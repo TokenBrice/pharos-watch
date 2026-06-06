@@ -143,10 +143,7 @@ export const CORE_NAV_ITEMS: NavItem[] = [
   _byHref("/alt-pegs/"),
   _byHref("/yield/"),
   _byHref("/stability-index/"),
-  _byHref("/timeline/"),
   _byHref("/pharoswatchbot/"),
-  { ..._byHref("/learn/"), label: "Learn" },
-  { ..._byHref("/status/"), label: "Status" },
 ];
 
 export function normalizeNavPath(pathname: string): string {

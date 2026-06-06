@@ -101,13 +101,12 @@ describe("nav-config", () => {
       { href: "/alt-pegs/", label: "Alt-Pegs" },
       { href: "/yield/", label: "Yield Intelligence" },
       { href: "/stability-index/", label: "Stability Index" },
-      { href: "/timeline/", label: "Timeline" },
       { href: "/pharoswatchbot/", label: "PharosWatchBot" },
-      { href: "/learn/", label: "Learn" },
-      { href: "/status/", label: "Status" },
     ]);
 
-    expect(isCoreNavPath("/timeline/")).toBe(true);
+    expect(isCoreNavPath("/timeline/")).toBe(false);
+    expect(isCoreNavPath("/learn/")).toBe(false);
+    expect(isCoreNavPath("/status/")).toBe(false);
     expect(isCoreNavPath("/learn/mechanisms/")).toBe(false);
 
     const corePageNav = getSidebarNavForPath("/yield/");

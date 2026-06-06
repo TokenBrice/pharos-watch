@@ -87,18 +87,18 @@ describe("CoreTopRail", () => {
     expect(screen.getByRole("link", { name: "FreezeWatch" }).getAttribute("href")).toMatch(/^\/freezewatch\/?$/);
     expect(screen.getByRole("link", { name: "Stability Index" }).getAttribute("href")).toMatch(/^\/stability-index\/?$/);
     expect(screen.getByRole("link", { name: "PharosWatchBot" }).getAttribute("href")).toMatch(/^\/pharoswatchbot\/?$/);
-    expect(screen.getByRole("link", { name: "Learn" }).getAttribute("href")).toMatch(/^\/learn\/?$/);
-    expect(screen.getByRole("link", { name: "Timeline" }).getAttribute("href")).toMatch(/^\/timeline\/?$/);
-    expect(screen.getByRole("link", { name: "Status" }).getAttribute("href")).toMatch(/^\/status\/?$/);
+    expect(screen.queryByRole("link", { name: "Learn" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Timeline" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Status" })).toBeNull();
   });
 
-  it("renders on the added core pages", () => {
+  it("does not render on routes outside the trimmed core rail", () => {
     pathnameMock.mockReturnValue("/timeline/");
     sidebarMock.mockReturnValue({ expanded: true });
 
-    render(<CoreTopRail />);
+    const { container } = render(<CoreTopRail />);
 
-    expect(screen.getByRole("link", { name: "Timeline" }).getAttribute("aria-current")).toBe("page");
+    expect(container.firstChild).toBeNull();
   });
 
   it("does not render on non-core routes", () => {
