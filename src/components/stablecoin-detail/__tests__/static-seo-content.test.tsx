@@ -94,7 +94,16 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByRole("link", { name: "Reserve source" }).getAttribute("href")).toBe(
       "https://example.com/reserves",
     );
-    expect(screen.getByText("3 deployments tracked across Ethereum, Base, and Solana.")).toBeTruthy();
+    expect(container.textContent).toContain("3 deployments tracked across Ethereum, Base, and Solana.");
+    expect(screen.getByRole("link", { name: "View Ethereum chain profile" }).getAttribute("href")).toBe(
+      "/chains/ethereum/",
+    );
+    expect(screen.getByRole("link", { name: "View Base chain profile" }).getAttribute("href")).toBe(
+      "/chains/base/",
+    );
+    expect(screen.getByRole("link", { name: "View Solana chain profile" }).getAttribute("href")).toBe(
+      "/chains/solana/",
+    );
     expect(screen.getByText("AI summary / Updated May 2, 2026")).toBeTruthy();
     expect(screen.getByText(/The profile summary is concise and specific/)).toBeTruthy();
     expect(

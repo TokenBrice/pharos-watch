@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -29,6 +30,7 @@ const ACTION_LINK_CLASS =
 const FACT_LABEL_CLASS = "text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
+const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -45,13 +47,6 @@ function summarizeText(text: string, maxLength = 280): string {
   return `${truncated.slice(0, wordBoundary).replace(/[,.!?;:]+$/, "")}...`;
 }
 
-function formatList(items: readonly string[]): string {
-  if (items.length <= 1) return items[0] ?? "";
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-
-  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-}
-
 function formatJurisdiction(coin: StablecoinMeta): string {
   const jurisdiction = coin.jurisdiction;
 
@@ -62,19 +57,51 @@ function formatJurisdiction(coin: StablecoinMeta): string {
   return [jurisdiction.country, jurisdiction.regulator, jurisdiction.license].filter(Boolean).join(" / ");
 }
 
-function buildContractSummary(coin: StablecoinMeta): string {
+function renderInlineList(items: readonly ReactNode[]): ReactNode {
+  return items.map((item, index) => (
+    <Fragment key={index}>
+      {index > 0 ? (index === items.length - 1 ? (items.length === 2 ? " and " : ", and ") : ", ") : null}
+      {item}
+    </Fragment>
+  ));
+}
+
+function ContractSummary({ coin }: { coin: StablecoinMeta }) {
   const contracts = coin.contracts ?? [];
 
   if (contracts.length === 0) {
-    return "No contract deployments are listed in the static profile.";
+    return <span>No contract deployments are listed in the static profile.</span>;
   }
 
-  const sampleChains = contracts.slice(0, 4).map((contract) => CHAIN_META[contract.chain]?.name ?? contract.chain);
+  const sampleChains = contracts.slice(0, 4).map((contract) => {
+    const meta = CHAIN_META[contract.chain];
+    const label = meta?.name ?? contract.chain;
+
+    if (!meta) {
+      return <span key={`${contract.chain}-${contract.address}`}>{label}</span>;
+    }
+
+    return (
+      <Link
+        key={`${contract.chain}-${contract.address}`}
+        href={`/chains/${contract.chain}/`}
+        className={INLINE_LINK_CLASS}
+        aria-label={`View ${label} chain profile`}
+      >
+        {label}
+      </Link>
+    );
+  });
   const remainingCount = Math.max(contracts.length - sampleChains.length, 0);
   const remaining = remainingCount > 0 ? `, plus ${remainingCount} more` : "";
   const deploymentLabel = contracts.length === 1 ? "deployment" : "deployments";
 
-  return `${contracts.length} ${deploymentLabel} tracked across ${formatList(sampleChains)}${remaining}.`;
+  return (
+    <span>
+      {contracts.length} {deploymentLabel} tracked across {renderInlineList(sampleChains)}
+      {remaining}.
+    </span>
+  );
 }
 
 function buildProfileSentence(coin: StablecoinMeta): string {
@@ -271,7 +298,9 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
             </div>
             <div>
               <dt className={FACT_LABEL_CLASS}>Contracts</dt>
-              <dd className={FACT_VALUE_CLASS}>{buildContractSummary(coin)}</dd>
+              <dd className={FACT_VALUE_CLASS}>
+                <ContractSummary coin={coin} />
+              </dd>
             </div>
           </dl>
         </div>

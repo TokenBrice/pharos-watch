@@ -26,9 +26,13 @@ describe("ChainProfilePage", () => {
     expect(html).toContain("Compare cohort");
     expect(html).toContain("Set up alerts");
     expect(html).toContain("chain client ethereum");
+    expect(html).toContain("Tracked Stablecoins On Ethereum");
+    expect(html).toContain('href="/stablecoin/usdc-circle"');
     expect(html).toContain('href="/stablecoins"');
     expect(html).toContain('href="/safety-scores"');
     expect(html).toContain("Stablecoin Research Surfaces");
+    expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Tracked Stablecoins On Ethereum"));
+    expect(html.indexOf("Tracked Stablecoins On Ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
     expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
   });
 

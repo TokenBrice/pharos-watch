@@ -73,7 +73,7 @@ Default sort is `totalUsd desc`.
 - sets canonical metadata at `/chains/[chain]/`
 - builds the title/description from the mapped deployment count and leading ticker symbols when they fit the search-snippet title budget
 - emits `CollectionPage` + `ItemList` JSON-LD for tracked deployments, with chain/deployment entities typed as `Thing` and no `Product` markup
-- renders the live client first, followed by related taxonomy and research route hubs; the page does not duplicate the client table with a visible static deployment list
+- renders the live client first, then a compact server-rendered deployment anchor hub linking each tracked stablecoin on the chain to its `/stablecoin/[id]/` page, followed by related taxonomy and research route hubs
 
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 

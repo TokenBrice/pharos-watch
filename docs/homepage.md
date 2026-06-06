@@ -152,6 +152,8 @@ The `Mint Auth` column reads `coin.mintAuthoritySummary` from the slim client re
 
 ## Loading Strategy
 
+`HomeAltHero` keeps the headline and cohort rows in the eager homepage bundle, while the market-cap chart body is dynamically imported through `src/components/home-alt-hero-chart.tsx` so Recharts and the shared chart-axis primitives stay out of the initial hero module.
+
 The heavier homepage sections are dynamically imported in `src/components/home-alt-client.tsx`:
 
 - `StablecoinTable`

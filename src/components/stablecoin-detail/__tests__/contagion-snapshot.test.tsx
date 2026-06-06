@@ -30,6 +30,13 @@ vi.mock("@/hooks/use-logos", () => ({
   useLogos: useLogosMock,
 }));
 
+vi.mock("next/dynamic", () => ({
+  default: () =>
+    function MockDynamicContagionGraph({ focusCoinId }: { focusCoinId?: string }) {
+      return <div data-testid="contagion-graph-mock">graph:{focusCoinId}</div>;
+    },
+}));
+
 vi.mock("@/components/contagion-graph", () => ({
   ContagionGraph: ({ focusCoinId }: { focusCoinId?: string }) => (
     <div data-testid="contagion-graph-mock">graph:{focusCoinId}</div>

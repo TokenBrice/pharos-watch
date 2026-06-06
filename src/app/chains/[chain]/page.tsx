@@ -159,6 +159,55 @@ function ChainRouteCta({
   );
 }
 
+function ChainDeploymentAnchors({
+  chainName,
+  deployments,
+}: {
+  chainName: string;
+  deployments: readonly ChainTrackedDeployment[];
+}) {
+  if (deployments.length === 0) {
+    return null;
+  }
+
+  return (
+    <nav className="space-y-3" aria-labelledby="chain-deployment-anchors-heading">
+      <div className="space-y-1.5">
+        <h2
+          id="chain-deployment-anchors-heading"
+          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Tracked Stablecoins On {chainName}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Crawlable links to the stablecoin profiles with checked-in deployments on this chain.
+        </p>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {deployments.map((deployment) => (
+          <li key={deployment.id} className="min-w-0">
+            <Link
+              href={deployment.href}
+              className="pharos-focus-ring block rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+            >
+              <span className="flex min-w-0 items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate font-medium text-foreground">{deployment.name}</span>
+                <span className="shrink-0 font-mono text-xs text-muted-foreground">{deployment.symbol}</span>
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {deploymentCountLabel(deployment.contractCount)} on {chainName}
+              </span>
+              <span className="mt-2 block truncate text-[11px] text-muted-foreground/80">
+                {deployment.pegLabel} / {deployment.backingLabel} / {deployment.governanceLabel}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 function ChainResearchSurfaces({ chainName }: { chainName: string }) {
   return (
     <section className="space-y-3" aria-label={`${chainName} stablecoin research surfaces`}>
@@ -237,6 +286,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
       }
     >
       <ChainProfileClient chainId={chain} />
+      <ChainDeploymentAnchors chainName={meta.name} deployments={deployments} />
       <ChainRouteCta chainName={meta.name} deployments={deployments} />
       <ChainRelatedHubs chainId={chain} taxonomyLinks={taxonomyLinks} />
       <ChainResearchSurfaces chainName={meta.name} />

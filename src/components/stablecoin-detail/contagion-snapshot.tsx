@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { ContagionGraph } from "@/components/contagion-graph";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CollateralUsageSection } from "./collateral-usage-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
@@ -17,6 +17,18 @@ interface ContagionSnapshotProps {
 }
 
 const DETAIL_NODE_LIMIT = 500;
+
+const ContagionGraph = dynamic(
+  () => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
+        Loading dependency graph...
+      </div>
+    ),
+  },
+);
 
 export function ContagionSnapshot({
   stablecoinId,
