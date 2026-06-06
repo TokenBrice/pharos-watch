@@ -1,4 +1,41 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const activeStablecoins = vi.hoisted(() => [
+  {
+    id: "usdc-circle",
+    symbol: "USDC",
+    geckoId: "usd-coin",
+    flags: { governance: "centralized", pegCurrency: "USD", navToken: false },
+  },
+  {
+    id: "usdt-tether",
+    symbol: "USDT",
+    geckoId: "tether",
+    flags: { governance: "centralized", pegCurrency: "USD", navToken: false },
+  },
+]);
+
+vi.mock("@shared/lib/stablecoins/registry", () => ({
+  ACTIVE_STABLECOINS: activeStablecoins,
+  TRACKED_META_BY_ID: new Map(activeStablecoins.map((stablecoin) => [stablecoin.id, stablecoin])),
+}));
+
+vi.mock("../../../lib/fetch-retry", () => ({
+  fetchWithRetry: vi.fn(),
+}));
+
+vi.mock("../../../lib/cron-logger", () => ({
+  logCronEvent: vi.fn(async () => {}),
+}));
+
+vi.mock("../../../lib/abort", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/abort")>("../../../lib/abort");
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async () => {}),
+  };
+});
+
 import { ORDERBOOK_TVL_FACTOR } from "../constants";
 import {
   aggregateCgTickersByExchange,
@@ -6,7 +43,28 @@ import {
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../coingecko-tickers-shared";
+import { fetchCgTickersFallback } from "../fetch-fallbacks";
+import { createKnownPoolIdentityIndex } from "../pool-identity";
 import type { CgTicker } from "../types";
+import { fetchWithRetry } from "../../../lib/fetch-retry";
+
+function createMockDb(): D1Database {
+  return {
+    prepare: () => ({
+      bind: () => ({
+        all: async () => ({ results: [] }),
+        first: async () => null,
+        run: async () => ({ success: true, meta: {} }),
+      }),
+      all: async () => ({ results: [] }),
+      first: async () => null,
+      run: async () => ({ success: true, meta: {} }),
+    }),
+    batch: async () => [],
+    exec: async () => ({ count: 0, duration: 0 }),
+    dump: async () => new ArrayBuffer(0),
+  } as unknown as D1Database;
+}
 
 function makeTicker(overrides: Partial<CgTicker> = {}): CgTicker {
   return {
@@ -22,6 +80,10 @@ function makeTicker(overrides: Partial<CgTicker> = {}): CgTicker {
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  vi.mocked(fetchWithRetry).mockReset();
+});
 
 describe("CoinGecko tickers shared helpers", () => {
   it("filters out stale, anomalous, non-USD, and low-volume tickers", () => {
@@ -176,5 +238,33 @@ describe("CoinGecko tickers shared helpers", () => {
         tvlBasis: "coingecko-depth-2pct-capped-by-volume",
       }),
     ]);
+  });
+});
+
+describe("fetchCgTickersFallback", () => {
+  it("emits distinct synthetic orderbook pool ids for different stablecoins on the same exchange", async () => {
+    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response(JSON.stringify({
+      tickers: [makeTicker({
+        market: { name: "Kinesis", identifier: "kinesis" },
+        converted_last: { usd: 1 },
+        converted_volume: { usd: 20_000 },
+        cost_to_move_down_usd: 40_000,
+        cost_to_move_up_usd: 45_000,
+      })],
+    }), { status: 200 }));
+
+    const result = await fetchCgTickersFallback(
+      createMockDb(),
+      new Map(),
+      new Map(),
+      createKnownPoolIdentityIndex(),
+    );
+
+    const poolIdsFor = (stablecoinId: string) =>
+      result.newPools.get(stablecoinId)?.map((pool) => `${pool.chain}:${pool.address}`);
+
+    expect(poolIdsFor("usdc-circle")).toEqual(["orderbook:kinesis:usdc-circle"]);
+    expect(poolIdsFor("usdt-tether")).toEqual(["orderbook:kinesis:usdt-tether"]);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
   });
 });

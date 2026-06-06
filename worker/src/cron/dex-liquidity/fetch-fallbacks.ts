@@ -403,10 +403,11 @@ export async function fetchCgTickersFallback(
 
       const pools: GtNewPool[] = [];
       for (const summary of exchangeSummaries) {
+        const orderbookAddress = `${summary.exchangeId}:${meta.id}`.toLowerCase();
         const identity = buildPoolIdentity({
           chain: "orderbook",
           protocol: "cg-tickers",
-          poolAddressOrId: `orderbook:${summary.exchangeId}`,
+          poolAddressOrId: `orderbook:${orderbookAddress}`,
           tokenAddresses: [],
           poolType: "orderbook",
           feeTierBps: null,
@@ -424,7 +425,7 @@ export async function fetchCgTickersFallback(
 
         const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
         pools.push({
-          address: summary.exchangeId,
+          address: orderbookAddress,
           chain: "orderbook",
           dexId: summary.exchangeId,
           name: summary.exchangeName,

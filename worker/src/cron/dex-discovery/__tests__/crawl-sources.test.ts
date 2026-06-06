@@ -440,7 +440,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
 
     expect(result.pools).toEqual([{
-      poolId: "orderbook:kinesis",
+      poolId: "orderbook:kinesis:usdc-circle",
       stablecoinId: "usdc-circle",
       source: "cg_tickers",
       chain: "orderbook",
@@ -475,5 +475,47 @@ describe("crawlCoin DexScreener hardening", () => {
       protocol: "cg-ticker-kinesis",
     }]);
     expect(vi.mocked(fetchWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
+  });
+
+  it("keeps same-exchange CoinGecko tickers pools distinct across stablecoins", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response(JSON.stringify({
+      tickers: [{
+        base: "USD",
+        target: "USD",
+        market: { name: "Kinesis", identifier: "kinesis" },
+        converted_last: { usd: 1 },
+        converted_volume: { usd: 20_000 },
+        cost_to_move_down_usd: 40_000,
+        cost_to_move_up_usd: 45_000,
+        target_coin_id: undefined,
+        is_anomaly: false,
+        is_stale: false,
+        trust_score: null,
+      }],
+    }), { status: 200 }));
+
+    const knownPoolIds = new Set<string>();
+    const usdcResult = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+      null,
+      knownPoolIds,
+    );
+    const usdtResult = await crawlCoin(
+      createMockDb(),
+      "usdt-tether",
+      [{ chain: "ethereum", address: "0xdef", decimals: 6 }],
+      null,
+      knownPoolIds,
+    );
+
+    expect(usdcResult.pools.map((pool) => pool.poolId)).toEqual(["orderbook:kinesis:usdc-circle"]);
+    expect(usdtResult.pools.map((pool) => pool.poolId)).toEqual(["orderbook:kinesis:usdt-tether"]);
+    expect(knownPoolIds).toEqual(new Set([
+      "orderbook:kinesis:usdc-circle",
+      "orderbook:kinesis:usdt-tether",
+    ]));
   });
 });

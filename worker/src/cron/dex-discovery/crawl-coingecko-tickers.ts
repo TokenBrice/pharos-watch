@@ -62,9 +62,7 @@ export async function crawlCoinGeckoTickersStage({
       );
 
       for (const summary of exchangeSummaries) {
-        // Canonical orderbook pool id — no stablecoin suffix. Multiple tracked stablecoins
-        // sharing the same exchange map to the same poolId and dedup correctly downstream.
-        const poolId = `orderbook:${summary.exchangeId}`.toLowerCase();
+        const poolId = `orderbook:${summary.exchangeId}:${context.stablecoinId}`.toLowerCase();
         if (context.knownPoolIds.has(poolId)) continue;
         const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
 

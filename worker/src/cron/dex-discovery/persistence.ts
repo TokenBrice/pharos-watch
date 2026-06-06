@@ -30,6 +30,7 @@ const STAGING_BATCH_SIZE = 50;
 const STAGING_DELETE_TTL_SEC = 172800; // 48h
 const STAGING_RAW_JSON_TTL_SEC = 21600; // 6h
 const RUN_SEQ_KEY = "discovery_run_seq";
+const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
 
 // Canonical pool_id shapes observed in dex_pool_staging:
 //   "chain:0xhex"                 (EVM, lowercased)
@@ -48,6 +49,17 @@ export function hasValidStagedPoolTvl(pool: Pick<StagedPool, "tvlUsd">): boolean
     pool.tvlUsd == null ||
     (Number.isFinite(pool.tvlUsd) && pool.tvlUsd >= 0 && pool.tvlUsd <= STAGED_POOL_MAX_TVL_USD)
   );
+}
+
+function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" | "source">): string | null {
+  if (pool.source !== "cg_tickers") return null;
+  if (!pool.poolId.startsWith(ORDERBOOK_POOL_ID_PREFIX)) return null;
+  const suffix = pool.poolId.slice(ORDERBOOK_POOL_ID_PREFIX.length);
+  const stablecoinSuffix = `:${pool.stablecoinId.toLowerCase()}`;
+  if (!suffix.toLowerCase().endsWith(stablecoinSuffix)) return null;
+  const exchangeId = suffix.slice(0, suffix.length - stablecoinSuffix.length);
+  if (!exchangeId || exchangeId.includes(":")) return null;
+  return `${ORDERBOOK_POOL_ID_PREFIX}${exchangeId.toLowerCase()}`;
 }
 
 /**
@@ -75,8 +87,14 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
   });
   if (validPools.length === 0) return;
 
-  const stmts = validPools.map((pool) =>
-    db
+  const stmts = validPools.flatMap((pool) => {
+    const cleanupPoolId = legacyOrderbookPoolId(pool);
+    const cleanupStmt = cleanupPoolId
+      ? db
+          .prepare("DELETE FROM dex_pool_staging WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?")
+          .bind(pool.stablecoinId, cleanupPoolId)
+      : null;
+    const insertStmt = db
       .prepare(STAGING_UPSERT_SQL)
       .bind(
         pool.poolId,
@@ -101,8 +119,9 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
         pool.rawJson,
         pool.discoveredAt,
         pool.refreshedAt,
-      ),
-  );
+      );
+    return cleanupStmt ? [cleanupStmt, insertStmt] : [insertStmt];
+  });
 
   await batchExecute(db, stmts, STAGING_BATCH_SIZE);
 }
