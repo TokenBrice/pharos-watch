@@ -79,13 +79,11 @@ export function stratumLabel(key: DdrStratumKey | DdrStratumCandidate): string {
 export function candidateStrata(active: DdrStratumKey): DdrStratumCandidate[] {
   const exact: readonly DdrDepthBucket[] = [active.depth];
   const collapsed: readonly DdrDepthBucket[] =
-    active.depth === "catastrophic"
+    active.depth === "catastrophic" || active.depth === "severe"
       ? ["severe", "catastrophic"]
-      : active.depth === "severe"
-        ? ["severe", "catastrophic"]
-        : active.depth === "moderate"
-          ? ["moderate", "severe", "catastrophic"]
-          : ["minor"];
+      : active.depth === "moderate"
+        ? ["moderate", "severe", "catastrophic"]
+        : ["minor"];
   const broad: readonly DdrDepthBucket[] =
     active.depth === "minor"
       ? ["minor"]
