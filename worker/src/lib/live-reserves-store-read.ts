@@ -5,6 +5,7 @@ import {
   parseWarnings,
 } from "./live-reserves-store-row-decoding";
 import {
+  RESERVE_COMPOSITION_SELECT_COLUMNS,
   RESERVE_SYNC_STATE_SELECT_COLUMNS,
   type ReserveCompositionRow,
   type ReserveSyncStateRecord,
@@ -35,13 +36,38 @@ export async function getReserveCompositionRow(
 ): Promise<ReserveCompositionRow | null> {
   return db
     .prepare(
-      `SELECT stablecoin_id, slices, fetched_at, source, attempt_id, metadata, warning_count, warnings,
-              adapter_source_model, adapter_evidence_class
+      `SELECT ${RESERVE_COMPOSITION_SELECT_COLUMNS}
          FROM reserve_composition
         WHERE stablecoin_id = ?`,
     )
     .bind(stablecoinId)
     .first<ReserveCompositionRow>();
+}
+
+async function loadMapByStablecoinId<Row extends { stablecoin_id: string }, Value>(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+  sqlForInClause: (inClauseSql: string) => string,
+  mapRow: (row: Row) => Value,
+  chunkSize = 50,
+): Promise<Map<string, Value>> {
+  if (stablecoinIds.length === 0) return new Map();
+
+  const result = new Map<string, Value>();
+
+  for (const batch of chunkArray(stablecoinIds, chunkSize)) {
+    const inClause = buildInClause(batch);
+    const rows = await db
+      .prepare(sqlForInClause(inClause.sql))
+      .bind(...inClause.binds)
+      .all<Row>();
+
+    for (const row of rows.results ?? []) {
+      result.set(row.stablecoin_id, mapRow(row));
+    }
+  }
+
+  return result;
 }
 
 export async function getReserveSyncState(
@@ -65,55 +91,30 @@ export async function loadReserveSyncStateMap(
   db: D1Database,
   stablecoinIds: readonly string[],
 ): Promise<Map<string, ReserveSyncStateRecord>> {
-  if (stablecoinIds.length === 0) return new Map();
-
-  const result = new Map<string, ReserveSyncStateRecord>();
-
-  for (const batch of chunkArray(stablecoinIds, 50)) {
-    const inClause = buildInClause(batch);
-    const rows = await db
-      .prepare(
-        `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
+  return loadMapByStablecoinId<ReserveSyncStateRow, ReserveSyncStateRecord>(
+    db,
+    stablecoinIds,
+    (inClauseSql) =>
+      `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
            FROM reserve_sync_state
-          WHERE stablecoin_id IN (${inClause.sql})`,
-      )
-      .bind(...inClause.binds)
-      .all<ReserveSyncStateRow>();
-
-    for (const row of rows.results ?? []) {
-      result.set(row.stablecoin_id, mapReserveSyncStateRow(row));
-    }
-  }
-
-  return result;
+          WHERE stablecoin_id IN (${inClauseSql})`,
+    mapReserveSyncStateRow,
+  );
 }
 
 export async function loadReserveCompositionRowMap(
   db: D1Database,
   stablecoinIds: readonly string[],
 ): Promise<Map<string, ReserveCompositionRow>> {
-  if (stablecoinIds.length === 0) return new Map();
-
-  const result = new Map<string, ReserveCompositionRow>();
-
-  for (const batch of chunkArray(stablecoinIds, 50)) {
-    const inClause = buildInClause(batch);
-    const rows = await db
-      .prepare(
-        `SELECT stablecoin_id, slices, fetched_at, source, attempt_id, metadata, warning_count, warnings,
-                adapter_source_model, adapter_evidence_class
+  return loadMapByStablecoinId<ReserveCompositionRow, ReserveCompositionRow>(
+    db,
+    stablecoinIds,
+    (inClauseSql) =>
+      `SELECT ${RESERVE_COMPOSITION_SELECT_COLUMNS}
            FROM reserve_composition
-          WHERE stablecoin_id IN (${inClause.sql})`,
-      )
-      .bind(...inClause.binds)
-      .all<ReserveCompositionRow>();
-
-    for (const row of rows.results ?? []) {
-      result.set(row.stablecoin_id, row);
-    }
-  }
-
-  return result;
+          WHERE stablecoin_id IN (${inClauseSql})`,
+    (row) => row,
+  );
 }
 
 export async function getMaxSyncAge(

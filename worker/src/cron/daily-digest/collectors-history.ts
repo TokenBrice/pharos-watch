@@ -1,4 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
+import { round1 } from "@shared/lib/math";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import {
@@ -62,7 +63,7 @@ export async function collectPsiContributors(
         symbol: contributor.symbol,
         bps: contributor.bps,
         mcapUsd: contributor.mcapUsd,
-        marketImpact: Math.round(Math.abs(contributor.bps) * contributor.mcapUsd / 1e9 * contributor.factor * 10) / 10,
+        marketImpact: round1(Math.abs(contributor.bps) * contributor.mcapUsd / 1e9 * contributor.factor),
       }))
       .sort((a, b) => b.marketImpact - a.marketImpact)
       .slice(0, 3);

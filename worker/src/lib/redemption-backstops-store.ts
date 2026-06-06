@@ -52,7 +52,9 @@ import {
 } from "@shared/lib/redemption-backstop-confidence";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
+import { isMissingColumnError, isMissingTableError } from "./db";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
+import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export {
   upsertRedemptionBackstopSnapshots,
   updateRedemptionBackstopRunMetadata,
@@ -122,33 +124,7 @@ export interface RedemptionBackstopRunMetadata {
   [key: string]: unknown;
 }
 
-const REDEMPTION_BACKSTOP_ROW_COLUMNS = [
-  "stablecoin_id",
-  "score",
-  "effective_exit_score",
-  "dex_liquidity_score",
-  "access_score",
-  "settlement_score",
-  "execution_certainty_score",
-  "capacity_score",
-  "output_asset_quality_score",
-  "cost_score",
-  "route_family",
-  "access_model",
-  "settlement_model",
-  "execution_model",
-  "output_asset_type",
-  "provider",
-  "source_mode",
-  "immediate_capacity_usd",
-  "immediate_capacity_ratio",
-  "fee_bps",
-  "queue_enabled",
-  "updated_at",
-  "methodology_version",
-  "details_json",
-  "snapshot_run_id",
-].join(", ");
+const REDEMPTION_BACKSTOP_ROW_COLUMNS = [...SNAPSHOT_ROW_COLUMNS, "snapshot_run_id"].join(", ");
 
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
   cause?: unknown;
@@ -295,11 +271,6 @@ export function normalizeRedemptionBackstopRunMetadata(
   return decoded.payload ?? {};
 }
 
-function isMissingTableError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.toLowerCase().includes("no such table");
-}
-
 function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   const details = parseDetails(row.details_json);
   const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
@@ -380,6 +351,16 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   return parsed.data;
 }
 
+function decodeBackstopRows(rows: readonly RedemptionBackstopRow[], errorMessage: string): RedemptionBackstopMap {
+  try {
+    return Object.fromEntries(rows.map((row) => [row.stablecoin_id, toEntry(row)]));
+  } catch (error) {
+    throw new RedemptionBackstopSnapshotUnavailableError(errorMessage, {
+      cause: error,
+    });
+  }
+}
+
 export function resolveSnapshotMethodologyVersion(
   coins: RedemptionBackstopMap,
   updatedAt: number,
@@ -424,8 +405,7 @@ async function getRecentCompletedRedemptionBackstopRuns(
         metadata: normalizeRedemptionBackstopRunMetadata(row.metadata_json),
       }));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.toLowerCase().includes("no such table")) return [];
+    if (isMissingTableError(error)) return [];
     throw error;
   }
 }
@@ -447,8 +427,7 @@ async function hasManifestedCurrentRedemptionBackstopRows(db: D1Database): Promi
       .first<{ stablecoin_id: string }>();
     return row != null;
   } catch (error) {
-    const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-    if (isMissingTableError(error) || message.includes("no such column")) return false;
+    if (isMissingTableError(error) || isMissingColumnError(error)) return false;
     throw error;
   }
 }
@@ -475,13 +454,7 @@ async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null)
     });
   }
 
-  try {
-    return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
-  } catch (error) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode redemption backstop snapshot rows", {
-      cause: error,
-    });
-  }
+  return decodeBackstopRows(rows.results ?? [], "Failed to decode redemption backstop snapshot rows");
 }
 
 async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: string): Promise<RedemptionBackstopMap> {
@@ -504,13 +477,7 @@ async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: stri
     });
   }
 
-  try {
-    return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
-  } catch (error) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode immutable redemption backstop run rows", {
-      cause: error,
-    });
-  }
+  return decodeBackstopRows(rows.results ?? [], "Failed to decode immutable redemption backstop run rows");
 }
 
 async function queryCompletedRedemptionBackstopRunMap(
@@ -651,19 +618,9 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
         changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
         asOf: updatedAt,
       }),
-      componentWeights: {
-        access: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.access,
-        settlement: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.settlement,
-        executionCertainty: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.executionCertainty,
-        capacity: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.capacity,
-        outputAssetQuality: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality,
-        cost: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost,
-      },
+      componentWeights: { ...REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS },
       effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
-      routeFamilyCaps: {
-        queueRedeem: REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem,
-        offchainIssuer: REDEMPTION_ROUTE_FAMILY_CAPS.offchainIssuer,
-      },
+      routeFamilyCaps: { ...REDEMPTION_ROUTE_FAMILY_CAPS },
     },
     updatedAt,
   };

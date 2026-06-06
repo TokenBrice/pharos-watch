@@ -11,6 +11,8 @@
  * hydration loaders.
  */
 
+import { isMissingTableError } from "../../../lib/db";
+
 const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
   "dex-prices",
   "dex-liquidity-history",
@@ -20,9 +22,7 @@ const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
   "stability-index-samples",
 ]);
 
-export function isMissingTableError(error: unknown): boolean {
-  return String(error).toLowerCase().includes("no such table");
-}
+export { isMissingTableError };
 
 export function isBootstrapAllowedMissingTableSource(source: string): boolean {
   return BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES.has(source);

@@ -1,4 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
+import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
@@ -164,7 +165,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const currentPsiSource = latestSample ?? latestDaily;
 
   const avg24h = avg24hRow?.avg != null
-    ? Math.round(avg24hRow.avg * 10) / 10
+    ? round1(avg24hRow.avg)
     : null;
 
   const displayPsi = currentPsiSource

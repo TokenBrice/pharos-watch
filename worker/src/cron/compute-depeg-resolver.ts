@@ -160,12 +160,7 @@ export async function computeDepegResolver(
   let v2PublicationSucceeded = false;
   let v2PublicationError: string | null = null;
 
-  const schedulerHealthFailures = [
-    options.stablecoinsCacheSafe ? null : "stablecoins-cache-unsafe",
-    options.depegPipelineHealthy ? null : "depeg-pipeline-unhealthy",
-  ].filter((reason): reason is string => reason != null);
-  if (schedulerHealthFailures.length > 0) {
-    const degradedReason = schedulerHealthFailures.join(",");
+  const degradedResult = async (degradedReason: string): Promise<CronResult> => {
     v2LockDeferrals = await recordSystemHealthDeferrals({
       stores: storeContracts,
       db,
@@ -200,6 +195,14 @@ export async function computeDepegResolver(
         reviewRows: degradedArtifacts.reviewRows,
       }),
     };
+  };
+
+  const schedulerHealthFailures = [
+    options.stablecoinsCacheSafe ? null : "stablecoins-cache-unsafe",
+    options.depegPipelineHealthy ? null : "depeg-pipeline-unhealthy",
+  ].filter((reason): reason is string => reason != null);
+  if (schedulerHealthFailures.length > 0) {
+    return degradedResult(schedulerHealthFailures.join(","));
   }
 
   const confirmationTiming = await loadPendingPromotionConfirmationTimes(db, activeRows);
@@ -210,41 +213,7 @@ export async function computeDepegResolver(
     abortIf(options.signal, "compute-depeg-resolver");
     const contextResult = await loadDdrContext(db, activeRows, nowSec);
     if (contextResult.kind === "degraded") {
-      const degradedReason = contextResult.reason;
-      v2LockDeferrals = await recordSystemHealthDeferrals({
-        stores: storeContracts,
-        db,
-        incidentsByEventId,
-        activeRows,
-        nowSec,
-        ddrRunId: options.ddrRunId,
-        runAt: options.runAt,
-        syncCapabilities: options.syncCapabilities,
-        reason: degradedReason,
-      });
-      const degradedArtifacts = await persistDegradedArtifacts({
-        db,
-        nowSec,
-        reason: degradedReason,
-        lineage,
-        signal: options.signal,
-        storeContracts,
-      });
-      return {
-        itemCount: 0,
-        metadata: JSON.stringify({
-          ddrRunId: options.ddrRunId,
-          activeEvents: activeRows.length,
-          degraded: true,
-          degradedReason,
-          v2LockDeferrals,
-          v2FreezeSkipped: true,
-          v2PublicationAttempted: false,
-          ddrrDegraded: degradedArtifacts.reviewError != null,
-          ddrrDegradedReason: degradedArtifacts.reviewError,
-          reviewRows: degradedArtifacts.reviewRows,
-        }),
-      };
+      return degradedResult(contextResult.reason);
     }
 
     abortIf(options.signal, "compute-depeg-resolver");

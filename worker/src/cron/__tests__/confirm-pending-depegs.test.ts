@@ -3,6 +3,8 @@ import type { StablecoinMeta } from "@shared/types/core";
 
 vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
+  isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
 
 vi.mock("../../lib/fetch-retry", () => ({

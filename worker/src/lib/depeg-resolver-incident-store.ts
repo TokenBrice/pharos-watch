@@ -47,6 +47,27 @@ const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
 const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";
 const AUTOMATED_SEALED_TAIL_CURRENT_REASON = "sealed incident live tail adopted as current source event";
+const DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION = `
+                m.incident_key AS membership_incident_key,
+                m.stablecoin_id AS membership_stablecoin_id,
+                m.prediction_policy_version,
+                m.public_tracked_at_first_seen,
+                m.psi_shadow_at_first_seen,
+                m.rollout_active_at_enablement,
+                m.policy_universe_included,
+                m.policy_universe_reason,
+                m.registry_snapshot_json,
+                m.created_at AS membership_created_at,
+                ls.eligible_at AS lock_eligible_at,
+                ls.deferral_count,
+                ls.last_deferral_reason,
+                ls.last_state,
+                ls.lock_trigger,
+                ls.forecast_readiness_score,
+                ls.forecast_readiness_version,
+                ls.readiness_threshold,
+                ls.backstop_at,
+                ls.backstop_delay_sec`;
 
 export interface DdrCanonicalIncidentEventInput {
   eventId: number;
@@ -381,26 +402,7 @@ async function loadIncidentsByEventIds(
           `SELECT i.*,
                 l.event_id,
                 l.relation,
-                m.incident_key AS membership_incident_key,
-                m.stablecoin_id AS membership_stablecoin_id,
-                m.prediction_policy_version,
-                m.public_tracked_at_first_seen,
-                m.psi_shadow_at_first_seen,
-                m.rollout_active_at_enablement,
-                m.policy_universe_included,
-                m.policy_universe_reason,
-                m.registry_snapshot_json,
-                m.created_at AS membership_created_at,
-                ls.eligible_at AS lock_eligible_at,
-                ls.deferral_count,
-                ls.last_deferral_reason,
-                ls.last_state,
-                ls.lock_trigger,
-                ls.forecast_readiness_score,
-                ls.forecast_readiness_version,
-                ls.readiness_threshold,
-                ls.backstop_at,
-                ls.backstop_delay_sec
+${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          FROM depeg_resolver_incident_event_links l
          JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
@@ -541,26 +543,7 @@ async function linkUnsealedNearbyIncident(
   const row = await db
     .prepare(
       `SELECT i.*,
-              m.incident_key AS membership_incident_key,
-              m.stablecoin_id AS membership_stablecoin_id,
-              m.prediction_policy_version,
-              m.public_tracked_at_first_seen,
-              m.psi_shadow_at_first_seen,
-              m.rollout_active_at_enablement,
-              m.policy_universe_included,
-              m.policy_universe_reason,
-              m.registry_snapshot_json,
-              m.created_at AS membership_created_at,
-              ls.eligible_at AS lock_eligible_at,
-              ls.deferral_count,
-              ls.last_deferral_reason,
-              ls.last_state,
-              ls.lock_trigger,
-              ls.forecast_readiness_score,
-              ls.forecast_readiness_version,
-              ls.readiness_threshold,
-              ls.backstop_at,
-              ls.backstop_delay_sec
+${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
        FROM depeg_resolver_incidents i
        LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
        LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
@@ -847,26 +830,7 @@ export async function loadCanonicalIncidents(
     const result = await db
       .prepare(
         `SELECT i.*,
-                m.incident_key AS membership_incident_key,
-                m.stablecoin_id AS membership_stablecoin_id,
-                m.prediction_policy_version,
-                m.public_tracked_at_first_seen,
-                m.psi_shadow_at_first_seen,
-                m.rollout_active_at_enablement,
-                m.policy_universe_included,
-                m.policy_universe_reason,
-                m.registry_snapshot_json,
-                m.created_at AS membership_created_at,
-                ls.eligible_at AS lock_eligible_at,
-                ls.deferral_count,
-                ls.last_deferral_reason,
-                ls.last_state,
-                ls.lock_trigger,
-                ls.forecast_readiness_score,
-                ls.forecast_readiness_version,
-                ls.readiness_threshold,
-                ls.backstop_at,
-                ls.backstop_delay_sec
+${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          FROM depeg_resolver_incidents i
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
          LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key

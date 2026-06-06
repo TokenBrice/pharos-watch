@@ -36,6 +36,8 @@ import type {
   DdrSealedPublicPrediction,
   DdrV2StoreContracts,
 } from "./depeg-resolver-v2-contracts";
+import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
+import { abortIf } from "./depeg-resolver/utils";
 
 const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
@@ -124,10 +126,6 @@ function arrayValue(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function publicPredictionIdOf(sealed: DdrSealedPublicPrediction): number {
-  return sealed.publicPredictionId ?? sealed.id;
-}
-
 export function buildEmptyDdrrSummary(): DdrrSummary {
   return summarizeDdrrRows([]);
 }
@@ -178,10 +176,6 @@ function buildDdrrResponseEnvelope(input: {
       asOf: input.nowSec,
     }),
   };
-}
-
-function abortIf(signal: AbortSignal | undefined, label: string): void {
-  if (signal?.aborted) throw signal.reason ?? new Error(`${label} aborted`);
 }
 
 function safeJsonParse(value: string): unknown {
@@ -464,10 +458,6 @@ async function loadActualEventsByEventIds(
   }
 
   return actualEventsById;
-}
-
-function firstPublicationById(rows: readonly DdrFirstPublicationMembership[]): Map<number, DdrFirstPublicationMembership> {
-  return new Map(rows.filter((row) => row.firstPublished).map((row) => [row.publicPredictionId, row]));
 }
 
 function latestErrataByPredictionId(
@@ -756,7 +746,7 @@ function failedPublicationCoverageRow(
 
 async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2ReviewSource): Promise<DdrrResponse> {
   const incidentsByKey = new Map(source.incidents.map((incident) => [incident.incidentKey, incident]));
-  const firstPublication = firstPublicationById(source.firstPublication);
+  const firstPublication = firstPublicationByPredictionId(source.firstPublication);
   const errataByPredictionId = latestErrataByPredictionId(source.errata);
   const actualEventsById = await loadActualEventsByEventIds(db, [
     ...source.incidents.map((incident) => incident.currentEventId),

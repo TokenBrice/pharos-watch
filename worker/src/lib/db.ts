@@ -5,6 +5,18 @@ import { runWithOverloadRetry } from "./cron-lease";
 export const D1_MAX_BOUND_PARAMETERS = 100;
 export { D1_SAFE_IN_CLAUSE_BIND_LIMIT, chunkArray } from "./collections";
 
+function d1ErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function isMissingTableError(error: unknown): boolean {
+  return d1ErrorMessage(error).toLowerCase().includes("no such table");
+}
+
+export function isMissingColumnError(error: unknown): boolean {
+  return d1ErrorMessage(error).toLowerCase().includes("no such column");
+}
+
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(
   db: D1Database,

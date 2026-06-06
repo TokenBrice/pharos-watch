@@ -14,6 +14,28 @@ export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 export const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
 export const PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC = 14 * DAY_SECONDS;
 export const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
+const RESERVE_COMPOSITION_COLUMN_NAMES = [
+  "stablecoin_id",
+  "slices",
+  "fetched_at",
+  "source",
+  "attempt_id",
+  "metadata",
+  "warning_count",
+  "warnings",
+  "adapter_source_model",
+  "adapter_evidence_class",
+] as const;
+
+export const RESERVE_COMPOSITION_INSERT_COLUMNS = RESERVE_COMPOSITION_COLUMN_NAMES.map(
+  (column) => `         ${column}`,
+).join(",\n");
+export const RESERVE_COMPOSITION_SELECT_COLUMNS = RESERVE_COMPOSITION_COLUMN_NAMES.join(", ");
+export const RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS = RESERVE_COMPOSITION_COLUMN_NAMES.filter(
+  (column) => column !== "stablecoin_id",
+)
+  .map((column) => `         ${column} = excluded.${column}`)
+  .join(",\n");
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 

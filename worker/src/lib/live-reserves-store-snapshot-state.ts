@@ -46,10 +46,6 @@ export function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnap
     typeof metadata.sourceTimestamp === "number" &&
     Number.isFinite(metadata.sourceTimestamp) &&
     metadata.sourceTimestamp > 0;
-  if (metadata.freshnessMode === "verified") {
-    return hasVerifiedTimestamp;
-  }
-
   return hasVerifiedTimestamp;
 }
 

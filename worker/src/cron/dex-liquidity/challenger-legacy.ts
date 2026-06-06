@@ -1,4 +1,5 @@
 import { decodeJsonString } from "../../lib/cache-json";
+import { isMissingTableError } from "../../lib/db";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
 
@@ -107,7 +108,7 @@ export async function loadLegacyDexPoolChallengers(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading legacy challengers:", msg);
     }
   }
@@ -153,7 +154,7 @@ export async function loadLegacyDexPoolChallengers(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading legacy price-source challengers:", msg);
     }
   }

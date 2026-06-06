@@ -69,4 +69,23 @@ export function resolveReserveSyncCapacityConfidence(
   return "dynamic";
 }
 
+export function buildMissingSupplyResolution(
+  provider: RedemptionBackstopProviderId,
+  capacityConfidence: RedemptionBackstopEntry["capacityConfidence"],
+  capacitySemantics: RedemptionBackstopEntry["capacitySemantics"],
+): CapacityResolution {
+  return {
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    scoringCapacityUsd: null,
+    scoringCapacityRatio: null,
+    provider,
+    sourceMode: "static",
+    resolutionState: "missing-cache",
+    capacityConfidence,
+    capacitySemantics,
+    notes: ["Stablecoins cache missing current supply; route retained as configured but unrated"],
+  };
+}
+
 export { resolveCapacityBasis };

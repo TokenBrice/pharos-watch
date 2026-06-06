@@ -7,9 +7,7 @@ import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
 
-function isDigestInputDataSummary(
-  value: unknown,
-): value is {
+type DigestArchiveInput = {
   stabilityIndex?: { score: number; band: string } | null;
   totalMcapUsd?: number;
   activeDepegCount?: number;
@@ -18,21 +16,16 @@ function isDigestInputDataSummary(
   nextTriggers?: unknown[];
   forwardLookOutcomes?: unknown[];
   riskTape?: unknown[];
-} {
+};
+
+function isDigestInputDataSummary(
+  value: unknown,
+): value is DigestArchiveInput {
   return typeof value === "object" && value !== null;
 }
 
 function decodeDigestInputData(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<{
-    stabilityIndex?: { score: number; band: string } | null;
-    totalMcapUsd?: number;
-    activeDepegCount?: number;
-    topDepegs?: unknown[];
-    dailyDigests?: unknown[];
-    nextTriggers?: unknown[];
-    forwardLookOutcomes?: unknown[];
-    riskTape?: unknown[];
-  }, "missing" | "json-parse-failed" | "invalid-shape">(
+  const decoded = decodeJsonString<DigestArchiveInput, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       mode: "best-effort",

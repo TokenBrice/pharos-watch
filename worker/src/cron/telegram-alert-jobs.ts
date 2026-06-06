@@ -8,6 +8,7 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import {
   buildDedupeKey,
   estimateTelegramDrainTimeSec,
+  hashDedupePart,
 } from "./telegram-pending-queue";
 import {
   expandSubscriberChunks,
@@ -21,15 +22,6 @@ export interface TelegramAlertJobManifest {
 }
 
 const ALERT_TYPES: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch"];
-
-function hashStable(value: string): string {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
 
 function severityForAlertType(alertType: TelegramAlertType): "risk" | "info" {
   return alertType === "launch" ? "info" : "risk";
@@ -54,7 +46,7 @@ export async function persistTelegramAlertJobManifests(
     if (messages.length === 0) continue;
 
     const targetKeys = messages.map((message) => buildDedupeKey(message)).sort();
-    const sourceEventId = `${alertType}:v1:${hashStable(targetKeys.join("|"))}`;
+    const sourceEventId = `${alertType}:v1:${hashDedupePart(targetKeys.join("|"))}`;
     const jobId = `telegram:${sourceEventId}`;
     const expiresAt = nowSec + ttlForAlertType(alertType);
     const lastCursor = targetKeys[targetKeys.length - 1] ?? null;

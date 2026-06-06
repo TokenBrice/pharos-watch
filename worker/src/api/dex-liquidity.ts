@@ -5,6 +5,7 @@ import {
   jsonResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { isMissingTableError } from "../lib/db";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import {
@@ -34,7 +35,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       .all<DexHistoryRow>(),
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices").all<DexPriceRow>().catch((err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("no such table")) {
+      if (isMissingTableError(err)) {
         return { results: [] as DexPriceRow[] };
       }
       console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);

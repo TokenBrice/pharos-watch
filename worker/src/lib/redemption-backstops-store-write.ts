@@ -15,7 +15,7 @@ export interface RedemptionBackstopRunRetentionResult {
 const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
 const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
 
-const SNAPSHOT_ROW_COLUMNS = [
+export const SNAPSHOT_ROW_COLUMNS = [
   "stablecoin_id",
   "score",
   "effective_exit_score",

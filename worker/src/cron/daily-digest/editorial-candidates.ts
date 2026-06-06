@@ -7,6 +7,7 @@ import type {
   DigestInputData,
 } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { round1 } from "@shared/lib/math";
 import {
   getDepegEditorialImpactScore,
   getDepegMarketImpactScore,
@@ -35,7 +36,7 @@ function addCandidate(
 ): void {
   candidates.push({
     ...candidate,
-    impactScore: Math.max(0, Math.round(candidate.impactScore * 10) / 10),
+    impactScore: Math.max(0, round1(candidate.impactScore)),
     symbols: [...new Set(candidate.symbols.map((symbol) => symbol.toUpperCase()))].slice(0, 4),
     headlineFacts: candidate.headlineFacts.filter(Boolean).slice(0, 4),
   });
@@ -174,7 +175,7 @@ function addMintBurnCandidates(candidates: DigestEditorialCandidate[], data: Dig
       headlineFacts: [
         `${formatCurrency(flows.flightToQuality.safeNetUsd)} into safe havens`,
         `${formatCurrency(flows.flightToQuality.riskyNetUsd)} out of risky coins`,
-        `Bank Run Gauge ${Math.round(flows.gaugeScore * 10) / 10} [${flows.gaugeBand}]`,
+        `Bank Run Gauge ${round1(flows.gaugeScore)} [${flows.gaugeBand}]`,
       ],
       whyItMatters: "Flow rotation reveals holder preference before market-cap totals fully settle.",
     });
@@ -193,7 +194,7 @@ function addMintBurnCandidates(candidates: DigestEditorialCandidate[], data: Dig
       headlineFacts: [
         `intensity ${Math.round(pressure.intensity)}`,
         `net ${formatCurrency(pressure.net24hUsd)} over 24h`,
-        `Bank Run Gauge ${Math.round(flows.gaugeScore * 10) / 10} [${flows.gaugeBand}]`,
+        `Bank Run Gauge ${round1(flows.gaugeScore)} [${flows.gaugeBand}]`,
       ],
       whyItMatters: "A large pressure shift against the 30-day baseline can flag changing holder behavior.",
     });

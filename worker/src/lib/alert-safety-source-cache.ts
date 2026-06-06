@@ -6,7 +6,7 @@ import {
 } from "@shared/lib/report-card-core";
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1 } from "@shared/lib/math";
-import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types";
+import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
@@ -16,7 +16,7 @@ const ALERT_SAFETY_DETAIL_MAX_CHARS = 160;
 
 const DIMENSION_KEYS = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
-export type AlertSafetySourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
+export type AlertSafetySourceState = SafetyAlertSourceState;
 
 export interface AlertSafetyDimensionSnapshot {
   grade: ReportCardGrade | string;

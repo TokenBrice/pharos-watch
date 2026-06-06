@@ -1,4 +1,4 @@
-import { batchExecute } from "./db";
+import { batchExecute, isMissingColumnError } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
@@ -107,11 +107,6 @@ function parseJsonStringArray(value: string | null | undefined): string[] {
   } catch {
     return [];
   }
-}
-
-function isMissingColumnError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.toLowerCase().includes("no such column");
 }
 
 export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCacheEntry>> {

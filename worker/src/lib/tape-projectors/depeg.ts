@@ -16,6 +16,7 @@ import {
   severityForDepegOpened,
 } from "../tape-event-helpers";
 import { getCache, setCache } from "../db-cache";
+import { isMissingColumnError } from "../db";
 import {
   getProjectorWatermark,
   insertTapeEvents,
@@ -77,8 +78,7 @@ async function fetchDepegRows(
   } catch (err) {
     // The depeg_events.methodology_version column was added later; tolerate
     // its absence on older databases the same way other readers do.
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.toLowerCase().includes("no such column")) throw err;
+    if (!isMissingColumnError(err)) throw err;
     const fallbackSql = sql.replace(", methodology_version", "");
     const result = await db.prepare(fallbackSql).bind(...binds).all<DepegSourceRow>();
     return result.results ?? [];
@@ -220,8 +220,7 @@ export async function projectDepegPeakWorsened(
   try {
     rowsResult = await db.prepare(sql).bind(limit).all<DepegSourceRow>();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.toLowerCase().includes("no such column")) throw err;
+    if (!isMissingColumnError(err)) throw err;
     const fallbackSql = sql.replace(", methodology_version", "");
     rowsResult = await db.prepare(fallbackSql).bind(limit).all<DepegSourceRow>();
   }

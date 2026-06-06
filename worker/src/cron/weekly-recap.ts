@@ -1,5 +1,7 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { THREAT_BAND_ORDER } from "@shared/lib/classification";
+import { round1 } from "@shared/lib/math";
 import {
   getDepegEditorialImpactScore,
   getDepegMarketImpactScore,
@@ -70,13 +72,7 @@ const WEEKLY_SYSTEM_PROMPT = [
 
 type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
 
-const DEWS_BAND_RANK: Record<string, number> = {
-  CALM: 0,
-  WATCH: 1,
-  ALERT: 2,
-  WARNING: 3,
-  DANGER: 4,
-};
+const DEWS_BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
 interface WeeklyDepegSignal {
   id: string;
@@ -732,7 +728,7 @@ function buildWeeklyPrompt(
   ];
 
   if (data.gaugeRange) {
-    lines.push(`Bank Run Gauge range: ${Math.round(data.gaugeRange.min * 10) / 10} to ${Math.round(data.gaugeRange.max * 10) / 10}`);
+    lines.push(`Bank Run Gauge range: ${round1(data.gaugeRange.min)} to ${round1(data.gaugeRange.max)}`);
   }
 
   lines.push("", "Weekly spike metrics (do not let averages erase these):");
@@ -740,7 +736,7 @@ function buildWeeklyPrompt(
     lines.push(`  Worst PSI day: ${data.spikeMetrics.minPsi.date}, ${data.spikeMetrics.minPsi.score} [${data.spikeMetrics.minPsi.band}]`);
   }
   if (data.spikeMetrics.minGauge) {
-    lines.push(`  Lowest Bank Run Gauge day: ${data.spikeMetrics.minGauge.date}, ${Math.round(data.spikeMetrics.minGauge.score * 10) / 10}`);
+    lines.push(`  Lowest Bank Run Gauge day: ${data.spikeMetrics.minGauge.date}, ${round1(data.spikeMetrics.minGauge.score)}`);
   }
   if (data.spikeMetrics.maxDepeg) {
     lines.push(`  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap`);
@@ -773,7 +769,7 @@ function buildWeeklyPrompt(
     for (const signal of data.weeklySignals.riskLeaderboard) {
       const critical = signal.critical ? " | critical" : "";
       const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
-      lines.push(`  ${signal.id} | ${signal.kind} | severity=${Math.round(signal.severityScore * 10) / 10} | impact=${Math.round(signal.impactScore * 10) / 10}${critical}${suppression}`);
+      lines.push(`  ${signal.id} | ${signal.kind} | severity=${round1(signal.severityScore)} | impact=${round1(signal.impactScore)}${critical}${suppression}`);
       lines.push(`    ${signal.label}`);
     }
   } else {

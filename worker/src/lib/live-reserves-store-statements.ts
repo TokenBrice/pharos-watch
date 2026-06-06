@@ -4,6 +4,10 @@ import type {
   ReserveSyncAttemptStartRecord,
   ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
+import {
+  RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS,
+  RESERVE_COMPOSITION_INSERT_COLUMNS,
+} from "./live-reserves-store-shared";
 
 const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 
@@ -14,27 +18,10 @@ export function buildReserveCompositionUpsertStatement(
   return db
     .prepare(
       `INSERT INTO reserve_composition (
-         stablecoin_id,
-         slices,
-         fetched_at,
-         source,
-         attempt_id,
-         metadata,
-         warning_count,
-         warnings,
-         adapter_source_model,
-         adapter_evidence_class
+${RESERVE_COMPOSITION_INSERT_COLUMNS}
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(stablecoin_id) DO UPDATE SET
-         slices = excluded.slices,
-         fetched_at = excluded.fetched_at,
-         source = excluded.source,
-         attempt_id = excluded.attempt_id,
-         metadata = excluded.metadata,
-         warning_count = excluded.warning_count,
-         warnings = excluded.warnings,
-         adapter_source_model = excluded.adapter_source_model,
-         adapter_evidence_class = excluded.adapter_evidence_class
+${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
        WHERE reserve_composition.fetched_at < excluded.fetched_at
           OR (reserve_composition.fetched_at = excluded.fetched_at AND reserve_composition.attempt_id IS NULL)`,
     )
@@ -59,16 +46,7 @@ export function buildReserveCompositionFinalizeSuccessStatement(
   return db
     .prepare(
       `INSERT INTO reserve_composition (
-         stablecoin_id,
-         slices,
-         fetched_at,
-         source,
-         attempt_id,
-         metadata,
-         warning_count,
-         warnings,
-         adapter_source_model,
-         adapter_evidence_class
+${RESERVE_COMPOSITION_INSERT_COLUMNS}
        )
        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
@@ -79,15 +57,7 @@ export function buildReserveCompositionFinalizeSuccessStatement(
             AND pending_attempt_id = ?
        )
        ON CONFLICT(stablecoin_id) DO UPDATE SET
-         slices = excluded.slices,
-         fetched_at = excluded.fetched_at,
-         source = excluded.source,
-         attempt_id = excluded.attempt_id,
-         metadata = excluded.metadata,
-         warning_count = excluded.warning_count,
-         warnings = excluded.warnings,
-         adapter_source_model = excluded.adapter_source_model,
-         adapter_evidence_class = excluded.adapter_evidence_class
+${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
        WHERE (
             reserve_composition.fetched_at < excluded.fetched_at
             OR (reserve_composition.fetched_at = excluded.fetched_at AND reserve_composition.attempt_id IS NULL)

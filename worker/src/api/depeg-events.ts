@@ -12,6 +12,7 @@ import {
   SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
+import { isMissingTableError } from "../lib/db";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -97,7 +98,7 @@ async function loadDexAvailability(
     ]));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading DEX availability:", msg);
     }
     return new Map();
@@ -125,7 +126,7 @@ async function loadPoolAvailability(
     ]));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading pool availability:", msg);
     }
     return new Map();
@@ -190,7 +191,7 @@ async function loadActiveIncidentProjections(
     return { projections, available: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading active incident projections:", msg);
     }
     return { projections: new Map(), available: false };

@@ -18,6 +18,7 @@ import {
 } from "@shared/lib/stability-index-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
+import { round1 } from "@shared/lib/math";
 
 import { isRecord } from "@shared/lib/type-guards";
 
@@ -150,7 +151,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   const contributors = Array.isArray(snapshot.value.contributors) ? snapshot.value.contributors : [];
   const inputDegradation = readPsiInputDegradation(snapshot.value);
 
-  const avg24h = avg24hRow?.avg != null ? Math.round(avg24hRow.avg * 10) / 10 : undefined;
+  const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : undefined;
   const avg24hBand = avg24h != null ? getConditionBand(avg24h) : undefined;
   const resolveMethodologyVersion = (version: string | null | undefined, ts: number) =>
     version ?? getPsiMethodologyVersionAt(ts);
@@ -188,7 +189,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Append today's running average as the last point if we have samples today
   if (todayAvgRow?.avg != null) {
-    const todayScore = Math.round(todayAvgRow.avg * 10) / 10;
+    const todayScore = round1(todayAvgRow.avg);
     const todayBand = getConditionBand(todayScore);
     const latestSampleTs = latestSample?.stored_at ?? todayMidnight;
     const todayMethodologyVersion =

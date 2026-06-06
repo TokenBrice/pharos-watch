@@ -1,5 +1,6 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { round1 } from "@shared/lib/math";
 import { classifyRegime } from "./prompt/regime";
 import {
   formatDigestUsdPrice,
@@ -108,7 +109,7 @@ export function buildUserPrompt(
     }
     if (gaugeTrajectory && gaugeTrajectory.length >= 3) {
       const gaugeMissing = gaugeTrajectory.length < 7 ? ` (${7 - gaugeTrajectory.length} days missing)` : "";
-      lines.push(`Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((point) => `${point.date}: ${Math.round(point.gaugeScore * 10) / 10}`).join(" -> ")}${gaugeMissing}`);
+      lines.push(`Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((point) => `${point.date}: ${round1(point.gaugeScore)}`).join(" -> ")}${gaugeMissing}`);
     }
   }
 
@@ -147,7 +148,7 @@ export function buildUserPrompt(
   if (data.mintBurnFlows) {
     const { gaugeScore, gaugeBand, flightToQuality, topPressure } = data.mintBurnFlows;
     lines.push("", "Mint/Burn Flows (24h on-chain):");
-    lines.push(`  Bank Run Gauge: ${Math.round(gaugeScore * 10) / 10} [${gaugeBand}]`);
+    lines.push(`  Bank Run Gauge: ${round1(gaugeScore)} [${gaugeBand}]`);
     if (flightToQuality.active) {
       lines.push(`  Flight-to-Quality: ACTIVE, ${formatCurrency(flightToQuality.safeNetUsd)} into safe havens, ${formatCurrency(flightToQuality.riskyNetUsd)} out of risky coins`);
     } else {

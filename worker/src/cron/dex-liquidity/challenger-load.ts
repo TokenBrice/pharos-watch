@@ -1,5 +1,6 @@
 import { detectDexPriceChallengerTableState } from "./challenger-publish";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
+import { isMissingTableError } from "../../lib/db";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import type {
   DexPriceChallengerLoadRow,
@@ -21,6 +22,17 @@ export async function loadPublishedDexPoolChallengers(
 ): Promise<DexPriceChallengerLoadResult> {
   const state = await detectDexPriceChallengerTableState(db);
   const legacy = await loadLegacyDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
+  const legacyFallbackResult = (): DexPriceChallengerLoadResult => ({
+    challengersByStablecoin: legacy.challengersByStablecoin,
+    diagnostics: {
+      mode: legacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
+      missingTables: true,
+      emptyPublishedCoins: [],
+      incompletePublishedCoins: [],
+      legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
+      staleSnapshotCoins: [],
+    },
+  });
 
   if (!state.challengersTable || !state.snapshotsTable) {
     recordRuntimeFallbackUsage("dex-challenger-legacy", {
@@ -76,7 +88,7 @@ export async function loadPublishedDexPoolChallengers(
     snapshotRows = snapshots.results ?? [];
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
     }
     recordRuntimeFallbackUsage("dex-challenger-legacy", {
@@ -84,17 +96,7 @@ export async function loadPublishedDexPoolChallengers(
       topPoolCoins: legacy.topPoolCoins.size,
       fallbackCoins: legacy.fallbackCoins.size,
     });
-    return {
-      challengersByStablecoin: legacy.challengersByStablecoin,
-      diagnostics: {
-        mode: legacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
-        missingTables: true,
-        emptyPublishedCoins: [],
-        incompletePublishedCoins: [],
-        legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
-        staleSnapshotCoins: [],
-      },
-    };
+    return legacyFallbackResult();
   }
 
   const snapshotByCoin = new Map(snapshotRows.map((row) => [row.stablecoin_id, row]));
@@ -129,7 +131,7 @@ export async function loadPublishedDexPoolChallengers(
     challengerRows = challengers.results ?? [];
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
+    if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading challenger rows:", msg);
     }
     recordRuntimeFallbackUsage("dex-challenger-legacy", {
@@ -137,17 +139,7 @@ export async function loadPublishedDexPoolChallengers(
       topPoolCoins: legacy.topPoolCoins.size,
       fallbackCoins: legacy.fallbackCoins.size,
     });
-    return {
-      challengersByStablecoin: legacy.challengersByStablecoin,
-      diagnostics: {
-        mode: legacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
-        missingTables: true,
-        emptyPublishedCoins: [],
-        incompletePublishedCoins: [],
-        legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
-        staleSnapshotCoins: [],
-      },
-    };
+    return legacyFallbackResult();
   }
 
   const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();

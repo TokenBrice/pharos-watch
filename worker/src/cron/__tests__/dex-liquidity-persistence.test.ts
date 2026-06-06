@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
+  isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
 
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";

@@ -14,6 +14,32 @@ interface StatusDiscrepancyStateRow {
   last_probe_alert_at: number | null;
 }
 
+type AlertTimestampColumn = "last_alert_at" | "last_probe_alert_at";
+
+async function markAlertColumn(
+  db: D1Database,
+  now: number,
+  column: AlertTimestampColumn,
+  issueCode: string,
+  action: string,
+  onIssue?: StatusPersistenceIssueReporter,
+): Promise<boolean> {
+  try {
+    await db
+      .prepare(
+        `UPDATE status_discrepancy_state
+         SET ${column} = ?, updated_at = ?
+         WHERE scope = ?`,
+      )
+      .bind(now, now, STATUS_SCOPE)
+      .run();
+    return true;
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, issueCode, action, error);
+    return false;
+  }
+}
+
 export async function updateDiscrepancyObservation(
   db: D1Database,
   now: number,
@@ -111,20 +137,14 @@ export async function markDiscrepancyAlertSent(
   now: number,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<boolean> {
-  try {
-    await db
-      .prepare(
-        `UPDATE status_discrepancy_state
-         SET last_alert_at = ?, updated_at = ?
-         WHERE scope = ?`,
-      )
-      .bind(now, now, STATUS_SCOPE)
-      .run();
-    return true;
-  } catch (error) {
-    reportStatusPersistenceIssue(onIssue, "status_discrepancy_alert_write_failed", "mark-discrepancy-alert", error);
-    return false;
-  }
+  return markAlertColumn(
+    db,
+    now,
+    "last_alert_at",
+    "status_discrepancy_alert_write_failed",
+    "mark-discrepancy-alert",
+    onIssue,
+  );
 }
 
 export async function markProbeFailureAlertSent(
@@ -132,20 +152,7 @@ export async function markProbeFailureAlertSent(
   now: number,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<boolean> {
-  try {
-    await db
-      .prepare(
-        `UPDATE status_discrepancy_state
-         SET last_probe_alert_at = ?, updated_at = ?
-         WHERE scope = ?`,
-      )
-      .bind(now, now, STATUS_SCOPE)
-      .run();
-    return true;
-  } catch (error) {
-    reportStatusPersistenceIssue(onIssue, "status_probe_alert_write_failed", "mark-probe-alert", error);
-    return false;
-  }
+  return markAlertColumn(db, now, "last_probe_alert_at", "status_probe_alert_write_failed", "mark-probe-alert", onIssue);
 }
 
 export async function getDiscrepancyStreak(

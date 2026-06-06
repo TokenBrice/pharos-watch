@@ -66,6 +66,27 @@ async function loadSnapshotRow(db: D1Database, date: string): Promise<PublicSnap
     .first<PublicSnapshotRow>();
 }
 
+async function loadSnapshotBytes(
+  db: D1Database,
+  date: string,
+): Promise<{ row: PublicSnapshotRow; bytes: Uint8Array } | Response> {
+  if (!SNAPSHOT_DATE_PATTERN.test(date)) {
+    return errorResponse(400, "Invalid snapshot date — expected YYYY-MM-DD");
+  }
+
+  const row = await loadSnapshotRow(db, date);
+  if (!row) {
+    return errorResponse(404, "No snapshot for this date");
+  }
+
+  const bytes = toUint8Array(row.payload_gz);
+  if (!bytes) {
+    return errorResponse(500, "Snapshot payload unreadable");
+  }
+
+  return { row, bytes };
+}
+
 export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (db: D1Database): Promise<Response> => {
   const result = await db
     .prepare(
@@ -88,23 +109,12 @@ export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
   db: D1Database,
   date: string,
 ): Promise<Response> => {
-  if (!SNAPSHOT_DATE_PATTERN.test(date)) {
-    return errorResponse(400, "Invalid snapshot date — expected YYYY-MM-DD");
-  }
-
-  const row = await loadSnapshotRow(db, date);
-  if (!row) {
-    return errorResponse(404, "No snapshot for this date");
-  }
-
-  const bytes = toUint8Array(row.payload_gz);
-  if (!bytes) {
-    return errorResponse(500, "Snapshot payload unreadable");
-  }
+  const loaded = await loadSnapshotBytes(db, date);
+  if (loaded instanceof Response) return loaded;
 
   let payload: string;
   try {
-    payload = await gunzipToString(bytes);
+    payload = await gunzipToString(loaded.bytes);
   } catch (err) {
     console.error(`[snapshot-day] decompress failed for ${date}:`, err);
     return errorResponse(500, "Snapshot payload corrupted");
@@ -115,7 +125,7 @@ export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": IMMUTABLE_CACHE_CONTROL,
-      ETag: `"${row.content_hash}"`,
+      ETag: `"${loaded.row.content_hash}"`,
     },
   });
 });
@@ -125,19 +135,8 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
   date: string,
   stablecoinId: string,
 ): Promise<Response> => {
-  if (!SNAPSHOT_DATE_PATTERN.test(date)) {
-    return errorResponse(400, "Invalid snapshot date — expected YYYY-MM-DD");
-  }
-
-  const row = await loadSnapshotRow(db, date);
-  if (!row) {
-    return errorResponse(404, "No snapshot for this date");
-  }
-
-  const bytes = toUint8Array(row.payload_gz);
-  if (!bytes) {
-    return errorResponse(500, "Snapshot payload unreadable");
-  }
+  const loaded = await loadSnapshotBytes(db, date);
+  if (loaded instanceof Response) return loaded;
 
   let envelope: {
     snapshotDate?: string;
@@ -150,7 +149,7 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
     liquidity?: { stablecoinId: string }[];
   };
   try {
-    envelope = JSON.parse(await gunzipToString(bytes));
+    envelope = JSON.parse(await gunzipToString(loaded.bytes));
   } catch (err) {
     console.error(`[snapshot-coin] decompress/parse failed for ${date}:`, err);
     return errorResponse(500, "Snapshot payload corrupted");
@@ -172,8 +171,8 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
   const projected = {
     snapshotDate: envelope.snapshotDate ?? date,
     stablecoinId,
-    generatedAt: envelope.generatedAt ?? row.created_at,
-    methodologyVersions: envelope.methodologyVersions ?? safeParseMethodology(row.methodology_versions),
+    generatedAt: envelope.generatedAt ?? loaded.row.created_at,
+    methodologyVersions: envelope.methodologyVersions ?? safeParseMethodology(loaded.row.methodology_versions),
     stablecoin,
     scores: {
       reportCard,
@@ -186,7 +185,7 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
   return jsonResponse(projected, {
     headers: {
       "Cache-Control": IMMUTABLE_CACHE_CONTROL,
-      ETag: `"${row.content_hash}-${stablecoinId}"`,
+      ETag: `"${loaded.row.content_hash}-${stablecoinId}"`,
     },
   });
 });
