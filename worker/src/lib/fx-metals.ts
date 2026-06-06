@@ -31,9 +31,15 @@ export interface MetalsResolution {
   sources: MetalSourceSummary;
 }
 
+const METAL_CROSS_CHECK_MAX_DIVERGENCE = 0.05;
+
 const MetalPriceSchema = z.object({
   price: z.number(),
 });
+
+function relativeDivergence(candidate: number, reference: number): number {
+  return Math.abs(candidate - reference) / reference;
+}
 
 function deriveCommodityPeerMedianRates(
   peggedAssets: Parameters<typeof derivePegRates>[0],
@@ -125,14 +131,25 @@ export async function resolveMetalReferenceRates(
   };
 
   const resolveMetal = (pegKey: MetalPegKey, candidateRate: number | undefined): ResolvedMetalRate | null => {
+    const peerMedian = resolvePeerMedian(pegKey);
     if (typeof candidateRate === "number" && candidateRate > 0 && validateRate(pegKey, candidateRate, prevRates[pegKey])) {
+      if (peerMedian) {
+        const divergence = relativeDivergence(candidateRate, peerMedian.rate);
+        if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {
+          console.warn(
+            `[sync-fx-rates] Rejected gold-api.com ${pegKey} rate ${candidateRate} because it diverged ` +
+            `${Number((divergence * 100).toFixed(1))}% from commodity peer median ${peerMedian.rate}`,
+          );
+          return peerMedian;
+        }
+      }
       return {
         rate: candidateRate,
         source: "gold-api.com",
         updatedAt: syncStartSec,
       };
     }
-    return resolvePeerMedian(pegKey) ?? resolveCached(pegKey);
+    return peerMedian ?? resolveCached(pegKey);
   };
 
   try {

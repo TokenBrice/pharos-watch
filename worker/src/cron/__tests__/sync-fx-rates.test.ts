@@ -225,6 +225,115 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedSILVER).toBeNull();
   });
 
+  it("rejects gold-api.com metal spots that diverge from the commodity peer median", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockFetch([
+      {
+        match: "frankfurter.dev",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "currency-api",
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 3100 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 120;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "xaut-tether",
+                name: "Tether Gold",
+                symbol: "XAUT",
+                pegType: "peggedGOLD",
+                pegMechanism: "rwa-backed",
+                price: 2910,
+                priceSource: "defillama",
+                circulating: { peggedGOLD: 100_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+              {
+                id: "paxg-paxos",
+                name: "Pax Gold",
+                symbol: "PAXG",
+                pegType: "peggedGOLD",
+                pegMechanism: "rwa-backed",
+                price: 2900,
+                priceSource: "defillama",
+                circulating: { peggedGOLD: 80_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+              {
+                id: "kag-kinesis",
+                name: "Kinesis Silver",
+                symbol: "KAG",
+                pegType: "peggedSILVER",
+                pegMechanism: "rwa-backed",
+                price: 31.5,
+                priceSource: "defillama",
+                circulating: { peggedSILVER: 2_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+            ],
+          }),
+          updated_at: stablecoinsUpdatedAt,
+        },
+      },
+    ]);
+
+    const result = await syncFxRates(db);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("live");
+    expect(metadata.sources["gold-api.com"]).toBe("partial");
+    expect(metadata.sources["commodity-peer-median"]).toBe("partial");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Rejected gold-api.com peggedGOLD rate 3100"));
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
+    expect(cachedRates.peggedSILVER).toBeCloseTo(32, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(Math.floor(Date.now() / 1000));
+  });
+
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
     mockFetch([
       {
@@ -780,7 +889,7 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
   });
 
-  it("does not let an older Chainlink silver quote replace a fresher resolved metal source", async () => {
+  it("validates an older Chainlink silver quote without replacing a fresher resolved metal source", async () => {
     const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const nowSec = Math.floor(Date.now() / 1000);
     const olderUpdatedAt = nowSec - (11 * 3600);
@@ -789,6 +898,93 @@ describe("syncFxRates", () => {
       "0x" +
       toHexWord(1n) +
       toHexWord(3_200_000_000n) +
+      toHexWord(0n) +
+      toHexWord(BigInt(olderUpdatedAt)) +
+      toHexWord(1n);
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("frankfurter.dev")) {
+        return new Response(JSON.stringify({
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        }), { status: 200 });
+      }
+      if (url.includes("currency-api")) {
+        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }), { status: 200 });
+      }
+      if (url.includes("gold-api.com/price/XAU")) {
+        return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
+      }
+      if (url.includes("gold-api.com/price/XAG")) {
+        return new Response(JSON.stringify({ price: 32 }), { status: 200 });
+      }
+      if (url === "https://rpc.ethereum.test") {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { params?: Array<{ to?: string; data?: string }> };
+        const call = body.params?.[0];
+        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0x313ce567") {
+          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: decimalsHex }), { status: 200 });
+        }
+        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0xfeaf968c") {
+          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: latestRoundDataHex }), { status: 200 });
+        }
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+    const chainRpcs = new Map([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm" as const,
+        rpcUrl: "https://rpc.ethereum.test",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+
+    const result = await syncFxRates(db, undefined, undefined, chainRpcs);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };
+    expect(metadata.sources?.chainlink).toBe("ok");
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(32, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number>;
+      sourceCadenceByPeg: Record<string, string>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec);
+    expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
+
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-older-metal-quote-validated")).toBeDefined();
+  });
+
+  it("checks older Chainlink metal quotes for divergence before skipping them", async () => {
+    const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
+    const nowSec = Math.floor(Date.now() / 1000);
+    const olderUpdatedAt = nowSec - (11 * 3600);
+    const toHexWord = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
+    const latestRoundDataHex =
+      "0x" +
+      toHexWord(1n) +
+      toHexWord(4_200_000_000n) +
       toHexWord(0n) +
       toHexWord(BigInt(olderUpdatedAt)) +
       toHexWord(1n);
@@ -859,10 +1055,9 @@ describe("syncFxRates", () => {
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
       sourceUpdatedAtByPeg: Record<string, number>;
-      sourceCadenceByPeg: Record<string, string>;
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec);
-    expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-rate-diverged")).toBeDefined();
   });
 
   it("reconstructs daily fiat provenance from same-day live timestamps during carry-forward", async () => {

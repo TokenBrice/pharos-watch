@@ -5,7 +5,7 @@ import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote } fr
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
-import type { MetalsResolution } from "../lib/fx-metals";
+import type { MetalPegKey, MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
 import { getFxSourceStatus, persistFxRateState } from "../lib/fx-rate-state";
 import { logCronEvent, type CronEventInput, type CronResult } from "../lib/cron-logger";
@@ -16,6 +16,12 @@ import {
 } from "../lib/fx-source-metadata";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
+const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;
+const CHAINLINK_METAL_PEG_KEYS = new Set<string>(["peggedGOLD", "peggedSILVER"]);
+
+function isChainlinkMetalPegKey(pegKey: string): pegKey is MetalPegKey {
+  return CHAINLINK_METAL_PEG_KEYS.has(pegKey);
+}
 
 async function loadChainlinkFailingRuns(db: D1Database): Promise<Record<string, number> | undefined> {
   const cached = await getCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY);
@@ -493,16 +499,18 @@ export class FxSyncRunState {
   }
 
   applyChainlinkQuotes(quotes: Map<string, ChainlinkReferenceQuote>): number {
-    let applied = 0;
+    let accepted = 0;
 
     for (const [pegKey, quote] of quotes) {
       const existingUpdatedAt = this.sourceUpdatedAtByPeg[pegKey] ?? null;
-      if (
+      const quoteOlderThanCurrent =
         existingUpdatedAt != null &&
         Number.isFinite(existingUpdatedAt) &&
         existingUpdatedAt > 0 &&
-        quote.updatedAt < existingUpdatedAt
-      ) {
+        quote.updatedAt < existingUpdatedAt;
+      const metalPegKey = isChainlinkMetalPegKey(pegKey);
+
+      if (quoteOlderThanCurrent && !metalPegKey) {
         this.recordCronEvent({
           eventType: "chainlink-older-quote-skipped",
           severity: "info",
@@ -515,7 +523,7 @@ export class FxSyncRunState {
       const existing = this.usableRates[pegKey];
       if (existing != null && existing > 0) {
         const delta = Math.abs(quote.price - existing) / existing;
-        if (delta > 0.05) {
+        if (delta > CHAINLINK_REFERENCE_MAX_DIVERGENCE) {
           this.recordCronEvent({
             eventType: "chainlink-rate-diverged",
             severity: "warning",
@@ -533,6 +541,22 @@ export class FxSyncRunState {
 
       const normalized = Number(quote.price.toFixed(6));
       if (this.validateRate(pegKey, normalized, this.prevRates[pegKey])) {
+        if (quoteOlderThanCurrent && metalPegKey && existing != null && existing > 0) {
+          this.recordCronEvent({
+            eventType: "chainlink-older-metal-quote-validated",
+            severity: "info",
+            message: "Validated older Chainlink metal quote against current reference.",
+            metadata: {
+              pegKey,
+              currentRate: existing,
+              chainlinkRate: normalized,
+              chainlinkUpdatedAt: quote.updatedAt,
+              existingUpdatedAt,
+            },
+          });
+          accepted++;
+          continue;
+        }
         this.usableRates[pegKey] = normalized;
         applyRealtimeOverlaySourceMetadata(
           pegKey,
@@ -543,14 +567,14 @@ export class FxSyncRunState {
           this.sourceCadenceByPeg,
           this.sourceDateByPeg,
         );
-        applied++;
+        accepted++;
       } else if (this.prevRates[pegKey]) {
         this.usableRates[pegKey] = this.prevRates[pegKey]!;
         this.inheritPrevious(pegKey);
       }
     }
 
-    return applied;
+    return accepted;
   }
 
   ensureCachedRate(pegKey: string, label: string): boolean {
@@ -773,7 +797,7 @@ export async function runChainlinkOverlay(
       etherscanApiKey,
       previousFailingRuns,
     );
-    const applied = state.applyChainlinkQuotes(snapshot.quotes);
+    const accepted = state.applyChainlinkQuotes(snapshot.quotes);
     await runBestEffort("recordOutcome:chainlink-feeds", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
     });
@@ -781,7 +805,7 @@ export async function runChainlinkOverlay(
       await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
     });
     return snapshot.quotes.size > 0
-      ? (applied === snapshot.quotes.size ? "ok" : "partial")
+      ? (accepted === snapshot.quotes.size ? "ok" : "partial")
       : "unavailable";
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
