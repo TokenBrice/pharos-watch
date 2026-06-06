@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 48,
+    "fileLines": 43,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -14,7 +14,7 @@
   "shared/lib/format.ts": {
     "fileLines": 340,
     "maxFunctionLines": 30,
-    "branchCount": 84,
+    "branchCount": 83,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 306,
@@ -132,8 +132,8 @@
     "notes": "Liquidity copy is isolated now. A follow-up split should extract long table-heavy detail blocks if the section grows again."
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "fileLines": 309,
-    "maxFunctionLines": 297,
+    "fileLines": 311,
+    "maxFunctionLines": 299,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -384,8 +384,8 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 361,
-    "maxFunctionLines": 282,
+    "fileLines": 371,
+    "maxFunctionLines": 291,
     "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
@@ -432,8 +432,8 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 229,
-    "maxFunctionLines": 153,
+    "fileLines": 233,
+    "maxFunctionLines": 157,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -444,9 +444,9 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 104,
-    "maxFunctionLines": 66,
-    "branchCount": 6,
+    "fileLines": 102,
+    "maxFunctionLines": 64,
+    "branchCount": 5,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 132,
