@@ -26,6 +26,7 @@ export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
+export const DETERMINISTIC_APY_SANITY_MAX = 300;
 
 export {
   computePYS,
@@ -92,6 +93,10 @@ export function computeApyFromRate(rateNow: number, ratePrev: number, days: numb
 
 export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): number {
   return computeApyFromRate(priceNow, pricePrev, days);
+}
+
+export function isDeterministicApyWithinSanityBounds(apy: number): boolean {
+  return Number.isFinite(apy) && apy <= DETERMINISTIC_APY_SANITY_MAX;
 }
 
 export function computeYieldStability(apySamples: number[]): number | null {

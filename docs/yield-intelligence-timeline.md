@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.19`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.20`.
+
+---
+
+## v8.20 - Deterministic APY Sanity Envelope (June 6, 2026)
+
+- Generic on-chain exchange-rate APY and price-derived NAV APY now share a 300% sanity envelope for annualized observations
+- Out-of-envelope Tier 1 on-chain rows are skipped instead of being published or stored as fresh exchange-rate anchors
+- Out-of-envelope Tier 3 price-derived rows return no source, allowing curated DeFiLlama, protocol-API, or rate-derived rows to win arbitration
+- Protocol-specific adapters and benchmark rate-derived rows keep their existing source-family rules; the guard only covers generic short-window annualization
 
 ---
 

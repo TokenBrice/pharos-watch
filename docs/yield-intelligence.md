@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.19`
+- **Current methodology version:** `v8.20`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.20 rejects generic deterministic APY observations when exchange-rate or price-derived annualization exceeds the shared 300% sanity envelope. Out-of-envelope Tier 1 on-chain rows are skipped without storing the suspicious current exchange rate as a fresh anchor; out-of-envelope Tier 3 price-derived rows return no source so curated DeFiLlama, protocol-API, or rate-derived rows can win arbitration. Protocol-specific adapters and benchmark rate-derived rows keep their existing source-family rules.
 
 Yield v8.19 adds Royco Dawn structured-tranche opportunities as protocol-native Yield Intelligence rows. Senior and junior rows publish under `royco-dawn:<chainId>:<marketId>:senior` / `royco-dawn:<chainId>:<marketId>:junior`, attach to the tracked underlying stablecoin when the deposit token resolves, and use an opportunity-level tranche Safety Score for PYS while leaving the underlying Report Card Safety Score unchanged.
 
@@ -132,6 +134,8 @@ Currently configured for 11 generic vaults (all use selector `0x07a2d13a` — `c
 ```
 apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
+
+The generic exchange-rate reader rejects computed APY above `DETERMINISTIC_APY_SANITY_MAX = 300`. Rejected observations are not published as `onchain` rows and the suspicious current exchange rate is not written as a new anchor; the resolver continues through lower tiers so curated DeFiLlama, protocol-API, or rate-derived coverage can win. Negative APY remains allowed because it is bounded by the ratio formula and can be useful stress evidence.
 
 Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 emits a seed row with `currentApy: 0`, `apyBase: null`, and the current `exchangeRate` so the rate is persisted in `yield_history`. This breaks the bootstrapping deadlock: without the seed, the on-chain source would never resolve because it needs a 7-day-old rate, but the rate was never stored because the source never resolved. Subsequent syncs (7+ days later) will find the seed rate and compute a real APY. Once real on-chain APY samples exist, those bootstrap seeds are excluded from rolling `apy7d`, `apy30d`, `excessYield`, yield stability, and PYS calculations because they are anchor placeholders, not observed zero-yield periods.
 
@@ -271,6 +275,8 @@ apy = ((price_now / price_anchor) ^ (365.25 / lookbackDays) - 1) * 100
 ```
 
 Zero new API calls — reuses cached price data. Falls through if no price history exists or if the coin has fewer than 7 days of priced history.
+
+The same 300% deterministic APY sanity envelope applies to price-derived rows. A transient price spike, token migration, or one-off NAV correction above that envelope returns no price-derived source instead of publishing a headline APY or displacing a sane curated source.
 
 **Tier 3 as additional source:** For `navToken` and `PRICE_DERIVED_FALLBACK_IDS` coins, Tier 3 also runs when Tier 2 found sources but they all report 0% APY. This handles DL pools that exist but have stale/broken yield data (e.g., a tiny Aave lending market matched via Layer 3 symbol fallback). The price-derived source is added alongside the DL source, and `is_best` picks the higher-APY winner.
 
@@ -779,8 +785,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.19",
-    "currentVersion": "8.19",
+    "version": "8.20",
+    "currentVersion": "8.20",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

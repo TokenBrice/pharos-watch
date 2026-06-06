@@ -2645,8 +2645,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.19",
-    "currentVersion": "8.19",
+    "version": "8.20",
+    "currentVersion": "8.20",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2711,7 +2711,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `sourceRisk.accessRestricted`     | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                           | Whether the source marks jurisdictional or other access restrictions                                                                                    |
 | `rankChangeAttribution`           | ranking rows                | `object \| null \| undefined`                                                                                                                                                             | Optional previous-rank/PYS delta attribution with primary driver and contribution hints                                                                 |
 
-Current `v8.19` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Current `v8.20` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. Generic on-chain exchange-rate and price-derived APY observations above the deterministic 300% sanity envelope are rejected before publication; protocol-specific adapters and benchmark rate-derived rows retain their family-specific rules. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 

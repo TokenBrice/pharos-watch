@@ -1194,6 +1194,46 @@ describe("price-derived and auto-discovery yield paths", () => {
     expect(priceDerivedRow).toBeDefined();
   });
 
+  it("skips price-derived APY when annualization exceeds the deterministic sanity cap", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      {
+        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        matchBinds: ["sdai-maker"],
+        rows: [],
+        first: { price: 1.2, snapshot_date: nowSec },
+      },
+      {
+        match: "FROM supply_history",
+        matchBinds: ["sdai-maker", nowSec - 45 * 86400, nowSec - 7 * 86400],
+        rows: [],
+        first: { price: 1.0, snapshot_date: nowSec - 7 * 86400 },
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = getWriteStatements();
+    const priceDerivedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "sdai-maker" && stmt.boundValues?.[12] === "price-derived",
+    );
+    expect(priceDerivedRow).toBeUndefined();
+  });
+
   it("resolves auto-discovery lending pool for non-yield-bearing coin", async () => {
     const db = makeDb();
     setupDefaultMocks();
@@ -1332,6 +1372,65 @@ describe("on-chain rate bootstrapping seed", () => {
     expect(anchorQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
 
     // Clean up
+    configs.length = 0;
+  });
+
+  it("skips on-chain APY when annualization exceeds the deterministic sanity cap", async () => {
+    const configs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    configs.push({
+      stablecoinId: "usde-ethena",
+      chain: "ethereum",
+      contract: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    vi.spyOn(yieldSourcesModule, "fetchOnChainRates").mockResolvedValue({
+      rates: new Map([["usde-ethena", { rate: 1.2 }]]),
+      failureBreakdown: null,
+    });
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "usde-ethena",
+            source_key: "onchain:usde-ethena",
+            recorded_at: nowSec - 7 * 86400,
+            is_best: 1,
+            apy: 5,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const stmts = getWriteStatements();
+    expect(findYieldDataRow(stmts, "usde-ethena", "onchain:usde-ethena")).toBeUndefined();
+
     configs.length = 0;
   });
 });

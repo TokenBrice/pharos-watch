@@ -4,6 +4,7 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 import {
   buildOnChainSourceKey,
   computeApyFromRate,
+  isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
 } from "../yield-helpers";
 import {
@@ -134,24 +135,26 @@ export async function resolveTrackedYieldSources(params: {
       if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
         const actualDays = (params.startSec - prevRow.recordedAt) / DAY_SECONDS;
         const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
-        const nativePoolId = YIELD_POOL_MAP[id] ?? null;
-        resolved.push({
-          id,
-          symbol,
-          yield: {
-            currentApy: apy,
-            apyBase: apy,
-            apyReward: null,
-            sourcePool: nativePoolId,
-            sourceTvlUsd: null,
-            dataSource: "onchain",
-            exchangeRate: rate,
-            sourceKey: buildOnChainSourceKey(id),
-            sourceObservedAt: params.startSec,
-            comparisonAnchorObservedAt: prevRow.recordedAt,
-          },
-        });
-        hasAnySource = true;
+        if (isDeterministicApyWithinSanityBounds(apy)) {
+          const nativePoolId = YIELD_POOL_MAP[id] ?? null;
+          resolved.push({
+            id,
+            symbol,
+            yield: {
+              currentApy: apy,
+              apyBase: apy,
+              apyReward: null,
+              sourcePool: nativePoolId,
+              sourceTvlUsd: null,
+              dataSource: "onchain",
+              exchangeRate: rate,
+              sourceKey: buildOnChainSourceKey(id),
+              sourceObservedAt: params.startSec,
+              comparisonAnchorObservedAt: prevRow.recordedAt,
+            },
+          });
+          hasAnySource = true;
+        }
       } else {
         resolved.push({
           id,

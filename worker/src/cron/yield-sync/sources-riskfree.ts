@@ -1,7 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldBenchmarkMeta } from "@shared/types/yield";
 import { getCache } from "../../lib/db-cache";
-import { computeApyFromPrice } from "../yield-helpers";
+import { computeApyFromPrice, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { parseRiskFreeRateCache, parseRiskFreeRatesCache } from "./cache";
 
@@ -45,9 +45,11 @@ export async function getPriceDerivedApy(
 
   const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / DAY_SECONDS;
   if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
+  const apy = computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays);
+  if (!isDeterministicApyWithinSanityBounds(apy)) return null;
 
   return {
-    apy: computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays),
+    apy,
     sourceObservedAt: recentRow.snapshot_date,
     comparisonAnchorObservedAt: anchoredRow.snapshot_date,
   };

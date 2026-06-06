@@ -4,6 +4,7 @@ import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
   computePYS,
@@ -12,6 +13,7 @@ import {
   derivePysNullReason,
   detectWarningSignals,
   getRankingStaleThresholdMs,
+  isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
@@ -87,6 +89,14 @@ describe("computeApyFromRate", () => {
     const rateApy = computeApyFromRate(1.05, 1.0, 30);
     const priceApy = computeApyFromPrice(1.05, 1.0, 30);
     expect(rateApy).toBe(priceApy);
+  });
+
+  it("flags extreme deterministic annualization as outside the sanity envelope", () => {
+    const apy = computeApyFromRate(1.02, 1.0, 3);
+    expect(apy).toBeGreaterThan(DETERMINISTIC_APY_SANITY_MAX);
+    expect(isDeterministicApyWithinSanityBounds(apy)).toBe(false);
+    expect(isDeterministicApyWithinSanityBounds(5)).toBe(true);
+    expect(isDeterministicApyWithinSanityBounds(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
 

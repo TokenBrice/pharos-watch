@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.20",
+    title: "Deterministic APY Sanity Envelope",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "Deterministic exchange-rate and price-derived APY rows are now rejected when short-window annualization exceeds the shared sanity ceiling.",
+    impact: [
+      "Adds a shared 300% APY sanity envelope for generic on-chain exchange-rate and price-derived observations",
+      "Rejects out-of-envelope Tier 1 on-chain rows instead of publishing or storing the suspicious current exchange rate as a fresh history anchor",
+      "Rejects out-of-envelope price-derived NAV rows so curated DeFiLlama, protocol API, or rate-derived rows can win arbitration instead of being displaced by a transient price spike",
+      "Protocol-specific adapters and benchmark rate-derived rows keep their existing source-family rules and are not governed by this generic annualization guard",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.19",
     title: "Royco Dawn Tranche Opportunities",
     date: "2026-06-03",
