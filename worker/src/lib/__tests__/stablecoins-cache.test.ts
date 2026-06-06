@@ -128,11 +128,25 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
-  it("marks legacy array payloads as degraded when enabled", async () => {
+  it("fails closed on legacy array payloads in strict mode", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
+      allowLegacyArray: true,
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.reason).toBe("legacy-array-payload");
+    }
+  });
+
+  it("marks legacy array payloads as degraded in lenient mode when enabled", async () => {
+    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
+
+    const result = await loadStablecoinsCache(db, {
+      mode: "lenient",
       allowLegacyArray: true,
     });
 
@@ -205,7 +219,7 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
-  it("returns degraded filtered count in critical-field compatibility mode", async () => {
+  it("rejects malformed entries in strict critical-field mode", async () => {
     const db = makeDbWithStablecoinsValue(
       JSON.stringify({
         peggedAssets: [
@@ -217,6 +231,27 @@ describe("loadStablecoinsCache", () => {
 
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
+      contract: "critical-fields",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.reason).toBe("filtered-malformed-entries");
+    }
+  });
+
+  it("returns degraded filtered count in lenient critical-field compatibility mode", async () => {
+    const db = makeDbWithStablecoinsValue(
+      JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT" },
+          { id: "broken-coin" },
+        ],
+      }),
+    );
+
+    const result = await loadStablecoinsCache(db, {
+      mode: "lenient",
       contract: "critical-fields",
     });
 

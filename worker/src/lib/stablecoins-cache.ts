@@ -175,7 +175,6 @@ function normalizePayload(
 }
 
 function toFailure(
-  _mode: "strict" | "lenient",
   reason: StablecoinsCacheFailureReason,
   updatedAt: number | null,
 ): StablecoinsCacheLoadError {
@@ -235,7 +234,7 @@ export async function loadStablecoinsCache(
   );
 
   if (!decoded.ok) {
-    if (decoded.payload != null) {
+    if (decoded.payload != null && mode === "lenient") {
       if (decoded.reason === "legacy-array-payload") {
         recordRuntimeFallbackUsage("stablecoins-cache-legacy-array", {
           updatedAt: decoded.updatedAt,
@@ -250,7 +249,7 @@ export async function loadStablecoinsCache(
         filteredCount: decoded.payload.filteredCount,
       };
     }
-    return toFailure(mode, decoded.reason, decoded.updatedAt);
+    return toFailure(decoded.reason, decoded.updatedAt);
   }
 
   return {
