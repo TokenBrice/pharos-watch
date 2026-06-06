@@ -160,6 +160,7 @@ export class FxSyncRunState {
   readonly sourceModeByPeg: Record<string, FxRateSourceMode> = {};
   readonly sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
   readonly sourceDateByPeg: Record<string, string | null> = {};
+  private readonly provisionalRealtimeOverlayPegs = new Set<string>();
 
   usableRates: Record<string, number> = {};
   mode: FxRateSyncMode = "live";
@@ -490,8 +491,26 @@ export class FxSyncRunState {
             },
           });
         }
-      } else if (this.validateRate(pegKey, realtimeRate, this.prevRates[pegKey])) {
-        applyRealtimeRate(pegKey, realtimeRate);
+      } else {
+        const prevRate = this.prevRates[pegKey];
+        const hasPreviousRate =
+          typeof prevRate === "number" && Number.isFinite(prevRate) && prevRate > 0;
+        if (!hasPreviousRate) {
+          if (this.validateRate(pegKey, realtimeRate, undefined)) {
+            this.provisionalRealtimeOverlayPegs.add(pegKey);
+            this.recordCronEvent({
+              eventType: "realtime-rate-provisional",
+              severity: "warning",
+              message: "Realtime FX rate lacked current or previous reference.",
+              metadata: { pegKey, realtimeRate },
+            });
+          }
+          continue;
+        }
+
+        if (this.validateRate(pegKey, realtimeRate, prevRate)) {
+          applyRealtimeRate(pegKey, realtimeRate);
+        }
       }
     }
 
@@ -663,11 +682,15 @@ export class FxSyncRunState {
   buildResultMetadata(secondaryPegKeys: string[]): Record<string, unknown> {
     const missing = this.getMissingPegKeys();
     const meta = this.buildPersistedMeta();
+    const provisionalRealtimeOverlayPegs = [...this.provisionalRealtimeOverlayPegs];
     return {
       rateCount: Object.keys(this.usableRates).length,
       mode: this.mode,
       fallbackMode: this.fallbackMode,
       missing: missing.length > 0 ? missing : undefined,
+      provisionalRealtimeOverlayPegs: provisionalRealtimeOverlayPegs.length > 0
+        ? provisionalRealtimeOverlayPegs
+        : undefined,
       validationIssues: this.validationIssues,
       secondaryCoverage: secondaryPegKeys.filter((pegKey) => pegKey in this.usableRates).length,
       ecbDate: this.ecbDate ?? undefined,
