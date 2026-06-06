@@ -61,8 +61,8 @@ export function buildContentSecurityPolicy(nonce: string, options: ContentSecuri
 }
 
 export function addNonceToInlineScripts(html: string, nonce: string): string {
-  return html.replace(
-    /<script(?![^>]*\bsrc=)(?![^>]*\bnonce=)([^>]*)>/gi,
-    `<script nonce="${nonce}"$1>`,
-  );
+  return html.replace(/<script(?![^>]*\bsrc=)([^>]*)>/gi, (_tag, attrs: string) => {
+    const attrsWithoutNonce = attrs.replace(/\s+nonce=(?:"[^"]*"|'[^']*'|[^\s>]*)/i, "");
+    return `<script nonce="${nonce}"${attrsWithoutNonce}>`;
+  });
 }

@@ -193,6 +193,8 @@ describe("pages middleware markdown negotiation", () => {
     const html = [
       "<html><head>",
       "<script>window.__INLINE_ONE__ = true;</script>",
+      "<script nonce=\"route-nonce\">window.__INLINE_TWO__ = true;</script>",
+      "<script nonce=\"\">window.__INLINE_THREE__ = true;</script>",
       "<script src=\"/_next/static/chunks/app.js\"></script>",
       "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\"}</script>",
       "</head></html>",
@@ -212,6 +214,9 @@ describe("pages middleware markdown negotiation", () => {
     expect(res.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(res.headers.get("CDN-Cache-Control")).toBe("no-store");
     expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_ONE__ = true;<\/script>/);
+    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_TWO__ = true;<\/script>/);
+    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_THREE__ = true;<\/script>/);
+    expect(body).not.toContain("route-nonce");
     expect(body).toContain('<script src="/_next/static/chunks/app.js"></script>');
     expect(body).toMatch(/<script nonce="[^"]+" type="application\/ld\+json">/);
   });
