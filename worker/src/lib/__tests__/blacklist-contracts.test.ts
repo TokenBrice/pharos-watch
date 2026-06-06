@@ -16,6 +16,7 @@ import {
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
 } from "../blacklist-contracts";
+import { shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
 
 describe("blacklist-contracts shared metadata alignment", () => {
   it("marks every blacklist-tracked stablecoin as directly freezable", () => {
@@ -187,6 +188,15 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(getStartBlock("fdusd-first-digital", "arbitrum")).toBe(336_278_229);
     expect(getStartBlock("ausd-agora", "arbitrum")).toBe(342_153_906);
     expect(getStartBlock("buidl-blackrock", "arbitrum")).toBe(270_969_308);
+  });
+
+  it("defines bootstrap startBlocks for every RPC-log blacklist config", () => {
+    const missing = CONTRACT_CONFIGS
+      .filter((config) => shouldPreferRpcLogScan(config.chain.chainId))
+      .filter((config) => !Number.isFinite(config.startBlock) || (config.startBlock ?? 0) <= 0)
+      .map((config) => config.configKey);
+
+    expect(missing).toEqual([]);
   });
 
   it("resolves usdp-paxos on ethereum with PYUSD event family", () => {

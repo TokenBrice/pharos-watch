@@ -713,16 +713,16 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // USDC
   { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
-  { chain: BASE, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
-  { chain: OPTIMISM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: BASE, stablecoinId: "usdc-circle", startBlock: 2_797_221, events: USDC_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdc-circle", startBlock: 38_198_364, events: USDC_EVENT_FAMILY.events },
   { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "usdc-circle", startBlock: 7_388_829, events: USDC_EVENT_FAMILY.events },
 
   // USDT (EVM)
   { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", events: USDT0_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", startBlock: 2_595, events: USDT_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", startBlock: 133_193_269, events: USDT0_EVENT_FAMILY.events },
   { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT_EVENT_FAMILY.events },
   { chain: BSC, stablecoinId: "usdt-tether", startBlock: 176_416, events: USDT_EVENT_FAMILY.events },
