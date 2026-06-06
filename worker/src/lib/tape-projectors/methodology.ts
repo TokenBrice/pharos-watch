@@ -28,6 +28,7 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version"
 import {
   buildTapeEventId,
   severityForMethodologyBump,
+  truncateSummary,
 } from "../tape-event-helpers";
 import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
@@ -152,7 +153,7 @@ async function projectOneDomain(
       pegCurrency: null,
       chain: null,
       title: `${spec.label} v${entry.version}: ${entry.title}`,
-      summary: entry.summary.length > 180 ? `${entry.summary.slice(0, 177)}…` : entry.summary,
+      summary: truncateSummary(entry.summary),
       payload: {
         domain: spec.domain,
         version: entry.version,

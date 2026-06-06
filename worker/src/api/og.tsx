@@ -56,6 +56,10 @@ async function ensureWasm(): Promise<void> {
   }
 }
 
+function nowUtcLabel(): string {
+  return `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
 // ---------------------------------------------------------------------------
 // Shared constants
 // ---------------------------------------------------------------------------
@@ -155,7 +159,7 @@ export function deriveStablecoinOgCardData({
     variantLabel: variantLabel ?? null,
     variantParentSymbol: variantParentSymbol ?? null,
     isFrozen: isFrozen ?? false,
-    lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
+    lastUpdated: nowUtcLabel(),
   };
 }
 
@@ -354,7 +358,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     topPerformers,
     bottomPerformers,
     trend: null,
-    lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
+    lastUpdated: nowUtcLabel(),
   };
 
   const png = await renderPng(<SafetyScoresCard data={data} />);
@@ -454,7 +458,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     activeDepegs,
     recoveredToday: recoveredTodayResult?.count ?? 0,
     newToday: newTodayResult?.count ?? 0,
-    lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
+    lastUpdated: nowUtcLabel(),
   };
 
   const png = await renderPng(<DepegCard data={data} />);
@@ -534,7 +538,7 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     allTimeLow: atlRow?.min ?? psiScore,
     flightToQuality: false,
     flightIntensity: null,
-    lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
+    lastUpdated: nowUtcLabel(),
   };
 
   const png = await renderPng(<StabilityIndexCard data={data} />);

@@ -12,7 +12,7 @@
  */
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 
-import { buildTapeEventId } from "../tape-event-helpers";
+import { buildTapeEventId, formatUsdShort, truncateSummary } from "../tape-event-helpers";
 import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { ProjectorOptions, ProjectorResult } from "./types";
@@ -52,7 +52,7 @@ function buildEvent(entry: CemeteryEntry): TapeEventInsert {
     ? `${entry.symbol} entered cemetery (peak ${peakLabel})`
     : `${entry.symbol} entered cemetery`;
   const summaryBase = entry.epitaph?.trim() || entry.causeOfDeath;
-  const summary = summaryBase.length > 180 ? `${summaryBase.slice(0, 177)}…` : summaryBase;
+  const summary = truncateSummary(summaryBase);
 
   return {
     eventId: buildTapeEventId({
@@ -87,14 +87,6 @@ function buildEvent(entry: CemeteryEntry): TapeEventInsert {
     sourceUrl: "/cemetery/",
     methodologyVersion: null,
   };
-}
-
-function formatUsdShort(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(value / 1_000)}k`;
-  return `$${Math.round(value)}`;
 }
 
 export async function projectCemeteryEntries(

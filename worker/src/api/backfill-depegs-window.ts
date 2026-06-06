@@ -168,11 +168,7 @@ export function existingRowOverlapsReplayWindow(
   row: { started_at: number; ended_at: number | null },
   replayWindow: BackfillReplayWindow | null,
 ): boolean {
-  if (!replayWindow) return true;
-  const rowEnd = row.ended_at ?? row.started_at;
-  if (replayWindow.compareStartSec != null && rowEnd < replayWindow.compareStartSec) return false;
-  if (replayWindow.compareEndSec != null && row.started_at > replayWindow.compareEndSec) return false;
-  return true;
+  return eventOverlapsReplayWindow({ startedAt: row.started_at, endedAt: row.ended_at }, replayWindow);
 }
 
 export function buildBackfillDeleteStmt(

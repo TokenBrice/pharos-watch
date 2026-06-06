@@ -80,6 +80,18 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   return "notice";
 }
 
+export function formatUsdShort(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `$${Math.round(value / 1_000)}k`;
+  return `$${Math.round(value)}`;
+}
+
+export function truncateSummary(summary: string): string {
+  return summary.length > 180 ? `${summary.slice(0, 177)}…` : summary;
+}
+
 /**
  * Methodology bumps: major X.0 → warning; everything else (X.Y, X.YZ, ...) → info.
  * "Major" is defined as a single-segment version (e.g. "6") or a version whose

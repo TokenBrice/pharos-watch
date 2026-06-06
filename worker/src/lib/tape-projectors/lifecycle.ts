@@ -9,7 +9,7 @@
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 
-import { buildTapeEventId } from "../tape-event-helpers";
+import { buildTapeEventId, truncateSummary } from "../tape-event-helpers";
 import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { ProjectorOptions, ProjectorResult } from "./types";
@@ -44,7 +44,7 @@ function buildEvent(coin: StablecoinMeta): TapeEventInsert {
   const sourceRowId = coin.id;
   const epitaph = coin.obituary?.epitaph?.trim();
   const summary = epitaph && epitaph.length > 0
-    ? (epitaph.length > 180 ? `${epitaph.slice(0, 177)}…` : epitaph)
+    ? truncateSummary(epitaph)
     : `${coin.symbol} entered the frozen archive lifecycle phase.`;
 
   return {

@@ -1,6 +1,6 @@
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
-import { hmacSha256Hex } from "../../lib/api-key-core";
+import { bytesToBase64Url, hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
 import {
   ApiKeySelfServeRequestSchema,
   ApiKeySelfServeVerifySchema,
@@ -136,20 +136,6 @@ export async function hashClientIp(secret: string, request: Request): Promise<st
 export async function hashUserAgent(secret: string, request: Request): Promise<string | null> {
   const userAgent = request.headers.get("User-Agent")?.trim();
   return userAgent ? hashForLookup(secret, userAgent) : null;
-}
-
-function randomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return bytes;
-}
-
-function bytesToBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const value of bytes) {
-    binary += String.fromCharCode(value);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 export function createRequestId(): string {

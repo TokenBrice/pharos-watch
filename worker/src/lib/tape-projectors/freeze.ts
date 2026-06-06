@@ -7,6 +7,7 @@
  */
 import {
   buildTapeEventId,
+  formatUsdShort,
   severityForFreezeBlocked,
   severityForFreezeDestroyed,
 } from "../tape-event-helpers";
@@ -37,14 +38,6 @@ const BLACKLIST_VARIANTS = [
 ] as const;
 
 type BlacklistVariant = (typeof BLACKLIST_VARIANTS)[number];
-
-function formatUsdShort(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(value / 1_000)}k`;
-  return `$${Math.round(value)}`;
-}
 
 async function projectFreezeVariant(
   db: D1Database,
