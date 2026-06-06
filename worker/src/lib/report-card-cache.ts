@@ -72,7 +72,7 @@ function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardC
     && parsed.staleInputs.every((entry) => typeof entry === "string");
 }
 
-export function buildReportCardCacheInputStatus(
+function buildReportCardCacheInputStatus(
   options: WriteReportCardCacheOptions = {},
 ): ReportCardCacheInputStatus {
   const liquidityStale = Boolean(

@@ -5,7 +5,7 @@ import {
 import type { BlacklistStablecoin } from "@shared/types/market";
 import type { BlacklistRow } from "./shared";
 
-export const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
+const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
 function compareBlacklistRows(left: BlacklistRow, right: BlacklistRow): number {
   return left.timestamp === right.timestamp ? left.id.localeCompare(right.id) : left.timestamp - right.timestamp;
