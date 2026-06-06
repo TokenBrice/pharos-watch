@@ -17,6 +17,7 @@ export interface CronHealthSnapshot {
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
+const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 20;
 
 const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
 
@@ -74,6 +75,14 @@ function buildCronHistoryQuery(jobCount: number): string {
           ORDER BY started_at DESC`;
 }
 
+function chunkCronJobs(jobs: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < jobs.length; i += CRON_HISTORY_QUERY_JOB_BATCH_SIZE) {
+    chunks.push(jobs.slice(i, i + CRON_HISTORY_QUERY_JOB_BATCH_SIZE));
+  }
+  return chunks;
+}
+
 export async function loadCronHealth(
   db: D1Database,
   now: number,
@@ -92,18 +101,25 @@ export async function loadCronHealth(
   let cronHistoryQueryFailed = false;
 
   try {
-    cronRows = await db
-      .prepare(buildCronHistoryQuery(cronJobs.length))
-      .bind(...cronJobs)
-      .all<{
-        job: string;
-        started_at: number;
-        duration_ms: number;
-        status: string;
-        error: string | null;
-        item_count: number | null;
-        metadata: string | null;
-      }>();
+    const results: NonNullable<typeof cronRows.results> = [];
+    for (const jobBatch of chunkCronJobs(cronJobs)) {
+      const batchJobSet = new Set(jobBatch);
+      const batchRows = await db
+        .prepare(buildCronHistoryQuery(jobBatch.length))
+        .bind(...jobBatch)
+        .all<{
+          job: string;
+          started_at: number;
+          duration_ms: number;
+          status: string;
+          error: string | null;
+          item_count: number | null;
+          metadata: string | null;
+        }>();
+      results.push(...(batchRows.results ?? []).filter((row) => batchJobSet.has(row.job)));
+    }
+    results.sort((a, b) => b.started_at - a.started_at);
+    cronRows = { results };
   } catch (err) {
     cronHistoryQueryFailed = true;
     console.error("[status] Failed to query cron history:", err);
