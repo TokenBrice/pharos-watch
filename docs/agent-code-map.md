@@ -287,12 +287,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-primitives/shell.tsx` - ChartCardShell
 - `src/components/chart-primitives/skeleton.tsx` - ChartShellSkeleton
 - `src/components/chart-primitives/sync.tsx` - BrushedRange, ChartBrush, ChartCrosshairOverlay, MarketDataChartSync, MarketDataChartSyncProvider, useChartSyncHandlers
+- `src/components/chart-primitives/use-market-data-chart-window.ts` - useMarketDataChartWindow
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- `src/components/coin-selector.tsx` - CoinSelector
-- ... 347 more files omitted; use `rg --files src/components` for the full list.
+- ... 348 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 240 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 239 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -485,7 +485,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/admin-telegram-resend.ts` - handleAdminTelegramResend
 - `worker/src/api/api-key-audit-log.ts` - handleApiKeyAuditLog
 - `worker/src/api/api-key-requests.ts` - handleApiKeyRequest, handleApiKeyRequestVerify
-- `worker/src/api/api-key-requests/admin-handlers.ts` - handleApiKeyRequestReject, handleApiKeyRequestRejectRoute, handleApiKeyRequestReleaseClaim, handleApiKeyRequestReleaseClaimRoute, handleApiKeyRequestsAdmin, handleApiKeyRequestsAdminRoute
+- `worker/src/api/api-key-requests/admin-handlers.ts` - handleApiKeyRequestReject, handleApiKeyRequestRejectRoute, handleApiKeyRequestReleaseClaimRoute, handleApiKeyRequestsAdmin, handleApiKeyRequestsAdminRoute
 - `worker/src/api/api-key-requests/admin.ts` - buildAdminMutationResponse, deactivateLinkedSelfServeKey, listAdminRequests, mapAdminRow, parseAdminMutationBody, recordRequestAdminAction
 - `worker/src/api/api-key-requests/email.ts` - redactProviderBody, sendVerificationEmail
 - `worker/src/api/api-key-requests/notifications.ts` - notifySelfServeIssued
@@ -496,7 +496,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/api-key-requests/serialization.ts` - parseJsonStringArray
 - `worker/src/api/api-key-requests/state.ts` - IssuedKeyFailureCompensation, acquireEmailClaim, acquireIssuanceIpCap, compensateIssuedKeyFailure, finalizeRequestIssued, insertPendingRequest
 - `worker/src/api/api-key-requests/types.ts` - ApiKeyRequestAdminRow, ApiKeyRequestDb, ApiKeyRequestRow, ApiKeyRequestStatement, ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema
-- `worker/src/api/api-keys.ts` - handleApiKeyDeactivate, handleApiKeyDeactivateRoute, handleApiKeyRotate, handleApiKeyRotateRoute, handleApiKeyUpdate, handleApiKeyUpdateRoute
+- `worker/src/api/api-keys.ts` - handleApiKeyDeactivateRoute, handleApiKeyRotate, handleApiKeyRotateRoute, handleApiKeyUpdate, handleApiKeyUpdateRoute, handleApiKeys
 - `worker/src/api/audit-depeg-history.ts` - AuditEventsOptions, auditEvents, handleAuditDepegHistory, handleAuditDepegHistoryTrusted
 - `worker/src/api/backfill-blacklist-current-balances.ts` - handleBackfillBlacklistCurrentBalances
 - `worker/src/api/backfill-cg-prices.ts` - BackfillCgPricesRouteContext, handleBackfillCgPrices, handleBackfillCgPricesTrusted
@@ -533,7 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
 - `worker/src/api/events.ts` - handleEvents
-- ... 116 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 117 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -642,7 +642,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/api-json-body.ts` - RequestJsonSchemaOptions, parseOptionalRequestJsonObject, parseRequestJsonWithSchema
 - `worker/src/lib/api-key-admin.ts` - TrustedApiKeyAuditInput, TrustedApiKeyCreateInput, activateTrustedApiKey, createApiKey, createTrustedApiKey, deactivateApiKey
 - `worker/src/lib/api-key-auth.ts` - authenticateApiKey, authenticateApiKeyFromFreshCache, parseApiKeyToken
-- `worker/src/lib/api-key-core.ts` - API_KEY_TOKEN_PATTERN, ApiKeyAuthenticationResult, ApiKeyDb, ApiKeyPublicRow, ApiKeyRow, AuthenticatedApiKey
+- `worker/src/lib/api-key-core.ts` - API_KEY_AUTH_CACHE_MAX_ENTRIES, API_KEY_AUTH_CACHE_STALE_TTL_MS, API_KEY_AUTH_CACHE_TTL_MS, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES, API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER, API_KEY_TOKEN_PATTERN
 - `worker/src/lib/api-key-rate-limit.ts` - ApiKeyRateLimitDependencyCircuitSnapshot, checkApiKeyRateLimit, checkIsolateLocalApiKeyRateLimit, flushPendingApiKeyPrunes, isApiKeyRateLimitDependencyCircuitOpen, recordApiKeyRateLimitDependencyFailure
 - `worker/src/lib/api-keys.ts`
 - `worker/src/lib/api-methodology.ts` - MethodologyEnvelopeInput, buildMethodologyEnvelope
