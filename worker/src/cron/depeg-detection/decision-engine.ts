@@ -7,6 +7,7 @@ import {
   DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   DEPEG_EVENT_MIN_SUPPLY_USD,
   DEPEG_EXTREME_MOVE_BPS,
+  DEPEG_SECONDARY_THRESHOLD_RATIO,
   getDepegThresholdBps,
 } from "../../lib/constants";
 import {
@@ -58,6 +59,7 @@ interface DecisionContext {
   dexRecoveryProtocolCount: number;
   dexRecoveryChallenged: boolean;
   dexSupportsDirection: boolean;
+  dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
   primarySupportsRecovery: boolean;
   requiresConfirmation: boolean;
@@ -256,25 +258,30 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const { bps, absBps, direction } = primarySignal;
   const threshold = getDepegThresholdBps(asset.pegType);
   const nativeSignal = input.nativePegQuote ? deriveDepegSignal(input.nativePegQuote.price, 1) : null;
-  const dexBps = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
-    ? Math.round(((input.dexRow.dex_price_usd / pegRef) - 1) * 10000)
+  const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
+    ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
     : null;
-  const dexAbsBps = dexBps == null ? null : Math.abs(dexBps);
+  const dexAbsBps = dexSignal?.absBps ?? null;
+  const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
   const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
+  const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection =
     existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
   const dexSupportsDirection =
-    dexBps != null &&
-    dexAbsBps != null &&
-    dexAbsBps >= threshold &&
-    (dexBps >= 0 ? "above" : "below") === direction &&
+    dexSignal != null &&
+    signalCrossesThreshold(dexSignal, threshold) &&
+    signalsShareDirection(dexSignal, direction) &&
     dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+  const dexSupportsSecondaryBarDirection =
+    dexSignal != null &&
+    signalCrossesThreshold(dexSignal, secondaryBar) &&
+    signalsShareDirection(dexSignal, direction) &&
+    dexSecondaryDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
   const dexSupportsRecovery =
-    dexBps != null &&
-    dexAbsBps != null &&
-    dexAbsBps < threshold &&
+    dexSignal != null &&
+    dexSignal.absBps < threshold &&
     dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
     !dexRecoveryChallenged;
   const sourceDepth = getPrimarySourceDepth(asset);
@@ -318,6 +325,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexRecoveryProtocolCount,
       dexRecoveryChallenged,
       dexSupportsDirection,
+      dexSupportsSecondaryBarDirection,
       dexSupportsRecovery,
       primarySupportsRecovery,
       requiresConfirmation,
@@ -409,6 +417,7 @@ function decideExistingEvent(
     dexRow,
     dexAbsBps,
     dexSupportsDirection,
+    dexSupportsSecondaryBarDirection,
     requiresConfirmation,
     pendingReason,
   } = ctx;
@@ -416,9 +425,8 @@ function decideExistingEvent(
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
 
-  // Direction change: a live event cannot stay open in the opposite direction.
-  // Low-confidence contradictory prices still route the replacement through pending
-  // confirmation, but they retire the stale live row immediately.
+  // Direction change: retire the live row only on authoritative contradiction
+  // or corroborated same-direction DEX support for the replacement move.
   if (existing.direction !== direction) {
     if (primaryTrust === "authoritative" || dexSupportsDirection) {
       commands.push({
@@ -434,19 +442,13 @@ function decideExistingEvent(
         commands.push(buildLiveEventCommand(asset, now, direction, bps, price, pegRef));
       }
     } else if (primaryTrust === "confirm_required") {
+      seenEventIds.push(existing.id);
       diagnostics.push(withDiagnostic(
         "warn",
-        `[depeg] Retiring contradicted live event for ${asset.symbol} (id=${existing.id}): ` +
-        `existing=${existing.direction}, primary=${direction} (${bps}bps) requires confirmation`,
+        `[depeg] Kept live event for ${asset.symbol} (id=${existing.id}) through ` +
+        `confirm-required opposite reading: existing=${existing.direction}, ` +
+        `primary=${direction} (${bps}bps)`,
       ));
-      commands.push({
-        type: "close-event",
-        id: existing.id,
-        endedAt: now,
-        recoveryPrice: price,
-        recoveryPriceMode: "bind",
-      });
-      commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
     } else {
       seenEventIds.push(existing.id);
     }
@@ -455,7 +457,11 @@ function decideExistingEvent(
 
   // Same direction - event stays open.
   seenEventIds.push(existing.id);
-  if ((primaryTrust === "authoritative" || dexSupportsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
+  const canUpdatePeak =
+    primaryTrust === "authoritative" ||
+    dexSupportsDirection ||
+    (primaryTrust === "confirm_required" && dexSupportsSecondaryBarDirection);
+  if (canUpdatePeak && absBps > Math.abs(existing.peak_deviation_bps)) {
     commands.push({
       type: "update-peak",
       id: existing.id,

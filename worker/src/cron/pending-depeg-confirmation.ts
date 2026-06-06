@@ -378,9 +378,9 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
   const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
-  const nativeThresholdStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
-  const nativePegRecovered = nativeThresholdStatus === "recover";
-  const nativePegStillDepegged = nativeThresholdStatus === "confirm";
+  const nativeSecondaryStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
+  const nativePegRecovered = nativeSecondaryStatus === "recover";
+  const nativePegStillDepegged = nativeSecondaryStatus === "confirm";
   const confirmingSources: string[] = [];
   const opposingSources: string[] = [];
   const unavailableSources: string[] = [];
@@ -388,8 +388,8 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const hardOpposingSources: string[] = [];
   const nativeSourceKey = buildNativeConfirmationKey(nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency);
   if (nativeSignal != null) {
-    if (nativeThresholdStatus === "confirm") addSource(confirmingSources, nativeSourceKey);
-    if (isOpposingConfirmationStatus(nativeThresholdStatus)) {
+    if (nativeSecondaryStatus === "confirm") addSource(confirmingSources, nativeSourceKey);
+    if (isOpposingConfirmationStatus(nativeSecondaryStatus)) {
       addSource(opposingSources, nativeSourceKey);
       addSource(hardOpposingSources, nativeSourceKey);
     }

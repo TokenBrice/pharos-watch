@@ -2,6 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { binarySearchNearest } from "../lib/binary-search";
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_EVENT_MIN_SUPPLY_USD } from "../lib/constants";
+import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
   buildPriceValidationContext,
   type PriceReasonablenessOptions,
@@ -133,9 +134,9 @@ export function extractDepegEvents(
     });
     if (!decision.accepted) continue;
 
-    const bps = Math.round((price / pegRef - 1) * 10_000);
-    const absBps = Math.abs(bps);
-    const direction = bps >= 0 ? "above" : "below";
+    const depegSignal = deriveDepegSignal(price, pegRef);
+    if (!depegSignal) continue;
+    const { bps, absBps, direction } = depegSignal;
     const isLargeCap = supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
 
     if (absBps >= threshold) {

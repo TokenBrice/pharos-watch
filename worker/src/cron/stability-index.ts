@@ -6,6 +6,7 @@ import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
+import { deriveDepegSignal } from "../lib/depeg-signals";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
@@ -210,9 +211,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     let worstBps = 0;
     let earliestStart = Infinity;
     for (const e of events) {
-      if (e.peg_reference <= 0) continue;
-      const bps = Math.round(((price / e.peg_reference) - 1) * 10000);
-      if (Math.abs(bps) > Math.abs(worstBps)) worstBps = bps;
+      const depegSignal = deriveDepegSignal(price, e.peg_reference);
+      if (!depegSignal) continue;
+      if (depegSignal.absBps > Math.abs(worstBps)) worstBps = depegSignal.bps;
       if (e.started_at < earliestStart) earliestStart = e.started_at;
     }
 

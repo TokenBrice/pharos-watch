@@ -34,9 +34,9 @@ export async function detectDepegEvents(
 
   // Track event IDs that are still legitimately open after this run.
   const seen = new Set<number>();
-  // Track coins that are still part of the current tracked universe (even if data is missing).
-  // This prevents false "recovery" closes during transient upstream data gaps.
-  const trackedCoinIds = new Set<string>();
+  // Track coins that are still part of the current PSI universe, even when a
+  // partial upstream payload omits them entirely for this run.
+  const trackedCoinIds = new Set<string>(PSI_ELIGIBLE_META_BY_ID.keys());
   const commands: DepegPersistenceCommand[] = [];
 
   for (const asset of assets) {

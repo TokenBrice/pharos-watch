@@ -405,6 +405,63 @@ describe("confirmPendingDepegs", () => {
     expect(deletes).toEqual([21]);
   });
 
+  it("does not clear BRZ pending rows as recovered when the native quote is in the secondary-confirm zone", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["brz-transfero", {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 1.01,
+        updatedAt: nowSec - 60,
+      }],
+    ]));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 22,
+            stablecoin_id: "brz-transfero",
+            symbol: "BRZ",
+            peg_type: "peggedREAL",
+            direction: "above",
+            first_seen_bps: 180,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.190587,
+            peg_reference: 0.18765951,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "brz-transfero",
+          name: "Brazilian Digital",
+          symbol: "BRZ",
+          geckoId: "brz",
+          pegType: "peggedREAL",
+          price: 0.190587,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+      { peggedREAL: 0.18765951 },
+    );
+
+    const statements = lastBatchStatements();
+    const outcome = pendingOutcomeInserts(statements)[0];
+    const inserts = statements.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    const deletes = statements
+      .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
+      .map((stmt) => stmt.boundValues[0]);
+
+    expect(inserts).toHaveLength(1);
+    expect(deletes).toEqual([22]);
+    expect(outcome?.boundValues[15]).toBe("promoted");
+    expect(outcome?.boundValues[21]).toBe("confirmed-by:native:brl");
+  });
+
   it("promotes or rejects pending rows based on secondary-source agreement", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

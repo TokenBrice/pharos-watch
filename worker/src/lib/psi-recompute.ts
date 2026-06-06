@@ -8,6 +8,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { deriveDepegSignal } from "./depeg-signals";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 const HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC = 6 * 3600;
@@ -50,8 +51,9 @@ function computeHistoricalEventBps(
   thresholdBps: number,
 ): { bps: number; source: "historical-price" | "peak-fallback" } | null {
   const peakDeviationBps = Number.isFinite(event.peak_deviation_bps) ? event.peak_deviation_bps : null;
-  if (snapshotPrice != null && event.peg_reference > 0) {
-    const historicalBps = Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000);
+  const historicalSignal = snapshotPrice != null ? deriveDepegSignal(snapshotPrice, event.peg_reference) : null;
+  if (historicalSignal != null) {
+    const historicalBps = historicalSignal.bps;
     const boundedHistoricalBps =
       peakDeviationBps != null && Math.abs(historicalBps) > Math.abs(peakDeviationBps)
         ? peakDeviationBps

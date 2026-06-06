@@ -331,7 +331,7 @@ describe("detectDepegEvents", () => {
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("retires a stale live event and routes the opposite low-confidence move into pending", async () => {
+  it("keeps a live event open through an opposite low-confidence tick without DEX support", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     const db = mockD1([
@@ -345,6 +345,74 @@ describe("detectDepegEvents", () => {
         }],
       },
       { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.55,
+        priceSource: "coingecko",
+        priceConfidence: "low",
+        priceUpdatedAt: now,
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
+    );
+    const pending = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_pending")
+    );
+    const liveInserts = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_events")
+    );
+
+    expect(closures).toHaveLength(0);
+    expect(pending).toHaveLength(0);
+    expect(liveInserts).toHaveLength(0);
+  });
+
+  it("retires a stale live event when an opposite low-confidence move has same-direction DEX support", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "above", peak_deviation_bps: 220, started_at: now - 3600,
+          start_price: 1.022, peak_price: 1.022, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.55,
+          deviation_from_primary_bps: 0,
+          source_pool_count: 5,
+          source_total_tvl: 5_000_000,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "curve", chain: "ethereum", price: 0.55, tvl: 3_000_000 },
+            { protocol: "uniswap", chain: "ethereum", price: 0.551, tvl: 2_000_000 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
     ]);
     const origPrepare = db.prepare.bind(db);
     db.prepare = vi.fn((sql: string) => {
@@ -865,6 +933,59 @@ describe("detectDepegEvents", () => {
     expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET peak_deviation_bps"))).toBe(true);
   });
 
+  it("updates a worse same-direction peak when low-confidence primary is corroborated by DEX at the secondary bar", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
+          start_price: 0.98, peak_price: 0.98, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.994,
+          deviation_from_primary_bps: 240,
+          source_pool_count: 4,
+          source_total_tvl: 4_000_000,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "curve", chain: "ethereum", price: 0.994, tvl: 2_000_000 },
+            { protocol: "uniswap", chain: "ethereum", price: 0.9945, tvl: 2_000_000 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.97,
+        priceSource: "coingecko",
+        priceConfidence: "low",
+        priceUpdatedAt: now,
+      }),
+    ]);
+
+    const peakUpdate = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"),
+    );
+    expect(peakUpdate?.binds).toEqual([-300, 0.97, 1]);
+  });
+
   it("keeps an ongoing event open when only aggregate DEX disagrees", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
@@ -1071,7 +1192,7 @@ describe("detectDepegEvents", () => {
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("does not orphan-close tracked events during transient data gaps", async () => {
+  it("does not orphan-close tracked events during transient invalid-price data gaps", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     const db = mockD1([
@@ -1109,5 +1230,65 @@ describe("detectDepegEvents", () => {
       sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
     );
     expect(orphanClosures).toHaveLength(0);
+  });
+
+  it("does not orphan-close tracked events when a partial payload omits the coin entirely", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
+          start_price: 0.976, peak_price: 0.976, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdc-circle",
+        symbol: "USDC",
+        pegType: "peggedUSD",
+        price: 1,
+      }),
+    ]);
+
+    const orphanClosures = db.getHistory().filter((entry) =>
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+    );
+    expect(orphanClosures).toHaveLength(0);
+  });
+
+  it("still orphan-closes open events for coins removed from the tracked universe", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 99, stablecoin_id: "removed-coin", symbol: "OLD", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
+          start_price: 0.976, peak_price: 0.976, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdc-circle",
+        symbol: "USDC",
+        pegType: "peggedUSD",
+        price: 1,
+      }),
+    ]);
+
+    const orphanClosure = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+    );
+    expect(orphanClosure?.binds).toEqual([now, 99]);
   });
 });

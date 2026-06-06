@@ -20,6 +20,7 @@ import {
   type PsiSupplyRow,
 } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { deriveDepegSignal } from "../lib/depeg-signals";
 
 type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
 type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
@@ -144,22 +145,8 @@ interface AuditMutationPlan {
   affectedDays: Set<number>;
 }
 
-function getAbsoluteDeviationBps(price: number | null | undefined, pegReference: number): number | null {
-  if (price == null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(pegReference) || pegReference <= 0) {
-    return null;
-  }
-  return Math.abs(Math.round(((price / pegReference) - 1) * 10_000));
-}
-
-function getSignedDeviationBps(price: number | null | undefined, pegReference: number): number | null {
-  if (price == null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(pegReference) || pegReference <= 0) {
-    return null;
-  }
-  return Math.round(((price / pegReference) - 1) * 10_000);
-}
-
-function directionFromSignedBps(bps: number): "above" | "below" {
-  return bps >= 0 ? "above" : "below";
+function getDeviationSignal(price: number | null | undefined, pegReference: number) {
+  return price == null ? null : deriveDepegSignal(price, pegReference);
 }
 
 function buildAuditVerdictProvenanceStmt(
@@ -392,8 +379,8 @@ function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
   if (gapSec < 0 || gapSec > SYNTHETIC_SPLIT_MAX_GAP_SEC) return false;
 
   const threshold = Math.max(getDepegThresholdBps(next.peg_type), SYNTHETIC_SPLIT_RESUME_MIN_BPS);
-  const recoveryBps = getAbsoluteDeviationBps(previous.recovery_price, previous.peg_reference);
-  const resumeBps = getAbsoluteDeviationBps(next.start_price, next.peg_reference);
+  const recoveryBps = getDeviationSignal(previous.recovery_price, previous.peg_reference)?.absBps ?? null;
+  const resumeBps = getDeviationSignal(next.start_price, next.peg_reference)?.absBps ?? null;
   const previousPeakAbsBps = Math.abs(previous.peak_deviation_bps);
 
   const resumedSevereDepeg =
@@ -500,7 +487,7 @@ function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryReco
     return null;
   }
   const thresholdBps = getDepegThresholdBps(event.peg_type);
-  const recoveryBps = getAbsoluteDeviationBps(event.recovery_price, event.peg_reference);
+  const recoveryBps = getDeviationSignal(event.recovery_price, event.peg_reference)?.absBps ?? null;
   if (recoveryBps == null || recoveryBps < thresholdBps) {
     return null;
   }
@@ -1083,11 +1070,11 @@ export async function auditEvents(
       let maxSameDirectionBps = 0;
       let maxOppositeDirectionBps = 0;
       for (const [, cgPrice] of validatedPrices) {
-        const signedCgBps = getSignedDeviationBps(cgPrice, event.peg_reference);
-        if (signedCgBps == null) continue;
-        const cgBps = Math.abs(signedCgBps);
+        const cgSignal = getDeviationSignal(cgPrice, event.peg_reference);
+        if (cgSignal == null) continue;
+        const cgBps = cgSignal.absBps;
         if (cgBps > maxCgBps) maxCgBps = cgBps;
-        if (directionFromSignedBps(signedCgBps) === event.direction) {
+        if (cgSignal.direction === event.direction) {
           if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
         } else if (cgBps > maxOppositeDirectionBps) {
           maxOppositeDirectionBps = cgBps;
