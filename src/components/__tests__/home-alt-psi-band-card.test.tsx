@@ -1,0 +1,62 @@
+// @vitest-environment jsdom
+
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
+import type { StabilityIndexResponse } from "@shared/types/stability";
+
+const { useStabilityIndexMock } = vi.hoisted(() => ({
+  useStabilityIndexMock: vi.fn(),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useStabilityIndex: useStabilityIndexMock,
+}));
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+function makePsiResponse(): StabilityIndexResponse {
+  return {
+    current: {
+      score: 40,
+      band: "STEADY",
+      components: { severity: 1, breadth: 2, stressBreadth: 3, trend: 4 },
+      contributors: [],
+      totalMcapUsd: 100,
+      computedAt: 1_700_259_200,
+      methodologyVersion: "1.0",
+    },
+    // API history is newest-first. The card should render oldest -> newest and
+    // append the current sample, matching the full PSI history chart.
+    history: [
+      { date: 1_700_172_800, score: 30, band: "STEADY", methodologyVersion: "1.0" },
+      { date: 1_700_086_400, score: 20, band: "STEADY", methodologyVersion: "1.0" },
+      { date: 1_700_000_000, score: 10, band: "STEADY", methodologyVersion: "1.0" },
+    ],
+    methodology: {
+      version: "1.0",
+      versionLabel: "v1.0",
+      currentVersion: "1.0",
+      currentVersionLabel: "v1.0",
+      changelogPath: "/methodology/stability-index-changelog/",
+      isCurrent: true,
+    },
+  };
+}
+
+describe("PsiBandCard", () => {
+  it("renders the PSI sparkline from chronological history plus the current sample", () => {
+    useStabilityIndexMock.mockReturnValue({
+      data: makePsiResponse(),
+      isLoading: false,
+    });
+
+    const { container } = render(<PsiBandCard />);
+
+    const polyline = container.querySelector("polyline");
+    expect(polyline?.getAttribute("points")).toBe("0.00,40.00 33.33,26.67 66.67,13.33 100.00,0.00");
+  });
+});

@@ -8,6 +8,7 @@ import {
   PSI_HEX_COLORS,
   type ConditionBand,
 } from "@shared/lib/psi-colors";
+import { buildPsiChartData } from "@shared/lib/psi-view-model";
 
 function PsiSparkline({
   values,
@@ -51,9 +52,9 @@ export function PsiBandCard(): React.JSX.Element {
   const { data, isLoading } = useStabilityIndex();
   const current = data?.current ?? null;
   const sparkValues = useMemo(() => {
-    const history = data?.history ?? [];
-    return history.slice(-90).map((p) => p.score);
-  }, [data?.history]);
+    const chartData = buildPsiChartData(data?.history ?? [], current);
+    return chartData.slice(-90).map((p) => p.score);
+  }, [current, data?.history]);
 
   const band = (current?.band ?? "STEADY") as ConditionBand;
   const bandColor = PSI_HEX_COLORS[band] ?? PSI_HEX_COLORS.STEADY;
