@@ -2204,14 +2204,14 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
     "band": "STEADY",
     "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
     "computedAt": 1771977600,
-    "methodologyVersion": "3.2"
+    "methodologyVersion": "3.4"
   },
   "history": [{ "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }],
   "methodology": {
-    "version": "3.2",
-    "versionLabel": "v3.2",
-    "currentVersion": "3.2",
-    "currentVersionLabel": "v3.2",
+    "version": "3.4",
+    "versionLabel": "v3.4",
+    "currentVersion": "3.4",
+    "currentVersionLabel": "v3.4",
     "changelogPath": "/methodology/stability-index-changelog/",
     "asOf": 1771977600,
     "isCurrent": true

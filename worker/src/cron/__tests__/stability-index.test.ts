@@ -32,6 +32,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
 
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeAndStoreStabilityIndex } from "../stability-index";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 interface TestDb extends D1Database {
   runHistory: Array<{ sql: string; binds: unknown[] }>;
@@ -39,6 +40,7 @@ interface TestDb extends D1Database {
 
 function makeDb(opts: {
   dewsUnavailable?: boolean;
+  dewsRows?: Array<{ stablecoin_id: string; score: number; band: string; computed_at: number }>;
   depegQueryFails?: boolean;
   depegRows?: Array<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
   priceCacheRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
@@ -85,7 +87,12 @@ function makeDb(opts: {
           throw new Error("no such table: stress_signals");
         }
         return {
-          results: [{ stablecoin_id: "usdt-tether", score: 72, band: "WARNING" }] as T[],
+          results: (opts.dewsRows ?? [{
+            stablecoin_id: "usdt-tether",
+            score: 72,
+            band: "WARNING",
+            computed_at: Math.floor(Date.now() / 1000) - 300,
+          }]) as T[],
         };
       }
       return { results: [] as T[] };
@@ -179,6 +186,66 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("stress_signals");
     expect(metadata.preservedCurrentSample).toBe(true);
+    expect(
+      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
+    ).toBe(false);
+  });
+
+  it("returns degraded when DEWS has no latest rows", async () => {
+    const db = makeDb({ dewsRows: [] });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string;
+      dewsUnavailable: boolean;
+      dewsFailureReason: string | null;
+      dewsRowsRead: number;
+      preservedCurrentSample: boolean;
+    };
+    expect(metadata.fallbackMode).toBe("dews-unavailable");
+    expect(metadata.dewsUnavailable).toBe(true);
+    expect(metadata.dewsFailureReason).toBe("stress_signals returned no latest rows");
+    expect(metadata.dewsRowsRead).toBe(0);
+    expect(metadata.preservedCurrentSample).toBe(true);
+    expect(
+      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
+    ).toBe(false);
+  });
+
+  it("returns degraded when latest DEWS rows are stale", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
+    const db = makeDb({
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: staleComputedAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string;
+      dewsUnavailable: boolean;
+      dewsFailureReason: string | null;
+      dewsLatestComputedAt: number | null;
+      dewsRowsRead: number;
+      dewsMaxAgeSec: number;
+    };
+    expect(metadata.fallbackMode).toBe("dews-unavailable");
+    expect(metadata.dewsUnavailable).toBe(true);
+    expect(metadata.dewsFailureReason).toContain("stale");
+    expect(metadata.dewsLatestComputedAt).toBe(staleComputedAt);
+    expect(metadata.dewsRowsRead).toBe(1);
+    expect(metadata.dewsMaxAgeSec).toBe(CRON_INTERVALS["compute-dews"] * 2);
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
     ).toBe(false);

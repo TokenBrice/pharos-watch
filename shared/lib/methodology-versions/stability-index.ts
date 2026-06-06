@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./base";
 
 const psi = createMethodologyVersion({
-  currentVersion: "3.3",
+  currentVersion: "3.4",
   changelogPath: "/methodology/stability-index-changelog/",
   changelog: [
+  {
+    version: "3.4",
+    title: "Fail-closed DEWS freshness dependency",
+    date: "2026-06-06",
+    effectiveAt: 1780755098,
+    summary:
+      "PSI now requires a non-empty, fresh latest DEWS row set before publishing a new sample, preventing stale or wiped stress signals from being treated as zero stress breadth.",
+    impact: [
+      "The 30-minute cron skips PSI sample publication when latest DEWS rows are absent, missing computed_at, or older than two compute-dews intervals",
+      "DEWS stress breadth is now computed from warning-band rows only after dependency freshness is proven across the latest DEWS row set",
+      "Public PSI remains anchored to the last valid stored sample instead of publishing a healthier fresh score from stale or absent early-warning inputs",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.3",
     title: "Active-only PSI universe",

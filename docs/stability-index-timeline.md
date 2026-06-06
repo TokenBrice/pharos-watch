@@ -1,6 +1,14 @@
 # Stability Index Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.3` (2026-02-25 -> 2026-05-14).
+Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.4` (2026-02-25 -> 2026-06-06).
+
+---
+
+## v3.4 — Fail-closed DEWS freshness dependency (Jun 6, 2026)
+
+- PSI now skips publication when the latest DEWS row set is empty, missing usable `computed_at`, or older than two `compute-dews` intervals
+- Stress breadth is computed from ALERT/WARNING/DANGER rows only after the latest DEWS dependency row set is proven fresh
+- Prevents fresh PSI samples from being published off stale or absent early-warning inputs; the API continues serving the last valid stored value
 
 ---
 

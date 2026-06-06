@@ -3,6 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import { round1 } from "@shared/lib/math";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
@@ -10,6 +11,8 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
+const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
+const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
@@ -109,23 +112,50 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   let dewsStressBreadth = 0;
   let dewsUnavailable = false;
   let dewsFailureReason: string | null = null;
+  let dewsLatestComputedAt: number | null = null;
+  let dewsRowsRead = 0;
   try {
     const dewsRows = await db
       .prepare(
-        `SELECT s.stablecoin_id, s.score, s.band
+        `SELECT s.stablecoin_id, s.score, s.band, s.computed_at
          FROM stress_signals s
          INNER JOIN (
            SELECT stablecoin_id, MAX(computed_at) as max_at
            FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
-         WHERE s.band IN ('ALERT', 'WARNING', 'DANGER')`,
+         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
       )
-      .all<{ stablecoin_id: string; score: number; band: string }>();
+      .all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>();
 
-    // Count stressed coins weighted by mcap
-    for (const row of dewsRows.results ?? []) {
-      const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
-      dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * 1.5;
+    const rows = dewsRows.results ?? [];
+    dewsRowsRead = rows.length;
+    for (const row of rows) {
+      if (Number.isFinite(row.computed_at)) {
+        dewsLatestComputedAt =
+          dewsLatestComputedAt == null
+            ? row.computed_at
+            : Math.max(dewsLatestComputedAt, row.computed_at);
+      }
+    }
+
+    if (rows.length === 0) {
+      dewsUnavailable = true;
+      dewsFailureReason = "stress_signals returned no latest rows";
+    } else if (dewsLatestComputedAt == null) {
+      dewsUnavailable = true;
+      dewsFailureReason = "stress_signals latest rows are missing computed_at";
+    } else if (now - dewsLatestComputedAt > DEWS_STRESS_MAX_AGE_SEC) {
+      dewsUnavailable = true;
+      dewsFailureReason =
+        `stress_signals latest row is stale (ageSec=${now - dewsLatestComputedAt}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
+    }
+
+    if (!dewsUnavailable) {
+      // Count stressed coins weighted by mcap after dependency freshness is proven.
+      for (const row of rows) {
+        if (!DEWS_STRESS_BANDS.has(row.band)) continue;
+        const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
+        dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * 1.5;
+      }
     }
   } catch (error) {
     dewsUnavailable = true;
@@ -141,6 +171,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         fallbackMode: "dews-unavailable",
         dewsUnavailable,
         dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
         totalMcapUsd,
         mcap7dChangePct,
         preservedCurrentSample: true,
@@ -216,6 +249,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsStressBreadth,
         dewsUnavailable,
         dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
       }),
     };
   }
@@ -237,6 +273,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsStressBreadth,
         dewsUnavailable,
         dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
         depegEventsUnavailable,
         depegEventsFailureReason,
         replayPriceFallbackCount,
@@ -262,6 +301,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsStressBreadth,
       dewsUnavailable,
       dewsFailureReason,
+      dewsLatestComputedAt,
+      dewsRowsRead,
+      dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
       depegEventsUnavailable,
       depegEventsFailureReason,
       replayPriceFallbackCount,
