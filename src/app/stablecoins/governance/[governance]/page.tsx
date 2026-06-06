@@ -10,6 +10,7 @@ const route = createStaticSlugRoute({
   pages: GOVERNANCE_TAXONOMY_PAGES,
   pageBySlug: GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
   missingTitle: "Governance Type Not Found",
+  ogImage: "/og-stablecoins.png",
   render: (page) => <StablecoinTaxonomyPage page={page} />,
 });
 

@@ -7,6 +7,7 @@ interface SlugPageMetadata {
   title: string;
   description: string;
   href: string;
+  ogImage?: string;
 }
 
 export function buildSlugStaticParams<TParamKey extends string>(
@@ -30,6 +31,7 @@ export async function buildSlugPageMetadata<TParamKey extends string>(
   paramKey: TParamKey,
   pageBySlug: ReadonlyMap<string, SlugPageMetadata>,
   missingTitle: string,
+  ogImage?: string,
 ) {
   const page = await resolveSlugPage(params, paramKey, pageBySlug);
   if (!page) {
@@ -43,6 +45,7 @@ export async function buildSlugPageMetadata<TParamKey extends string>(
     title: page.title,
     description: page.description,
     canonical: page.href,
+    ogImage: page.ogImage ?? ogImage,
   });
 }
 
@@ -51,6 +54,7 @@ interface StaticSlugRouteConfig<TParamKey extends string, TPage extends SlugPage
   pages: ReadonlyArray<{ slug: string }>;
   pageBySlug: ReadonlyMap<string, TPage>;
   missingTitle: string;
+  ogImage?: string;
   render: (page: TPage) => ReactNode;
 }
 
@@ -59,6 +63,7 @@ export function createStaticSlugRoute<TParamKey extends string, TPage extends Sl
   pages,
   pageBySlug,
   missingTitle,
+  ogImage,
   render,
 }: StaticSlugRouteConfig<TParamKey, TPage>) {
   return {
@@ -66,7 +71,7 @@ export function createStaticSlugRoute<TParamKey extends string, TPage extends Sl
       return buildSlugStaticParams(paramKey, pages);
     },
     generateMetadata({ params }: { params: Promise<Record<TParamKey, string>> }) {
-      return buildSlugPageMetadata(params, paramKey, pageBySlug, missingTitle);
+      return buildSlugPageMetadata(params, paramKey, pageBySlug, missingTitle, ogImage);
     },
     async Page({ params }: { params: Promise<Record<TParamKey, string>> }) {
       const page = await resolveSlugPage(params, paramKey, pageBySlug);

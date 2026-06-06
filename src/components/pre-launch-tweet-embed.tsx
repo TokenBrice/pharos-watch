@@ -1,5 +1,3 @@
-"use client";
-
 import dynamic from "next/dynamic";
 
 interface PreLaunchTweetEmbedProps {
@@ -15,7 +13,6 @@ function TweetEmbedLoading() {
 }
 
 const Tweet = dynamic(() => import("react-tweet").then((mod) => mod.Tweet), {
-  ssr: false,
   loading: TweetEmbedLoading,
 });
 

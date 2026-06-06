@@ -213,6 +213,14 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     ],
   },
   {
+    label: "depeg event detail",
+    pattern: /^\/depeg\/[^/]+\/$/,
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "NewsArticle", requiredPaths: ["headline", "datePublished", "dateModified", "mainEntityOfPage"] },
+    ],
+  },
+  {
     label: "safety scores",
     route: "/safety-scores/",
     nodes: [

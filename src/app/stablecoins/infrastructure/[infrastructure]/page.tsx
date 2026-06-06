@@ -10,6 +10,7 @@ const route = createStaticSlugRoute({
   pages: INFRASTRUCTURE_TAXONOMY_PAGES,
   pageBySlug: INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG,
   missingTitle: "Infrastructure Cohort Not Found",
+  ogImage: "/og-stablecoins.png",
   render: (page) => <StablecoinTaxonomyPage page={page} />,
 });
 

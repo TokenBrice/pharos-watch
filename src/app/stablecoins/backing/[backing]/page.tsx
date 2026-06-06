@@ -10,6 +10,7 @@ const route = createStaticSlugRoute({
   pages: BACKING_TAXONOMY_PAGES,
   pageBySlug: BACKING_TAXONOMY_PAGE_BY_SLUG,
   missingTitle: "Backing Type Not Found",
+  ogImage: "/og-stablecoins.png",
   render: (page) => <StablecoinTaxonomyPage page={page} />,
 });
 

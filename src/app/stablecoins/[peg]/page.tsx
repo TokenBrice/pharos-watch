@@ -49,6 +49,7 @@ const route = createStaticSlugRoute({
   pages: PEG_TAXONOMY_PAGES,
   pageBySlug: PEG_TAXONOMY_PAGE_BY_SLUG,
   missingTitle: "Peg Currency Not Found",
+  ogImage: "/og-stablecoins.png",
   render: (page) => (
     <StablecoinTaxonomyShell
       title={page.title}

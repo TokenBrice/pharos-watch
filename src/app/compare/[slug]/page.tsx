@@ -24,7 +24,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found");
+  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found", "/og-compare.png");
 }
 
 export default async function StaticComparisonPage({ params }: { params: Promise<{ slug: string }> }) {

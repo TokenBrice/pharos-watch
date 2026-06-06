@@ -58,7 +58,6 @@ function HomeAltHeroChartFallback() {
 const HomeAltHeroChart = dynamic(
   () => import("@/components/home-alt-hero-chart").then((mod) => mod.HomeAltHeroChart),
   {
-    ssr: false,
     loading: HomeAltHeroChartFallback,
   },
 );

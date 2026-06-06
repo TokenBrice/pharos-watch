@@ -259,20 +259,6 @@ export default async function DepegEventPage(
     identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
   };
 
-  const eventJsonLd: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    name: heroTitle,
-    description: heroDescription,
-    startDate: startedIso,
-    eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
-    url: canonicalUrl,
-    organizer: { "@type": "Organization", name: "Pharos", url: SITE_URL },
-    identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
-  };
-  if (endedIso) eventJsonLd.endDate = endedIso;
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <BreadcrumbJsonLd
@@ -285,10 +271,6 @@ export default async function DepegEventPage(
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(newsArticleJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(eventJsonLd) }}
       />
 
       <div className="space-y-2">
