@@ -10,6 +10,7 @@ vi.mock("../../lib/db-cache", () => ({
 
 import { batchExecute } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import type { PoolEntry } from "../dex-liquidity/types";
@@ -565,7 +566,7 @@ describe("dex-liquidity scoring", () => {
               poolId: "ethereum:curve-1",
               project: "curve",
               chain: "Ethereum",
-              tvlUsd: 40,
+              tvlUsd: 400_000,
               price: 0.98,
               source: "dl",
             }),
@@ -573,7 +574,7 @@ describe("dex-liquidity scoring", () => {
               poolId: "ethereum:curve-2",
               project: "curve",
               chain: "Ethereum",
-              tvlUsd: 35,
+              tvlUsd: 350_000,
               price: 1.0,
               source: "dl",
             }),
@@ -581,7 +582,7 @@ describe("dex-liquidity scoring", () => {
               poolId: "base:uni-1",
               project: "uniswap-v3",
               chain: "Base",
-              tvlUsd: 25,
+              tvlUsd: 250_000,
               price: 1.02,
               source: "direct_api",
             }),
@@ -594,7 +595,7 @@ describe("dex-liquidity scoring", () => {
               poolId: "base:alien-1",
               project: "alien-base",
               chain: "Base",
-              tvlUsd: 10,
+              tvlUsd: 100_000,
               price: 1.2,
             }),
           ],
@@ -612,12 +613,12 @@ describe("dex-liquidity scoring", () => {
       "USDT",
       1,
       3,
-      100,
+      1_000_000,
       -99,
       1.01,
       JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 75 },
-        { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 25 },
+        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 750_000 },
+        { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000 },
       ]),
       1_700_000_001,
     ]);
@@ -626,10 +627,85 @@ describe("dex-liquidity scoring", () => {
       "USDC",
       1.2,
       1,
-      10,
+      100_000,
       null,
       null,
-      JSON.stringify([{ protocol: "alien-base", chain: "Base", price: 1.2, tvl: 10 }]),
+      JSON.stringify([{ protocol: "alien-base", chain: "Base", price: 1.2, tvl: 100_000 }]),
+      1_700_000_001,
+    ]);
+  });
+
+  it("does not publish retained priced pools below the DEX price observation floor", async () => {
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: DEX_PRICE_OBSERVATION_MIN_TVL_USD - 1,
+            price: 0.9999,
+            source: "dl",
+          }),
+        ]],
+      ]),
+      1_700_000_001,
+    );
+
+    expect(getCache).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("weights DEX price medians by source family rather than claimed protocol", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", price: 1 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 100_000,
+            price: 1,
+            source: "dl",
+          }),
+          makeDexPricePool({
+            poolId: "solana:raydium-fallback-1",
+            project: "raydium",
+            chain: "Solana",
+            tvlUsd: 180_000,
+            price: 1.2,
+            source: "dexscreener",
+          }),
+        ]],
+      ]),
+      1_700_000_001,
+    );
+
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const upserts = statements as PreparedStatementWithMeta[];
+    expect(upserts[0]?.boundValues).toEqual([
+      "usdt-tether",
+      "USDT",
+      1,
+      2,
+      280_000,
+      0,
+      1,
+      JSON.stringify([
+        { protocol: "raydium", chain: "Solana", price: 1.2, tvl: 180_000 },
+        { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000 },
+      ]),
       1_700_000_001,
     ]);
   });
@@ -648,7 +724,7 @@ describe("dex-liquidity scoring", () => {
             poolId: "ethereum:curve-1",
             project: "curve",
             chain: "Ethereum",
-            tvlUsd: 5,
+            tvlUsd: DEX_PRICE_OBSERVATION_MIN_TVL_USD,
             price: 0.99,
             source: "dl",
           }),

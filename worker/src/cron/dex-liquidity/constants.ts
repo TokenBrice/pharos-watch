@@ -8,6 +8,7 @@
  * see ../../lib/dex-constants.ts
  */
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
@@ -101,45 +102,15 @@ export const USD_QUOTE_COIN_IDS = new Set([
 export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
 
 /**
- * Confidence weight for DEX price observations by protocol.
- * Scales TVL weight in the TVL-weighted median to down-weight less reliable sources.
- *
- * Tier 1 (1.0): Primary scoring sources — exact match
- *   "curve", "uniswap-v3", "aerodrome"
- *
- * Tier 2 (0.85): Discovery-stage CoinGecko/GeckoTerminal — startsWith match
- *   "staged-cg_onchain-<dexId>"  (e.g., "staged-cg_onchain-raydium")
- *   "geckoterminal-<dexId>"      (e.g., "geckoterminal-uniswap_v3")
- *   "coingecko-<exchange>"       (e.g., "coingecko-binance")
- *
- * Tier 3 (0.55): DexScreener and CG tickers fallback — startsWith match
- *   "dexscreener-<dexId>"        (e.g., "dexscreener-raydium")
- *   "cg-ticker-<exchange>"       (e.g., "cg-ticker-kinesis")
- *   "staged-dexscreener-<dexId>"
- *   "staged-cg_tickers-<exchange>"
- *
- * Tier 4 (0.3): Unknown/unrecognized protocols — fallback
- *
- * startsWith is used for Tiers 2-3 because the crawl pipeline appends
- * source-specific dexId/exchange suffixes to the protocol string.
+ * Confidence weight for DEX price observations by source family.
+ * Scales TVL weight in the TVL-weighted median to down-weight less reliable
+ * source families without trusting protocol labels supplied by fallback feeds.
  */
-export function dexPriceConfidenceForProtocol(protocol: string): number {
-  if (
-    protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome" ||
-    protocol === "fluid" || protocol === "balancer" || protocol === "raydium" || protocol === "orca" ||
-    protocol === "meteora" || protocol === "pancakeswap" ||
-    protocol === "aerodrome-slipstream" || protocol === "velodrome-slipstream"
-  ) return 1.0;
-  if (
-    protocol.startsWith("staged-cg_onchain") ||
-    protocol.startsWith("geckoterminal") ||
-    protocol.startsWith("coingecko")
-  ) return 0.85;
-  if (
-    protocol.startsWith("dexscreener") ||
-    protocol.startsWith("cg-ticker") ||
-    protocol.startsWith("staged-dexscreener") ||
-    protocol.startsWith("staged-cg_tickers")
-  ) return 0.55;
+export function dexPriceConfidenceForSourceFamily(
+  sourceFamily: LiquidityPoolSourceFamily | string | null | undefined,
+): number {
+  if (sourceFamily === "dl" || sourceFamily === "direct_api") return 1.0;
+  if (sourceFamily === "cg_onchain" || sourceFamily === "gecko_terminal") return 0.85;
+  if (sourceFamily === "dexscreener" || sourceFamily === "cg_tickers") return 0.55;
   return 0.3;
 }

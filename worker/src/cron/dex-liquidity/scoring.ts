@@ -7,7 +7,7 @@ import type {
   FullScoreResult,
   GlobalAgg,
 } from "./types";
-import { dexPriceConfidenceForProtocol } from "./constants";
+import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import {
@@ -368,7 +368,7 @@ export async function computeDexPrices(
     // Scale TVL weights by source confidence before computing median
     const adjustedObs = medianInputObs.map((o) => ({
       ...o,
-      tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
+      tvl: o.tvl * dexPriceConfidenceForSourceFamily(o.sourceFamily),
     }));
 
     // TVL-weighted median: sort by price, walk until cumulative (confidence-weighted) TVL crosses 50%

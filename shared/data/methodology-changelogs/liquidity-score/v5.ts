@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.8",
+    title: "Retained-pool DEX price ownership hardening",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "DEX implied-price publication now reapplies the documented $50K retained-pool price floor and weights medians by source family instead of protocol labels.",
+    impact: [
+      "Retained pools below the $50K DEX price-observation floor can still contribute to liquidity scoring when otherwise eligible, but no longer publish dex_price_usd or price_sources_json rows",
+      "DEX price median weighting now uses canonical source families: DeFiLlama and direct API at 1.0, CoinGecko Onchain and GeckoTerminal at 0.85, DexScreener and CoinGecko tickers at 0.55",
+      "Fallback rows that claim high-trust protocol names can no longer receive primary-source median weight solely from the protocol label",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.7",
     title: "Peg-aware staged discovery price gate",
     date: "2026-05-20",

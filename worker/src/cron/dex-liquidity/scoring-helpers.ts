@@ -5,6 +5,7 @@ import type {
   LiquiditySourceMixByFamily,
 } from "./types";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
 import { normalizeProtocol } from "./pool-helpers";
 
@@ -492,7 +493,7 @@ export function buildDexPriceObservationsFromRetainedPools(
         Number.isFinite(pool.price) &&
         pool.price > 0 &&
         Number.isFinite(pool.tvlUsd) &&
-        pool.tvlUsd > 0
+        pool.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
       ))
       .map((pool) => ({
         price: pool.price!,

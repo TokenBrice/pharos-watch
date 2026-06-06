@@ -1,6 +1,14 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.7` (2026-02-19 -> 2026-05-20).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.8` (2026-02-19 -> 2026-06-06).
+
+---
+
+## v5.8 - Retained-pool DEX price ownership hardening (June 6, 2026)
+
+- Retained pools below the documented `$50K` DEX price-observation floor can still contribute to liquidity scoring when otherwise eligible, but no longer publish `dex_price_usd` or `price_sources_json`
+- DEX price median weighting now keys on source family rather than protocol label: DeFiLlama/direct API `1.0x`, CoinGecko Onchain/GeckoTerminal `0.85x`, DexScreener/CoinGecko tickers `0.55x`
+- Fallback rows that claim high-trust protocol names can no longer receive primary-source median weight solely from that venue label
 
 ---
 
