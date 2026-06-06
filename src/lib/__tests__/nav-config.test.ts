@@ -92,7 +92,7 @@ describe("nav-config", () => {
     ]);
   });
 
-  it("defines the core top rail run and hides duplicate core links in the sidebar on core pages", () => {
+  it("defines the core top rail run while preserving sidebar links on core pages", () => {
     expect(CORE_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual([
       { href: "/", label: "Dashboard" },
       { href: "/safety-scores/", label: "Safety Scores" },
@@ -111,10 +111,13 @@ describe("nav-config", () => {
     expect(isCoreNavPath("/learn/mechanisms/")).toBe(false);
 
     const corePageNav = getSidebarNavForPath("/yield/");
-    expect(corePageNav.primaryItems.map((item) => item.href)).toEqual(["/"]);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(false);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/")).toBe(false);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(false);
+    expect(corePageNav.primaryItems).toBe(PRIMARY_NAV_ITEMS);
+    expect(corePageNav.groups).toBe(NAV_GROUPS);
+    expect(corePageNav.primaryItems.some((item) => item.href === "/depeg/")).toBe(true);
+    expect(corePageNav.primaryItems.some((item) => item.href === "/alt-pegs/")).toBe(true);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(true);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/")).toBe(true);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/screener/")).toBe(true);
 
     const nonCorePageNav = getSidebarNavForPath("/stablecoin/usdt-tether/");

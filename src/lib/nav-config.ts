@@ -154,29 +154,14 @@ export function normalizeNavPath(pathname: string): string {
   return pathname.replace(/\/+$/, "");
 }
 
-function isCoreNavHref(href: string): boolean {
-  const normalizedHref = normalizeNavPath(href);
-  return CORE_NAV_ITEMS.some((item) => normalizeNavPath(item.href) === normalizedHref);
-}
-
 export function isCoreNavPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   const normalizedPath = normalizeNavPath(pathname);
   return CORE_NAV_ITEMS.some((item) => normalizeNavPath(item.href) === normalizedPath);
 }
 
-export function getSidebarNavForPath(pathname: string | null | undefined): { primaryItems: NavItem[]; groups: NavGroup[] } {
-  if (!isCoreNavPath(pathname)) {
-    return { primaryItems: PRIMARY_NAV_ITEMS, groups: NAV_GROUPS };
-  }
-
-  return {
-    primaryItems: PRIMARY_NAV_ITEMS.filter((item) => normalizeNavPath(item.href) === "/"),
-    groups: NAV_GROUPS.map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !isCoreNavHref(item.href)),
-    })).filter((group) => group.items.length > 0),
-  };
+export function getSidebarNavForPath(_pathname: string | null | undefined): { primaryItems: NavItem[]; groups: NavGroup[] } {
+  return { primaryItems: PRIMARY_NAV_ITEMS, groups: NAV_GROUPS };
 }
 
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
