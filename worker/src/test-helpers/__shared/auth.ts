@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { bytesToHex } from "../../lib/hash";
 
 type ApiRequestOptions = {
   method?: string;
@@ -57,7 +58,7 @@ export async function hmacSha256Hex(secret: string, input: string): Promise<stri
     ["sign"],
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
+  return bytesToHex(new Uint8Array(signature));
 }
 
 export function makeExecutionContext() {

@@ -21,7 +21,8 @@ import {
   type RateLimitedFetch,
   type SubrequestBudget,
   budgetExhausted,
-  decodeUint256,
+  decodeAddressWord,
+  decodeUint256Word,
   readDataWord,
 } from "../../lib/evm-logs";
 import { ETHERSCAN_V2_BASE } from "../../lib/constants";
@@ -183,20 +184,6 @@ function normalizeEvmAddress(address: string): string | null {
   return value;
 }
 
-function decodeAddressWordStrict(word: string | null | undefined): string | null {
-  if (typeof word !== "string") return null;
-  const cleaned = word.startsWith("0x") ? word.slice(2) : word;
-  if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) return null;
-  return normalizeEvmAddress("0x" + cleaned.slice(24));
-}
-
-function decodeUint256WordStrict(word: string | null | undefined, decimals: number): number | null {
-  if (typeof word !== "string") return null;
-  const cleaned = word.startsWith("0x") ? word.slice(2) : word;
-  if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) return null;
-  return decodeUint256("0x" + cleaned, decimals);
-}
-
 function readTopicWord(topics: readonly string[], index: number): string | null {
   const topic = topics[index];
   if (typeof topic !== "string") return null;
@@ -211,19 +198,19 @@ function resolveDestroyLogAddress(
 
   if (typeof matchingEvent.addressDataIndex === "number") {
     return {
-      address: decodeAddressWordStrict(readDataWord(log.data, matchingEvent.addressDataIndex)),
+      address: decodeAddressWord(readDataWord(log.data, matchingEvent.addressDataIndex)),
       addressFromTopic: false,
     };
   }
 
   const topicIdx = matchingEvent.addressTopicIndex ?? 1;
-  const topicAddress = decodeAddressWordStrict(readTopicWord(log.topics, topicIdx));
+  const topicAddress = decodeAddressWord(readTopicWord(log.topics, topicIdx));
   if (topicAddress) {
     return { address: topicAddress, addressFromTopic: true };
   }
 
   return {
-    address: decodeAddressWordStrict(readDataWord(log.data, 0)),
+    address: decodeAddressWord(readDataWord(log.data, 0)),
     addressFromTopic: false,
   };
 }
@@ -235,13 +222,13 @@ function resolveDestroyLogAmount(
   addressFromTopic: boolean,
 ): number | null {
   if (typeof matchingEvent.amountTopicIndex === "number") {
-    return decodeUint256WordStrict(readTopicWord(log.topics, matchingEvent.amountTopicIndex), decimals);
+    return decodeUint256Word(readTopicWord(log.topics, matchingEvent.amountTopicIndex), decimals);
   }
   if (typeof matchingEvent.amountDataIndex === "number") {
-    return decodeUint256WordStrict(readDataWord(log.data, matchingEvent.amountDataIndex), decimals);
+    return decodeUint256Word(readDataWord(log.data, matchingEvent.amountDataIndex), decimals);
   }
 
-  return decodeUint256WordStrict(
+  return decodeUint256Word(
     readDataWord(log.data, addressFromTopic ? 0 : 1),
     decimals,
   );
@@ -274,7 +261,7 @@ export function extractDestroyAmountFromReceiptLogs(
     if (log.topics.length < 3) continue;
     if (log.topics[1]?.toLowerCase() !== paddedAddress) continue;
     if (log.topics[2]?.toLowerCase() !== ZERO_ADDRESS_TOPIC) continue;
-    const amount = decodeUint256WordStrict(readDataWord(log.data, 0), config.decimals);
+    const amount = decodeUint256Word(readDataWord(log.data, 0), config.decimals);
     if (amount != null) return amount;
   }
 

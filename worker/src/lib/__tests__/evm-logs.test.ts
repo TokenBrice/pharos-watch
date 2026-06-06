@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   buildTopicParams,
   decodeAddress,
+  decodeAddressWord,
   decodeUint256,
+  decodeUint256Word,
   createBudget,
   budgetExhausted,
   createRateLimiter,
@@ -87,6 +89,20 @@ describe("decodeAddress", () => {
   });
 });
 
+describe("decodeAddressWord", () => {
+  it("returns null for malformed or short words", () => {
+    expect(decodeAddressWord(null)).toBeNull();
+    expect(decodeAddressWord("0xdeadbeef")).toBeNull();
+    expect(decodeAddressWord("0x" + "z".repeat(64))).toBeNull();
+  });
+
+  it("extracts a lowercase address from a strict 32-byte word", () => {
+    expect(
+      decodeAddressWord("0x000000000000000000000000DAC17F958D2EE523A2206206994597C13D831EC7"),
+    ).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
+  });
+});
+
 // --- readDataWord ---
 
 describe("readDataWord", () => {
@@ -142,6 +158,19 @@ describe("decodeUint256", () => {
     // 1e9 * 1e6 = 1e15 = 0x38D7EA4C68000
     const hex = "0x00000000000000000000000000000000000000000000000000038d7ea4c68000";
     expect(decodeUint256(hex, 6)).toBeCloseTo(1_000_000_000, 0);
+  });
+});
+
+describe("decodeUint256Word", () => {
+  it("returns null for malformed or short words", () => {
+    expect(decodeUint256Word(null, 6)).toBeNull();
+    expect(decodeUint256Word("0xf4240", 6)).toBeNull();
+    expect(decodeUint256Word("0x" + "g".repeat(64), 6)).toBeNull();
+  });
+
+  it("decodes a strict 32-byte word", () => {
+    const word = "0x00000000000000000000000000000000000000000000000000000000000f4240";
+    expect(decodeUint256Word(word, 6)).toBe(1);
   });
 });
 
