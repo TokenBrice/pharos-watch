@@ -82,6 +82,55 @@ describe("handleDexLiquidity", () => {
     });
   });
 
+  it("treats dex_prices as optional when the table is not deployed yet", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [row] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [], throwError: new Error("no such table: dex_prices") },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["usdt-tether"]?.dexPriceUsd).toBeNull();
+    expect(body["usdt-tether"]?.priceSources).toBeNull();
+  });
+
+  it("falls back to row timestamps when cron freshness lookups fail", async () => {
+    const staleRow = makeDexLiquidityRow({ updated_at: 1_700_000_000 });
+    const db = mockD1([
+      { match: "dex_liquidity_history", rows: [] },
+      {
+        match: "dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.999,
+          deviation_from_primary_bps: -10,
+          source_pool_count: 2,
+          source_total_tvl: 1_250_000,
+          price_sources_json: JSON.stringify([{ source: "curve" }]),
+          updated_at: 1_700_000_010,
+        }],
+      },
+      { match: "MAX(started_at)", rows: [], throwError: new Error("cron max unavailable") },
+      { match: "ORDER BY started_at DESC", rows: [], throwError: new Error("cron latest unavailable") },
+      { match: "dex_liquidity", rows: [staleRow] },
+    ]);
+
+    const before = Math.floor(Date.now() / 1000);
+    const res = await handleDexLiquidity(db);
+    const after = Math.floor(Date.now() / 1000);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["usdt-tether"]?.dexPriceUsd).toBe(0.999);
+    expect(body["usdt-tether"]?.priceSources).toEqual([{ source: "curve" }]);
+    const age = Number(res.headers.get("X-Data-Age"));
+    expect(age).toBeGreaterThanOrEqual(before - staleRow.updated_at);
+    expect(age).toBeLessThanOrEqual(after - staleRow.updated_at);
+  });
+
   it("overrides coverageClass to null for the __global__ sentinel row", async () => {
     const globalRow = makeDexLiquidityRow({
       stablecoin_id: "__global__",

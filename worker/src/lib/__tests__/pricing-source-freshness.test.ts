@@ -52,6 +52,42 @@ describe("pricing source freshness", () => {
     });
   });
 
+  it("rejects unknown and invalid source observations before freshness checks", () => {
+    expect(validatePricingSourceFreshness({
+      source: "made-up-source",
+      observedAt: 1_800_000_000,
+      nowSec: 1_800_000_000,
+    })).toEqual({
+      accepted: false,
+      reason: "unknown_source",
+      source: "made-up-source",
+      observedAt: 1_800_000_000,
+    });
+
+    expect(validatePricingSourceFreshness({
+      source: "coingecko",
+      observedAt: -1,
+      nowSec: 1_800_000_000,
+    })).toEqual({
+      accepted: false,
+      reason: "invalid_observed_at",
+      source: "coingecko",
+      observedAt: null,
+    });
+  });
+
+  it("accepts optional local-fetch sources without observed-at metadata", () => {
+    expect(validatePricingSourceFreshness({
+      source: "coingecko",
+      observedAt: null,
+      nowSec: 1_800_000_000,
+    })).toEqual({
+      accepted: true,
+      observedAt: null,
+      observedAtMode: "local_fetch",
+    });
+  });
+
   it("requires observed-at metadata for DefiLlama list prices before applying its staleness window", () => {
     expect(validatePricingSourceFreshness({
       source: "defillama-list",
@@ -87,6 +123,19 @@ describe("pricing source freshness", () => {
       reason: "stale_observed_at",
       source: "pyth",
       maxAgeSec: 300,
+    });
+  });
+
+  it("rejects empty composite source labels", () => {
+    expect(validateCompositePricingSourceFreshness({
+      source: " + ",
+      observedAt: 1_800_000_000,
+      nowSec: 1_800_000_000,
+    })).toEqual({
+      accepted: false,
+      reason: "unknown_source",
+      source: " + ",
+      observedAt: 1_800_000_000,
     });
   });
 });
