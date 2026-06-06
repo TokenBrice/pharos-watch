@@ -10,6 +10,26 @@ function guardTone(active: boolean): string {
   return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
 }
 
+function CoverageMix({
+  title,
+  classes,
+}: {
+  title: string;
+  classes: Pick<LiquidityHealth["currentCoverageClasses"], "primary" | "mixed" | "fallback" | "unobserved">;
+}) {
+  return (
+    <div className="rounded-lg border border-border/50 p-3">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>Primary: <span className="pharos-numeric">{classes.primary}</span></div>
+        <div>Mixed: <span className="pharos-numeric">{classes.mixed}</span></div>
+        <div>Fallback: <span className="pharos-numeric">{classes.fallback}</span></div>
+        <div>Unobserved: <span className="pharos-numeric">{classes.unobserved}</span></div>
+      </div>
+    </div>
+  );
+}
+
 export function LiquidityHealthCard({
   health,
   error,
@@ -97,24 +117,8 @@ export function LiquidityHealthCard({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-border/50 p-3">
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Current coverage mix</div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Primary: <span className="pharos-numeric">{currentClasses.primary}</span></div>
-              <div>Mixed: <span className="pharos-numeric">{currentClasses.mixed}</span></div>
-              <div>Fallback: <span className="pharos-numeric">{currentClasses.fallback}</span></div>
-              <div>Unobserved: <span className="pharos-numeric">{currentClasses.unobserved}</span></div>
-            </div>
-          </div>
-          <div className="rounded-lg border border-border/50 p-3">
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Previous coverage mix</div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Primary: <span className="pharos-numeric">{previousClasses.primary}</span></div>
-              <div>Mixed: <span className="pharos-numeric">{previousClasses.mixed}</span></div>
-              <div>Fallback: <span className="pharos-numeric">{previousClasses.fallback}</span></div>
-              <div>Unobserved: <span className="pharos-numeric">{previousClasses.unobserved}</span></div>
-            </div>
-          </div>
+          <CoverageMix title="Current coverage mix" classes={currentClasses} />
+          <CoverageMix title="Previous coverage mix" classes={previousClasses} />
         </div>
       </CardContent>
     </Card>

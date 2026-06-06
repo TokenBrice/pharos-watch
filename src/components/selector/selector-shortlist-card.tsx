@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
 import type {
   SelectorComponent,
-  SelectorInput,
   SelectorProfile,
   SelectorRecommendation,
 } from "@shared/lib/selector";
@@ -25,7 +24,6 @@ interface SelectorShortlistCardProps {
   rank: 1 | 2 | 3;
   recommendation: SelectorRecommendation;
   profile: SelectorProfile;
-  pegCurrency: SelectorInput["pegCurrency"];
   isMobile: boolean;
   /** Logo URL keyed by coin id. Optional. */
   logoUrl?: string;
@@ -166,7 +164,6 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     rank,
     recommendation: rec,
     profile,
-    pegCurrency: _pegCurrency,
     isMobile,
     logoUrl,
     whyText,
@@ -263,25 +260,20 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             </p>
           )}
         </div>
-        {resolvedWatchText && resolvedWatchText.length > 0 ? (
-          <div className="space-y-1 text-muted-foreground">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-              What to watch
-            </p>
+        <div className="space-y-1 text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+            What to watch
+          </p>
+          {resolvedWatchText && resolvedWatchText.length > 0 ? (
             <p className="break-words">{resolvedWatchText}</p>
-          </div>
-        ) : (
-          <div className="space-y-1 text-muted-foreground">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-              What to watch
-            </p>
+          ) : (
             <p>
               {readableLowestSubDimension(rec.lowestSubDimension.key)} scores{" "}
               <span className="font-mono tabular-nums">{Math.round(rec.lowestSubDimension.score)}</span>{" "}
               under this profile.
             </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {rec.profile === "yield" && rec.recommendedSource ? (

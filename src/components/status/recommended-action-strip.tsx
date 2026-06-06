@@ -2,6 +2,9 @@ import type { StatusActionRecommendation } from "@/lib/status/action-recommendat
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { SeverityPill } from "@/components/status/severity-pill";
 
+const RECOMMENDED_ACTION_STRIP_CLASS =
+  "rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]";
+
 export function RecommendedActionStrip({
   recommendations,
   onActionFinished,
@@ -11,7 +14,7 @@ export function RecommendedActionStrip({
 }) {
   if (recommendations.length === 0) {
     return (
-      <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
+      <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
         <div className="space-y-2">
           <p className="pharos-kicker">Recommended Now</p>
           <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">No manual intervention.</h3>
@@ -24,7 +27,7 @@ export function RecommendedActionStrip({
   }
 
   return (
-    <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
+    <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="pharos-kicker">Recommended Now</p>

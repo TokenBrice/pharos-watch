@@ -76,7 +76,6 @@ describe("SelectorShortlistCard", () => {
         rank={1}
         recommendation={baseRecommendation}
         profile="treasury"
-        pegCurrency="USD"
         isMobile={false}
       />,
     );
@@ -92,7 +91,6 @@ describe("SelectorShortlistCard", () => {
         rank={1}
         recommendation={baseRecommendation}
         profile="treasury"
-        pegCurrency="USD"
         isMobile={false}
         whyText="USDC ranks here because Safety A and Resilience 91 anchor the Treasury profile."
       />,
@@ -121,7 +119,6 @@ describe("SelectorShortlistCard", () => {
           ],
         }}
         profile="treasury"
-        pegCurrency="USD"
         isMobile={false}
       />,
     );
@@ -155,7 +152,6 @@ describe("SelectorShortlistCard", () => {
           perInputStaleness: null,
         }}
         profile="yield"
-        pegCurrency="USD"
         isMobile={false}
       />,
     );

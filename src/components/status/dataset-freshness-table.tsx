@@ -34,11 +34,8 @@ const DATASET_META: Record<
 };
 
 function getExpectedFreshnessSec(owners: readonly string[]): number | null {
-  const intervals = owners
-    .map((owner) => getCronJobMeta(owner)?.intervalSec)
-    .filter((interval): interval is number => interval != null);
-  if (intervals.length === 0) return null;
-  return Math.min(...intervals) * 2;
+  const cadenceSec = getCadenceSec(owners);
+  return cadenceSec == null ? null : cadenceSec * 2;
 }
 
 function getCadenceSec(owners: readonly string[]): number | null {

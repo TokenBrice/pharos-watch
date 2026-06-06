@@ -252,6 +252,50 @@ export function PegDeviationChart({
   // Available plot-area width inside the chart's left axis + right margin.
   // Used by the density strip so its bars share the x-pixel domain.
   const plotAreaWidth = Math.max(0, width - plotInsetLeft - plotInsetRight);
+  const pegSeverityBands = [
+    {
+      id: "drift-above",
+      y1: bpsToPrice(PEG_BAND_BPS.tight),
+      y2: bpsToPrice(PEG_BAND_BPS.drift),
+      fill: PEG_BAND_HEX.drift,
+      fillOpacity: 0.06,
+    },
+    {
+      id: "drift-below",
+      y1: bpsToPrice(-PEG_BAND_BPS.drift),
+      y2: bpsToPrice(-PEG_BAND_BPS.tight),
+      fill: PEG_BAND_HEX.drift,
+      fillOpacity: 0.06,
+    },
+    {
+      id: "stress-above",
+      y1: bpsToPrice(PEG_BAND_BPS.drift),
+      y2: bpsToPrice(PEG_BAND_BPS.stress),
+      fill: PEG_BAND_HEX.stress,
+      fillOpacity: 0.07,
+    },
+    {
+      id: "stress-below",
+      y1: bpsToPrice(-PEG_BAND_BPS.stress),
+      y2: bpsToPrice(-PEG_BAND_BPS.drift),
+      fill: PEG_BAND_HEX.stress,
+      fillOpacity: 0.07,
+    },
+    {
+      id: "depeg-above",
+      y1: bpsToPrice(PEG_BAND_BPS.stress),
+      y2: yAxis.domain[1],
+      fill: PEG_BAND_HEX.depeg,
+      fillOpacity: 0.08,
+    },
+    {
+      id: "depeg-below",
+      y1: yAxis.domain[0],
+      y2: bpsToPrice(-PEG_BAND_BPS.stress),
+      fill: PEG_BAND_HEX.depeg,
+      fillOpacity: 0.08,
+    },
+  ] as const;
 
   const chartBody =
     visibleData.length > 0 ? (
@@ -283,54 +327,17 @@ export function PegDeviationChart({
 
               {/* Peg severity bands — calm in-band core, warning outside. ifOverflow="hidden" clips
               bands that extend past the visible domain so they don't push the axis. */}
-              <ReferenceArea
-                y1={bpsToPrice(PEG_BAND_BPS.tight)}
-                y2={bpsToPrice(PEG_BAND_BPS.drift)}
-                fill={PEG_BAND_HEX.drift}
-                fillOpacity={0.06}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
-              <ReferenceArea
-                y1={bpsToPrice(-PEG_BAND_BPS.drift)}
-                y2={bpsToPrice(-PEG_BAND_BPS.tight)}
-                fill={PEG_BAND_HEX.drift}
-                fillOpacity={0.06}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
-              <ReferenceArea
-                y1={bpsToPrice(PEG_BAND_BPS.drift)}
-                y2={bpsToPrice(PEG_BAND_BPS.stress)}
-                fill={PEG_BAND_HEX.stress}
-                fillOpacity={0.07}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
-              <ReferenceArea
-                y1={bpsToPrice(-PEG_BAND_BPS.stress)}
-                y2={bpsToPrice(-PEG_BAND_BPS.drift)}
-                fill={PEG_BAND_HEX.stress}
-                fillOpacity={0.07}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
-              <ReferenceArea
-                y1={bpsToPrice(PEG_BAND_BPS.stress)}
-                y2={yAxis.domain[1]}
-                fill={PEG_BAND_HEX.depeg}
-                fillOpacity={0.08}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
-              <ReferenceArea
-                y1={yAxis.domain[0]}
-                y2={bpsToPrice(-PEG_BAND_BPS.stress)}
-                fill={PEG_BAND_HEX.depeg}
-                fillOpacity={0.08}
-                ifOverflow="hidden"
-                strokeOpacity={0}
-              />
+              {pegSeverityBands.map((band) => (
+                <ReferenceArea
+                  key={band.id}
+                  y1={band.y1}
+                  y2={band.y2}
+                  fill={band.fill}
+                  fillOpacity={band.fillOpacity}
+                  ifOverflow="hidden"
+                  strokeOpacity={0}
+                />
+              ))}
 
               {/* $1 peg reference line — solid, mono-weight, with inline label */}
               <ReferenceLine

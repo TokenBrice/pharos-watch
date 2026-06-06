@@ -14,6 +14,31 @@ function formatLaneLabel(lane: "public-api" | "site-api"): string {
   return lane === "public-api" ? "Public API" : "Site API";
 }
 
+function ShareBar({
+  siteSharePct,
+  externalSharePct,
+  topMargin = true,
+}: {
+  siteSharePct: number;
+  externalSharePct: number;
+  topMargin?: boolean;
+}) {
+  return (
+    <div className={topMargin ? "mt-2 h-2 overflow-hidden rounded-full bg-muted/70" : "h-2 overflow-hidden rounded-full bg-muted/70"}>
+      <div className="flex h-full">
+        <div
+          className="bg-sky-500/70"
+          style={{ width: `${siteSharePct}%` }}
+        />
+        <div
+          className="bg-amber-500/70"
+          style={{ width: `${externalSharePct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function metricRow(label: string, value: number) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
@@ -123,18 +148,7 @@ export function RequestSourceAttributionCard({
                       </div>
                       <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/70">
-                      <div className="flex h-full">
-                        <div
-                          className="bg-sky-500/70"
-                          style={{ width: `${lane.siteSharePct}%` }}
-                        />
-                        <div
-                          className="bg-amber-500/70"
-                          style={{ width: `${lane.externalSharePct}%` }}
-                        />
-                      </div>
-                    </div>
+                    <ShareBar siteSharePct={lane.siteSharePct} externalSharePct={lane.externalSharePct} />
                   </div>
                 )) : (
                   <div className="text-sm text-muted-foreground">No worker-lane data recorded in this window.</div>
@@ -162,18 +176,7 @@ export function RequestSourceAttributionCard({
                         <div className="text-[11px] text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
                       </div>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/70">
-                      <div className="flex h-full">
-                        <div
-                          className="bg-sky-500/70"
-                          style={{ width: `${route.siteSharePct}%` }}
-                        />
-                        <div
-                          className="bg-amber-500/70"
-                          style={{ width: `${route.externalSharePct}%` }}
-                        />
-                      </div>
-                    </div>
+                    <ShareBar siteSharePct={route.siteSharePct} externalSharePct={route.externalSharePct} />
                   </div>
                 )) : (
                   <div className="text-sm text-muted-foreground">No route groups recorded in this window.</div>
@@ -193,18 +196,11 @@ export function RequestSourceAttributionCard({
                       <span className="pharos-numeric text-muted-foreground">{formatBucketLabel(bucket.bucketStart)}</span>
                       <span className="pharos-numeric text-foreground">{formatCompactCount(bucket.totalRequests)}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted/70">
-                      <div className="flex h-full">
-                        <div
-                          className="bg-sky-500/70"
-                          style={{ width: `${bucket.siteSharePct}%` }}
-                        />
-                        <div
-                          className="bg-amber-500/70"
-                          style={{ width: `${bucket.externalSharePct}%` }}
-                        />
-                      </div>
-                    </div>
+                    <ShareBar
+                      siteSharePct={bucket.siteSharePct}
+                      externalSharePct={bucket.externalSharePct}
+                      topMargin={false}
+                    />
                   </div>
                 )) : (
                   <div className="text-sm text-muted-foreground">No time buckets recorded in this window.</div>

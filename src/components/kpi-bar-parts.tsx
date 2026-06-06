@@ -13,6 +13,12 @@ const KPI_CHIP_BASE =
 const SNAPSHOT_PILL_BASE =
   "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:px-3 sm:py-1 sm:text-xs" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
+const CHIP_TONE_CLASSES = {
+  positive: "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400",
+  negative: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400",
+  warning: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  neutral: "border-border bg-muted/40 text-muted-foreground",
+} as const;
 
 export function trendDirection(value: number): TrendDirection {
   if (value === 0) return "flat";
@@ -28,10 +34,10 @@ export function trendTextClass(value: number): string {
 export function TrendChip({ label, value, direction }: { label: ReactNode; value: string; direction: TrendDirection }) {
   const toneClasses =
     direction === "up"
-      ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
+      ? CHIP_TONE_CLASSES.positive
       : direction === "down"
-        ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
-        : "border-border bg-muted/40 text-muted-foreground";
+        ? CHIP_TONE_CLASSES.negative
+        : CHIP_TONE_CLASSES.neutral;
   const Icon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
 
   return (
@@ -54,12 +60,12 @@ export function InfoChip({
 }) {
   const toneClasses =
     tone === "positive"
-      ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
+      ? CHIP_TONE_CLASSES.positive
       : tone === "negative"
-        ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
+        ? CHIP_TONE_CLASSES.negative
         : tone === "warning"
-          ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-          : "border-border bg-muted/40 text-muted-foreground";
+          ? CHIP_TONE_CLASSES.warning
+          : CHIP_TONE_CLASSES.neutral;
 
   return (
     <span className={`${KPI_CHIP_BASE} ${toneClasses}`}>

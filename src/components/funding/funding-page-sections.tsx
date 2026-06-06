@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import { formatAddress } from "@shared/lib/format";
+import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
@@ -261,7 +261,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
   const visible = community.slice(0, limit);
   const lastUpdatedLabel =
     lastUpdatedAt > 0
-      ? new Date(lastUpdatedAt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      ? formatEventDate(lastUpdatedAt)
       : null;
 
   return (

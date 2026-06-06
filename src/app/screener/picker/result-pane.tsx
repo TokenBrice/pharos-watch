@@ -286,7 +286,6 @@ export function ResultPane({
                 rank={(idx + 1) as 1 | 2 | 3}
                 recommendation={enriched}
                 profile={profile}
-                pegCurrency={effectiveInput.pegCurrency}
                 isMobile={isMobile}
                 logoUrl={logos[rec.id] ?? undefined}
                 prominentOpenDetail={singleResult}
