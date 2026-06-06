@@ -21,10 +21,7 @@ export const ChainDominantStablecoinSchema = z.object({
 
 export type ChainDominantStablecoin = z.infer<typeof ChainDominantStablecoinSchema>;
 
-export const ChainTopStablecoinSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  share: z.number(),
+export const ChainTopStablecoinSchema = ChainDominantStablecoinSchema.extend({
   supplyUsd: z.number(),
 });
 

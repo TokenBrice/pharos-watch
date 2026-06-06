@@ -263,19 +263,6 @@ const DexLiquidityDataSchema = z.object({
 });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
-export interface DexLiquidityHistoryPoint {
-  tvl: number;
-  volume24h: number;
-  score: number | null;
-  date: number;
-  coverageClass: LiquidityCoverageClass;
-  coverageConfidence: number;
-  liquidityEvidenceClass: LiquidityEvidenceClass;
-  hasMeasuredLiquidityEvidence: boolean;
-  trendworthy: boolean;
-  methodologyVersion: string;
-}
-
 export const DexLiquidityHistoryPointSchema = z.object({
   tvl: z.number(),
   volume24h: z.number(),
@@ -288,6 +275,7 @@ export const DexLiquidityHistoryPointSchema = z.object({
   trendworthy: z.boolean(),
   methodologyVersion: z.string(),
 });
+export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
 
 export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);
 
@@ -335,22 +323,6 @@ export interface DepegEvent {
     pegScoreEligible?: boolean | null;
     updatedAt?: number | null;
   } | null;
-}
-
-export interface DepegPendingIncident {
-  stablecoinId: string;
-  symbol: string;
-  direction: "above" | "below";
-  firstSeenAt: number;
-  lastSeenAt: number;
-  firstSeenBps: number;
-  lastSeenBps: number;
-  peakSeenBps: number;
-  reason: string;
-  ageSec: number;
-  expiresAt: number;
-  availableConfirmationCategories: string[];
-  missingConfirmationCategories: string[];
 }
 
 const DepegEventSchema = z.object({
@@ -405,6 +377,7 @@ export const DepegPendingIncidentSchema = z.object({
   availableConfirmationCategories: z.array(z.string()),
   missingConfirmationCategories: z.array(z.string()),
 });
+export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
 
 export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
@@ -534,30 +507,6 @@ export type BlacklistAmountStatus =
   | "provider_failed"
   | "ambiguous";
 
-export interface BlacklistEvent {
-  id: string;
-  stablecoin: BlacklistStablecoin;
-  chainId: string;
-  chainName: string;
-  eventType: BlacklistEventType;
-  address: string;
-  amountNative: number | null;
-  amountUsdAtEvent: number | null;
-  amountSource: BlacklistAmountSource;
-  amountStatus: BlacklistAmountStatus;
-  txHash: string;
-  blockNumber: number;
-  timestamp: number;
-  methodologyVersion: string;
-  contractAddress: string | null;
-  configKey: string | null;
-  eventSignature: string | null;
-  eventTopic0: string | null;
-  suppressionReason?: string | null;
-  explorerTxUrl: string;
-  explorerAddressUrl: string;
-}
-
 const BlacklistEventSchema = z.object({
   id: z.string(),
   stablecoin: z.enum(BLACKLIST_STABLECOINS),
@@ -588,6 +537,7 @@ const BlacklistEventSchema = z.object({
   explorerTxUrl: z.string(),
   explorerAddressUrl: z.string(),
 });
+export type BlacklistEvent = z.infer<typeof BlacklistEventSchema>;
 
 export const BlacklistResponseSchema = z.object({
   events: z.array(BlacklistEventSchema),
@@ -805,15 +755,7 @@ export const StressSignalEntrySchema = z.object({
   ageClassification: StressSignalAgeClassificationSchema.optional(),
 });
 
-export interface StressSignalEntry {
-  score: number;
-  band: string;
-  signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
-  amplifiers?: { psi: number; contagion: number };
-  computedAt: number;
-  methodologyVersion: string;
-  ageClassification?: StressSignalAgeClassification;
-}
+export type StressSignalEntry = z.infer<typeof StressSignalEntrySchema>;
 
 export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
@@ -829,19 +771,7 @@ export const StressSignalsAllResponseSchema = z.object({
   methodology: MethodologyEnvelopeSchema,
 });
 
-export interface StressSignalsAllResponse {
-  signals: Record<string, StressSignalEntry>;
-  updatedAt: number;
-  eligibleCount?: number;
-  computedCount?: number;
-  missingCount?: number;
-  oldestComputedAt?: number;
-  coverageRatio?: number;
-  malformedRows?: number;
-  coverageStatus?: StressSignalDataStatus;
-  coverageReasons?: StressSignalDataReason[];
-  methodology: DepegDewsMethodology;
-}
+export type StressSignalsAllResponse = z.infer<typeof StressSignalsAllResponseSchema>;
 
 const StressSignalHistoryEntrySchema = z.object({
   date: z.number(),

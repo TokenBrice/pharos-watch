@@ -20,13 +20,12 @@ import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
 function pickWhyKeys(
   row: MergedRow,
   profile: SelectorProfile,
-  input: SelectorInput,
 ): WhyKey[] {
   const candidates = whyKeysByProfile[profile];
   const triggered: WhyKey[] = [];
   for (const key of candidates) {
     if (triggered.length >= 4) break;
-    if (whyKeyTriggers(key, row, input)) triggered.push(key);
+    if (whyKeyTriggers(key, row)) triggered.push(key);
   }
   for (const key of triggered) {
     if (!WHY_KEYS_SET.has(key)) {
@@ -39,7 +38,6 @@ function pickWhyKeys(
 function whyKeyTriggers(
   key: WhyKey,
   row: MergedRow,
-  input: SelectorInput,
 ): boolean {
   switch (key) {
     case "top-safety":
@@ -119,7 +117,6 @@ function whyKeyTriggers(
     case "strong-exit":
       return row.effectiveExitScore != null && row.effectiveExitScore >= 75;
     default:
-      void input;
       return false;
   }
 }
@@ -187,7 +184,7 @@ export function buildRecommendation(
     confidence: round1(entry.confidence),
     confidenceReasons: entry.confidenceReasons,
     components: entry.components,
-    whyKeys: pickWhyKeys(entry.row, profile, input),
+    whyKeys: pickWhyKeys(entry.row, profile),
     whyText: buildWhyText(entry, profile),
     watchText: renderWatchText(lowestWithContext, profile, entry.row),
     lowestSubDimension: lowestWithContext,

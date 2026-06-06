@@ -83,7 +83,6 @@ const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlyS
 function rawValueFor(
   key: WeightKey,
   row: MergedRow,
-  input: SelectorInput,
 ): number | null {
   switch (key) {
     case "safetyOverall":
@@ -121,7 +120,6 @@ function rawValueFor(
     case "liquidityDiversification":
       return row.concentrationHhi;
   }
-  void input;
   return null;
 }
 
@@ -161,7 +159,6 @@ function normalizeFor(
 
 function normalizeRow(
   row: MergedRow,
-  profile: SelectorProfile,
   input: SelectorInput,
 ): NormalizedSlot[] {
   const vector = getWeightVectorForInput(input);
@@ -171,7 +168,7 @@ function normalizeRow(
     if (w === 0) continue;
     if (k === "__profile") continue;
     const key = k as WeightKey;
-    const raw = rawValueFor(key, row, input);
+    const raw = rawValueFor(key, row);
     const normalized = normalizeFor(key, raw);
     slots.push({ key, rawValue: raw, normalizedValue: normalized, baseWeight: w });
   }
@@ -191,7 +188,7 @@ export function scoreRow(
   profile: SelectorProfile,
   input: SelectorInput,
 ): ScoreRowResult | null {
-  const slots = normalizeRow(row, profile, input);
+  const slots = normalizeRow(row, input);
 
   let redistributedSlots = 0;
   let scoreCap = 100;

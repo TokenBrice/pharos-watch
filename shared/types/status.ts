@@ -13,29 +13,6 @@ export type {
   PriceSourceHealthBucketKey,
 } from "./pricing-source-health";
 
-export interface CacheStatus {
-  ageSeconds: number | null;
-  /** Availability budget used by /api/health and /api/status ratio bands. */
-  maxAge: number;
-  healthy: boolean;
-  freshnessSource?: "freshness-sentinel" | "table-fallback" | "cron-fallback";
-  sentinelValidationReason?: string | null;
-  producerJob?: string | null;
-  producerIntervalSec?: number | null;
-  endpointMaxAge?: number | null;
-  availabilityMaxAge?: number | null;
-  endpointBudgetReason?: string | null;
-  availabilityBudgetReason?: string | null;
-  mode?: "live" | "cached-fallback";
-  sourceUpdatedAt?: number | null;
-  sourceAgeSeconds?: number | null;
-  sourceStatus?: "fresh" | "degraded" | "stale" | "none";
-  warning?: string | null;
-  consecutiveFallbackRuns?: number;
-  /** Human-friendly upstream provider (Binance, CoinGecko, DefiLlama, on-chain RPC, …). */
-  upstreamProvider?: string | null;
-}
-
 const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
   maxAge: z.number(),
@@ -56,6 +33,7 @@ const CacheStatusSchema = z.object({
   consecutiveFallbackRuns: z.number().optional(),
   upstreamProvider: z.string().nullable().optional(),
 });
+export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 
 export interface CronRun {
   startedAt: number;
@@ -398,7 +376,8 @@ export interface PerAlertTypeDeliveryStats {
 
 export type PerAlertTypeDelivery = Record<TelegramAlertType, PerAlertTypeDeliveryStats>;
 
-export type SafetyAlertSourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
+export const SAFETY_ALERT_SOURCE_STATE_VALUES = ["ok", "missing", "corrupt", "stale", "wrong-generation"] as const;
+export type SafetyAlertSourceState = (typeof SAFETY_ALERT_SOURCE_STATE_VALUES)[number];
 
 export interface TelegramDispatchCronResult {
   subscribersNotified: number;
@@ -970,14 +949,6 @@ export interface PublicStatusHistoryResponse {
   transitions: PublicStatusTransition[];
 }
 
-export interface CircuitRecord {
-  state: "closed" | "half-open" | "open";
-  consecutiveFailures: number;
-  lastFailureAt: number | null;
-  lastSuccessAt: number | null;
-  openedAt: number | null;
-}
-
 const CircuitRecordSchema = z.object({
   state: z.enum(["closed", "half-open", "open"]),
   consecutiveFailures: z.number(),
@@ -985,6 +956,7 @@ const CircuitRecordSchema = z.object({
   lastSuccessAt: z.number().nullable(),
   openedAt: z.number().nullable(),
 });
+export type CircuitRecord = z.infer<typeof CircuitRecordSchema>;
 
 export interface TelegramHealthSummary {
   totalChats: number;
@@ -1059,7 +1031,7 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     pendingDeliveries: z.number(),
     lastDispatchAt: z.number().nullable(),
     lastDispatchStatus: z.string().nullable(),
-    safetyAlertSourceState: z.enum(["ok", "missing", "corrupt", "stale", "wrong-generation"]).nullable(),
+    safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
     safetyAlertSourceAgeSeconds: z.number().nullable(),
     safetyAlertsSuppressed: z.boolean(),
     safetyAlertSourceGeneration: z.string().nullable(),

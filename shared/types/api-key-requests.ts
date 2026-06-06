@@ -1,14 +1,5 @@
 import { z } from "zod";
 
-export type ApiKeySelfServeStatus =
-  | "pending_verification"
-  | "issued"
-  | "rejected"
-  | "blocked"
-  | "expired";
-
-export type ApiKeySelfServeClaimStatus = "pending_verification" | "issued" | "released";
-
 export const ApiKeySelfServeStatusSchema = z.enum([
   "pending_verification",
   "issued",
@@ -16,8 +7,10 @@ export const ApiKeySelfServeStatusSchema = z.enum([
   "blocked",
   "expired",
 ]);
+export type ApiKeySelfServeStatus = z.infer<typeof ApiKeySelfServeStatusSchema>;
 
 export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
+export type ApiKeySelfServeClaimStatus = z.infer<typeof ApiKeySelfServeClaimStatusSchema>;
 
 export type ApiKeySelfServeCadence =
   | "hourly"
