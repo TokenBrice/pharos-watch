@@ -1,5 +1,31 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV7291Entry() {
+  return (
+    <VersionCard entry={getScoringEntry("7.291")}>
+      <p>
+        Safety Score scoring is unchanged, but degraded report-card inputs no longer
+        create durable grade-history transitions and the compact score cache now exposes
+        input-staleness metadata to dependent consumers.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Daily grade-history writes are suppressed when stale DEX liquidity or
+          redemption-backstop inputs built the report-card snapshot.
+        </li>
+        <li>
+          The history cron records degraded conditions in cron metadata instead of
+          persisting stale-input transitions.
+        </li>
+        <li>
+          The compact report-card cache now carries degraded-input metadata for Chain
+          Health and other lightweight consumers.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV729Entry() {
   return (
     <VersionCard entry={getScoringEntry("7.29")}>
