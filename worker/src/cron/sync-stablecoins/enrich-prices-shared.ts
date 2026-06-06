@@ -39,6 +39,8 @@ export interface PeggedAsset {
   priceSyncedAt?: number | null;
   priceSelectedSource?: string | null;
   supplySource?: string;
+  supplyObservedAt?: number | null;
+  supplyRestored?: boolean;
   pegType?: string;
   pegMechanism?: string;
   circulating?: Record<string, number>;

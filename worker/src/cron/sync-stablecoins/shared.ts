@@ -72,11 +72,20 @@ function toPegBuckets(value: unknown): Record<string, number> {
   return out;
 }
 
+function normalizeOptionalTimestamp(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPayload {
   return {
     ...payload,
     peggedAssets: payload.peggedAssets.map((asset) => {
-      const { gecko_id: _ignoredSnakeCase, ...rest } = asset as PeggedAsset & { gecko_id?: unknown };
+      const {
+        gecko_id: _ignoredSnakeCase,
+        supplyObservedAt: _ignoredSupplyObservedAt,
+        supplyRestored: _ignoredSupplyRestored,
+        ...rest
+      } = asset as PeggedAsset & { gecko_id?: unknown };
       const confidence = asset.priceConfidence;
       const priceUpdatedAt =
         typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt)
@@ -102,6 +111,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
           ? confidence
           : null;
+      const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
 
       return {
         ...rest,
@@ -113,6 +123,8 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         priceObservedAtMode,
         priceSyncedAt,
         priceSelectedSource,
+        ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
+        ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
@@ -235,13 +247,35 @@ function cloneCachedAsset(asset: PeggedAsset): PeggedAsset {
   };
 }
 
+function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: number | null): PeggedAsset {
+  const cloned = cloneCachedAsset(asset);
+  if (sumPegBuckets(cloned.circulating) <= 0) {
+    return cloned;
+  }
+  cloned.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt) ?? cacheUpdatedAt;
+  return cloned;
+}
+
+function markRestoredSupply(asset: PeggedAsset): PeggedAsset {
+  const restored = cloneCachedAsset(asset);
+  restored.supplyRestored = true;
+  restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
+  return restored;
+}
+
 export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<string, PeggedAsset>> {
   try {
     const prevCache = await getCache(db, "stablecoins");
     if (!prevCache) return new Map();
     const prevData = parseStablecoinsCachePayload(prevCache.value);
     if (!prevData) return new Map();
-    return new Map(prevData.peggedAssets.map((asset) => [String(asset.id), asset]));
+    const cacheUpdatedAt = normalizeOptionalTimestamp(prevCache.updatedAt);
+    return new Map(
+      prevData.peggedAssets.map((asset) => [
+        String(asset.id),
+        stampPreviousSupplyObservedAt(asset, cacheUpdatedAt),
+      ]),
+    );
   } catch (err) {
     console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
     return new Map();
@@ -282,7 +316,7 @@ export function mergeSupplementalLastKnownGood(
 
     const previous = previousAssetsById.get(id);
     if (previous && sumPegBuckets(previous.circulating) > 0) {
-      const merged = cloneCachedAsset(previous);
+      const merged = markRestoredSupply(previous);
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         merged.price = asset.price;
         merged.priceSource = asset.priceSource;
@@ -307,7 +341,7 @@ export function mergeSupplementalLastKnownGood(
     if (primaryAssetIds.has(id) || resolved.has(id)) continue;
     const previous = previousAssetsById.get(id);
     if (!previous || sumPegBuckets(previous.circulating) <= 0) continue;
-    resolved.set(id, cloneCachedAsset(previous));
+    resolved.set(id, markRestoredSupply(previous));
     restoredCount++;
   }
 

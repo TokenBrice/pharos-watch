@@ -16,6 +16,8 @@ function makeStablecoinsCacheValue() {
         priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
         supplySource: "defillama",
+        supplyObservedAt: 1_700_000_000,
+        supplyRestored: true,
         circulating: { peggedUSD: 100 },
         circulatingPrevDay: { peggedUSD: 90 },
         circulatingPrevWeek: { peggedUSD: 80 },
@@ -80,6 +82,8 @@ describe("handleStablecoinSummary", () => {
       const body = await res.json() as {
         id: string;
         symbol: string;
+        supplyObservedAt: number | null;
+        supplyRestored: boolean;
         supplyUsd: { current: number; change1d: number; change7d: number; change30d: number };
         chainCount: number;
         updatedAt: number;
@@ -90,6 +94,8 @@ describe("handleStablecoinSummary", () => {
       expect(res.headers.get("X-Data-Age")).toBe("42");
       expect(body.id).toBe("usdt-tether");
       expect(body.symbol).toBe("USDT");
+      expect(body.supplyObservedAt).toBe(1_700_000_000);
+      expect(body.supplyRestored).toBe(true);
       expect(body.supplyUsd.current).toBe(100);
       expect(body.supplyUsd.change1d).toBe(10);
       expect(body.supplyUsd.change7d).toBe(20);

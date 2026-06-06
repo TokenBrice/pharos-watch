@@ -2711,6 +2711,8 @@ describe("syncStablecoins", () => {
     expect(dgld?.price).toBe(10_700);
     expect(dgld?.priceSource).toBe("coingecko-mirror");
     expect(dgld?.supplySource).toBe("coingecko-fallback");
+    expect(dgld?.supplyObservedAt).toBe(nowSec - 300);
+    expect(dgld?.supplyRestored).toBe(true);
     expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
   });
 
@@ -2822,6 +2824,7 @@ describe("syncStablecoins", () => {
           priceConfidence: null,
           priceUpdatedAt: null,
           supplySource: "onchain-total-supply",
+          supplyObservedAt: nowSec - 600,
           circulating: { peggedUSD: 24_038_912.803829 },
           circulatingPrevDay: {},
           circulatingPrevWeek: {},
@@ -2899,6 +2902,8 @@ describe("syncStablecoins", () => {
 
     expect(usdk).toMatchObject({
       supplySource: "onchain-total-supply",
+      supplyObservedAt: nowSec - 600,
+      supplyRestored: true,
       price: null,
       priceSource: "missing",
       chains: ["Solana"],

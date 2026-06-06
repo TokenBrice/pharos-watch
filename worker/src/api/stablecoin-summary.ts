@@ -44,6 +44,8 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
     priceSource: coin.priceSource,
     priceConfidence: coin.priceConfidence ?? null,
     supplySource: coin.supplySource ?? null,
+    supplyObservedAt: coin.supplyObservedAt ?? null,
+    supplyRestored: coin.supplyRestored === true,
     supplyByPegUsd: coin.circulating,
     supplyUsd: {
       current: currentSupplyUsd,

@@ -52,6 +52,8 @@ const StablecoinDataRawSchema = z.object({
   agreeSources: z.array(z.string()).optional(),
   priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.nullable().optional(),
   supplySource: z.string().optional(),
+  supplyObservedAt: z.number().nullable().optional(),
+  supplyRestored: z.boolean().optional(),
   circulating: PegBucketsSchema,
   circulatingPrevDay: PegBucketsSchema.nullish(),
   circulatingPrevWeek: PegBucketsSchema.nullish(),
@@ -83,6 +85,8 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
     ? { priceSourceConfidenceProfile: asset.priceSourceConfidenceProfile }
     : {}),
   supplySource: asset.supplySource,
+  ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
+  ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
   circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
