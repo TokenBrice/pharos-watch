@@ -35,42 +35,71 @@ export function shouldCloseOrphanedDepeg(
 }
 
 export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRepairResult {
-  const openByCoin = new Map<string, DepegRow[]>();
+  const openByCoin = new Map<string, Map<string, DepegRow[]>>();
   for (const row of openRows) {
-    const list = openByCoin.get(row.stablecoin_id) ?? [];
+    const directionGroups = openByCoin.get(row.stablecoin_id) ?? new Map<string, DepegRow[]>();
+    const list = directionGroups.get(row.direction) ?? [];
     list.push(row);
-    openByCoin.set(row.stablecoin_id, list);
+    directionGroups.set(row.direction, list);
+    openByCoin.set(row.stablecoin_id, directionGroups);
   }
 
   const commands: DepegPersistenceCommand[] = [];
   const openEvents = new Map<string, DepegRow>();
-  for (const [coinId, rows] of openByCoin) {
-    if (rows.length === 1) {
-      openEvents.set(coinId, rows[0]);
+  for (const [coinId, directionGroups] of openByCoin) {
+    const directionKeepers: DepegRow[] = [];
+
+    for (const rows of directionGroups.values()) {
+      if (rows.length === 1) {
+        directionKeepers.push(rows[0]);
+        continue;
+      }
+
+      // Sort by started_at ascending - keep the earliest same-direction event.
+      rows.sort((a, b) => a.started_at - b.started_at || a.id - b.id);
+      const keeper = rows[0];
+      if (!keeper) continue;
+      for (let i = 1; i < rows.length; i++) {
+        const dupe = rows[i];
+        if (!dupe) continue;
+        // Absorb worse peak deviation into the same-direction keeper only.
+        if (Math.abs(dupe.peak_deviation_bps) > Math.abs(keeper.peak_deviation_bps)) {
+          keeper.peak_deviation_bps = dupe.peak_deviation_bps;
+          keeper.peak_price = dupe.peak_price;
+        }
+        commands.push({ type: "delete-event", id: dupe.id });
+      }
+      commands.push({
+        type: "update-peak",
+        id: keeper.id,
+        peakDeviationBps: keeper.peak_deviation_bps,
+        peakPrice: keeper.peak_price,
+      });
+      directionKeepers.push(keeper);
+    }
+
+    if (directionKeepers.length === 0) continue;
+    if (directionKeepers.length === 1) {
+      openEvents.set(coinId, directionKeepers[0]);
       continue;
     }
 
-    // Sort by started_at ascending - keep the earliest event.
-    rows.sort((a, b) => a.started_at - b.started_at);
-    const keeper = rows[0];
+    // Opposite-direction open rows are not true duplicates. Keep the most
+    // recent direction live and close older direction keepers at that boundary.
+    directionKeepers.sort((a, b) => b.started_at - a.started_at || b.id - a.id);
+    const keeper = directionKeepers[0];
     if (!keeper) continue;
-    for (let i = 1; i < rows.length; i++) {
-      const dupe = rows[i];
-      if (!dupe) continue;
-      // Absorb worse peak deviation into the keeper.
-      if (Math.abs(dupe.peak_deviation_bps) > Math.abs(keeper.peak_deviation_bps)) {
-        keeper.peak_deviation_bps = dupe.peak_deviation_bps;
-        keeper.peak_price = dupe.peak_price;
-      }
-      commands.push({ type: "delete-event", id: dupe.id });
+    for (let i = 1; i < directionKeepers.length; i++) {
+      const stale = directionKeepers[i];
+      if (!stale) continue;
+      commands.push({
+        type: "close-event",
+        id: stale.id,
+        endedAt: keeper.started_at,
+        recoveryPrice: null,
+        recoveryPriceMode: "null",
+      });
     }
-    // Update keeper's peak in DB.
-    commands.push({
-      type: "update-peak",
-      id: keeper.id,
-      peakDeviationBps: keeper.peak_deviation_bps,
-      peakPrice: keeper.peak_price,
-    });
     openEvents.set(coinId, keeper);
   }
 

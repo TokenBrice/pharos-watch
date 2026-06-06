@@ -39,13 +39,21 @@ const YIELD_WARNING_SCORES: Record<string, number> = {
 
 export function computeSupplySignal(input: DEWSInput): SignalResult {
   const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
+  const prevDayAvailable = input.circulatingPrevDayAvailable ?? true;
+  const prevWeekAvailable = input.circulatingPrevWeekAvailable ?? true;
 
-  if (circulatingPrevDay <= 0 && circulatingPrevWeek <= 0) {
+  if (!prevDayAvailable && !prevWeekAvailable) {
+    return { value: 0, available: false, unavailableReason: "supply-history-anchors-missing" };
+  }
+
+  if ((!prevDayAvailable || circulatingPrevDay <= 0) && (!prevWeekAvailable || circulatingPrevWeek <= 0)) {
     return { value: 0, available: true, delta1d: 0, delta7d: 0 };
   }
 
-  const delta1d = circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
-  const delta7d = circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
+  const delta1d =
+    prevDayAvailable && circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
+  const delta7d =
+    prevWeekAvailable && circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
 
   // Only contraction contributes stress
   const norm1d =

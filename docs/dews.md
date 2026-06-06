@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v6.04`
+- **Current methodology version:** `v6.06`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -74,7 +74,7 @@ Measures supply contraction rate. Only negative changes contribute stress.
 - **7d normalization:** `[0%, 0] → [3%, 15] → [7%, 40] → [15%, 70] → [30%, 100]`
 - **Blend:** `0.6 * norm1d + 0.4 * norm7d`
 - **Size dampening:** `sizeFactor = min(1, log10(max(mcap, $1M) / $1M) / 3)` — small coins (<$50M) get reduced signal
-- **History fallback:** absent previous-day or previous-week supply anchors default to current supply; explicit finite zero anchors stay zero and produce zero velocity stress rather than a divide-by-zero or a false contraction
+- **Anchor availability:** if both previous-day and previous-week supply anchors are absent, the sub-signal is unavailable and its weight is redistributed. If one anchor is present, the present side is scored and the missing side contributes zero velocity. Explicit finite zero anchors stay available and produce zero velocity stress rather than a divide-by-zero or a false contraction
 
 ### S_pool — Pool Balance Drift
 
@@ -161,7 +161,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 - **Small coins (<$50M):** S_supply dampened via size factor
 - **No DEX data:** S_pool and S_liq marked unavailable, weight redistributed
 - **No blacklist tracking:** S_black unavailable for most coins
-- **New coins / no history:** Signals gracefully degrade to unavailable
+- **New coins / no history:** Signals gracefully degrade to unavailable; Supply Velocity is unavailable until at least one previous-day or previous-week supply anchor exists
 
 ---
 

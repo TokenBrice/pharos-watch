@@ -1,6 +1,23 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.04` (2026-02-18 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.06` (2026-02-18 -> 2026-06-06).
+
+---
+
+## v6.06 — Confirmation peg-reference parity and directional duplicate repair (Jun 6, 2026)
+
+- Pending depeg confirmation now applies the same peg-reference authority gate as live detection before trusting a refreshed reference
+- Thin non-USD fiat groups without FX fallback use the stored pending-row `peg_reference` when valid, and otherwise wait instead of deleting or promoting from an unsafe reference
+- Duplicate open-event repair now merges only same-direction rows; older opposite-direction rows close at the newer direction boundary with `recovery_price = NULL`
+
+---
+
+## v6.05 — Missing supply anchors fail closed (Jun 6, 2026)
+
+- DEWS now marks the Supply Velocity sub-signal unavailable when both previous-day and previous-week supply-history anchors are absent
+- Coins with no prior supply-history anchors no longer receive an available zero-stress supply signal by default
+- If only one prior anchor is present, DEWS still computes the available side and treats the missing side as zero velocity contribution
+- Explicit finite zero anchors remain available and continue to produce zero velocity stress instead of divide-by-zero behavior
 
 ---
 

@@ -182,6 +182,42 @@ describe("computeDEWS", () => {
     expect(result.insufficientEvidenceReason).toBe("missing_market_or_liquidity_evidence");
   });
 
+  it("marks supply unavailable when both prior supply anchors are missing", () => {
+    const result = computeDews(
+      baseInput({
+        circulatingPrevDayAvailable: false,
+        circulatingPrevWeekAvailable: false,
+        weightedBalanceRatio: 0.98,
+        avgPoolStress: 0,
+        topPools: [],
+      }),
+    );
+    expect(result.signals.supply).toMatchObject({
+      available: false,
+      unavailableReason: "supply-history-anchors-missing",
+    });
+    expect(result.effectiveWeights.supply).toBeUndefined();
+    expect(result.availableWeight).toBeCloseTo(0.5);
+  });
+
+  it("keeps explicit zero prior supply anchors available", () => {
+    const result = computeDews(
+      baseInput({
+        circulatingPrevDay: 0,
+        circulatingPrevWeek: 0,
+        circulatingPrevDayAvailable: true,
+        circulatingPrevWeekAvailable: true,
+      }),
+    );
+    expect(result.signals.supply).toMatchObject({
+      available: true,
+      value: 0,
+      delta1d: 0,
+      delta7d: 0,
+    });
+    expect(result.effectiveWeights.supply).toBeGreaterThan(0);
+  });
+
   it("dampens supply velocity for small coins", () => {
     const large = computeDews(
       baseInput({

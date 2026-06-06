@@ -74,7 +74,11 @@ export async function confirmPendingDepegs(
     coingeckoApiKey,
   );
 
-  const { rates: pegRates } = derivePegRates(assets, ACTIVE_META_BY_ID, fxFallbackRates);
+  const {
+    rates: pegRates,
+    sources: pegRateSources,
+    counts: pegRateCounts,
+  } = derivePegRates(assets, ACTIVE_META_BY_ID, fxFallbackRates);
 
   throwIfAborted(signal);
   const dexPriceRows = await loadDexPriceRows(db);
@@ -126,6 +130,8 @@ export async function confirmPendingDepegs(
       asset: assetById.get(row.stablecoin_id),
       meta: ACTIVE_META_BY_ID.get(row.stablecoin_id),
       pegRates,
+      pegRateSources,
+      pegRateCounts,
       nativePegQuote: nativePegQuotes.get(row.stablecoin_id),
       openSet,
       now,

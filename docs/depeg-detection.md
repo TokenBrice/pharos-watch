@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.04`
+- **Current methodology version:** `v6.06`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -126,7 +126,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 1. Load PSI-eligible stablecoins into `metaById` map
 2. Derive peg rates (handles FX lookups once)
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
-4. Merge duplicate open events: for each coin with multiple open events, keep earliest, absorb worst peak, delete rest
+4. Merge duplicate open events: same-direction duplicates keep the earliest row and absorb only same-direction peaks; if opposite directions are open, the newest direction remains live and older direction rows close with `recovery_price = NULL`
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
@@ -220,7 +220,7 @@ Age checks:
 - Preferred path for supported non-USD fiat pegs: use a fresh direct native-peg quote (for example `BRZ/BRL` or `EURC/EUR`) and compare that quote directly to the native `1.0` peg
 - Default path: choose an independent off-chain family from the current primary `agreeSources` (falling back to `priceSource`). CoinGecko-family primaries use DefiLlama confirmation, DefiLlama-family primaries use CoinGecko confirmation, and primary clusters that already include both families do not get an off-chain confirmation vote.
 - CoinGecko confirmation uses `/simple/price` with `include_last_updated_at=true`; DefiLlama confirmation uses `coins.llama.fi/prices/current/coingecko:{geckoId}`. When those timestamps are present, stale or future-dated observations are ignored, and non-OK response bodies are canceled before later confirmation fetches.
-- Calculate deviation against the current peg reference recomputed during confirmation, falling back to the pending-row reference only when the current reference is unavailable
+- Calculate deviation against the current peg reference recomputed during confirmation only when that reference passes the same authority gate as Stage 1; thin non-USD fiat references without FX fallback fall back to the stored pending-row `peg_reference` when valid, or wait without mutating when no safe reference is available
 - Counts as confirmation only when deviation >= `secondaryBar` (50% of primary threshold) **and** it points in the same direction as the pending incident
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
 - Canonical persisted keys are `coingecko-confirm`, `defillama-confirm`, or `native:<peg>`.
@@ -263,7 +263,7 @@ Age checks:
 | null | null | false/null | false/null | true | REJECT when DEX or pool contradiction is decisive and no same-direction source rescues the candidate |
 | null | null | null | null | false | Keep pending until the dynamic expiry limit; then expire (or record `unconfirmed-severe` for extreme moves) |
 
-Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, refreshed `peg_reference`, canonical `confirmation_sources`, and peak = worst of the stored pending peak, current authoritative primary, and trustworthy same-direction confirmer prices, then deletes from `depeg_pending`.
+Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources`, and peak = worst of the stored pending peak, current authoritative primary, and trustworthy same-direction confirmer prices, then deletes from `depeg_pending`.
 
 Pending rows that pass the 45-minute base expiry but still have same-direction primary evidence, unavailable sources, or open confirmation circuits remain pending until their final dynamic limit. Rows that exceed that final limit are deleted with a recorded pending outcome; extreme-move expiries use `unconfirmed-severe` instead of the generic `expired` label.
 
@@ -470,7 +470,7 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 
 | Scenario | Handling |
 |----------|----------|
-| Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + merge at run start |
+| Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + run-start repair; same-direction rows merge, opposite-direction rows close older directions without absorbing opposite-sign peaks |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
 | Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |

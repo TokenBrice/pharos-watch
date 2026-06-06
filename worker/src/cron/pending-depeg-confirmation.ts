@@ -1,6 +1,6 @@
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getPegReference } from "@shared/lib/peg-rates";
+import { getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -14,7 +14,10 @@ import {
   loadDexPriceRows,
   loadDexPriceSources,
 } from "../lib/depeg-helpers";
-import { classifyPrimaryDepegTrust } from "../lib/depeg-trust-policy";
+import {
+  classifyPrimaryDepegTrust,
+  isAuthoritativeDepegPegReference,
+} from "../lib/depeg-trust-policy";
 import {
   classifyDirectionalSignal,
   deriveDepegSignal,
@@ -93,6 +96,8 @@ export interface ConfirmationPlanInput {
   asset: PegAssetBase | undefined;
   meta: ReturnType<typeof ACTIVE_META_BY_ID.get>;
   pegRates: Record<string, number>;
+  pegRateSources: Record<string, PegRateSource>;
+  pegRateCounts: Record<string, number>;
   nativePegQuote: NativePegQuote | undefined;
   openSet: ReadonlySet<string>;
   now: number;
@@ -105,7 +110,7 @@ export type ConfirmationPlan =
     }
   | {
       kind: "wait";
-      reason: "too-young";
+      reason: "too-young" | "peg-reference-unavailable";
     }
   | ConfirmationPlanReady;
 
@@ -325,12 +330,23 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     asset,
     meta,
     pegRates,
+    pegRateSources,
+    pegRateCounts,
     nativePegQuote,
     openSet,
     now,
   } = input;
-  const refreshedPegRef =
+  const refreshedPegReferenceIsAuthoritative =
     asset && meta
+      ? isAuthoritativeDepegPegReference({
+        pegCurrency: meta.flags.pegCurrency,
+        pegType: asset.pegType,
+        pegRateSource: asset.pegType ? pegRateSources[asset.pegType] : undefined,
+        pegRateContributorCount: asset.pegType ? pegRateCounts[asset.pegType] : undefined,
+      })
+      : false;
+  const refreshedPegRef =
+    asset && meta && refreshedPegReferenceIsAuthoritative
       ? getPegReference(asset.pegType, pegRates, meta.commodityOunces)
       : Number.NaN;
   const pegReference =
@@ -340,6 +356,13 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const outcomeState: PendingDepegState = { ...pendingState, pegReference };
 
   if (!Number.isFinite(pegReference) || pegReference <= 0) {
+    if (asset && meta && !refreshedPegReferenceIsAuthoritative) {
+      console.warn(
+        `[depeg-confirm] Skipped pending mutation for ${row.symbol}: ` +
+        `thin ${meta.flags.pegCurrency} peg reference lacks FX fallback and stored peg_reference=${row.peg_reference}`,
+      );
+      return { kind: "wait", reason: "peg-reference-unavailable" };
+    }
     console.warn(`[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);
     return {
       kind: "mutate",

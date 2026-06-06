@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 
 vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
@@ -50,8 +51,10 @@ import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
+import { normalizePendingDepegRow } from "../../lib/depeg-pending";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { buildConfirmationPlan } from "../pending-depeg-confirmation";
 
 interface PendingRow {
   id: number;
@@ -62,11 +65,11 @@ interface PendingRow {
   first_seen_bps: number;
   first_seen_at: number;
   first_price: number;
-  last_seen_bps?: number | null;
-  last_seen_at?: number | null;
-  last_price?: number | null;
-  peak_seen_bps?: number | null;
-  peak_price?: number | null;
+  last_seen_bps: number | null;
+  last_seen_at: number | null;
+  last_price: number | null;
+  peak_seen_bps: number | null;
+  peak_price: number | null;
   peg_reference: number;
   reason?: "large-cap" | "low-confidence" | "extreme-move";
   updated_at?: number | null;
@@ -102,6 +105,11 @@ function makePendingRow(overrides: Partial<PendingRow> = {}): PendingRow {
     first_seen_bps: -200,
     first_seen_at: 0,
     first_price: 0.98,
+    last_seen_bps: null,
+    last_seen_at: null,
+    last_price: null,
+    peak_seen_bps: null,
+    peak_price: null,
     peg_reference: 1,
     ...overrides,
   };
@@ -134,6 +142,21 @@ function makeAuthoritativeUsdAsset(
     ...overrides,
   });
 }
+
+const brlMeta: StablecoinMeta = {
+  id: "brz-transfero",
+  name: "Brazilian Digital Token",
+  symbol: "BRZ",
+  geckoId: "brz",
+  flags: {
+    backing: "rwa-backed",
+    pegCurrency: "BRL",
+    governance: "centralized",
+    yieldBearing: false,
+    rwa: true,
+    navToken: false,
+  },
+};
 
 function makeDb(config: {
   pendingRows?: PendingRow[];
@@ -208,6 +231,76 @@ describe("confirmPendingDepegs", () => {
     expect(batchExecute).not.toHaveBeenCalled();
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(recordOutcomeSafe).not.toHaveBeenCalled();
+  });
+
+  it("keeps the stored pending peg reference when the refreshed fiat median is thin", () => {
+    const nowSec = 1_700_000_000;
+    const row = makePendingRow({
+      stablecoin_id: "brz-transfero",
+      symbol: "BRZ",
+      peg_type: "peggedREAL",
+      first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+      peg_reference: 0.18765951,
+    });
+
+    const plan = buildConfirmationPlan({
+      db: makeDb({}),
+      row,
+      pendingState: normalizePendingDepegRow(row),
+      asset: makeAuthoritativeUsdAsset(nowSec, {
+        id: "brz-transfero",
+        name: "Brazilian Digital Token",
+        symbol: "BRZ",
+        geckoId: "brz",
+        pegType: "peggedREAL",
+        price: 0.3,
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.3 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 1 },
+      nativePegQuote: undefined,
+      openSet: new Set(),
+      now: nowSec,
+    });
+
+    expect(plan.kind).toBe("ready");
+    if (plan.kind !== "ready") throw new Error(`unexpected plan kind: ${plan.kind}`);
+    expect(plan.pegReference).toBe(row.peg_reference);
+  });
+
+  it("waits instead of deleting when a thin fiat reference has no valid stored reference", () => {
+    const nowSec = 1_700_000_000;
+    const row = makePendingRow({
+      stablecoin_id: "brz-transfero",
+      symbol: "BRZ",
+      peg_type: "peggedREAL",
+      first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+      peg_reference: 0,
+    });
+
+    const plan = buildConfirmationPlan({
+      db: makeDb({}),
+      row,
+      pendingState: normalizePendingDepegRow(row),
+      asset: makeAuthoritativeUsdAsset(nowSec, {
+        id: "brz-transfero",
+        name: "Brazilian Digital Token",
+        symbol: "BRZ",
+        geckoId: "brz",
+        pegType: "peggedREAL",
+        price: 0.3,
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.3 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 1 },
+      nativePegQuote: undefined,
+      openSet: new Set(),
+      now: nowSec,
+    });
+
+    expect(plan).toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
   });
 
   it("cleans invalid, duplicate, recovered, young, and expired pending rows correctly", async () => {

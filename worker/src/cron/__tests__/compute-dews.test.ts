@@ -428,6 +428,44 @@ describe("computeAndStoreDEWS", () => {
         circulatingCurrent: 100_000_000,
         circulatingPrevDay: 0,
         circulatingPrevWeek: 0,
+        circulatingPrevDayAvailable: true,
+        circulatingPrevWeekAvailable: true,
+      }),
+    );
+  });
+
+  it("marks supply-history anchors unavailable when both previous buckets are absent", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        circulatingCurrent: 100_000_000,
+        circulatingPrevDay: 100_000_000,
+        circulatingPrevWeek: 100_000_000,
+        circulatingPrevDayAvailable: false,
+        circulatingPrevWeekAvailable: false,
       }),
     );
   });

@@ -100,6 +100,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
 
     const prevDay = getPrevDayRawOrNull(asset);
     const prevWeek = getPrevWeekRawOrNull(asset);
+    const hasPrevDayAnchor = prevDay !== null;
+    const hasPrevWeekAnchor = prevWeek !== null;
 
     const dexLiq = sourceState.dexLiqMap.get(meta.id);
     const dexPrice = sourceState.dexPriceMap.get(meta.id);
@@ -144,6 +146,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       circulatingCurrent: current,
       circulatingPrevDay: prevDay ?? current,
       circulatingPrevWeek: prevWeek ?? current,
+      circulatingPrevDayAvailable: hasPrevDayAnchor,
+      circulatingPrevWeekAvailable: hasPrevWeekAnchor,
       weightedBalanceRatio: dexLiq?.weighted_balance_ratio ?? null,
       avgPoolStress: dexLiq?.avg_pool_stress ?? null,
       topPools,

@@ -2,6 +2,36 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.06",
+    title: "Confirmation peg-reference parity and directional duplicate repair",
+    date: "2026-06-06",
+    effectiveAt: 1780758000,
+    summary:
+      "Pending depeg confirmation now reuses the live detection peg-reference authority gate, and duplicate open-event repair no longer folds opposite-direction peaks into a surviving row.",
+    impact: [
+      "Thin non-USD fiat peg references without FX fallback use the stored pending `peg_reference` when valid instead of recomputing confirmation against a 1-2 coin peer median",
+      "Pending rows with neither an authoritative refreshed reference nor a valid stored reference wait for a safer reference instead of being deleted or promoted",
+      "Duplicate open-event repair merges only same-direction rows and closes older opposite-direction rows at the newer direction boundary with `recovery_price = NULL`",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.05",
+    title: "Missing supply anchors fail closed",
+    date: "2026-06-06",
+    effectiveAt: 1780755099,
+    summary:
+      "DEWS now marks the Supply Velocity sub-signal unavailable when both previous-day and previous-week supply-history anchors are absent.",
+    impact: [
+      "Coins with no prior supply-history anchors no longer receive an available zero-stress supply signal by default",
+      "When only one prior anchor is present, DEWS still computes the available side and treats the missing side as zero velocity contribution",
+      "Explicit finite zero anchors remain available and continue to produce zero velocity stress instead of divide-by-zero behavior",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.04",
     title: "Below-floor live event closure",
     date: "2026-06-06",

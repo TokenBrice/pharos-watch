@@ -51,6 +51,8 @@ export interface DEWSInput {
   circulatingCurrent: number;
   circulatingPrevDay: number;
   circulatingPrevWeek: number;
+  circulatingPrevDayAvailable?: boolean;
+  circulatingPrevWeekAvailable?: boolean;
   // Pool balance
   weightedBalanceRatio: number | null;
   avgPoolStress: number | null;
