@@ -55,11 +55,6 @@ type TelemetryContextItem = {
   value: string;
 };
 
-type OptionalMetricItem = {
-  label: string;
-  value: string;
-};
-
 function scoreToneClass(score: number | null): string {
   return scoreToColorClass(
     score,
@@ -292,7 +287,7 @@ function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContext
   return items;
 }
 
-function buildCostScenarioContext(entry: RedemptionBackstopEntry): OptionalMetricItem[] {
+function buildCostScenarioContext(entry: RedemptionBackstopEntry): TelemetryContextItem[] {
   const scenarios = entry.costScenarioScores;
   if (!scenarios) return [];
   return [
@@ -301,13 +296,13 @@ function buildCostScenarioContext(entry: RedemptionBackstopEntry): OptionalMetri
     scenarios.institutional != null
       ? { label: "Institutional cost", value: formatScoreOutOf100(scenarios.institutional) }
       : null,
-  ].filter((item): item is OptionalMetricItem => item != null);
+  ].filter((item): item is TelemetryContextItem => item != null);
 }
 
-function buildConfidenceContext(entry: RedemptionBackstopEntry): OptionalMetricItem[] {
+function buildConfidenceContext(entry: RedemptionBackstopEntry): TelemetryContextItem[] {
   const details = entry.confidenceDetails;
   if (!details) return [];
-  const items: OptionalMetricItem[] = [
+  const items: TelemetryContextItem[] = [
     { label: "Capacity evidence", value: formatScoreOutOf100(details.capacityEvidenceQuality) },
     { label: "Fee evidence", value: formatScoreOutOf100(details.feeEvidenceQuality) },
     { label: "Route freshness", value: formatScoreOutOf100(details.routeStatusFreshness) },

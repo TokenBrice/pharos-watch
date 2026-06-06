@@ -16,7 +16,7 @@ export interface MechanismStepOverride {
   subtitle?: string;
 }
 
-interface ThreeStepReturnArrow {
+export interface ThreeStepReturnArrow {
   fromX: number;
   toX: number;
   topY: number;
@@ -27,7 +27,7 @@ interface ThreeStepReturnArrow {
   strokeWidth?: number;
 }
 
-interface ThreeStepMechanismDiagramProps {
+export interface ThreeStepMechanismDiagramProps {
   ariaLabel: string;
   description: string;
   accentColor: string;

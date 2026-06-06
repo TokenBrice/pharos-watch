@@ -13,6 +13,26 @@ import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card
 
 const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
 
+function MetadataBadgeList({
+  items,
+}: {
+  items: readonly { label: string; value: string }[];
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <Badge
+          key={`${item.label}:${item.value}`}
+          variant="outline"
+          className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
+        >
+          {item.label}: {item.value}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 export function RedemptionBackstopCard({
   entry,
 }: {
@@ -103,17 +123,7 @@ export function RedemptionBackstopCard({
               </p>
             ) : null}
             {viewModel.telemetryContext.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {viewModel.telemetryContext.map((item) => (
-                  <Badge
-                    key={`${item.label}:${item.value}`}
-                    variant="outline"
-                    className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
-                  >
-                    {item.label}: {item.value}
-                  </Badge>
-                ))}
-              </div>
+              <MetadataBadgeList items={viewModel.telemetryContext} />
             ) : null}
           </div>
 
@@ -127,17 +137,7 @@ export function RedemptionBackstopCard({
               <p className="mt-1 text-sm font-medium">{viewModel.feeSummary.headline}</p>
               <p className="mt-1 text-xs text-muted-foreground">{viewModel.feeSummary.detail}</p>
               {viewModel.costScenarioContext.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {viewModel.costScenarioContext.map((item) => (
-                    <Badge
-                      key={`${item.label}:${item.value}`}
-                      variant="outline"
-                      className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
-                    >
-                      {item.label}: {item.value}
-                    </Badge>
-                  ))}
-                </div>
+                <MetadataBadgeList items={viewModel.costScenarioContext} />
               ) : null}
             </div>
 
@@ -146,17 +146,7 @@ export function RedemptionBackstopCard({
                 <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                   Confidence Detail
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {viewModel.confidenceContext.map((item) => (
-                    <Badge
-                      key={`${item.label}:${item.value}`}
-                      variant="outline"
-                      className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
-                    >
-                      {item.label}: {item.value}
-                    </Badge>
-                  ))}
-                </div>
+                <MetadataBadgeList items={viewModel.confidenceContext} />
                 {viewModel.confidenceReasons.length > 0 ? (
                   <p className="mt-2 text-xs text-muted-foreground">{viewModel.confidenceReasons.join(". ")}</p>
                 ) : null}

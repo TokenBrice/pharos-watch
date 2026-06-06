@@ -1,12 +1,8 @@
 import type { ReactNode } from "react";
 import type { MechanismArchetype, VariantKind } from "@shared/types";
 
-import { AlgorithmicDiagram } from "./algorithmic-diagram";
-import { CdpDiagram } from "./cdp-diagram";
-import { FiatCashDiagram } from "./fiat-cash-diagram";
-import { RwaCreditFundDiagram } from "./rwa-credit-fund-diagram";
 import { SyntheticDeltaNeutralDiagram } from "./synthetic-delta-neutral-diagram";
-import { TbillDiagram } from "./tbill-diagram";
+import { ThreeStepArchetypeDiagram } from "./three-step-archetype-diagram";
 
 interface WrapperDiagramProps {
   /** Child (wrapper) symbol, e.g. "sUSDe", "sDAI". */
@@ -44,27 +40,24 @@ function renderParentDiagram(
   archetype: MechanismArchetype,
   parentSymbol: string,
 ): ReactNode {
-  switch (archetype) {
-    case "fiat-cash":
-      return <FiatCashDiagram symbol={parentSymbol} stressFootnote="" />;
-    case "tbill":
-      return <TbillDiagram symbol={parentSymbol} stressFootnote="" />;
-    case "cdp":
-      return <CdpDiagram symbol={parentSymbol} stressFootnote="" />;
-    case "synthetic-delta-neutral":
-      return (
-        <SyntheticDeltaNeutralDiagram
-          symbol={parentSymbol}
-          stressFootnote=""
-        />
-      );
-    case "algorithmic":
-      return <AlgorithmicDiagram symbol={parentSymbol} stressFootnote="" />;
-    case "rwa-credit-fund":
-      return <RwaCreditFundDiagram symbol={parentSymbol} stressFootnote="" />;
-    default:
-      return null;
+  if (archetype === "synthetic-delta-neutral") {
+    return (
+      <SyntheticDeltaNeutralDiagram
+        symbol={parentSymbol}
+        stressFootnote=""
+      />
+    );
   }
+  if (
+    archetype === "fiat-cash" ||
+    archetype === "tbill" ||
+    archetype === "cdp" ||
+    archetype === "algorithmic" ||
+    archetype === "rwa-credit-fund"
+  ) {
+    return <ThreeStepArchetypeDiagram archetype={archetype} symbol={parentSymbol} stressFootnote="" />;
+  }
+  return null;
 }
 
 export function WrapperDiagram({

@@ -1,11 +1,7 @@
 import type { MechanismArchetype } from "@shared/types";
 
-import { AlgorithmicDiagram } from "./algorithmic-diagram";
-import { CdpDiagram } from "./cdp-diagram";
-import { FiatCashDiagram } from "./fiat-cash-diagram";
-import { RwaCreditFundDiagram } from "./rwa-credit-fund-diagram";
 import { SyntheticDeltaNeutralDiagram } from "./synthetic-delta-neutral-diagram";
-import { TbillDiagram } from "./tbill-diagram";
+import { ThreeStepArchetypeDiagram } from "./three-step-archetype-diagram";
 import { WrapperDiagram } from "./wrapper-diagram";
 import type { CoinOverride, MechanismDiagramOptions } from "./types";
 
@@ -18,58 +14,32 @@ function renderArchetype(
 ): React.ReactNode {
   const steps = override?.steps;
   const stressFootnote = override?.stressFootnote;
-  switch (archetype) {
-    case "fiat-cash":
-      return (
-        <FiatCashDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    case "tbill":
-      return (
-        <TbillDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    case "cdp":
-      return (
-        <CdpDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    case "synthetic-delta-neutral":
-      return (
-        <SyntheticDeltaNeutralDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    case "algorithmic":
-      return (
-        <AlgorithmicDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    case "rwa-credit-fund":
-      return (
-        <RwaCreditFundDiagram
-          symbol={symbol}
-          steps={steps}
-          {...(stressFootnote !== undefined ? { stressFootnote } : {})}
-        />
-      );
-    default:
-      return null;
+  if (archetype === "synthetic-delta-neutral") {
+    return (
+      <SyntheticDeltaNeutralDiagram
+        symbol={symbol}
+        steps={steps}
+        {...(stressFootnote !== undefined ? { stressFootnote } : {})}
+      />
+    );
   }
+  if (
+    archetype === "fiat-cash" ||
+    archetype === "tbill" ||
+    archetype === "cdp" ||
+    archetype === "algorithmic" ||
+    archetype === "rwa-credit-fund"
+  ) {
+    return (
+      <ThreeStepArchetypeDiagram
+        archetype={archetype}
+        symbol={symbol}
+        steps={steps}
+        {...(stressFootnote !== undefined ? { stressFootnote } : {})}
+      />
+    );
+  }
+  return null;
 }
 
 export function mechanismDiagramFor(
