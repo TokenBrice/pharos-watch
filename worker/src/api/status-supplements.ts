@@ -39,26 +39,19 @@ import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 import { loadYieldHealthSummary } from "../lib/status/yield-health";
 
+const SECTION_ERROR_MESSAGES: Record<string, string> = {
+  discovery_candidates_query_failed: "Discovery candidates unavailable.",
+  liquidity_health_extraction_failed: "Liquidity health data unavailable.",
+  price_source_health_extraction_failed: "Price source health data unavailable.",
+  coingecko_price_diff_query_failed: "CoinGecko price diff unavailable.",
+  d1_usage_query_failed: "D1 usage metrics unavailable.",
+  mint_burn_reconciliation_query_failed: "Mint/burn reconciliation unavailable.",
+  reserve_drift_computation_failed: "Reserve drift diagnostics unavailable.",
+  classification_warnings_computation_failed: "Classification warnings unavailable.",
+};
+
 function sectionError(code: string, message?: string): StatusSectionError {
-  const safeMessage = message ?? (
-    code === "discovery_candidates_query_failed"
-      ? "Discovery candidates unavailable."
-      : code === "liquidity_health_extraction_failed"
-        ? "Liquidity health data unavailable."
-        : code === "price_source_health_extraction_failed"
-          ? "Price source health data unavailable."
-          : code === "coingecko_price_diff_query_failed"
-            ? "CoinGecko price diff unavailable."
-            : code === "d1_usage_query_failed"
-              ? "D1 usage metrics unavailable."
-              : code === "mint_burn_reconciliation_query_failed"
-                ? "Mint/burn reconciliation unavailable."
-                : code === "reserve_drift_computation_failed"
-                  ? "Reserve drift diagnostics unavailable."
-                  : code === "classification_warnings_computation_failed"
-                    ? "Classification warnings unavailable."
-                    : "Section unavailable."
-  );
+  const safeMessage = message ?? SECTION_ERROR_MESSAGES[code] ?? "Section unavailable.";
   return { code, message: safeMessage };
 }
 

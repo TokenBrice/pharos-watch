@@ -1,8 +1,8 @@
 export { readJsonStorageValue, writeJsonStorageValue } from "@/lib/browser-storage";
 
-type SearchInput = string | URLSearchParams;
+export type SearchInput = string | URLSearchParams;
 
-function toSearchParams(input: SearchInput): URLSearchParams {
+export function toSearchParams(input: SearchInput): URLSearchParams {
   return typeof input === "string" ? new URLSearchParams(input) : input;
 }
 

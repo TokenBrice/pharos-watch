@@ -11,6 +11,51 @@ import type {
   SortKey,
 } from "./view-model";
 
+interface ScoreTone {
+  text: string;
+  bar: string;
+  panel: string;
+  label: string;
+}
+
+const NOT_RATED_SCORE_TONE = {
+  text: "text-zinc-700 dark:text-zinc-300",
+  bar: "bg-zinc-500",
+  panel: "border-zinc-500/30 bg-zinc-500/10",
+  label: "Not rated",
+} satisfies ScoreTone;
+
+const SCORE_TONE_BANDS = [
+  {
+    min: 80,
+    text: "text-emerald-700 dark:text-emerald-300",
+    bar: "bg-emerald-500",
+    panel: "border-emerald-500/30 bg-emerald-500/10",
+    label: "Clean",
+  },
+  {
+    min: 65,
+    text: "text-sky-700 dark:text-sky-300",
+    bar: "bg-sky-500",
+    panel: "border-sky-500/30 bg-sky-500/10",
+    label: "Watch",
+  },
+  {
+    min: 50,
+    text: "text-amber-700 dark:text-amber-300",
+    bar: "bg-amber-500",
+    panel: "border-amber-500/30 bg-amber-500/10",
+    label: "Finding",
+  },
+  {
+    min: Number.NEGATIVE_INFINITY,
+    text: "text-red-700 dark:text-red-300",
+    bar: "bg-red-500",
+    panel: "border-red-500/30 bg-red-500/10",
+    label: "Critical",
+  },
+] as const satisfies readonly (ScoreTone & { min: number })[];
+
 function scoreTone(row: SafetyInspectionRow): {
   text: string;
   bar: string;
@@ -19,43 +64,9 @@ function scoreTone(row: SafetyInspectionRow): {
 } {
   const score = row.weightedScore ?? row.averageScore;
   if (score == null) {
-    return {
-      text: "text-zinc-700 dark:text-zinc-300",
-      bar: "bg-zinc-500",
-      panel: "border-zinc-500/30 bg-zinc-500/10",
-      label: "Not rated",
-    };
+    return NOT_RATED_SCORE_TONE;
   }
-  if (score >= 80) {
-    return {
-      text: "text-emerald-700 dark:text-emerald-300",
-      bar: "bg-emerald-500",
-      panel: "border-emerald-500/30 bg-emerald-500/10",
-      label: "Clean",
-    };
-  }
-  if (score >= 65) {
-    return {
-      text: "text-sky-700 dark:text-sky-300",
-      bar: "bg-sky-500",
-      panel: "border-sky-500/30 bg-sky-500/10",
-      label: "Watch",
-    };
-  }
-  if (score >= 50) {
-    return {
-      text: "text-amber-700 dark:text-amber-300",
-      bar: "bg-amber-500",
-      panel: "border-amber-500/30 bg-amber-500/10",
-      label: "Finding",
-    };
-  }
-  return {
-    text: "text-red-700 dark:text-red-300",
-    bar: "bg-red-500",
-    panel: "border-red-500/30 bg-red-500/10",
-    label: "Critical",
-  };
+  return SCORE_TONE_BANDS.find((band) => score >= band.min) ?? SCORE_TONE_BANDS[0];
 }
 
 function formatScoreOrNotRated(score: number | null): string {

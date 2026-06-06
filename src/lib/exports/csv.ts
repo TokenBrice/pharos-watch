@@ -6,7 +6,7 @@ export interface CsvColumn<T> {
   accessor: (row: T, index: number) => string | number | null;
 }
 
-function escapeCsvField(value: string | number | null): string {
+export function escapeCsvField(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
   const str = String(value);
   return str.includes(",") || str.includes('"') || str.includes("\n")

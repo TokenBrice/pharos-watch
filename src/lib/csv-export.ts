@@ -1,7 +1,4 @@
-interface CsvColumn<T> {
-  header: string;
-  accessor: (row: T, index: number) => string | number | null;
-}
+import { escapeCsvField, type CsvColumn } from "@/lib/exports/csv";
 
 export function downloadCsv<T>(
   data: T[],
@@ -10,16 +7,7 @@ export function downloadCsv<T>(
 ): void {
   const header = columns.map((c) => c.header).join(",");
   const rows = data.map((row, rowIndex) =>
-    columns
-      .map((c) => {
-        const val = c.accessor(row, rowIndex);
-        if (val === null || val === undefined) return "";
-        const str = String(val);
-        return str.includes(",") || str.includes('"') || str.includes("\n")
-          ? `"${str.replace(/"/g, '""')}"`
-          : str;
-      })
-      .join(","),
+    columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","),
   );
   const csv = [header, ...rows].join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });

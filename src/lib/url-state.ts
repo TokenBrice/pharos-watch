@@ -13,6 +13,8 @@ import {
   parseBoundedNumberSearchParam,
   parseEnumSearchParam,
   parseStringSearchParam,
+  toSearchParams,
+  type SearchInput,
 } from "@/lib/url-storage-codecs";
 
 export type UrlStateField<V> =
@@ -56,12 +58,6 @@ export type UrlStateSchema<T> = { [K in keyof T]: UrlStateField<T[K]> };
  * patterns are supported (the screener declares both for clarity).
  */
 export type InferUrlStateValues<S> = S extends UrlStateSchema<infer V> ? V : never;
-
-type SearchInput = string | URLSearchParams;
-
-function toSearchParams(input: SearchInput): URLSearchParams {
-  return typeof input === "string" ? new URLSearchParams(input) : input;
-}
 
 function decodeField<V>(
   params: URLSearchParams,
