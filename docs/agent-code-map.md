@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 348 more files omitted; use `rg --files src/components` for the full list.
+- ... 350 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 239 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 240 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 216 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 217 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
 - `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
-- ... 153 more files omitted; use `rg --files scripts` for the full list.
+- ... 154 more files omitted; use `rg --files scripts` for the full list.
