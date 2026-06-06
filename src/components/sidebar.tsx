@@ -217,6 +217,7 @@ function SidebarNavItem({
 
   return (
     <Link
+      prefetch={false}
       href={item.href}
       title={title}
       aria-label={ariaLabel}
@@ -370,7 +371,7 @@ export function Sidebar() {
       {/* Brand lockup — the tower. A thin shaft of frost light rides the
           header divider and fades to the right like a real beam. */}
       <div className={`relative flex items-center h-14 shrink-0 border-b border-border/55 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
-        <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
+        <Link prefetch={false} href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
           <PharosLogo size={28} />
           {expanded && <span className="text-sm font-mono uppercase tracking-[0.2em] font-semibold text-foreground">PHAROS</span>}
         </Link>

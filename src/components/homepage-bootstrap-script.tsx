@@ -3,7 +3,7 @@ import {
   HOMEPAGE_BOOTSTRAP_SCRIPT_ID,
   countSeedableHomepageBootstrapQueries,
   normalizeHomepageBootstrapPayload,
-} from "@/lib/homepage-bootstrap";
+} from "@/lib/homepage-bootstrap-runtime";
 import { safeJsonLd } from "@/lib/json-ld";
 
 export function HomepageBootstrapScript() {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { CHART_SLATE, SKY_YELLOW, USDC_BLUE, USDT_GREEN } from "@/lib/chart-colors";
 import { computeChartYDomain } from "@/lib/chart-utils";
@@ -19,46 +20,156 @@ const HOME_ALT_DATE_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   year: "2-digit",
 });
 
-type HomeAltHeroChartModules = {
-  recharts: typeof import("recharts");
-  axes: typeof import("@/components/chart-primitives/axes");
-};
-
 interface HomeAltHeroChartProps {
   rows: TotalMcapChartRow[];
 }
+
+interface ChartBounds {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+interface CohortArea {
+  key: keyof Pick<TotalMcapChartRow, "usdt" | "usdc" | "sky" | "others">;
+  label: string;
+  color: string;
+  gradientId: string;
+  topOpacity: number;
+  bottomOpacity: number;
+}
+
+const COHORT_AREAS: readonly CohortArea[] = [
+  {
+    key: "usdt",
+    label: "USDT",
+    color: USDT_GREEN,
+    gradientId: "homeAltUsdtGrad",
+    topOpacity: 0.78,
+    bottomOpacity: 0.18,
+  },
+  {
+    key: "usdc",
+    label: "USDC",
+    color: USDC_BLUE,
+    gradientId: "homeAltUsdcGrad",
+    topOpacity: 0.72,
+    bottomOpacity: 0.16,
+  },
+  {
+    key: "sky",
+    label: "USDS + DAI",
+    color: SKY_YELLOW,
+    gradientId: "homeAltSkyGrad",
+    topOpacity: 0.7,
+    bottomOpacity: 0.16,
+  },
+  {
+    key: "others",
+    label: "Others",
+    color: CHART_SLATE,
+    gradientId: "homeAltOthersGrad",
+    topOpacity: 0.55,
+    bottomOpacity: 0.12,
+  },
+];
 
 function buildEvenTicks(count: number): number[] {
   if (count <= 1) return [0];
   return Array.from({ length: count }, (_, i) => i / (count - 1));
 }
 
-function HomeAltInlineChartSkeleton() {
-  return (
-    <div className="pharos-chart-stage skeleton-shimmer relative h-full w-full overflow-hidden" aria-hidden="true">
-      <div className="absolute bottom-8 left-3 top-3 flex w-8 flex-col justify-between">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-2.5 w-full rounded bg-muted/50" />
-        ))}
-      </div>
-      <div className="absolute bottom-2 left-12 right-3 flex justify-between">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-2 w-8 rounded bg-muted/50" />
-        ))}
-      </div>
-      <svg
-        className="absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        viewBox="0 0 400 100"
-      >
-        <path
-          d="M 40 80 C 80 75, 120 60, 160 65 C 200 70, 240 40, 280 45 C 320 50, 360 30, 400 35 L 400 100 L 40 100 Z"
-          fill="currentColor"
-          className="text-muted/20"
-        />
-      </svg>
-    </div>
-  );
+function sampleRows(rows: TotalMcapChartRow[], maxPoints = 140): TotalMcapChartRow[] {
+  if (rows.length <= maxPoints) return rows;
+  const lastIndex = rows.length - 1;
+  return Array.from({ length: maxPoints }, (_, index) => {
+    const sourceIndex = Math.round((index / (maxPoints - 1)) * lastIndex);
+    return rows[sourceIndex]!;
+  });
+}
+
+function makeScales({
+  rows,
+  bounds,
+  yDomain,
+}: {
+  rows: TotalMcapChartRow[];
+  bounds: ChartBounds;
+  yDomain: [number, number];
+}) {
+  const start = rows.length > 0 ? rows[0]!.ts : HOME_ALT_PLACEHOLDER_START;
+  const end = rows.length > 0 ? rows[rows.length - 1]!.ts : HOME_ALT_PLACEHOLDER_END;
+  const span = Math.max(1, end - start);
+  const ySpan = Math.max(1, yDomain[1] - yDomain[0]);
+
+  return {
+    x: (ts: number) => bounds.x0 + ((ts - start) / span) * (bounds.x1 - bounds.x0),
+    y: (value: number) =>
+      bounds.y1 - ((value - yDomain[0]) / ySpan) * (bounds.y1 - bounds.y0),
+    start,
+    end,
+  };
+}
+
+function formatPoint(x: number, y: number): string {
+  return `${x.toFixed(1)} ${y.toFixed(1)}`;
+}
+
+function buildAreaPath({
+  rows,
+  area,
+  bounds,
+  yDomain,
+}: {
+  rows: TotalMcapChartRow[];
+  area: CohortArea;
+  bounds: ChartBounds;
+  yDomain: [number, number];
+}): string {
+  if (rows.length === 0) return "";
+
+  const scales = makeScales({ rows, bounds, yDomain });
+  const topPoints: string[] = [];
+  const bottomPoints: string[] = [];
+
+  for (const row of rows) {
+    let bottom = 0;
+    for (const candidate of COHORT_AREAS) {
+      if (candidate.key === area.key) break;
+      bottom += row[candidate.key];
+    }
+    const top = bottom + row[area.key];
+    topPoints.push(formatPoint(scales.x(row.ts), scales.y(top)));
+    bottomPoints.push(formatPoint(scales.x(row.ts), scales.y(bottom)));
+  }
+
+  return `M ${topPoints.join(" L ")} L ${bottomPoints.reverse().join(" L ")} Z`;
+}
+
+function buildTopLinePath({
+  rows,
+  area,
+  bounds,
+  yDomain,
+}: {
+  rows: TotalMcapChartRow[];
+  area: CohortArea;
+  bounds: ChartBounds;
+  yDomain: [number, number];
+}): string {
+  if (rows.length === 0) return "";
+  const scales = makeScales({ rows, bounds, yDomain });
+  return rows
+    .map((row, index) => {
+      let top = 0;
+      for (const candidate of COHORT_AREAS) {
+        top += row[candidate.key];
+        if (candidate.key === area.key) break;
+      }
+      return `${index === 0 ? "M" : "L"} ${formatPoint(scales.x(row.ts), scales.y(top))}`;
+    })
+    .join(" ");
 }
 
 function HomeAltChartFrame({
@@ -78,6 +189,7 @@ function HomeAltChartFrame({
   const x1 = Math.max(x0, width - HOME_ALT_CHART_MARGIN.right);
   const y0 = HOME_ALT_CHART_MARGIN.top;
   const y1 = Math.max(y0, height - HOME_ALT_CHART_MARGIN.bottom - HOME_ALT_X_AXIS_HEIGHT);
+  const bounds = { x0, x1, y0, y1 };
   const start = rows.length > 0 ? rows[0].ts : HOME_ALT_PLACEHOLDER_START;
   const end = rows.length > 0 ? rows[rows.length - 1].ts : HOME_ALT_PLACEHOLDER_END;
   const maxFromRows = rows.reduce((max, row) => Math.max(max, row.total), 0);
@@ -85,6 +197,7 @@ function HomeAltChartFrame({
     yDomain[0],
     typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows,
   ];
+  const visibleRows = sampleRows(rows);
 
   return (
     <svg
@@ -92,8 +205,16 @@ function HomeAltChartFrame({
       width={width}
       height={height}
       role="img"
-      aria-label="Stablecoin market cap chart loading"
+      aria-label="Stablecoin market cap history by major cohort"
     >
+      <defs>
+        {COHORT_AREAS.map((area) => (
+          <linearGradient key={area.key} id={area.gradientId} x1={0} y1={0} x2={0} y2={1}>
+            <stop offset="5%" stopColor={area.color} stopOpacity={area.topOpacity} />
+            <stop offset="95%" stopColor={area.color} stopOpacity={area.bottomOpacity} />
+          </linearGradient>
+        ))}
+      </defs>
       <g aria-hidden="true">
         {buildEvenTicks(5).map((tick, i) => {
           const y = y0 + tick * (y1 - y0);
@@ -142,32 +263,47 @@ function HomeAltChartFrame({
             </text>
           );
         })}
+        {visibleRows.length > 0 ? (
+          <g>
+            {COHORT_AREAS.map((area) => (
+              <path
+                key={area.key}
+                d={buildAreaPath({
+                  rows: visibleRows,
+                  area,
+                  bounds,
+                  yDomain: resolvedYDomain,
+                })}
+                fill={`url(#${area.gradientId})`}
+              />
+            ))}
+            {COHORT_AREAS.map((area) => (
+              <path
+                key={`${area.key}-line`}
+                d={buildTopLinePath({
+                  rows: visibleRows,
+                  area,
+                  bounds,
+                  yDomain: resolvedYDomain,
+                })}
+                fill="none"
+                stroke={area.color}
+                strokeWidth={1.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <title>{area.label}</title>
+              </path>
+            ))}
+          </g>
+        ) : null}
       </g>
     </svg>
   );
 }
 
 export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
-  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
-    useChartShell<HTMLDivElement>();
-  const [chartModules, setChartModules] = useState<HomeAltHeroChartModules | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    void Promise.all([
-      import("recharts"),
-      import("@/components/chart-primitives/axes"),
-    ]).then(([recharts, axes]) => {
-      if (active) {
-        setChartModules({ recharts, axes });
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const yDomain = useMemo(
     () =>
@@ -177,102 +313,7 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       ),
     [rows],
   );
-  const chartReady = isChartReady && chartModules !== null && rows.length > 0;
-
-  if (chartReady) {
-    const { Area, AreaChart } = chartModules.recharts;
-    const { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } = chartModules.axes;
-
-    return (
-      <div
-        ref={chartContainerRef}
-        className="h-[260px] w-full sm:h-[320px] lg:h-auto lg:min-h-[360px]"
-        role="figure"
-        aria-label="Stablecoin market cap history by major cohort"
-      >
-        <div className="animate-fade-in">
-          <AreaChart
-            width={width}
-            height={height}
-            data={rows}
-            margin={HOME_ALT_CHART_MARGIN}
-          >
-            <defs>
-              <linearGradient id="homeAltUsdtGrad" x1={0} y1={0} x2={0} y2={1}>
-                <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.78} />
-                <stop offset="95%" stopColor={USDT_GREEN} stopOpacity={0.18} />
-              </linearGradient>
-              <linearGradient id="homeAltUsdcGrad" x1={0} y1={0} x2={0} y2={1}>
-                <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.72} />
-                <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.16} />
-              </linearGradient>
-              <linearGradient id="homeAltSkyGrad" x1={0} y1={0} x2={0} y2={1}>
-                <stop offset="5%" stopColor={SKY_YELLOW} stopOpacity={0.7} />
-                <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.16} />
-              </linearGradient>
-              <linearGradient id="homeAltOthersGrad" x1={0} y1={0} x2={0} y2={1}>
-                <stop offset="5%" stopColor={CHART_SLATE} stopOpacity={0.55} />
-                <stop offset="95%" stopColor={CHART_SLATE} stopOpacity={0.12} />
-              </linearGradient>
-            </defs>
-            <TimeGrid />
-            <TimeXAxis dataKey="ts" minTickGap={72} />
-            <MonoYAxis
-              tickFormatter={(value: number) => formatCurrency(value, 0)}
-              domain={yDomain}
-            />
-            <DateTooltip
-              formatter={(value, name) => [formatCurrency(Number(value)), String(name)]}
-            />
-            <Area
-              type="monotone"
-              dataKey="usdt"
-              stackId="mcap"
-              stroke={USDT_GREEN}
-              fill="url(#homeAltUsdtGrad)"
-              strokeWidth={1.75}
-              name="USDT"
-              onAnimationEnd={handleAnimationEnd}
-              {...animProps}
-            />
-            <Area
-              type="monotone"
-              dataKey="usdc"
-              stackId="mcap"
-              stroke={USDC_BLUE}
-              fill="url(#homeAltUsdcGrad)"
-              strokeWidth={1.75}
-              name="USDC"
-              onAnimationEnd={handleAnimationEnd}
-              {...animProps}
-            />
-            <Area
-              type="monotone"
-              dataKey="sky"
-              stackId="mcap"
-              stroke={SKY_YELLOW}
-              fill="url(#homeAltSkyGrad)"
-              strokeWidth={1.75}
-              name="USDS + DAI"
-              onAnimationEnd={handleAnimationEnd}
-              {...animProps}
-            />
-            <Area
-              type="monotone"
-              dataKey="others"
-              stackId="mcap"
-              stroke={CHART_SLATE}
-              fill="url(#homeAltOthersGrad)"
-              strokeWidth={1.75}
-              name="Others"
-              onAnimationEnd={handleAnimationEnd}
-              {...animProps}
-            />
-          </AreaChart>
-        </div>
-      </div>
-    );
-  }
+  const chartReady = isChartReady && rows.length > 0;
 
   return (
     <div
@@ -281,7 +322,7 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
-      {isChartReady ? (
+      {chartReady ? (
         <HomeAltChartFrame
           width={width}
           height={height}

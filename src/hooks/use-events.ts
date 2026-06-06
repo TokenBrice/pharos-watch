@@ -2,11 +2,9 @@
 
 import { useMemo } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
-import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   TAPE_EVENT_SEVERITY_VALUES,
-  TapeEventsResponseSchema,
   type TapeEvent,
   type TapeEventSeverity,
 } from "@shared/types/tape-event";
@@ -15,12 +13,11 @@ import { CRON_15MIN } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
 import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
-// The wire `TapeEventsResponseSchema` includes the `_meta` envelope. Our
-// `apiFetchWithMeta` lifts `_meta` off the body before schema parsing, so we
-// validate against a body-only projection here and re-attach meta via the
-// fetcher. Mirrors the depeg-events pattern.
-const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });
-type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
+interface TapeEventsResponseBody {
+  events: TapeEvent[];
+  nextCursor?: string | null;
+  total?: number | null;
+}
 
 const TAPE_EVENTS_PAGE_SIZE = 500;
 
@@ -113,7 +110,7 @@ function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
           cursor: pageParam,
           includeTotal: pageParam == null,
         }),
-        TapeEventsResponseBodySchema,
+        undefined,
         { signal },
       ),
     getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
@@ -215,7 +212,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
     ],
     path,
     CRON_15MIN,
-    { enabled, schema: TapeEventsResponseBodySchema },
+    { enabled },
   );
   return result;
 }

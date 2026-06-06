@@ -19,6 +19,7 @@ describe("route-labels", () => {
   });
 
   it("falls back through registered parents for nested routes", () => {
+    expect(routeLabelFor("/stablecoin/usdc-circle")).toBe("USDC");
     expect(routeLabelFor("/stablecoins/usd")).toBe("Usd");
     expect(routeLabelFor("/methodology/scoring-changelog")).toBe("Scoring Changelog");
   });

@@ -1,15 +1,15 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { ZodType } from "zod";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import { usePollingQuery } from "./use-api-query";
+import type { SchemaLike } from "@/lib/schema-like";
 
 interface AdminPollingOptions<T> {
   enabled?: boolean;
   retry?: number | boolean;
-  schema?: ZodType<T>;
+  schema?: SchemaLike<T>;
 }
 
 const ADMIN_QUERY_SCOPE = "ops-proxy";

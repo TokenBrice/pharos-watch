@@ -480,6 +480,47 @@ export const TRACKED_STABLECOIN_IDS = [
   "tgld-tenbin",
 ] as const;
 
+const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
+  "usdpt-western-union",
+  "roughrider-bnd",
+  "fiusd-fiserv",
+  "eur-qivalis",
+  "pusd-polaris",
+  "pgold-polaris",
+  "klarnausd-klarna",
+  "bd-basedollar",
+  "trusd-tori",
+  "rgbp-revolut",
+  "jpysc-sbi-startale",
+  "usdb-bridge",
+  "hkdap-anchorpoint",
+  "hkd-hsbc",
+  "okrw-hashed",
+  "arc-anq",
+  "brl-b3",
+  "usdf-flipcash",
+  "hkdr-rd-technologies",
+  "brd-volpon",
+  "krw1-bdacs",
+  "rusd-revolut",
+  "brl-itau",
+  "usd-nubank",
+  "krw-imbank",
+  "gynusd-gyndore",
+  "gelt-tether",
+  "tgld-tenbin",
+  "usr-resolv",
+  "usnd-nerite",
+  "euroe-membrane",
+  "buck-buck-assets",
+] as const);
+
+export const ACTIVE_STABLECOIN_IDS = TRACKED_STABLECOIN_IDS.filter(
+  (id) => !NON_ACTIVE_STABLECOIN_ID_SET.has(id),
+);
+
+export const ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set(ACTIVE_STABLECOIN_IDS);
+
 export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [
   { id: "usdt-tether", name: "Tether", symbol: "USDT" },
   { id: "susdt-spark", name: "Spark Savings USDT", symbol: "spUSDT" },

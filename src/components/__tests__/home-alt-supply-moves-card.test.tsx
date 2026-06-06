@@ -18,8 +18,8 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
 }));
 
-vi.mock("@shared/lib/stablecoins/client-registry", () => ({
-  CLIENT_ACTIVE_IDS: new Set(["usdr-real", "usdc-circle", "eur-stasis"]),
+vi.mock("@/lib/stablecoin-static-data", () => ({
+  ACTIVE_STABLECOIN_ID_SET: new Set(["usdr-real", "usdc-circle", "eur-stasis"]),
 }));
 
 vi.mock("next/image", () => ({

@@ -1,0 +1,84 @@
+import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
+import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
+
+interface TopStablecoinsDatasetRow {
+  id?: unknown;
+  pegType?: unknown;
+  circulatingUsd?: unknown;
+}
+
+interface TopStablecoinsDataset {
+  _meta?: {
+    asOfISO?: unknown;
+  };
+  rows?: TopStablecoinsDatasetRow[];
+}
+
+export interface HomepageHeroSnapshot {
+  asOfISO: string | null;
+  totalUsd: number;
+  nonUsdUsd: number;
+  nonUsdShare: number | null;
+  cohort: TotalMcapChartRow;
+}
+
+const TOP_STABLECOINS_DATASET = topStablecoinsDataset as TopStablecoinsDataset;
+
+function finiteNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function asOfISO(): string | null {
+  const value = TOP_STABLECOINS_DATASET._meta?.asOfISO;
+  return typeof value === "string" && value ? value : null;
+}
+
+export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
+  const rows = Array.isArray(TOP_STABLECOINS_DATASET.rows) ? TOP_STABLECOINS_DATASET.rows : [];
+  let totalUsd = 0;
+  let nonUsdUsd = 0;
+  let usdt = 0;
+  let usdc = 0;
+  let sky = 0;
+
+  for (const row of rows) {
+    if (typeof row.id !== "string" || !ACTIVE_STABLECOIN_ID_SET.has(row.id)) {
+      continue;
+    }
+
+    const circulatingUsd = finiteNumber(row.circulatingUsd);
+    totalUsd += circulatingUsd;
+
+    if (row.pegType !== "peggedUSD") {
+      nonUsdUsd += circulatingUsd;
+    }
+
+    if (row.id === "usdt-tether") {
+      usdt += circulatingUsd;
+    } else if (row.id === "usdc-circle") {
+      usdc += circulatingUsd;
+    } else if (row.id === "usds-sky" || row.id === "dai-makerdao") {
+      sky += circulatingUsd;
+    }
+  }
+
+  const nonUsdShare = totalUsd > 0 ? nonUsdUsd / totalUsd : null;
+  const others = Math.max(0, totalUsd - usdt - usdc - sky);
+  const timestamp = asOfISO();
+
+  return {
+    asOfISO: timestamp,
+    totalUsd,
+    nonUsdUsd,
+    nonUsdShare,
+    cohort: {
+      ts: timestamp ? Date.parse(timestamp) : Date.now(),
+      usdt,
+      usdc,
+      sky,
+      others,
+      total: totalUsd,
+    },
+  };
+}

@@ -104,8 +104,10 @@ describe("useEvents", () => {
     await options.queryFn({ pageParam: "cursor-2" });
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/events?type=peg.alert&type=depeg.confirmed&coin=usdc-circle&limit=500&cursor=cursor-2",
-      expect.anything(),
-      { signal: undefined },
+      undefined,
+      expect.objectContaining({
+        signal: undefined,
+      }),
     );
   });
 });

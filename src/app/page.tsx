@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomeAltClient } from "@/components/home-alt-client";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
+import { HomeAltHero } from "@/components/home-alt-hero";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
+import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_STABLECOIN_COUNT,
@@ -37,6 +39,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   const total = ACTIVE_STABLECOIN_COUNT;
+  const heroSnapshot = getHomepageHeroSnapshot();
 
   // Top 20 stablecoins for ItemList schema
   const itemListElements = HOMEPAGE_TOP_ACTIVE_STABLECOINS.map((coin, i) => {
@@ -89,6 +92,7 @@ export default function HomePage() {
       <div className="space-y-4 sm:space-y-5">
         <SiteHeader total={total} pegCount={ACTIVE_PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
       </div>
+      <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />
     </div>
   );

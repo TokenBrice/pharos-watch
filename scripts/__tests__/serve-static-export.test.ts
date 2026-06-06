@@ -95,6 +95,27 @@ describe("serve-static-export", () => {
     expect(await response.text()).toBe("static api route asset");
   });
 
+  it("compresses static text assets when the browser accepts Brotli", async () => {
+    const root = await makeRoot();
+    await writeFile(path.join(root, "app.css"), ".a{color:red;}\n".repeat(200));
+
+    const app = createStaticExportServer({
+      apiBaseUrl: "http://127.0.0.1:1",
+      port: 0,
+      rootDir: root,
+    });
+    const baseUrl = await listen(app.server);
+
+    const response = await fetch(`${baseUrl}/app.css`, {
+      method: "HEAD",
+      headers: { "Accept-Encoding": "br, gzip" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Encoding")).toBe("br");
+    expect(response.headers.get("Vary")).toBe("Accept-Encoding");
+  });
+
   it("serves Mini App HTML with Telegram-specific CSP", async () => {
     const root = await makeRoot();
     await mkdir(path.join(root, "pharoswatchbot", "app"), { recursive: true });

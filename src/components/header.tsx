@@ -61,6 +61,7 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
 
   return (
     <Link
+      prefetch={false}
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
@@ -92,7 +93,7 @@ export function Header() {
       style={{ boxShadow: "var(--elevation-rest)" }}
     >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
+        <Link prefetch={false} href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
           <PharosLogo size={32} priority />
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="text-[1.05rem] font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</span>
@@ -127,7 +128,7 @@ export function Header() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
-              <Link href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
+              <Link prefetch={false} href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
                 <PharosLogo size={28} />
                 <SheetTitle className="text-lg font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</SheetTitle>
               </Link>

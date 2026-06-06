@@ -261,6 +261,15 @@ function buildSmokeRunCode(config) {
         }
       };
 
+      const maybeRevealHomepageTable = () => {
+        const tableAnchor = document.getElementById("home-alt-rankings") || document.getElementById("data");
+        if (tableAnchor) {
+          tableAnchor.scrollIntoView({ behavior: "instant", block: "start" });
+          return;
+        }
+        window.scrollTo(0, document.body.scrollHeight);
+      };
+
       while (Date.now() < timeoutAt) {
         const text = document.body?.innerText ?? "";
         const rows = document.querySelectorAll("table tbody tr").length;
@@ -295,6 +304,7 @@ function buildSmokeRunCode(config) {
           };
         }
 
+        maybeRevealHomepageTable();
         await delay(500);
       }
 

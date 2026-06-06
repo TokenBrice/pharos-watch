@@ -34,8 +34,8 @@ The visible top fold is split across four independently composed surfaces:
 
 - `CoreTopRail`, rendered directly under the global PSI `RegimeBar` on `/` and the core pages; it pairs the recent-events tape with the centered horizontal core submenu. On desktop core pages the combined rail is sticky at `top: 3px`, below the fixed PSI strip, so the tape and submenu persist while scrolling. On mobile, only the horizontal core submenu is sticky; the events tape scrolls away. The tape uses full mobile width plus the available desktop width to the right of the sidebar, while the submenu spans the full viewport.
 - `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
-- `HomeAltHero`
-- `HomeAltMiniCardGrid`
+- `HomeAltHero`, whose text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
+- `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
 
 `SiteHeader` owns the visible `h1` and keeps one raw heading across breakpoints. Mobile and desktop masthead layouts may duplicate metric groups, but they must not duplicate the page-level heading because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
 
@@ -47,15 +47,14 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomeAltClient`
 
-Critical query inputs:
+The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live: `HomeAltHeroChartGate` mounts `HomeAltHeroLiveChart` once the chart surface reaches the viewport, then the chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+
+`HomeAltRankingsSection` query inputs:
 
 - `useStablecoins()`
 - `useLogos()`
 - `usePegSummary()`
 - `usePinnedStablecoins()` for local pinned-watchlist state
-
-Additional query inputs:
-
 - `useDexLiquidity()`
 - `useReportCards()`
 - `useStressSignals()`
@@ -152,11 +151,11 @@ The `Mint Auth` column reads `coin.mintAuthoritySummary` from the slim client re
 
 ## Loading Strategy
 
-`HomeAltHero` keeps the headline and cohort rows in the eager homepage bundle, while the market-cap chart body is dynamically imported through `src/components/home-alt-hero-chart.tsx` so Recharts and the shared chart-axis primitives stay out of the initial hero module.
+`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport.
 
 The heavier homepage sections are dynamically imported in `src/components/home-alt-client.tsx`:
 
-- `StablecoinTable`
+- `HomeAltRankingsSection`, which owns `PegBrowseStrip`, `StablecoinTable`, pinned stablecoin state, and the table view model
 - `DailyDigest`
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.

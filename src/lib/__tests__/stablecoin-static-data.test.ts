@@ -11,6 +11,7 @@ import {
   ACTIVE_PEG_CURRENCIES,
   ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_PEG_CURRENCY_COUNTS,
+  ACTIVE_STABLECOIN_IDS,
   ACTIVE_STABLECOIN_COUNT,
   ACTIVE_STABLECOIN_GOVERNANCE_COUNTS,
   DEAD_STABLECOIN_COUNT,
@@ -83,6 +84,7 @@ describe("static stablecoin projections", () => {
 
   it("keeps homepage IDs and top active schema rows in canonical order", () => {
     expect(TRACKED_STABLECOIN_IDS).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
+    expect(ACTIVE_STABLECOIN_IDS).toEqual(ACTIVE_STABLECOINS.map((coin) => coin.id));
     expect(HOMEPAGE_TOP_ACTIVE_STABLECOINS).toEqual(
       ACTIVE_STABLECOINS.slice(0, 20).map((coin) => ({
         id: coin.id,

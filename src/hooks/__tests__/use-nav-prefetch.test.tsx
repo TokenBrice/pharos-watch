@@ -62,8 +62,10 @@ describe("useNavPrefetch", () => {
 
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/mint-burn-flows",
-      expect.anything(),
-      expect.anything(),
+      undefined,
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
       3600,
       undefined,
     );

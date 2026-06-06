@@ -1,89 +1,10 @@
-"use client";
-
-import { useMemo } from "react";
-import dynamic from "next/dynamic";
-import { useStablecoins, useSupplyHistory } from "@/hooks/use-stablecoins";
-import { useStablecoinCharts } from "@/hooks/api-hooks";
-import { selectVisibleMcap } from "@/lib/home-alt-aggregates";
-import {
-  buildTotalMcapChartRows,
-  TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS,
-} from "@/lib/total-mcap-chart";
+import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
-import { formatCurrency, getNetColor } from "@shared/lib/format";
+import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
+import { formatCurrency } from "@shared/lib/format";
 
-function HomeAltInlineChartSkeleton({ className = "" }: { className?: string }) {
-  return (
-    <div
-      className={`pharos-chart-stage skeleton-shimmer relative w-full overflow-hidden ${className}`}
-      aria-hidden="true"
-    >
-      <div className="absolute bottom-8 left-3 top-3 flex w-8 flex-col justify-between">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-2.5 w-full rounded bg-muted/50" />
-        ))}
-      </div>
-      <div className="absolute bottom-2 left-12 right-3 flex justify-between">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-2 w-8 rounded bg-muted/50" />
-        ))}
-      </div>
-      <svg
-        className="absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        viewBox="0 0 400 100"
-      >
-        <path
-          d="M 40 80 C 80 75, 120 60, 160 65 C 200 70, 240 40, 280 45 C 320 50, 360 30, 400 35 L 400 100 L 40 100 Z"
-          fill="currentColor"
-          className="text-muted/20"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function HomeAltHeroChartFallback() {
-  return (
-    <div
-      className="h-[260px] w-full p-5 sm:h-[320px] lg:h-auto lg:min-h-[360px]"
-      role="figure"
-      aria-label="Stablecoin market cap history by major cohort"
-    >
-      <HomeAltInlineChartSkeleton className="h-full" />
-    </div>
-  );
-}
-
-const HomeAltHeroChart = dynamic(
-  () => import("@/components/home-alt-hero-chart").then((mod) => mod.HomeAltHeroChart),
-  {
-    loading: HomeAltHeroChartFallback,
-  },
-);
-
-export function HomeAltHero(): React.JSX.Element {
-  const { data: stablecoins } = useStablecoins();
-  const { data: chartData } = useStablecoinCharts();
-  const { data: usdtHistory } = useSupplyHistory("usdt-tether", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
-  const { data: usdcHistory } = useSupplyHistory("usdc-circle", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
-  const { data: usdsHistory } = useSupplyHistory("usds-sky", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
-  const { data: daiHistory } = useSupplyHistory("dai-makerdao", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
-
-  const mcap = useMemo(() => selectVisibleMcap(stablecoins?.peggedAssets), [stablecoins]);
-  const change24hPct = mcap.change24hPct === null ? null : mcap.change24hPct * 100;
-
-  const rows = useMemo(() => {
-    if (!Array.isArray(chartData) || chartData.length === 0) return [];
-    return buildTotalMcapChartRows(chartData, {
-      usdtHistory,
-      usdcHistory,
-      usdsHistory,
-      daiHistory,
-    });
-  }, [chartData, daiHistory, usdcHistory, usdsHistory, usdtHistory]);
-
-  const latest = rows.length > 0 ? rows[rows.length - 1] : null;
+export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): React.JSX.Element {
+  const latest = snapshot.cohort;
 
   return (
     <section
@@ -99,18 +20,17 @@ export function HomeAltHero(): React.JSX.Element {
             Total Stablecoin Market Cap
           </p>
           <p
-            className="font-mono font-semibold leading-[0.92] tracking-tight tabular-nums text-foreground"
-            style={{ fontSize: "clamp(2.5rem, 5.5vw, 4.75rem)" }}
+            className="font-semibold leading-[0.92] tracking-tight tabular-nums text-foreground"
+            style={{
+              fontSize: "clamp(2.5rem, 5.5vw, 4.75rem)",
+              fontFamily: "SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace",
+            }}
           >
-            {formatCurrency(mcap.totalUsd, 1)}
+            {formatCurrency(snapshot.totalUsd, 1)}
           </p>
-          {change24hPct !== null ? (
-            <p
-              className={`font-mono text-sm tabular-nums ${getNetColor(change24hPct)}`}
-            >
-              <span aria-hidden="true">{change24hPct >= 0 ? "↑" : "↓"}</span>{" "}
-              <span>{`${change24hPct >= 0 ? "+" : ""}${change24hPct.toFixed(2)}%`}</span>
-              <span className="ml-1 text-muted-foreground">24h</span>
+          {snapshot.asOfISO ? (
+            <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Snapshot {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(snapshot.asOfISO))}
             </p>
           ) : null}
         </div>
@@ -129,8 +49,8 @@ export function HomeAltHero(): React.JSX.Element {
                 <li className="flex items-baseline justify-between gap-2 pt-1 text-[11px] text-muted-foreground">
                   <span className="font-mono uppercase tracking-wider">Non-USD share</span>
                   <span className="font-mono tabular-nums text-foreground/90">
-                    {mcap.nonUsdShare !== null
-                      ? `${formatCurrency(mcap.nonUsdUsd, 1)} · ${(mcap.nonUsdShare * 100).toFixed(1)}%`
+                    {snapshot.nonUsdShare !== null
+                      ? `${formatCurrency(snapshot.nonUsdUsd, 1)} · ${(snapshot.nonUsdShare * 100).toFixed(1)}%`
                       : "—"}
                   </span>
                 </li>
@@ -144,7 +64,7 @@ export function HomeAltHero(): React.JSX.Element {
         </div>
       </div>
 
-      <HomeAltHeroChart rows={rows} />
+      <HomeAltHeroChartGate />
     </section>
   );
 }

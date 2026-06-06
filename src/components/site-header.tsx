@@ -1,11 +1,5 @@
-"use client";
-
-import { useMemo } from "react";
 import { formatCompactCount } from "@shared/lib/format";
-import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
-import { useStablecoins } from "@/hooks/use-stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 interface SiteHeaderProps {
   total: number;
@@ -36,46 +30,11 @@ function MetricPills({ metrics }: { metrics: MetricPill[] }) {
 }
 
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
-  const { data: health } = useHealth();
-  const { data: dexMap } = useDexLiquidity();
-  const { data: stablecoinsData } = useStablecoins();
-
-  const blacklistEvents = health?.blacklist.totalEvents;
-  const mintBurnEvents = health?.mintBurn?.totalEvents;
-  const totalPools = useMemo(
-    () => (dexMap ? Object.values(dexMap).reduce((sum, d) => sum + d.poolCount, 0) : undefined),
-    [dexMap],
-  );
-  const trackedStats = useMemo(() => {
-    const stats: string[] = [];
-    if (totalPools != null) {
-      stats.push(`${formatCompactCount(totalPools)} pools processed`);
-    }
-
-    if (mintBurnEvents != null) {
-      stats.push(`${formatCompactCount(mintBurnEvents)} mint/burn events recorded`);
-    }
-    if (blacklistEvents != null) {
-      stats.push(`${formatCompactCount(blacklistEvents)} blacklist events recorded`);
-    }
-
-    return stats;
-  }, [totalPools, blacklistEvents, mintBurnEvents]);
-
-  const liveTrackedCount = useMemo(() => {
-    const assets = stablecoinsData?.peggedAssets;
-    if (!assets) return total;
-
-    return assets.filter((asset) => TRACKED_META_BY_ID.has(asset.id)).length;
-  }, [stablecoinsData, total]);
-  const headlineMetrics = useMemo(
-    () => [
-      { value: formatCompactCount(liveTrackedCount), label: "coins" },
-      { value: formatCompactCount(pegCount), label: "pegs" },
-      { value: formatCompactCount(chainCount), label: "chains" },
-    ],
-    [chainCount, liveTrackedCount, pegCount],
-  );
+  const headlineMetrics = [
+    { value: formatCompactCount(total), label: "coins" },
+    { value: formatCompactCount(pegCount), label: "pegs" },
+    { value: formatCompactCount(chainCount), label: "chains" },
+  ];
 
   return (
     <div className="pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3">
@@ -103,11 +62,6 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
 
       <div className="hidden shrink-0 flex-nowrap items-center justify-end gap-2 text-[11px] md:flex">
         <MetricPills metrics={headlineMetrics} />
-        {trackedStats.map((stat) => (
-          <span key={stat} className={`${METRIC_PILL_CLASS} hidden xl:inline-flex`}>
-            {stat}
-          </span>
-        ))}
       </div>
     </div>
   );

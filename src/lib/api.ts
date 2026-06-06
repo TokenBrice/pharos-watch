@@ -1,13 +1,12 @@
-import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { isSiteDataAllowedUiHostname, resolveSiteDataProxyPath } from "@shared/lib/site-data-lane";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
-import { ApiMetaSchema, type ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
+import type { ApiDependencyMeta, ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
-import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
+import type { SchemaLike } from "@/lib/schema-like";
 
 export type ApiMeta =
   | ApiMetaWithAge
@@ -185,6 +184,51 @@ function getBodyWarning(data: unknown): string | null {
   return typeof warning === "string" && warning.trim().length > 0 ? warning : null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {
+  if (!isRecord(value)) return null;
+  const status = value.status;
+  if (status !== "fresh" && status !== "degraded" && status !== "stale" && status !== "unavailable") {
+    return null;
+  }
+  return {
+    status,
+    updatedAt: typeof value.updatedAt === "number" || value.updatedAt === null ? value.updatedAt : undefined,
+    ageSeconds: typeof value.ageSeconds === "number" || value.ageSeconds === null ? value.ageSeconds : undefined,
+    reason: typeof value.reason === "string" || value.reason === null ? value.reason : undefined,
+  };
+}
+
+function normalizeApiMeta(value: unknown): ApiMetaWithAge | null {
+  if (!isRecord(value)) return null;
+  const status = value.status;
+  if (status !== "fresh" && status !== "degraded" && status !== "stale") {
+    return null;
+  }
+  if (typeof value.updatedAt !== "number" || typeof value.ageSeconds !== "number") {
+    return null;
+  }
+
+  const dependencies: Record<string, ApiDependencyMeta> = {};
+  if (isRecord(value.dependencies)) {
+    for (const [key, raw] of Object.entries(value.dependencies)) {
+      const dependency = normalizeApiDependencyMeta(raw);
+      if (dependency) dependencies[key] = dependency;
+    }
+  }
+
+  return {
+    updatedAt: value.updatedAt,
+    ageSeconds: value.ageSeconds,
+    status,
+    warning: typeof value.warning === "string" || value.warning === null ? value.warning : undefined,
+    dependencies: Object.keys(dependencies).length > 0 ? dependencies : undefined,
+  };
+}
+
 async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
   let bodyText: string | null = null;
   try {
@@ -196,14 +240,14 @@ async function buildFetchError(path: string, res: Response): Promise<ApiFetchErr
 }
 
 function resolveContractMode(
-  schema: ZodType<unknown> | undefined,
+  schema: SchemaLike<unknown> | undefined,
   mode: ApiContractMode | undefined,
 ): ApiContractMode | null {
   if (!schema) return null;
   return mode ?? "strict";
 }
 
-function validateApiPayload<T>(path: string, data: unknown, schema?: ZodType<T>, contractMode?: ApiContractMode): T {
+function validateApiPayload<T>(path: string, data: unknown, schema?: SchemaLike<T>, contractMode?: ApiContractMode): T {
   if (!schema) {
     return data as T;
   }
@@ -239,21 +283,21 @@ export interface ApiFetchOptions extends ApiRequestOptions {
  *  graceful degradation that returns data as-is after logging. */
 export async function apiFetch<T>(
   path: string,
-  schema?: ZodType<T>,
+  schema?: SchemaLike<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
 ): Promise<T>;
 /** Overload: passing `{ nullOn404: true }` makes the return type `T | null`. */
 export async function apiFetch<T>(
   path: string,
-  schema: ZodType<T> | undefined,
+  schema: SchemaLike<T> | undefined,
   init: RequestInit | undefined,
   contractMode: ApiContractMode | undefined,
   options: ApiFetchOptions & { nullOn404: true },
 ): Promise<T | null>;
 export async function apiFetch<T>(
   path: string,
-  schema?: ZodType<T>,
+  schema?: SchemaLike<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
   options?: ApiFetchOptions,
@@ -273,7 +317,7 @@ export async function apiFetch<T>(
 /** Fetch JSON + extract freshness metadata from _meta field or X-Data-Age header. */
 export async function apiFetchWithMeta<T>(
   path: string,
-  schema?: ZodType<T>,
+  schema?: SchemaLike<T>,
   init?: RequestInit,
   maxAgeSec = 900,
   contractMode?: ApiContractMode,
@@ -289,8 +333,7 @@ export async function apiFetchWithMeta<T>(
   let data = json;
   if (json && typeof json === "object" && !Array.isArray(json) && "_meta" in json) {
     const { _meta, ...rest } = json as Record<string, unknown>;
-    const parsed = ApiMetaSchema.safeParse(_meta);
-    if (parsed.success) meta = parsed.data;
+    meta = normalizeApiMeta(_meta);
     data = rest;
   }
   const bodyWarning = getBodyWarning(data);
@@ -345,6 +388,7 @@ export async function apiFetchWithMeta<T>(
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<StablecoinReservesResponse | null> {
+  const { StablecoinReservesResponseSchema } = await import("@shared/types/live-reserves");
   return apiFetch<StablecoinReservesResponse>(
     API_PATHS.stablecoinReserves(stablecoinId),
     StablecoinReservesResponseSchema,

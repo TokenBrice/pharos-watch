@@ -7,7 +7,7 @@
  * by per-prefix functions in `DYNAMIC_SEGMENT_RESOLVERS`.
  */
 import { NAV_ITEMS } from "@/lib/nav-config";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 
 /**
  * Canonical labels for every public top-level route visible in navigation.
@@ -72,8 +72,8 @@ function titleCaseSlug(slug: string): string {
  */
 const DYNAMIC_SEGMENT_RESOLVERS: Record<string, (segment: string) => string | null> = {
   "/stablecoin": (segment) => {
-    const meta = CLIENT_TRACKED_META_BY_ID.get(segment);
-    return meta?.symbol ?? meta?.name ?? null;
+    const row = COMMAND_PALETTE_STABLECOINS.find(([id]) => id === segment);
+    return row?.[2] ?? row?.[1] ?? null;
   },
 };
 

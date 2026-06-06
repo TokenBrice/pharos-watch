@@ -43,7 +43,7 @@ describe("query option builders", () => {
     await options.queryFn?.();
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
-      expect.anything(),
+      undefined,
       undefined,
       undefined,
     );
@@ -57,7 +57,7 @@ describe("query option builders", () => {
     await options.queryFn?.();
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=5000",
-      expect.anything(),
+      undefined,
       undefined,
       undefined,
     );
@@ -74,7 +74,7 @@ describe("query option builders", () => {
     await options.queryFn?.();
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
-      expect.anything(),
+      undefined,
       undefined,
       3600,
       undefined,
@@ -97,7 +97,7 @@ describe("query option builders", () => {
     await safetyOptions.queryFn?.();
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
-      expect.anything(),
+      undefined,
       undefined,
       24 * 60 * 60,
       undefined,
@@ -116,7 +116,7 @@ describe("query option builders", () => {
 
     expect(apiFetchMock).toHaveBeenLastCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
-      expect.anything(),
+      undefined,
       { signal: controller.signal },
       undefined,
     );

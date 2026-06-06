@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 import { createApiPollingQueryOptionsWithMeta } from "@/hooks/use-api-query";
-import type { ZodType } from "zod";
+import type { SchemaLike } from "@/lib/schema-like";
 
 const PREFETCH_DEBOUNCE_MS = 100;
 
@@ -13,13 +13,13 @@ interface RoutePrefetchDescriptor {
   queryKey: readonly unknown[];
   path: string;
   producerIntervalMs: number;
-  schema?: ZodType<unknown>;
+  schema?: SchemaLike<unknown>;
   metaMaxAgeSec?: number;
 }
 
 type RoutePrefetchDescriptorFactory = () => RoutePrefetchDescriptor;
 
-const reg = FRONTEND_API_QUERY_REGISTRY;
+const reg = FRONTEND_API_QUERY_RUNTIME_REGISTRY;
 
 const ROUTE_PREFETCH_DESCRIPTORS = {
   "/screener/": [

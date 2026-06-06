@@ -10,7 +10,7 @@ import { useFlashOnChange } from "@/hooks/use-flash-on-change";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
+import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 interface ActiveRow {
@@ -42,7 +42,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
 
   const activeEvents = useMemo(
     () => (data?.events ?? [])
-      .filter((ev) => CLIENT_ACTIVE_IDS.has(ev.stablecoinId))
+      .filter((ev) => ACTIVE_STABLECOIN_ID_SET.has(ev.stablecoinId))
       .flatMap((ev) => {
         if (!hasCurrentActiveDeviation(ev, pegSummaryById)) return [];
         const currentDeviationBps = pegSummaryById.get(ev.stablecoinId)?.currentDeviationBps;
@@ -123,6 +123,7 @@ function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefine
   return (
     <li>
       <Link
+        prefetch={false}
         href={buildStablecoinUrl(row.id)}
         className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
       >

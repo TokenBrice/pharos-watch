@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
 import {
-  FRONTEND_API_QUERY_REGISTRY,
+  FRONTEND_API_QUERY_RUNTIME_REGISTRY,
   type FrontendApiQueryDescriptor,
-} from "@/lib/api-query-registry";
+} from "@/lib/api-query-runtime-registry";
 import type {
   BlacklistSummaryResponse,
   DailyDigestResponse,
@@ -40,24 +40,24 @@ export function useLightApiQuery<T>(
 }
 
 export function useSidebarPegSummarySignal() {
-  return useLightApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_REGISTRY.pegSummary);
+  return useLightApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.pegSummary);
 }
 
 export function useSidebarStabilityIndexSignal() {
-  return useLightApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_REGISTRY.stabilityIndex);
+  return useLightApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex);
 }
 
 export function useSidebarBlacklistSignal(enabled: boolean) {
   return useLightApiQuery<BlacklistSummaryResponse>(
-    FRONTEND_API_QUERY_REGISTRY.blacklistSummary,
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.blacklistSummary,
     { enabled, retry: 1 },
   );
 }
 
 export function useSidebarHealthSignal() {
-  return useLightApiQuery<HealthResponse>(FRONTEND_API_QUERY_REGISTRY.health);
+  return useLightApiQuery<HealthResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.health);
 }
 
 export function useSidebarDailyDigestSignal() {
-  return useLightApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_REGISTRY.dailyDigest);
+  return useLightApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.dailyDigest);
 }

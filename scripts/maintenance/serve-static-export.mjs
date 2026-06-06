@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { brotliCompress, gzip } from "node:zlib";
+import { promisify } from "node:util";
 import {
   addNonceToInlineScripts,
   buildContentSecurityPolicy,
@@ -29,6 +31,47 @@ const CONTENT_TYPES = {
   ".woff2": "font/woff2",
   ".xml": "application/xml; charset=utf-8",
 };
+
+const brotliCompressAsync = promisify(brotliCompress);
+const gzipAsync = promisify(gzip);
+
+const COMPRESSIBLE_CONTENT_TYPES = [
+  "application/javascript",
+  "application/json",
+  "application/rss+xml",
+  "application/xml",
+  "image/svg+xml",
+  "text/css",
+  "text/csv",
+  "text/html",
+  "text/plain",
+];
+
+function isCompressibleContentType(contentType) {
+  return COMPRESSIBLE_CONTENT_TYPES.some((candidate) => contentType.startsWith(candidate));
+}
+
+function pickAcceptedCompression(acceptEncoding = "") {
+  const accepted = acceptEncoding.toLowerCase();
+  if (accepted.includes("br")) return "br";
+  if (accepted.includes("gzip")) return "gzip";
+  return null;
+}
+
+async function maybeCompressStaticBody(body, contentType, acceptEncoding) {
+  if (body.byteLength < 1024 || !isCompressibleContentType(contentType)) {
+    return { body, encoding: null };
+  }
+
+  const encoding = pickAcceptedCompression(acceptEncoding);
+  if (encoding === "br") {
+    return { body: await brotliCompressAsync(body), encoding };
+  }
+  if (encoding === "gzip") {
+    return { body: await gzipAsync(body), encoding };
+  }
+  return { body, encoding: null };
+}
 
 const EXCLUDED_PROXY_RESPONSE_HEADERS = new Set([
   "connection",
@@ -136,10 +179,11 @@ async function readStaticExportFile(rootDir, requestPathname) {
   return { file, filePath };
 }
 
-function sendStaticExportFile(res, method, { file, filePath }, requestPathname) {
+async function sendStaticExportFile(req, res, method, { file, filePath }, requestPathname) {
   const contentType = buildContentType(filePath, requestPathname);
   const headers = {
     "Content-Type": contentType,
+    "Vary": "Accept-Encoding",
   };
   let body = file;
 
@@ -154,6 +198,12 @@ function sendStaticExportFile(res, method, { file, filePath }, requestPathname) 
     if (isTelegramMiniAppPath(requestPathname)) {
       headers["X-Robots-Tag"] = "noindex, nofollow";
     }
+  }
+
+  const compressed = await maybeCompressStaticBody(body, contentType, req.headers["accept-encoding"]);
+  body = compressed.body;
+  if (compressed.encoding) {
+    headers["Content-Encoding"] = compressed.encoding;
   }
 
   res.writeHead(200, {
@@ -190,7 +240,7 @@ export function createStaticExportServer({
     if (isNestedApiPath && canServeStaticMethod) {
       try {
         const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
-        sendStaticExportFile(res, method, staticFile, requestUrl.pathname);
+        await sendStaticExportFile(req, res, method, staticFile, requestUrl.pathname);
         return;
       } catch (error) {
         if (isPathEscapeError(error)) {
@@ -273,7 +323,7 @@ export function createStaticExportServer({
 
     try {
       const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
-      sendStaticExportFile(res, method, staticFile, requestUrl.pathname);
+      await sendStaticExportFile(req, res, method, staticFile, requestUrl.pathname);
       return;
     } catch (error) {
       if (isPathEscapeError(error)) {

@@ -87,6 +87,7 @@ export function MintBurnCard(): React.JSX.Element {
             return (
               <li key={row.id}>
                 <Link
+                  prefetch={false}
                   href={buildStablecoinUrl(row.id)}
                   className="pharos-focus-ring -mx-1 grid grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-0.5 font-mono tabular-nums transition-colors hover:bg-muted/50"
                 >

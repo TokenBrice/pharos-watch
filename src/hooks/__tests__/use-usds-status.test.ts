@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UsdsStatusResponseSchema } from "@shared/types/digest";
 
 const { useApiQueryMock } = vi.hoisted(() => ({
   useApiQueryMock: vi.fn(),
@@ -28,7 +27,7 @@ describe("useUsdsStatus", () => {
     });
   });
 
-  it("attaches the shared USDS status schema to the query", () => {
+  it("uses the shared USDS status descriptor options", () => {
     useUsdsStatus();
 
     expect(useApiQueryMock).toHaveBeenCalledWith(
@@ -36,7 +35,7 @@ describe("useUsdsStatus", () => {
       "/api/usds-status",
       CRON_15MIN,
       expect.objectContaining({
-        schema: UsdsStatusResponseSchema,
+        schema: undefined,
       }),
     );
   });

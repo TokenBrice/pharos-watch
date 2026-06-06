@@ -72,6 +72,7 @@ npm run test:noncritical # Deploy/merge-gate Vitest lane excluding tests owned b
 npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run validate:pages-smoke # Serve the built static export and run local Pages smoke checks
+npm run lighthouse:static # Serve the built static export and fail when mobile Lighthouse performance is below 95 using DevTools throttling
 npm run validate:worker-smoke # Run local worker canary smoke checks after worker typecheck
 npm run check:hook-polling-window # Verify local agent hook polling windows stay within the configured budget
 npm run check:reserve-fixture-freshness # Verify retained reserve HTML fixtures stay within freshness policy

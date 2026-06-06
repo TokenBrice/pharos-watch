@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
+import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types";
 
@@ -29,7 +29,7 @@ function compute(coins: readonly StablecoinData[]): {
 } {
   const movers: Mover[] = [];
   for (const c of coins) {
-    if (!CLIENT_ACTIVE_IDS.has(c.id)) continue;
+    if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
     const current = getCirculatingRaw(c);
     const prev = getPrevWeekRaw(c);
     if (current < MIN_TRACKED_MCAP_USD && prev < MIN_TRACKED_MCAP_USD) continue;
@@ -82,6 +82,7 @@ export function SupplyMovesCard(): React.JSX.Element {
         <>
           {peak && (
             <Link
+              prefetch={false}
               href={buildStablecoinUrl(peak.id)}
               className="pharos-focus-ring -mx-1 flex items-center gap-2.5 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
               aria-label={`${peak.symbol} supply moved ${formatPct(peak.pctChange)} over 7 days`}
@@ -167,6 +168,7 @@ function MoverList({
           return (
             <li key={row.id}>
               <Link
+                prefetch={false}
                 href={buildStablecoinUrl(row.id)}
                 className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
               >

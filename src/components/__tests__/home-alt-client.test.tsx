@@ -4,44 +4,36 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltClient } from "@/components/home-alt-client";
-import { ALL_COLUMNS } from "@/lib/column-visibility";
 
 const {
-  stablecoinTablePropsMock,
-  togglePinnedMock,
-  useStablecoinsMock,
-  useLogosMock,
-  usePegSummaryMock,
-  useDexLiquidityMock,
-  useReportCardsMock,
-  useStressSignalsMock,
-  useHomeAltFiltersMock,
+  homeAltRankingsPropsMock,
+  homeAltMiniCardGridMock,
   useHomepageDiscoverySuggestionsMock,
-  usePinnedStablecoinsMock,
 } = vi.hoisted(() => ({
-  stablecoinTablePropsMock: vi.fn(),
-  togglePinnedMock: vi.fn(),
-  useStablecoinsMock: vi.fn(),
-  useLogosMock: vi.fn(),
-  usePegSummaryMock: vi.fn(),
-  useDexLiquidityMock: vi.fn(),
-  useReportCardsMock: vi.fn(),
-  useStressSignalsMock: vi.fn(),
-  useHomeAltFiltersMock: vi.fn(),
+  homeAltRankingsPropsMock: vi.fn(),
+  homeAltMiniCardGridMock: vi.fn(),
   useHomepageDiscoverySuggestionsMock: vi.fn(),
-  usePinnedStablecoinsMock: vi.fn(),
 }));
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => unknown) => {
     const source = String(loader);
-    if (source.includes("stablecoin-table")) {
-      function MockStablecoinTable(props: Record<string, unknown>) {
-        stablecoinTablePropsMock(props);
-        return <div data-testid="stablecoin-table" />;
+    if (source.includes("home-alt-mini-card-grid")) {
+      function MockHomeAltMiniCardGrid() {
+        homeAltMiniCardGridMock();
+        return <div data-testid="home-alt-mini-card-grid" />;
       }
 
-      return MockStablecoinTable;
+      return MockHomeAltMiniCardGrid;
+    }
+
+    if (source.includes("home-alt-rankings-section")) {
+      function MockHomeAltRankingsSection(props: Record<string, unknown>) {
+        homeAltRankingsPropsMock(props);
+        return <div data-testid="home-alt-rankings-section" />;
+      }
+
+      return MockHomeAltRankingsSection;
     }
 
     function MockDailyDigest() {
@@ -52,96 +44,39 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-stablecoins", () => ({
-  useStablecoins: useStablecoinsMock,
-}));
-
-vi.mock("@/hooks/use-logos", () => ({
-  useLogos: useLogosMock,
-}));
-
-vi.mock("@/hooks/api-hooks", () => ({
-  usePegSummary: usePegSummaryMock,
-  useDexLiquidity: useDexLiquidityMock,
-  useReportCards: useReportCardsMock,
-  useStressSignals: useStressSignalsMock,
-}));
-
-vi.mock("@/hooks/use-home-alt-filters", () => ({
-  useHomeAltFilters: useHomeAltFiltersMock,
+vi.mock("@/components/lazy-section", () => ({
+  LazySection: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/hooks/use-homepage-discovery", () => ({
   useHomepageDiscoverySuggestions: useHomepageDiscoverySuggestionsMock,
 }));
 
-vi.mock("@/hooks/use-pinned-stablecoins", () => ({
-  usePinnedStablecoins: usePinnedStablecoinsMock,
-}));
-
-vi.mock("@/components/homepage-client-view-model", () => ({
-  buildHomepageCriticalViewModel: () => ({
-    pegRates: {},
-    pegScores: new Map(),
-    filteredRowCount: 392,
-  }),
-  buildHomepageOptionalViewModel: () => ({
-    reportCardMap: {},
-    dewsRiskLevel: "normal",
-  }),
-}));
-
-vi.mock("@/components/home-alt-hero", () => ({
-  HomeAltHero: () => <div data-testid="home-alt-hero" />,
-}));
-
-vi.mock("@/components/home-alt-mini-card-grid", () => ({
-  HomeAltMiniCardGrid: () => <div data-testid="home-alt-mini-card-grid" />,
-}));
-
 vi.mock("@/components/homepage-discovery-module", () => ({
   HomepageDiscoveryModule: () => <div data-testid="homepage-discovery-module" />,
 }));
 
-vi.mock("@/components/peg-distribution-grid", () => ({
-  PegBrowseStrip: () => <div data-testid="peg-browse-strip" />,
-}));
-
 describe("HomeAltClient", () => {
   beforeEach(() => {
-    stablecoinTablePropsMock.mockClear();
-    togglePinnedMock.mockClear();
-    useStablecoinsMock.mockReturnValue({
-      data: { peggedAssets: [{ id: "usdt-tether" }] },
-      isLoading: false,
-    });
-    useLogosMock.mockReturnValue({ data: {} });
-    usePegSummaryMock.mockReturnValue({ data: { coins: [], summary: {} } });
-    useDexLiquidityMock.mockReturnValue({ data: {} });
-    useReportCardsMock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });
-    useStressSignalsMock.mockReturnValue({ data: { signals: {} } });
-    useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
+    homeAltRankingsPropsMock.mockClear();
+    homeAltMiniCardGridMock.mockClear();
     useHomepageDiscoverySuggestionsMock.mockReturnValue([]);
-    usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: togglePinnedMock });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("configures the main table with homepage defaults", () => {
+  it("keeps the rankings module behind the homepage lazy boundary", () => {
     render(<HomeAltClient />);
 
-    expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
-    expect(stablecoinTablePropsMock).toHaveBeenCalledTimes(1);
-    expect(stablecoinTablePropsMock).toHaveBeenCalledWith(expect.objectContaining({
-      initialVisibleColumns: ALL_COLUMNS.map((column) => column.id),
-      columnPreferenceNamespace: "pharos-home-alt-table-v2",
-      suppressDesktopHorizontalScroll: true,
-      showHeaderMethodologyHints: false,
-      pinnedStablecoinIds: ["usdc-circle"],
-      onTogglePinnedStablecoin: togglePinnedMock,
-    }));
-    expect(stablecoinTablePropsMock.mock.calls[0]?.[0]).not.toHaveProperty("usePageVerticalScroll");
+    expect(screen.getByTestId("home-alt-mini-card-grid")).toBeTruthy();
+    expect(screen.getByTestId("daily-digest")).toBeTruthy();
+    expect(screen.getByTestId("homepage-discovery-module")).toBeTruthy();
+    expect(screen.getByTestId("home-alt-rankings-section")).toBeTruthy();
+    expect(document.getElementById("home-alt-rankings")).toBeTruthy();
+    expect(homeAltRankingsPropsMock).toHaveBeenCalledWith({
+      titleId: "home-alt-rankings-title",
+    });
   });
 });

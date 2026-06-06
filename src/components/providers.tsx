@@ -10,7 +10,7 @@ import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import {
   readHomepageBootstrapPayloadFromDocument,
   seedHomepageBootstrapQueries,
-} from "@/lib/homepage-bootstrap";
+} from "@/lib/homepage-bootstrap-runtime";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality

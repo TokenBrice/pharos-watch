@@ -8,7 +8,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import type { ZodType } from "zod";
+import type { SchemaLike } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
@@ -27,7 +27,7 @@ interface PollingQueryControlOptions {
 }
 
 interface ApiQueryOptions<T> extends PollingQueryControlOptions {
-  schema?: ZodType<T>;
+  schema?: SchemaLike<T>;
   fetchInit?: RequestInit;
   metaMaxAgeSec?: number;
   contractMode?: ApiContractMode;
@@ -47,7 +47,7 @@ function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortS
 
 export function createApiQueryFn<T>(
   path: string,
-  schema?: ZodType<T>,
+  schema?: SchemaLike<T>,
   fetchInit?: RequestInit,
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<T> {
@@ -59,7 +59,7 @@ export function createApiQueryFn<T>(
 
 export function createApiQueryFnWithMeta<T>(
   path: string,
-  schema?: ZodType<T>,
+  schema?: SchemaLike<T>,
   fetchInit?: RequestInit,
   metaMaxAgeSec?: number,
   contractMode?: ApiContractMode,

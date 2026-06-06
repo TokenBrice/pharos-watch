@@ -53,6 +53,7 @@ export function CoreTopRail() {
                     />
                   )}
                   <Link
+                    prefetch={false}
                     ref={isActive ? activeRef : undefined}
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}

@@ -102,6 +102,7 @@ function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
 
   return (
     <Link
+      prefetch={false}
       href={resolveEventHref(event)}
       className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
     >
@@ -132,6 +133,7 @@ function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
 function TapeTerminator() {
   return (
     <Link
+      prefetch={false}
       href="/timeline/"
       className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground"
     >

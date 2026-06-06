@@ -212,6 +212,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
 - `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
 - `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
+- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
 - `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
@@ -247,8 +248,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
-- `src/lib/coverage-matrix-model.ts` - COVERAGE_MATRIX_QUERY_KEYS, CoverageMatrixModel, CoverageMatrixModelInput, CoverageMatrixQueryKey, buildCoverageMatrixModel
-- ... 123 more files omitted; use `rg --files src/lib` for the full list.
+- ... 127 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 350 more files omitted; use `rg --files src/components` for the full list.
+- ... 354 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
 - `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
-- ... 154 more files omitted; use `rg --files scripts` for the full list.
+- ... 155 more files omitted; use `rg --files scripts` for the full list.
