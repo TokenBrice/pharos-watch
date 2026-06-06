@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { handleStressSignals } from "../stress-signals";
 
 stubCryptoForAuth();
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function createSqliteD1(sqlite: import("node:sqlite").DatabaseSync): D1Database {
   const makeStatement = (sql: string, boundValues: unknown[] = []): D1PreparedStatement => ({
@@ -33,6 +37,9 @@ function createSqliteD1(sqlite: import("node:sqlite").DatabaseSync): D1Database 
 
 describe("DEWS history repair", () => {
   it("prunes the requested history window and the public stress-signals read path stops returning it", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2026, 3, 9, 12, 0, 0));
+
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec(`
