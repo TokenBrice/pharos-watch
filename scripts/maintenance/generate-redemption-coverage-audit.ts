@@ -100,7 +100,6 @@ export interface RedemptionCoverageAuditCheckFinding {
 const CHECK_BASELINE_PATH = "scripts/lib/redemption-coverage-audit-baseline.json";
 
 const OFFCHAIN_CANDIDATES = new Set(["mmxn-moneta-digital", "vndc-jade-labs", "zkusd-goal3"]);
-const FROZEN_HARD_REJECTS = new Set(["buck-buck-assets", "usnd-nerite"]);
 const WRAPPER_OR_NAV_CANDIDATES = new Set(["iusd-initia", "susd1plus-lorenzo", "witry-brix", "inalpha-nest"]);
 const PROTOCOL_RESEARCH_CANDIDATES = new Set(["hollar-hydrated", "crvusd-curve"]);
 const PROTOCOL_DEFER_CANDIDATES = new Set([
@@ -242,7 +241,7 @@ function classifyLifecycleExcludedCoin(
 
   return {
     disposition: "hard-reject",
-    reasonCode: FROZEN_HARD_REJECTS.has(coin.id) ? "frozen" : "frozen",
+    reasonCode: "frozen",
     classificationSource: "curated",
     blocker: "Frozen assets are excluded from active route count targets.",
     evidenceNeeded: "Lifecycle must change back to active before route config work.",

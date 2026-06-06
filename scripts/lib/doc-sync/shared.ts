@@ -23,7 +23,7 @@ export function normalizeNumber(value: string): number {
 }
 
 export function formatNumber(value: number): string {
-  return Number.isInteger(value) ? String(value) : String(value);
+  return String(value);
 }
 
 export function findLineValue(text: string, pattern: RegExp): string | null {
