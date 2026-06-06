@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DepegRow } from "../../../lib/depeg-helpers";
-import { buildDuplicateOpenEventRepair } from "../repair";
+import { buildDuplicateOpenEventRepair, buildOrphanCloseRepair } from "../repair";
 
 function makeOpenRow(overrides: Partial<DepegRow> = {}): DepegRow {
   return {
@@ -59,6 +59,29 @@ describe("buildDuplicateOpenEventRepair", () => {
       { type: "delete-event", id: 2 },
       { type: "update-peak", id: 1, peakDeviationBps: -300, peakPrice: 0.97 },
       { type: "close-event", id: 1, endedAt: 300, recoveryPrice: null, recoveryPriceMode: "null" },
+    ]);
+  });
+});
+
+describe("buildOrphanCloseRepair", () => {
+  it("closes untracked orphan events and reports the repair", () => {
+    const result = buildOrphanCloseRepair({
+      rows: [
+        { id: 10, stablecoin_id: "retired-coin", started_at: 100 },
+        { id: 11, stablecoin_id: "usdt-tether", started_at: 100 },
+        { id: 12, stablecoin_id: "new-coin", started_at: 500 },
+      ],
+      seenEventIds: new Set(),
+      syncStart: 500,
+      trackedCoinIds: new Set(["usdt-tether"]),
+      now: 1_000,
+    });
+
+    expect(result.commands).toEqual([
+      { type: "close-event", id: 10, endedAt: 1_000, recoveryPrice: null, recoveryPriceMode: "null" },
+    ]);
+    expect(result.diagnostics).toEqual([
+      { level: "log", message: "[depeg] Closing orphan event for retired-coin (id=10)" },
     ]);
   });
 });

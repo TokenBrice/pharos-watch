@@ -79,6 +79,36 @@ function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoadedCont
 }
 
 describe("loadDdrContext", () => {
+  it("degrades when the stablecoins cache is stale", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "usdc-circle",
+                  symbol: "USDC",
+                  name: "USD Coin",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 1_000_000_000 },
+                },
+              ],
+            }),
+            updated_at: NOW_SEC - 3 * 3600,
+          },
+        ],
+      },
+    ]);
+
+    const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
+
+    expect(result).toEqual({ kind: "degraded", reason: "stablecoins-cache-stale", dataAsOf: NOW_SEC - 3 * 3600 });
+  });
+
   it("hydrates live DDR inputs from DEWS signals, DEX TVL history, and Safety Score history", async () => {
     const row = activeRow();
     const signalsJson = JSON.stringify({
@@ -267,6 +297,57 @@ describe("resolveDdrIncidents", () => {
     expect(k5).toMatchObject({
       severity: "elevated",
       label: "Sustained one-sided outflow (bank-run signal)",
+    });
+  });
+
+  it("omits stale live context while preserving sparse supply coverage", () => {
+    const context = loadedContext({
+      supplyByCoin: new Map([["usdc-circle", [{ date: NOW_SEC - DAY, usd: 1_000_000 }]]]),
+      dewsByCoin: new Map([
+        [
+          "usdc-circle",
+          {
+            stablecoin_id: "usdc-circle",
+            score: 80,
+            band: "DANGER",
+            signals_json: "{bad json",
+            computed_at: NOW_SEC - 3 * 3600,
+          },
+        ],
+      ]),
+      liqByCoin: new Map([
+        [
+          "usdc-circle",
+          {
+            stablecoin_id: "usdc-circle",
+            liquidity_score: 10,
+            concentration_hhi: 0.9,
+            total_tvl_usd: 10,
+            updated_at: NOW_SEC - 3 * 3600,
+          },
+        ],
+      ]),
+      redemptionByCoin: new Map([
+        [
+          "usdc-circle",
+          {
+            stablecoin_id: "usdc-circle",
+            immediate_capacity_ratio: 0.5,
+            route_family: "native",
+            updated_at: NOW_SEC - 8 * DAY,
+          },
+        ],
+      ]),
+    });
+
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
+
+    expect(row.relatedContext).toMatchObject({
+      dewsScore: null,
+      liquidityScore: null,
+      supplyChange7dPct: null,
+      supplyChange30dPct: null,
+      mintSurge: null,
     });
   });
 });

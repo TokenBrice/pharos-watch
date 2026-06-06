@@ -23,9 +23,18 @@ function mockDbWithPrevRows(
     contract_address: string | null;
     timestamp: number;
   }> = [],
+  latestRows: Array<{
+    stablecoin_id: string;
+    signals_json: string;
+    band: string;
+    computed_at: number;
+  }> = [],
 ): D1Database {
   const stmt = (sql: string) => {
     const all = async <T>() => {
+      if (sql.includes("FROM stress_signals_latest")) {
+        return { results: latestRows as unknown as T[] };
+      }
       if (sql.includes("FROM stress_signals s")) {
         return { results: prevRows as unknown as T[] };
       }
@@ -119,6 +128,48 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     // The amplifiers envelope is stripped — downstream hydration defaults it
     // to { psi: 1, contagion: 1 } when re-scoring.
     expect((prev?.signals as Record<string, unknown>).amplifiers).toBeUndefined();
+  });
+
+  it("prefers newer latest-table rows while keeping legacy-only rows", async () => {
+    const latestPayload = { signals: { supply: { value: 8, available: true } } };
+    const legacyPayload = { signals: { supply: { value: 3, available: true } } };
+    const db = mockDbWithPrevRows(
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: JSON.stringify(legacyPayload),
+          band: "CALM",
+          computed_at: nowSec - 900,
+        },
+        {
+          stablecoin_id: "usdc-circle",
+          signals_json: JSON.stringify(legacyPayload),
+          band: "CALM",
+          computed_at: nowSec - 700,
+        },
+      ],
+      undefined,
+      [],
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: JSON.stringify(latestPayload),
+          band: "WARNING",
+          computed_at: nowSec - 300,
+        },
+      ],
+    );
+
+    const sourceState = await loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending: false,
+      registerSourceFailure: () => {},
+      registerMalformedPersistedInput: () => {},
+    });
+
+    expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 8, available: true });
+    expect(sourceState.prevSignals.get("usdc-circle")?.signals.supply).toEqual({ value: 3, available: true });
   });
 
   it("hydrates structured yield source-risk and rank attribution from rankings cache", async () => {
