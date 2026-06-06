@@ -1,4 +1,5 @@
 import { runChunkedInRead } from "./db";
+import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
@@ -42,6 +43,10 @@ export type DdrLockAuditAction =
 
 const DEFAULT_DDR_V2_EFFECTIVE_AT = 1_779_897_600;
 const DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;
+const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
+const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
+const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";
+const AUTOMATED_SEALED_TAIL_CURRENT_REASON = "sealed incident live tail adopted as current source event";
 
 export interface DdrCanonicalIncidentEventInput {
   eventId: number;
@@ -594,9 +599,7 @@ async function linkUnsealedNearbyIncident(
     .bind(row.incident_key)
     .first<{ sealed: number }>();
   if (sealed) {
-    throw new Error(
-      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
-    );
+    return linkSealedNearbyIncidentTail(db, event, row, options, policyDelaySec);
   }
 
   await db.batch([
@@ -631,6 +634,117 @@ async function linkUnsealedNearbyIncident(
       )
       .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
   ]);
+
+  return mapIncidentRow(
+    {
+      ...row,
+      current_event_id: event.eventId,
+      current_started_at: event.startedAt,
+      updated_at: nowSec,
+      event_id: event.eventId,
+      relation: "repair_replacement",
+    },
+    policyDelaySec,
+  );
+}
+
+function canAutoRepairSealedTail(event: DdrCanonicalIncidentEventInput, row: IncidentRow): boolean {
+  return (
+    row.incident_state === "active" &&
+    event.source === "live" &&
+    event.stablecoinId === row.stablecoin_id &&
+    event.pegCurrency === row.peg_currency &&
+    event.direction === row.direction &&
+    event.startedAt > row.current_started_at
+  );
+}
+
+async function linkSealedNearbyIncidentTail(
+  db: D1Database,
+  event: DdrCanonicalIncidentEventInput,
+  row: IncidentRow,
+  options: EnsureCanonicalIncidentsOptions,
+  policyDelaySec: number,
+): Promise<DdrCanonicalIncident> {
+  if (!canAutoRepairSealedTail(event, row)) {
+    throw new Error(
+      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
+    );
+  }
+
+  const nowSec = optionNowSec(options);
+
+  const linkAuthorization = await authorizeEventRepair(db, {
+    eventId: event.eventId,
+    incidentKey: row.incident_key,
+    operation: "incident_link",
+    columns: ["event_id", "incident_key"],
+    reason: "Live source event reopened inside DDR sealed incident merge window",
+    createdAt: nowSec,
+    expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT,
+    createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+  });
+  await consumeEventRepairAuthorization(db, {
+    authorizationId: linkAuthorization.id,
+    eventId: event.eventId,
+    incidentKey: row.incident_key,
+    operation: "incident_link",
+    consumedAt: nowSec,
+    consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+  });
+  await db
+    .prepare(
+      `INSERT INTO depeg_resolver_incident_event_links
+       (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+       VALUES (?, ?, 'repair_replacement', ?, ?, ?)`,
+    )
+    .bind(row.incident_key, event.eventId, linkAuthorization.id, nowSec, AUTOMATED_SEALED_TAIL_LINK_NOTE)
+    .run();
+
+  const currentAuthorization = await authorizeEventRepair(db, {
+    eventId: event.eventId,
+    incidentKey: row.incident_key,
+    operation: "incident_current_update",
+    columns: ["current_event_id", "current_started_at"],
+    reason: "Live source event is the current source event for the sealed canonical incident",
+    createdAt: nowSec,
+    expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT,
+    createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+  });
+  await consumeEventRepairAuthorization(db, {
+    authorizationId: currentAuthorization.id,
+    eventId: event.eventId,
+    incidentKey: row.incident_key,
+    operation: "incident_current_update",
+    consumedAt: nowSec,
+    consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+  });
+  await db
+    .prepare(
+      `INSERT INTO depeg_resolver_incident_revisions
+       (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+    )
+    .bind(
+      row.incident_key,
+      row.current_event_id,
+      event.eventId,
+      AUTOMATED_SEALED_TAIL_CURRENT_REASON,
+      currentAuthorization.id,
+      nowSec,
+      AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+    )
+    .run();
+  await db
+    .prepare(
+      `UPDATE depeg_resolver_incidents
+       SET current_event_id = ?,
+           current_started_at = ?,
+           updated_at = ?
+       WHERE incident_key = ?`,
+    )
+    .bind(event.eventId, event.startedAt, nowSec, row.incident_key)
+    .run();
 
   return mapIncidentRow(
     {

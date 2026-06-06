@@ -23,7 +23,7 @@ function degradedResponse(reason: string): DdrrResponse {
   return {
     _meta: {
       computedAt: nowSec,
-      expiresAt: nowSec + 1800,
+      expiresAt: nowSec + API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
       degraded: true,
       degradedReason: reason,
       reviewerVersion: DDRR_REVIEWER_VERSION,

@@ -584,7 +584,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
 - `worker/src/cron/depeg-resolver-v2-contracts.ts` - DDR_PUBLICATION_SNAPSHOT_KIND, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
-- `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP, REDEMPTION_BACKSTOP_MAX_AGE_SEC
+- `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DDR_SNAPSHOT_TTL_SEC, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP
 - `worker/src/cron/depeg-resolver/context.ts` - DdrContextLoadResult, DdrLoadedContext, emptyDdrLineage, loadActiveConfirmedEvents, loadDdrContext, loadPolicyUniverseEvents
 - `worker/src/cron/depeg-resolver/incident-resolution.ts` - resolveDdrIncidents
 - `worker/src/cron/depeg-resolver/incident-state.ts` - applyConfirmationTimes, computeLockTiming, ensureCanonicalIncidentsForEvents, loadPendingPromotionConfirmationTimes, recordConfirmedSeenOpportunities, recordSystemHealthDeferrals

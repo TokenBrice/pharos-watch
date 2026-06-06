@@ -34,7 +34,7 @@ import type {
   DdrPublicationManifest,
   DdrSealedPublicPrediction,
 } from "../depeg-resolver-v2-contracts";
-import { DAY } from "./constants";
+import { DAY, DDR_SNAPSHOT_TTL_SEC } from "./constants";
 import type { DdrDiagnosticResponse, DdrLineage } from "./types";
 import { eligibleAt, nullableNumberValue, nullableStringValue, numberValue, recordValue, stringValue } from "./utils";
 import { firstPublicationByPredictionId, publicPredictionIdOf, sealedByIncident } from "./storage-adapters";
@@ -656,7 +656,7 @@ export function buildDiagnosticSnapshot(input: {
       dataAsOf: input.nowSec,
       modelAsOf: input.nowSec,
       computedAt: input.nowSec,
-      expiresAt: input.nowSec + 1800,
+      expiresAt: input.nowSec + DDR_SNAPSHOT_TTL_SEC,
       snapshotToken: null,
       snapshotGeneration: null,
       publicPredictionRows: [],
@@ -687,7 +687,7 @@ export function buildDdrResponse(input: {
       dataAsOf: input.nowSec,
       modelAsOf: input.nowSec,
       computedAt: input.nowSec,
-      expiresAt: input.nowSec + 1800,
+      expiresAt: input.nowSec + DDR_SNAPSHOT_TTL_SEC,
       snapshotToken: input.manifest?.snapshotToken ?? null,
       snapshotGeneration: input.manifest?.snapshotGeneration ?? null,
       publicPredictionRows,

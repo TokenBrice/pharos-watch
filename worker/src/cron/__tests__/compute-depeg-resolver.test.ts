@@ -3,7 +3,8 @@ import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/dep
 import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
-import { normalizeErratumRecord } from "../depeg-resolver/public-projection";
+import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/depeg-resolver-version";
+import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
@@ -305,7 +306,87 @@ describe("computeDepegResolver", () => {
     );
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    const ddrCacheWrite = db
+      .getHistory()
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.computedAt).toBe(NOW_SEC);
+    expect(payload._meta.expiresAt).toBe(NOW_SEC + 900);
+    expect(payload.rows).toEqual([]);
+  });
+
+  it("preserves cached rows as stale when scheduler health is degraded", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores } = storesFor();
+    const previousSnapshot = buildDdrResponse({
+      candidateRows: [resolverRow()],
+      incidentsByEventId: new Map([[42, canonicalIncident()]]),
+      sealed: [],
+      firstPublication: [],
+      manifest: null,
+      errata: [],
+      lineage: {
+        trainingWindow: { start: NOW_SEC - 3600, end: NOW_SEC - 600 },
+        eventCount: 1,
+        incidentCount: 1,
+        coinCount: 1,
+        quarantinedCoins: 0,
+      },
+      nowSec: NOW_SEC - 600,
+      storageAvailable: true,
+    });
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "depeg-resolver:snapshot",
+            value: JSON.stringify({
+              generation: DDR_SNAPSHOT_CACHE_GENERATION,
+              methodologyVersion: DDR_METHODOLOGY_VERSION,
+              payload: previousSnapshot,
+            }),
+            updated_at: NOW_SEC - 600,
+          },
+        ],
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: false,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+
+    const ddrCacheWrite = db
+      .getHistory()
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.computedAt).toBe(NOW_SEC);
+    expect(payload._meta.dataAsOf).toBe(previousSnapshot._meta.dataAsOf);
+    expect(payload.rows).toHaveLength(1);
+    expect(payload.rows[0].live).toMatchObject({
+      stale: true,
+      degradedReason: "stablecoins-cache-unsafe",
+      updatedAt: NOW_SEC - 600,
+    });
   });
 
   it("seals a backstop-eligible insufficient-signal incident as a no-call before publication", async () => {

@@ -1,5 +1,6 @@
-import type { DdrRow } from "@shared/types/depeg-resolver";
+import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import type { CronResult } from "../lib/cron-logger";
+import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
   emptyDdrLineage,
   loadActiveConfirmedEvents,
@@ -29,11 +30,101 @@ import {
   buildDdrResponse,
   buildDiagnosticSnapshot,
 } from "./depeg-resolver/public-projection";
+import { DDR_SNAPSHOT_TTL_SEC } from "./depeg-resolver/constants";
 import type { ComputeDepegResolverV2Options, DdrLineage } from "./depeg-resolver/types";
 import { abortIf } from "./depeg-resolver/utils";
 
 export type { DdrV2StoreContracts } from "./depeg-resolver-v2-contracts";
 export type { ComputeDepegResolverV2Options } from "./depeg-resolver/types";
+
+function emptyDegradedPublicSnapshot(input: {
+  nowSec: number;
+  reason: string;
+  lineage: DdrLineage;
+  storageAvailable: boolean;
+}): DdrResponse {
+  const snapshot = buildDdrResponse({
+    candidateRows: [],
+    incidentsByEventId: new Map(),
+    sealed: [],
+    firstPublication: [],
+    manifest: null,
+    errata: [],
+    lineage: input.lineage,
+    nowSec: input.nowSec,
+    storageAvailable: input.storageAvailable,
+  });
+  snapshot._meta.degraded = true;
+  snapshot._meta.degradedReason = input.reason;
+  return snapshot;
+}
+
+async function degradedPublicSnapshotFromCache(input: {
+  db: D1Database;
+  nowSec: number;
+  reason: string;
+  lineage: DdrLineage;
+  storageAvailable: boolean;
+}): Promise<DdrResponse> {
+  let cached: Awaited<ReturnType<typeof loadDepegResolverSnapshot>>;
+  try {
+    cached = await loadDepegResolverSnapshot(input.db);
+  } catch {
+    return emptyDegradedPublicSnapshot(input);
+  }
+  if (cached.kind !== "ok") {
+    return emptyDegradedPublicSnapshot(input);
+  }
+
+  return {
+    ...cached.payload,
+    _meta: {
+      ...cached.payload._meta,
+      computedAt: input.nowSec,
+      expiresAt: input.nowSec + DDR_SNAPSHOT_TTL_SEC,
+      degraded: true,
+      degradedReason: input.reason,
+    },
+    rows: cached.payload.rows.map((row) => ({
+      ...row,
+      live: {
+        ...row.live,
+        stale: true,
+        degradedReason: row.live.degradedReason ?? input.reason,
+      },
+    })),
+  };
+}
+
+async function persistDegradedArtifacts(input: {
+  db: D1Database;
+  nowSec: number;
+  reason: string;
+  lineage: DdrLineage;
+  signal?: AbortSignal;
+  storeContracts: ComputeDepegResolverV2Options["storeContracts"];
+}): Promise<{ reviewRows: number; reviewError: string | null }> {
+  const publicSnapshot = await degradedPublicSnapshotFromCache({
+    db: input.db,
+    nowSec: input.nowSec,
+    reason: input.reason,
+    lineage: input.lineage,
+    storageAvailable: input.storeContracts != null,
+  });
+  await persistDepegResolverSnapshot(input.db, publicSnapshot);
+
+  const diagnosticSnapshot = buildDiagnosticSnapshot({ rows: [], lineage: input.lineage, nowSec: input.nowSec });
+  const reviewArtifacts = await persistDepegResolverReviewArtifacts(
+    input.db,
+    diagnosticSnapshot,
+    input.signal,
+    input.storeContracts,
+  );
+  return {
+    reviewRows: reviewArtifacts.reviewRows,
+    reviewError: reviewArtifacts.reviewError,
+  };
+}
 
 export async function computeDepegResolver(
   input: D1Database | ComputeDepegResolverV2Options,
@@ -74,6 +165,7 @@ export async function computeDepegResolver(
     options.depegPipelineHealthy ? null : "depeg-pipeline-unhealthy",
   ].filter((reason): reason is string => reason != null);
   if (schedulerHealthFailures.length > 0) {
+    const degradedReason = schedulerHealthFailures.join(",");
     v2LockDeferrals = await recordSystemHealthDeferrals({
       stores: storeContracts,
       db,
@@ -83,7 +175,15 @@ export async function computeDepegResolver(
       ddrRunId: options.ddrRunId,
       runAt: options.runAt,
       syncCapabilities: options.syncCapabilities,
-      reason: schedulerHealthFailures.join(","),
+      reason: degradedReason,
+    });
+    const degradedArtifacts = await persistDegradedArtifacts({
+      db,
+      nowSec,
+      reason: degradedReason,
+      lineage,
+      signal: options.signal,
+      storeContracts,
     });
     return {
       itemCount: 0,
@@ -91,10 +191,13 @@ export async function computeDepegResolver(
         ddrRunId: options.ddrRunId,
         activeEvents: activeRows.length,
         degraded: true,
-        degradedReason: schedulerHealthFailures.join(","),
+        degradedReason,
         v2LockDeferrals,
         v2FreezeSkipped: true,
         v2PublicationAttempted: false,
+        ddrrDegraded: degradedArtifacts.reviewError != null,
+        ddrrDegradedReason: degradedArtifacts.reviewError,
+        reviewRows: degradedArtifacts.reviewRows,
       }),
     };
   }
@@ -107,6 +210,7 @@ export async function computeDepegResolver(
     abortIf(options.signal, "compute-depeg-resolver");
     const contextResult = await loadDdrContext(db, activeRows, nowSec);
     if (contextResult.kind === "degraded") {
+      const degradedReason = contextResult.reason;
       v2LockDeferrals = await recordSystemHealthDeferrals({
         stores: storeContracts,
         db,
@@ -116,7 +220,15 @@ export async function computeDepegResolver(
         ddrRunId: options.ddrRunId,
         runAt: options.runAt,
         syncCapabilities: options.syncCapabilities,
-        reason: contextResult.reason,
+        reason: degradedReason,
+      });
+      const degradedArtifacts = await persistDegradedArtifacts({
+        db,
+        nowSec,
+        reason: degradedReason,
+        lineage,
+        signal: options.signal,
+        storeContracts,
       });
       return {
         itemCount: 0,
@@ -124,10 +236,13 @@ export async function computeDepegResolver(
           ddrRunId: options.ddrRunId,
           activeEvents: activeRows.length,
           degraded: true,
-          degradedReason: contextResult.reason,
+          degradedReason,
           v2LockDeferrals,
           v2FreezeSkipped: true,
           v2PublicationAttempted: false,
+          ddrrDegraded: degradedArtifacts.reviewError != null,
+          ddrrDegradedReason: degradedArtifacts.reviewError,
+          reviewRows: degradedArtifacts.reviewRows,
         }),
       };
     }

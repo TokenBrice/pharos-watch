@@ -382,7 +382,104 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
-  it("still requires explicit repair for nearby events after a public prediction is sealed", async () => {
+  it("links sealed live tails through automated repair authorizations", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { incident } = await sealPredictionFixture(db);
+      const [nearby] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+      );
+
+      expect(nearby?.incidentKey).toBe(incident.incidentKey);
+      expect(nearby?.eventId).toBe(2);
+      expect(nearby?.currentEventId).toBe(2);
+      expect(nearby?.relation).toBe("repair_replacement");
+
+      const link = db.sqlite
+        .prepare(
+          `SELECT relation, note, repair_authorization_id
+           FROM depeg_resolver_incident_event_links
+           WHERE event_id = 2`,
+        )
+        .get() as { relation: string; note: string; repair_authorization_id: number };
+      expect(link).toEqual({
+        relation: "repair_replacement",
+        note: "sealed incident live tail linked through automated repair authorization",
+        repair_authorization_id: expect.any(Number),
+      });
+
+      const authorizations = db.sqlite
+        .prepare(
+          `SELECT operation, columns_json, created_by
+           FROM depeg_resolver_event_repair_authorizations
+           WHERE event_id = 2
+           ORDER BY id`,
+        )
+        .all() as Array<{ operation: string; columns_json: string; created_by: string }>;
+      expect(authorizations).toEqual([
+        {
+          operation: "incident_link",
+          columns_json: '["event_id","incident_key"]',
+          created_by: "ddr-worker:auto-sealed-tail",
+        },
+        {
+          operation: "incident_current_update",
+          columns_json: '["current_event_id","current_started_at"]',
+          created_by: "ddr-worker:auto-sealed-tail",
+        },
+      ]);
+
+      const revision = db.sqlite
+        .prepare(
+          `SELECT previous_event_id, current_event_id, reason, repair_authorization_id, created_by
+           FROM depeg_resolver_incident_revisions
+           WHERE current_event_id = 2`,
+        )
+        .get() as {
+          previous_event_id: number;
+          current_event_id: number;
+          reason: string;
+          repair_authorization_id: number;
+          created_by: string;
+        };
+      expect(revision).toEqual({
+        previous_event_id: 1,
+        current_event_id: 2,
+        reason: "sealed incident live tail adopted as current source event",
+        repair_authorization_id: expect.any(Number),
+        created_by: "ddr-worker:auto-sealed-tail",
+      });
+
+      const uses = db.sqlite
+        .prepare(
+          `SELECT operation, target_table
+           FROM depeg_resolver_event_repair_authorization_uses
+           WHERE event_id = 2
+           ORDER BY authorization_id`,
+        )
+        .all() as Array<{ operation: string; target_table: string }>;
+      expect(uses).toEqual([
+        { operation: "incident_link", target_table: "depeg_resolver_incident_event_links" },
+        { operation: "incident_current_update", target_table: "depeg_resolver_incidents" },
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("still requires manual repair for non-live nearby events after a public prediction is sealed", async () => {
     const db = makeSqliteD1();
     try {
       const { incident } = await sealPredictionFixture(db);
@@ -397,7 +494,7 @@ describe("DDRv2 storage migrations and stores", () => {
               direction: "below",
               startedAt: 100900,
               peakDeviationBps: -350,
-              source: "live",
+              source: "backfill",
             },
           ],
           { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },

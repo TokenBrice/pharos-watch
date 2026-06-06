@@ -25,6 +25,7 @@ import {
   type DdrrResponse,
   type DdrrSummary,
 } from "@shared/types/depeg-resolver-review";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
@@ -36,7 +37,7 @@ import type {
   DdrV2StoreContracts,
 } from "./depeg-resolver-v2-contracts";
 
-const DDRR_SNAPSHOT_TTL_SEC = 1800;
+const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
 const DDRR_PUBLIC_ROW_CAP = 100;
 
