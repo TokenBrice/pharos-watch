@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.996",
+    title: "Fresh price-cache valuation gate",
+    date: "2026-06-06",
+    effectiveAt: 1780704000, // 2026-06-06T00:00:00Z
+    summary:
+      "Requires non-USD blacklist ledger USD conversions to use a fresh price-cache row instead of silently reusing stale cached prices.",
+    impact: [
+      "A7A5, EURC, BRZ, EURI, TGBP, EURCV, JPYC, PAXG, XAUT, and XAUM freeze-ledger USD values now require a positive `price_cache` row newer than the 6-hour replay budget",
+      "Stale or malformed conversion prices leave `amountUsd` unresolved so existing amount-gap status and remediation paths remain visible",
+      "Current-balance snapshots, duplicate-row repair, fresh ingestion, and admin amount-gap remediation share the same freshness gate through the blacklist price-cache reader",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.995",
     title: "Full unfreezable set re-audit",
     date: "2026-05-25",

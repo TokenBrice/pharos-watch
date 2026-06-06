@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.995` (2026-02-09 -> 2026-05-25).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.996` (2026-02-09 -> 2026-06-06).
+
+---
+
+## v3.996 — Fresh price-cache valuation gate (2026-06-06)
+
+- **Fresh conversion required** — non-USD FreezeWatch USD values now require a positive `price_cache` row newer than the 6-hour replay budget
+- **Stale prices fail closed** — stale or malformed conversion rows leave `amountUsd` unresolved instead of silently valuing frozen balances with old FX/commodity marks
+- **Shared ingestion/remediation gate** — fresh ingestion, duplicate-row repair, current-balance snapshots, and admin amount-gap remediation use the same blacklist price-cache reader
 
 ---
 

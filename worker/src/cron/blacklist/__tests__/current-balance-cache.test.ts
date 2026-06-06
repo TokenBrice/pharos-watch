@@ -66,11 +66,11 @@ function makeContext() {
   };
 }
 
-function makePriceDb(price: number | null): D1Database {
+function makePriceDb(price: number | null, updatedAt = Math.floor(Date.now() / 1000)): D1Database {
   return {
     prepare: vi.fn(() => ({
       bind: vi.fn(() => ({
-        first: vi.fn(async () => (price == null ? null : { price })),
+        first: vi.fn(async () => (price == null ? null : { price, updated_at: updatedAt })),
       })),
     })),
   } as unknown as D1Database;
@@ -449,5 +449,63 @@ describe("syncCurrentBalanceCacheForRows", () => {
         amountUsd: 12.5,
       }),
     );
+  });
+
+  it("leaves non-USD ledger amounts unresolved when the price_cache entry is stale", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(1_000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const staleUpdatedAt = Math.floor(Date.now() / 1000) - (7 * 3600);
+
+    const result = await syncCurrentBalanceCacheForRows(
+      makePriceDb(0.0125, staleUpdatedAt),
+      a7a5Config,
+      [
+        {
+          id: "6",
+          stablecoin: "A7A5",
+          chain_id: "ethereum",
+          chain_name: "Ethereum",
+          event_type: "blacklist",
+          address: "0x666",
+          amount_native: null,
+          amount_usd_at_event: null,
+          amount_source: "unavailable",
+          amount_status: "recoverable_pending",
+          tx_hash: "0xa7a5-stale",
+          block_number: 6,
+          timestamp: 15,
+          methodology_version: "3.996",
+          contract_address: a7a5Config.contractAddress,
+          config_key: a7a5Config.configKey,
+          event_signature: "Blacklisted(address)",
+          event_topic0: "0xtopic",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          explorer_tx_url: "https://etherscan.io/tx/0xa7a5-stale",
+          explorer_address_url: "https://etherscan.io/address/0x666",
+        },
+      ],
+      makeContext(),
+    );
+
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        stablecoin: "A7A5",
+        address: "0x666",
+        amountNative: 1_000,
+        amountUsd: null,
+      }),
+    );
+    warnSpy.mockRestore();
   });
 });

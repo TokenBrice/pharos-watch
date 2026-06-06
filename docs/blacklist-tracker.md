@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.995`
+- **Current methodology version:** `v3.996`
 - **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
 - **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
@@ -200,7 +200,7 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 - **Address:** `0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9`
 - **Decimals:** 6
 - **Events:** `Blacklisted(address)`, `DeBlacklisted(address)`, `DestroyedBlackFunds(address,uint256)`
-- **Note:** A7A5 is RUB-pegged. USD values use the `a7a5-old-vector` price-cache entry instead of assuming native units equal dollars.
+- **Note:** A7A5 is RUB-pegged. USD values use a fresh `a7a5-old-vector` price-cache entry instead of assuming native units equal dollars.
 
 ### USDA (Avalon)
 
@@ -799,8 +799,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.995",
-    "currentVersionLabel": "v3.995",
+    "currentVersion": "3.996",
+    "currentVersionLabel": "v3.996",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
@@ -909,8 +909,8 @@ address, and transaction link. From `md` upward, the full table remains the prim
 ### Amount Display Logic
 
 - `null` or (`0` and not destroy): show the amount status/source instead of implying a confirmed value
-- Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using the coin-specific price-cache entry)
-- A7A5, EURC, BRZ, EURI, and TGBP: native amounts are non-USD-denominated and converted to USD using coin-specific price-cache entries
+- Gold coins (PAXG, XAUT, XAUM): 4 decimal places + symbol (converted to USD only when the coin-specific price-cache entry is positive and newer than the 6-hour replay budget)
+- A7A5, EURC, BRZ, EURI, TGBP, EURCV, and JPYC: native amounts are non-USD-denominated and converted to USD only when their coin-specific price-cache entries are positive and newer than the 6-hour replay budget
 - USD-pegged stablecoins: `formatCurrency` (USD)
 
 ### Special UI Components
@@ -965,13 +965,13 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.
 12. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 13. **Legacy mixed-case cursor rows:** older runs may have stored checksum-cased EVM addresses in `blacklist_sync_state`; current reads merge those with lowercase canonical keys to avoid duplicate cursors and redundant rescans.
-14. **RPC bootstrap guards:** Avalanche USDC, Avalanche USDT, and BSC USDT now start from known deployment blocks, and RPC-log scans use bounded per-run block windows. This prevents empty zero-cursor configs from repeatedly attempting impractical genesis-to-head scans.
+14. **RPC bootstrap guards:** Base USDC, Optimism USDC, Optimism legacy USDT, Optimism USDT0, Avalanche USDC, Avalanche USDT, and BSC USDT start from known deployment blocks, and RPC-log scans use bounded per-run block windows. This prevents empty zero-cursor configs from repeatedly attempting impractical genesis-to-head scans.
 15. **Recoverable-gap telemetry is row-level:** use `amount_attempt_count`, `amount_last_error_class`, and `amount_last_provider` to diagnose stranded historical rows instead of inferring from null amounts alone.
 16. **USDtb emits batch events:** `AccountsBlocked(address[])` and `AccountsUnblocked(address[])` expand one log into one row per affected address, with the array index appended to the row ID.
-17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on the `a7a5-old-vector` price-cache entry.
+17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on a fresh `a7a5-old-vector` price-cache entry.
 18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
 19. **MNEE has independent blacklist and freeze states:** v3.9 tracks MNEE freeze/unfreeze plus confiscation/burn events only. AccountBlacklisted/AccountDelisted need a future restriction-source key to avoid active-state collisions.
-20. **EURC/BRZ/EURI/TGBP/EURCV/JPYC are non-USD:** public USD values depend on price-cache conversion rather than native token units (EUR for EURC/EURI/EURCV, BRL for BRZ, GBP for TGBP, JPY for JPYC).
+20. **EURC/BRZ/EURI/TGBP/EURCV/JPYC are non-USD:** public USD values depend on fresh price-cache conversion rather than native token units (EUR for EURC/EURI/EURCV, BRL for BRZ, GBP for TGBP, JPY for JPYC).
 21. **Gnosis dRPC free-tier caps log range at 10k blocks:** scan windows must stay at or below 9k blocks per request, otherwise `eth_getLogs` rejects the range and no events are returned.
 
 ---
