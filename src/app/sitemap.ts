@@ -18,10 +18,7 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
-import {
-  selectIndexableDepegEvents,
-  selectStaticDepegEventPages,
-} from "@/app/depeg/[event]/config";
+import { selectIndexableDepegEvents, selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
 
 export const dynamic = "force-static";
 
@@ -64,10 +61,18 @@ function fundingLastModified(): Date {
   );
 }
 
+function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]): Date {
+  return new Date(
+    Math.max(
+      lastEdited(buildStablecoinUrl(page.left.id)).getTime(),
+      lastEdited(buildStablecoinUrl(page.right.id)).getTime(),
+    ),
+  );
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  // Routes explicitly excluded from the sitemap (still reachable, but noindex).
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/`,
@@ -109,6 +114,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${SITE_URL}/cemetery/`,
       lastModified: lastEdited("/cemetery/"),
       changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/compare/`,
+      lastModified: lastEdited("/compare/"),
+      changeFrequency: "weekly",
       priority: 0.7,
     },
     {
@@ -442,7 +453,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
-    lastModified: new Date("2026-03-07"),
+    lastModified: comparisonLastModified(page),
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));
