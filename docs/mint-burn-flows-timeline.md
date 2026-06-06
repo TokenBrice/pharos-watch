@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.14` (2026-03-01 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.15` (2026-03-01 -> 2026-06-06).
+
+---
+
+## v6.15 - Bridge tx-context shortfall guard (June 6, 2026)
+
+- Bridge-enabled configs now require transaction and receipt context before parsed rows are persisted.
+- If tx context is unavailable under budget pressure or RPC failure, parsed rows for that config are deferred instead of defaulting bridge candidates to `standard` flow.
+- The config remains unsatisfied, the sync frontier does not advance, and cron metadata exposes `bridgeClassification.txContextShortfalls` plus `bridgeClassification.deferredRows`.
 
 ---
 

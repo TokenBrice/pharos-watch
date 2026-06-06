@@ -382,6 +382,7 @@ describe("mint-burn shared pipeline modules", () => {
       effectiveBurns: 1,
       bridgeBurns: 1,
       reviewBurns: 1,
+      txContextShortfalls: 0,
     });
     expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(getAlchemyTransactionReceipt)).toHaveBeenCalledTimes(4);
@@ -448,6 +449,55 @@ describe("mint-burn shared pipeline modules", () => {
     // min(4, 20) = 4; bounded by TX_CONTEXT_CONCURRENCY in classification.ts
     expect(peak).toBe(4);
     expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(20);
+  });
+
+  it("reports tx-context shortfalls before classifier defaults can count bridge rows", async () => {
+    vi.mocked(getAlchemyTransactionByHash).mockResolvedValue(null);
+    vi.mocked(getAlchemyTransactionReceipt).mockResolvedValue(null);
+
+    const rows: MintBurnRow[] = [
+      makeRow({ id: "mint-bridge", direction: "mint", tx_hash: "0xbridge-mint" }),
+      makeRow({ id: "burn-bridge", direction: "burn", tx_hash: "0xbridge-burn" }),
+    ];
+
+    const counters = await classifyBridgeBurnRows(
+      rows,
+      {
+        chain: {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          evmChainId: 1,
+          explorerUrl: "https://etherscan.io",
+          type: "evm",
+        },
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        decimals: 6,
+        dustThreshold: 10_000,
+        startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
+        events: [],
+        bridgeDetection: {
+          protocol: "ccip",
+          knownBridgePoolAddresses: ["0xpool"],
+          knownBridgeRouterAddresses: ["0xrouter"],
+          bridgeSignalTopics: ["0xtopic"],
+          bridgeSignalSelectors: ["0x96f4e9f9"],
+        },
+      },
+      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      { count: 0, limit: 200 },
+      new Map(),
+    );
+
+    expect(counters.txContextShortfalls).toBe(2);
+    expect(counters.effectiveBurns).toBe(0);
+    expect(counters.bridgeBurns).toBe(1);
+    expect(counters.reviewBurns).toBe(0);
+    expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 
   it("recomputes only affected hourly buckets", async () => {

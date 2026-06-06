@@ -171,12 +171,14 @@ describe("handleBackfillMintBurn", () => {
       effectiveBurns: number;
       bridgeBurns: number;
       reviewBurns: number;
+      txContextShortfalls: number;
     };
     expect(body.done).toBe(true);
     expect(body.chunksProcessed).toBe(0);
     expect(body.effectiveBurns).toBe(0);
     expect(body.bridgeBurns).toBe(0);
     expect(body.reviewBurns).toBe(0);
+    expect(body.txContextShortfalls).toBe(0);
   });
 
   it("returns nextFromBlock when maxChunks stops before toBlock", async () => {

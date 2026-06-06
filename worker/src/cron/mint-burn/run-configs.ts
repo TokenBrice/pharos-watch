@@ -36,6 +36,8 @@ export interface MintBurnRunConfigPhaseResult {
   bridgeBurns: number;
   reviewBurns: number;
   atomicRoundtripsTotal: number;
+  txContextShortfalls: number;
+  bridgeClassificationDeferredRows: number;
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
@@ -77,6 +79,8 @@ export async function runMintBurnConfigPhase(input: {
   let bridgeBurns = 0;
   let reviewBurns = 0;
   let atomicRoundtripsTotal = 0;
+  let txContextShortfalls = 0;
+  let bridgeClassificationDeferredRows = 0;
   let criticalContractsSatisfied = 0;
   let criticalContractsUnsatisfied = 0;
 
@@ -204,6 +208,8 @@ export async function runMintBurnConfigPhase(input: {
     bridgeBurns += result.bridgeBurns;
     reviewBurns += result.reviewBurns;
     atomicRoundtripsTotal += result.atomicRoundtripsDetected;
+    txContextShortfalls += summary.txContextShortfalls;
+    bridgeClassificationDeferredRows += summary.bridgeClassificationDeferredRows;
 
     if (result.newLastBlock != null) {
       await upsertMintBurnSyncState(input.db, key, result.newLastBlock, "replace");
@@ -257,6 +263,8 @@ export async function runMintBurnConfigPhase(input: {
     bridgeBurns,
     reviewBurns,
     atomicRoundtripsTotal,
+    txContextShortfalls,
+    bridgeClassificationDeferredRows,
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown,

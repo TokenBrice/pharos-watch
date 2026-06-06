@@ -37,6 +37,8 @@ export async function completeMintBurnRun(input: {
   bridgeBurns: number;
   reviewBurns: number;
   atomicRoundtripsTotal: number;
+  txContextShortfalls: number;
+  bridgeClassificationDeferredRows: number;
   criticalContractsEnabled: number;
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
@@ -153,6 +155,10 @@ export async function completeMintBurnRun(input: {
       reviewBurns: input.reviewBurns,
     },
     atomicRoundtripsDetected: input.atomicRoundtripsTotal,
+    bridgeClassification: {
+      txContextShortfalls: input.txContextShortfalls,
+      deferredRows: input.bridgeClassificationDeferredRows,
+    },
     criticalCoverage: {
       contractsEnabled: input.criticalContractsEnabled,
       contractsSatisfied: input.criticalContractsSatisfied,

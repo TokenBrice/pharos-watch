@@ -191,6 +191,8 @@ function makeSummary(overrides?: Partial<MintBurnConfigSummary>): MintBurnConfig
     advanceReason: "no-safe-frontier",
     missingTimestampCount: 0,
     earliestMissingTimestampBlock: null,
+    txContextShortfalls: 0,
+    bridgeClassificationDeferredRows: 0,
     requestBudgetLimit: 100,
     requestBudgetUsed: 10,
     ...overrides,

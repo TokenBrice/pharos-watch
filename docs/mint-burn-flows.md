@@ -19,11 +19,11 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.14`
+- **Current methodology version:** `v6.15`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
-> **Note:** `v6.14` went live on 2026-06-06 with fail-closed bridge-detection config validation and explicit `bridgeValidationErrors` cron metadata. `v6.13` added a USD-valued-only guard for the 24-hour largest-event field, `v6.12` added cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing, `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
+> **Note:** `v6.15` went live on 2026-06-06 with bridge tx-context shortfall guards and explicit `bridgeClassification` cron metadata. `v6.14` added fail-closed bridge-detection config validation, `v6.13` added a USD-valued-only guard for the 24-hour largest-event field, `v6.12` added cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing, `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
 ---
 
@@ -225,6 +225,7 @@ reUSD's `Deposited(address user, address token, uint256 amount)` event has all t
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
    - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
+   - If a bridge-enabled config cannot resolve required transaction and receipt context for any parsed row, the run records a tx-context shortfall, skips persistence for that config's parsed rows, and leaves the sync frontier unchanged so the same range can be retried.
    - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id, chain_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
@@ -287,6 +288,7 @@ Key behavior changes forward-going:
 - **LayerZero endpoint-only signal.** The OFT/OAdapter path now accepts a third fingerprint (`fingerprintC`) that fires when the transaction context contains both a known LayerZero endpoint topic and an expected emitter address, even without the classic pool-address match (`hasSignalTopic && hasExpectedEmitter && signalEmitterSet.size > 0`). This catches LayerZero-Executor-only mints that previously slipped through. Tradeoff: known risk of shared-endpoint false positives is accepted to eliminate the prior false-negative backlog.
 - **No more `bridge-signal-with-unknown-pool` review path.** Rows that touch a recognized bridge-signal topic/emitter but not a tracked pool address now tag as `bridge_transfer` instead of flowing to a review queue. Policy: if a transaction carries a bridge signal, treat every mint/burn in it as bridge noise.
 - **Fail-closed bridge-detection config validation.** `validateMintBurnBridgeDetection` runs against every `bridgeDetection` config at module load. Address fields must match `ADDRESS_RE`, topics must match `TOPIC_RE`, and selectors must match `SELECTOR_RE`. Any malformed bridge config now aborts module load instead of logging and continuing, so bridge filtering cannot silently disable itself for one coin. Healthy mint/burn runs publish `bridgeValidationErrors: 0` in cron metadata for status diagnostics.
+- **Bridge tx-context shortfall guard.** For bridge-enabled configs, both transaction and receipt context must resolve before parsed rows can be persisted. If context is unavailable under budget pressure or RPC failure, the config reports `txContextShortfalls`, does not publish those parsed rows, and does not advance `mint_burn_sync_state`; run metadata surfaces `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows`.
 
 ### Atomic Roundtrip Detection
 
@@ -616,6 +618,8 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 | `configBreakdown[]`, `laggingConfigs[]` | arrays | Per-config diagnostics |
 | `apiErrors`, `fallbackMode`, `validationFailures` | mixed | Provider-error observability |
 | `atomicRoundtripsDetected` | number | Rows tagged in-memory this run |
+| `bridgeClassification.txContextShortfalls` | number | Transaction/receipt context lookup shortfalls for bridge-enabled configs |
+| `bridgeClassification.deferredRows` | number | Parsed rows withheld because bridge classification context was unavailable |
 | `nullPricesHealed` | number | Rows auto-valued from `price_cache` this run (48h window) |
 | `degradedSignal`, `degradedStreak`, `coverageRatio` | mixed | Critical-lane health signals |
 | `recalcFailed` | boolean | `true` when `recalcAffectedHours` threw during the run's `finally` block; critical lane downgrades `ok → degraded` when this is set |

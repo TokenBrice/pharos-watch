@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.15",
+    title: "Bridge tx-context shortfall guard",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "Bridge-aware mint/burn ingestion now treats unresolved transaction context as a classification shortfall instead of publishing bridge candidates as standard flow.",
+    impact: [
+      "Rows from bridge-enabled configs are not persisted when tx or receipt context cannot be resolved, keeping unclassified bridge mints out of counted economic flow",
+      "Affected configs remain unsatisfied and do not advance their sync frontier, allowing a later run to retry the same block range once RPC context is available",
+      "Cron metadata exposes `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows` so status diagnostics show classification gaps explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.14",
     title: "Bridge config validation fail-closed",
     date: "2026-06-06",

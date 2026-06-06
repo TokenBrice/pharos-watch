@@ -541,6 +541,39 @@ describe("syncMintBurn", () => {
     expect(meta.bridgeValidationErrors).toBe(0);
   });
 
+  it("defers bridge-classified rows when tx context cannot be resolved", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ txHash: "0xmissing-context" })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    vi.mocked(getAlchemyTransactionByHash).mockResolvedValueOnce(null);
+    vi.mocked(getAlchemyTransactionReceipt).mockResolvedValueOnce(null);
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+    const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
+
+    expect(result.itemCount).toBe(0);
+    expect(meta.rowsParsed).toBe(1);
+    expect(meta.rowsInserted).toBe(0);
+    expect(meta.bridgeClassification.txContextShortfalls).toBe(1);
+    expect(meta.bridgeClassification.deferredRows).toBe(1);
+    expect(meta.degradedSignal).toBe(true);
+    expect(usdt?.txContextShortfalls).toBe(1);
+    expect(usdt?.bridgeClassificationDeferredRows).toBe(1);
+    expect(usdt?.failedEventDefs).toContain("tx-context:1");
+    expect(usdt?.advanceReason).toBe("no-safe-frontier");
+  });
+
   it("counts atomic roundtrips across mint and burn event definitions", async () => {
     const db = makeDb();
 

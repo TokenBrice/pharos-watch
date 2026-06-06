@@ -178,6 +178,7 @@ export async function handleBackfillMintBurn(
         effectiveBurns: 0,
         bridgeBurns: 0,
         reviewBurns: 0,
+        txContextShortfalls: 0,
         rowsReclassified: 0,
         reclassified: { flowTypeChanges: 0, burnTypeChanges: 0 },
         chunksProcessed: 0,
@@ -199,6 +200,7 @@ export async function handleBackfillMintBurn(
     let effectiveBurns = 0;
     let bridgeBurns = 0;
     let reviewBurns = 0;
+    let txContextShortfalls = 0;
     let flowTypeChanges = 0;
     let burnTypeChanges = 0;
     let rowsReclassifiedUnique = 0;
@@ -268,6 +270,14 @@ export async function handleBackfillMintBurn(
       }
 
       const burnCounts = await classifyBridgeBurnRows(allParsedRows, config, alchemyUrl, budget, txContextCache);
+      if (burnCounts.txContextShortfalls > 0) {
+        txContextShortfalls += burnCounts.txContextShortfalls;
+        return errorResponse(
+          502,
+          `Backfill failed for ${configKey(config)} at ${cursor}-${scanTo}: ` +
+            `${burnCounts.txContextShortfalls} transaction context lookup(s) unavailable`,
+        );
+      }
       effectiveBurns += burnCounts.effectiveBurns;
       bridgeBurns += burnCounts.bridgeBurns;
       reviewBurns += burnCounts.reviewBurns;
@@ -305,6 +315,7 @@ export async function handleBackfillMintBurn(
       effectiveBurns,
       bridgeBurns,
       reviewBurns,
+      txContextShortfalls,
       // Legacy scalar: unique rows that had any classification column rewritten.
       // Exact per-column counts live in `reclassified` below.
       rowsReclassified: rowsReclassifiedUnique,

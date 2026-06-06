@@ -158,6 +158,10 @@ export async function syncMintBurn(
       fallbackMode: null,
       validationFailures: 0,
       bridgeValidationErrors: MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
+      bridgeClassification: {
+        txContextShortfalls: 0,
+        deferredRows: 0,
+      },
       configBreakdown: [],
       laggingConfigs: [],
       degradedSignal: false,
@@ -269,7 +273,8 @@ export async function syncMintBurn(
     rowsRead, rowsParsed, rowsInserted, rowsIgnored, rowsDropped,
     contractsProcessed, contractsSkipped, contractsDeferredExtended,
     apiErrors, effectiveBurns, bridgeBurns, reviewBurns,
-    atomicRoundtripsTotal, criticalContractsSatisfied, criticalContractsUnsatisfied,
+    atomicRoundtripsTotal, txContextShortfalls, bridgeClassificationDeferredRows,
+    criticalContractsSatisfied, criticalContractsUnsatisfied,
     configBreakdown,
   } = phaseResult;
 
@@ -314,6 +319,8 @@ export async function syncMintBurn(
     bridgeBurns,
     reviewBurns,
     atomicRoundtripsTotal,
+    txContextShortfalls,
+    bridgeClassificationDeferredRows,
     criticalContractsEnabled,
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,

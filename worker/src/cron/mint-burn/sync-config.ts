@@ -51,6 +51,8 @@ export interface MintBurnConfigSummary {
     | null;
   missingTimestampCount: number;
   earliestMissingTimestampBlock: number | null;
+  txContextShortfalls: number;
+  bridgeClassificationDeferredRows: number;
   requestBudgetLimit: number;
   requestBudgetUsed: number;
 }
@@ -118,6 +120,8 @@ export function createMintBurnConfigSummary(
     advanceReason: null,
     missingTimestampCount: 0,
     earliestMissingTimestampBlock: null,
+    txContextShortfalls: 0,
+    bridgeClassificationDeferredRows: 0,
     requestBudgetLimit: options.requestBudgetLimit ?? 0,
     requestBudgetUsed: 0,
   };
@@ -284,6 +288,24 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     txContextCache,
     signal,
   );
+  summary.txContextShortfalls = burnCounts.txContextShortfalls;
+  if (burnCounts.txContextShortfalls > 0) {
+    apiErrors += burnCounts.txContextShortfalls;
+    summary.errors += burnCounts.txContextShortfalls;
+    summary.failedEventDefs.push(`tx-context:${burnCounts.txContextShortfalls}`);
+    summary.bridgeClassificationDeferredRows = allParsedRows.length;
+    summary.requestBudgetUsed = configBudget.count;
+    summary.advanceReason = "no-safe-frontier";
+    return {
+      summary,
+      apiErrors,
+      effectiveBurns: 0,
+      bridgeBurns: 0,
+      reviewBurns: 0,
+      atomicRoundtripsDetected: 0,
+      newLastBlock: null,
+    };
+  }
   effectiveBurns += burnCounts.effectiveBurns;
   bridgeBurns += burnCounts.bridgeBurns;
   reviewBurns += burnCounts.reviewBurns;

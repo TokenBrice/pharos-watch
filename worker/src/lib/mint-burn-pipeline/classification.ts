@@ -14,6 +14,7 @@ import {
   type MintBurnTxContext,
 } from "../mint-burn-bridge-classifier";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
+import { budgetExhausted } from "../evm-logs";
 import type {
   BurnClassificationCounters,
   MintBurnRequestBudget,
@@ -23,6 +24,11 @@ import type {
 // Keep <= half of CF's 6-connection-per-trigger pool so other
 // ctx.waitUntil() work in the same cron trigger has headroom.
 const TX_CONTEXT_CONCURRENCY = 4;
+
+interface TxContextResolution {
+  context: MintBurnTxContext | null;
+  shortfall: boolean;
+}
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -51,28 +57,33 @@ async function resolveTxContext(
   budget: MintBurnRequestBudget,
   txContextCache: Map<string, MintBurnTxContext | null>,
   signal?: AbortSignal,
-): Promise<MintBurnTxContext | null> {
+): Promise<TxContextResolution> {
   const cached = txContextCache.get(txHash);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    return { context: cached, shortfall: false };
+  }
+
+  if (budget.limit - budget.count < 2 || budgetExhausted(budget)) {
+    return { context: null, shortfall: true };
+  }
 
   const [tx, receipt] = await Promise.all([
     getAlchemyTransactionByHash(alchemyUrl, txHash, budget, signal),
     getAlchemyTransactionReceipt(alchemyUrl, txHash, budget, signal),
   ]);
 
-  if (!tx && !receipt) {
-    txContextCache.set(txHash, null);
-    return null;
+  if (!tx || !receipt) {
+    return { context: null, shortfall: true };
   }
 
   const context: MintBurnTxContext = {
-    to: tx?.to ?? receipt?.to ?? null,
-    inputSelector: tx?.input?.slice(0, 10) ?? null,
-    logTopics: receipt?.logs.flatMap((log) => log.topics ?? []) ?? [],
-    logAddresses: receipt?.logs.map((log) => log.address).filter((address): address is string => Boolean(address)) ?? [],
+    to: tx.to ?? receipt.to ?? null,
+    inputSelector: tx.input?.slice(0, 10) ?? null,
+    logTopics: receipt.logs.flatMap((log) => log.topics ?? []),
+    logAddresses: receipt.logs.map((log) => log.address).filter((address): address is string => Boolean(address)),
   };
   txContextCache.set(txHash, context);
-  return context;
+  return { context, shortfall: false };
 }
 
 export async function classifyBridgeBurnRows(
@@ -84,19 +95,33 @@ export async function classifyBridgeBurnRows(
   signal?: AbortSignal,
 ): Promise<BurnClassificationCounters> {
   if (rows.length === 0) {
-    return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0 };
+    return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, txContextShortfalls: 0 };
+  }
+
+  if (!config.bridgeDetection) {
+    classifyBridgeAwareBurnRows(rows, undefined, new Map());
+    const burnRows = rows.filter((row) => row.direction === "burn");
+    return {
+      effectiveBurns: burnRows.length,
+      bridgeBurns: 0,
+      reviewBurns: 0,
+      txContextShortfalls: 0,
+    };
   }
 
   const burnRows = rows.filter((row) => row.direction === "burn");
   const txHashes = [...new Set(rows.map((row) => row.tx_hash))];
-  const contexts = await mapWithConcurrency(
+  const resolutions = await mapWithConcurrency(
     txHashes,
     TX_CONTEXT_CONCURRENCY,
     (txHash) => resolveTxContext(alchemyUrl, txHash, budget, txContextCache, signal),
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
+  let txContextShortfalls = 0;
   for (let i = 0; i < txHashes.length; i++) {
-    txContextByHash.set(txHashes[i]!, contexts[i]!);
+    const resolution = resolutions[i]!;
+    txContextByHash.set(txHashes[i]!, resolution.context);
+    if (resolution.shortfall) txContextShortfalls++;
   }
 
   classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
@@ -114,5 +139,5 @@ export async function classifyBridgeBurnRows(
     }
   }
 
-  return { effectiveBurns, bridgeBurns, reviewBurns };
+  return { effectiveBurns, bridgeBurns, reviewBurns, txContextShortfalls };
 }

@@ -30,6 +30,7 @@ export interface BurnClassificationCounters {
   effectiveBurns: number;
   bridgeBurns: number;
   reviewBurns: number;
+  txContextShortfalls: number;
 }
 
 export interface MintBurnPriceHistoryPoint {
