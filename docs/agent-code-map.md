@@ -543,7 +543,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/evm-source.ts` - FetchEvmEventsIncrementalResult, RPC_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, parseEvmLogs, resolveRpcLogTarget, shouldPreferRpcLogScan
 - `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
 - `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows
-- `worker/src/cron/blacklist/row-preparation.ts` - buildLatestBlacklistRows, fetchBlacklistAssetPriceFromCache
+- `worker/src/cron/blacklist/row-preparation.ts` - BLACKLIST_PRICE_CACHE_TTL_SEC, buildCurrentBalanceSnapshotRows, buildLatestBlacklistRows, fetchBlacklistAssetPriceFromCache
 - `worker/src/cron/blacklist/run-budget.ts` - BlacklistRunBudget, blacklistRuntimeBudgetReached, blacklistShouldStopBeforeNextConfig, blacklistSubrequestBudgetReached, createBlacklistRunBudget
 - `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanResult, buildBlacklistRow, shouldSuppressAsMirrorZero
 - `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
@@ -596,7 +596,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-resolver/types.ts` - ComputeDepegResolverV2Options, CurrentDeviationMapResult, DdrDiagnosticResponse, DdrEventDbRow, DdrLineage, DdrPendingPromotionOutcomeRow
 - `worker/src/cron/depeg-resolver/utils.ts` - abortIf, allocateDdrRunId, eligibleAt, fallbackIncidentForEvent, fallbackStructural, formatDdrrFailure
 - `worker/src/cron/detect-depegs.ts` - detectDepegEvents, shouldCloseOrphanedDepeg
-- `worker/src/cron/dews/contracts.ts` - ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState, DexLiquidityRow
+- `worker/src/cron/dews/contracts.ts` - BlacklistCountByStablecoinId, ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState
 - `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults
 - `worker/src/cron/dews/progress.ts` - DewsProgressMetadata, buildStablecoinsCacheFailureResult, reportDewsProgress
 - `worker/src/cron/dews/scoring.ts` - buildDewsScoringResult
