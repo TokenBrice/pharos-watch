@@ -44,6 +44,7 @@ const MintBurnCoverageStatusSchema = z.enum([
   "partial-history",
   "lagging",
   "bootstrapping",
+  "unknown",
   "disabled",
 ]);
 export type MintBurnCoverageStatus = z.infer<typeof MintBurnCoverageStatusSchema>;

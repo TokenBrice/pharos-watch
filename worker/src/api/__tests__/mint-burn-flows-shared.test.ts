@@ -296,11 +296,11 @@ describe("buildCoinCoverageMap", () => {
     });
   });
 
-  it("returns lagging when lastSyncedBlock is > 10,000 blocks behind chain head", () => {
+  it("returns lagging when lastSyncedBlock is beyond the cadence-derived chain threshold", () => {
     const config = pickSingleConfigCoin();
     const chainHead = config.startBlock + 1_000_000;
-    // Lag = chainHead - lastSynced = 20,000 > 10,000 threshold
-    const lastSynced = chainHead - 20_000;
+    // Ethereum threshold is 60 minutes of expected blocks: 3,600 / 12 = 300.
+    const lastSynced = chainHead - 301;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
       [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
@@ -311,7 +311,25 @@ describe("buildCoinCoverageMap", () => {
     expect(coverage.get(config.stablecoinId)).toMatchObject({
       status: "lagging",
       isPartial: true,
-      lagBlocks: 20_000,
+      lagBlocks: 301,
+    });
+  });
+
+  it("returns unknown for established coverage when chain-head metadata is missing", () => {
+    const config = pickSingleConfigCoin();
+    const referenceHead = config.startBlock + 1_000_000;
+    const coverage = buildCoinCoverageMap(
+      200 * DAY_SECONDS,
+      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
+      new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
+      new Map(),
+    );
+
+    expect(coverage.get(config.stablecoinId)).toMatchObject({
+      status: "unknown",
+      isPartial: true,
+      lagBlocks: null,
+      has30dWindow: true,
     });
   });
 

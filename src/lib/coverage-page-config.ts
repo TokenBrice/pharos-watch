@@ -344,6 +344,11 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
       bar: "bg-violet-400/80",
     },
+    unknown: {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/75",
+      barText: "text-slate-950",
+    },
     "data-unavailable": {
       chip: COVERAGE_GAP_CHIP_CLASS,
       bar: COVERAGE_GAP_BAR_CLASS,

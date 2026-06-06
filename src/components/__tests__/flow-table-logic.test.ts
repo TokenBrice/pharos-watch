@@ -121,6 +121,13 @@ describe("getCoverageBadge", () => {
     expect(badge!.label).toBe("Bootstrapping");
   });
 
+  it("returns unknown badge", () => {
+    const coin = makeFlow({ coverage: { status: "unknown" } as MintBurnCoinFlow["coverage"] });
+    const badge = getCoverageBadge(coin);
+    expect(badge).not.toBeNull();
+    expect(badge!.label).toBe("Unknown");
+  });
+
   it("returns disabled badge", () => {
     const coin = makeFlow({ coverage: { status: "disabled" } as MintBurnCoinFlow["coverage"] });
     const badge = getCoverageBadge(coin);

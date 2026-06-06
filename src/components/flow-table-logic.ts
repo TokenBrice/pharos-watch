@@ -44,6 +44,11 @@ export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; class
         label: "Bootstrapping",
         className: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
       };
+    case "unknown":
+      return {
+        label: "Unknown",
+        className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      };
     case "disabled":
       return {
         label: "Disabled",

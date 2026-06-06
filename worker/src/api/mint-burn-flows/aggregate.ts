@@ -74,7 +74,7 @@ export interface CoinFlowSummary {
     adapterKinds?: string[];
     startBlockSource?: string;
     startBlockConfidence?: "high" | "medium" | "low";
-    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
+    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "unknown" | "disabled";
   };
 }
 

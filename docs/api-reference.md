@@ -2979,7 +2979,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                                                                                                             |
 | `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                                                                                                             |
 | `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                                                                                                      |
-| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` |
+| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` (`full`, `partial-history`, `lagging`, `bootstrapping`, `unknown`, or `disabled`) |
 
 **`HourlyFlow`**
 

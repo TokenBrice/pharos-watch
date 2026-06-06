@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.11` (2026-03-01 -> 2026-05-12).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.12` (2026-03-01 -> 2026-06-06).
+
+---
+
+## v6.12 - Cadence-based coverage lag classification (June 6, 2026)
+
+- Established per-coin coverage now turns `lagging` once measured block progress falls beyond the public freshness cadence for that chain, capped at the historical 10K-block ceiling.
+- Coins with missing current chain-head metadata now report `unknown` coverage instead of staying `full` from historical sync state alone.
+- The public flows table, flow receipt, API schema, and coverage matrix all expose the new `unknown` state so frozen or unverifiable configured-chain coverage is visible.
 
 ---
 

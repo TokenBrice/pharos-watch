@@ -2,7 +2,7 @@
 
 On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion runs in two lanes: a critical 30-minute lane for major coverage and an offset extended 30-minute lane for long-tail backlog drain.
 
-Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history or lagging sync states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum as its canonical issuance/redemption chain.
+Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history, lagging sync, or unknown current chain-head states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum as its canonical issuance/redemption chain.
 
 The `/flows` page also renders a Flow Receipt directly under the printer/shredder overview. The receipt uses the existing 24-hour coin rows and 7-day hourly buckets to show printed, shredded, and net tracked flow totals, the top 24-hour minter and burner, and the current coverage/lag state. Its labels deliberately describe observed configured-chain events; they do not claim complete market-wide supply creation or redemption.
 
@@ -19,11 +19,11 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.11`
+- **Current methodology version:** `v6.12`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
-> **Note:** `v6.11` went live on 2026-05-12 with Yearn BOLD (yBOLD) added to extended Ethereum mint/burn tracking. `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, while `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
+> **Note:** `v6.12` went live on 2026-06-06 with cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing. `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
 ---
 
@@ -65,6 +65,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
 | Per-config request cap | 60 critical / 25 extended | Prevents one hot config from consuming the full lane budget |
 | Config tier policy | `critical` / `extended` | Critical and extended lanes run on separate cron schedules; each config also has a per-config request cap |
+| Coverage lag threshold | public freshness window by chain block cadence, capped at 10K blocks | Marks established per-coin coverage `lagging` once current block progress exceeds the public freshness cadence |
 
 ---
 
@@ -175,6 +176,7 @@ Per-config adapter provenance is now surfaced through coin `coverage` metadata:
 - `adapterKinds` — active decoding families for the coin (`transfer-zero-address`, `custom-events`, `mixed`)
 - `startBlockSource` — whether the earliest tracked block is a reviewed contract-specific bound or a blanket default coverage floor
 - `startBlockConfidence` — qualitative confidence on historical completeness (`high`, `medium`, `low`)
+- `status` — `full`, `partial-history`, `lagging`, `bootstrapping`, `unknown`, or `disabled`; `unknown` means the current chain head is unavailable, so Pharos cannot certify present sync lag
 
 Current rule: the March 24 long-tail transfer wave that inherited the blanket `21_900_000` Ethereum floor is labeled `startBlockSource = default-coverage-floor-2026-03-24` and `startBlockConfidence = low`, so the public API no longer implies contract-specific historical certainty where none exists.
 

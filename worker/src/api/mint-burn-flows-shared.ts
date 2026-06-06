@@ -53,7 +53,19 @@ export const ETHEREUM_CHAIN_ID = "ethereum";
 export const FLOW_DEFAULT_WINDOW_HOURS = 24;
 export const MINT_BURN_AGGREGATE_PUBLISH_WINDOWS = [FLOW_DEFAULT_WINDOW_HOURS, 168] as const;
 export const MINT_BURN_CRON_JOB = "sync-mint-burn";
-const COVERAGE_LAG_THRESHOLD_BLOCKS = 10_000;
+const MINT_BURN_COVERAGE_LAG_MAX_BLOCKS = 10_000;
+const MINT_BURN_EXPECTED_BLOCK_TIME_SEC: Record<string, number> = {
+  arbitrum: 0.25,
+  ethereum: 12,
+};
+
+function coverageLagThresholdBlocks(chainId: string): number {
+  const blockTimeSec = MINT_BURN_EXPECTED_BLOCK_TIME_SEC[chainId] ?? 12;
+  return Math.max(1, Math.min(
+    MINT_BURN_COVERAGE_LAG_MAX_BLOCKS,
+    Math.ceil(MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC / blockTimeSec),
+  ));
+}
 
 export interface MintBurnCronSnapshot {
   startedAt: number | null;
@@ -520,7 +532,7 @@ export function buildCoinCoverageMap(
     adapterKinds: string[];
     startBlockSource: string;
     startBlockConfidence: "high" | "medium" | "low";
-    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
+    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled" | "unknown";
   }>();
 
   for (const [stablecoinId, configs] of configsByCoin) {
@@ -531,13 +543,20 @@ export function buildCoinCoverageMap(
     const lastSyncedBlock = Math.min(...lastSyncedBlocks);
     const historyStartAt = firstSeenMap.get(stablecoinId) ?? null;
     const disabled = configs.every((config) => config.enabled === false);
-    const lagValues = configs
-      .map((config, index) => {
-        const head = chainHeads.get(config.chain.chainId);
-        if (head == null) return null;
-        return Math.max(0, head - lastSyncedBlocks[index]!);
-      })
-      .filter((value): value is number => value != null);
+    let hasUnknownChainHead = false;
+    const measuredLags: Array<{ chainId: string; lagBlocks: number }> = [];
+    for (const [index, config] of configs.entries()) {
+      const head = chainHeads.get(config.chain.chainId);
+      if (head == null) {
+        hasUnknownChainHead = true;
+        continue;
+      }
+      measuredLags.push({
+        chainId: config.chain.chainId,
+        lagBlocks: Math.max(0, head - lastSyncedBlocks[index]!),
+      });
+    }
+    const lagValues = measuredLags.map((entry) => entry.lagBlocks);
     const lagBlocks = lagValues.length > 0 ? Math.max(...lagValues) : null;
     const adapterKinds = [...new Set(configs.map((config) => config.adapterKind))].sort();
     const startBlockSources = [...new Set(configs.map((config) => config.startBlockSource))].sort();
@@ -554,7 +573,8 @@ export function buildCoinCoverageMap(
     const status =
       disabled ? "disabled" :
       !has24hWindow || lastSyncedBlock < startBlock ? "bootstrapping" :
-      lagBlocks != null && lagBlocks > COVERAGE_LAG_THRESHOLD_BLOCKS ? "lagging" :
+      measuredLags.some((entry) => entry.lagBlocks > coverageLagThresholdBlocks(entry.chainId)) ? "lagging" :
+      hasUnknownChainHead ? "unknown" :
       !has30dWindow ? "partial-history" :
       "full";
 

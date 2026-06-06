@@ -43,6 +43,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   "partial-history": "partial",
   lagging: "lag",
   bootstrapping: "boot",
+  unknown: "unknown",
   yes: "yes",
   upstream: "upstr",
   possible: "poss",

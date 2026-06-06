@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.12",
+    title: "Cadence-based coverage lag classification",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "Per-coin mint/burn coverage now marks established configs as lagging once block progress falls beyond the public freshness cadence, and reports unknown coverage when current chain-head metadata is unavailable.",
+    impact: [
+      "Ethereum mint/burn coverage no longer waits roughly 10,000 blocks before surfacing a stuck established config as lagging",
+      "Coins with missing current chain-head metadata no longer continue to report full coverage solely from historical sync state",
+      "The public flows table, coverage matrix, and flow receipt now expose an `unknown` coverage status for configured assets whose current lag cannot be trusted",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.11",
     title: "yBOLD extended transfer coverage",
     date: "2026-05-12",

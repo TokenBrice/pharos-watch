@@ -267,6 +267,7 @@ describe("coverage helpers", () => {
     expect(resolveFlowCoverage("partial-history").label).toBe("Partial");
     expect(resolveFlowCoverage("bootstrapping").kind).toBe("bootstrapping");
     expect(resolveFlowCoverage("bootstrapping").spokenLabel).toBe("Bootstrapping");
+    expect(resolveFlowCoverage("unknown").label).toBe("Unknown");
     expect(resolveFlowCoverage(null).available).toBe(false);
   });
 
@@ -1207,6 +1208,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     "partial-history",
     "lagging",
     "bootstrapping",
+    "unknown",
     "disabled",
   ] as const) {
     record("flows", resolveFlowCoverage(status).kind);

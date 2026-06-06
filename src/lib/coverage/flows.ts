@@ -49,6 +49,14 @@ const FLOW_STATUS_PRESETS = {
     detail: "Configured issuance-chain mint/burn tracking is configured, but coverage is still bootstrapping.",
     spokenLabel: "Bootstrapping",
   },
+  unknown: {
+    kind: "unknown",
+    label: "Unknown",
+    tone: "amber",
+    available: true,
+    sortRank: 1,
+    detail: "Configured issuance-chain mint/burn tracking exists, but current chain-head metadata is unavailable.",
+  },
   disabled: {
     kind: "disabled",
     label: "Disabled",
@@ -89,6 +97,7 @@ function formatFlows(
     breakdownItem("partial-history", "partial", get("partial-history")),
     breakdownItem("lagging", "lagging", get("lagging")),
     breakdownItem("bootstrapping", "bootstrapping", get("bootstrapping")),
+    breakdownItem("unknown", "unknown", get("unknown")),
     breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
   ];
 }
@@ -98,6 +107,7 @@ const FLOWS_KINDS: readonly string[] = [
   "partial-history",
   "lagging",
   "bootstrapping",
+  "unknown",
   "disabled",
   "none",
   DATA_UNAVAILABLE_KIND,
@@ -113,6 +123,11 @@ const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
     term: "Bootstr.",
     description: "Tracking is configured, but the history window is still building.",
     kinds: ["bootstrapping"],
+  },
+  {
+    term: "Unknown",
+    description: "Tracking is configured, but the latest chain-head metadata is missing, so current lag cannot be trusted.",
+    kinds: ["unknown"],
   },
   {
     term: "Disabled",

@@ -139,4 +139,26 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(model.coverageSummary).toBe("Lag warning active");
     expect(model.rows.find((row) => row.id === "mint-7d")?.valueUsd).toBeNull();
   });
+
+  it("summarizes unknown coverage when chain-head metadata is unavailable", () => {
+    const model = buildFlowPressureReceiptModel({
+      gauge,
+      coins: [makeCoin({
+        coverage: {
+          startBlock: 1,
+          lastSyncedBlock: 10,
+          lagBlocks: null,
+          historyStartAt: 1_700_000_000,
+          has24hWindow: true,
+          has30dWindow: true,
+          has90dWindow: true,
+          isPartial: true,
+          status: "unknown",
+        },
+      })],
+    });
+
+    expect(model.coverageSummary).toBe("1 unknown coin");
+    expect(model.coverageRows).toEqual([{ status: "unknown", count: 1 }]);
+  });
 });

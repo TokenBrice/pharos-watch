@@ -47,6 +47,7 @@ const COVERAGE_ORDER: MintBurnCoinCoverage["status"][] = [
   "partial-history",
   "lagging",
   "bootstrapping",
+  "unknown",
   "disabled",
 ];
 
@@ -67,6 +68,8 @@ function summarizeCoverage(rows: readonly FlowPressureReceiptCoverageRow[], sync
   if (rows.length === 0) return "Coverage metadata unavailable";
   const lagging = rows.find((row) => row.status === "lagging")?.count ?? 0;
   if (lagging > 0) return `${lagging} lagging ${lagging === 1 ? "coin" : "coins"}`;
+  const unknown = rows.find((row) => row.status === "unknown")?.count ?? 0;
+  if (unknown > 0) return `${unknown} unknown ${unknown === 1 ? "coin" : "coins"}`;
   const partial = rows
     .filter((row) => row.status === "partial-history" || row.status === "bootstrapping")
     .reduce((sum, row) => sum + row.count, 0);
