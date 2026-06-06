@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => {
-  const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>("@shared/lib/stablecoins");
+  const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>(
+    "@shared/lib/stablecoins/registry",
+  );
   return { ...actual, FROZEN_IDS: new Set<string>() };
 });
 
@@ -112,7 +114,7 @@ vi.mock("../../lib/dews", () => ({
   })),
 }));
 
-import { getCache } from "../../lib/db-cache";
+import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../compute-dews";
@@ -143,8 +145,13 @@ interface MakeDbOptions {
     total_mint: number;
     days_with_data: number;
   }>;
-  blacklist24hRows?: Array<{ stablecoin: string; cnt: number }>;
-  blacklist7dRows?: Array<{ stablecoin: string; cnt: number }>;
+  blacklistRows?: Array<{
+    stablecoin: string;
+    chain_id?: string;
+    config_key?: string | null;
+    contract_address?: string | null;
+    timestamp: number;
+  }>;
   prevSignalRows?: Array<{
     stablecoin_id: string;
     signals_json: string;
@@ -222,11 +229,13 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         };
       }
       if (sql.includes("FROM blacklist_events")) {
-        const cutoff = typeof boundArgs[0] === "number" ? boundArgs[0] : null;
-        const nowSec = Math.floor(Date.now() / 1000);
-        const sevenDayCutoff = nowSec - 7 * 86400;
         return {
-          results: (cutoff === sevenDayCutoff ? (opts.blacklist7dRows ?? []) : (opts.blacklist24hRows ?? [])) as T[],
+          results: (opts.blacklistRows ?? []).map((row) => ({
+            chain_id: "ethereum",
+            config_key: null,
+            contract_address: null,
+            ...row,
+          })) as T[],
         };
       }
       if (sql.includes("FROM yield_data")) {
@@ -297,6 +306,7 @@ describe("computeAndStoreDEWS", () => {
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
     vi.mocked(computeDEWS).mockClear();
     vi.mocked(derivePegRates).mockClear();
+    vi.mocked(writeFreshnessSentinel).mockClear();
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return {
@@ -342,6 +352,39 @@ describe("computeAndStoreDEWS", () => {
         tvl7dAgo: 1_200_000,
       }),
     );
+  });
+
+  it("publishes the DEWS freshness sentinel after healthy non-empty persistence", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+    expect(writeFreshnessSentinel).toHaveBeenCalledTimes(1);
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000));
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      freshnessSentinelPublished: boolean;
+    };
+    expect(metadata.freshnessSentinelPublished).toBe(true);
+  });
+
+  it("does not publish the DEWS freshness sentinel for zero-result runs", async () => {
+    vi.mocked(computeDEWS).mockReturnValueOnce(null as never);
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rowsWritten: number;
+      freshnessSentinelPublished: boolean;
+    };
+    expect(metadata.rowsWritten).toBe(0);
+    expect(metadata.freshnessSentinelPublished).toBe(false);
   });
 
   it("passes cached fxFallbackRates into peg-rate derivation", async () => {
@@ -427,6 +470,21 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
+  });
+
+  it("does not publish the DEWS freshness sentinel for degraded runs", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, { failDexLiquidity: true });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      freshnessSentinelPublished: boolean;
+    };
+    expect(metadata.freshnessSentinelPublished).toBe(false);
   });
 
   it("marks run degraded when previous stress_signals JSON is malformed", async () => {
@@ -933,14 +991,49 @@ describe("computeAndStoreDEWS", () => {
       } as never;
     });
     const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
-      blacklist24hRows: [
-        { stablecoin: "PYUSD", cnt: 2 },
-        { stablecoin: "USD1", cnt: 1 },
-      ],
-      blacklist7dRows: [
-        { stablecoin: "PYUSD", cnt: 5 },
-        { stablecoin: "USD1", cnt: 3 },
+      blacklistRows: [
+        {
+          stablecoin: "PYUSD",
+          config_key: "ethereum-0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          timestamp: nowSec - 1_000,
+        },
+        {
+          stablecoin: "PYUSD",
+          config_key: "ethereum-0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          timestamp: nowSec - 2_000,
+        },
+        {
+          stablecoin: "PYUSD",
+          config_key: "ethereum-0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          timestamp: nowSec - 2 * 86400,
+        },
+        {
+          stablecoin: "PYUSD",
+          config_key: "ethereum-0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          timestamp: nowSec - 3 * 86400,
+        },
+        {
+          stablecoin: "PYUSD",
+          config_key: "ethereum-0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          timestamp: nowSec - 4 * 86400,
+        },
+        {
+          stablecoin: "USD1",
+          config_key: "ethereum-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+          timestamp: nowSec - 1_000,
+        },
+        {
+          stablecoin: "USD1",
+          config_key: "ethereum-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+          timestamp: nowSec - 2 * 86400,
+        },
+        {
+          stablecoin: "USD1",
+          config_key: "ethereum-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+          timestamp: nowSec - 3 * 86400,
+        },
       ],
     });
 

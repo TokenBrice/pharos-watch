@@ -176,6 +176,11 @@ export async function computeAndStoreDEWS(
   });
   await reportDewsProgress(reportProgress, "scoring-complete", { rowsComputed: results.length, validationFailures });
 
+  const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
+  const degradedByMalformedInputs = malformedCoreInputRows > 0;
+  const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
+  const freshnessSentinelPublished = results.length > 0 && !degraded;
+
   await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
   const { rowsDropped, rowsRetiredCurrent } = await runWithAbort(signal, () =>
     persistDewsResults({
@@ -183,6 +188,7 @@ export async function computeAndStoreDEWS(
       results,
       eligibleIds,
       noCurrentSupplyIds,
+      publishFreshnessSentinel: freshnessSentinelPublished,
       nowSec,
     })
   );
@@ -193,9 +199,6 @@ export async function computeAndStoreDEWS(
     console.warn(`[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`);
   }
 
-  const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
-  const degradedByMalformedInputs = malformedCoreInputRows > 0;
-  const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
   Object.assign(sourceCoverage, { liquidityHistoryCoveragePct: Number((liqHistCoverage * 100).toFixed(2)), coinsComputed: results.length, coinsSkippedInsufficientData: insufficientDataCount, coinsSkippedNoCurrentSupply: noCurrentSupplyIds.length });
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
@@ -211,6 +214,7 @@ export async function computeAndStoreDEWS(
       rowsSkippedInsufficientData: insufficientDataCount,
       rowsSkippedNoCurrentSupply: noCurrentSupplyIds.length, rowsRetiredCurrent,
       rowsDropped,
+      freshnessSentinelPublished,
       sourceCoverage,
       sourceFailures,
       fallbackMode:

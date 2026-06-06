@@ -29,6 +29,7 @@ describe("persistDewsResults", () => {
       db,
       results: [buildDewsRow("usdt-tether")],
       eligibleIds: new Set(["usdt-tether"]),
+      publishFreshnessSentinel: true,
       nowSec: 1_800_000_000,
     });
 
@@ -50,11 +51,42 @@ describe("persistDewsResults", () => {
       db,
       results: [buildDewsRow("usdt-tether")],
       eligibleIds: new Set(["usdt-tether"]),
+      publishFreshnessSentinel: true,
       nowSec: 1_800_000_000,
     })).resolves.toEqual(expect.objectContaining({ rowsRetiredCurrent: 0 }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-current-upsert"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-latest-upsert"))).toBe(true);
+  });
+
+  it("skips the freshness sentinel when the run is not publishable", async () => {
+    const db = mockD1();
+
+    await persistDewsResults({
+      db,
+      results: [buildDewsRow("usdt-tether")],
+      eligibleIds: new Set(["usdt-tether"]),
+      publishFreshnessSentinel: false,
+      nowSec: 1_800_000_000,
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.binds.includes("freshness:dews"))).toBe(false);
+  });
+
+  it("skips the freshness sentinel when no DEWS rows were written", async () => {
+    const db = mockD1();
+
+    await persistDewsResults({
+      db,
+      results: [],
+      eligibleIds: new Set(["usdt-tether"]),
+      publishFreshnessSentinel: true,
+      nowSec: 1_800_000_000,
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.binds.includes("freshness:dews"))).toBe(false);
   });
 });

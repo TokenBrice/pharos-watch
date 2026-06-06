@@ -179,6 +179,7 @@ export async function persistDewsResults(params: {
   results: DewsComputedRow[];
   eligibleIds: Set<string>;
   noCurrentSupplyIds?: string[];
+  publishFreshnessSentinel: boolean;
   nowSec: number;
 }): Promise<{ rowsDropped: number; rowsRetiredCurrent: number }> {
   if (params.results.length > 0) {
@@ -200,8 +201,6 @@ export async function persistDewsResults(params: {
     await batchExecute(params.db, stmts);
     await upsertLatestStressSignalRows(params.db, params.results, params.nowSec);
   }
-  await writeFreshnessSentinel(params.db, "dews", params.nowSec);
-
   const computedIds = new Set(params.results.map((result) => result.stablecoinId));
   const noCurrentSupplyIds = (params.noCurrentSupplyIds ?? []).filter(
     (stablecoinId) => params.eligibleIds.has(stablecoinId) && !computedIds.has(stablecoinId),
@@ -266,6 +265,10 @@ export async function persistDewsResults(params: {
       .run(),
   );
   rowsDropped += oldHistory.meta?.changes ?? 0;
+
+  if (params.publishFreshnessSentinel && params.results.length > 0) {
+    await writeFreshnessSentinel(params.db, "dews", params.nowSec);
+  }
 
   return { rowsDropped, rowsRetiredCurrent };
 }
