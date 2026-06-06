@@ -1,0 +1,63 @@
+// @vitest-environment jsdom
+
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { DEWSSummary } from "@/components/dews-summary";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useStressSignals: () => ({
+    data: {
+      updatedAt: 1_775_898_800,
+      signals: {
+        "usdc-circle": { score: 68, band: "WARNING" },
+        "usdt-tether": { score: 42, band: "ALERT" },
+        "dai-makerdao": { score: 25, band: "WATCH" },
+      },
+    },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock("@/hooks/use-stablecoins", () => ({
+  useStablecoins: () => ({ data: undefined }),
+}));
+
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("DEWSSummary radar logos", () => {
+  it("renders stablecoin logos for alert-or-higher dots while leaving watch dots plain", () => {
+    const { container } = render(
+      <DEWSSummary
+        showHeader={false}
+        logos={{
+          "usdc-circle": "/logos/usdc.svg",
+          "usdt-tether": "/logos/usdt.svg",
+          "dai-makerdao": "/logos/dai.svg",
+        }}
+      />,
+    );
+
+    const images = Array.from(container.querySelectorAll("image")).map((image) => image.getAttribute("href"));
+    expect(images).toContain("/logos/usdc.svg");
+    expect(images).toContain("/logos/usdt.svg");
+    expect(images).not.toContain("/logos/dai.svg");
+  });
+});

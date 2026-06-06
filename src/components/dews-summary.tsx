@@ -74,9 +74,13 @@ function DEWSDot({
   ariaLabel: string;
   registerRef: (id: string, node: SVGGElement | null) => void;
 }) {
+  const rawClipId = useId();
+  const logoClipId = `dews-logo-${rawClipId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
+  const showLogo = coin.band !== "WATCH" && Boolean(coin.logoUrl);
   const dotR = mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6);
+  const logoR = showLogo ? Math.max(dotR + 2, coin.band === "ALERT" ? 8 : 10) : dotR;
   const glowR = dotR + 7;
   const dur = pulseDuration(coin.band);
 
@@ -160,12 +164,32 @@ function DEWSDot({
         className="dews-glow-r"
         style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }}
       />
-      {/* Main dot */}
-      <circle r={dotR} fill={hex} fillOpacity={0.92} />
+      {showLogo ? (
+        <>
+          <defs>
+            <clipPath id={logoClipId}>
+              <circle r={logoR - 1.5} />
+            </clipPath>
+          </defs>
+          <circle r={logoR + 2} fill={hex} fillOpacity={0.18} />
+          <circle r={logoR} fill="var(--color-background)" stroke={hex} strokeWidth={1.75} />
+          <image
+            href={coin.logoUrl}
+            x={-logoR + 2}
+            y={-logoR + 2}
+            width={(logoR - 2) * 2}
+            height={(logoR - 2) * 2}
+            preserveAspectRatio="xMidYMid meet"
+            clipPath={`url(#${logoClipId})`}
+          />
+        </>
+      ) : (
+        <circle r={dotR} fill={hex} fillOpacity={0.92} />
+      )}
       {/* Always-visible label: WARNING and DANGER only */}
       {isHighTier && (
         <text
-          y={-(dotR + 7)}
+          y={-(logoR + 7)}
           textAnchor="middle"
           dominantBaseline="auto"
           fill={hex}
