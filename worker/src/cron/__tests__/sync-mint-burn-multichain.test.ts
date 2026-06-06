@@ -4,6 +4,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.
 vi.mock("../../lib/mint-burn-contracts", () => ({
+  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
   MINT_BURN_CONFIGS: [
     {
       chain: {
