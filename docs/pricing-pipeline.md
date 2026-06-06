@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.12`
+- **Current methodology version:** `v6.13`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -159,7 +159,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Bitstamp ticker surface:** Bitstamp is fetched from the exchange-wide all-tickers endpoint and then filtered through an explicit tracked-pair allowlist so venue coverage stays deterministic.
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, PAXG, USDS, USD1, HONEY.
 - **Binance stable-quote conversion:** Binance direct markets may be configured with stablecoin quote assets when no USD pair exists. BFUSD uses `BFUSDUSDT` and `BFUSDUSDC`; the raw quote is multiplied by the same-run Binance USDT/USD or USDC/USD price before entering consensus as the single `binance` source. If the DEX bridge row also contains Binance orderbook evidence for the same asset, the overlapping aggregate `dex-promoted` lane is suppressed.
-- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (21 symbols including `USDe`, `crvUSD`, and `fxUSD`). Unsupported symbols are filtered out before transport, and test coverage now guards the allowlist against stale untracked entries. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_SYMBOL_CONFIG` entries (each carrying `metaSymbol` and `apiSymbol` fields) and keys results by metadata symbol so callers don't need to know the mapping.
+- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (21 symbols including `USDe`, `crvUSD`, and `fxUSD`). Unsupported symbols are filtered out before transport, and test coverage now guards the allowlist against stale untracked entries. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_SYMBOL_CONFIG` entries. Each entry also declares the canonical stablecoin id that may consume the feed, and fetched quotes are keyed by that id before consensus so same-symbol assets cannot share a hard-oracle quote. The `USDH` RedStone feed is pinned to `usdh-native-markets` because the live RedStone source set is Hyperliquid/HypEVM-specific.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
 - **RedStone multi-venue gate:** RedStone prices now need at least 2 venues and at least 60% venue agreement before they can enter primary consensus; a single venue is treated as insufficient corroboration, and the published RedStone price is derived from the venue median instead of the provider aggregate.

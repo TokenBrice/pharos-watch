@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.12` (2026-02-01 -> 2026-06-05).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.13` (2026-02-01 -> 2026-06-06).
+
+---
+
+## v6.13 - RedStone stablecoin-id attribution (June 6, 2026)
+
+- RedStone oracle quotes are now attributed by configured canonical stablecoin id before primary consensus
+- Each `REDSTONE_SYMBOL_CONFIG` entry declares the stablecoin id that may consume that feed
+- Consensus looks up RedStone quotes by stablecoin id, not by bare asset symbol
+- The live RedStone `USDH` feed is pinned to Native Markets USDH because its source set is Hyperliquid/HypEVM-specific, so Hubble USDH no longer receives that quote
 
 ---
 

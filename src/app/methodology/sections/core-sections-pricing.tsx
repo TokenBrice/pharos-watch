@@ -30,7 +30,8 @@ export function PricingPipelineMethodologySection() {
 
         <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
-          Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
+          Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns
+          and are attributed only to configured canonical stablecoin IDs.
           The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca,
           Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
           profiles attached when those lanes participate. Targeted exact-address augmentation can add DexScreener,

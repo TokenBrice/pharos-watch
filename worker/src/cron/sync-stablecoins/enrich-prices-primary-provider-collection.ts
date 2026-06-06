@@ -18,7 +18,11 @@ import {
 } from "../../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
+import {
+  fetchRedstonePrices,
+  getRedstoneMetaSymbolForStablecoinId,
+  REDSTONE_TRACKED_STABLECOIN_IDS,
+} from "../../lib/redstone";
 import {
   ADDRESS_PROVIDER_CIRCUIT_SOURCE,
   buildAddressPriceTargetsByProvider,
@@ -283,7 +287,7 @@ export async function buildPrimaryPricePlan(
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
   const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
-  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+  const redstoneStablecoinIdSet = new Set<string>(REDSTONE_TRACKED_STABLECOIN_IDS);
   const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
   curveEligibleIds.add("crvusd-curve");
 
@@ -298,7 +302,7 @@ export async function buildPrimaryPricePlan(
       coinbaseKnownSet.has(symbolUpper) ||
       krakenKnownSet.has(symbolUpper) ||
       bitstampKnownSet.has(symbolUpper) ||
-      redstoneSymbolSet.has(asset.symbol) ||
+      redstoneStablecoinIdSet.has(asset.id) ||
       curveEligibleIds.has(asset.id) ||
       isNavTelemetryPriceEligible(asset.id, metaById) ||
       dexRows.has(asset.id) ||
@@ -399,7 +403,11 @@ export async function buildPrimaryPricePlan(
   const krakenSymbols = candidateSymbolsUpper.filter((symbol) => krakenKnownSet.has(symbol));
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
   const redstoneSymbols = [
-    ...new Set(candidates.map((asset) => asset.symbol).filter((symbol) => redstoneSymbolSet.has(symbol))),
+    ...new Set(
+      candidates
+        .map((asset) => getRedstoneMetaSymbolForStablecoinId(asset.id))
+        .filter((symbol): symbol is string => symbol != null),
+    ),
   ];
 
   return {

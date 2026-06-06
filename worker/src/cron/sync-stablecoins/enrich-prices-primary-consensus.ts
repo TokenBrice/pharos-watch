@@ -66,7 +66,7 @@ export function buildPrimaryConsensusResults(params: {
       bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
       coinbaseObservedAt: params.quoteMaps.coinbaseObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
-      redstoneQuote: params.quoteMaps.redstonePrices.get(asset.symbol),
+      redstoneQuote: params.quoteMaps.redstonePrices.get(asset.id),
       curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
       curveObservedAt: params.quoteMaps.curveObservedAtByCoinId.get(asset.id) ?? null,
       curveOraclePrice: params.quoteMaps.curveOraclePrice,

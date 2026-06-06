@@ -7,6 +7,9 @@ import { fetchWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
 export interface RedstoneResult {
+  stablecoinId: string;
+  metaSymbol: string;
+  apiSymbol: string;
   price: number;
   venues: Map<string, number>;    // venue name → price
   venueCount: number;
@@ -29,14 +32,25 @@ const REDSTONE_RETRY_SLEEP_MS = 100;
 const REDSTONE_META_TO_API_SYMBOL = new Map<string, string>(
   REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.metaSymbol, entry.apiSymbol] as const),
 );
+const REDSTONE_META_TO_ENTRY = new Map<string, (typeof REDSTONE_SYMBOL_CONFIG)[number]>(
+  REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.metaSymbol, entry] as const),
+);
+const REDSTONE_STABLECOIN_ID_TO_META_SYMBOL = new Map<string, string>(
+  REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.stablecoinId, entry.metaSymbol] as const),
+);
 
 export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = REDSTONE_SYMBOL_CONFIG.map((entry) => entry.metaSymbol) as readonly string[];
+export const REDSTONE_TRACKED_STABLECOIN_IDS = REDSTONE_SYMBOL_CONFIG.map((entry) => entry.stablecoinId) as readonly string[];
 
 function toApiSymbol(metaSymbol: string): string {
   return REDSTONE_META_TO_API_SYMBOL.get(metaSymbol) ?? metaSymbol;
 }
 
 const REDSTONE_TRACKED_SYMBOL_SET = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+
+export function getRedstoneMetaSymbolForStablecoinId(stablecoinId: string): string | undefined {
+  return REDSTONE_STABLECOIN_ID_TO_META_SYMBOL.get(stablecoinId);
+}
 
 function normalizeSymbols(symbols: string[]): string[] {
   const deduped = new Set<string>();
@@ -76,13 +90,17 @@ async function fetchRedstoneBatch(
   const results = new Map<string, RedstoneResult>();
   if (symbols.length === 0) return { results, transportOk: true };
 
-  // Translate metadata symbols to RedStone API symbols and build reverse map
-  const apiToMeta = new Map<string, string>();
+  // Translate metadata symbols to RedStone API symbols and build reverse map.
+  // Results are keyed by canonical stablecoin id so same-symbol tracked assets
+  // cannot receive a feed that belongs to a different issuer or deployment.
+  const apiToEntry = new Map<string, (typeof REDSTONE_SYMBOL_CONFIG)[number]>();
   const apiSymbols: string[] = [];
   for (const metaSym of symbols) {
+    const configEntry = REDSTONE_META_TO_ENTRY.get(metaSym);
+    if (!configEntry) continue;
     const apiSym = toApiSymbol(metaSym);
     apiSymbols.push(apiSym);
-    apiToMeta.set(apiSym, metaSym);
+    apiToEntry.set(apiSym, configEntry);
   }
 
   const symbolsParam = apiSymbols.join(",");
@@ -99,6 +117,8 @@ async function fetchRedstoneBatch(
 
   const data = (await res.json()) as Record<string, RedstoneEntry | RedstoneEntry[]>;
   for (const apiSym of apiSymbols) {
+    const configEntry = apiToEntry.get(apiSym);
+    if (!configEntry) continue;
     const entry = normalizeEntry(data[apiSym]);
     if (!entry?.value || entry.value <= 0) continue;
 
@@ -141,9 +161,10 @@ async function fetchRedstoneBatch(
       ? Math.round((agreeCount / venues.size) * 100)
       : 100;
 
-    // Key results by metadata symbol so callers can look up by asset.symbol
-    const metaSym = apiToMeta.get(apiSym) ?? apiSym;
-    results.set(metaSym, {
+    results.set(configEntry.stablecoinId, {
+      stablecoinId: configEntry.stablecoinId,
+      metaSymbol: configEntry.metaSymbol,
+      apiSymbol: configEntry.apiSymbol,
       price: derivedPrice,
       venues,
       venueCount: venues.size,
@@ -179,11 +200,12 @@ export async function fetchRedstonePrices(
       transportAttempts++;
       const { results: batchResults, transportOk } = await fetchRedstoneBatch(batch, signal);
       if (!transportOk) transportFailures++;
-      for (const [symbol, result] of batchResults) {
-        results.set(symbol, result);
+      for (const [stablecoinId, result] of batchResults) {
+        results.set(stablecoinId, result);
       }
+      const returnedMetaSymbols = new Set([...batchResults.values()].map((result) => result.metaSymbol));
       for (const symbol of batch) {
-        if (!batchResults.has(symbol)) {
+        if (!returnedMetaSymbols.has(symbol)) {
           missingSymbols.push(symbol);
         }
       }
@@ -199,9 +221,9 @@ export async function fetchRedstonePrices(
       transportAttempts++;
       const { results: retryResults, transportOk } = await fetchRedstoneBatch([symbol], signal);
       if (!transportOk) transportFailures++;
-      const retryResult = retryResults.get(symbol);
+      const retryResult = [...retryResults.values()].find((result) => result.metaSymbol === symbol);
       if (retryResult) {
-        results.set(symbol, retryResult);
+        results.set(retryResult.stablecoinId, retryResult);
         recoveredCount++;
       }
     }

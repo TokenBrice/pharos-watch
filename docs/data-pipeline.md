@@ -52,7 +52,7 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 | Kraken spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Alias-safe explicit pair mapping |
 | Bitstamp spot tickers | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
 | Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
-| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` |
+| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, attributed only to configured canonical stablecoin IDs |
 | Curve on-chain `get_dy()` | 3 | `worker/src/lib/curve-onchain.ts` | StableSwap implied prices from explicit direct, one-hop, and opt-in chained-hop configs |
 | Curve oracle (`crvusd-curve`) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Additional primary-consensus voice for crvUSD |
 | DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Aggregate DEX voice when no overlapping promoted protocol-level DEX source is admitted |
@@ -86,7 +86,7 @@ Primary pricing also includes a few source-specific normalization rules that are
 - **Pyth Hermes feed IDs** are normalized to lowercase with any leading `0x` stripped before matching back to tracked assets. Hermes can return feed IDs in either form.
 - **Pyth confidence weighting** now degrades smoothly as confidence intervals widen instead of dropping medium-confidence quotes abruptly.
 - **Coinbase** uses uppercased product symbols.
-- **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
+- **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, retries any batch-dropped symbol individually once, and keys usable quotes by the configured canonical stablecoin id rather than by bare symbol.
 - **RedStone admission** now requires at least 2 venues and at least 60% venue agreement before the quote can enter primary consensus.
 - **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, while Jupiter treats documented V3 sparse no-quote rows as healthy empty coverage because they indicate provider reachability but no usable quote for that mint.
 - **CEX freshness semantics** are explicit: Binance and Kraken use local-fetch observation times; Bitstamp and Coinbase publish upstream-observed timestamps when the upstream response provides them. Registry metadata records whether each feed is last-trade-only or exposes bid/ask-style spot data.

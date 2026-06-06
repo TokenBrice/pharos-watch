@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.13",
+      title: "RedStone stablecoin-id attribution",
+      date: "2026-06-06",
+      effectiveAt: 1780752518,
+      summary:
+        "RedStone oracle quotes are now attributed by configured canonical stablecoin id before primary consensus, preventing same-symbol assets from sharing one hard-oracle feed.",
+      impact: [
+        "Each `REDSTONE_SYMBOL_CONFIG` entry declares the stablecoin id that may consume that feed",
+        "Consensus looks up RedStone quotes by stablecoin id, not by bare asset symbol",
+        "The live RedStone `USDH` feed is pinned to Native Markets USDH because its source set is Hyperliquid/HypEVM-specific, so Hubble USDH no longer receives that quote",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.12",
       title: "High-TVL directional DEX pool challenge",
       date: "2026-06-05",
