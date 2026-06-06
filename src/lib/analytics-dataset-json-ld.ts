@@ -101,6 +101,16 @@ const COVERAGE_VARIABLES = [
 ] as const;
 
 const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
+export const PHAROS_PUBLIC_DATA_CATALOG_NAME = "Pharos Public API Data Catalog";
+
+export function buildPharosDataCatalogReference(siteUrl: string, catalogId = `${siteUrl}/about/api/#data-catalog`) {
+  return {
+    "@type": "DataCatalog",
+    "@id": catalogId,
+    name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
+    url: `${siteUrl}/about/api/`,
+  };
+}
 
 function datasetDate(dataset: PublicDatasetExport): string | undefined {
   return dataset._meta.asOfISO?.slice(0, 10);
@@ -172,7 +182,7 @@ export function buildPublicDatasetMirrorJsonLd(
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
-    includedInDataCatalog: { "@id": catalogId },
+    includedInDataCatalog: buildPharosDataCatalogReference(siteUrl, catalogId),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
     sameAs: `${siteUrl}/datasets/${descriptor.slug}/latest.json`,
     ...(date ? { dateModified: date } : {}),
@@ -203,7 +213,7 @@ export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
-    includedInDataCatalog: { "@id": `${siteUrl}/about/api/#data-catalog` },
+    includedInDataCatalog: buildPharosDataCatalogReference(siteUrl),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", "coverage")],
     sameAs: `${siteUrl}/coverage/`,
     mainEntityOfPage: { "@id": `${siteUrl}/coverage/` },

@@ -204,7 +204,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/alt-peg-market.ts` - AltPegDistributionRow, AltPegLinkHubGroup, AltPegLinkHubItem, AltPegRegion, AltPegSnapshot, AltPegTrendPoint
 - `src/lib/alt-peg-packing.ts` - PackedCoin, PackingInput, arrangeClusterCoins, resolvePackedCoinOverlaps
 - `src/lib/alt-peg-sizing.ts` - FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, SKY_COHORT_SIZE_CEIL, coinEmblemSize
-- `src/lib/analytics-dataset-json-ld.ts` - PUBLIC_DATASET_JSON_LD_DESCRIPTORS, PublicDatasetDescriptor, buildCoverageDatasetJsonLd, buildPublicDatasetMirrorJsonLd
+- `src/lib/analytics-dataset-json-ld.ts` - PHAROS_PUBLIC_DATA_CATALOG_NAME, PUBLIC_DATASET_JSON_LD_DESCRIPTORS, PublicDatasetDescriptor, buildCoverageDatasetJsonLd, buildPharosDataCatalogReference, buildPublicDatasetMirrorJsonLd
 - `src/lib/analytics.ts` - trackEvent, trackSearch
 - `src/lib/api-artifact-json-ld.ts` - buildApiArtifactCatalogJsonLd
 - `src/lib/api-key-admin-view-model.ts` - ApiKeySummaryItem, CreateExpiryMode, CreateKeyState, DEFAULT_CREATE_KEY_STATE, EditableKeyState, buildApiKeyInventorySummary

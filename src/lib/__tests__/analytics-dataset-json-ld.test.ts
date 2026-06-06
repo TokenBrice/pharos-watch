@@ -21,7 +21,12 @@ describe("buildCoverageDatasetJsonLd", () => {
       publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       isAccessibleForFree: true,
       license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
-      includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      includedInDataCatalog: {
+        "@type": "DataCatalog",
+        "@id": "https://pharos.watch/about/api/#data-catalog",
+        name: "Pharos Public API Data Catalog",
+        url: "https://pharos.watch/about/api/",
+      },
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:coverage" }],
       sameAs: "https://pharos.watch/coverage/",
       mainEntityOfPage: { "@id": "https://pharos.watch/coverage/" },
@@ -57,7 +62,12 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
       creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
-      includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      includedInDataCatalog: {
+        "@type": "DataCatalog",
+        "@id": "https://pharos.watch/about/api/#data-catalog",
+        name: "Pharos Public API Data Catalog",
+        url: "https://pharos.watch/about/api/",
+      },
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:scores-latest" }],
       sameAs: "https://pharos.watch/datasets/scores-latest/latest.json",
     });

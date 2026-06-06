@@ -2,7 +2,9 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import {
   buildCoverageDatasetJsonLd,
+  buildPharosDataCatalogReference,
   buildPublicDatasetMirrorJsonLd,
+  PHAROS_PUBLIC_DATA_CATALOG_NAME,
   PUBLIC_DATASET_JSON_LD_DESCRIPTORS,
 } from "@/lib/analytics-dataset-json-ld";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
@@ -10,6 +12,7 @@ import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}) {
   const siteUrl = options.siteUrl ?? SITE_URL;
   const catalogId = `${siteUrl}/about/api/#data-catalog`;
+  const catalogReference = buildPharosDataCatalogReference(siteUrl, catalogId);
   const organization = { "@id": `${siteUrl}#organization` };
   const coverageDataset = buildCoverageDatasetJsonLd({ siteUrl });
   const cemeteryDataset = buildCemeteryDatasetJsonLd();
@@ -22,7 +25,7 @@ export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}
       "@context": "https://schema.org",
       "@type": "DataCatalog",
       "@id": catalogId,
-      name: "Pharos Public API Data Catalog",
+      name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
       description:
         "Machine-readable Pharos integration artifacts and public stablecoin data surfaces for external API consumers.",
       url: `${siteUrl}/about/api/`,
@@ -91,7 +94,7 @@ export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}
       isPartOf: { "@id": catalogId },
       publisher: organization,
     },
-    { ...cemeteryDataset, includedInDataCatalog: { "@id": catalogId } },
+    { ...cemeteryDataset, includedInDataCatalog: catalogReference },
     coverageDataset,
     ...publicDatasets,
   ];

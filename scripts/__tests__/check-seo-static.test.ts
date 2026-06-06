@@ -686,6 +686,44 @@ describe("check-seo-static", () => {
     );
   });
 
+  it("asserts Dataset catalog references include Google-required fields", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/safety-scores/"]);
+    await writePage(root, "/safety-scores/", {
+      h1: "Safety Scores",
+      extraHead: jsonLdScript({
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        name: "Pharos Latest Stablecoin Scores Dataset",
+        includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      }),
+    });
+    await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      structuredDataRouteMatrix: [
+        {
+          label: "safety scores",
+          route: "/safety-scores/",
+          nodes: [
+            {
+              type: "Dataset",
+              requiredPaths: ["includedInDataCatalog.name", "includedInDataCatalog.url"],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.name"),
+        expect.stringContaining("/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.url"),
+      ]),
+    );
+  });
+
   it("fails /about/ FAQ structured data when the emitted Q&A is not visible", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/about/"]);

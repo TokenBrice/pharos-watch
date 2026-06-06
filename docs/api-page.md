@@ -63,7 +63,7 @@ The route renders:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`
    - `/postman/pharos-api.postman_environment.json`
-6. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`
+6. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`; Dataset nodes that use `includedInDataCatalog` include the catalog `@id`, `name`, and `url` so Google can validate the nested catalog reference in isolation
 7. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
 8. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
 9. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory

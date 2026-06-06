@@ -28,7 +28,12 @@ describe("CoveragePage", () => {
       name: "Pharos Stablecoin Feature Coverage Dataset",
       url: "https://pharos.watch/coverage/",
       isAccessibleForFree: true,
-      includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      includedInDataCatalog: {
+        "@type": "DataCatalog",
+        "@id": "https://pharos.watch/about/api/#data-catalog",
+        name: "Pharos Public API Data Catalog",
+        url: "https://pharos.watch/about/api/",
+      },
     });
     expect(dataset).not.toHaveProperty("isPartOf");
     expect(dataset).not.toHaveProperty("distribution");

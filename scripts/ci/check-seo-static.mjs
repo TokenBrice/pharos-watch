@@ -66,6 +66,11 @@ const REQUIRED_STATIC_HEADER_RULES = [
 const REQUIRED_STATIC_HEADER_RESETS = [
   { route: "/llms.txt", header: "X-Robots-Tag", label: "LLM-facing index" },
 ];
+const DATASET_DATA_CATALOG_REFERENCE_PATHS = [
+  "includedInDataCatalog.@id",
+  "includedInDataCatalog.name",
+  "includedInDataCatalog.url",
+];
 
 // FAQ structured data is retained as semantic markup for visible Q&A content.
 // Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
@@ -159,6 +164,79 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     ],
   },
   {
+    label: "stablecoin taxonomy",
+    route: "/stablecoins/",
+    nodes: [
+      { type: "CollectionPage", requiredPaths: ["name", "url"] },
+      { type: "ItemList", requiredPaths: ["name", "numberOfItems", "itemListElement.0.url"] },
+      {
+        type: "Dataset",
+        requiredPaths: [
+          "name",
+          "description",
+          "url",
+          "creator.@type",
+          "creator.name",
+          "publisher.@type",
+          "publisher.name",
+          "license",
+          "identifier.0.value",
+          "sameAs",
+          "distribution.0.contentUrl",
+          ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
+        ],
+      },
+    ],
+  },
+  {
+    label: "depeg tracker",
+    route: "/depeg/",
+    nodes: [
+      {
+        type: "Dataset",
+        requiredPaths: [
+          "name",
+          "description",
+          "url",
+          "creator.@type",
+          "creator.name",
+          "publisher.@type",
+          "publisher.name",
+          "license",
+          "identifier.0.value",
+          "sameAs",
+          "distribution.0.contentUrl",
+          ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
+        ],
+      },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+    ],
+  },
+  {
+    label: "safety scores",
+    route: "/safety-scores/",
+    nodes: [
+      {
+        type: "Dataset",
+        requiredPaths: [
+          "name",
+          "description",
+          "url",
+          "creator.@type",
+          "creator.name",
+          "publisher.@type",
+          "publisher.name",
+          "license",
+          "identifier.0.value",
+          "sameAs",
+          "distribution.0.contentUrl",
+          ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
+        ],
+      },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+    ],
+  },
+  {
     label: "coverage matrix",
     route: "/coverage/",
     nodes: [
@@ -177,6 +255,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
           "identifier.0.value",
           "sameAs",
           "variableMeasured.0.name",
+          ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
         ],
       },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
