@@ -15,7 +15,9 @@ vi.mock("../helpers", async (importOriginal) => {
 import { adaptCapVaultState, fetchCapVaultReserves } from "../cap-vault";
 import { fetchOnchainUint256, fetchOnchainRawCall } from "../helpers";
 
-const signal = AbortSignal.timeout(5_000);
+function makeSignal(): AbortSignal {
+  return AbortSignal.timeout(5_000);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -307,6 +309,26 @@ describe("fetchCapVaultReserves", () => {
 
   const encodedFalse = `0x${encodeUint256(0n)}`;
 
+  it("fails closed when the vault contract is not configured for the input chain", async () => {
+    const unsupportedCoin = {
+      id: "cusd-cap-vault",
+      contracts: [],
+    } as unknown as StablecoinMeta;
+
+    await expect(fetchCapVaultReserves(unsupportedCoin, config, makeSignal()))
+      .rejects.toThrow(/could not find a ethereum contract/);
+    expect(fetchOnchainRawCall).not.toHaveBeenCalled();
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when assets() returns an empty array", async () => {
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeAddressArray([]));
+
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
+      .rejects.toThrow(/assets\(\) returned no assets/);
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
   it("fails closed when totalSupplies() returns null", async () => {
     primeMocks({
       decimals: 6n,
@@ -316,7 +338,7 @@ describe("fetchCapVaultReserves", () => {
       paused: encodedFalse,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, signal))
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
       .rejects.toThrow(/totalSupplies/);
   });
 
@@ -329,7 +351,7 @@ describe("fetchCapVaultReserves", () => {
       paused: encodedFalse,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, signal))
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
       .rejects.toThrow(/decimals/);
   });
 
@@ -342,7 +364,7 @@ describe("fetchCapVaultReserves", () => {
       paused: encodedFalse,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, signal))
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
       .rejects.toThrow(/expected safe integer 0-36/);
   });
 
@@ -355,7 +377,7 @@ describe("fetchCapVaultReserves", () => {
       paused: encodedFalse,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, signal))
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
       .rejects.toThrow(/totalBorrows/);
   });
 
@@ -368,7 +390,7 @@ describe("fetchCapVaultReserves", () => {
       paused: encodedFalse,
     });
 
-    await expect(fetchCapVaultReserves(coin, config, signal))
+    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
       .rejects.toThrow(/available/);
   });
 
@@ -381,7 +403,7 @@ describe("fetchCapVaultReserves", () => {
       paused: null,
     });
 
-    const result = await fetchCapVaultReserves(coin, config, signal);
+    const result = await fetchCapVaultReserves(coin, config, makeSignal());
     const warning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
     expect(warning).toBeDefined();
     // Paused-treated-as-true must exclude from immediateRedeemable
@@ -403,7 +425,7 @@ describe("fetchCapVaultReserves", () => {
         ...config,
         params: { assets: [] },
       },
-      signal,
+      makeSignal(),
     );
 
     expect(result.slices).toEqual([
@@ -457,7 +479,7 @@ describe("fetchCapVaultReserves", () => {
           ],
         },
       },
-      signal,
+      makeSignal(),
     );
 
     expect(result.slices).toEqual([

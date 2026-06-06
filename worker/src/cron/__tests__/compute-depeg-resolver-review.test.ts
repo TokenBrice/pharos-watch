@@ -584,6 +584,114 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.publicationFailedCount).toBe(1);
   });
 
+  it("emits invalidated prediction rows when sealed public rows have errata", async () => {
+    const incident = {
+      incidentKey: "ddr2:invalidated-public-prediction",
+      eventId: 43,
+      currentEventId: 43,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const originalNoCall = {
+      lockedAt: ELIGIBLE_AT,
+      eventAgeAtLockSec: 86_400,
+      missingReasons: ["insufficient_signal"],
+      relatedContext: {},
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 43,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 10,
+          publicPredictionId: 10,
+          incidentKey: incident.incidentKey,
+          eventId: 43,
+          assessmentId: 91,
+          outcomeKind: "no_call" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: ELIGIBLE_AT,
+          lockedAt: ELIGIBLE_AT,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "d".repeat(64),
+          sealedPayload: {
+            symbol: "LUSD",
+            name: "Liquity USD",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            noCall: originalNoCall,
+          },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 10,
+          incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-2",
+          snapshotGeneration: 3,
+          publishedAt: ELIGIBLE_AT + 60,
+          firstPublished: true,
+        },
+      ]),
+      loadPredictionErrata: vi.fn(async () => [
+        {
+          id: 1,
+          state: "invalidated" as const,
+          publicPredictionId: 10,
+          incidentKey: incident.incidentKey,
+          eventId: 43,
+          assessmentId: 91,
+          reason: "event_identity_error" as const,
+          operatorNote: "Fixture invalidation",
+          replacementAssessmentId: null,
+          replacementRowHash: null,
+          rowHashBefore: "d".repeat(64),
+          createdAt: ELIGIBLE_AT + 120,
+          createdBy: "test",
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+    const row = snapshot.rows.find((entry) => entry.kind === "invalidated_prediction");
+
+    expect(row).toMatchObject({
+      kind: "invalidated_prediction",
+      incidentKey: incident.incidentKey,
+      publicPredictionId: 10,
+      assessmentId: 91,
+      predictionState: "invalidated",
+      originalKind: "no_call",
+      originalOutcome: originalNoCall,
+      latestErratum: expect.objectContaining({ reason: "event_identity_error" }),
+      errataCount: 1,
+    });
+    expect(snapshot.summary.headline.invalidatedPredictionCount).toBe(1);
+    expect(snapshot._meta.reviewedEventCount).toBe(1);
+  });
+
   it("keeps headline stats complete while capping public review rows", async () => {
     const assessmentRows = Array.from({ length: 101 }, (_, index) =>
       assessmentRow({
