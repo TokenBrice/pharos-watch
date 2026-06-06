@@ -88,15 +88,6 @@ export const handleApiKeyDeactivateRoute = makeAdminRoute<ApiKeyByIdRouteContext
   },
 );
 
-export function handleApiKeyDeactivate(
-  db: D1Database,
-  id: number,
-  trustedAdmin = false,
-  request: Request = fallbackAdminRequest(`/api/api-keys/${id}/deactivate`),
-): Promise<Response> {
-  return handleApiKeyDeactivateRoute({ db, apiKeyId: id, trustedAdmin, request });
-}
-
 export const handleApiKeyRotateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-rotate",
   async ({ db, apiKeyId, apiKeyHashPepper }) => {

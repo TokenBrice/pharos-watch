@@ -198,19 +198,22 @@ export function buildBackfillReplayPreview({
   events: BackfillEvent[] | null;
 }): BackfillReplayPreview {
   const existingOpenLiveEventCount = existingRows.existingLiveRows.filter((row) => row.ended_at == null).length;
+  const previewBase = {
+    stablecoinId: meta.id,
+    symbol: meta.symbol,
+    replaySource: sourceKind,
+    authoritativeSource,
+    marketSourcesUsed: marketDiagnostics?.sourcesUsed ?? [],
+    mergeReasons: marketDiagnostics?.mergeReasons ?? [],
+    policyAdjustmentCount: marketDiagnostics?.policyAdjustments.length ?? 0,
+    existingBackfillEventCount: existingRows.existingBackfillRows.length,
+    existingLiveEventCount: existingRows.existingLiveRows.length,
+    existingOpenLiveEventCount,
+  };
   if (events == null) {
     return {
-      stablecoinId: meta.id,
-      symbol: meta.symbol,
-      replaySource: sourceKind,
-      authoritativeSource,
-      marketSourcesUsed: marketDiagnostics?.sourcesUsed ?? [],
-      mergeReasons: marketDiagnostics?.mergeReasons ?? [],
-      policyAdjustmentCount: marketDiagnostics?.policyAdjustments.length ?? 0,
-      existingBackfillEventCount: existingRows.existingBackfillRows.length,
+      ...previewBase,
       recomputedBackfillEventCount: null,
-      existingLiveEventCount: existingRows.existingLiveRows.length,
-      existingOpenLiveEventCount,
       exactMatch: null,
       removedBackfillEventCount: 0,
       removedBackfillEventIdsSample: [],
@@ -221,17 +224,8 @@ export function buildBackfillReplayPreview({
 
   const diff = summarizeBackfillReplayDiff(existingRows.existingBackfillRows, events);
   return {
-    stablecoinId: meta.id,
-    symbol: meta.symbol,
-    replaySource: sourceKind,
-    authoritativeSource,
-    marketSourcesUsed: marketDiagnostics?.sourcesUsed ?? [],
-    mergeReasons: marketDiagnostics?.mergeReasons ?? [],
-    policyAdjustmentCount: marketDiagnostics?.policyAdjustments.length ?? 0,
-    existingBackfillEventCount: existingRows.existingBackfillRows.length,
+    ...previewBase,
     recomputedBackfillEventCount: events.length,
-    existingLiveEventCount: existingRows.existingLiveRows.length,
-    existingOpenLiveEventCount,
     exactMatch: diff.exactMatch,
     removedBackfillEventCount: diff.removedBackfillEventCount,
     removedBackfillEventIdsSample: diff.removedBackfillEventIdsSample,

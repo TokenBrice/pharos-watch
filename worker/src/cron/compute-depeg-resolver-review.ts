@@ -131,6 +131,54 @@ export function buildEmptyDdrrSummary(): DdrrSummary {
   return summarizeDdrrRows([]);
 }
 
+function buildDdrrResponseEnvelope(input: {
+  nowSec: number;
+  summary: DdrrSummary;
+  rows: DdrrResponse["rows"];
+  assessedEventCount: number;
+  assessmentRowsTruncated: boolean;
+  methodologyVersions: string[];
+  degradedReasons?: string[];
+}): DdrrResponse {
+  const publicRows = input.rows.slice(0, DDRR_PUBLIC_ROW_CAP);
+  const publicRowsTruncated = input.rows.length > publicRows.length;
+  const degradedReasons = input.degradedReasons ?? [];
+
+  return {
+    _meta: {
+      computedAt: input.nowSec,
+      expiresAt: input.nowSec + DDRR_SNAPSHOT_TTL_SEC,
+      degraded: degradedReasons.length > 0,
+      degradedReason: degradedReasons.length > 0 ? degradedReasons.join(",") : null,
+      reviewerVersion: DDRR_REVIEWER_VERSION,
+      publicWarning: DDRR_PUBLIC_WARNING,
+      assessedEventCount: input.assessedEventCount,
+      reviewedEventCount: input.rows.length,
+      pendingEventCount:
+        input.summary.headline.pendingLockCount +
+        input.summary.headline.lockDeferredCount +
+        input.summary.headline.publicationRetryPendingCount,
+      durationScoredCount: input.summary.headline.durationScoredCount,
+      verdictScoredCount: input.summary.headline.recoveryLikelihoodScoredCount,
+      assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
+      assessmentRowsTruncated: input.assessmentRowsTruncated,
+      publicRowLimit: DDRR_PUBLIC_ROW_CAP,
+      publicRowsTruncated,
+      methodologyVersions: input.methodologyVersions,
+    },
+    summary: input.summary,
+    rows: publicRows,
+    methodology: buildMethodologyEnvelope({
+      version: DDR_METHODOLOGY_VERSION,
+      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      currentVersion: DDR_METHODOLOGY_VERSION,
+      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
+      asOf: input.nowSec,
+    }),
+  };
+}
+
 function abortIf(signal: AbortSignal | undefined, label: string): void {
   if (signal?.aborted) throw signal.reason ?? new Error(`${label} aborted`);
 }
@@ -356,13 +404,6 @@ async function loadAssessments(
     }
   }
   return { assessments, parseIssueCount, truncated };
-}
-
-async function loadActualEventsById(
-  db: D1Database,
-  assessments: readonly DdrrAssessment[],
-): Promise<Map<number, DdrrActualEventWithTerminalEvidence>> {
-  return loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId));
 }
 
 async function loadActualEventsByEventIds(
@@ -801,43 +842,16 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
     actualEventsById,
     nowSec: source.nowSec,
   });
-  const publicRows = rows.slice(0, DDRR_PUBLIC_ROW_CAP);
-  const publicRowsTruncated = rows.length > publicRows.length;
   const methodologyVersions = [...new Set(source.sealedPublicPredictions.map((prediction) => prediction.predictionMethodologyVersion))].sort();
 
-  return {
-    _meta: {
-      computedAt: source.nowSec,
-      expiresAt: source.nowSec + DDRR_SNAPSHOT_TTL_SEC,
-      degraded: false,
-      degradedReason: null,
-      reviewerVersion: DDRR_REVIEWER_VERSION,
-      publicWarning: DDRR_PUBLIC_WARNING,
-      assessedEventCount: source.incidents.length,
-      reviewedEventCount: rows.length,
-      pendingEventCount:
-        summary.headline.pendingLockCount +
-        summary.headline.lockDeferredCount +
-        summary.headline.publicationRetryPendingCount,
-      durationScoredCount: summary.headline.durationScoredCount,
-      verdictScoredCount: summary.headline.recoveryLikelihoodScoredCount,
-      assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
-      assessmentRowsTruncated: false,
-      publicRowLimit: DDRR_PUBLIC_ROW_CAP,
-      publicRowsTruncated,
-      methodologyVersions,
-    },
+  return buildDdrrResponseEnvelope({
+    nowSec: source.nowSec,
     summary,
-    rows: publicRows,
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: source.nowSec,
-    }),
-  };
+    rows,
+    assessedEventCount: source.incidents.length,
+    assessmentRowsTruncated: false,
+    methodologyVersions,
+  });
 }
 
 async function maybeBuildDdrV2ReviewSnapshot(
@@ -896,53 +910,27 @@ export async function buildDepegResolverReviewSnapshot(
   const { assessments, parseIssueCount, truncated: assessmentRowsTruncated } = await loadAssessments(db);
   abortIf(signal, "compute-depeg-resolver-review");
 
-  const actualEventsById = await loadActualEventsById(db, assessments);
+  const actualEventsById = await loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId));
   abortIf(signal, "compute-depeg-resolver-review");
 
   const { rows, summary } = assessments.length
     ? reviewDepegResolverAssessments({ assessments, actualEventsById, nowSec })
     : { rows: [], summary: buildEmptyDdrrSummary() };
-  const publicRows = rows.slice(0, DDRR_PUBLIC_ROW_CAP);
-  const publicRowsTruncated = rows.length > publicRows.length;
   const methodologyVersions = [...new Set(assessments.map((assessment) => assessment.methodologyVersion))].sort();
   const degradedReasons = [
     parseIssueCount > 0 ? "invalid-assessment-row" : null,
     assessmentRowsTruncated ? "assessment-row-cap" : null,
   ].filter((reason): reason is string => reason != null);
 
-  return {
-    _meta: {
-      computedAt: nowSec,
-      expiresAt: nowSec + DDRR_SNAPSHOT_TTL_SEC,
-      degraded: degradedReasons.length > 0,
-      degradedReason: degradedReasons.length > 0 ? degradedReasons.join(",") : null,
-      reviewerVersion: DDRR_REVIEWER_VERSION,
-      publicWarning: DDRR_PUBLIC_WARNING,
-      assessedEventCount: new Set(assessments.map((assessment) => assessment.eventId)).size,
-      reviewedEventCount: rows.length,
-      pendingEventCount:
-        summary.headline.pendingLockCount +
-        summary.headline.lockDeferredCount +
-        summary.headline.publicationRetryPendingCount,
-      durationScoredCount: summary.headline.durationScoredCount,
-      verdictScoredCount: summary.headline.recoveryLikelihoodScoredCount,
-      assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
-      assessmentRowsTruncated,
-      publicRowLimit: DDRR_PUBLIC_ROW_CAP,
-      publicRowsTruncated,
-      methodologyVersions,
-    },
+  return buildDdrrResponseEnvelope({
+    nowSec,
     summary,
-    rows: publicRows,
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: nowSec,
-    }),
-  };
+    rows,
+    assessedEventCount: new Set(assessments.map((assessment) => assessment.eventId)).size,
+    assessmentRowsTruncated,
+    methodologyVersions,
+    degradedReasons,
+  });
 }
 
 export async function computeAndStoreDepegResolverReview(

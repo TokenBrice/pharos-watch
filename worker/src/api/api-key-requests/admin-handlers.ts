@@ -167,12 +167,3 @@ export const handleApiKeyRequestReleaseClaimRoute = makeIdempotentAdminRoute<Api
     ));
   },
 );
-
-export function handleApiKeyRequestReleaseClaim(
-  db: D1Database,
-  requestId: string,
-  trustedAdmin: boolean,
-  request: Request,
-): Promise<Response> {
-  return handleApiKeyRequestReleaseClaimRoute({ db, requestId, trustedAdmin, request });
-}
