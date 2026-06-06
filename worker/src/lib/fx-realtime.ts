@@ -3,6 +3,7 @@ import {
   isValidFxRate,
   REALTIME_FX_CURRENCY_TO_PEG,
 } from "./fx-config";
+import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 
 /**
@@ -14,6 +15,9 @@ import { cancelResponseBodyQuietly } from "./response-body";
 const OpenExchangeRatesSchema = z.object({
   rates: z.record(z.string(), z.number()),
 });
+
+const OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS = 5_000;
+const OPEN_EXCHANGE_RATES_MAX_RETRIES = 1;
 
 export interface RealtimeFxFetchResult {
   rates: Map<string, number>;
@@ -35,10 +39,16 @@ export async function fetchRealtimeFxRates(
 
   try {
     const symbols = Object.keys(REALTIME_FX_CURRENCY_TO_PEG).join(",");
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `https://openexchangerates.org/api/latest.json?app_id=${apiKey}&symbols=${symbols}&base=USD`,
       { signal, headers: { Accept: "application/json" } },
+      OPEN_EXCHANGE_RATES_MAX_RETRIES,
+      { timeoutMs: OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS },
     );
+    if (!res) {
+      console.warn("[fx-realtime] Open Exchange Rates returned no response");
+      return { rates: result, completed: false };
+    }
     if (!res.ok) {
       console.warn(`[fx-realtime] Open Exchange Rates returned ${res.status}`);
       await cancelResponseBodyQuietly(res);

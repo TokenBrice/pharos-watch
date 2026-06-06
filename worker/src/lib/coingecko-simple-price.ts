@@ -5,13 +5,9 @@ import { cgUrl, cgHeaders } from "./coingecko";
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
+import { CoinGeckoSimplePriceSchema } from "./upstream-schemas";
 
 const PRIMARY_CG_BATCH_SIZE = 250;
-
-interface CoinGeckoSimplePriceValue {
-  usd?: number;
-  last_updated_at?: number;
-}
 
 export interface CoingeckoSimplePriceEntry {
   price: number;
@@ -50,7 +46,13 @@ export async function fetchCoingeckoSimplePrices(
         continue;
       }
 
-      const data = (await res.json()) as Record<string, CoinGeckoSimplePriceValue>;
+      const parsed = CoinGeckoSimplePriceSchema.safeParse(await res.json());
+      if (!parsed.success) {
+        hadBatchFailure = true;
+        console.warn(`[primary-prices] CG price API payload invalid: ${parsed.error.message}`);
+        continue;
+      }
+      const data = parsed.data;
       for (const [gId, val] of Object.entries(data)) {
         if (val?.usd == null || !(val.usd > 0)) continue;
         const upstreamObservedAt =

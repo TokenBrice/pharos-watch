@@ -119,6 +119,15 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
   { command: "npm run check:hotspot-ratchet", deployImpact: "full", paths: ["scripts/ci/check-hotspot-ratchet.mjs"] },
   { command: "npm run check:migrations", deployImpact: "worker", paths: ["scripts/ci/check-worker-migrations.mjs"] },
   {
+    command: "npm run check:price-bounds-parity",
+    deployImpact: "full",
+    paths: [
+      "scripts/ci/check-price-bounds-parity.ts",
+      "shared/lib/peg-price-bounds.ts",
+      "shared/types/core.ts",
+    ],
+  },
+  {
     command: "npm run check:redemption-backstops",
     deployImpact: "full",
     paths: ["scripts/ci/check-redemption-backstops.ts"],

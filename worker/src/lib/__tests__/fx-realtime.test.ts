@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { fetchRealtimeFxRates } from "../fx-realtime";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe("fetchRealtimeFxRates", () => {
   it("returns USD-per-unit rates for all requested currencies", async () => {
@@ -19,12 +22,46 @@ describe("fetchRealtimeFxRates", () => {
   });
 
   it("returns empty map on API failure", async () => {
-    const response = new Response("down", { status: 500 });
-    const cancel = vi.spyOn(response.body!, "cancel");
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
-    const result = await fetchRealtimeFxRates("test-key");
-    expect(result.completed).toBe(true);
+    vi.useFakeTimers();
+    const firstResponse = new Response("down", { status: 500 });
+    const secondResponse = new Response("still down", { status: 500 });
+    const firstCancel = vi.spyOn(firstResponse.body!, "cancel");
+    const secondCancel = vi.spyOn(secondResponse.body!, "cancel");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(firstResponse)
+      .mockResolvedValueOnce(secondResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = fetchRealtimeFxRates("test-key");
+    await vi.advanceTimersByTimeAsync(1_000);
+    const result = await pending;
+
+    expect(result.completed).toBe(false);
     expect(result.rates.size).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(firstCancel).toHaveBeenCalledOnce();
+    expect(secondCancel).toHaveBeenCalledOnce();
+  });
+
+  it("retries a rate-limited OXR response before returning rates", async () => {
+    vi.useFakeTimers();
+    const rateLimited = new Response(JSON.stringify({ error: "rate limited" }), {
+      status: 429,
+      headers: { "Retry-After": "1" },
+    });
+    const cancel = vi.spyOn(rateLimited.body!, "cancel");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(rateLimited)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ rates: { EUR: 0.925 } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = fetchRealtimeFxRates("test-key");
+    await vi.advanceTimersByTimeAsync(1_000);
+    const result = await pending;
+
+    expect(result.completed).toBe(true);
+    expect(result.rates.get("peggedEUR")).toBeCloseTo(1 / 0.925, 4);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(cancel).toHaveBeenCalledOnce();
   });
 

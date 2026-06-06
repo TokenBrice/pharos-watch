@@ -3,6 +3,7 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import {
@@ -237,12 +238,6 @@ function applyJupiterPrimaryAugmentation(asset: PeggedAsset, jupiterPrice: numbe
   // Deliberately do not add Jupiter to agreeSources or replace priceSource here.
   // The pass only exposes a bounded soft corroborator for source-depth/UI use.
   return true;
-}
-
-function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
-  const mid = (left + right) / 2;
-  if (mid <= 0) return false;
-  return (Math.abs(left - right) / mid) * 10_000 <= thresholdBps;
 }
 
 async function fetchJupiterPrices(

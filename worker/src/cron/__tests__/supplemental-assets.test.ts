@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
@@ -6,6 +6,11 @@ import {
   selectSingleOnChainSupplyContract,
   selectSupplementalOnChainSupplyContract,
 } from "../sync-stablecoins/supplemental-assets";
+import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"): StablecoinMeta {
   return {
@@ -127,5 +132,16 @@ describe("resolveSupplementalPrice", () => {
       observedAt: nowSec - 60,
       observedAtMode: "upstream",
     });
+  });
+});
+
+describe("fetchSupplementalPriceData", () => {
+  it("fails closed to an empty coin map on malformed DefiLlama price payloads", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ coins: { "coingecko:test": { price: "1.00" } } }), { status: 200 })
+    ));
+    const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test")).resolves.toEqual({ coins: {} });
   });
 });

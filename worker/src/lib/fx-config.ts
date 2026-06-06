@@ -1,3 +1,5 @@
+import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
+
 export const PRIMARY_FX_CURRENCIES = [
   "EUR",
   "GBP",
@@ -63,35 +65,6 @@ export const EXPECTED_FX_PEG_KEYS = [
   ...Object.values(PRIMARY_CURRENCY_TO_PEG),
   ...Object.values(SECONDARY_FX_CURRENCY_TO_PEG),
 ];
-
-const FX_RATE_BOUNDS: Record<string, [number, number]> = {
-  peggedEUR: [0.50, 2.50],
-  peggedGBP: [0.50, 3.00],
-  peggedCHF: [0.40, 2.50],
-  peggedREAL: [0.05, 0.60],
-  peggedJPY: [0.003, 0.03],
-  peggedIDR: [0.00003, 0.0003],
-  peggedSGD: [0.30, 1.50],
-  peggedTRY: [0.01, 0.20],
-  peggedAUD: [0.30, 1.50],
-  peggedZAR: [0.02, 0.20],
-  peggedRUB: [0.003, 0.10],
-  peggedCAD: [0.40, 1.50],
-  peggedCNY: [0.05, 0.40],
-  peggedCNH: [0.05, 0.40],
-  peggedPHP: [0.01, 0.06],
-  peggedMXN: [0.02, 0.15],
-  peggedMYR: [0.18, 0.30],
-  peggedKRW: [0.0005, 0.0010],
-  peggedUAH: [0.01, 0.10],
-  peggedARS: [0.0001, 0.01],
-  peggedKGS: [0.005, 0.05],
-  peggedNGN: [0.0002, 0.005],
-  peggedXOF: [0.001, 0.005],
-  peggedVND: [0.00002, 0.00006],
-  peggedSILVER: [5, 500],
-  peggedGOLD: [500, 10000],
-};
 
 const MAX_FX_RATE_DELTA_PCT = 0.20;
 

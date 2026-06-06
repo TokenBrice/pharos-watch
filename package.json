@@ -81,6 +81,7 @@
     "check:duplicate-exports": "node scripts/ci/check-duplicate-exports.mjs",
     "check:migrations": "node scripts/ci/check-worker-migrations.mjs",
     "check:cron-connections": "tsx scripts/ci/check-cron-connection-budget.ts",
+    "check:price-bounds-parity": "tsx scripts/ci/check-price-bounds-parity.ts",
     "check:telegram-load": "tsx scripts/ci/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node scripts/ci/check-sql-interpolation-safety.mjs",
     "check:stale-flags": "node scripts/ci/check-stale-flags.mjs",

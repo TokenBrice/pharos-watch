@@ -2,6 +2,7 @@ import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import type { AddressPriceQuote } from "./address-price-providers";
+import { pricesAgreeWithinBps } from "./price-divergence";
 import type { SourcePrice } from "./price-consensus";
 import { validatePricingSourceFreshness, type PricingSourceFreshnessRejectReason } from "./pricing-source-freshness";
 
@@ -178,12 +179,6 @@ function getAdjustedPythWeight(confidenceBps: number, baseWeight: number): numbe
   const confidencePenalty = Math.min(0.85, confidenceBps / 250);
   const adjustedWeight = baseWeight * (1 - confidencePenalty);
   return Math.max(0.25, Number(adjustedWeight.toFixed(3)));
-}
-
-function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
-  const mid = (left + right) / 2;
-  if (mid <= 0) return false;
-  return (Math.abs(left - right) / mid) * 10_000 <= thresholdBps;
 }
 
 const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;

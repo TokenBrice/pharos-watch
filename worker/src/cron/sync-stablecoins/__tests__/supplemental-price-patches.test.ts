@@ -152,4 +152,29 @@ describe("runCoingeckoLowVolumePass", () => {
       supplySource: "defillama",
     });
   });
+
+  it("ignores malformed CoinGecko simple-price payloads", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({
+        "pareto-usp": { usd: "0.911" },
+      }), { status: 200 })
+    ));
+
+    const primary = asset({
+      id: "usp-pareto-credit",
+      symbol: "USP",
+      price: null,
+      priceSource: "defillama",
+      supplySource: "defillama",
+    });
+
+    const result = await runCoingeckoLowVolumePass([primary], null, undefined);
+
+    expect(result).toEqual({ resolved: 0, failures: ["coingecko-low-volume"] });
+    expect(primary).toMatchObject({
+      price: null,
+      priceSource: "defillama",
+      supplySource: "defillama",
+    });
+  });
 });

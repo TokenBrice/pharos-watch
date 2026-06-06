@@ -4,9 +4,11 @@ import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
 import { DEFILLAMA_COINS } from "../../../lib/constants";
-import type { DefiLlamaCoinPrice, PeggedAsset } from "../enrich-prices";
+import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
+import type { PeggedAsset } from "../enrich-prices";
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
+type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
 
 export interface SupplementalPriceResolution {
   price: number;
@@ -31,7 +33,7 @@ function isFreshSupplementalPrice(source: SupplementalPriceResolution["source"],
 }
 
 export function resolveSupplementalPrice(
-  priceData: { coins: Record<string, DefiLlamaCoinPrice> },
+  priceData: SupplementalDefiLlamaPriceData,
   cgData: CoinGeckoMcapData,
   geckoId?: string,
 ): SupplementalPriceResolution | null {
@@ -112,7 +114,7 @@ export function buildSupplementalAsset(input: {
 
 export function buildPricedSupplementalAsset(
   meta: StablecoinMeta,
-  priceData: { coins: Record<string, DefiLlamaCoinPrice> },
+  priceData: SupplementalDefiLlamaPriceData,
   cgData: CoinGeckoMcapData,
   input: {
     mcap: number;
@@ -140,7 +142,7 @@ export async function fetchSupplementalPriceData(
   metas: StablecoinMeta[],
   logPrefix: string,
   signal?: AbortSignal,
-): Promise<{ coins: Record<string, DefiLlamaCoinPrice> }> {
+): Promise<SupplementalDefiLlamaPriceData> {
   if (metas.length === 0) return { coins: {} };
 
   const coinIds = metas.map((token) => token.geckoId).filter(Boolean).map((id) => `coingecko:${id}`).join(",");
@@ -155,5 +157,10 @@ export async function fetchSupplementalPriceData(
     return { coins: {} };
   }
 
-  return (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+  const parsed = DefiLlamaCoinsPriceSchema.safeParse(await priceRes.json());
+  if (!parsed.success) {
+    return { coins: {} };
+  }
+
+  return { coins: parsed.data.coins ?? {} };
 }

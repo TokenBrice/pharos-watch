@@ -224,6 +224,7 @@ describe("validatePriceCandidate", () => {
       peggedKRW: 0.00072,
       peggedKGS: 0.011,
       peggedNGN: 0.00065,
+      peggedVND: 0.00004,
     },
     type: "fresh",
     updatedAt: Math.floor(Date.now() / 1000),
@@ -250,16 +251,28 @@ describe("validatePriceCandidate", () => {
     const krw = buildPriceValidationContext({ pegType: "peggedKRW", pegCurrency: "KRW" });
     const kgs = buildPriceValidationContext({ pegType: "peggedKGS", pegCurrency: "KGS" });
     const ngn = buildPriceValidationContext({ pegType: "peggedNGN", pegCurrency: "NGN" });
+    const vnd = buildPriceValidationContext({ pegType: "peggedVND", pegCurrency: "VND" });
     const noReference: PriceValidationReferences = { rates: {}, type: "none", updatedAt: null };
 
     expect(validatePriceCandidate(0.21, myr, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
     expect(validatePriceCandidate(0.00072, krw, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
     expect(validatePriceCandidate(0.011, kgs, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
     expect(validatePriceCandidate(0.00065, ngn, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
+    expect(validatePriceCandidate(0.00004, vnd, "fallback_enrichment", freshRefs).reasonCode).toBe("within_reference_band");
     expect(validatePriceCandidate(1, myr, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
     expect(validatePriceCandidate(0.01, krw, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
     expect(validatePriceCandidate(1, kgs, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
     expect(validatePriceCandidate(0.02, ngn, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+    expect(validatePriceCandidate(0.001, vnd, "fallback_enrichment", noReference).reasonCode).toBe("hardcoded_upper_bound_exceeded");
+  });
+
+  it("caps USD reference upper bound at the hardcoded USD publish ceiling", () => {
+    const context = buildPriceValidationContext({ pegType: "peggedUSD", pegCurrency: "USD" });
+    const result = validatePriceCandidate(1.5, context, "fallback_enrichment", freshRefs);
+
+    expect(result.accepted).toBe(false);
+    expect(result.reasonCode).toBe("reference_upper_bound_exceeded");
+    expect(result.boundsUsed?.max).toBe(1.19);
   });
 
   it("allows catastrophic downside in authoritative mode while keeping strict fallback behavior", () => {
@@ -269,6 +282,8 @@ describe("validatePriceCandidate", () => {
     const fallback = validatePriceCandidate(0.0001, context, "fallback_enrichment", freshRefs);
 
     expect(authoritative.accepted).toBe(true);
+    expect(authoritative.reasonCode).toBe("authoritative_downside_allowed");
+    expect(authoritative.boundsUsed).toEqual({ min: 0, max: 1.19 });
     expect(fallback.accepted).toBe(false);
   });
 

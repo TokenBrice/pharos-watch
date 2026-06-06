@@ -23,6 +23,7 @@ import {
   pickConservativeObservedAt,
   pickConservativeObservedAtMode,
 } from "./pricing-types";
+import { midDivergenceBps, pricesAgreeWithinBps } from "./price-divergence";
 
 export interface SourcePrice {
   source: string;
@@ -240,12 +241,6 @@ function intersectSets(left: Set<number>, right: Set<number>): Set<number> {
   return result;
 }
 
-function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
-  const mid = (left + right) / 2;
-  if (mid <= 0) return false;
-  return (Math.abs(left - right) / mid) * 10000 <= thresholdBps;
-}
-
 function buildSourceLabel(cluster: SourcePrice[]): string {
   return cluster.map((s) => s.source).sort().join("+");
 }
@@ -264,9 +259,7 @@ function clusterSpreadBps(cluster: SourcePrice[]): number {
   const prices = cluster.map((source) => source.price);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
-  const mid = (minPrice + maxPrice) / 2;
-  if (mid <= 0) return Number.POSITIVE_INFINITY;
-  return (Math.abs(maxPrice - minPrice) / mid) * 10000;
+  return midDivergenceBps(minPrice, maxPrice);
 }
 
 /**

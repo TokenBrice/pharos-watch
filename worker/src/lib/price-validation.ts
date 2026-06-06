@@ -1,4 +1,10 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  classifyPegClass,
+  HARDCODED_PRICE_BOUNDS,
+  normalizePegTypeFromCurrency,
+  type PegClass,
+} from "@shared/lib/peg-price-bounds";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 import { sanitizeRecordValues } from "./normalizers";
 
@@ -10,7 +16,8 @@ export type PriceValidationMode =
 
 export type PriceReferenceType = "fresh" | "stale" | "static" | "none";
 
-export type PegClass = "usd" | "fiat_fx" | "commodity" | "nav" | "variable" | "unknown";
+export type { PegClass };
+export { normalizePegTypeFromCurrency };
 
 export interface PriceValidationContext {
   stablecoinId?: string;
@@ -60,52 +67,12 @@ export interface PriceReasonablenessOptions {
 const MAX_PRICE = 100_000;
 const DEFAULT_REFERENCE_STALE_SEC = 6 * 3600;
 
-const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
-  USD: [0.01, 1.19],
-  EUR: [0.01, 2],
-  GBP: [0.01, 2],
-  CHF: [0.01, 2],
-  BRL: [0.01, 2],
-  REAL: [0.01, 2],
-  JPY: [0.001, 0.05],
-  IDR: [0.00001, 0.001],
-  SGD: [0.2, 5],
-  TRY: [0.005, 0.5],
-  AUD: [0.2, 5],
-  RUB: [0.005, 50],
-  ZAR: [0.01, 0.5],
-  CAD: [0.3, 2],
-  CNY: [0.01, 0.5],
-  CNH: [0.01, 0.5],
-  PHP: [0.002, 0.1],
-  MXN: [0.005, 0.2],
-  MYR: [0.18, 0.3],
-  KRW: [0.0005, 0.001],
-  UAH: [0.002, 0.15],
-  ARS: [0.000001, 0.05],
-  KGS: [0.005, 0.05],
-  NGN: [0.0002, 0.005],
-  XOF: [0.001, 0.005],
-  GOLD: [100, 100_000],
-  SILVER: [5, 500],
-};
-
 export const PRICE_BOUNDS = HARDCODED_PRICE_BOUNDS;
 
 function sanitizeRates(input: unknown): Record<string, number> {
   return sanitizeRecordValues(input, (value) => (
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined
   ));
-}
-
-export function normalizePegTypeFromCurrency(pegCurrency: string | undefined): string | undefined {
-  if (!pegCurrency || pegCurrency === "VAR" || pegCurrency === "OTHER") {
-    return undefined;
-  }
-  if (pegCurrency === "BRL") {
-    return "peggedREAL";
-  }
-  return `pegged${pegCurrency}`;
 }
 
 function getCommodityScale(pegType: string | undefined, commodityOunces: number | undefined): number {
@@ -118,44 +85,6 @@ function getCommodityScale(pegType: string | undefined, commodityOunces: number 
     return commodityOunces;
   }
   return 1;
-}
-
-function classifyPegClass(pegCurrency: string | undefined, pegType: string | undefined, navToken: boolean): PegClass {
-  if (navToken) return "nav";
-  if (pegCurrency === "VAR" || pegCurrency === "OTHER") return "variable";
-  if (!pegType) return "unknown";
-  if (pegType.includes("USD")) return "usd";
-  if (pegType.includes("GOLD") || pegType.includes("SILVER")) return "commodity";
-  if (
-    pegType.includes("EUR") ||
-    pegType.includes("GBP") ||
-    pegType.includes("CHF") ||
-    pegType.includes("REAL") ||
-    pegType.includes("BRL") ||
-    pegType.includes("JPY") ||
-    pegType.includes("IDR") ||
-    pegType.includes("SGD") ||
-    pegType.includes("TRY") ||
-    pegType.includes("AUD") ||
-    pegType.includes("RUB") ||
-    pegType.includes("ZAR") ||
-    pegType.includes("CAD") ||
-    pegType.includes("CNY") ||
-    pegType.includes("CNH") ||
-    pegType.includes("PHP") ||
-    pegType.includes("MXN") ||
-    pegType.includes("MYR") ||
-    pegType.includes("KRW") ||
-    pegType.includes("KGS") ||
-    pegType.includes("NGN") ||
-    pegType.includes("XOF") ||
-    pegType.includes("UAH") ||
-    pegType.includes("ARS") ||
-    pegType.includes("VND")
-  ) {
-    return "fiat_fx";
-  }
-  return "unknown";
 }
 
 export function buildPriceValidationContext(
@@ -406,6 +335,7 @@ function validateCandidatePreamble(
 
 function evaluateReferenceBand(
   price: number,
+  context: PriceValidationContext,
   mode: PriceValidationMode,
   referenceType: PriceReferenceType,
   referencePrice: number | null,
@@ -415,7 +345,7 @@ function evaluateReferenceBand(
   }
 
   const lowerBound = isAuthoritativeDownsideMode(mode) ? 0 : 0.01 * referencePrice;
-  const upperBound = 2 * referencePrice;
+  const upperBound = context.pegClass === "usd" ? PRICE_BOUNDS.USD[1] : 2 * referencePrice;
   const candidateRatio = price / referencePrice;
 
   if (price >= upperBound) {
@@ -512,7 +442,7 @@ export function validatePriceCandidate(
     return preamble;
   }
 
-  const referenceDecision = evaluateReferenceBand(price, mode, referenceType, referencePrice);
+  const referenceDecision = evaluateReferenceBand(price, context, mode, referenceType, referencePrice);
   if (referenceDecision) {
     return referenceDecision;
   }
@@ -545,7 +475,7 @@ export function validatePriceCandidateAgainstReference(
     return preamble;
   }
 
-  const referenceDecision = evaluateReferenceBand(price, mode, referenceType, referencePrice);
+  const referenceDecision = evaluateReferenceBand(price, context, mode, referenceType, referencePrice);
   if (referenceDecision) {
     return referenceDecision;
   }
