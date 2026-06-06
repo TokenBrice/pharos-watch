@@ -73,6 +73,17 @@ export async function registerSubscriberBlockAndMaybeDisable(
   return { disabled: false, failed: true };
 }
 
+export async function handleBlockedChat(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+  blockedChatsThisRun: Set<string>,
+): Promise<BlockedSubscriberCascadeResult> {
+  if (blockedChatsThisRun.has(chatId)) return { disabled: false, failed: false };
+  blockedChatsThisRun.add(chatId);
+  return registerSubscriberBlockAndMaybeDisable(db, chatId, nowSec);
+}
+
 /** Reset the consecutive-block counter on any successful send. */
 export async function resetSubscriberBlockCount(db: D1Database, chatId: string): Promise<void> {
   try {
@@ -95,6 +106,16 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       module: "telegram-pending-lifecycle",
     });
   }
+}
+
+export async function resetChatOnSuccess(
+  db: D1Database,
+  chatId: string,
+  chatsResetThisRun: Set<string>,
+): Promise<void> {
+  if (chatsResetThisRun.has(chatId)) return;
+  chatsResetThisRun.add(chatId);
+  await resetSubscriberBlockCount(db, chatId);
 }
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {

@@ -9,8 +9,8 @@ import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram"
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
-  registerSubscriberBlockAndMaybeDisable,
-  resetSubscriberBlockCount,
+  handleBlockedChat,
+  resetChatOnSuccess,
 } from "./telegram-pending-queue";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import type {
@@ -311,10 +311,7 @@ export async function deliverFreshAlerts(
       deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
       targetStatusUpdates.push({ targetKey: buildDedupeKey(sendPlan), status: "sent", at: nowSec });
       freshSent++;
-      if (!chatsResetThisRun.has(result.chatId)) {
-        chatsResetThisRun.add(result.chatId);
-        await resetSubscriberBlockCount(db, result.chatId);
-      }
+      await resetChatOnSuccess(db, result.chatId, chatsResetThisRun);
       if (bucket) {
         bucket.sent++;
         if (bucket.firstSendLatencyMs == null) {
@@ -332,14 +329,11 @@ export async function deliverFreshAlerts(
         at: nowSec,
         errorClass: result.errorClass ?? "blocked",
       });
-      if (!blockedChats.has(result.chatId)) {
-        blockedChats.add(result.chatId);
-        const blockedCascade = await registerSubscriberBlockAndMaybeDisable(db, result.chatId, nowSec);
-        if (blockedCascade.disabled) {
-          blockedUsersCleanedUp++;
-        } else if (blockedCascade.failed) {
-          blockedUsersCleanupFailed++;
-        }
+      const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChats);
+      if (blockedCascade.disabled) {
+        blockedUsersCleanedUp++;
+      } else if (blockedCascade.failed) {
+        blockedUsersCleanupFailed++;
       }
       if (bucket) bucket.blocked++;
       continue;

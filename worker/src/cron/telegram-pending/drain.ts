@@ -25,8 +25,8 @@ import {
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import {
-  registerSubscriberBlockAndMaybeDisable,
-  resetSubscriberBlockCount,
+  handleBlockedChat,
+  resetChatOnSuccess,
 } from "./lifecycle";
 import {
   emptyDrainResult,
@@ -354,6 +354,7 @@ export async function drainPendingQueue(
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
   const blockedChatsThisLoop = new Set<string>();
+  const chatsResetThisLoop = new Set<string>();
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
@@ -378,38 +379,36 @@ export async function drainPendingQueue(
       }),
     );
 
-    const chatsResetThisLoop = new Set<string>();
     for (const result of results) {
       attempted++;
+      const pendingRow = pendingById.get(result.id);
+      const pushTargetStatus = (
+        status: TelegramAlertTargetStatusUpdate["status"],
+        errorClass?: string | null,
+      ) => appendPendingTargetStatus(targetStatusUpdates, pendingRow, status, nowSec, errorClass);
+
+      deliveryDiagnostics.push(result.ok
+        ? { chatId: result.chatId, ok: true }
+        : { chatId: result.chatId, ok: false, errorClass: result.errorClass });
+
       if (result.ok) {
-        deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
         sent++;
         sentIdsToDelete.push(result.id);
-        const pendingRow = pendingById.get(result.id);
-        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "sent", nowSec);
+        pushTargetStatus("sent");
         completedIds.add(result.id);
-        if (!chatsResetThisLoop.has(result.chatId)) {
-          chatsResetThisLoop.add(result.chatId);
-          await resetSubscriberBlockCount(db, result.chatId);
-        }
+        await resetChatOnSuccess(db, result.chatId, chatsResetThisLoop);
       } else if (result.blocked) {
-        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         blocked++;
-        const pendingRow = pendingById.get(result.id);
         if (pendingRow) blockedRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "blocked");
+        pushTargetStatus("failed", result.errorClass ?? "blocked");
         completedIds.add(result.id);
-        if (!blockedChatsThisLoop.has(result.chatId)) {
-          blockedChatsThisLoop.add(result.chatId);
-          const blockedCascade = await registerSubscriberBlockAndMaybeDisable(db, result.chatId, nowSec);
-          if (blockedCascade.disabled) {
-            blockedCleanedUp++;
-          } else if (blockedCascade.failed) {
-            blockedCleanupFailed++;
-          }
+        const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChatsThisLoop);
+        if (blockedCascade.disabled) {
+          blockedCleanedUp++;
+        } else if (blockedCascade.failed) {
+          blockedCleanupFailed++;
         }
       } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
-        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Age-based retry: keep retrying inside the TTL window (enforced at SELECT time).
         // The defensive PENDING_MAX_ATTEMPTS ceiling prevents a pathological row from looping
         // forever with sub-second backoffs.
@@ -422,8 +421,7 @@ export async function drainPendingQueue(
             ? null
             : nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec),
         });
-        const pendingRow = pendingById.get(result.id);
-        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "queued", nowSec, result.errorClass ?? null);
+        pushTargetStatus("queued", result.errorClass ?? null);
         completedIds.add(result.id);
         if (result.errorClass === "rate_limit") {
           rateLimited = true;
@@ -435,22 +433,18 @@ export async function drainPendingQueue(
           }
         }
       } else if (result.retryable) {
-        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Hit the defensive attempts ceiling while still retryable.
         dropped++;
         droppedMaxAttemptsFallback++;
-        const pendingRow = pendingById.get(result.id);
         if (pendingRow) maxAttemptRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "max_attempts");
+        pushTargetStatus("failed", result.errorClass ?? "max_attempts");
         completedIds.add(result.id);
       } else {
-        deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
         // Non-retryable, non-blocked: classify as permanent failure (e.g. 400 bad_request, 401 auth_error).
         dropped++;
         droppedPermanentFailure++;
-        const pendingRow = pendingById.get(result.id);
         if (pendingRow) permanentRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "permanent_failure");
+        pushTargetStatus("failed", result.errorClass ?? "permanent_failure");
         completedIds.add(result.id);
       }
     }
