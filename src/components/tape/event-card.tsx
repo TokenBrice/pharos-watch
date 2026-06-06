@@ -19,6 +19,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
@@ -175,6 +176,37 @@ function DepegEnrichment({ event }: { event: TapeEvent }) {
 const SCORE_PILL_CLASS =
   "inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums";
 
+function formatSignedDelta(value: number, formatted = String(value)): string {
+  return value > 0 ? `+${formatted}` : formatted;
+}
+
+function renderDeltaPills(
+  prev: string | number,
+  next: string | number,
+  pillClassName: string,
+  ArrowIcon: LucideIcon,
+  arrowColorClassName: string,
+  trail?: string,
+  delta?: string,
+  deltaClassName = "text-muted-foreground",
+) {
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className={`${pillClassName} text-muted-foreground`}>{prev}</span>
+      <ArrowIcon className={`h-3 w-3 ${arrowColorClassName}`} aria-hidden="true" />
+      <span className={`${pillClassName} text-foreground`}>{next}</span>
+      {trail || delta ? (
+        <span className={`font-mono text-[11px] tabular-nums ${deltaClassName}`}>
+          {trail}
+          {delta ? (
+            <span className={trail ? `ml-1 ${arrowColorClassName}` : undefined}>({delta})</span>
+          ) : null}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function ScoreEnrichment({ event }: { event: TapeEvent }) {
   const p = event.payload;
   const prev = typeof p?.prevGrade === "string" ? p.prevGrade : null;
@@ -187,21 +219,14 @@ function ScoreEnrichment({ event }: { event: TapeEvent }) {
   const arrowColor = isUpgrade
     ? "text-emerald-600 dark:text-emerald-400"
     : "text-red-600 dark:text-red-400";
-  return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-      <span className={`${SCORE_PILL_CLASS} text-muted-foreground`}>{prev}</span>
-      <ArrowIcon className={`h-3 w-3 ${arrowColor}`} aria-hidden="true" />
-      <span className={`${SCORE_PILL_CLASS} text-foreground`}>{next}</span>
-      {prevScore != null && newScore != null ? (
-        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-          {prevScore} → {newScore}
-          <span className={`ml-1 ${arrowColor}`}>
-            ({newScore - prevScore > 0 ? "+" : ""}
-            {newScore - prevScore})
-          </span>
-        </span>
-      ) : null}
-    </div>
+  return renderDeltaPills(
+    prev,
+    next,
+    SCORE_PILL_CLASS,
+    ArrowIcon,
+    arrowColor,
+    prevScore != null && newScore != null ? `${prevScore} → ${newScore}` : undefined,
+    prevScore != null && newScore != null ? formatSignedDelta(newScore - prevScore) : undefined,
   );
 }
 
@@ -220,21 +245,14 @@ function BandTransitionEnrichment({ event }: { event: TapeEvent }) {
   const arrowColor = isEscalation
     ? "text-red-600 dark:text-red-400"
     : "text-emerald-600 dark:text-emerald-400";
-  return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-      <span className={`${BAND_PILL_CLASS} text-muted-foreground`}>{prev}</span>
-      <ArrowIcon className={`h-3 w-3 ${arrowColor}`} aria-hidden="true" />
-      <span className={`${BAND_PILL_CLASS} text-foreground`}>{next}</span>
-      {prevScore != null && newScore != null ? (
-        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-          {prevScore.toFixed(1)} → {newScore.toFixed(1)}
-          <span className={`ml-1 ${arrowColor}`}>
-            ({newScore - prevScore > 0 ? "+" : ""}
-            {(newScore - prevScore).toFixed(1)})
-          </span>
-        </span>
-      ) : null}
-    </div>
+  return renderDeltaPills(
+    prev,
+    next,
+    BAND_PILL_CLASS,
+    ArrowIcon,
+    arrowColor,
+    prevScore != null && newScore != null ? `${prevScore.toFixed(1)} → ${newScore.toFixed(1)}` : undefined,
+    prevScore != null && newScore != null ? formatSignedDelta(newScore - prevScore, (newScore - prevScore).toFixed(1)) : undefined,
   );
 }
 
@@ -245,15 +263,16 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
     const next = typeof p?.newScore === "number" ? p.newScore : null;
     if (prev == null || next == null) return null;
     const delta = next - prev;
-    return (
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-        <span className={`${SCORE_PILL_CLASS} text-muted-foreground`}>{Math.round(prev)}</span>
-        <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" aria-hidden="true" />
-        <span className={`${SCORE_PILL_CLASS} text-foreground`}>{Math.round(next)}</span>
-        <span className="font-mono text-[11px] tabular-nums text-red-600 dark:text-red-400">
-          ({delta > 0 ? "+" : ""}{Math.round(delta)})
-        </span>
-      </div>
+    const arrowColor = "text-red-600 dark:text-red-400";
+    return renderDeltaPills(
+      Math.round(prev),
+      Math.round(next),
+      SCORE_PILL_CLASS,
+      TrendingDown,
+      arrowColor,
+      undefined,
+      formatSignedDelta(delta, String(Math.round(delta))),
+      "text-red-600 dark:text-red-400",
     );
   }
   // yield.warning_emitted

@@ -308,8 +308,9 @@ export function KpiBar() {
         </div>
       )}
 
-      <div className="space-y-2 px-2.5 py-2.5 sm:space-y-2.5 sm:px-3 sm:py-3 lg:hidden">
+      <div className="grid gap-2 px-2.5 py-2.5 sm:gap-2.5 sm:px-3 sm:py-3 lg:grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] lg:items-stretch lg:gap-0 lg:divide-x lg:divide-border/30 lg:px-0 lg:py-0">
         <div
+          className="lg:px-4 lg:py-3"
           style={{
             animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
             animationDelay: `${delayFor("kpi", 0)}ms`,
@@ -317,7 +318,7 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard {...primarySnapshotCardProps} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
           {metricDefinitions.map((metric, i) => (
             <div
               key={metric.key}
@@ -337,23 +338,11 @@ export function KpiBar() {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30 lg:grid items-stretch">
-        <div
-          className="px-4 py-3"
-          style={{
-            animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
-            animationDelay: `${delayFor("kpi", 0)}ms`,
-          }}
-        >
-          <PrimarySnapshotCard {...primarySnapshotCardProps} />
-        </div>
 
         {metricDefinitions.map((metric, i) => (
           <div
             key={metric.key}
-            className="h-full flex"
+            className="hidden h-full lg:flex"
             style={{
               animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
               animationDelay: `${delayFor("kpi", i + 1)}ms`,
