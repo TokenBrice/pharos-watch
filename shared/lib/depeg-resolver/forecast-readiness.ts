@@ -66,20 +66,15 @@ function resolutionSignalComponent(input: DdrForecastReadinessInput): DdrForecas
 
   switch (input.resolution.tier) {
     case "recovery_likely":
-      return component(
-        "resolution_signal",
-        "Resolution signal",
-        0.9 + factorLift,
-        0.25,
-        "Resolution outlook has a recoverable read with supporting anchors.",
-      );
     case "recovery_unlikely":
       return component(
         "resolution_signal",
         "Resolution signal",
         0.9 + factorLift,
         0.25,
-        "Resolution outlook has a terminal-leaning read with fired kill signals.",
+        input.resolution.tier === "recovery_likely"
+          ? "Resolution outlook has a recoverable read with supporting anchors."
+          : "Resolution outlook has a terminal-leaning read with fired kill signals.",
       );
     case "at_risk":
       return component(
