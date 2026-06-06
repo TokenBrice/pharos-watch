@@ -7,6 +7,7 @@ import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
 import { useState } from "react";
 import { formatCurrency, formatElapsedSeconds } from "@shared/lib/format";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function SourceBadge({ source }: { source: string }) {
   const colors: Record<string, string> = {
@@ -37,18 +38,11 @@ export function DiscoveryCandidatesCard({
 
   if (!candidates || candidates.length === 0) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Coverage Discovery</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error
-              ? `Discovery candidate loader failed: ${error.message}`
-              : `No untracked stablecoins above ${formatCurrency(DISCOVERY_MIN_MCAP, 1)} found.`}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="Coverage Discovery">
+        {error
+          ? `Discovery candidate loader failed: ${error.message}`
+          : `No untracked stablecoins above ${formatCurrency(DISCOVERY_MIN_MCAP, 1)} found.`}
+      </StatusCardEmptyState>
     );
   }
 

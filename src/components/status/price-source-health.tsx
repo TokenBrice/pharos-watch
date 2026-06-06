@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth, StatusSectionError } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
   const colors: Record<string, string> = {
@@ -46,16 +47,9 @@ export function PriceSourceHealthCard({
 }) {
   if (!health) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Price Source Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error ? `Price source health loader failed: ${error.message}` : "No price source data available yet."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="Price Source Health">
+        {error ? `Price source health loader failed: ${error.message}` : "No price source data available yet."}
+      </StatusCardEmptyState>
     );
   }
 

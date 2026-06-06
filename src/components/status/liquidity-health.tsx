@@ -4,6 +4,7 @@ import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LiquidityHealth, StatusSectionError } from "@shared/types";
 import { formatCurrency } from "@shared/lib/format";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function guardTone(active: boolean): string {
   return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
@@ -18,16 +19,9 @@ export function LiquidityHealthCard({
 }) {
   if (!health) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Liquidity Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error ? `Liquidity health loader failed: ${error.message}` : "No liquidity health data available yet."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="Liquidity Health">
+        {error ? `Liquidity health loader failed: ${error.message}` : "No liquidity health data available yet."}
+      </StatusCardEmptyState>
     );
   }
 

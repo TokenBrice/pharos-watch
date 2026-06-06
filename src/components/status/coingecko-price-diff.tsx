@@ -4,6 +4,7 @@ import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-th
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { CoinGeckoPriceDiff, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function formatUsdPrice(value: number): string {
   if (value >= 1000) {
@@ -45,16 +46,9 @@ export function CoinGeckoPriceDiffCard({
 }) {
   if (!summary) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">CoinGecko Price Drift</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error ? `CoinGecko comparison loader failed: ${error.message}` : "CoinGecko comparison is not available yet."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="CoinGecko Price Drift">
+        {error ? `CoinGecko comparison loader failed: ${error.message}` : "CoinGecko comparison is not available yet."}
+      </StatusCardEmptyState>
     );
   }
 

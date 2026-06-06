@@ -7,6 +7,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 const COLLAPSED_ROW_COUNT = 6;
 
@@ -52,16 +53,9 @@ export function MintBurnReconciliationCard({
 
   if (!summary) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Mint/Burn Reconciliation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error ? `Mint/burn reconciliation loader failed: ${error.message}` : "No reconciliation signal available yet."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="Mint/Burn Reconciliation">
+        {error ? `Mint/burn reconciliation loader failed: ${error.message}` : "No reconciliation signal available yet."}
+      </StatusCardEmptyState>
     );
   }
 

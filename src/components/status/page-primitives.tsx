@@ -5,6 +5,7 @@ import {
   type DashboardNotice,
   type DashboardSectionId,
 } from "@/lib/status-dashboard-model";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function SummaryBadge({
@@ -86,6 +87,25 @@ export function StatusSection({
       </div>
       <div className="mt-5 space-y-5">{children}</div>
     </section>
+  );
+}
+
+export function StatusCardEmptyState({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">{children}</p>
+      </CardContent>
+    </Card>
   );
 }
 

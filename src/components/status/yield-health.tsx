@@ -11,6 +11,7 @@ import type {
 } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 const SOURCE_RISK_COVERAGE_FIELDS = [
   ["sourceRiskPenalty", "Penalty"],
@@ -125,16 +126,9 @@ export function YieldHealthCard({
 }) {
   if (!health) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Yield Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error ? `Yield health loader failed: ${error.message}` : "No yield health data available yet."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="Yield Health">
+        {error ? `Yield health loader failed: ${error.message}` : "No yield health data available yet."}
+      </StatusCardEmptyState>
     );
   }
 

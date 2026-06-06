@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { isTimeRangeOption, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -11,13 +11,8 @@ import {
 } from "@/lib/compare-config";
 import type { CoinOption } from "@/lib/compare-types";
 
-const VALID_COMPARE_RANGES = new Set<TimeRangeOption>(["7d", "30d", "90d", "1y", "all"]);
-
 function normalizeCompareRange(value: string | null): TimeRangeOption {
-  if (value && VALID_COMPARE_RANGES.has(value as TimeRangeOption)) {
-    return value as TimeRangeOption;
-  }
-  return "all";
+  return value !== null && isTimeRangeOption(value) ? value : "all";
 }
 
 export function useCompareSelection() {

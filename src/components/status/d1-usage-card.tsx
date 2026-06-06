@@ -2,6 +2,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { D1UsageSummary, StatusSectionError } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function formatBytes(value: number | null): string {
   if (value == null || !Number.isFinite(value) || value < 0) return "—";
@@ -32,18 +33,11 @@ export function D1UsageCard({
 }) {
   if (!summary) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">D1 Usage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {error
-              ? `D1 usage loader failed: ${error.message}`
-              : "Live D1 metrics are unavailable until the Cloudflare admin bindings are configured."}
-          </p>
-        </CardContent>
-      </Card>
+      <StatusCardEmptyState title="D1 Usage">
+        {error
+          ? `D1 usage loader failed: ${error.message}`
+          : "Live D1 metrics are unavailable until the Cloudflare admin bindings are configured."}
+      </StatusCardEmptyState>
     );
   }
 
