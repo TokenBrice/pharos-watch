@@ -5,7 +5,14 @@ import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty
 import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeApyVarianceScore, computePYS, computeYieldStability, derivePysNullReason, detectWarningSignals } from "../yield-helpers";
+import {
+  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  computeApyVarianceScore,
+  computePYS,
+  computeYieldStability,
+  derivePysNullReason,
+  detectWarningSignals,
+} from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
@@ -295,11 +302,18 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
           });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
+      const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
       const anomalies: string[] = [];
       if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
       if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
       if (historyRows.length > 0 && apy30d > 0 && y.currentApy / apy30d > 2) anomalies.push("source-yield-spike");
       if (historyRows.length > 0 && apy30d > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
+      if (
+        comparisonAnchorAgeSeconds != null &&
+        comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS
+      ) {
+        anomalies.push("anchor-stale");
+      }
 
       return {
         id: stablecoinId,

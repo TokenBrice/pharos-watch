@@ -27,6 +27,7 @@ export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
+export const COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
 
 export {
   computePYS,
@@ -288,10 +289,9 @@ export function matchAllDlPools(
   }
 
   // Layer 3: Base-symbol fallback (only when BOTH static maps miss — stablecoin=true required).
-  // Intentionally uses .includes() instead of === to catch DL pools with prefixed/suffixed
-  // symbols (e.g., "FEUSDH" for USDH, "STEAKEURCV" for EURCV). Layers 1 and 2 catch most
-  // coins first, so Layer 3 only fires when both miss. A minimum symbol length of 4 prevents
-  // short symbols like "USD" from matching everything.
+  // Prefer address corroboration first, then exact normalized symbol equality. Substring-only
+  // matches are intentionally excluded because they can attach a base asset to an unrelated
+  // prefixed/suffixed wrapper.
   if (found.length === 0) {
     const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
@@ -310,7 +310,7 @@ export function matchAllDlPools(
         const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
         found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
       } else {
-        const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol).includes(sym));
+        const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === sym);
         if (symbolCandidates.length === 1) {
           const candidate = symbolCandidates[0];
           found.push({

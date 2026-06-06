@@ -64,6 +64,10 @@ export function buildYieldSyncMetadata(input: {
   expectedYieldBearingCount: number;
   publishedYieldBearingCount: number;
   previousPublishedYieldBearingCount: number;
+  publishedOpportunityCount: number;
+  previousPublishedOpportunityCount: number;
+  publishedRankingCount: number;
+  previousPublishedRankingCount: number;
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
   onChainRatesResolved: number;
@@ -103,6 +107,10 @@ export function buildYieldSyncMetadata(input: {
       expectedYieldBearingCount: input.expectedYieldBearingCount,
       publishedYieldBearingCount: input.publishedYieldBearingCount,
       previousPublishedYieldBearingCount: input.previousPublishedYieldBearingCount,
+      publishedOpportunityCount: input.publishedOpportunityCount,
+      previousPublishedOpportunityCount: input.previousPublishedOpportunityCount,
+      publishedRankingCount: input.publishedRankingCount,
+      previousPublishedRankingCount: input.previousPublishedRankingCount,
       dlPoolCount: input.dlPoolsMeta.poolCount,
       supplementalSourceMode: input.supplementalMeta.mode,
       supplementalSourceUpdatedAt: input.supplementalMeta.updatedAt,

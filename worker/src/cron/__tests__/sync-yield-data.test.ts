@@ -1775,6 +1775,119 @@ describe("syncYieldData", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
+  it("returns degraded when published lending-opportunity coverage regresses against the previous snapshot", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") {
+        return {
+          value: JSON.stringify({
+            rankings: [
+              { id: "100" },
+              ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" })),
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string | null;
+      previousPublishedOpportunityCount: number;
+      currentPublishedOpportunityCount: number;
+      previousPublishedRankingCount: number;
+      currentPublishedRankingCount: number;
+    };
+    expect(metadata.reason).toBe("published-lending-opportunity-coverage-regression");
+    expect(metadata.previousPublishedOpportunityCount).toBe(10);
+    expect(metadata.currentPublishedOpportunityCount).toBe(0);
+    expect(metadata.previousPublishedRankingCount).toBe(11);
+    expect(metadata.currentPublishedRankingCount).toBe(1);
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("returns degraded when total published ranking count regresses against the previous snapshot", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") {
+        return {
+          value: JSON.stringify({
+            rankings: Array.from({ length: 10 }, (_, index) => ({ id: `legacy-opportunity-${index}` })),
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string | null;
+      previousPublishedRankingCount: number;
+      currentPublishedRankingCount: number;
+    };
+    expect(metadata.reason).toBe("published-total-coverage-regression");
+    expect(metadata.previousPublishedRankingCount).toBe(10);
+    expect(metadata.currentPublishedRankingCount).toBe(1);
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   it("recovers a malformed previous yield-rankings cache when the new payload passes guards", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);

@@ -29,7 +29,7 @@ function countYieldRankings(
 
 export async function readPreviousYieldRankingsCount(
   db: D1Database,
-  options?: { allowedIds?: Set<string> },
+  options?: { allowedIds?: Set<string>; allowMalformedRecovery?: boolean },
 ): Promise<{ count: number; malformed: boolean }> {
   const previousCache = await getCache(db, "yield-rankings");
   const previousRankings = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
@@ -41,7 +41,7 @@ export async function readPreviousYieldRankingsCount(
     return { count: 0, malformed: false };
   }
   if (previousRankings.status === "malformed") {
-    if (options?.allowedIds) {
+    if (options?.allowedIds || options?.allowMalformedRecovery) {
       // Let the later schema and absolute-coverage publish guards decide whether
       // a valid replacement can recover a malformed public cache.
       return { count: 0, malformed: false };

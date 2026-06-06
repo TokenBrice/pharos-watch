@@ -4,6 +4,7 @@ import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
@@ -29,6 +30,10 @@ describe("STALE_THRESHOLD_MS", () => {
 
   it("gives supplemental families one four-hour cycle plus buffer before stale", () => {
     expect(SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-supplemental"] * 1.5 * 1000);
+  });
+
+  it("marks comparison anchors stale after the conservative two-week window", () => {
+    expect(COMPARISON_ANCHOR_STALE_THRESHOLD_MS).toBe(14 * 24 * 60 * 60 * 1000);
   });
 });
 
@@ -639,14 +644,56 @@ describe("matchAllDlPools", () => {
     expect(result[0].pool).toBe("other-uuid");
   });
 
-  it("skips Layer 3 includes fallback for symbols shorter than 4 chars", () => {
+  it("skips Layer 3 symbol fallback for symbols shorter than 4 chars", () => {
     const pools = [
       { pool: "p1", symbol: "USDH", project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, apyReward: null, exposure: "single", stablecoin: true },
       { pool: "p2", symbol: "USDT", project: "test", tvlUsd: 10e6, apy: 2, apyBase: 2, apyReward: null, exposure: "single", stablecoin: true },
     ];
-    // "USD" is 3 chars — should not match anything via includes
+    // "USD" is 3 chars and should not match anything through fallback symbol matching.
     const result = matchAllDlPools("no-static-match", "USD", pools, {}, {});
     expect(result).toHaveLength(0);
+  });
+
+  it("does not accept Layer 3 substring-only symbol matches", () => {
+    const pools = [
+      {
+        pool: "p1",
+        symbol: "FEUSDH",
+        project: "test",
+        tvlUsd: 5e6,
+        apy: 3,
+        apyBase: 3,
+        apyReward: null,
+        exposure: "single",
+        stablecoin: true,
+      },
+    ];
+
+    const result = matchAllDlPools("usdh-test", "USDH", pools, {}, {});
+    expect(result).toHaveLength(0);
+  });
+
+  it("keeps Layer 3 wrapper matches when the underlying token address corroborates identity", () => {
+    const pools = [
+      {
+        pool: "p1",
+        symbol: "FEUSDH",
+        project: "test",
+        tvlUsd: 5e6,
+        apy: 3,
+        apyBase: 3,
+        apyReward: null,
+        exposure: "single",
+        stablecoin: true,
+        underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111"],
+      },
+    ];
+
+    const result = matchAllDlPools("usdh-test", "USDH", pools, {}, {}, {
+      contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.pool).toBe("p1");
   });
 });
 

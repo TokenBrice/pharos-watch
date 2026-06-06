@@ -10,7 +10,7 @@ import type {
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { getRankingStaleThresholdMs } from "../yield-helpers";
+import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import { buildPublicDecisionLedger } from "./decision-public";
@@ -193,7 +193,14 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         : input.startSec;
     const updatedAtMs = sourceObservedAt * 1000;
     const staleThresholdMs = getRankingStaleThresholdMs(source.dataSource, source.sourceKey);
-    if (updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) {
+    const comparisonAnchorAgeSeconds =
+      provenance != null && typeof provenance.comparisonAnchorAgeSeconds === "number"
+        ? provenance.comparisonAnchorAgeSeconds
+        : null;
+    const staleComparisonAnchor =
+      comparisonAnchorAgeSeconds != null &&
+      comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
+    if ((updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) || staleComparisonAnchor) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
       }

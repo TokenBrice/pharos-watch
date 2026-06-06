@@ -12,6 +12,7 @@ import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
@@ -131,6 +132,7 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
 function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial<EvaluatedYieldSource> = {}) {
   const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
   const source = makeEvaluatedSource(overrides);
+  const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const benchmark = makeBenchmarkMeta();
   const benchmarks: ParsedYieldBenchmarkRegistry = {
     USD: benchmark,
@@ -155,6 +157,11 @@ function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial
           sourceKey: source.sourceKey,
           sourceObservedAt,
           sourceAgeSeconds: Math.max(0, startSec - sourceObservedAt),
+          comparisonAnchorObservedAt,
+          comparisonAnchorAgeSeconds:
+            comparisonAnchorObservedAt == null
+              ? null
+              : Math.max(0, startSec - comparisonAnchorObservedAt),
           confidenceTier: source.confidenceTier,
           selectionMethod: "confidence-weighted" as const,
           selectionReason: "test",
@@ -257,6 +264,32 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
         sourceKey: "protocol-api:pendle:ethereum:0xpool",
       },
     );
+
+    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("does not add data-stale for a fresh comparison anchor", () => {
+    const thresholdSec = COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "onchain",
+      sourceKey: "onchain:test-coin",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - thresholdSec + 60,
+    });
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+
+  it("adds data-stale when a fresh on-chain row uses an old comparison anchor", () => {
+    const thresholdSec = COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "onchain",
+      sourceKey: "onchain:test-coin",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
+    });
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
   });

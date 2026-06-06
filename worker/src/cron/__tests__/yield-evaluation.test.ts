@@ -296,6 +296,29 @@ describe("evaluateYieldSources", () => {
     expect(stale?.sourceRiskPenalty).toBeGreaterThan(1);
   });
 
+  it("marks derived rows with materially stale comparison anchors", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "onchain:coin-a",
+            dataSource: "onchain",
+            sourceObservedAt: startSec,
+            comparisonAnchorObservedAt: startSec - 15 * 86400,
+          }),
+        },
+      ],
+    }));
+
+    const source = result.evaluatedSources.find((row) => row.sourceKey === "onchain:coin-a");
+    expect(source?.sourceObservedAt).toBe(startSec);
+    expect(source?.anomalies).toContain("anchor-stale");
+  });
+
   it("penalizes reward-heavy rows when reward APY exceeds current APY", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [

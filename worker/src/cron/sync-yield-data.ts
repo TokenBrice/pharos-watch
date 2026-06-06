@@ -1,5 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { CronResult } from "../lib/cron-logger";
 import { getCache } from "../lib/db-cache";
@@ -52,6 +53,11 @@ export async function syncYieldData(
   const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
   const yieldCoins = ACTIVE_YIELD_BEARING_STABLECOINS;
   const yieldCoinIdSet = new Set(yieldCoins.map((coin) => coin.id));
+  const opportunityCoinIdSet = new Set(
+    ACTIVE_STABLECOINS
+      .map((coin) => coin.id)
+      .filter((id) => !yieldCoinIdSet.has(id)),
+  );
 
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
@@ -234,6 +240,7 @@ export async function syncYieldData(
     db,
     previewRankingsPayload,
     yieldCoinIdSet,
+    opportunityCoinIdSet,
   });
   if (publishedCoverageGuard.result) {
     return publishedCoverageGuard.result;
@@ -241,6 +248,10 @@ export async function syncYieldData(
   const {
     previousPublishedYieldBearingCount,
     currentPublishedYieldBearingCount,
+    previousPublishedOpportunityCount,
+    currentPublishedOpportunityCount,
+    previousPublishedRankingCount,
+    currentPublishedRankingCount,
   } = publishedCoverageGuard;
 
   const degradationReasons = buildYieldDegradationReasons({
@@ -290,6 +301,10 @@ export async function syncYieldData(
       expectedYieldBearingCount: yieldCoins.length,
       publishedYieldBearingCount: currentPublishedYieldBearingCount,
       previousPublishedYieldBearingCount,
+      publishedOpportunityCount: currentPublishedOpportunityCount,
+      previousPublishedOpportunityCount,
+      publishedRankingCount: currentPublishedRankingCount,
+      previousPublishedRankingCount,
       dlPoolsMeta,
       supplementalMeta,
       onChainRatesResolved: onChainRates.size,

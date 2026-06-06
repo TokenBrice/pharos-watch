@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.20`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.21`.
+
+---
+
+## v8.21 - Anchor Freshness and Published Coverage Guards (June 6, 2026)
+
+- Derived on-chain and price-derived rows now treat comparison anchors older than 14 days as stale freshness evidence
+- Rows with stale anchors carry `anchor-stale` decision evidence and publish the existing `data-stale` warning even when the current source observation was fetched in the current hourly run
+- The hourly publisher now compares candidate rankings against the previous public cache for yield-bearing rows, non-yield-bearing lending-opportunity rows, and total ranking count before replacing the public snapshot
+- Severe lending-opportunity or total ranking collapses return a degraded no-op instead of silently overwriting the previous public rankings with partial supplemental coverage
+- Layer 3 DeFiLlama fallback no longer accepts substring-only symbol matches; exact normalized symbols still match, and prefixed/suffixed wrappers require underlying-token address corroboration
+- PYS scoring math, source confidence tiers, and source-risk penalty calibration are unchanged
 
 ---
 

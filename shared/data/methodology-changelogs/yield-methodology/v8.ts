@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.21",
+    title: "Anchor Freshness and Published Coverage Guards",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "Yield publication now treats stale comparison anchors as stale data, blocks severe lending-opportunity or total ranking collapses against the prior public snapshot, and tightens Layer-3 DeFiLlama fallback matching to exact symbols or address-corroborated wrappers.",
+    impact: [
+      "On-chain and price-derived rows with comparison anchors older than 14 days carry `anchor-stale` decision evidence and publish the existing `data-stale` warning even when the current source observation is fresh",
+      "The hourly publisher compares the candidate rankings against the previous public cache for yield-bearing rows, non-yield-bearing lending-opportunity rows, and total ranking count before replacing the cache",
+      "Severe lending-opportunity or total ranking count regressions return a degraded no-op so partial supplemental loss does not silently overwrite the last good public rankings snapshot",
+      "Layer-3 DeFiLlama fallback no longer accepts substring-only symbol matches; exact normalized symbols can still match, and prefixed/suffixed wrapper rows require underlying-token address corroboration",
+      "PYS scoring math and source confidence tiers are unchanged; the bump records publication safety, freshness labeling, and source-resolution guardrails",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.20",
     title: "Deterministic APY Sanity Envelope",
     date: "2026-06-06",
