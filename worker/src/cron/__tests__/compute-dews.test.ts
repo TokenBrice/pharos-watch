@@ -173,7 +173,6 @@ interface MakeDbOptions {
 function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
-    let boundArgs: unknown[] = [];
     const all = async <T>() => {
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
         return {
@@ -282,7 +281,6 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
 
     return {
       bind: (...args: unknown[]) => {
-        boundArgs = args;
         opts.onBind?.(sql, args);
         return { all, first, run };
       },
