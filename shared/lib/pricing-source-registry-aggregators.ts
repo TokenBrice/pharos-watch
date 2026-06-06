@@ -66,6 +66,7 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
     defaultWeight: 1,
     isGtProbeEligible: true,
     isListAggregator: true,
+    requiresObservedAt: true,
     defaultObservedAtMode: null,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {

@@ -52,6 +52,29 @@ describe("pricing source freshness", () => {
     });
   });
 
+  it("requires observed-at metadata for DefiLlama list prices before applying its staleness window", () => {
+    expect(validatePricingSourceFreshness({
+      source: "defillama-list",
+      observedAt: null,
+      observedAtMode: "unknown",
+      nowSec: 1_800_000_000,
+    })).toMatchObject({
+      accepted: false,
+      reason: "missing_observed_at",
+    });
+
+    expect(validatePricingSourceFreshness({
+      source: "defillama-list",
+      observedAt: 1_799_999_000,
+      observedAtMode: "unknown",
+      nowSec: 1_800_000_000,
+    })).toMatchObject({
+      accepted: false,
+      reason: "stale_observed_at",
+      maxAgeSec: 900,
+    });
+  });
+
   it("validates every component of composite source labels against the strictest component", () => {
     expect(validateCompositePricingSourceFreshness({
       source: "coingecko+pyth",

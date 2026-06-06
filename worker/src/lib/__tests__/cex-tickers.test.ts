@@ -19,7 +19,7 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
 } from "../cex-tickers";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 
 beforeEach(() => sleepWithSignalMock.mockClear());
@@ -508,6 +508,14 @@ describe("COINBASE_KNOWN_SYMBOLS", () => {
 
 describe("exchange symbol allowlists", () => {
   const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol.toUpperCase()));
+  const allKnownSymbols = [
+    ...new Set([
+      ...BINANCE_KNOWN_SYMBOLS,
+      ...KRAKEN_KNOWN_SYMBOLS,
+      ...BITSTAMP_KNOWN_SYMBOLS,
+      ...COINBASE_KNOWN_SYMBOLS,
+    ]),
+  ].sort();
 
   it("keeps Binance symbols uppercase and tracked", () => {
     expect(new Set(BINANCE_KNOWN_SYMBOLS).size).toBe(BINANCE_KNOWN_SYMBOLS.length);
@@ -538,6 +546,16 @@ describe("exchange symbol allowlists", () => {
     for (const symbol of COINBASE_KNOWN_SYMBOLS) {
       expect(symbol).toBe(symbol.toUpperCase());
       expect(trackedSymbols.has(symbol)).toBe(true);
+    }
+  });
+
+  it("maps every curated CEX symbol to exactly one tracked stablecoin id", () => {
+    for (const symbol of allKnownSymbols) {
+      const matchingIds = TRACKED_STABLECOINS
+        .filter((stablecoin) => stablecoin.symbol.toUpperCase() === symbol)
+        .map((stablecoin) => stablecoin.id);
+
+      expect(matchingIds, `${symbol} CEX symbol must have exactly one tracked owner`).toHaveLength(1);
     }
   });
 });

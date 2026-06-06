@@ -109,6 +109,14 @@ describe("pricing source registry", () => {
       defaultWeight: 3,
     });
 
+    expect(getPricingSourceRegistryEntry("defillama-list")).toMatchObject({
+      key: "defillama-list",
+      trustTier: "soft_aggregator",
+      requiresObservedAt: true,
+      maxTrustedAgeSec: 15 * 60,
+      defaultObservedAtMode: null,
+    });
+
     expect(getPricingSourceRegistryEntry("zephyr-scanner")).toMatchObject({
       key: "zephyr-scanner",
       trustTier: "hard_protocol",

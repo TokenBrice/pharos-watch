@@ -396,6 +396,22 @@ describe("buildPrimarySourceCandidates", () => {
     expect(coinbase?.observedAtMode).toBe("upstream");
   });
 
+  it("rejects DefiLlama list prices without observed-at metadata", () => {
+    const collected = makeCollected({
+      dlListQuote: {
+        price: 1.0001,
+        observedAt: null,
+        observedAtMode: "unknown",
+      },
+    });
+
+    const { sources } = buildPrimarySourceCandidates({ id: "usdt-test", symbol: "USDT" }, collected, {
+      nowSec: 1_776_439_510,
+    });
+
+    expect(sources.some((source) => source.source === "defillama-list")).toBe(false);
+  });
+
   it("rejects stale Bitstamp and Coinbase upstream observations before hard-market admission", () => {
     const collected = makeCollected({
       bitstampPrice: 0.9999,
