@@ -7,7 +7,7 @@ import { PRICING_PIPELINE_V6 } from "../../data/methodology-changelogs/pricing-p
 import { createMethodologyVersion } from "./base";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "6.13",
+  currentVersion: "6.14",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
     ...PRICING_PIPELINE_V6,

@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-06-06T17:01:32+02:00",
+    "dateModified": "2026-06-06T18:32:45+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -24,11 +24,11 @@
     "dateCreated": "2026-02-19T17:42:02+01:00"
   },
   "pricing-pipeline": {
-    "dateModified": "2026-06-06T17:01:56+02:00",
+    "dateModified": "2026-06-06T18:32:45+02:00",
     "dateCreated": "2026-03-14T09:59:04+01:00"
   },
   "depeg-detection": {
-    "dateModified": "2026-06-06T17:02:30+02:00",
+    "dateModified": "2026-06-06T18:32:45+02:00",
     "dateCreated": "2026-02-28T12:27:51+01:00"
   },
   "dews": {

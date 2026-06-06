@@ -3343,6 +3343,56 @@ describe("applyPoolChallenge", () => {
     expect(result.observedAt).toBe(1_780_641_624);
   });
 
+  it("replaces depeg-sized soft consensus when a high-TVL DEX protocol agrees with a hard depeg candidate", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["apxusd-apyx", {
+        price: 0.9207390119709549,
+        source: "alchemy-address+coingecko+curve-dex",
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        confidence: "low",
+        dlPrice: 0.9029027110580571,
+        cgPrice: 0.920669,
+        candidateSources: [
+          "coingecko",
+          "defillama-list",
+          "curve-onchain",
+          "alchemy-address",
+          "curve-dex",
+          "uniswap-v4-dex",
+        ],
+        agreeSources: ["coingecko", "alchemy-address", "curve-dex"],
+        disagreeSources: ["defillama-list", "curve-onchain", "uniswap-v4-dex"],
+        allPrices: {
+          coingecko: 0.920669,
+          "defillama-list": 0.9029027110580571,
+          "curve-onchain": 0.9096446090435735,
+          "alchemy-address": 0.9207390119709549,
+          "curve-dex": 0.9207390119709549,
+          "uniswap-v4-dex": 1.0001161257,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["apxusd-apyx", [
+        { price: 0.9096446090435735, tvlUsd: 17_862_827, protocol: "curve", chain: "ethereum", observedAt: 1_780_760_659 },
+        { price: 1.0001161257, tvlUsd: 1_328_507, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_760_659 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
+    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 };
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("apxusd-apyx")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.9096446090435735, 9);
+    expect(result.allPrices).toEqual({ "pool-tvl-weighted": result.price });
+    expect(result.observedAt).toBe(1_780_760_659);
+  });
+
   it("replaces recovered soft consensus when multiple high-TVL DEX protocols directionally corroborate a depeg", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["apxusd-apyx", {

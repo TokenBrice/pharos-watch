@@ -387,6 +387,8 @@ Response:
 }
 ```
 
+When DDR has linked multiple raw rows into one active repaired incident, the endpoint returns the incident's current event row, excludes superseded source rows from the active projection, and projects the public `startedAt`/`startPrice` from the first linked row.
+
 Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
 
 Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the latest successful `sync-stablecoins` timestamp, falling back to the latest event `startedAt` when cron history is unavailable; TTL remains 900s.

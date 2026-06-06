@@ -100,7 +100,7 @@ export function applyPoolChallenge(
   for (const [assetId, result] of results) {
     if (result.confidence !== "high" && result.confidence !== "single-source" && result.confidence !== "low") continue;
     if (navTokenAssetIds?.has(assetId)) continue;
-    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
+    const challengeSources = result.agreeSources.length > 0 ? result.agreeSources : [result.source];
     if (!isPoolChallengeEligibleConsensus(challengeSources)) continue;
 
     const pools = poolChallengers.get(assetId);
@@ -212,19 +212,17 @@ function selectReplacementProtocolGroups(params: {
 
   const depegThresholdBps = getDepegThresholdBps(params.pegType);
   const resultAbsBps = Math.abs(priceDeviationBps(params.result.price, pegRef));
-  if (resultAbsBps >= depegThresholdBps) {
-    return [];
-  }
-
-  const directionalHighTvlGroups = selectHighTvlDirectionalReplacementGroups({
-    protocolGroups: params.protocolGroups,
-    pegRef,
-    depegThresholdBps,
-    poolChallengeBps: params.poolChallengeBps,
-    resultPrice: params.result.price,
-  });
-  if (directionalHighTvlGroups.length >= 2) {
-    return directionalHighTvlGroups;
+  if (resultAbsBps < depegThresholdBps) {
+    const directionalHighTvlGroups = selectHighTvlDirectionalReplacementGroups({
+      protocolGroups: params.protocolGroups,
+      pegRef,
+      depegThresholdBps,
+      poolChallengeBps: params.poolChallengeBps,
+      resultPrice: params.result.price,
+    });
+    if (directionalHighTvlGroups.length >= 2) {
+      return directionalHighTvlGroups;
+    }
   }
 
   return params.protocolGroups.filter((group) => (

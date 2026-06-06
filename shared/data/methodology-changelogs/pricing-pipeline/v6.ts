@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.14",
+      title: "Depeg-sized hard-corroborated DEX replacement",
+      date: "2026-06-06",
+      effectiveAt: 1780763002,
+      summary:
+        "Pool challenge can now replace a depeg-sized soft consensus price when a high-TVL DEX protocol median agrees with a hard primary candidate.",
+      impact: [
+        "The single-protocol replacement exception no longer requires the published soft result itself to be inside the peg depeg threshold",
+        "The replacement still requires at least $5M of protocol-level DEX TVL, depeg-sized DEX evidence, material divergence from the published soft result, and hard market/oracle/protocol candidate agreement",
+        "Uncorroborated single-protocol divergence, same-protocol noisy pools, and incoherent cross-protocol DEX prices still preserve the original price while downgrading confidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.13",
       title: "RedStone stablecoin-id attribution",
       date: "2026-06-06",

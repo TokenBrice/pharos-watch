@@ -995,7 +995,7 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 
 Results are ordered by `startedAt DESC, id DESC`. Prefer `cursor`/`nextCursor` for deep pagination; offset pagination is retained for shallow compatibility only.
 
-Results are ordered by `startedAt` descending (most recent first).
+When the Depeg Duration Resolver has linked multiple raw event rows into one active repaired incident, this endpoint returns only the incident's current event row, excludes superseded source rows from the active projection, and projects the public `startedAt`/`startPrice` from the first linked row.
 
 **`DepegEvent`**
 

@@ -107,6 +107,58 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.sql).toContain("ended_at IS NULL");
   });
 
+  it("excludes superseded rows from active DDR incident repairs", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "depeg_events", rows: [row] },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
+
+    expect(res.status).toBe(200);
+    const dataQuery = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("FROM depeg_events") && !entry.sql.includes("COUNT(*)"));
+    expect(dataQuery?.sql).toContain("depeg_resolver_incident_event_links");
+    expect(dataQuery?.sql).toContain("links.event_id != incidents.current_event_id");
+  });
+
+  it("projects active DDR incidents from the first linked event start", async () => {
+    const currentRow = makeDepegRow({
+      id: 90089,
+      stablecoin_id: "apxusd-apyx",
+      started_at: 1_780_671_044,
+      start_price: 0.9365,
+    });
+    const db = mockD1([
+      {
+        match: "FROM depeg_resolver_incidents incidents",
+        matchBinds: ["apxusd-apyx"],
+        rows: [
+          {
+            current_event_id: 90089,
+            first_started_at: 1_780_437_028,
+            first_start_price: 0.9893,
+            first_peg_reference: 1,
+          },
+        ],
+      },
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "FROM depeg_events_with_provenance", rows: [currentRow] },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]).toMatchObject({
+      id: 90089,
+      startedAt: 1_780_437_028,
+      startPrice: 0.9893,
+      pegReference: 1,
+    });
+  });
+
   it("includes X-Data-Age header", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
