@@ -389,6 +389,78 @@ describe("computeDepegResolver", () => {
     });
   });
 
+  it("publishes degraded empty rows when context loading cannot use stablecoins cache", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores } = storesFor();
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      { match: "FROM cache WHERE key = ?", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    const result = await computeDepegResolver({
+      db,
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+
+    expect(metadata.degraded).toBe(true);
+    expect(metadata.degradedReason).toBe("stablecoins-cache-missing-cache");
+    expect(metadata.v2FreezeSkipped).toBe(true);
+    expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
+    expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
+    const ddrCacheWrite = db
+      .getHistory()
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toBe("stablecoins-cache-missing-cache");
+    expect(payload.rows).toEqual([]);
+  });
+
+  it("falls back to degraded empty rows when prior snapshot cache read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores } = storesFor();
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      { match: "FROM cache WHERE key = ?", throwError: new Error("cache unavailable"), rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: false,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+
+    const ddrCacheWrite = db
+      .getHistory()
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
+    expect(payload.rows).toEqual([]);
+  });
+
   it("seals a backstop-eligible insufficient-signal incident as a no-call before publication", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
