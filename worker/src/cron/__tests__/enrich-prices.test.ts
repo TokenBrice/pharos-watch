@@ -2313,6 +2313,14 @@ describe("fetchPrimaryPrices", () => {
     vi.unstubAllGlobals();
   });
 
+  function makeFreshDlListPrices(entries: Array<[string, number]>) {
+    const observedAt = Math.floor(Date.now() / 1000) - 60;
+    return new Map(entries.map(([id, price]) => [
+      id,
+      { price, observedAt, observedAtMode: "upstream" as const },
+    ]));
+  }
+
   function makeTestDb() {
     return mockD1([
       { match: "circuit", rows: [] },
@@ -2373,7 +2381,7 @@ describe("fetchPrimaryPrices", () => {
       }],
     });
 
-    const dlListPrices = new Map([["usr-resolv", 0.549146]]);
+    const dlListPrices = makeFreshDlListPrices([["usr-resolv", 0.549146]]);
     const { results } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     const result = results.get("usr-resolv");
@@ -2506,7 +2514,7 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const dlListPrices = new Map([["usdt-tether", 1.0002]]);
+    const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
     const { results, stats, cgPrices } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
@@ -2674,7 +2682,7 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const dlListPrices = new Map([["usdt-tether", 1.05]]);
+    const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.05]]);
     const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
@@ -2698,7 +2706,7 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const dlListPrices = new Map([["eurc-circle", 1.8]]);
+    const dlListPrices = makeFreshDlListPrices([["eurc-circle", 1.8]]);
     const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
@@ -2733,7 +2741,7 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const dlListPrices = new Map([["ousg-ondo-finance", 110]]);
+    const dlListPrices = makeFreshDlListPrices([["ousg-ondo-finance", 110]]);
     const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
@@ -2758,7 +2766,7 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const dlListPrices = new Map([["usdt-tether", 1.0]]);
+    const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0]]);
     const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
