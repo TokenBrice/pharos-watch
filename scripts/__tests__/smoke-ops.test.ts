@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  assertNonceProtectedHtml,
   extractCookiePairs,
   fetchJsonWithRetry,
   fetchOpsUiProxyStatus,
@@ -70,6 +71,52 @@ describe("mergeCookieHeader", () => {
     expect(mergeCookieHeader("CF_Authorization=old", ["other=value", "CF_Authorization=new"])).toBe(
       "CF_Authorization=new; other=value",
     );
+  });
+});
+
+describe("assertNonceProtectedHtml", () => {
+  it("accepts inline scripts that carry the CSP nonce", () => {
+    const response = new Response(null, {
+      headers: {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval'",
+      },
+    });
+
+    expect(() =>
+      assertNonceProtectedHtml(
+        response,
+        '<html><body><script nonce="abc123">self.__next_f=[];</script><script src="/_next/static/chunk.js"></script></body></html>',
+        "Ops UI",
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects inline scripts when the CSP nonce is missing", () => {
+    const response = new Response(null, {
+      headers: {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval'",
+      },
+    });
+
+    expect(() =>
+      assertNonceProtectedHtml(response, "<html><body><script>self.__next_f=[];</script></body></html>", "Ops UI"),
+    ).toThrow("Ops UI CSP script-src is missing a nonce");
+  });
+
+  it("rejects inline scripts that do not carry the CSP nonce", () => {
+    const response = new Response(null, {
+      headers: {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval'",
+      },
+    });
+
+    expect(() =>
+      assertNonceProtectedHtml(
+        response,
+        '<html><body><script nonce="wrong">self.__next_f=[];</script><script>window.__INLINE__=true;</script></body></html>',
+        "Ops UI",
+      ),
+    ).toThrow("Ops UI has 2 inline script(s) without the CSP nonce");
   });
 });
 

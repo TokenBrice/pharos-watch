@@ -1,8 +1,12 @@
 /admin/*
   X-Robots-Tag: noindex, nofollow
+  ! Cache-Control
+  Cache-Control: private, no-store
 
 /admin-api/*
   X-Robots-Tag: noindex, nofollow
+  ! Cache-Control
+  Cache-Control: private, no-store
 
 /portfolio/*
   X-Robots-Tag: noindex, follow

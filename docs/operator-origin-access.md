@@ -11,6 +11,7 @@ Current repo-side state:
 - the Worker is attached to `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
 - `/admin/` only serves the live operator panel on `ops.pharos.watch`; `/admin-api/` only serves private API management there. The public host is blocked by Pages host-gate functions and returns non-indexed `404` responses.
+- `/admin/*` and `/admin-api/*` static fallback headers are `no-store`; the host-gate functions also nonce-authorize inline scripts and return `no-store` HTML so stale pre-hydration operator shells cannot persist in shared caches.
 - `/status/` is public and read-only on both the public and ops hosts
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
 

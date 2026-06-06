@@ -49,6 +49,15 @@ describe("Pages function routes", () => {
 });
 
 describe("Pages static headers", () => {
+  it("keeps private operator HTML out of the static fallback cache", () => {
+    expect(headersFile).toContain(
+      "/admin/*\n  X-Robots-Tag: noindex, nofollow\n  ! Cache-Control\n  Cache-Control: private, no-store",
+    );
+    expect(headersFile).toContain(
+      "/admin-api/*\n  X-Robots-Tag: noindex, nofollow\n  ! Cache-Control\n  Cache-Control: private, no-store",
+    );
+  });
+
   it("keeps chain route HTML out of immutable asset cache rules", () => {
     expect(headersFile).not.toMatch(/^\/chains\/\*\s*$/m);
     expect(headersFile).toContain(

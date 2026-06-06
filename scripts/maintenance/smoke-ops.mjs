@@ -66,6 +66,41 @@ async function fetchText(url, headers) {
   return { response, body };
 }
 
+function getCspDirective(csp, directiveName) {
+  return (csp ?? "")
+    .split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith(`${directiveName} `)) ?? "";
+}
+
+function getInlineScriptTags(html) {
+  return [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>/gi)].map((match) => match[0]);
+}
+
+function getScriptTagNonce(scriptTag) {
+  const match = scriptTag.match(/\bnonce=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? "";
+}
+
+export function assertNonceProtectedHtml(response, body, label) {
+  const inlineScripts = getInlineScriptTags(body);
+  if (inlineScripts.length === 0) {
+    return;
+  }
+
+  const scriptSrc = getCspDirective(response.headers.get("Content-Security-Policy"), "script-src");
+  const nonceMatch = scriptSrc.match(/(?:^|\s)'nonce-([^']+)'(?:\s|$)/);
+  const cspNonce = nonceMatch?.[1] ?? "";
+  assert(cspNonce, `${label} CSP script-src is missing a nonce`);
+  assert(!scriptSrc.includes("'unsafe-inline'"), `${label} CSP script-src still permits unsafe inline scripts`);
+
+  const missingNonceCount = inlineScripts.filter((scriptTag) => getScriptTagNonce(scriptTag) !== cspNonce).length;
+  assert(
+    missingNonceCount === 0,
+    `${label} has ${missingNonceCount} inline script(s) without the CSP nonce`,
+  );
+}
+
 export async function fetchJson(url, headers, fetchImpl = fetch, requestInit = {}) {
   const response = await fetchImpl(url, { ...requestInit, headers, redirect: "manual" });
   const bodyText = await response.text();
@@ -316,6 +351,7 @@ export async function run() {
       !ui.body.includes("Operator tooling is no longer available on the public host."),
       "Ops UI returned the public-host fallback shell",
     );
+    assertNonceProtectedHtml(ui.response, ui.body, "Ops UI");
     console.log("[smoke-ops] OK ops UI via service token");
   } else {
     const location = ui.response.headers.get("Location") ?? "";
@@ -344,6 +380,7 @@ export async function run() {
       !adminApi.body.includes("API management is not available on the public host."),
       "Admin API UI returned the public-host fallback shell",
     );
+    assertNonceProtectedHtml(adminApi.response, adminApi.body, "Admin API UI");
     console.log("[smoke-ops] OK /admin-api/ via service token");
   } else {
     const location = adminApi.response.headers.get("Location") ?? "";
