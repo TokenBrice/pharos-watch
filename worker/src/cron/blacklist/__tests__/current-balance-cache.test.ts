@@ -245,6 +245,72 @@ describe("syncCurrentBalanceCacheForRows", () => {
     );
   });
 
+  it("captures a same-batch blacklist snapshot before a later release", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(875);
+
+    const blacklistRow = {
+      id: "3c-blacklist",
+      stablecoin: "USDT" as const,
+      chain_id: "ethereum",
+      chain_name: "Ethereum",
+      event_type: "blacklist" as const,
+      address: "0x333c",
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable" as const,
+      amount_status: "recoverable_pending" as const,
+      tx_hash: "0xblacklist-transient",
+      block_number: 3,
+      timestamp: 12,
+      methodology_version: "3.997",
+      contract_address: ethereumConfig.contractAddress,
+      config_key: ethereumConfig.configKey,
+      event_signature: "AddedBlackList(address)",
+      event_topic0: "0xtopic",
+      amount_attempt_count: 0,
+      amount_last_attempted_at: null,
+      amount_last_error_class: null,
+      amount_last_provider: null,
+      explorer_tx_url: "https://etherscan.io/tx/0xblacklist-transient",
+      explorer_address_url: "https://etherscan.io/address/0x333c",
+    };
+    const releaseRow = {
+      ...blacklistRow,
+      id: "3c-unblacklist",
+      event_type: "unblacklist" as const,
+      tx_hash: "0xunblacklist-transient",
+      block_number: 4,
+      timestamp: 13,
+      event_signature: "RemovedBlackList(address)",
+    };
+
+    const result = await syncCurrentBalanceCacheForRows(
+      {} as D1Database,
+      ethereumConfig,
+      [releaseRow, blacklistRow],
+      makeContext(),
+    );
+
+    expect(result).toEqual({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+    expect(fetchEvmTokenCurrentBalance).toHaveBeenCalledTimes(1);
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        address: "0x333c",
+        amountNative: 875,
+        amountUsd: 875,
+        source: "current_balance",
+        status: "resolved",
+      }),
+    );
+  });
+
   it("records provider failures with scoped identity without supplying replacement amounts", async () => {
     vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(null);
 

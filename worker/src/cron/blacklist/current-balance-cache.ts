@@ -19,7 +19,7 @@ import {
   type BlacklistRunBudget,
 } from "./run-budget";
 import {
-  buildLatestBlacklistRows,
+  buildCurrentBalanceSnapshotRows,
   fetchBlacklistAssetPriceFromCache,
 } from "./row-preparation";
 
@@ -130,7 +130,7 @@ export async function syncCurrentBalanceCacheForRows(
     return { updated: 0, deleted: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
   }
 
-  const latestRows = context.latestRows ?? buildLatestBlacklistRows(rows);
+  const latestRows = context.latestRows ?? buildCurrentBalanceSnapshotRows(rows);
   const counters: SyncCurrentBalanceCacheResult = {
     updated: 0,
     deleted: 0,

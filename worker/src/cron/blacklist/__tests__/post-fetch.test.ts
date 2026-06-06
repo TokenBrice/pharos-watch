@@ -114,4 +114,71 @@ describe("processFetchedBlacklistRows", () => {
       }),
     );
   });
+
+  it("passes same-batch blacklist rows to cache sync even when a later unblacklist is latest", async () => {
+    const blacklistRow = makeBlacklistRow({
+      id: "ethereum-0xtransient-0",
+      stablecoin: "USDT",
+      chain_id: "ethereum",
+      chain_name: "Ethereum",
+      event_type: "blacklist",
+      address: "0x0000000000000000000000000000000000000456",
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+      timestamp: 20,
+    }) as BlacklistRow;
+    const unblacklistRow = makeBlacklistRow({
+      id: "ethereum-0xtransient-1",
+      stablecoin: "USDT",
+      chain_id: "ethereum",
+      chain_name: "Ethereum",
+      event_type: "unblacklist",
+      address: blacklistRow.address,
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+      timestamp: 21,
+    }) as BlacklistRow;
+    const db = mockD1([
+      {
+        match: "SELECT id FROM blacklist_events WHERE id IN",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
+    vi.mocked(insertBlacklistRows).mockResolvedValue(2);
+    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+      updated: 1,
+      deleted: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    });
+
+    const result = await processFetchedBlacklistRows({
+      db,
+      config,
+      rows: [blacklistRow, unblacklistRow],
+      chainLabel: "evm",
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      trongridApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(result.insertedRows).toBe(2);
+    expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
+      db,
+      config,
+      [blacklistRow, unblacklistRow],
+      expect.objectContaining({
+        latestRows: [blacklistRow, unblacklistRow],
+      }),
+    );
+  });
 });

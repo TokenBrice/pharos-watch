@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.996` (2026-02-09 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.997` (2026-02-09 -> 2026-06-06).
+
+---
+
+## v3.997 — Same-cycle freeze snapshot capture (2026-06-06)
+
+- **Transient freeze snapshots** — if a blacklist and matching unblacklist arrive in the same `sync-blacklist` batch, the blacklist row still receives a current-balance snapshot before the release marker is skipped as non-deleting
+- **Ledger semantics unchanged** — later unblacklist rows continue preserving existing freeze-ledger rows instead of deleting them
+- **Scope** — this fixes newly observed same-cycle batches and duplicate-row repair batches; it does not retroactively recover older transient freezes that never produced a ledger row
 
 ---
 

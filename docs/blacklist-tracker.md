@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.996`
+- **Current methodology version:** `v3.997`
 - **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
 - **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
@@ -630,7 +630,7 @@ Use it for:
 - tracked freeze-ledger record counts (`trackedAddressCount`)
 - tracked snapshot gap tracking (`trackedAmountGapCount`)
 
-Do **not** treat it as raw event history. New snapshot rows are keyed to contract/config-scoped blacklist/freeze identities so same-symbol/same-chain deployments cannot overwrite each other. Legacy rows can still fall back to the older symbol/chain/address identity until remediated. Rows are preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
+Do **not** treat it as raw event history. New snapshot rows are keyed to contract/config-scoped blacklist/freeze identities so same-symbol/same-chain deployments cannot overwrite each other. Legacy rows can still fall back to the older symbol/chain/address identity until remediated. Rows are preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. If a blacklist and matching unblacklist arrive in the same cron batch, the blacklist row is still selected for a snapshot before the release marker is skipped as non-deleting. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
 
 Legacy `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount` remain in `/api/blacklist-summary` for wire compatibility. They describe Pharos' local net-active event-state view and should not be used as the public frozen-total source. New consumers should prefer the tracked freeze-ledger fields above for historical freeze exposure and use the active fields only when they specifically need the current local net-frozen state machine.
 
@@ -691,7 +691,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
    - Newly blacklisted addresses fetch a latest token balance snapshot and persist it into `blacklist_current_balances`
    - New snapshot writes are contract/config-scoped; legacy rows can use symbol/chain/address fallback identity during remediation
    - Provider refresh failures retain the previous resolved amount while surfacing failure status/provenance
-   - Later unblacklist events do **not** delete the ledger row; the freeze snapshot remains part of the historical freeze ledger
+   - Later unblacklist events do **not** delete the ledger row; if a blacklist and release are ingested in the same cron cycle, the blacklist event still receives a snapshot before the release marker is skipped
    - Destroy events preserve the row and can replace the stored amount with the emitted seized/burned amount when available
    - This ledger feeds the public tracked frozen-total summary without claiming unsupported event-time precision for blacklist rows
 
@@ -799,8 +799,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.996",
-    "currentVersionLabel": "v3.996",
+    "currentVersion": "3.997",
+    "currentVersionLabel": "v3.997",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false

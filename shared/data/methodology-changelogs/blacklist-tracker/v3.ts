@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.997",
+    title: "Same-cycle freeze snapshot capture",
+    date: "2026-06-06",
+    effectiveAt: 1780704000, // 2026-06-06T00:00:00Z
+    summary:
+      "Captures freeze-ledger snapshots for blacklist events seen in the same cron batch even when a later unblacklist event is also ingested.",
+    impact: [
+      "Same-batch blacklist -> unblacklist sequences now still fetch a current-balance snapshot for the freeze ledger",
+      "Later unblacklist rows remain non-deleting release markers, preserving the existing historical ledger semantics",
+      "The change is scoped to rows observed in the current ingestion/repair batch and does not backfill older transient freezes by itself",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.996",
     title: "Fresh price-cache valuation gate",
     date: "2026-06-06",

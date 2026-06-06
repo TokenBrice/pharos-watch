@@ -9,7 +9,7 @@ import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
 import { type BlacklistRunBudget } from "./run-budget";
 import {
-  buildLatestBlacklistRows,
+  buildCurrentBalanceSnapshotRows,
   fetchBlacklistAssetPriceFromCache,
 } from "./row-preparation";
 
@@ -112,7 +112,7 @@ export async function processFetchedBlacklistRows(
           signal: options.signal,
           chainRpcs: options.chainRpcs,
           assetPriceUsd,
-          latestRows: buildLatestBlacklistRows(duplicateLedgerRows),
+          latestRows: buildCurrentBalanceSnapshotRows(duplicateLedgerRows),
         },
       );
       return {
@@ -158,7 +158,7 @@ export async function processFetchedBlacklistRows(
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
   const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
   const cacheSyncRows = [...ledgerRows, ...duplicateLedgerRows];
-  const latestLedgerRows = buildLatestBlacklistRows(cacheSyncRows);
+  const latestLedgerRows = buildCurrentBalanceSnapshotRows(cacheSyncRows);
   const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
     options.db,
     options.config,
