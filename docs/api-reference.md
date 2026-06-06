@@ -597,7 +597,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
   "globalChange7dPct": 0.0045,
   "globalChange30dPct": 0.018,
   "updatedAt": 1710500000,
-  "healthMethodologyVersion": "1.2"
+  "healthMethodologyVersion": "1.3"
 }
 ```
 
@@ -611,7 +611,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share                         |
 | `globalChange30dPct`       | `number`         | 30d change for total tracked stablecoin supply as a decimal share                        |
 | `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot                                |
-| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.2"`)                               |
+| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.3"`)                               |
 
 `_meta.dependencies.reportCards` is present when the endpoint can determine report-card freshness. When that dependency is stale or unavailable, `healthScore` degrades to `null` and the route UI surfaces the dependency reason instead of pretending the chain is fully fresh.
 

@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** `v1.2`
+- **Current methodology version:** `v1.3`
 - **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
 - **Version source:** `shared/lib/chain-health-version.ts`
 - **API source:** `worker/src/api/chains.ts`
@@ -12,13 +12,15 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 ## Inputs
 
-`GET /api/chains` loads the strict stablecoins cache, derives non-USD peg references with `derivePegRates(...)`, and reads the current report-card cache for Safety Score inputs. The endpoint returns `503` if the stablecoins cache is unavailable. Report-card cache misses do not fail the route; they reduce or null out the quality factor depending on coverage.
+`GET /api/chains` loads the strict stablecoins cache, filters it to active non-frozen/non-defunct stablecoins, derives non-USD peg references with `derivePegRates(...)`, and reads the current report-card cache for Safety Score inputs. The endpoint returns `503` if the stablecoins cache is unavailable. Report-card cache misses do not fail the route; they reduce or null out the quality factor depending on coverage.
+
+The compact report-card cache carries a `degradedInputs` marker. When cached Safety Scores were computed from stale report-card inputs, Chain Health keeps the cached score map available but downgrades `_meta.dependencies.reportCards` to `degraded`, switches the response to `no-store`, and emits a freshness warning.
 
 The frontend chain profile coordinates `GET /api/chains` with `GET /api/stablecoins`. It renders top-level summary data from the chain snapshot first, then shows composition, backing breakdown, and stablecoin tables only when both snapshots share the same `updatedAt` and the stablecoins snapshot includes authoritative freshness metadata.
 
 ## Formula
 
-Current `v1.2` composite:
+Current `v1.3` composite:
 
 ```text
 0.30 * quality

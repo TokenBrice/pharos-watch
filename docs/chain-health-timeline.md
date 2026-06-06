@@ -1,6 +1,14 @@
 # Chain Health Score Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.2`.
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.3`.
+
+---
+
+## v1.3 - Active-only inputs and stale report-card dependency (Jun 6, 2026)
+
+- Live `GET /api/chains` aggregation now filters the stablecoins cache to active, non-frozen, non-defunct assets before deriving peg rates or summing chain supply
+- The live aggregation universe now matches the active-only daily `snapshot-chain-supply` path
+- `report_card_cache.degradedInputs` now downgrades `_meta.dependencies.reportCards` to `degraded` when cached Safety Scores were computed with stale report-card inputs
 
 ---
 

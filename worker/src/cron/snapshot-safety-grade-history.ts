@@ -5,12 +5,22 @@ import { writeReportCardCache } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import type { ReportCardsSnapshot } from "../lib/report-cards-snapshot";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;
   grade: ReportCardGrade;
   score: number | null;
   recorded_at: number;
+}
+
+function hasDegradedReportCardInputs(snapshot: ReportCardsSnapshot): boolean {
+  return Boolean(
+    snapshot.liquidityStale
+    || snapshot.redemptionStale
+    || snapshot.inputFreshness.dexLiquidity.stale
+    || snapshot.inputFreshness.redemptionBackstops.stale,
+  );
 }
 
 export async function snapshotSafetyGradeHistory(
@@ -39,6 +49,7 @@ export async function snapshotSafetyGradeHistory(
   const liveCards = snapshot.cards.filter(
     (card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id),
   );
+  const degradedReportCardInputs = hasDegradedReportCardInputs(snapshot);
 
   const latestRows = await db
     .prepare(
@@ -62,6 +73,8 @@ export async function snapshotSafetyGradeHistory(
   let seeded = 0;
   let changed = 0;
   let skipped = 0;
+  let suppressedSeeds = 0;
+  let suppressedTransitions = 0;
   const stmts: D1PreparedStatement[] = [];
 
   for (const card of liveCards) {
@@ -72,6 +85,10 @@ export async function snapshotSafetyGradeHistory(
     const latest = latestByCoin.get(card.id);
 
     if (!latest) {
+      if (degradedReportCardInputs) {
+        suppressedSeeds++;
+        continue;
+      }
       seeded++;
       stmts.push(
         db
@@ -94,6 +111,10 @@ export async function snapshotSafetyGradeHistory(
     }
 
     if (latest.grade !== card.overallGrade) {
+      if (degradedReportCardInputs) {
+        suppressedTransitions++;
+        continue;
+      }
       changed++;
       stmts.push(
         db
@@ -121,9 +142,14 @@ export async function snapshotSafetyGradeHistory(
   if (stmts.length > 0) {
     await batchExecute(db, stmts);
   }
-  const cacheResult = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt);
+  const cacheResult = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt, {
+    liquidityStale: snapshot.liquidityStale,
+    redemptionStale: snapshot.redemptionStale,
+    inputFreshness: snapshot.inputFreshness,
+  });
 
   return {
+    ...(degradedReportCardInputs ? { status: "degraded" as const } : {}),
     itemCount: stmts.length,
     metadata: JSON.stringify({
       snapshotDay,
@@ -131,6 +157,10 @@ export async function snapshotSafetyGradeHistory(
       seeded,
       changed,
       skipped,
+      degradedReportCardInputs,
+      gradeHistorySuppressed: degradedReportCardInputs,
+      suppressedSeeds,
+      suppressedTransitions,
       reportCardCacheRows: cacheResult.writtenCount,
     }),
   };

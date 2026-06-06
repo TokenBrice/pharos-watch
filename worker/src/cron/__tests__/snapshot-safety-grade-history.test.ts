@@ -73,7 +73,15 @@ function makeCard(
   };
 }
 
-function mockSnapshot(cards: ReportCard[]) {
+function mockSnapshot(
+  cards: ReportCard[],
+  overrides: Partial<{
+    liquidityStale: boolean;
+    redemptionStale: boolean;
+  }> = {},
+) {
+  const liquidityStale = overrides.liquidityStale ?? false;
+  const redemptionStale = overrides.redemptionStale ?? false;
   vi.mocked(buildReportCardsSnapshot).mockResolvedValue({
     cards,
     methodology: {
@@ -95,11 +103,11 @@ function mockSnapshot(cards: ReportCard[]) {
     },
     dependencyGraph: { edges: [] },
     updatedAt: 1_777_770_000,
-    liquidityStale: false,
-    redemptionStale: false,
+    liquidityStale,
+    redemptionStale,
     inputFreshness: {
-      dexLiquidity: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: false },
-      redemptionBackstops: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: false },
+      dexLiquidity: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: liquidityStale },
+      redemptionBackstops: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: redemptionStale },
     },
   });
 }
@@ -199,5 +207,44 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(2);
     expect(metadata.reportCardCacheRows).toBe(2);
+  });
+
+  it("suppresses grade-history writes when report-card inputs are degraded", async () => {
+    mockSnapshot([
+      makeCard("usdt-tether", "B", 72),
+      makeCard("usdc-circle", "B+", 77),
+    ], { redemptionStale: true });
+
+    const db = mockD1([
+      {
+        match: "FROM safety_grade_history h",
+        rows: [
+          { stablecoin_id: "usdc-circle", grade: "A", score: 83, recorded_at: 1_777_680_000 },
+        ],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
+
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.degradedReportCardInputs).toBe(true);
+    expect(metadata.gradeHistorySuppressed).toBe(true);
+    expect(metadata.seeded).toBe(0);
+    expect(metadata.changed).toBe(0);
+    expect(metadata.suppressedSeeds).toBe(1);
+    expect(metadata.suppressedTransitions).toBe(1);
+    expect(metadata.reportCardCacheRows).toBe(2);
+
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(JSON.parse(String(write?.binds[1])).degradedInputs).toEqual({
+      inputsStale: true,
+      liquidityStale: false,
+      redemptionStale: true,
+      staleInputs: ["redemptionBackstops"],
+    });
   });
 });

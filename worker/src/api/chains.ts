@@ -1,8 +1,13 @@
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS, type ReportCardCacheLoadResult } from "../lib/report-card-cache";
+import {
+  loadReportCardCache,
+  REPORT_CARD_CACHE_MAX_AGE_MS,
+  type ReportCardCacheInputStatus,
+  type ReportCardCacheLoadResult,
+} from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
@@ -18,6 +23,8 @@ interface ChainsDependencyMeta {
   ageSeconds?: number | null;
   status: ChainsDependencyStatus;
   reason?: string | null;
+  inputsStale?: boolean;
+  staleInputs?: string[];
 }
 
 interface ChainsFreshnessMeta {
@@ -35,11 +42,26 @@ function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: n
   return Math.max(0, nowSec - updatedAt);
 }
 
+function reportCardInputsAreStale(inputStatus: ReportCardCacheInputStatus | undefined): boolean {
+  return inputStatus?.inputsStale === true;
+}
+
 function buildReportCardDependencyMeta(
   reportCardResult: ReportCardCacheLoadResult,
   nowSec: number,
 ): ChainsDependencyMeta {
   if (reportCardResult.kind === "ok") {
+    if (reportCardInputsAreStale(reportCardResult.payload.degradedInputs)) {
+      return {
+        updatedAt: reportCardResult.updatedAt,
+        ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
+        status: "degraded",
+        reason: "inputs stale",
+        inputsStale: true,
+        staleInputs: reportCardResult.payload.degradedInputs?.staleInputs ?? [],
+      };
+    }
+
     return {
       updatedAt: reportCardResult.updatedAt,
       ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
@@ -58,6 +80,13 @@ function buildReportCardDependencyMeta(
     status,
     reason: reportCardResult.reason.replace(/-/g, " "),
   };
+}
+
+function isActiveChainAggregateAsset(asset: { id: string; frozen?: boolean; isDefunct?: boolean; defunct?: boolean }): boolean {
+  return ACTIVE_IDS.has(asset.id)
+    && asset.frozen !== true
+    && asset.isDefunct !== true
+    && asset.defunct !== true;
 }
 
 function buildChainsFreshnessMeta(
@@ -118,9 +147,10 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
   }
 
   const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;
+  const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
 
   // Derive peg rates for non-USD peg stability calculation
-  const { rates: pegRates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
 
   // Load safety scores from report card cache (one D1 read)
   const safetyScores: Record<string, number> = {};
@@ -132,7 +162,7 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
   }
 
   const response = aggregateChains({
-    peggedAssets,
+    peggedAssets: activePeggedAssets,
     safetyScores,
     pegRates,
   });

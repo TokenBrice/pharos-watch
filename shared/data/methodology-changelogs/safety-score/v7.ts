@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V7: readonly MethodologyChangelogEntry[] = [
     {
+      version: "7.291",
+      title: "Degraded-input history guard",
+      date: "2026-06-06",
+      effectiveAt: 1780704000,
+      summary:
+        "Safety Score scoring is unchanged, but degraded report-card inputs no longer create durable grade-history transitions and the compact score cache now exposes input-staleness metadata to dependent consumers.",
+      impact: [
+        "`snapshot-safety-grade-history` suppresses seed and transition writes when the report-card snapshot was built with stale DEX liquidity or redemption-backstop inputs",
+        "The daily history cron records the degraded condition in cron metadata instead of persisting an `INSERT OR IGNORE` transition from stale upstream inputs",
+        "The compact `report_card_cache` payload now carries `degradedInputs` metadata so Chain Health and other lightweight consumers can distinguish fresh scores from stale-input scores",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "7.29",
       title: "fxSAVE live redemption capacity",
       date: "2026-05-27",

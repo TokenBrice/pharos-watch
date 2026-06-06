@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "../methodology-version";
 
 const chainHealth = createMethodologyVersion({
-  currentVersion: "1.2",
+  currentVersion: "1.3",
   changelogPath: "/methodology/chain-health-changelog/",
   changelog: [
+    {
+      version: "1.3",
+      title: "Active-only inputs and stale report-card dependency",
+      date: "2026-06-06",
+      effectiveAt: 1780704000,
+      summary:
+        "Live Chain Health now uses the same active/non-archived input universe as the daily chain-supply snapshot and degrades its report-card dependency when cached Safety Scores were computed with stale report-card inputs.",
+      impact: [
+        "`GET /api/chains` excludes frozen, defunct, and non-active stablecoins before deriving peg rates or aggregating chain supply",
+        "The report-card dependency now reports `degraded` when `report_card_cache.degradedInputs.inputsStale` is true, instead of marking stale-input scores as fresh",
+        "Health scores can remain computed from the cached score map, but response freshness and headers now surface the degraded upstream report-card condition",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.2",
       title: "Two-bucket backing diversity after active taxonomy cleanup",

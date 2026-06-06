@@ -98,17 +98,47 @@ describe("loadReportCardCache", () => {
       updatedAt: payloadUpdatedAt,
     });
   });
+
+  it("accepts degraded input metadata on cache payloads", async () => {
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        scores: {
+          "usdt-tether": { score: 71, grade: "B" },
+        },
+        updatedAt: 1_700_000_000,
+        degradedInputs: {
+          inputsStale: true,
+          liquidityStale: false,
+          redemptionStale: true,
+          staleInputs: ["redemptionBackstops"],
+        },
+      })),
+    );
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.payload.degradedInputs).toEqual({
+        inputsStale: true,
+        liquidityStale: false,
+        redemptionStale: true,
+        staleInputs: ["redemptionBackstops"],
+      });
+    }
+  });
 });
 
 describe("writeReportCardCache", () => {
-  it("writes scored non-defunct cards using the existing cache payload shape", async () => {
+  it("writes scored non-defunct cards with degraded input metadata", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO cache", rows: [] }]);
 
     const result = await writeReportCardCache(db, [
       { id: "rated", overallScore: 82, overallGrade: "B+", isDefunct: false },
       { id: "nr", overallScore: null, overallGrade: "NR", isDefunct: false },
       { id: "dead", overallScore: 0, overallGrade: "F", isDefunct: true },
-    ] as never, 1_777_000_000);
+    ] as never, 1_777_000_000, {
+      liquidityStale: true,
+      redemptionStale: false,
+    });
 
     expect(result.writtenCount).toBe(1);
     const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
@@ -118,6 +148,12 @@ describe("writeReportCardCache", () => {
         rated: { score: 82, grade: "B+" },
       },
       updatedAt: 1_777_000_000,
+      degradedInputs: {
+        inputsStale: true,
+        liquidityStale: true,
+        redemptionStale: false,
+        staleInputs: ["dexLiquidity"],
+      },
     });
   });
 });

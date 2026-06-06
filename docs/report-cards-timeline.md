@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.29 (2026-02-25 → 2026-05-27). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.291 (2026-02-25 → 2026-06-06). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+
+## v7.291 — Degraded-input history guard (2026-06-06)
+
+- Safety Score scoring is unchanged from v7.29
+- `snapshot-safety-grade-history` now suppresses durable seed and grade-transition writes while report-card snapshots are built with stale DEX liquidity or redemption-backstop inputs
+- The compact `report_card_cache` score map now carries `degradedInputs` metadata so Chain Health and other lightweight consumers can downgrade freshness when cached scores came from degraded report-card inputs
 
 ## v7.29 — fxSAVE live redemption capacity (2026-05-27)
 

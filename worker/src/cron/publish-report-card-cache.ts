@@ -25,7 +25,11 @@ export async function publishReportCardCache(
 
   const writableCards = snapshot.cards.filter((card) => !FROZEN_IDS.has(card.id));
   await writePublishedReportCardsSnapshot(db, snapshot);
-  const { writtenCount } = await writeReportCardCache(db, writableCards, snapshot.updatedAt);
+  const { writtenCount } = await writeReportCardCache(db, writableCards, snapshot.updatedAt, {
+    liquidityStale: snapshot.liquidityStale,
+    redemptionStale: snapshot.redemptionStale,
+    inputFreshness: snapshot.inputFreshness,
+  });
   await setCache(
     db,
     ALERT_SAFETY_SOURCE_CACHE_KEY,

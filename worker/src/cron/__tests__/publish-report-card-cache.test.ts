@@ -65,6 +65,10 @@ describe("publishReportCardCache", () => {
       updatedAt: 1_700_000_000,
       liquidityStale: false,
       redemptionStale: false,
+      inputFreshness: {
+        dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+        redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+      },
     });
     mockWriteReportCardCache.mockResolvedValue({ writtenCount: 1 });
     mockSetCache.mockResolvedValue(undefined);
@@ -72,6 +76,19 @@ describe("publishReportCardCache", () => {
     const result = await publishReportCardCache({} as D1Database);
 
     expect(result.itemCount).toBe(1);
+    expect(mockWriteReportCardCache).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.arrayContaining([expect.objectContaining({ id: "usdc-circle" })]),
+      1_700_000_000,
+      {
+        liquidityStale: false,
+        redemptionStale: false,
+        inputFreshness: {
+          dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+          redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+        },
+      },
+    );
     expect(mockSetCache).toHaveBeenCalledTimes(2);
     expect(mockSetCache.mock.calls[0]?.[1]).toBe("report-cards:snapshot");
     expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"cards\"");

@@ -6,12 +6,12 @@ The stablecoin registry currently contains 401 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.29`
+- **Current methodology version:** `v7.291`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.29)
+## Overall Grade (v7.291)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.29 keeps the v7.28 four-status FreezeWatch model and moves fxSAVE's redemption route from a low-confidence heuristic strategy-buffer estimate to fresh ERC-4626 live capacity. Clean fxSAVE snapshots can now reach medium model confidence and feed Liquidity / Exit; missing or degraded live telemetry leaves the route unrated instead of falling back to the old 20% heuristic buffer.
+Current-version note: v7.291 keeps the v7.29 scoring formula and fxSAVE live redemption-capacity rules. The behavior change is persistence-side: stale or degraded report-card inputs are surfaced in cache metadata, and the daily grade-history writer suppresses durable seed/transition rows while those degraded inputs are active.
 
 ## Yield Source-Risk Boundary
 
@@ -389,6 +389,8 @@ Implementation notes:
 
 - Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
 - Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
+- The compact `report_card_cache` score map includes `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`) so lightweight consumers such as Chain Health can degrade freshness when cached scores were computed from stale report-card inputs.
+- `snapshot-safety-grade-history` still writes the compact report-card cache during degraded-input runs, but suppresses `safety_grade_history` seed and grade-transition inserts when `liquidityStale`, `redemptionStale`, or the corresponding `inputFreshness.*.stale` flags are active.
 
 Key types:
 

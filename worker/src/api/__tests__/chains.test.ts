@@ -48,6 +48,12 @@ function reportCardCache(
   scores: Record<string, { score: number; grade: string }>,
   payloadAgeSeconds = 60,
   rowAgeSeconds = payloadAgeSeconds,
+  degradedInputs?: {
+    inputsStale: boolean;
+    liquidityStale: boolean;
+    redemptionStale: boolean;
+    staleInputs: string[];
+  },
 ) {
   const nowSec = Math.floor(Date.now() / 1000);
   return {
@@ -59,6 +65,7 @@ function reportCardCache(
       value: JSON.stringify({
         scores,
         updatedAt: nowSec - payloadAgeSeconds,
+        ...(degradedInputs ? { degradedInputs } : {}),
       }),
       updated_at: nowSec - rowAgeSeconds,
     },
@@ -255,5 +262,101 @@ describe("handleChains", () => {
 
     expect(body._meta.dependencies.reportCards.status).toBe("stale");
     expect(body._meta.dependencies.reportCards.ageSeconds).toBeGreaterThanOrEqual(3 * 60 * 60);
+  });
+
+  it("marks the report-card dependency degraded when cached scores used stale inputs", async () => {
+    const payload = {
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD",
+        circulating: { peggedUSD: 100 },
+        chainCirculating: {
+          ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+        },
+      }],
+    };
+
+    const db = mockD1([
+      freshCache(payload),
+      reportCardCache(
+        { "usdt-tether": { score: 75, grade: "B" } },
+        60,
+        60,
+        {
+          inputsStale: true,
+          liquidityStale: true,
+          redemptionStale: false,
+          staleInputs: ["dexLiquidity"],
+        },
+      ),
+    ]);
+
+    const response = await handleChains(db);
+    const body = await response.json() as {
+      chains: Array<{ healthScore: number | null }>;
+      _meta: {
+        status: FreshnessStatus;
+        dependencies: {
+          reportCards: {
+            status: FreshnessStatus | "unavailable";
+            reason?: string | null;
+            inputsStale?: boolean;
+            staleInputs?: string[];
+          };
+        };
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.chains[0].healthScore).toBeTypeOf("number");
+    expect(body._meta.status).toBe("degraded");
+    expect(body._meta.dependencies.reportCards.status).toBe("degraded");
+    expect(body._meta.dependencies.reportCards.reason).toBe("inputs stale");
+    expect(body._meta.dependencies.reportCards.inputsStale).toBe(true);
+    expect(body._meta.dependencies.reportCards.staleInputs).toEqual(["dexLiquidity"]);
+    expect(response.headers.get("Warning")).toContain("report-card cache inputs stale");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("excludes frozen and non-active assets from live chain aggregation", async () => {
+    const payload = {
+      peggedAssets: [
+        {
+          id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          chainCirculating: {
+            ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+          },
+        },
+        {
+          id: "frozen-archive", symbol: "FRZ", name: "Frozen Archive", price: 1.0, pegType: "peggedUSD",
+          frozen: true,
+          circulating: { peggedUSD: 900 },
+          chainCirculating: {
+            bsc: { current: 900, circulatingPrevDay: 900, circulatingPrevWeek: 900, circulatingPrevMonth: 900 },
+          },
+        },
+      ],
+    };
+
+    const db = mockD1([
+      freshCache(payload),
+      reportCardCache({
+        "usdt-tether": { score: 75, grade: "B" },
+        "frozen-archive": { score: 5, grade: "F" },
+      }),
+    ]);
+
+    const response = await handleChains(db);
+    const body = await response.json() as {
+      chains: Array<{ id: string; totalUsd: number }>;
+      globalTotalUsd: number;
+      chainAttributedTotalUsd: number;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.chains).toHaveLength(1);
+    expect(body.chains[0]).toMatchObject({ id: "ethereum", totalUsd: 100 });
+    expect(body.globalTotalUsd).toBe(100);
+    expect(body.chainAttributedTotalUsd).toBe(100);
   });
 });

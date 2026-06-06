@@ -1,6 +1,7 @@
 import { getCache, setCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
 import type { ReportCard } from "@shared/types/report-cards";
+import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
 export interface ReportCardScoreEntry {
   score: number;
@@ -10,6 +11,14 @@ export interface ReportCardScoreEntry {
 export interface ReportCardCachePayload {
   scores: Record<string, ReportCardScoreEntry>;
   updatedAt: number;
+  degradedInputs?: ReportCardCacheInputStatus;
+}
+
+export interface ReportCardCacheInputStatus {
+  inputsStale: boolean;
+  liquidityStale: boolean;
+  redemptionStale: boolean;
+  staleInputs: string[];
 }
 
 export type ReportCardCacheFailureReason =
@@ -26,16 +35,64 @@ export interface LoadReportCardCacheOptions {
   maxAgeMs?: number;
 }
 
+export interface WriteReportCardCacheOptions {
+  liquidityStale?: boolean;
+  redemptionStale?: boolean;
+  inputFreshness?: ReportCardsInputFreshness;
+}
+
 /** Shared max-age budget for report-card-dependent read paths. */
 export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 function isValidReportCardCachePayload(value: unknown): value is ReportCardCachePayload {
   if (!value || typeof value !== "object") return false;
-  const parsed = value as { scores?: unknown; updatedAt?: unknown };
+  const parsed = value as { scores?: unknown; updatedAt?: unknown; degradedInputs?: unknown };
   return parsed.scores != null
     && typeof parsed.scores === "object"
     && typeof parsed.updatedAt === "number"
-    && Number.isFinite(parsed.updatedAt);
+    && Number.isFinite(parsed.updatedAt)
+    && (
+      parsed.degradedInputs == null
+      || isValidReportCardCacheInputStatus(parsed.degradedInputs)
+    );
+}
+
+function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardCacheInputStatus {
+  if (!value || typeof value !== "object") return false;
+  const parsed = value as {
+    inputsStale?: unknown;
+    liquidityStale?: unknown;
+    redemptionStale?: unknown;
+    staleInputs?: unknown;
+  };
+  return typeof parsed.inputsStale === "boolean"
+    && typeof parsed.liquidityStale === "boolean"
+    && typeof parsed.redemptionStale === "boolean"
+    && Array.isArray(parsed.staleInputs)
+    && parsed.staleInputs.every((entry) => typeof entry === "string");
+}
+
+export function buildReportCardCacheInputStatus(
+  options: WriteReportCardCacheOptions = {},
+): ReportCardCacheInputStatus {
+  const liquidityStale = Boolean(
+    options.liquidityStale
+    || options.inputFreshness?.dexLiquidity.stale,
+  );
+  const redemptionStale = Boolean(
+    options.redemptionStale
+    || options.inputFreshness?.redemptionBackstops.stale,
+  );
+  const staleInputs = [
+    ...(liquidityStale ? ["dexLiquidity"] : []),
+    ...(redemptionStale ? ["redemptionBackstops"] : []),
+  ];
+  return {
+    inputsStale: staleInputs.length > 0,
+    liquidityStale,
+    redemptionStale,
+    staleInputs,
+  };
 }
 
 export async function loadReportCardCache(
@@ -73,6 +130,7 @@ export async function writeReportCardCache(
   db: D1Database,
   cards: readonly ReportCard[],
   updatedAt: number,
+  options: WriteReportCardCacheOptions = {},
 ): Promise<{ writtenCount: number }> {
   const scores: ReportCardCachePayload["scores"] = {};
   for (const card of cards) {
@@ -89,6 +147,7 @@ export async function writeReportCardCache(
     JSON.stringify({
       scores,
       updatedAt,
+      degradedInputs: buildReportCardCacheInputStatus(options),
     } satisfies ReportCardCachePayload),
   );
 
