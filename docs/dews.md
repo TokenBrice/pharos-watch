@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v6.02`
+- **Current methodology version:** `v6.03`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -113,7 +113,7 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 
 ### S_black — Blacklist Activity
 
-Only for symbols in the shared `BLACKLIST_STABLECOINS` set (`shared/types/market.ts`). Coverage is derived from the same supported blacklist symbol set as the live blacklist tracker instead of maintaining a separate DEWS-local coin list. Uses 24h event count with spike detection relative to 7d daily average.
+Only for stablecoin IDs with direct live blacklist tracker configs. Recent `blacklist_events` rows are resolved through tracker provenance (`config_key` / `contract_address`) to the owning canonical stablecoin ID before scoring, so same-symbol siblings do not inherit each other's freeze events. Legacy rows without provenance fall back only when the symbol maps to a single tracker-owned stablecoin ID. Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 

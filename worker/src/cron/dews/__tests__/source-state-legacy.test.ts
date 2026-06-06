@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadDewsSourceState } from "../source-state";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 
 /**
  * Minimal D1 mock that returns a single row from the previous-stress-signals
@@ -15,11 +16,21 @@ function mockDbWithPrevRows(
     computed_at: number;
   }>,
   rankingsCache?: { value: string; updated_at: number },
+  blacklistRows: Array<{
+    stablecoin: string;
+    chain_id: string;
+    config_key: string | null;
+    contract_address: string | null;
+    timestamp: number;
+  }> = [],
 ): D1Database {
   const stmt = (sql: string) => {
     const all = async <T>() => {
       if (sql.includes("FROM stress_signals s")) {
         return { results: prevRows as unknown as T[] };
+      }
+      if (sql.includes("FROM blacklist_events")) {
+        return { results: blacklistRows as unknown as T[] };
       }
       return { results: [] as T[] };
     };
@@ -151,5 +162,32 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       primaryDriver: "source-risk",
     });
     expect(sourceState.sourceCoverage.yieldStructuredRows).toBe(1);
+  });
+
+  it("hydrates blacklist counts by tracker stablecoin id instead of bare symbol", async () => {
+    const config = CONTRACT_CONFIGS.find((entry) => entry.stablecoinId === "usda-avalon");
+    expect(config).toBeDefined();
+
+    const db = mockDbWithPrevRows([], undefined, [
+      {
+        stablecoin: "USDA",
+        chain_id: config!.chain.chainId,
+        config_key: config!.configKey,
+        contract_address: config!.contractAddress,
+        timestamp: nowSec - 300,
+      },
+    ]);
+
+    const sourceState = await loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending: false,
+      registerSourceFailure: () => {},
+      registerMalformedPersistedInput: () => {},
+    });
+
+    expect(sourceState.blacklistCounts.get("usda-avalon")).toEqual({ count24h: 1, count7d: 1 });
+    expect(sourceState.blacklistCounts.has("USDA")).toBe(false);
+    expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
   });
 });

@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.02` (2026-02-18 -> 2026-06-05).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.03` (2026-02-18 -> 2026-06-06).
+
+---
+
+## v6.03 — Blacklist activity stablecoin-id attribution (Jun 6, 2026)
+
+- DEWS blacklist activity now resolves recent blacklist events to the tracker config's canonical stablecoin id before scoring
+- Blacklist counts hydrate from event provenance (`config_key` / `contract_address`) instead of grouping by bare symbol
+- Same-symbol siblings without direct blacklist-tracker coverage keep the blacklist sub-signal unavailable
+- Legacy rows without provenance fall back only when a symbol maps to a single tracker-owned stablecoin id
 
 ---
 

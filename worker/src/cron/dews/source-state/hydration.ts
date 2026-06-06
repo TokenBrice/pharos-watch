@@ -10,9 +10,15 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../../lib/cache-json";
+import {
+  CONTRACT_CONFIGS,
+  getBlacklistConfigByContract,
+  getBlacklistConfigByKey,
+} from "../../../lib/blacklist-contracts";
 import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../../lib/depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../../lib/mint-burn-canonical-chain";
 import type {
+  BlacklistCountByStablecoinId,
   DewsSourceState,
   DexLiquidityRow,
   DexPriceSnapshot,
@@ -278,44 +284,69 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
 }
 
 export interface BlacklistHydration {
-  blacklistCounts: Map<string, { count24h: number; count7d: number }>;
+  blacklistCounts: BlacklistCountByStablecoinId;
   rowsRead: number;
 }
 
+interface BlacklistEventHydrationRow {
+  stablecoin: string;
+  chain_id: string;
+  config_key: string | null;
+  contract_address: string | null;
+  timestamp: number;
+}
+
+const BLACKLIST_SYMBOL_TO_TRACKED_ID = (() => {
+  const bySymbol = new Map<string, Set<string>>();
+  for (const config of CONTRACT_CONFIGS) {
+    const symbol = config.stablecoin.toUpperCase();
+    const ids = bySymbol.get(symbol) ?? new Set<string>();
+    ids.add(config.stablecoinId);
+    bySymbol.set(symbol, ids);
+  }
+
+  const unique = new Map<string, string>();
+  for (const [symbol, ids] of bySymbol) {
+    if (ids.size === 1) unique.set(symbol, [...ids][0]!);
+  }
+  return unique;
+})();
+
+function resolveBlacklistEventStablecoinId(row: BlacklistEventHydrationRow): string | null {
+  if (row.config_key) {
+    const config = getBlacklistConfigByKey(row.config_key);
+    if (config) return config.stablecoinId;
+  }
+  if (row.contract_address) {
+    const config = getBlacklistConfigByContract(row.chain_id, row.contract_address);
+    if (config) return config.stablecoinId;
+  }
+  return BLACKLIST_SYMBOL_TO_TRACKED_ID.get(row.stablecoin.toUpperCase()) ?? null;
+}
+
 export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<BlacklistHydration> {
-  const blacklistCounts = new Map<string, { count24h: number; count7d: number }>();
+  const blacklistCounts: BlacklistCountByStablecoinId = new Map();
   let blacklistRowsRead = 0;
   try {
-    const bl7d = await ctx.db
+    const rows = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:blacklist-events-7d */
-           stablecoin, COUNT(*) as cnt
+           stablecoin, chain_id, config_key, contract_address, timestamp
          FROM blacklist_events
-         WHERE timestamp >= ?
-         GROUP BY stablecoin`,
+         WHERE timestamp >= ?`,
       )
       .bind(ctx.nowSec - 7 * DAY_SECONDS)
-      .all<{ stablecoin: string; cnt: number }>();
-    const bl24h = await ctx.db
-      .prepare(
-        `SELECT /* pharos:dews:blacklist-events-24h */
-           stablecoin, COUNT(*) as cnt
-         FROM blacklist_events
-         WHERE timestamp >= ?
-         GROUP BY stablecoin`,
-      )
-      .bind(ctx.nowSec - DAY_SECONDS)
-      .all<{ stablecoin: string; cnt: number }>();
-    blacklistRowsRead = (bl7d.results?.length ?? 0) + (bl24h.results?.length ?? 0);
+      .all<BlacklistEventHydrationRow>();
+    blacklistRowsRead = rows.results?.length ?? 0;
 
-    const map7d = new Map(bl7d.results.map((row) => [row.stablecoin, row.cnt]));
-    const map24h = new Map(bl24h.results.map((row) => [row.stablecoin, row.cnt]));
-
-    for (const [symbol, count7d] of map7d) {
-      blacklistCounts.set(symbol, {
-        count24h: map24h.get(symbol) ?? 0,
-        count7d,
-      });
+    const cutoff24h = ctx.nowSec - DAY_SECONDS;
+    for (const row of rows.results ?? []) {
+      const stablecoinId = resolveBlacklistEventStablecoinId(row);
+      if (!stablecoinId) continue;
+      const counts = blacklistCounts.get(stablecoinId) ?? { count24h: 0, count7d: 0 };
+      counts.count7d += 1;
+      if (row.timestamp >= cutoff24h) counts.count24h += 1;
+      blacklistCounts.set(stablecoinId, counts);
     }
   } catch (error) {
     ctx.registerSourceFailure("blacklist-events", error, {

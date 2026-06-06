@@ -33,7 +33,7 @@ export const DEWS_SIGNAL_DESCRIPTIONS: Record<DewsSignalKey, string> = {
   liq: "LPs fleeing, measured from 7-day changes in liquidity score and TVL",
   price: "N-source consensus failures across CoinGecko, DefiLlama list, GeckoTerminal, Pyth, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices; maps confidence levels (high/single-source/low/fallback) to stress values",
   diverg: "fragmented pricing between multi-source consensus price, DEX price, and peg reference",
-  black: "issuer emergency freeze surges for the live blacklist-tracked symbol set",
+  black: "issuer emergency freeze surges for canonical stablecoin IDs with direct blacklist-tracker coverage",
   flow: "redemption surge vs minting from on-chain Transfer event data; mature 30-day coverage stays available even when the latest 24-hour window is quiet, contributing zero flow stress instead of disappearing",
   yield: "warning-signal and structured source-risk accumulation from yield spikes, divergence, TVL outflows, negative trends, reward-heavy regimes, thin/stale sources, source switches, and source-risk rank drivers",
 };

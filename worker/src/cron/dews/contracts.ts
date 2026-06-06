@@ -50,6 +50,8 @@ export interface MintBurnSnapshot {
   baselineDays: number;
 }
 
+export type BlacklistCountByStablecoinId = Map<string, { count24h: number; count7d: number }>;
+
 export type DewsComputedRow = DEWSResult & {
   stablecoinId: string;
 };
@@ -71,7 +73,7 @@ export interface DewsSourceState {
   dexPriceStaleIds: Set<string>;
   liqHist7dMap: Map<string, LiquidityHistorySnapshot>;
   liqHistRowsRead: number;
-  blacklistCounts: Map<string, { count24h: number; count7d: number }>;
+  blacklistCounts: BlacklistCountByStablecoinId;
   prevSignals: Map<string, { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
   mintBurnMap: Map<string, MintBurnSnapshot>;

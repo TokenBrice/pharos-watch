@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { computeDEWS } from "../../lib/dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
@@ -9,6 +8,7 @@ import { isAuthoritativeDepegPegReference } from "../../lib/depeg-trust-policy";
 import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
 import { decodeJsonString } from "../../lib/cache-json";
 import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../../lib/constants";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),
@@ -19,13 +19,7 @@ const RawPoolDataSchema = z.object({
     .optional(),
 });
 
-const BLACKLIST_SYMBOL_SET = new Set<string>(BLACKLIST_STABLECOINS);
-const BLACKLIST_ID_TO_SYMBOL = new Map<string, string>();
-for (const meta of PSI_ELIGIBLE_STABLECOINS) {
-  const symbol = typeof meta.symbol === "string" ? meta.symbol.toUpperCase() : "";
-  if (!BLACKLIST_SYMBOL_SET.has(symbol)) continue;
-  BLACKLIST_ID_TO_SYMBOL.set(meta.id, symbol);
-}
+const BLACKLIST_TRACKED_ID_SET = new Set(CONTRACT_CONFIGS.map((config) => config.stablecoinId));
 
 interface BuildDewsScoringResultOptions extends DewsScoringState {
   registerMalformedPersistedInput: (options: {
@@ -115,8 +109,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const prev = prevSnapshot?.signals;
     const mintBurn = sourceState.mintBurnMap.get(meta.id);
 
-    const blacklistSymbol = BLACKLIST_ID_TO_SYMBOL.get(meta.id);
-    const blacklistCounts = blacklistSymbol ? sourceState.blacklistCounts.get(blacklistSymbol) : undefined;
+    const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
+    const blacklistCounts = hasBlacklistTracking ? sourceState.blacklistCounts.get(meta.id) : undefined;
 
     const topPools = buildTopPools(
       meta.id,
@@ -168,7 +162,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       dexPriceUsd: dexPrice?.dexPriceUsd ?? null,
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
-      hasBlacklistTracking: Boolean(blacklistSymbol),
+      hasBlacklistTracking,
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,

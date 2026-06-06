@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.03",
+    title: "Blacklist activity stablecoin-id attribution",
+    date: "2026-06-06",
+    effectiveAt: 1780753058,
+    summary:
+      "DEWS blacklist activity now resolves recent blacklist events to the tracker config's canonical stablecoin id before scoring.",
+    impact: [
+      "Blacklist counts are hydrated from event provenance (`config_key` / `contract_address`) instead of being grouped by bare symbol",
+      "Same-symbol siblings that do not have direct blacklist-tracker coverage now keep the blacklist sub-signal unavailable",
+      "Legacy event rows without provenance fall back only to a single tracker-owned stablecoin id for that symbol, avoiding fan-out across same-symbol PSI assets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.02",
     title: "Explicit zero supply-history anchors",
     date: "2026-06-05",

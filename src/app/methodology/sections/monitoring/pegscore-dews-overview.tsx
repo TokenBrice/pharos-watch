@@ -45,9 +45,11 @@ export function PegScoreDewsOverview() {
           </p>
           <p>
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
-            confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress. Its
-            divergence input now reuses the live depeg DEX trust floor, so fresh-but-thin DEX rows stay visible for
-            analytics but do not affect the score unless they pass the same `$1M` aggregate-TVL gate.
+            confidence, blacklist, flow, and yield signals, with optional PSI-based amplification during systemic stress.
+            Blacklist activity is attributed through the tracker config&apos;s canonical stablecoin ID, so same-symbol
+            siblings do not inherit one issuer&apos;s freeze events. Its divergence input now reuses the live depeg DEX
+            trust floor, so fresh-but-thin DEX rows stay visible for analytics but do not affect the score unless they
+            pass the same `$1M` aggregate-TVL gate.
           </p>
           <p>
             Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
