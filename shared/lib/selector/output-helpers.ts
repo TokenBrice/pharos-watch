@@ -79,9 +79,6 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
     case "yield-warning-thin-tvl":
       return row.warningSignals.length > 0 ? row.warningSignals.join(", ") : "yield warning";
     case "custody-regulated-only-violation":
-      return row.custodyModel != null
-        ? `custody model ${row.custodyModel}`
-        : "custody model unavailable";
     case "custody-onchain-only-violation":
       return row.custodyModel != null
         ? `custody model ${row.custodyModel}`
