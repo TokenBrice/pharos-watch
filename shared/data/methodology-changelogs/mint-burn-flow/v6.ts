@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.14",
+    title: "Bridge config validation fail-closed",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "Bridge-detection config validation now aborts module load on malformed addresses, topics, or selectors instead of logging and continuing with silently disabled bridge filtering.",
+    impact: [
+      "Malformed bridge metadata can no longer let CCIP, CCTP, or LayerZero bridge mints/burns leak into standard economic flow counts",
+      "Mint/burn cron metadata now publishes `bridgeValidationErrors: 0` on healthy runs so the validation surface is explicit in status diagnostics",
+      "Checked-in bridge configs are covered by a module-load validation regression test before deployment",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.13",
     title: "USD-valued largest-event guard",
     date: "2026-06-06",

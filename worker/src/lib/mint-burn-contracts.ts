@@ -61,22 +61,33 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPEC
   resolveMintBurnContractConfig,
 );
 
-// Audit-and-report: validate every existing bridge config without aborting the
-// worker. Invalid metadata should surface in logs for data cleanup while keeping
-// mint/burn sync available for unaffected assets.
-const bridgeValidationErrors: string[] = [];
-for (const cfg of MINT_BURN_CONFIGS) {
-  if (!cfg.bridgeDetection) continue;
-  try {
-    validateMintBurnBridgeDetection(cfg.bridgeDetection);
-  } catch (e) {
-    bridgeValidationErrors.push(
-      `${cfg.chain.chainId}/${cfg.stablecoinId}: ${(e as Error).message}`,
-    );
+export function collectMintBurnBridgeValidationErrors(
+  configs: readonly MintBurnContractConfig[],
+): string[] {
+  const errors: string[] = [];
+  for (const cfg of configs) {
+    if (!cfg.bridgeDetection) continue;
+    try {
+      validateMintBurnBridgeDetection(cfg.bridgeDetection);
+    } catch (e) {
+      errors.push(
+        `${cfg.chain.chainId}/${cfg.stablecoinId}: ${(e as Error).message}`,
+      );
+    }
   }
+  return errors;
 }
-if (bridgeValidationErrors.length > 0) {
-  console.error("[mint-burn-contracts] BRIDGE CONFIG VALIDATION ERRORS:", bridgeValidationErrors);
+
+export const MINT_BURN_BRIDGE_VALIDATION_ERRORS =
+  collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS);
+export const MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT =
+  MINT_BURN_BRIDGE_VALIDATION_ERRORS.length;
+
+if (MINT_BURN_BRIDGE_VALIDATION_ERRORS.length > 0) {
+  throw new Error(
+    "[mint-burn-contracts] BRIDGE CONFIG VALIDATION ERRORS:\n" +
+      MINT_BURN_BRIDGE_VALIDATION_ERRORS.join("\n"),
+  );
 }
 
 export function getMintBurnConfigsForStablecoin(stablecoinId: string): MintBurnContractConfig[] {

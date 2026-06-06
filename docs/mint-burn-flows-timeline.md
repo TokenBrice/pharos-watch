@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.13` (2026-03-01 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.14` (2026-03-01 -> 2026-06-06).
+
+---
+
+## v6.14 - Bridge config validation fail-closed (June 6, 2026)
+
+- Bridge-detection configs now abort module load when an address, topic, or selector is malformed instead of logging and continuing.
+- Mint/burn runs publish `bridgeValidationErrors: 0` in cron metadata on healthy configs so status diagnostics expose the validation surface.
+- Checked-in bridge configs are covered by a validation collector regression before deploy.
 
 ---
 
@@ -47,7 +55,7 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 - CCIP/CCTP classifier now tags bridge **mints** as `flow_type='bridge_transfer'` (previously only burns were tagged). Affects USDO, USD1, avUSD, ZCHF (CCIP) and USDC, EURC (CCTP).
 - LayerZero OFT classifier now accepts an endpoint-only signal (`fingerprintC`: `hasSignalTopic && hasExpectedEmitter && signalEmitterSet.size > 0`), catching LayerZero-Executor-only mints that previously slipped through. Known shared-endpoint false-positive risk is accepted.
 - Removed the `bridge-signal-with-unknown-pool` review path: rows with a bridge signal are now tagged `bridge_transfer` regardless of whether the pool address is known.
-- Bridge-detection configs are validated at module load (`validateMintBurnBridgeDetection`) in audit-and-log mode; a follow-up commit will escalate to throw-on-error after two clean cron cycles.
+- Bridge-detection configs are validated at module load (`validateMintBurnBridgeDetection`); v6.14 escalated malformed bridge config metadata to fail-closed module-load errors.
 - Classifier module split: dispatcher in `mint-burn-bridge-classifier.ts`, per-protocol helpers in `mint-burn-bridge-classifier-protocols.ts`, shared types in `mint-burn-bridge-classifier-types.ts` (leaf module, breaks import cycle).
 
 **Counterparty extraction**

@@ -9,7 +9,7 @@ import {
 } from "./base";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "6.13",
+  currentVersion: "6.14",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
     ...MINT_BURN_FLOW_V6,

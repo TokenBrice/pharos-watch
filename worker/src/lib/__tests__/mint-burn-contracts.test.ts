@@ -3,7 +3,10 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { decodeUint256AtSlot } from "../evm-logs";
 import {
   buildMintBurnScope,
+  collectMintBurnBridgeValidationErrors,
   getMintBurnConfigsForStablecoin,
+  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
+  MINT_BURN_BRIDGE_VALIDATION_ERRORS,
   MINT_BURN_CONFIGS,
   validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
@@ -456,6 +459,12 @@ describe("mint-burn-contracts provenance metadata", () => {
 });
 
 describe("validateMintBurnBridgeDetection", () => {
+  it("keeps checked-in bridge configs clean at module load", () => {
+    expect(MINT_BURN_BRIDGE_VALIDATION_ERRORS).toEqual([]);
+    expect(MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT).toBe(0);
+    expect(collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS)).toEqual([]);
+  });
+
   it("accepts a well-formed config", () => {
     expect(() => validateMintBurnBridgeDetection({
       protocol: "ccip",
@@ -485,5 +494,24 @@ describe("validateMintBurnBridgeDetection", () => {
       knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
       bridgeSignalTopics: [], bridgeSignalSelectors: ["0xabcd"],
     })).toThrow(/selector/i);
+  });
+
+  it("collects per-config errors for fail-fast module validation", () => {
+    const [baseConfig] = MINT_BURN_CONFIGS;
+    expect(baseConfig).toBeDefined();
+    const malformed = {
+      ...baseConfig!,
+      bridgeDetection: {
+        protocol: "ccip" as const,
+        knownBridgePoolAddresses: ["0xnot-an-address"],
+        knownBridgeRouterAddresses: [],
+        bridgeSignalTopics: [],
+        bridgeSignalSelectors: [],
+      },
+    };
+
+    expect(collectMintBurnBridgeValidationErrors([malformed])).toEqual([
+      `${baseConfig!.chain.chainId}/${baseConfig!.stablecoinId}: mint-burn bridge config: invalid address "0xnot-an-address" for protocol ccip`,
+    ]);
   });
 });

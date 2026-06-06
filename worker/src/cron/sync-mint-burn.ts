@@ -3,6 +3,7 @@ import {
   createBudget,
 } from "../lib/evm-logs";
 import {
+  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
 } from "../lib/mint-burn-contracts";
@@ -156,6 +157,7 @@ export async function syncMintBurn(
       apiErrors: 0,
       fallbackMode: null,
       validationFailures: 0,
+      bridgeValidationErrors: MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
       configBreakdown: [],
       laggingConfigs: [],
       degradedSignal: false,
@@ -325,6 +327,7 @@ export async function syncMintBurn(
     status = "degraded";
   }
   completion.metadata.recalcFailed = recalcFailed;
+  completion.metadata.bridgeValidationErrors = MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT;
   if (recalcError) completion.metadata.recalcError = recalcError;
   const metadata = JSON.stringify(completion.metadata);
 
