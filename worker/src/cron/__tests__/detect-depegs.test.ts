@@ -481,6 +481,40 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it("closes an existing live event when tracked supply drops below the live-event floor", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
+          start_price: 0.98, peak_price: 0.98, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.90,
+        circulating: { ethereum: 500_000 },
+      }),
+    ]);
+
+    const closeCall = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL WHERE id = ?"),
+    );
+    expect(closeCall?.binds).toEqual([now, 1]);
+    const inserts = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT INTO depeg_events") || entry.sql.includes("INSERT INTO depeg_pending"),
+    );
+    expect(inserts).toHaveLength(0);
+  });
+
   it("does not suppress a new event when fresh DEX data is below the depeg trust TVL floor", async () => {
     const preparedSqls: string[] = [];
     const now = Math.floor(Date.now() / 1000);

@@ -1,6 +1,14 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.03` (2026-02-18 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.04` (2026-02-18 -> 2026-06-06).
+
+---
+
+## v6.04 — Below-floor live event closure (Jun 6, 2026)
+
+- Live depeg detection now closes an already-open event when the tracked asset remains in the cache but falls below the $1M live-event supply floor
+- Below-floor closures persist `recovery_price = NULL`, matching other coverage-lost closures where Pharos cannot assert a price recovery
+- New below-floor tracked assets still cannot open fresh live depeg rows; the change only resolves existing open rows whose coverage leaves the live-event universe
 
 ---
 

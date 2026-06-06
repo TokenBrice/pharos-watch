@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.04",
+    title: "Below-floor live event closure",
+    date: "2026-06-06",
+    effectiveAt: 1780755098,
+    summary:
+      "Live depeg detection now closes an already-open event when the tracked asset remains in the cache but falls below the $1M live-event supply floor.",
+    impact: [
+      "A coin that depegged above the live-event floor no longer stays LIVE forever after supply shrinks below $1M",
+      "Below-floor closures keep `recovery_price = NULL`, matching other coverage-lost closures where Pharos cannot assert a price recovery",
+      "New below-floor coins still cannot open fresh live depeg rows; the change only resolves existing open rows whose coverage leaves the live-event universe",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.03",
     title: "Blacklist activity stablecoin-id attribution",
     date: "2026-06-06",

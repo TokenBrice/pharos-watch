@@ -207,7 +207,22 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
 
   const supply = sumPegBuckets(asset.circulating);
   if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) {
-    return { kind: "skip", decision: emptyDecision(trackedCoinId) };
+    const decision = emptyDecision(trackedCoinId);
+    if (existing) {
+      decision.commands.push({
+        type: "close-event",
+        id: existing.id,
+        endedAt: now,
+        recoveryPrice: null,
+        recoveryPriceMode: "null",
+      });
+      decision.diagnostics.push(withDiagnostic(
+        "log",
+        `[depeg] Closing live event for ${asset.symbol}: ` +
+        `supply $${Math.round(supply).toLocaleString("en-US")} is below the live-event floor`,
+      ));
+    }
+    return { kind: "skip", decision };
   }
 
   const pegReferenceIsAuthoritative = isAuthoritativeDepegPegReference({

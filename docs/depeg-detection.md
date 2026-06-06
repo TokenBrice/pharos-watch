@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.02`
+- **Current methodology version:** `v6.04`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -130,7 +130,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
-The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a `depeg_events` row.
+The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor, the row closes as coverage-lost with `recovery_price = NULL` instead of remaining live indefinitely.
 
 ### Per-Asset Processing
 
@@ -139,7 +139,7 @@ Validation gates (skip if any fail):
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
 - Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `sumPegBuckets`) for live event recording
+- Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
