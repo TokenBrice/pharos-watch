@@ -53,6 +53,18 @@ function DEWSCalmDot({ x, y }: CalmDot) {
   );
 }
 
+const DEWS_LOGO_SCALE_BY_BAND: Partial<Record<ElevatedCoin["band"], number>> = {
+  ALERT: 1,
+  WARNING: 1.2,
+  DANGER: 1.44,
+};
+
+function dewsLogoRadius(coin: ElevatedCoin): number {
+  const scale = DEWS_LOGO_SCALE_BY_BAND[coin.band] ?? 1;
+  const baseR = mcapDotRadius(coin.mcap) ?? 8;
+  return baseR * scale;
+}
+
 function DEWSDot({
   coin,
   onHover,
@@ -80,8 +92,10 @@ function DEWSDot({
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
   const showLogo = coin.band !== "WATCH" && Boolean(coin.logoUrl);
   const dotR = mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6);
-  const logoR = showLogo ? Math.max(dotR + 2, coin.band === "ALERT" ? 8 : 10) : dotR;
-  const glowR = dotR + 7;
+  const logoR = showLogo ? dewsLogoRadius(coin) : dotR;
+  const visualR = showLogo ? logoR : dotR;
+  const logoInnerR = logoR * 0.75;
+  const glowR = visualR + 7;
   const dur = pulseDuration(coin.band);
 
   return (
@@ -133,7 +147,7 @@ function DEWSDot({
       {isSelected && (
         <>
           <circle
-            r={dotR + 12}
+            r={visualR + 12}
             fill="none"
             stroke={hex}
             strokeWidth={2}
@@ -150,7 +164,7 @@ function DEWSDot({
             />
           </circle>
           <circle
-            r={dotR + 4}
+            r={visualR + 4}
             fill="none"
             stroke="var(--color-background)"
             strokeWidth={2}
@@ -175,10 +189,10 @@ function DEWSDot({
           <circle r={logoR} fill="var(--color-background)" stroke={hex} strokeWidth={1.75} />
           <image
             href={coin.logoUrl}
-            x={-logoR + 2}
-            y={-logoR + 2}
-            width={(logoR - 2) * 2}
-            height={(logoR - 2) * 2}
+            x={-logoInnerR}
+            y={-logoInnerR}
+            width={logoInnerR * 2}
+            height={logoInnerR * 2}
             preserveAspectRatio="xMidYMid meet"
             clipPath={`url(#${logoClipId})`}
           />
