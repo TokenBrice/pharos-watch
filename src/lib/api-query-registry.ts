@@ -163,7 +163,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     pollingDescriptor<DexLiquidityHistoryPoint[]>({
       queryKey: ["dex-liquidity-history", stablecoinId, days],
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
-      producerIntervalMs: CRON_1H,
+      producerIntervalMs: CRON_24H,
       schema: DexLiquidityHistoryResponseSchema,
     }),
   digestArchive: pollingDescriptor<DigestArchiveResponse>({
@@ -355,7 +355,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     pollingDescriptor<SupplyHistoryPoint[]>({
       queryKey: ["supply-history", stablecoinId, days],
       path: API_PATHS.supplyHistory(stablecoinId, days),
-      producerIntervalMs: CRON_1H,
+      producerIntervalMs: CRON_24H,
       schema: SupplyHistoryResponseSchema,
     }),
 } as const;

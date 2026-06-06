@@ -20,10 +20,14 @@ function parseOptionalFiniteNumber(value: string | null | undefined): number | n
 
 export function parseCgPool(pool: CgPool): ParsedPool | null {
   const attrs = pool.attributes;
-  const dexId = pool.relationships.dex.data.id;
+  const dexId = pool.relationships?.dex?.data?.id;
   const poolAddress = attrs.address?.toLowerCase();
+  const baseTokenId = pool.relationships?.base_token?.data?.id;
+  const quoteTokenId = pool.relationships?.quote_token?.data?.id;
+  const baseTokenAddress = baseTokenId?.split("_").pop()?.toLowerCase();
+  const quoteTokenAddress = quoteTokenId?.split("_").pop()?.toLowerCase();
 
-  if (!dexId || !poolAddress) {
+  if (!dexId || !poolAddress || !baseTokenAddress || !quoteTokenAddress) {
     return null;
   }
 
@@ -32,8 +36,8 @@ export function parseCgPool(pool: CgPool): ParsedPool | null {
     poolAddress,
     tvlUsd: Number.parseFloat(attrs.reserve_in_usd ?? ""),
     volume24hUsd: parseCgPoolVolume(attrs),
-    baseTokenAddress: pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-    quoteTokenAddress: pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "",
+    baseTokenAddress,
+    quoteTokenAddress,
     baseTokenPriceUsd: Number.parseFloat(attrs.base_token_price_usd ?? ""),
     quoteTokenPriceUsd: Number.parseFloat(attrs.quote_token_price_usd ?? ""),
     createdAt: attrs.pool_created_at,

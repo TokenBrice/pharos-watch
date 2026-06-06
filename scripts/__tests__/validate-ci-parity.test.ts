@@ -220,6 +220,7 @@ describe("validate-ci parity", () => {
       "npm run check:hook-polling-window",
       "npm run check:hotspot-ratchet",
       "npm run check:migrations",
+      "npm run check:price-bounds-parity",
       "npm run check:redemption-backstops",
       "npm run check:redemption-coverage-audit",
       "npm run check:reserve-fixture-freshness",

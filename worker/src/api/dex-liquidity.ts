@@ -3,7 +3,6 @@ import {
   safeJsonParseWithContext,
   addFreshnessHeaders,
   jsonResponse,
-  getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -22,7 +21,7 @@ import {
 } from "./dex-liquidity-response";
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
-  const [result, histResult, priceResult, latestCron] = await Promise.all([
+  const [result, histResult, priceResult, latestCron, latestSuccessfulCron] = await Promise.all([
     db.prepare("SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version FROM dex_liquidity ORDER BY liquidity_score DESC").all<DexLiquidityRow>(),
     db
       .prepare(
@@ -50,6 +49,15 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
          LIMIT 1`
       )
       .first<DexLiquidityCronRow>()
+      .catch(() => null),
+    db
+      .prepare(
+        `SELECT MAX(started_at) AS started_at
+         FROM cron_runs
+         WHERE job = 'sync-dex-liquidity'
+           AND status = 'ok'`
+      )
+      .first<{ started_at: number | null }>()
       .catch(() => null),
   ]);
 
@@ -140,7 +148,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   const latestRowUpdate = rows.length > 0
     ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0)
     : Math.floor(Date.now() / 1000);
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-dex-liquidity", latestRowUpdate);
+  const freshnessTs = latestSuccessfulCron?.started_at ?? latestRowUpdate;
 
   const headers = addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.custom,

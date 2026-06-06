@@ -37,6 +37,18 @@ describe("geckoterminal shared helpers", () => {
     });
   });
 
+  it("drops pools with missing relationship data instead of throwing", () => {
+    const malformed = {
+      ...GT_POOL_FIXTURE,
+      relationships: {
+        ...GT_POOL_FIXTURE.relationships,
+        dex: { data: null },
+      },
+    } as unknown as GtPool;
+
+    expect(parseGtPool(malformed)).toBeNull();
+  });
+
   it("derives the correct GT pool type labels", () => {
     expect(getGtPoolType("uniswap-v3")).toBe("gt-concentrated");
     expect(getGtPoolType("curve-stable")).toBe("gt-stable-amm");

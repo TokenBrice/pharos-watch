@@ -157,9 +157,18 @@ describe("computeHealthScore", () => {
 
 describe("getHealthBand", () => {
   it("maps score ranges correctly", () => {
+    expect(getHealthBand(100)).toBe("robust");
+    expect(getHealthBand(80)).toBe("robust");
+    expect(getHealthBand(79.999)).toBe("healthy");
     expect(getHealthBand(85)).toBe("robust");
+    expect(getHealthBand(60)).toBe("healthy");
+    expect(getHealthBand(59.999)).toBe("mixed");
     expect(getHealthBand(65)).toBe("healthy");
+    expect(getHealthBand(40)).toBe("mixed");
+    expect(getHealthBand(39.999)).toBe("fragile");
     expect(getHealthBand(45)).toBe("mixed");
+    expect(getHealthBand(20)).toBe("fragile");
+    expect(getHealthBand(19.999)).toBe("concentrated");
     expect(getHealthBand(25)).toBe("fragile");
     expect(getHealthBand(10)).toBe("concentrated");
     expect(getHealthBand(null)).toBeNull();

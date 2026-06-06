@@ -124,7 +124,12 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     try {
       const pools = await config.fetchPools(token.address, token.sourceChain, config.signal);
       for (const rawPool of pools) {
-        const parsed = config.parsePool(rawPool);
+        let parsed: ParsedPool | null = null;
+        try {
+          parsed = config.parsePool(rawPool);
+        } catch {
+          continue;
+        }
         if (!parsed) continue;
 
         config.stats.poolsSeen++;

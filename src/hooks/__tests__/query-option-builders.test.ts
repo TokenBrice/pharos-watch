@@ -36,8 +36,8 @@ describe("query option builders", () => {
     const options = supplyHistoryQueryOptions("usdc-circle");
 
     expect(options.queryKey).toEqual(["supply-history", "usdc-circle", 1825]);
-    expect(options.staleTime).toBe(60 * 60 * 1000);
-    expect(options.refetchInterval).toBe(2 * 60 * 60 * 1000);
+    expect(options.staleTime).toBe(24 * 60 * 60 * 1000);
+    expect(options.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
     expect(options.enabled).toBe(true);
 
     await options.queryFn?.();
@@ -86,8 +86,8 @@ describe("query option builders", () => {
     const safetyOptions = safetyScoreHistoryQueryOptions("usdc-circle", 3650);
 
     expect(dexOptions.queryKey).toEqual(["dex-liquidity-history", "usdc-circle", 90]);
-    expect(dexOptions.staleTime).toBe(60 * 60 * 1000);
-    expect(dexOptions.refetchInterval).toBe(2 * 60 * 60 * 1000);
+    expect(dexOptions.staleTime).toBe(24 * 60 * 60 * 1000);
+    expect(dexOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
 
     expect(safetyOptions.queryKey).toEqual(["safety-score-history", "usdc-circle", 3650]);
     expect(safetyOptions.staleTime).toBe(24 * 60 * 60 * 1000);

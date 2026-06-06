@@ -66,6 +66,18 @@ describe("CoinGecko onchain shared helpers", () => {
     });
   });
 
+  it("drops CG pools with missing relationship data instead of throwing", () => {
+    const malformed = {
+      ...makeCgPool(),
+      relationships: {
+        ...makeCgPool().relationships,
+        base_token: { data: null },
+      },
+    };
+
+    expect(parseCgPool(malformed as never)).toBeNull();
+  });
+
   it("falls back to dex-quality classification when fee data is absent", () => {
     const parsed = parseCgPool(makeCgPool({
       dexId: "curve-stable-swap",

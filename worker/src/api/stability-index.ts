@@ -89,7 +89,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Daily history from stability_index
   const historyQuery = detail
-    ? "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC"
+    ? "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 366"
     : "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 91";
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),

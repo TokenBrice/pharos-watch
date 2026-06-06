@@ -94,6 +94,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0148     | `0148_usda_ddr_sealed_reopen_link.sql`                   | Link the USDA sealed DDR reopen event to the canonical incident through authorized append-only repair records                                    |
 | 0149     | `0149_usdxl_ddr_sealed_tail_link.sql`                    | Link the latest USDXL sealed DDR tail events and advance the canonical incident through authorized append-only repair records                    |
 | 0150     | `0150_usdxl_ddr_tail_90095_link.sql`                     | Link USDXL sealed DDR tail event 90095 and advance the canonical incident through authorized append-only repair records                          |
+| 0151     | `0151_cron_runs_ok_started_index.sql`                    | Add a partial cron_runs(job, started_at DESC) index for latest successful-run freshness lookups                                                  |
 
 ## Retired Individual Migrations
 

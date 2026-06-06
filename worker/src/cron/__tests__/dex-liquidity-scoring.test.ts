@@ -630,7 +630,7 @@ describe("dex-liquidity scoring", () => {
       100_000,
       null,
       null,
-      JSON.stringify([{ protocol: "alien-base", chain: "Base", price: 1.2, tvl: 100_000 }]),
+      JSON.stringify([]),
       1_700_000_001,
     ]);
   });
@@ -702,9 +702,67 @@ describe("dex-liquidity scoring", () => {
       280_000,
       0,
       1,
+      JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000 }]),
+      1_700_000_001,
+    ]);
+  });
+
+  it("filters high-TVL contaminated DEX prices when most observations agree with the primary price", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", price: 0.3 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 100_000,
+            price: 0.3,
+            source: "dl",
+          }),
+          makeDexPricePool({
+            poolId: "base:uniswap-1",
+            project: "uniswap-v3",
+            chain: "Base",
+            tvlUsd: 100_000,
+            price: 0.31,
+            source: "direct_api",
+          }),
+          makeDexPricePool({
+            poolId: "solana:raydium-1",
+            project: "raydium",
+            chain: "Solana",
+            tvlUsd: 1_000_000,
+            price: 1,
+            source: "gecko_terminal",
+          }),
+        ]],
+      ]),
+      1_700_000_001,
+    );
+
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const upserts = statements as PreparedStatementWithMeta[];
+    expect(upserts[0]?.boundValues).toEqual([
+      "usdt-tether",
+      "USDT",
+      0.3,
+      3,
+      1_200_000,
+      0,
+      0.3,
       JSON.stringify([
-        { protocol: "raydium", chain: "Solana", price: 1.2, tvl: 180_000 },
-        { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000 },
+        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000 },
+        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000 },
       ]),
       1_700_000_001,
     ]);
