@@ -99,6 +99,41 @@ describe("selectLargestEvents", () => {
     expect(selected.get("usdt-tether")?.id).toBe("b");
     expect(selected.get("usdc-circle")?.id).toBe("c");
   });
+
+  it("does not let unpriced raw token amounts outrank priced largest events", () => {
+    const selected = selectLargestEvents([
+      {
+        id: "unpriced",
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        chain_id: ETHEREUM_CHAIN_ID,
+        direction: "mint",
+        amount: 100_000_000,
+        amount_usd: null,
+        counterparty: null,
+        tx_hash: "0xunpriced",
+        block_number: 11,
+        timestamp: 1001,
+        explorer_tx_url: "https://example.com/unpriced",
+      },
+      {
+        id: "priced",
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        chain_id: ETHEREUM_CHAIN_ID,
+        direction: "mint",
+        amount: 100,
+        amount_usd: 100,
+        counterparty: null,
+        tx_hash: "0xpriced",
+        block_number: 10,
+        timestamp: 1000,
+        explorer_tx_url: "https://example.com/priced",
+      },
+    ]);
+
+    expect(selected.get("usdt-tether")?.id).toBe("priced");
+  });
 });
 
 describe("readMintBurnCronSnapshot", () => {

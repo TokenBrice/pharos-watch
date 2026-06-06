@@ -729,6 +729,20 @@ describe("handleMintBurnFlows contract tests", () => {
             explorer_tx_url: "https://etherscan.io/tx/0xolder",
           },
           {
+            id: "evt-unpriced",
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            chain_id: "ethereum",
+            direction: "mint",
+            amount: 100_000_000,
+            amount_usd: null,
+            counterparty: null,
+            tx_hash: "0xunpriced",
+            block_number: 12,
+            timestamp: now - 900,
+            explorer_tx_url: "https://etherscan.io/tx/0xunpriced",
+          },
+          {
             id: "evt-newer",
             stablecoin_id: "usdt-tether",
             symbol: "USDT",
@@ -759,6 +773,8 @@ describe("handleMintBurnFlows contract tests", () => {
 
     expect(usdt?.largestEvent24h?.txHash).toBe("0xnewer");
     expect(usdt?.largestEvent24h?.timestamp).toBe(now - 1800);
+    const largestEventQuery = db.getHistory().find((entry) => entry.sql.includes("FROM mint_burn_events"));
+    expect(largestEventQuery?.sql).toContain("amount_usd IS NOT NULL");
   });
 
   it("keeps aggregate coin fields on a fixed 24h window even when hours changes", async () => {

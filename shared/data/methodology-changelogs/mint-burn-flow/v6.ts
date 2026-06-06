@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.13",
+    title: "USD-valued largest-event guard",
+    date: "2026-06-06",
+    effectiveAt: 1780704000,
+    summary:
+      "The public 24-hour largest-event field now considers only rows with resolved USD valuation, preventing raw token amounts from being rendered as dollars.",
+    impact: [
+      "Aggregate `/api/mint-burn-flows` excludes `amount_usd IS NULL` rows from largest-event selection",
+      "The shared largest-event selector ranks by `amount_usd` only and no longer falls back to raw native token amount",
+      "Unpriced mint/burn rows remain available for remediation and event-ledger diagnostics, but they do not populate the USD largest-event table column",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.12",
     title: "Cadence-based coverage lag classification",
     date: "2026-06-06",

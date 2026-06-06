@@ -238,7 +238,8 @@ export async function fetchAggregateData(
            WHERE chain_id IN (${chainInClause.sql})
              AND timestamp >= ?
              AND (direction = 'mint' OR burn_type = 'effective_burn')
-             AND flow_type = 'standard'`,
+             AND flow_type = 'standard'
+             AND amount_usd IS NOT NULL`,
         )
         .bind(...chainInClause.binds, params.window24h),
     ]),
@@ -356,8 +357,8 @@ export function buildCoinSummaries(
       netFlow7dUsd: data.net7dMap.get(id) ?? 0,
       netFlow30dUsd: data.net30dMap.get(id) ?? 0,
       netFlow90dUsd: data.net90dMap.get(id) ?? 0,
-      largestEvent24h: largest
-        ? { direction: largest.direction, amountUsd: largest.amount_usd ?? largest.amount, txHash: largest.tx_hash, timestamp: largest.timestamp }
+      largestEvent24h: largest && largest.amount_usd != null
+        ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,
       coverage,
     });

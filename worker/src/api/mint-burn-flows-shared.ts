@@ -381,8 +381,8 @@ export async function withMintBurnFlowFallback(
 }
 
 function compareLargestEventRows(a: EventRow, b: EventRow): number {
-  const aValue = a.amount_usd ?? a.amount ?? 0;
-  const bValue = b.amount_usd ?? b.amount ?? 0;
+  const aValue = a.amount_usd ?? 0;
+  const bValue = b.amount_usd ?? 0;
   if (aValue !== bValue) return bValue - aValue;
   if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp;
   if (a.block_number !== b.block_number) return b.block_number - a.block_number;

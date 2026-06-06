@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.12` (2026-03-01 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.13` (2026-03-01 -> 2026-06-06).
+
+---
+
+## v6.13 - USD-valued largest-event guard (June 6, 2026)
+
+- Aggregate `/api/mint-burn-flows` now excludes `amount_usd IS NULL` rows from the 24-hour largest-event selector.
+- Largest-event ranking uses resolved USD amount only and no longer falls back to raw native token amount.
+- Unpriced mint/burn rows remain available for event-ledger diagnostics and remediation, but they do not populate the USD largest-event table column.
 
 ---
 
