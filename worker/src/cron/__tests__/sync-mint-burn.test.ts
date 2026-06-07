@@ -544,7 +544,7 @@ describe("syncMintBurn", () => {
     expect(meta.bridgeValidationErrors).toBe(0);
   });
 
-  it("defers bridge-classified rows when tx context cannot be resolved", async () => {
+  it("persists tx-context shortfall rows as excluded bridge transfers", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -564,16 +564,17 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
 
-    expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(1);
     expect(meta.rowsParsed).toBe(1);
-    expect(meta.rowsInserted).toBe(0);
+    expect(meta.rowsInserted).toBe(1);
     expect(meta.bridgeClassification.txContextShortfalls).toBe(1);
     expect(meta.bridgeClassification.deferredRows).toBe(1);
-    expect(meta.degradedSignal).toBe(true);
+    expect(meta.degradedSignal).toBe(false);
     expect(usdt?.txContextShortfalls).toBe(1);
     expect(usdt?.bridgeClassificationDeferredRows).toBe(1);
     expect(usdt?.failedEventDefs).toContain("tx-context:1");
-    expect(usdt?.advanceReason).toBe("no-safe-frontier");
+    expect(usdt?.advanceReason).toBe("full-success-events");
   });
 
   it("counts atomic roundtrips across mint and burn event definitions", async () => {

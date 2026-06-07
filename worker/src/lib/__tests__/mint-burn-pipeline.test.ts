@@ -385,6 +385,7 @@ describe("mint-burn shared pipeline modules", () => {
       bridgeBurns: 1,
       reviewBurns: 1,
       txContextShortfalls: 0,
+      deferredTxHashes: [],
     });
     expect(vi.mocked(getAlchemyTransactionContextBatch)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
@@ -492,9 +493,11 @@ describe("mint-burn shared pipeline modules", () => {
     );
 
     expect(counters.txContextShortfalls).toBe(2);
+    expect(counters.deferredTxHashes).toEqual(["0xbridge-mint", "0xbridge-burn"]);
     expect(counters.effectiveBurns).toBe(0);
-    expect(counters.bridgeBurns).toBe(1);
+    expect(counters.bridgeBurns).toBe(0);
     expect(counters.reviewBurns).toBe(0);
+    expect(rows.every((row) => row.flow_type === "bridge_transfer")).toBe(true);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 

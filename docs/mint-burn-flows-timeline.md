@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.16` (2026-03-01 -> 2026-06-07).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.17` (2026-03-01 -> 2026-06-07).
+
+---
+
+## v6.17 - Tx-context shortfall exclusion recovery (June 7, 2026)
+
+- Bridge-enabled configs now handle residual transaction-context shortfalls at the row level instead of withholding every parsed row in the config window.
+- Rows whose tx or receipt context is unavailable are persisted as `flow_type='bridge_transfer'`, with unresolved burns marked `review_required` / `tx-context-unavailable`, so they remain excluded from counted economic-flow aggregates.
+- Resolved rows in the same scan window are persisted normally and the sync frontier can advance when event and timestamp coverage are otherwise complete; cron metadata still exposes `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows` as unavailable-context diagnostics rather than provider-error counts.
 
 ---
 
@@ -8,7 +16,7 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 - Bridge-aware transaction context now resolves transaction and receipt data through one batched Alchemy JSON-RPC call per transaction instead of two separate calls.
 - Bridge-aware critical configs may use up to 150 requests within the unchanged 200-request cron-wide budget, allowing high-volume USDC windows to catch up without repeatedly deferring every parsed row under the old 60-request cap.
-- The v6.15 fail-closed guard remains intact: if tx or receipt context is genuinely unavailable, rows are still deferred and the sync frontier does not advance.
+- The v6.15 fail-closed guard remains intact for `standard` flow: unavailable tx-context rows are not counted as economic mints or burns.
 
 ---
 

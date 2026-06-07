@@ -289,22 +289,13 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     signal,
   );
   summary.txContextShortfalls = burnCounts.txContextShortfalls;
+  const deferredTxHashSet = new Set(burnCounts.deferredTxHashes);
+  const deferredRows = deferredTxHashSet.size > 0
+    ? allParsedRows.filter((row) => deferredTxHashSet.has(row.tx_hash))
+    : [];
   if (burnCounts.txContextShortfalls > 0) {
-    apiErrors += burnCounts.txContextShortfalls;
-    summary.errors += burnCounts.txContextShortfalls;
     summary.failedEventDefs.push(`tx-context:${burnCounts.txContextShortfalls}`);
-    summary.bridgeClassificationDeferredRows = allParsedRows.length;
-    summary.requestBudgetUsed = configBudget.count;
-    summary.advanceReason = "no-safe-frontier";
-    return {
-      summary,
-      apiErrors,
-      effectiveBurns: 0,
-      bridgeBurns: 0,
-      reviewBurns: 0,
-      atomicRoundtripsDetected: 0,
-      newLastBlock: null,
-    };
+    summary.bridgeClassificationDeferredRows = deferredRows.length;
   }
   effectiveBurns += burnCounts.effectiveBurns;
   bridgeBurns += burnCounts.bridgeBurns;

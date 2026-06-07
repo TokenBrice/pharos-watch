@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.17",
+    title: "Tx-context shortfall exclusion recovery",
+    date: "2026-06-07",
+    effectiveAt: 1780790400,
+    summary:
+      "Bridge-aware mint/burn ingestion now handles residual transaction-context shortfalls per row, excluding unresolved rows from economic flow while allowing resolved rows and the sync frontier to proceed.",
+    impact: [
+      "Rows with unavailable tx or receipt context are persisted as `flow_type='bridge_transfer'`, with unresolved burns marked `review_required` / `tx-context-unavailable`",
+      "Resolved rows in the same bridge-aware config window are no longer withheld because of one unavailable transaction context",
+      "Cron metadata continues to expose `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows` as unavailable-context diagnostics rather than provider-error counts",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.16",
     title: "Bridge context budget recovery",
     date: "2026-06-07",
@@ -10,7 +25,7 @@ export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
       "Bridge-aware critical mint/burn configs now resolve transaction and receipt context with one Alchemy batch request per transaction and have a bounded larger critical budget for high-volume configs.",
     impact: [
       "High-volume bridge-aware configs such as Ethereum USDC can catch up without repeatedly deferring all parsed rows under the old 60-request cap",
-      "Bridge classification still fails closed when transaction or receipt context is genuinely unavailable; the change reduces budget-induced shortfalls rather than publishing unclassified bridge candidates",
+      "Bridge classification still fails closed for counted standard flow when transaction or receipt context is genuinely unavailable; unavailable rows remain excluded from economic-flow aggregates",
       "The cron-wide request ceiling remains 200, while bridge-aware critical configs may use up to 150 requests so other critical configs retain run headroom",
     ],
     commits: [],

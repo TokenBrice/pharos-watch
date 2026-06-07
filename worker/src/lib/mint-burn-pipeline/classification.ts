@@ -91,7 +91,7 @@ export async function classifyBridgeBurnRows(
   signal?: AbortSignal,
 ): Promise<BurnClassificationCounters> {
   if (rows.length === 0) {
-    return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, txContextShortfalls: 0 };
+    return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, txContextShortfalls: 0, deferredTxHashes: [] };
   }
 
   if (!config.bridgeDetection) {
@@ -102,6 +102,7 @@ export async function classifyBridgeBurnRows(
       bridgeBurns: 0,
       reviewBurns: 0,
       txContextShortfalls: 0,
+      deferredTxHashes: [],
     };
   }
 
@@ -114,10 +115,15 @@ export async function classifyBridgeBurnRows(
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   let txContextShortfalls = 0;
+  const deferredTxHashes: string[] = [];
   for (let i = 0; i < txHashes.length; i++) {
     const resolution = resolutions[i]!;
-    txContextByHash.set(txHashes[i]!, resolution.context);
-    if (resolution.shortfall) txContextShortfalls++;
+    const txHash = txHashes[i]!;
+    txContextByHash.set(txHash, resolution.context);
+    if (resolution.shortfall) {
+      txContextShortfalls++;
+      deferredTxHashes.push(txHash);
+    }
   }
 
   classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
@@ -125,7 +131,23 @@ export async function classifyBridgeBurnRows(
   let effectiveBurns = 0;
   let bridgeBurns = 0;
   let reviewBurns = 0;
+  const deferredTxHashSet = new Set(deferredTxHashes);
+  if (deferredTxHashSet.size > 0) {
+    for (const row of rows) {
+      if (!deferredTxHashSet.has(row.tx_hash)) continue;
+      row.flow_type = "bridge_transfer";
+      if (row.direction === "burn") {
+        row.burn_type = "review_required";
+        row.burn_review_reason = "tx-context-unavailable";
+      } else {
+        row.burn_type = null;
+        row.burn_review_reason = null;
+      }
+    }
+  }
+
   for (const row of burnRows) {
+    if (deferredTxHashSet.has(row.tx_hash)) continue;
     if (row.burn_type === "bridge_burn") {
       bridgeBurns++;
     } else if (row.burn_type === "review_required") {
@@ -135,5 +157,5 @@ export async function classifyBridgeBurnRows(
     }
   }
 
-  return { effectiveBurns, bridgeBurns, reviewBurns, txContextShortfalls };
+  return { effectiveBurns, bridgeBurns, reviewBurns, txContextShortfalls, deferredTxHashes };
 }
