@@ -196,6 +196,18 @@ function getPagesValidationEnv(env) {
   return env[PRODUCTION_PAGES_ENV_MODE] === "1" ? getProductionPagesPublicEnv(env) : getOfflinePagesPublicEnv(env);
 }
 
+function getPagesSmokeGaEnv(env) {
+  const explicitExpectedGaId = env.SMOKE_UI_EXPECT_GA_ID?.trim();
+  if (explicitExpectedGaId) {
+    return {};
+  }
+  if (env[PRODUCTION_PAGES_ENV_MODE] !== "1") {
+    return {};
+  }
+  const productionGaId = env.NEXT_PUBLIC_GA_ID?.trim();
+  return productionGaId ? { SMOKE_UI_EXPECT_GA_ID: productionGaId } : {};
+}
+
 export function getCommandEnv(cmd, changedFiles, env = process.env) {
   const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1" ? {} : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
   const pagesValidationEnv = PAGES_VALIDATE_COMMANDS.includes(cmd) ? getPagesValidationEnv(env) : {};
@@ -231,6 +243,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     const pagesUiChanged = hasPagesUiImpact(changedFiles);
     const pagesSmokeEnv = {
       ...baseEnv,
+      ...getPagesSmokeGaEnv(env),
       ...(env.SMOKE_UI_OVERFLOW_ROUTES ? {} : { SMOKE_UI_OVERFLOW_ROUTES: LOCAL_PAGES_CANARY_ROUTES }),
       ...(env.SMOKE_UI_OVERFLOW_WORKERS ? {} : { SMOKE_UI_OVERFLOW_WORKERS: "6" }),
     };

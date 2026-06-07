@@ -262,6 +262,38 @@ describe("buildCommandPlan", () => {
     });
   });
 
+  it("expects GA during production Pages smoke rehearsal when the production GA id is provided", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+        MERGE_GATE_PRODUCTION_ENV: "1",
+        NEXT_PUBLIC_GA_ID: "G-PROD",
+      }),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      SMOKE_UI_EXPECT_GA_ID: "G-PROD",
+      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_UI_OVERFLOW_WORKERS: "6",
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+      SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
+      SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
+      SMOKE_MOBILE_UI_WORKERS: "3",
+      SMOKE_MOBILE_UI_WAIT_MS: "1500",
+    });
+  });
+
+  it("does not override an explicit GA expectation during Pages smoke", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {
+        MERGE_GATE_PRODUCTION_ENV: "1",
+        NEXT_PUBLIC_GA_ID: "G-PROD",
+        SMOKE_UI_EXPECT_GA_ID: "G-CUSTOM",
+      }),
+    ).not.toHaveProperty("SMOKE_UI_EXPECT_GA_ID");
+  });
+
   it("does not override explicit local mobile smoke env overrides", () => {
     expect(
       getCommandEnv(
