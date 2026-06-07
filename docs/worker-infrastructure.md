@@ -776,7 +776,7 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Alerts**: Webhook alert fires on open and close transitions
-- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*` breakers and `dexscreener-search` are excluded from that public-health count, while smaller or excluded circuit failures still surface in the circuit list
+- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*` breakers plus `dexscreener-liquidity` and `dexscreener-search` are excluded from that public-health count, while smaller or excluded circuit failures still surface in the circuit list
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 
@@ -793,6 +793,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_DISCOVERY`                       | `coingecko-discovery`         | `discovery-scan`                                                                                                          |
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
+| `DEXSCREENER_LIQUIDITY`              | `dexscreener-liquidity`       | Optional DexScreener DEX liquidity/discovery pool lookups; excluded from public-impact breaker counts                     |
 | `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | Legacy `enrich-prices` addressless unique-symbol DexScreener search fallback; retired for new sync runs                  |
 | `DEXSCREENER_ADDRESS_PRICES`         | `dexscreener-address-prices`  | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `DEXPAPRIKA_PRICES`                  | `dexpaprika-prices`           | `enrich-prices` targeted exact-address primary augmentation                                                               |

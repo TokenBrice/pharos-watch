@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.14` (2026-02-01 -> 2026-06-06).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.15` (2026-02-01 -> 2026-06-07).
+
+---
+
+## v6.15 - DexScreener liquidity breaker isolation (June 7, 2026)
+
+- Optional DexScreener liquidity and discovery pool lookups now use their own `dexscreener-liquidity` circuit breaker
+- `dexscreener-prices` now protects only the exact token-address stablecoin pricing fallback
+- The optional liquidity breaker remains visible in raw/admin health data but is excluded from public-impact circuit counts
+- `sync-dex-liquidity` records one aggregate DexScreener fallback outcome per run, so target-level failures or budget exhaustion cannot trip a source breaker multiple times in one run
 
 ---
 

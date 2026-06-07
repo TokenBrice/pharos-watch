@@ -136,6 +136,7 @@ export const CIRCUIT_SOURCE = {
   CG_DISCOVERY: "coingecko-discovery",
   CG_ONCHAIN: "coingecko-onchain",
   DEXSCREENER_PRICES: "dexscreener-prices",
+  DEXSCREENER_LIQUIDITY: "dexscreener-liquidity",
   DEXSCREENER_ADDRESS_PRICES: "dexscreener-address-prices",
   DEXPAPRIKA_PRICES: "dexpaprika-prices",
   ALCHEMY_PRICES: "alchemy-prices",

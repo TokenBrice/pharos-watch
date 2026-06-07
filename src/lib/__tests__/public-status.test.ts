@@ -109,8 +109,10 @@ describe("public status helpers", () => {
     expect(impacted).not.toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
   });
 
-  it("excludes reserve-only circuit breakers from public-impact circuit counts", () => {
+  it("excludes optional circuit breakers from public-impact circuit counts", () => {
     expect(isPublicImpactCircuitKey("live-reserves:ousg-ondo")).toBe(false);
+    expect(isPublicImpactCircuitKey("dexscreener-liquidity")).toBe(false);
+    expect(isPublicImpactCircuitKey("dexscreener-search")).toBe(false);
     expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
 
     const circuit = {
@@ -124,6 +126,8 @@ describe("public status helpers", () => {
     expect(countPublicImpactOpenCircuits({
       "live-reserves:ousg-ondo": circuit,
       "live-reserves:mtbill-midas": circuit,
+      "dexscreener-liquidity": circuit,
+      "dexscreener-search": circuit,
     })).toBe(0);
   });
 });

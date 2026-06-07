@@ -154,7 +154,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(warnSpy).toHaveBeenCalledWith("[dex-discovery] dexscreener error for ethereum:0xabc", expect.any(Error));
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
       false,
     );
   });
@@ -182,7 +182,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
       true,
     );
   });

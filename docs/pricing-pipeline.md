@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.14`
+- **Current methodology version:** `v6.15`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -309,7 +309,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Exact-address recoveries publish `dexscreener-exact`. The older last-resort symbol-search path is retired, so addressless assets no longer call `/latest/dex/search` and remain explicitly missing unless another fallback resolves them. The pass walks the full sorted missing set and stops after 10 actual DexScreener exact-address requests. The legacy `dexscreener-search` breaker can still appear in health payloads while stale production state ages out, but new sync runs recover it through the no-candidates path instead of probing the search endpoint.
 6. **Pass 5:** CoinGecko low-volume allowlisted fallback for selected DefiLlama-listed assets whose DL row supplies circulation but no price. It currently targets `mnee-mnee`, `veur-vnx`, `usp-pareto-credit`, and `tryb-bilira`, runs after DefiLlama contract, CMC, Jupiter, and DexScreener recovery fail, and only fills still-missing price fields with `priceConfidence: "fallback"`.
 
-The DefiLlama `/coins` contract-address fallback and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, and `dexscreener-prices` wraps the exact-address DexScreener pricing lane. Discovery records one aggregate DexScreener outcome per coin crawl, so a handful of optional token-target failures inside a partially successful crawl do not count as multiple source-wide failures.
+The DefiLlama `/coins` contract-address fallback and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, `dexscreener-prices` wraps only the exact-address stablecoin pricing lane, and `dexscreener-liquidity` wraps optional DEX liquidity/discovery pool lookups. Discovery and liquidity fallback record aggregate DexScreener outcomes, so a handful of optional token-target failures inside a partially successful crawl do not count as multiple source-wide failures or poison stablecoin price fallback availability.
 
 Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`.
 

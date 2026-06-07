@@ -18,6 +18,7 @@ import {
 } from "./staged-pool";
 
 type DexScreenerTarget = readonly [string, string];
+const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 
 export interface DexScreenerPoolsStageResult {
   stoppedEarly: boolean;
@@ -81,7 +82,7 @@ export async function crawlDexScreenerPoolsStage({
     return { stoppedEarly: false };
   }
 
-  const dsAllowed = await dependencies.shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES);
+  const dsAllowed = await dependencies.shouldAttemptFetch(db, DEXSCREENER_LIQUIDITY_CIRCUIT);
   if (!dsAllowed) {
     return { stoppedEarly: false };
   }
@@ -93,7 +94,7 @@ export async function crawlDexScreenerPoolsStage({
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
       if (dsRequests > 0) {
-        await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, successfulRequests > 0);
+        await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
       }
       return { stoppedEarly: true };
     }
@@ -193,7 +194,7 @@ export async function crawlDexScreenerPoolsStage({
   }
 
   if (dsRequests > 0) {
-    await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, successfulRequests > 0);
+    await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
   }
 
   return { stoppedEarly: false };

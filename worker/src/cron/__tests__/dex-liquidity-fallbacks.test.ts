@@ -100,9 +100,9 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     vi.restoreAllMocks();
   });
 
-  it("skips DexScreener when dexscreener-prices breaker is open", async () => {
+  it("skips DexScreener when dexscreener-liquidity breaker is open", async () => {
     vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) =>
-      source !== CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      source !== CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
     );
 
     // Seed metrics so the fallback has targets (zero pools triggers enrichment).
@@ -143,12 +143,13 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalled();
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
       true,
     );
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
   });
 
-  it("records failure when DexScreener fetch fails", async () => {
+  it("records one aggregate failure when DexScreener fetches fail", async () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: false, pairs: [] });
 
@@ -168,8 +169,9 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalled();
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
-      CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
       false,
     );
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
   });
 });

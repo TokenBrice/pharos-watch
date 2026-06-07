@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.15",
+      title: "DexScreener liquidity breaker isolation",
+      date: "2026-06-07",
+      effectiveAt: 1780825118,
+      summary:
+        "Optional DexScreener liquidity and discovery pool lookups now use their own circuit breaker, preserving the exact-address stablecoin price fallback when liquidity recovery is slow or unavailable.",
+      impact: [
+        "`dexscreener-prices` now protects only the exact token-address stablecoin pricing fallback",
+        "`dexscreener-liquidity` protects optional DEX liquidity and discovery pool lookups and is excluded from public-impact breaker counts",
+        "`sync-dex-liquidity` records one aggregate DexScreener fallback outcome per run, so target-level failures or budget exhaustion cannot trip a source breaker multiple times in one run",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.14",
       title: "Depeg-sized hard-corroborated DEX replacement",
       date: "2026-06-06",

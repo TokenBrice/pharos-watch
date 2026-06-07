@@ -33,6 +33,7 @@ const WEAK_COVERAGE_MIN_POOL_COUNT = 3;
 const WEAK_COVERAGE_MIN_PROTOCOL_COUNT = 2;
 const WEAK_COVERAGE_MIN_TVL_USD = 250_000;
 const WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE = 0.25;
+const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 
 function needsCoverageEnrichment(
   metric: LiquidityMetrics | undefined,
@@ -128,7 +129,7 @@ export async function fetchDsFallbackPools(
     return { newPools, priceObs };
   }
 
-  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES))) {
+  if (!(await shouldAttemptFetch(db, DEXSCREENER_LIQUIDITY_CIRCUIT))) {
     await logCronEvent(db, {
       job: "sync-dex-liquidity",
       eventType: "dexscreener-fallback-circuit-open",
@@ -147,7 +148,14 @@ export async function fetchDsFallbackPools(
   });
 
   let requests = 0;
+  let successfulRequests = 0;
   let poolsFound = 0;
+
+  const recordFallbackOutcome = async () => {
+    if (requests > 0) {
+      await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
+    }
+  };
 
   for (const meta of targetCoins) {
     throwIfAborted(signal);
@@ -159,6 +167,7 @@ export async function fetchDsFallbackPools(
         message: "DexScreener fallback budget exhausted; yielding partial results.",
         metadata: { requests },
       });
+      await recordFallbackOutcome();
       return { newPools, priceObs };
     }
 
@@ -174,6 +183,7 @@ export async function fetchDsFallbackPools(
           message: "DexScreener fallback budget exhausted; yielding partial results.",
           metadata: { requests },
         });
+        await recordFallbackOutcome();
         return { newPools, priceObs };
       }
 
@@ -197,10 +207,11 @@ export async function fetchDsFallbackPools(
             error: err instanceof Error ? err.message : String(err),
           },
         });
-        await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, false);
         continue;
       }
-      await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, result.ok);
+      if (result.ok) {
+        successfulRequests++;
+      }
       if (!result.ok) continue;
       const pairs = result.pairs;
       if (pairs.length === 0) continue;
@@ -317,6 +328,8 @@ export async function fetchDsFallbackPools(
       });
     }
   }
+
+  await recordFallbackOutcome();
 
   const identityCounts = countPoolIdentityKeys(candidates.map((candidate) => candidate.identity));
   for (const candidate of candidates) {
