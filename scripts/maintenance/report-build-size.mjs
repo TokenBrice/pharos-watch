@@ -23,8 +23,13 @@ const DEFAULT_BUDGETS = {
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,
   totalStaticMediaBytes: 2_000_000,
-  largestHtmlBytes: 2_500_000,
-  largestTxtBytes: 1_250_000,
+  // Allow documented App Router + RSC payload growth on docs-heavy release pages.
+  largestHtmlBytes: 2_700_000,
+  // Keep the homepage bootstrap/RSC payload from silently growing into the
+  // mobile critical path again without constraining long-form docs pages.
+  homepageHtmlBytes: 250_000,
+  // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
+  largestTxtBytes: 1_300_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD, so keep a small ratchet above 220 KB.
   representativeDetailHtmlBytes: 230_000,
@@ -38,6 +43,7 @@ const BUDGET_ENV = {
   totalCssBytes: "PHAROS_SIZE_BUDGET_TOTAL_CSS_BYTES",
   totalStaticMediaBytes: "PHAROS_SIZE_BUDGET_TOTAL_STATIC_MEDIA_BYTES",
   largestHtmlBytes: "PHAROS_SIZE_BUDGET_LARGEST_HTML_BYTES",
+  homepageHtmlBytes: "PHAROS_SIZE_BUDGET_HOMEPAGE_HTML_BYTES",
   largestTxtBytes: "PHAROS_SIZE_BUDGET_LARGEST_TXT_BYTES",
   representativeDetailHtmlBytes: "PHAROS_SIZE_BUDGET_DETAIL_HTML_BYTES",
   representativeDetailPageTxtBytes: "PHAROS_SIZE_BUDGET_DETAIL_PAGE_TXT_BYTES",
@@ -144,6 +150,8 @@ const cssFiles = collectFiles(chunksDir, (file) => file.endsWith(".css"));
 const mediaFiles = collectFiles(mediaDir);
 const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
 const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
+const homepageHtmlPath = path.join(outDir, "index.html");
+const homepageHtmlSize = existsSync(homepageHtmlPath) ? statSync(homepageHtmlPath).size : 0;
 
 console.log("# Pharos Build Size Report");
 console.log(`out total files: ${allOutFiles.length}`);
@@ -189,6 +197,7 @@ if (check) {
   checkBudget("total CSS chunks", sum(cssFiles), budgets.totalCssBytes, failures);
   checkBudget("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes, failures);
   checkBudget("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes, failures);
+  checkBudget("homepage HTML file", homepageHtmlSize, budgets.homepageHtmlBytes, failures);
   checkBudget("largest TXT/RSC helper", txtFiles[0]?.size ?? 0, budgets.largestTxtBytes, failures);
 
   for (const detail of representativeDetails) {
