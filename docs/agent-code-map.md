@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/__tests__/vitest-ci-args.test.ts`
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
-- ... 161 more files omitted; use `rg --files scripts` for the full list.
+- ... 162 more files omitted; use `rg --files scripts` for the full list.
