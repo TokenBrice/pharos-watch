@@ -442,11 +442,11 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `USD` | USD 3M T-Bill | FRED `DGS3MO`, then Treasury.gov yield curve XML | Default benchmark and backward-compatible top-level `riskFreeRate`; Treasury.gov is used as a fallback when FRED is unavailable |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
-| `GBP` | GBP SONIA (overnight, proxy) | FRED `IUDSOIA` mirror | Used as a proxy for "3M compounded SONIA"; full compounding can be added later |
-| `JPY` | JPY overnight call (TONA proxy) | FRED `IRSTCB01JPM156N` (uncollateralized overnight call rate) | Used as a TONA-equivalent proxy |
+| `GBP` | GBP SONIA (overnight, proxy) | Bank of England IADB `IUDSOIA` CSV | Used as a proxy for "3M compounded SONIA"; full compounding can be added later |
+| `JPY` | JPY overnight call (TONA proxy) | Bank of Japan Time-Series Data Search `STRDCLUCON` | Used as a TONA-equivalent proxy |
 | `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`), then Etherfuse CETES current issuance fallback | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, Etherfuse is marked `isFallback` and `isProxy`. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
-| `AUD` | AUD 3M interbank (RBA proxy) | FRED `IR3TIB01AUM156N` | 3-month interbank as a proxy for the RBA cash rate target |
+| `AUD` | AUD cash-rate target | Reserve Bank of Australia F1 money-market CSV | RBA cash-rate target used as the AUD local cash hurdle |
 | `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
 | `SGD` | SGD SORA (unavailable) | — | Reserved for a future MAS SORA feed; SGD pegs fall back to USD until a stable public source is wired |
 
@@ -459,9 +459,9 @@ https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservati
 https://indexdata.six-group.com/pro/oauth/token
 https://indexdata.six-group.com/pro/api/report-download
 https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
-https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA
-https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N
-https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N
+https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp
+https://www.stat-search.boj.or.jp/api/v1/getDataCode
+https://www.rba.gov.au/statistics/tables/csv/f1-data.csv
 https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
 https://app.etherfuse.com/bonds/cetes
 https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
@@ -678,11 +678,11 @@ Fetches the benchmark registry used by Yield Intelligence:
 - USD 3M Treasury yield from FRED `DGS3MO`, falling back to Treasury.gov yield XML when FRED is unavailable
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
-- GBP SONIA daily proxy from FRED `IUDSOIA` (v8.13)
-- JPY call-rate proxy from FRED `IRSTCB01JPM156N` (v8.13)
+- GBP SONIA daily proxy from the Bank of England IADB `IUDSOIA` CSV (v8.22)
+- JPY call-rate proxy from Bank of Japan Time-Series Data Search `STRDCLUCON` (v8.22)
 - MXN CETES 28-day from Banxico SIE (`SF43936`), falling back to Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable (v8.15)
 - BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
-- AUD interbank proxy from FRED `IR3TIB01AUM156N` (v8.13)
+- AUD cash-rate target from the Reserve Bank of Australia F1 money-market CSV (v8.22)
 - CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
 
 Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
@@ -789,8 +789,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.21",
-    "currentVersion": "8.21",
+    "version": "8.22",
+    "currentVersion": "8.22",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
@@ -1050,7 +1050,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD interbank proxy, CAD CORRA proxy) |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD cash-rate target, CAD CORRA proxy) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
