@@ -7,7 +7,7 @@ interface StablecoinDepegResolverRowsProps {
   stablecoinId: string;
   data:
     | {
-        _meta: {
+        _meta?: {
           degraded: boolean;
           degradedReason?: string | null;
         };
@@ -21,9 +21,10 @@ export { DepegResolverRowCard };
 
 export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: StablecoinDepegResolverRowsProps) {
   const rows = data?.rows.filter((row) => row.stablecoinId === stablecoinId) ?? [];
-  const showStaleRows = data?._meta.degraded === true && data._meta.degradedReason === "stale-cache" && rows.length > 0;
+  const degraded = data?._meta?.degraded === true;
+  const showStaleRows = degraded && data?._meta?.degradedReason === "stale-cache" && rows.length > 0;
 
-  if (!data || (data._meta.degraded && !showStaleRows) || rows.length === 0) {
+  if (!data || (degraded && !showStaleRows) || rows.length === 0) {
     return null;
   }
 

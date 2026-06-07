@@ -366,6 +366,20 @@ describe("StablecoinDepegResolverRows", () => {
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
   });
 
+  it("renders matching rows when the resolver payload is missing metadata", () => {
+    render(
+      <StablecoinDepegResolverRows
+        stablecoinId="lusd-liquity"
+        data={{
+          rows: [row],
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
+    expect(screen.getByText("At Risk")).toBeTruthy();
+  });
+
   it("keeps matching rows visible when the resolver snapshot is stale", () => {
     render(
       <StablecoinDepegResolverRows
