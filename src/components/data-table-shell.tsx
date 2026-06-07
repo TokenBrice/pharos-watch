@@ -7,13 +7,13 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import {
-  Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import {
@@ -53,6 +53,8 @@ export interface DataTableSortControls<K extends string> {
 }
 
 interface DataTableShellProps<K extends string> {
+  tableId?: string;
+  testId?: string;
   columns: readonly DataTableColumn<K>[];
   children: React.ReactNode;
   sort?: DataTableSortControls<K>;
@@ -129,6 +131,8 @@ export function TableBackgroundRefreshingBar({
 }
 
 export function DataTableShell<K extends string>({
+  tableId,
+  testId,
   columns,
   children,
   sort,
@@ -144,52 +148,52 @@ export function DataTableShell<K extends string>({
   isPending = false,
 }: DataTableShellProps<K>) {
   return (
-    <div className={cn(
-      "pharos-table-shell",
-      containerClassName
-    )}>
-      <TableBackgroundRefreshingBar queryKeys={refreshingQueryKeys} isPending={isPending} />
-      {topSlot}
-      {mobileScrollHint ? (
-        <div className="border-b border-border/50 px-4 py-2 text-[11px] font-medium text-muted-foreground sm:hidden">
-          {mobileScrollHint}
-        </div>
-      ) : null}
-      <div className="scroll-shadow overflow-x-auto overscroll-x-contain pb-3 sm:pb-0">
-        <Table className={cn(tableClassName, striped && "pharos-table-striped", `pharos-density-${density}`)}>
-          <TableHeader className={cn("bg-muted", headerClassName)}>
-            <TableRow>
-              {columns.map((column) =>
-                column.sortKey && sort ? (
-                  <SortableTableHead
-                    key={column.id}
-                    sortKey={column.sortKey}
-                    currentSortKey={sort.sortKey}
-                    sortDirection={sort.sortDirection}
-                    label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
-                    toggleSort={sort.toggleSort}
-                    getAriaSortValue={sort.getAriaSortValue}
-                    adornment={column.headerAdornment}
-                    className={column.className}
-                    title={column.title}
-                  />
-                ) : (
-                  <TableHead
-                    key={column.id}
-                    className={column.className}
-                    title={column.title}
-                  >
-                    {column.label}
-                  </TableHead>
-                ),
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>{children}</TableBody>
-        </Table>
-      </div>
-      {pagination ? <TablePagination {...pagination} /> : null}
-    </div>
+    <TableFrame
+      tableId={tableId}
+      testId={testId}
+      className={containerClassName}
+      tableClassName={tableClassName}
+      viewportProps={{ mobileScrollHint }}
+      density={density}
+      striped={striped}
+      topSlot={
+        <>
+          <TableBackgroundRefreshingBar queryKeys={refreshingQueryKeys} isPending={isPending} />
+          {topSlot}
+        </>
+      }
+      footerSlot={pagination ? <TablePagination {...pagination} /> : null}
+    >
+      <TableHeader className={cn("bg-muted", headerClassName)}>
+        <TableRow>
+          {columns.map((column) =>
+            column.sortKey && sort ? (
+              <SortableTableHead
+                key={column.id}
+                sortKey={column.sortKey}
+                currentSortKey={sort.sortKey}
+                sortDirection={sort.sortDirection}
+                label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
+                toggleSort={sort.toggleSort}
+                getAriaSortValue={sort.getAriaSortValue}
+                adornment={column.headerAdornment}
+                className={column.className}
+                title={column.title}
+              />
+            ) : (
+              <TableHead
+                key={column.id}
+                className={column.className}
+                title={column.title}
+              >
+                {column.label}
+              </TableHead>
+            ),
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>{children}</TableBody>
+    </TableFrame>
   );
 }
 
