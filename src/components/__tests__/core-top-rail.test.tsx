@@ -16,7 +16,7 @@ vi.mock("@/components/homepage-tape", () => ({
   ),
 }));
 
-vi.mock("@/components/sidebar", () => ({
+vi.mock("@/components/sidebar-context", () => ({
   useSidebar: () => sidebarMock(),
 }));
 
