@@ -26,6 +26,7 @@ import { PegCohortRidge } from "@/components/peg-cohort-ridge";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
+import { DepegResolverPostureModule } from "@/components/depeg-resolver-posture-module";
 import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
@@ -288,6 +289,12 @@ export function DepegClient() {
       {/* Coverage — full-width, low-prominence reliability band */}
       <DepegCoverageBand reliability={reliability} />
 
+      {/* Outlook Posture — the whole live book aggregated by recovery verdict, above the per-event cards */}
+      {resolverEnabled ? (
+        <SectionErrorBoundary name="depeg-posture">
+          <DepegResolverPostureModule data={resolverData} logos={logos} />
+        </SectionErrorBoundary>
+      ) : null}
       {/* Depeg Duration Resolver — recovery verdict + expected duration per open event */}
       {resolverEnabled ? (
         <SectionErrorBoundary name="depeg-resolver">
