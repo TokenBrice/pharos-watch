@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.21`
+- **Current methodology version:** `v8.22`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.22 uses first-party central-bank data for GBP/JPY/AUD benchmarks in the `fetchTbillRate` path, replacing the stale or proxy-driven FRED mirrors for these lanes. This keeps benchmark freshness metadata aligned with direct exchange-data availability while leaving yield scoring and source-arbitration semantics unchanged.
 
 Yield v8.21 treats stale comparison anchors as freshness debt, blocks severe lending-opportunity or total ranking collapses against the previous public snapshot, and tightens Layer 3 DeFiLlama fallback matching. On-chain and price-derived rows whose prior anchor is older than 14 days carry `anchor-stale` decision evidence and the public `data-stale` warning even when the current source observation is fresh. The publisher now compares candidate rankings against the prior public cache for yield-bearing rows, non-yield-bearing lending-opportunity rows, and total row count before replacing the cache. Layer 3 DeFiLlama fallback no longer accepts substring-only symbol matches; exact normalized symbols can still match, and prefixed/suffixed wrappers require underlying-token address corroboration.
 

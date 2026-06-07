@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.22",
+    title: "First-Party GBP/JPY/AUD Benchmarks",
+    date: "2026-06-07",
+    effectiveAt: 1780790400,
+    summary:
+      "The daily benchmark registry now reads GBP SONIA, JPY overnight call rate, and AUD cash-rate data from first-party central-bank endpoints instead of stale or slow FRED mirrors.",
+    impact: [
+      "GBP benchmark refreshes use the Bank of England IADB SONIA CSV (`IUDSOIA`) directly",
+      "JPY benchmark refreshes use Bank of Japan Time-Series Data Search `STRDCLUCON`, replacing the discontinued FRED mirror that ended at December 2023",
+      "AUD benchmark refreshes use the Reserve Bank of Australia F1 money-market CSV cash-rate target instead of the FRED 3-month interbank mirror",
+      "Retained-last-market fallback semantics and PYS scoring math are unchanged; the bump records benchmark source reliability and source-roster changes",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.21",
     title: "Anchor Freshness and Published Coverage Guards",
     date: "2026-06-06",
