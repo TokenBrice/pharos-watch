@@ -9,15 +9,17 @@ vi.mock("../db", async (importOriginal) => {
 });
 
 vi.mock("../alchemy-logs", () => ({
-  getAlchemyTransactionByHash: vi.fn(async (_url: string, txHash: string) => ({
-    hash: txHash,
-    to: "0xrouter",
-    input: "0x96f4e9f9",
-  })),
-  getAlchemyTransactionReceipt: vi.fn(async (_url: string, txHash: string) => ({
-    transactionHash: txHash,
-    to: "0xrouter",
-    logs: [],
+  getAlchemyTransactionContextBatch: vi.fn(async (_url: string, txHash: string) => ({
+    tx: {
+      hash: txHash,
+      to: "0xrouter",
+      input: "0x96f4e9f9",
+    },
+    receipt: {
+      transactionHash: txHash,
+      to: "0xrouter",
+      logs: [],
+    },
   })),
 }));
 
@@ -39,7 +41,7 @@ vi.mock("../mint-burn-bridge-classifier", () => ({
   }),
 }));
 
-import { getAlchemyTransactionByHash, getAlchemyTransactionReceipt } from "../alchemy-logs";
+import { getAlchemyTransactionContextBatch } from "../alchemy-logs";
 import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
 import { batchExecute } from "../db";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
@@ -384,8 +386,7 @@ describe("mint-burn shared pipeline modules", () => {
       reviewBurns: 1,
       txContextShortfalls: 0,
     });
-    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(4);
-    expect(vi.mocked(getAlchemyTransactionReceipt)).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(getAlchemyTransactionContextBatch)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
     expect(db).toBeDefined();
   });
@@ -393,7 +394,7 @@ describe("mint-burn shared pipeline modules", () => {
   it("fetches tx contexts with bounded concurrency", async () => {
     let inflight = 0;
     let peak = 0;
-    vi.mocked(getAlchemyTransactionByHash).mockImplementation(async (_url: string, txHash: string) => {
+    vi.mocked(getAlchemyTransactionContextBatch).mockImplementation(async (_url: string, txHash: string) => {
       inflight++;
       peak = Math.max(peak, inflight);
       // Yield across two microtask ticks so the scheduler can start more workers
@@ -401,13 +402,11 @@ describe("mint-burn shared pipeline modules", () => {
       await new Promise<void>((resolve) => queueMicrotask(resolve));
       await new Promise<void>((resolve) => queueMicrotask(resolve));
       inflight--;
-      return { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" };
+      return {
+        tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
+        receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
+      };
     });
-    vi.mocked(getAlchemyTransactionReceipt).mockImplementation(async (_url: string, txHash: string) => ({
-      transactionHash: txHash,
-      to: "0xrouter",
-      logs: [],
-    }));
 
     const rows: MintBurnRow[] = Array.from({ length: 20 }, (_, index) =>
       makeRow({ id: `burn-${index}`, direction: "burn", tx_hash: `0xtx-${index}` }),
@@ -448,12 +447,11 @@ describe("mint-burn shared pipeline modules", () => {
 
     // min(4, 20) = 4; bounded by TX_CONTEXT_CONCURRENCY in classification.ts
     expect(peak).toBe(4);
-    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(20);
+    expect(vi.mocked(getAlchemyTransactionContextBatch)).toHaveBeenCalledTimes(20);
   });
 
   it("reports tx-context shortfalls before classifier defaults can count bridge rows", async () => {
-    vi.mocked(getAlchemyTransactionByHash).mockResolvedValue(null);
-    vi.mocked(getAlchemyTransactionReceipt).mockResolvedValue(null);
+    vi.mocked(getAlchemyTransactionContextBatch).mockResolvedValue({ tx: null, receipt: null });
 
     const rows: MintBurnRow[] = [
       makeRow({ id: "mint-bridge", direction: "mint", tx_hash: "0xbridge-mint" }),

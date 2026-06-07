@@ -92,12 +92,12 @@ export const SIX_SARON_COMPOUND_RATES_REFERER_URL = "https://indexdata.six-group
 export const SIX_SARON_3M_CSV_URL = "https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv";
 /** SIX guest token and report-download endpoints reject the Pharos UA; use a browser-compatible UA instead. */
 export const SIX_BROWSER_USER_AGENT = "Mozilla/5.0";
-/** FRED SONIA daily rate (IUDSOIA) — Sterling Overnight Index Average; used as a proxy for "3M compounded SONIA". */
-export const FRED_SONIA_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA";
-/** FRED uncollateralized overnight call rate for Japan (IRSTCB01JPM156N) — TONA-equivalent proxy. */
-export const FRED_TONA_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N";
-/** FRED 3-month interbank rate for Australia (IR3TIB01AUM156N) — proxy for RBA cash rate target. */
-export const FRED_AUD_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N";
+/** Bank of England SONIA dataset CSV endpoint (base path; date filters added at runtime). */
+export const BOE_SONIA_CSV_BASE_URL = "https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp";
+/** Bank of Japan daily call-rate JSON endpoint (base path; query filters added at runtime). */
+export const BOJ_CALL_RATE_JSON_BASE_URL = "https://www.stat-search.boj.or.jp/api/v1/getDataCode";
+/** Reserve Bank of Australia F1 money-market CSV endpoint. */
+export const RBA_F1_MONEY_MARKET_CSV_URL = "https://www.rba.gov.au/statistics/tables/csv/f1-data.csv";
 /** Banxico SIE API — CETES 28-day primary auction yield (series SF43936). Requires Bmx-Token header. */
 export const BANXICO_CETES_28D_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno";
 /** Etherfuse app route whose Next data exposes the current CETES Stablebond issuance rate. */

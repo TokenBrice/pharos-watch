@@ -19,8 +19,11 @@ import {
   fetchTbillRate,
   parseBanxicoSeries,
   parseBcbSelicSeries,
+  parseBoeSoniaCsv,
+  parseBojCallRateJson,
   parseBocValetSeries,
   parseEcbCompoundedEstrCsv,
+  parseRbaF1MoneyMarketCsv,
   parseSixSar3mcCsv,
   parseTreasuryYieldXml,
 } from "../fetch-tbill-rate";
@@ -115,9 +118,18 @@ function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
  *  isolate USD/EUR/CHF-specific test cases from added benchmark coverage. */
 function okExtendedBenchmarkMocks(): Record<string, Response> {
   return {
-    "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
-    "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
-    "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+    "bankofengland.co.uk": new Response("DATE,IUDSOIA\n02 Mar 2026,5.20\n", { status: 200 }),
+    "stat-search.boj.or.jp": new Response(JSON.stringify({
+      RESULTSET: [{
+        SERIES_CODE: "STRDCLUCON",
+        VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
+      }],
+    }), { status: 200 }),
+    "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
+      "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
+      + "02-Mar-2026,4.30,,4.31\n",
+      { status: 200 },
+    ),
     "banxico.org.mx": new Response(
       JSON.stringify({
         bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
@@ -198,11 +210,11 @@ describe("fetchTbillRate", () => {
     expect(metadata.eurRate).toBe(1.9358);
     expect(metadata.chfSource).toBe("six-sar3mc");
     expect(metadata.chfRate).toBe(-0.0539);
-    expect(metadata.gbpSource).toBe("fred-iudsoia");
+    expect(metadata.gbpSource).toBe("boe-sonia");
     expect(metadata.gbpRate).toBe(5.2);
-    expect(metadata.jpySource).toBe("fred-jpy-overnight");
+    expect(metadata.jpySource).toBe("boj-call-rate");
     expect(metadata.jpyRate).toBe(0.1);
-    expect(metadata.audSource).toBe("fred-aud-3m");
+    expect(metadata.audSource).toBe("rba-cash-rate-target");
     expect(metadata.audRate).toBe(4.3);
     expect(metadata.mxnSource).toBe("banxico-cetes-28d");
     expect(metadata.mxnRate).toBe(10.45);
@@ -411,7 +423,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:fred-sonia-failed,jpy:fred-jpy-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:fred-aud-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
     );
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
     expect(latestCachePayload()).toMatchObject({
@@ -468,7 +480,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,eur:ecb-failed,chf:six-saron-failed,gbp:fred-sonia-failed,jpy:fred-jpy-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:fred-aud-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed-retained,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -518,7 +530,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,eur:ecb-failed,chf:six-saron-failed,gbp:fred-sonia-failed,jpy:fred-jpy-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:fred-aud-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed-retained,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -537,6 +549,70 @@ describe("parseEcbCompoundedEstrCsv", () => {
     expect(parseEcbCompoundedEstrCsv(ECB_ESTR_3M_CSV_SNIPPET)).toEqual({
       rate: 1.9358,
       recordDate: "2026-03-26",
+    });
+  });
+});
+
+describe("parseBoeSoniaCsv", () => {
+  it("extracts the latest Bank of England SONIA observation", () => {
+    expect(parseBoeSoniaCsv("DATE,IUDSOIA\n01 Jun 2026,3.7291\n03 Jun 2026,3.7306\n")).toEqual({
+      rate: 3.7306,
+      recordDate: "2026-06-03",
+    });
+  });
+
+  it("skips malformed trailing rows", () => {
+    expect(parseBoeSoniaCsv("DATE,IUDSOIA\n01 Jun 2026,3.7291\nnot-a-date,3.8\n")).toEqual({
+      rate: 3.7291,
+      recordDate: "2026-06-01",
+    });
+  });
+});
+
+describe("parseBojCallRateJson", () => {
+  it("extracts the latest Bank of Japan call-rate observation", () => {
+    const payload = JSON.stringify({
+      RESULTSET: [{
+        SERIES_CODE: "STRDCLUCON",
+        VALUES: {
+          SURVEY_DATES: [20260601, 20260602, 20260603],
+          VALUES: [0.726, 0.727, 0.728],
+        },
+      }],
+    });
+    expect(parseBojCallRateJson(payload)).toEqual({
+      rate: 0.728,
+      recordDate: "2026-06-03",
+    });
+  });
+
+  it("returns null for malformed JSON", () => {
+    expect(parseBojCallRateJson("not json")).toBeNull();
+  });
+});
+
+describe("parseRbaF1MoneyMarketCsv", () => {
+  it("extracts the latest RBA cash-rate target observation", () => {
+    const payload = [
+      "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate",
+      "03-Jun-2026,4.35,,4.35",
+      "04-Jun-2026,4.35,,4.35",
+      "05-Jun-2026,,,,",
+    ].join("\n");
+    expect(parseRbaF1MoneyMarketCsv(payload)).toEqual({
+      rate: 4.35,
+      recordDate: "2026-06-04",
+    });
+  });
+
+  it("falls back to the interbank overnight column when the target column is blank", () => {
+    const payload = [
+      "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate",
+      "04-Jun-2026,,,4.36",
+    ].join("\n");
+    expect(parseRbaF1MoneyMarketCsv(payload)).toEqual({
+      rate: 4.36,
+      recordDate: "2026-06-04",
     });
   });
 });
@@ -697,9 +773,18 @@ describe("fetchTbillRate — new currency fetchers", () => {
           status: 200,
           headers: { "Content-Type": "text/csv" },
         }),
-        "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
-        "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
-        "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+        "bankofengland.co.uk": new Response("DATE,IUDSOIA\n02 Mar 2026,5.20\n", { status: 200 }),
+        "stat-search.boj.or.jp": new Response(JSON.stringify({
+          RESULTSET: [{
+            SERIES_CODE: "STRDCLUCON",
+            VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
+          }],
+        }), { status: 200 }),
+        "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
+          "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
+          + "02-Mar-2026,4.30,,4.31\n",
+          { status: 200 },
+        ),
         "banxico.org.mx": (_url, opts) => {
           const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
           expect(header).toBe("test-token");
@@ -731,9 +816,9 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadRate).toBe(4.75);
-    expect(calls.some((u) => u.includes("IUDSOIA"))).toBe(true);
-    expect(calls.some((u) => u.includes("IRSTCB01JPM156N"))).toBe(true);
-    expect(calls.some((u) => u.includes("IR3TIB01AUM156N"))).toBe(true);
+    expect(calls.some((u) => u.includes("bankofengland.co.uk"))).toBe(true);
+    expect(calls.some((u) => u.includes("stat-search.boj.or.jp"))).toBe(true);
+    expect(calls.some((u) => u.includes("rba.gov.au/statistics/tables/csv/f1-data.csv"))).toBe(true);
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(true);
     expect(calls.some((u) => u.includes("api.bcb.gov.br"))).toBe(true);
     expect(calls.some((u) => u.includes("bankofcanada.ca/valet"))).toBe(true);
@@ -750,9 +835,18 @@ describe("fetchTbillRate — new currency fetchers", () => {
           status: 200,
           headers: { "Content-Type": "text/csv" },
         }),
-        "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
-        "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
-        "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+        "bankofengland.co.uk": new Response("DATE,IUDSOIA\n02 Mar 2026,5.20\n", { status: 200 }),
+        "stat-search.boj.or.jp": new Response(JSON.stringify({
+          RESULTSET: [{
+            SERIES_CODE: "STRDCLUCON",
+            VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
+          }],
+        }), { status: 200 }),
+        "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
+          "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
+          + "02-Mar-2026,4.30,,4.31\n",
+          { status: 200 },
+        ),
         "app.etherfuse.com/bonds/cetes": new Response(ETHERFUSE_CETES_HTML, {
           status: 200,
           headers: { "Content-Type": "text/html" },
@@ -836,9 +930,18 @@ describe("fetchTbillRate — new currency fetchers", () => {
         status: 200,
         headers: { "Content-Type": "text/csv" },
       }),
-      "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
-      "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
-      "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+      "bankofengland.co.uk": new Response("DATE,IUDSOIA\n02 Mar 2026,5.20\n", { status: 200 }),
+      "stat-search.boj.or.jp": new Response(JSON.stringify({
+        RESULTSET: [{
+          SERIES_CODE: "STRDCLUCON",
+          VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
+        }],
+      }), { status: 200 }),
+      "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
+        "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
+        + "02-Mar-2026,4.30,,4.31\n",
+        { status: 200 },
+      ),
       "banxico.org.mx": null,
       "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
       "bankofcanada.ca/valet": new Response(

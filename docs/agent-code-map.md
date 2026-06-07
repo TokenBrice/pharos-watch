@@ -633,7 +633,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/address-price-providers/types.ts` - AddressPriceAssetLike, AddressPriceProviderCollectionResult, AddressPriceProviderKey, AddressPriceProviderRunResult, AddressPriceProviderRuntimeConfig, AddressPriceQuote
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
-- `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache, ResolveBlockTimestampOptions
+- `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionContextBatch, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache
 - `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetyDimensionSnapshot, AlertSafetyExplainSnapshot, AlertSafetyRawInputSnapshot, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
 - `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, getCacheJsonParseFailureCountersForTests, getResponseReadyCacheKey, readCachedJson, readCachedJsonOr503

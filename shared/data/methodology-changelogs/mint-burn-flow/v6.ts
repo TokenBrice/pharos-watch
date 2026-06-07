@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.16",
+    title: "Bridge context budget recovery",
+    date: "2026-06-07",
+    effectiveAt: 1780790400,
+    summary:
+      "Bridge-aware critical mint/burn configs now resolve transaction and receipt context with one Alchemy batch request per transaction and have a bounded larger critical budget for high-volume configs.",
+    impact: [
+      "High-volume bridge-aware configs such as Ethereum USDC can catch up without repeatedly deferring all parsed rows under the old 60-request cap",
+      "Bridge classification still fails closed when transaction or receipt context is genuinely unavailable; the change reduces budget-induced shortfalls rather than publishing unclassified bridge candidates",
+      "The cron-wide request ceiling remains 200, while bridge-aware critical configs may use up to 150 requests so other critical configs retain run headroom",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.15",
     title: "Bridge tx-context shortfall guard",
     date: "2026-06-06",

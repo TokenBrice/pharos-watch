@@ -1,6 +1,14 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.15` (2026-03-01 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.16` (2026-03-01 -> 2026-06-07).
+
+---
+
+## v6.16 - Bridge context budget recovery (June 7, 2026)
+
+- Bridge-aware transaction context now resolves transaction and receipt data through one batched Alchemy JSON-RPC call per transaction instead of two separate calls.
+- Bridge-aware critical configs may use up to 150 requests within the unchanged 200-request cron-wide budget, allowing high-volume USDC windows to catch up without repeatedly deferring every parsed row under the old 60-request cap.
+- The v6.15 fail-closed guard remains intact: if tx or receipt context is genuinely unavailable, rows are still deferred and the sync frontier does not advance.
 
 ---
 

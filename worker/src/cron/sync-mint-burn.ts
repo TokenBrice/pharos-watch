@@ -38,6 +38,7 @@ const MINT_BURN_CRITICAL_JOB = "sync-mint-burn";
 const MINT_BURN_EXTENDED_JOB = "sync-mint-burn-extended";
 const GLOBAL_BUDGET_LIMIT = 200;
 const CRITICAL_CONFIG_BUDGET_LIMIT = 60;
+const CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT = 150;
 const EXTENDED_CONFIG_BUDGET_LIMIT = 25;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
@@ -81,9 +82,7 @@ export async function syncMintBurn(
   };
 
   throwIfAborted();
-
   const budget = createBudget(GLOBAL_BUDGET_LIMIT);
-
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
@@ -239,6 +238,7 @@ export async function syncMintBurn(
       lastBlocksAfterRun,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
+      criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
       extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
       evmSafetyMarginBlocks: EVM_SAFETY_MARGIN_BLOCKS,
       affectedHours,

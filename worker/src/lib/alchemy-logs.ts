@@ -31,6 +31,11 @@ export interface AlchemyTransactionReceipt {
   logs: AlchemyLogEntry[];
 }
 
+export interface AlchemyTransactionContextBatch {
+  tx: AlchemyTransactionEntry | null;
+  receipt: AlchemyTransactionReceipt | null;
+}
+
 interface JsonRpcResponse<T> {
   jsonrpc: string;
   id: number;
@@ -201,6 +206,80 @@ export async function getAlchemyTransactionReceipt(
     budget,
     signal,
   );
+}
+
+export async function getAlchemyTransactionContextBatch(
+  alchemyUrl: string,
+  txHash: string,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<AlchemyTransactionContextBatch> {
+  if (budgetExhausted(budget)) return { tx: null, receipt: null };
+  budget.count++;
+
+  const payload = [
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_getTransactionByHash",
+      params: [txHash],
+    },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "eth_getTransactionReceipt",
+      params: [txHash],
+    },
+  ];
+
+  const timeout = AbortSignal.timeout(30_000);
+  let res: Response;
+  try {
+    res = await fetch(alchemyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  } catch (err) {
+    console.debug("[alchemy-logs] transaction-context batch fetch failed", err);
+    return { tx: null, receipt: null };
+  }
+
+  if (!res.ok) {
+    console.warn(`[alchemy-logs] transaction-context batch HTTP ${res.status}`);
+    await cancelResponseBodyQuietly(res);
+    return { tx: null, receipt: null };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = await res.json();
+  } catch (err) {
+    console.debug("[alchemy-logs] transaction-context batch response body parse failed", err);
+    return { tx: null, receipt: null };
+  }
+
+  if (!Array.isArray(parsed)) {
+    console.warn("[alchemy-logs] transaction-context batch returned non-array JSON body");
+    return { tx: null, receipt: null };
+  }
+
+  let tx: AlchemyTransactionEntry | null = null;
+  let receipt: AlchemyTransactionReceipt | null = null;
+  for (const item of parsed as Array<JsonRpcResponse<unknown>>) {
+    if (item?.error) {
+      console.warn(`[alchemy-logs] transaction-context batch item error (${item.error.code}): ${item.error.message}`);
+      continue;
+    }
+    if (item?.id === 1) {
+      tx = (item.result ?? null) as AlchemyTransactionEntry | null;
+    } else if (item?.id === 2) {
+      receipt = (item.result ?? null) as AlchemyTransactionReceipt | null;
+    }
+  }
+
+  return { tx, receipt };
 }
 
 async function getAlchemyTransactionObject<T>(

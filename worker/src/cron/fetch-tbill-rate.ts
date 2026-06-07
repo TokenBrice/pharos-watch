@@ -12,9 +12,9 @@ import {
   SIX_REPORT_DOWNLOAD_URL,
   SIX_SARON_3M_CSV_URL,
   SIX_SARON_COMPOUND_RATES_REFERER_URL,
-  FRED_SONIA_CSV_URL,
-  FRED_TONA_CSV_URL,
-  FRED_AUD_CSV_URL,
+  BOE_SONIA_CSV_BASE_URL,
+  BOJ_CALL_RATE_JSON_BASE_URL,
+  RBA_F1_MONEY_MARKET_CSV_URL,
   BANXICO_CETES_28D_URL,
   BCB_SELIC_URL,
   BOC_CORRA_URL,
@@ -103,6 +103,91 @@ function parseFredLatest(csv: string): { recordDate: string; rate: number } | nu
     if (!recordDate || !rateRaw) continue;
     const rate = parseRate(rateRaw);
     if (!isValidBenchmarkRate(rate)) continue;
+    return { recordDate, rate };
+  }
+  return null;
+}
+
+function parseEnglishDate(dateRaw: string): string | null {
+  const match = dateRaw.trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (!match) return null;
+  const month = {
+    Jan: "01",
+    Feb: "02",
+    Mar: "03",
+    Apr: "04",
+    May: "05",
+    Jun: "06",
+    Jul: "07",
+    Aug: "08",
+    Sep: "09",
+    Oct: "10",
+    Nov: "11",
+    Dec: "12",
+  }[match[2]];
+  if (!month) return null;
+  return `${match[3]}-${month}-${match[1].padStart(2, "0")}`;
+}
+
+export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: number } | null {
+  const lines = csv.split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 1; i--) {
+    const line = lines[i]?.trim();
+    if (!line) continue;
+    const [dateRaw, rateRaw] = line.split(",");
+    const recordDate = dateRaw ? parseEnglishDate(dateRaw) : null;
+    const rate = parseRate(rateRaw);
+    if (!recordDate || !isValidBenchmarkRate(rate)) continue;
+    return { recordDate, rate };
+  }
+  return null;
+}
+
+function parseCompactDate(dateRaw: number | string | null | undefined): string | null {
+  const value = String(dateRaw ?? "");
+  const match = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+export function parseBojCallRateJson(json: string): { recordDate: string; rate: number } | null {
+  try {
+    const parsed = JSON.parse(json) as {
+      RESULTSET?: Array<{
+        SERIES_CODE?: unknown;
+        VALUES?: {
+          SURVEY_DATES?: Array<number | string>;
+          VALUES?: Array<number | string | null>;
+        };
+      }>;
+    };
+    const series = parsed.RESULTSET?.find((entry) => entry.SERIES_CODE === "STRDCLUCON") ?? parsed.RESULTSET?.[0];
+    const dates = series?.VALUES?.SURVEY_DATES;
+    const values = series?.VALUES?.VALUES;
+    if (!Array.isArray(dates) || !Array.isArray(values)) return null;
+    for (let i = Math.min(dates.length, values.length) - 1; i >= 0; i--) {
+      const recordDate = parseCompactDate(dates[i]);
+      const rate = parseRate(values[i]);
+      if (!recordDate || !isValidBenchmarkRate(rate)) continue;
+      return { recordDate, rate };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseRbaF1MoneyMarketCsv(csv: string): { recordDate: string; rate: number } | null {
+  const lines = csv.replace(/^\uFEFF/, "").split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]?.trim();
+    if (!line || !/^\d{2}-[A-Za-z]{3}-\d{4},/.test(line)) continue;
+    const columns = line.split(",");
+    const recordDate = parseEnglishDate((columns[0] ?? "").replace(/-/g, " "));
+    const cashRateTarget = parseRate(columns[1]);
+    const interbankOvernightRate = parseRate(columns[3]);
+    const rate = isValidBenchmarkRate(cashRateTarget) ? cashRateTarget : interbankOvernightRate;
+    if (!recordDate || !isValidBenchmarkRate(rate)) continue;
     return { recordDate, rate };
   }
   return null;
@@ -385,6 +470,73 @@ async function tryFredCsv(
   });
 }
 
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date.getTime());
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
+function formatBoeRequestDate(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${String(date.getUTCDate()).padStart(2, "0")}/${months[date.getUTCMonth()]}/${date.getUTCFullYear()}`;
+}
+
+function buildBoeSoniaCsvUrl(now = new Date()): string {
+  const url = new URL(BOE_SONIA_CSV_BASE_URL);
+  url.searchParams.set("csv.x", "yes");
+  url.searchParams.set("Datefrom", formatBoeRequestDate(addDays(now, -21)));
+  url.searchParams.set("Dateto", formatBoeRequestDate(now));
+  url.searchParams.set("SeriesCodes", "IUDSOIA");
+  url.searchParams.set("UsingCodes", "Y");
+  url.searchParams.set("VPD", "Y");
+  url.searchParams.set("VFD", "N");
+  return url.toString();
+}
+
+function buildBojCallRateJsonUrl(now = new Date()): string {
+  const start = addDays(now, -45);
+  const url = new URL(BOJ_CALL_RATE_JSON_BASE_URL);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("lang", "en");
+  url.searchParams.set("db", "FM01");
+  url.searchParams.set("code", "STRDCLUCON");
+  url.searchParams.set(
+    "startDate",
+    `${start.getUTCFullYear()}${String(start.getUTCMonth() + 1).padStart(2, "0")}`,
+  );
+  return url.toString();
+}
+
+async function tryBoeSoniaCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  return fetchAndParseBenchmark({
+    url: buildBoeSoniaCsvUrl(),
+    headers: { "User-Agent": USER_AGENT },
+    parse: parseBoeSoniaCsv,
+    warnLabel: "BoE SONIA CSV",
+    signal,
+  });
+}
+
+async function tryBojCallRate(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  return fetchAndParseBenchmark({
+    url: buildBojCallRateJsonUrl(),
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+    parse: parseBojCallRateJson,
+    warnLabel: "BOJ call-rate JSON",
+    signal,
+  });
+}
+
+async function tryRbaCashRateTarget(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  return fetchAndParseBenchmark({
+    url: RBA_F1_MONEY_MARKET_CSV_URL,
+    headers: { "User-Agent": USER_AGENT },
+    parse: parseRbaF1MoneyMarketCsv,
+    warnLabel: "RBA F1 money-market CSV",
+    signal,
+  });
+}
+
 async function tryEcbCompoundedEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: ECB_ESTR_3M_CSV_URL,
@@ -607,21 +759,21 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
   },
   GBP: {
     key: "GBP",
-    fetch: ({ signal }) => tryFredCsv(FRED_SONIA_CSV_URL, signal),
-    source: "fred-iudsoia",
-    fallbackMode: "fred-sonia-failed",
+    fetch: ({ signal }) => tryBoeSoniaCsv(signal),
+    source: "boe-sonia",
+    fallbackMode: "gbp-sonia-failed",
   },
   JPY: {
     key: "JPY",
-    fetch: ({ signal }) => tryFredCsv(FRED_TONA_CSV_URL, signal),
-    source: "fred-jpy-overnight",
-    fallbackMode: "fred-jpy-failed",
+    fetch: ({ signal }) => tryBojCallRate(signal),
+    source: "boj-call-rate",
+    fallbackMode: "jpy-call-rate-failed",
   },
   AUD: {
     key: "AUD",
-    fetch: ({ signal }) => tryFredCsv(FRED_AUD_CSV_URL, signal),
-    source: "fred-aud-3m",
-    fallbackMode: "fred-aud-failed",
+    fetch: ({ signal }) => tryRbaCashRateTarget(signal),
+    source: "rba-cash-rate-target",
+    fallbackMode: "aud-cash-rate-failed",
   },
   BRL: {
     key: "BRL",

@@ -19,11 +19,11 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.15`
+- **Current methodology version:** `v6.16`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
-> **Note:** `v6.15` went live on 2026-06-06 with bridge tx-context shortfall guards and explicit `bridgeClassification` cron metadata. `v6.14` added fail-closed bridge-detection config validation, `v6.13` added a USD-valued-only guard for the 24-hour largest-event field, `v6.12` added cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing, `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
+> **Note:** `v6.16` went live on 2026-06-07 with batched bridge tx-context reads and a larger bounded critical budget for bridge-aware configs. `v6.15` added bridge tx-context shortfall guards and explicit `bridgeClassification` cron metadata. `v6.14` added fail-closed bridge-detection config validation, `v6.13` added a USD-valued-only guard for the 24-hour largest-event field, `v6.12` added cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing, `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
 ---
 
@@ -63,7 +63,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 | `MAX_SCAN_RANGE` | 50K | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
-| Per-config request cap | 60 critical / 25 extended | Prevents one hot config from consuming the full lane budget |
+| Per-config request cap | 60 critical, 150 bridge-aware critical, 25 extended | Prevents one hot config from consuming the full lane while allowing high-volume bridge-aware critical configs to finish tx-context classification |
 | Config tier policy | `critical` / `extended` | Critical and extended lanes run on separate cron schedules; each config also has a per-config request cap |
 | Coverage lag threshold | public freshness window by chain block cadence, capped at 10K blocks | Marks established per-coin coverage `lagging` once current block progress exceeds the public freshness cadence |
 
@@ -223,7 +223,7 @@ reUSD's `Deposited(address user, address token, uint256 amount)` event has all t
    - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
-   - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
+   - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together through one batched Alchemy JSON-RPC request per transaction, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
    - If a bridge-enabled config cannot resolve required transaction and receipt context for any parsed row, the run records a tx-context shortfall, skips persistence for that config's parsed rows, and leaves the sync frontier unchanged so the same range can be retried.
    - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id, chain_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.

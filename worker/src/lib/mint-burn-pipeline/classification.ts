@@ -6,8 +6,7 @@
  * batch processing; delegates classification logic to the pure module.
  */
 import {
-  getAlchemyTransactionByHash,
-  getAlchemyTransactionReceipt,
+  getAlchemyTransactionContextBatch,
 } from "../alchemy-logs";
 import {
   classifyBridgeAwareBurnRows,
@@ -63,14 +62,11 @@ async function resolveTxContext(
     return { context: cached, shortfall: false };
   }
 
-  if (budget.limit - budget.count < 2 || budgetExhausted(budget)) {
+  if (budgetExhausted(budget)) {
     return { context: null, shortfall: true };
   }
 
-  const [tx, receipt] = await Promise.all([
-    getAlchemyTransactionByHash(alchemyUrl, txHash, budget, signal),
-    getAlchemyTransactionReceipt(alchemyUrl, txHash, budget, signal),
-  ]);
+  const { tx, receipt } = await getAlchemyTransactionContextBatch(alchemyUrl, txHash, budget, signal);
 
   if (!tx || !receipt) {
     return { context: null, shortfall: true };

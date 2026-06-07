@@ -62,6 +62,7 @@ export async function runMintBurnConfigPhase(input: {
   lastBlocksAfterRun: Map<string, number>;
   maxScanRange: number;
   criticalConfigBudgetLimit: number;
+  criticalBridgeConfigBudgetLimit?: number;
   extendedConfigBudgetLimit: number;
   evmSafetyMarginBlocks: number;
   affectedHours: Map<string, MintBurnAffectedHour>;
@@ -171,11 +172,17 @@ export async function runMintBurnConfigPhase(input: {
     summary.attempted = true;
     contractsProcessed++;
     const scanTo = Math.min(fromBlock + input.maxScanRange - 1, chainContext.chainHead);
+    const tierBudgetLimit =
+      tier === "critical" && config.bridgeDetection
+        ? input.criticalBridgeConfigBudgetLimit ?? input.criticalConfigBudgetLimit
+        : tier === "critical"
+          ? input.criticalConfigBudgetLimit
+          : input.extendedConfigBudgetLimit;
     const configBudgetLimit = Math.max(
       1,
       Math.min(
         input.budget.limit - input.budget.count,
-        tier === "critical" ? input.criticalConfigBudgetLimit : input.extendedConfigBudgetLimit,
+        tierBudgetLimit,
       ),
     );
     const result = await syncMintBurnConfig({
