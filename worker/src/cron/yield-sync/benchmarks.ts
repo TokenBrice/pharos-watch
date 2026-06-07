@@ -44,13 +44,13 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   GBP: {
-    // SONIA daily rate via FRED IUDSOIA mirror; used as a proxy for full 3M compounding.
+    // Bank of England IADB IUDSOIA SONIA daily rate; used as a proxy for full 3M compounding.
     label: "GBP SONIA (overnight, proxy)",
     currency: "GBP",
     isProxy: true,
   },
   JPY: {
-    // FRED IRSTCB01JPM156N — uncollateralized overnight call rate (TONA-equivalent proxy).
+    // Bank of Japan STRDCLUCON uncollateralized overnight call rate (TONA-equivalent proxy).
     label: "JPY overnight call (TONA proxy)",
     currency: "JPY",
     isProxy: true,
@@ -68,10 +68,10 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   AUD: {
-    // FRED IR3TIB01AUM156N — 3-month interbank rate Australia (RBA cash rate proxy).
-    label: "AUD 3M interbank (RBA proxy)",
+    // Reserve Bank of Australia F1 cash-rate target.
+    label: "AUD cash-rate target",
     currency: "AUD",
-    isProxy: true,
+    isProxy: false,
   },
   CAD: {
     // BoC Valet V122530 — overnight repo (CORRA-equivalent).

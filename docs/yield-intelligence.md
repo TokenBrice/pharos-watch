@@ -970,6 +970,9 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `SIX_REPORT_DOWNLOAD_URL`       | `https://indexdata.six-group.com/pro/api/report-download` | SIX download broker for delayed public report files |
 | `SIX_SARON_3M_CSV_URL`          | `https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv` | Delayed public CSV for `SAR3MC` |
 | `SIX_BROWSER_USER_AGENT`        | `Mozilla/5.0` | Browser-compatible UA required by SIX guest endpoints |
+| `BOE_SONIA_CSV_BASE_URL`        | `https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp` | Bank of England IADB SONIA CSV base path |
+| `BOJ_CALL_RATE_JSON_BASE_URL`   | `https://www.stat-search.boj.or.jp/api/v1/getDataCode` | Bank of Japan call-rate API base path |
+| `RBA_F1_MONEY_MARKET_CSV_URL`   | `https://www.rba.gov.au/statistics/tables/csv/f1-data.csv` | Reserve Bank of Australia F1 money-market CSV |
 | `PYS_SCALING_FACTOR`            | 8                                                           | PYS distribution tuning parameter after safety-curve steepening |
 | `DEFAULT_SAFETY_SCORE`          | 40                                                          | Safety score for unrated coins (most NAV tokens) |
 | `CIRCUIT_SOURCE.DL_YIELDS`      | `"defillama-yields"`                                        | Circuit breaker key for DL Yields API            |

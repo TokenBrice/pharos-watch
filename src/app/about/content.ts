@@ -82,7 +82,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Ratings & Reference",
     sources:
-      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, SIX delayed SARON compound-rate downloads via public guest access, FRED IUDSOIA (GBP SONIA proxy), FRED IRSTCB01JPM156N (JPY call-rate proxy), Banxico SIE SF43936 (MXN CETES 28d, token-gated), BCB SGS series 11 (BRL SELIC), FRED IR3TIB01AUM156N (AUD interbank proxy), and Bank of Canada Valet V122530 (CAD CORRA proxy)",
+      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, SIX delayed SARON compound-rate downloads via public guest access, Bank of England IADB IUDSOIA (GBP SONIA proxy), Bank of Japan Time-Series Data Search STRDCLUCON (JPY call-rate proxy), Banxico SIE SF43936 (MXN CETES 28d, token-gated), BCB SGS series 11 (BRL SELIC), Reserve Bank of Australia F1 money-market CSV (AUD cash-rate target), and Bank of Canada Valet V122530 (CAD CORRA proxy)",
   },
   {
     label: "Regulatory Registers",

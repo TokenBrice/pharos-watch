@@ -28,7 +28,7 @@ const benchmarks: YieldBenchmarkRegistry = {
   USD: makeBenchmark("USD", "USD", "USD 3M T-Bill", 3.68, "2026-05-18"),
   EUR: makeBenchmark("EUR", "EUR", "EUR 3M compounded €STR", 1.94, "2026-05-19"),
   CHF: makeBenchmark("CHF", "CHF", "CHF 3M compounded SARON", -0.05, "2026-05-15"),
-  AUD: makeBenchmark("AUD", "AUD", "AUD 3M interbank (RBA proxy)", 4.34, "2026-04-01"),
+  AUD: makeBenchmark("AUD", "AUD", "AUD cash-rate target", 4.35, "2026-06-04"),
 };
 
 const poolInputMeta: YieldSourceInputMeta = {
@@ -111,10 +111,10 @@ describe("ReferenceRatesStrip", () => {
     expect(eurRow).toBeDefined();
     expect(within(eurRow!).getByText("−174 bps")).toBeTruthy();
 
-    // AUD rate 4.34 vs USD 3.68 → +66 bps
+    // AUD rate 4.35 vs USD 3.68 -> +67 bps
     const audRow = within(table).getAllByRole("row").find((r) => within(r).queryByText("AUD"));
     expect(audRow).toBeDefined();
-    expect(within(audRow!).getByText("+66 bps")).toBeTruthy();
+    expect(within(audRow!).getByText("+67 bps")).toBeTruthy();
   });
 
   it("renders the Tracked column with per-currency counts when currencyCounts is provided", () => {
