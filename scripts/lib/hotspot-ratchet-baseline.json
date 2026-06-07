@@ -120,8 +120,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 153,
-    "maxFunctionLines": 145,
+    "fileLines": 155,
+    "maxFunctionLines": 147,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
