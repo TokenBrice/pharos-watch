@@ -47,7 +47,7 @@ export interface ContentTableProps
   rowHeaderColumnId?: string;
 }
 
-export function getContentTableCellKeyIssues(
+function getContentTableCellKeyIssues(
   columns: readonly ContentTableColumn[],
   rows: readonly ContentTableRow[],
 ): ContentTableCellKeyIssue[] {
