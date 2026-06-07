@@ -225,6 +225,37 @@ describe("api contract validation policy", () => {
     });
   });
 
+  it("preserves endpoint-owned _meta when no schema is provided", async () => {
+    const ddrPayload = {
+      _meta: {
+        schemaVersion: 2,
+        computedAt: 1779723422,
+        degraded: false,
+        degradedReason: null,
+        publicWarning: "Forecast from Pharos historical data. Not investment advice or a credit rating.",
+      },
+      rows: [],
+      methodology: {
+        currentVersionLabel: "v1.0",
+      },
+    };
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(ddrPayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "X-Data-Age": "30" },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/depeg-resolver");
+
+    expect(result.data).toEqual(ddrPayload);
+    expect(result.meta).toMatchObject({
+      ageSeconds: 30,
+      status: "fresh",
+    });
+  });
+
   it("preserves strict meta-aware validation failures when no envelope fallback applies", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {

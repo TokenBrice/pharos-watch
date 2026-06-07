@@ -328,13 +328,18 @@ export async function apiFetchWithMeta<T>(
 
   const json: unknown = await res.json();
 
-  // Extract _meta from response body (injected by createCacheHandler for object responses)
+  // Extract only the generic freshness envelope. Some endpoints expose domain
+  // metadata under `_meta`; that must stay in `data` for consumers.
   let meta: ApiMeta | null = null;
   let data = json;
   if (json && typeof json === "object" && !Array.isArray(json) && "_meta" in json) {
-    const { _meta, ...rest } = json as Record<string, unknown>;
-    meta = normalizeApiMeta(_meta);
-    data = rest;
+    const record = json as Record<string, unknown>;
+    const normalizedMeta = normalizeApiMeta(record._meta);
+    if (normalizedMeta) {
+      const { _meta, ...rest } = record;
+      meta = normalizedMeta;
+      data = rest;
+    }
   }
   const bodyWarning = getBodyWarning(data);
 
