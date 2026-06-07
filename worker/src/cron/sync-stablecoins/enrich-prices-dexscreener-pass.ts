@@ -232,6 +232,19 @@ export async function runDexScreenerPass(
           }
 
           dexExactAttempts += 1;
+          const pushExactFailure = (errorClass: string, errorMessage: string) => {
+            diagnostics.push({
+              source: "dexscreener-exact",
+              stage: "fallback",
+              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
+              status: null,
+              ok: false,
+              success: false,
+              candidateCount: 1,
+              errorClass,
+              errorMessage,
+            });
+          };
           let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
           try {
             lookupResult = await fetchDsTokenPoolsWithStatus(
@@ -244,17 +257,7 @@ export async function runDexScreenerPass(
           } catch (error) {
             if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
             console.warn(`[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`, error);
-            diagnostics.push({
-              source: "dexscreener-exact",
-              stage: "fallback",
-              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
-              status: null,
-              ok: false,
-              success: false,
-              candidateCount: 1,
-              errorClass: errorClassFor(error),
-              errorMessage: errorMessageFor(error),
-            });
+            pushExactFailure(errorClassFor(error), errorMessageFor(error));
             break;
           }
           const { ok, pairs } = lookupResult;
@@ -262,17 +265,7 @@ export async function runDexScreenerPass(
             dexExactSuccessfulCalls += 1;
           } else {
             console.warn(`[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`);
-            diagnostics.push({
-              source: "dexscreener-exact",
-              stage: "fallback",
-              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
-              status: null,
-              ok: false,
-              success: false,
-              candidateCount: 1,
-              errorClass: "upstream-error",
-              errorMessage: "DexScreener exact lookup returned no usable response",
-            });
+            pushExactFailure("upstream-error", "DexScreener exact lookup returned no usable response");
           }
 
           const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);

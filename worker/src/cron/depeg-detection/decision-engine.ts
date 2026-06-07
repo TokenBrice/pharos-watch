@@ -89,18 +89,6 @@ function withDiagnostic(level: DepegDiagnostic["level"], message: string): Depeg
   return { level, message };
 }
 
-function completeDecision(
-  trackedCoinId: string,
-  decision: Omit<DepegAssetDecision, "trackedCoinId">,
-): DepegAssetDecision {
-  return {
-    trackedCoinId,
-    seenEventIds: decision.seenEventIds,
-    commands: decision.commands,
-    diagnostics: decision.diagnostics,
-  };
-}
-
 /** Returns true when the DEX price row for this asset is fresh and trusted for depeg decisions. */
 function isDexFresh(
   dexRow: DexPriceRow | undefined,
@@ -616,7 +604,12 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
       ? decideNewDepeg(ctx)
       : emptyDecision();
 
-  return completeDecision(ctx.trackedCoinId, decision);
+  return {
+    trackedCoinId: ctx.trackedCoinId,
+    seenEventIds: decision.seenEventIds,
+    commands: decision.commands,
+    diagnostics: decision.diagnostics,
+  };
 }
 
 export function emitDepegDiagnostics(diagnostics: DepegDiagnostic[]): void {

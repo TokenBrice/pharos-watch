@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { encodeUint256Arg } from "../../../lib/evm-selectors";
+import { encodeUint256 } from "../../../lib/evm-selectors";
 import { fetchSghoWrapperReserves } from "../sgho-wrapper";
 
 vi.mock("../helpers", async () => {
@@ -10,7 +10,7 @@ vi.mock("../helpers", async () => {
     ...actual,
     fetchOnchainRawCall: vi.fn(async ({ data }: { data: string }) => {
       if (data === "0x18160ddd") return `0x${(1000n * 10n ** 18n).toString(16).padStart(64, "0")}`;
-      if (data === `0x4cdad506${encodeUint256Arg(1000n * 10n ** 18n)}`) {
+      if (data === `0x4cdad506${encodeUint256(1000n * 10n ** 18n)}`) {
         return `0x${(1005n * 10n ** 18n).toString(16).padStart(64, "0")}`;
       }
       return null;

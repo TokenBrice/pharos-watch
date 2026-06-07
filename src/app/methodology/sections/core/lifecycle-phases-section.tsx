@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
@@ -31,7 +32,7 @@ export function LifecyclePhasesMethodologySection() {
         <p>
           Tracked for visibility before launch. No live data yet, so the coin is excluded from
           score computations and live aggregates. Surfaced on{" "}
-          <Link href="/upcoming/" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">
+          <Link href="/upcoming/" className={METHODOLOGY_LINK_CLASS}>
             /upcoming
           </Link>
           {" "}with milestone metadata and on its own pre-launch detail page; not in the homepage
@@ -46,7 +47,7 @@ export function LifecyclePhasesMethodologySection() {
           preserved as an archive. No new data is collected, and the coin is excluded from PSI,
           DEWS, Safety Score recomputations, Bank Run Gauge, and other live aggregates. Frozen
           entries appear in the{" "}
-          <Link href="/cemetery/" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">
+          <Link href="/cemetery/" className={METHODOLOGY_LINK_CLASS}>
             cemetery
           </Link>
           {" "}with an &quot;archived data available&quot; link to the preserved detail page. The
@@ -75,11 +76,11 @@ export function LifecyclePhasesMethodologySection() {
       />
       <p className="text-xs text-muted-foreground">
         See also:{" "}
-        <Link href="/cemetery/" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">
+        <Link href="/cemetery/" className={METHODOLOGY_LINK_CLASS}>
           Cemetery
         </Link>
         {" · "}
-        <Link href="/upcoming/" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">
+        <Link href="/upcoming/" className={METHODOLOGY_LINK_CLASS}>
           Upcoming launches
         </Link>
         {" · "}

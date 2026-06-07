@@ -3,30 +3,16 @@ import type { ReactNode } from "react";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
-import {
-  buildMethodologyChangelogMetadata,
-  mapMethodologyChangelogEntries,
-} from "./changelog-page-utils";
+import { buildMethodologyChangelogMetadata } from "./changelog-page-utils";
 
-interface MethodologyChangelogSourceEntry {
-  version: string;
-  title: string;
-  date: string;
-  effectiveAt: number;
-  summary: string;
-  commits: readonly string[];
-  reconstructed: boolean;
-}
-
-interface MethodologyChangelogRouteConfig<T extends MethodologyChangelogSourceEntry> {
+interface MethodologyChangelogRouteConfig {
   path: string;
   metadataTitle: string;
   metadataDescription: string;
   breadcrumbName: string;
   title: string;
   lead: ReactNode;
-  entries?: readonly T[];
-  selectImpact?: (entry: T) => readonly string[];
+  entries?: readonly MethodologyChangelogEntry[];
   sections?: readonly { id: string; label: string }[];
   renderContent?: () => ReactNode;
   /** URN identity for the changelog route. */
@@ -44,17 +30,15 @@ interface MethodologyChangelogRouteDefinition {
   Page: () => ReactNode;
 }
 
-export function createMethodologyChangelogRoute<T extends MethodologyChangelogSourceEntry>(
-  config: MethodologyChangelogRouteConfig<T>,
+export function createMethodologyChangelogRoute(
+  config: MethodologyChangelogRouteConfig,
 ): MethodologyChangelogRouteDefinition {
   const metadata = buildMethodologyChangelogMetadata({
     title: config.metadataTitle,
     description: config.metadataDescription,
     path: config.path,
   });
-  const entries = config.entries && config.selectImpact
-    ? mapMethodologyChangelogEntries(config.entries, config.selectImpact)
-    : [];
+  const entries = [...(config.entries ?? [])];
 
   const Page = () => (
     <MethodologyChangelogPage
@@ -77,21 +61,16 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
   return { metadata, entries, Page };
 }
 
-type StandardMethodologyChangelogSourceEntry = MethodologyChangelogSourceEntry & {
-  impact: readonly string[];
-};
-
-interface StandardMethodologyChangelogRouteConfig<T extends StandardMethodologyChangelogSourceEntry>
-  extends Omit<MethodologyChangelogRouteConfig<T>, "lead" | "selectImpact"> {
+interface StandardMethodologyChangelogRouteConfig extends Omit<MethodologyChangelogRouteConfig, "lead"> {
   leadSubject: string;
   versionLabel: string;
 }
 
-export function createStandardMethodologyChangelogRoute<T extends StandardMethodologyChangelogSourceEntry>({
+export function createStandardMethodologyChangelogRoute({
   leadSubject,
   versionLabel,
   ...config
-}: StandardMethodologyChangelogRouteConfig<T>): MethodologyChangelogRouteDefinition {
+}: StandardMethodologyChangelogRouteConfig): MethodologyChangelogRouteDefinition {
   return createMethodologyChangelogRoute({
     ...config,
     lead: (
@@ -99,6 +78,5 @@ export function createStandardMethodologyChangelogRoute<T extends StandardMethod
         Full version history of {leadSubject} methodology decisions, from v1.0 to {versionLabel}.
       </>
     ),
-    selectImpact: (entry) => entry.impact,
   });
 }

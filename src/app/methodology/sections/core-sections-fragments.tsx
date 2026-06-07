@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { METHODOLOGY_LINK_CLASS } from "../methodology-shared";
 
 export function CollateralQualityMethodologyCopy() {
   return (
@@ -20,7 +21,7 @@ export function CollateralQualityMethodologyCopy() {
       remain Low.{" "}
       <Link
         href="/learn/mechanisms/synthetic-delta-neutral/"
-        className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+        className={METHODOLOGY_LINK_CLASS}
       >
         Delta-neutral
       </Link>

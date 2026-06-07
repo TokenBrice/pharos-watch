@@ -64,25 +64,11 @@ function resolveMintBurnJobName(lane: MintBurnLane, explicitJobName?: string): s
   return lane === "extended" ? MINT_BURN_EXTENDED_JOB : MINT_BURN_CRITICAL_JOB;
 }
 
-function normalizeSyncMintBurnOptions(
-  signalOrOptions?: AbortSignal | SyncMintBurnOptions,
-): SyncMintBurnOptions {
-  if (
-    signalOrOptions &&
-    typeof signalOrOptions === "object" &&
-    "aborted" in signalOrOptions
-  ) {
-    return { signal: signalOrOptions as AbortSignal };
-  }
-  return signalOrOptions ?? {};
-}
-
 export async function syncMintBurn(
   db: D1Database,
   alchemyApiKey: string | null,
-  signalOrOptions?: AbortSignal | SyncMintBurnOptions,
+  options: SyncMintBurnOptions = {},
 ): Promise<{ itemCount: number; metadata: string; status?: SyncMintBurnStatus }> {
-  const options = normalizeSyncMintBurnOptions(signalOrOptions);
   const signal = options.signal;
   const lane = options.lane ?? "all";
   const jobName = resolveMintBurnJobName(lane, options.jobName);

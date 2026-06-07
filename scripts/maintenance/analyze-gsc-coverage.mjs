@@ -43,7 +43,7 @@ const LIVE_CHECK_FIELDS = [
   "notes",
 ];
 
-function compareText(a, b) {
+export function compareText(a, b) {
   const left = String(a ?? "");
   const right = String(b ?? "");
   const lowerLeft = left.toLowerCase();
@@ -55,7 +55,7 @@ function compareText(a, b) {
   return 0;
 }
 
-function normalizeHeaderName(value) {
+export function normalizeHeaderName(value) {
   return String(value ?? "")
     .trim()
     .toLowerCase()
@@ -205,7 +205,7 @@ function hasHeader(headers, candidates) {
   return candidates.some((candidate) => normalized.has(normalizeHeaderName(candidate)));
 }
 
-function isDigit(char) {
+export function isDigit(char) {
   return char >= "0" && char <= "9";
 }
 

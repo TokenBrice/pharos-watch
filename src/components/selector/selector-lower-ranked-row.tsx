@@ -21,14 +21,10 @@ export function SelectorLowerRankedRow({
   verdictText,
   teachingText,
 }: SelectorLowerRankedRowProps) {
-  const entryWithProse = entry as SelectorLowerRanked & {
-    verdictText?: string;
-    teachingText?: string;
-  };
-  const verdict = verdictText ?? entryWithProse.verdictText ?? `${entry.symbol} needs review`;
+  const verdict = verdictText ?? entry.verdictText ?? `${entry.symbol} needs review`;
   const teaching =
     teachingText
-    ?? entryWithProse.teachingText
+    ?? entry.teachingText
     ?? (entry.failedComponent
       ? `Lower-ranked for this profile because its ${readableComponent(entry.failedComponent)} reading did not clear the selected profile threshold.`
       : "Lower-ranked for this profile after the same filters and weights were applied.");

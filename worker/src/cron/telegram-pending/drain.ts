@@ -15,7 +15,7 @@ import {
   type TelegramAlertTargetStatusUpdate,
 } from "../telegram-alert-target-status";
 import {
-  pendingRetryDelaySec,
+  pendingBackoffSec,
   readTelegramGlobalBackoff,
   setTelegramGlobalBackoff,
 } from "./backoff";
@@ -419,14 +419,14 @@ export async function drainPendingQueue(
           errorClass: result.errorClass,
           notBeforeAt: result.errorClass === "rate_limit" && result.rateLimitScope === "global"
             ? null
-            : nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec),
+            : nowSec + pendingBackoffSec(result.attempts, result.retryAfterSec),
         });
         pushTargetStatus("queued", result.errorClass ?? null);
         completedIds.add(result.id);
         if (result.errorClass === "rate_limit") {
           rateLimited = true;
           rateLimitRetryAfterSec = result.retryAfterSec;
-          rateLimitNotBeforeAt = nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec);
+          rateLimitNotBeforeAt = nowSec + pendingBackoffSec(result.attempts, result.retryAfterSec);
           if (result.rateLimitScope === "global") {
             globalRateLimited = true;
             await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);

@@ -22,7 +22,7 @@ import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loa
 import { AiSummary } from "@/components/ai-summary";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
-import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
+import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
@@ -284,7 +284,7 @@ export default function StablecoinDetailClient({
   const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
   const hasReservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null;
   const reservesPanel = hasReservesPanel ? (
-    <OverviewSection
+    <ReservePanel
       coin={viewModel.coin}
       reserves={viewModel.reserves}
       reserveFetchError={viewModel.reserveFetchError}

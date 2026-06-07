@@ -334,7 +334,7 @@ export function evaluateExclusions(
 // Required-signals coverage check
 // ---------------------------------------------------------------------------
 
-const REQUIRED_SIGNALS: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
+export const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
   treasury: [
     "safetyGrade",
     "safetyResilienceScore",
@@ -356,8 +356,6 @@ const REQUIRED_SIGNALS: Record<SelectorProfile, readonly (keyof MergedRow)[]> = 
   ],
 };
 
-export const REQUIRED_SIGNALS_BY_PROFILE = REQUIRED_SIGNALS;
-
 export interface CoverageResult {
   ok: boolean;
   missing: string[];
@@ -368,7 +366,7 @@ export function hasRequiredSignals(
   profile: SelectorProfile,
 ): CoverageResult {
   const missing: string[] = [];
-  for (const signal of REQUIRED_SIGNALS[profile]) {
+  for (const signal of REQUIRED_SIGNALS_BY_PROFILE[profile]) {
     if (row[signal] == null) {
       missing.push(String(signal));
     }

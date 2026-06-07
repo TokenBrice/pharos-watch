@@ -190,6 +190,98 @@ describe("buildDepegResolverReviewSnapshot", () => {
     );
   });
 
+  it("reviews published durable v2 prediction payloads", async () => {
+    const incident = {
+      incidentKey: "ddr2:published-prediction",
+      eventId: 42,
+      currentEventId: 42,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 42,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 3_600,
+            recovery_price: 1,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 55,
+          publicPredictionId: 55,
+          incidentKey: incident.incidentKey,
+          eventId: 42,
+          assessmentId: 90,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: ELIGIBLE_AT,
+          lockedAt: ELIGIBLE_AT,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "e".repeat(64),
+          sealedPayload: {
+            symbol: "LUSD",
+            name: "Liquity USD",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            frozen: {
+              resolution: {
+                tier: "recovery_likely",
+                factors: [],
+              },
+              duration: {
+                suppressed: false,
+                suppressedReason: null,
+                medianSec: 3_600,
+                iqrSec: [1_800, 7_200],
+                horizons: JSON.parse(assessmentRow().horizons_json as string),
+                stratum: "below - moderate - robust - USD",
+              },
+            },
+          },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 55,
+          incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-55",
+          snapshotGeneration: 1,
+          publishedAt: ELIGIBLE_AT + 60,
+          firstPublished: true,
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 7_200, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "prediction_review",
+      incidentKey: incident.incidentKey,
+      publicPredictionId: 55,
+      actual: { kind: "recovered" },
+      verdictReview: "correct_recoverable",
+    });
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
+  });
+
   it("reviews stored DDR assessments against actual depeg event outcomes", async () => {
     const db = mockD1([
       { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },

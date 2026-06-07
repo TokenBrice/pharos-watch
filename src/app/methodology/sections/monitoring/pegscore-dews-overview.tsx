@@ -1,4 +1,5 @@
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
   WorkedExample,
@@ -61,9 +62,9 @@ export function PegScoreDewsOverview() {
       </MethodologyDetails>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
-        <a href="#mint-burn-flow-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Mint/Burn Flow</a>
+        <a href="#mint-burn-flow-methodology" className={METHODOLOGY_LINK_CLASS}>Mint/Burn Flow</a>
         {" · "}
-        <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+        <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
       </p>
       <MethodologyFacts
         facts={[

@@ -13,7 +13,6 @@ import {
   HeroCardDesktopSection,
   HeroCardHeader,
   HeroCardMobileSection,
-  type HeroSignalRailItem,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
 
@@ -78,10 +77,6 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
   };
 }
 
-function toSignalRailItem(item: HeroCardViewModel["signalRailItems"][number]): HeroSignalRailItem {
-  return item;
-}
-
 export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   const {
     coin,
@@ -100,7 +95,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   } = model;
   const tertiaryMetrics = model.tertiaryMetrics.map(toMetricConfig);
   const desktopTertiaryMetrics = model.desktopTertiaryMetrics.map(toMetricConfig);
-  const signalRailItems = model.signalRailItems.map(toSignalRailItem);
+  const signalRailItems = model.signalRailItems;
   const sectionBaseProps: HeroSectionBaseProps = {
     coin,
     coinData,

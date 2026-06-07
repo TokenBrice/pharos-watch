@@ -3,6 +3,7 @@ import {
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/chain-health-version";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
   MethodologySectionShell,
@@ -28,7 +29,7 @@ export function ChainHealthMethodologySection() {
 
               <p className="text-xs text-muted-foreground">
                 See also:{" "}
-                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+                <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
               </p>
 
               <MethodologyFacts

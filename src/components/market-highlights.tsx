@@ -246,37 +246,6 @@ function MoverEntry({
   );
 }
 
-function SectionHeader({
-  id,
-  title,
-  detail,
-  badge,
-  hint,
-}: {
-  id: string;
-  title: string;
-  detail: string;
-  badge: string;
-  hint?: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-16 items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
-      <div className="min-w-0 space-y-1">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <h3 id={id} className="pharos-kicker truncate text-foreground">
-            {title}
-          </h3>
-          {hint}
-        </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">{detail}</p>
-      </div>
-      <span className="shrink-0 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono tabular-nums text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        {badge}
-      </span>
-    </div>
-  );
-}
-
 function MarketHighlightSection({
   titleId,
   title,
@@ -294,7 +263,20 @@ function MarketHighlightSection({
 }) {
   return (
     <section aria-labelledby={titleId} className="min-w-0">
-      <SectionHeader id={titleId} title={title} detail={detail} badge={badge} hint={hint} />
+      <div className="flex min-h-16 items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
+        <div className="min-w-0 space-y-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h3 id={titleId} className="pharos-kicker truncate text-foreground">
+              {title}
+            </h3>
+            {hint}
+          </div>
+          <p className="text-[11px] leading-snug text-muted-foreground">{detail}</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono tabular-nums text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {badge}
+        </span>
+      </div>
       <div className="px-3 py-3 sm:px-4">{children}</div>
     </section>
   );

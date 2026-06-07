@@ -41,10 +41,9 @@ function unitLabel(unit: "second" | "minute" | "hour" | "day", value: number, st
   return value === 1 ? "day" : "days";
 }
 
-function joinValueUnit(value: number | string, unit: "second" | "minute" | "hour" | "day", style: RelativeUnitStyle): string {
-  const numericValue = typeof value === "number" ? value : Number(value);
+function joinValueUnit(value: number, unit: "second" | "minute" | "hour" | "day", style: RelativeUnitStyle): string {
   const separator = style === "compact" ? "" : " ";
-  return `${value}${separator}${unitLabel(unit, numericValue, style)}`;
+  return `${value}${separator}${unitLabel(unit, value, style)}`;
 }
 
 function appendSuffix(label: string, suffix: "ago" | "old" | ""): string {

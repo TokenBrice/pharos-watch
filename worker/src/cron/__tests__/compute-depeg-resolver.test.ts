@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrRow } from "@shared/types/depeg-resolver";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/depeg-resolver-version";
 import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";
@@ -171,6 +171,16 @@ describe("computeDepegResolver", () => {
     };
   }
 
+  function readDdrSnapshotPayload(db: Pick<MockD1Database, "getHistory">) {
+    const ddrCacheWrite = db
+      .getHistory()
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
+    if (!ddrCacheWrite) throw new Error("Missing DDR snapshot cache write");
+    return JSON.parse(ddrCacheWrite.binds[1] as string).payload;
+  }
+
   function storesFor(incidentKey = "ddr2:11111111111111111111111111111111") {
     const sealed = {
       id: 7,
@@ -263,12 +273,7 @@ describe("computeDepegResolver", () => {
     ]);
 
     const result = await computeDepegResolver({ db, storeContracts: null });
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
 
     expect(result.itemCount).toBe(0);
     expect(payload.rows).toEqual([]);
@@ -306,12 +311,7 @@ describe("computeDepegResolver", () => {
     );
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
     expect(payload._meta.computedAt).toBe(NOW_SEC);
@@ -371,12 +371,7 @@ describe("computeDepegResolver", () => {
       storeContracts: stores,
     });
 
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
     expect(payload._meta.computedAt).toBe(NOW_SEC);
@@ -417,12 +412,7 @@ describe("computeDepegResolver", () => {
     expect(metadata.v2FreezeSkipped).toBe(true);
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toBe("stablecoins-cache-missing-cache");
     expect(payload.rows).toEqual([]);
@@ -450,12 +440,7 @@ describe("computeDepegResolver", () => {
       storeContracts: stores,
     });
 
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
     expect(payload.rows).toEqual([]);
@@ -565,12 +550,7 @@ describe("computeDepegResolver", () => {
     expect(prediction?.lockTrigger).toBe("readiness_backstop");
     expect(computeDdrPublicRowHash(publishedRow)).toBe(createdRowHash);
 
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
     expect(payload.rows[0].prediction.policyDelaySec).toBe(72 * 3600);
     expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
   });
@@ -638,12 +618,7 @@ describe("computeDepegResolver", () => {
       syncCapabilities: { depegPipeline: true },
       storeContracts: stores,
     });
-    const ddrCacheWrite = db
-      .getHistory()
-      .find(
-        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
-      );
-    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    const payload = readDdrSnapshotPayload(db);
 
     expect(payload.rows[0]).toMatchObject({
       kind: "invalidated_prediction",

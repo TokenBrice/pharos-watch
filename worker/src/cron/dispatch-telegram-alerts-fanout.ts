@@ -1,4 +1,5 @@
 import type { SubscriberRow } from "./dispatch-telegram-routing";
+import type { PendingCapacitySnapshot } from "./telegram-pending-queue";
 
 type AlertType = "dews" | "depeg" | "safety" | "launch";
 
@@ -45,18 +46,6 @@ interface FanoutSubscriptionLoaders {
     db: D1Database,
     stablecoinIds: readonly string[],
   ) => Promise<Map<string, Set<string>>>;
-}
-
-export interface PendingCapacitySnapshot {
-  active: number;
-  due: number;
-  deferred: number;
-  expired: number;
-  nearTtl: number;
-  oldestPendingAgeSec: number | null;
-  oldestDuePendingAgeSec: number | null;
-  estimatedDrainTimeSec: number;
-  drainBudgetPerRun: number;
 }
 
 export interface PendingCapacityFields {

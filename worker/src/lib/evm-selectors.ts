@@ -25,9 +25,6 @@ export function encodeUint256(value: bigint | number): string {
   return uint.toString(16).padStart(64, "0");
 }
 
-export const encodeAddressArg = encodeAddress;
-export const encodeUint256Arg = encodeUint256;
-
 export function encodeBalanceOfCallData(address: string): `0x${string}` {
   return `${BALANCE_OF_SELECTOR}${encodeAddress(address)}` as `0x${string}`;
 }

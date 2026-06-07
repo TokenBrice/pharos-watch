@@ -3,6 +3,7 @@ import {
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyDiagramArrow,
   MethodologyDiagramCard,
@@ -29,9 +30,9 @@ export function StabilityIndexMethodologySection() {
               </p>
               <p className="text-xs text-muted-foreground">
                 See also:{" "}
-                <a href="#pegscore-dews-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">PegScore + DEWS</a>
+                <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
                 {" · "}
-                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
+                <a href="#safety-scores-methodology" className={METHODOLOGY_LINK_CLASS}>Safety Scores</a>
               </p>
               <MethodologyFacts
                 facts={[

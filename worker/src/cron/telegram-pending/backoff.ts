@@ -19,10 +19,6 @@ export function pendingBackoffSec(priorAttempts: number, retryAfterSec: number |
   return PENDING_BACKOFF_SCHEDULE_SEC[idx] ?? PENDING_BACKOFF_CAP_SEC;
 }
 
-export function pendingRetryDelaySec(priorAttempts: number, retryAfterSec: number | null): number {
-  return pendingBackoffSec(priorAttempts, retryAfterSec);
-}
-
 export async function setTelegramGlobalBackoff(db: D1Database, notBeforeAt: number | null): Promise<void> {
   if (notBeforeAt == null) return;
   try {

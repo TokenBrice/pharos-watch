@@ -140,6 +140,35 @@ describe("api contract validation policy", () => {
     expect(result.meta).toEqual({ updatedAt: 200, ageSeconds: 20, status: "degraded" });
   });
 
+  it("drops malformed dependency metadata while preserving valid _meta", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          _meta: {
+            updatedAt: 200,
+            ageSeconds: 20,
+            status: "fresh",
+            dependencies: {
+              bad: { status: "offline", ageSeconds: 50 },
+              price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
+            },
+          },
+          ok: true,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
+
+    expect(result.meta?.dependencies).toEqual({
+      price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
+    });
+  });
+
   it("validates meta-aware response schemas that intentionally retain _meta", async () => {
     const ddrPayload = {
       _meta: {

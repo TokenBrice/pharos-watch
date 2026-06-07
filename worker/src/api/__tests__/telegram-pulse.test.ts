@@ -804,7 +804,7 @@ describe("handleTelegramPulse", () => {
 
 describe("publishTelegramPulseSnapshot", () => {
   it("reuses heavy public sections on the slower pulse cadence", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = Math.floor(Date.parse("2026-05-12T12:00:00.000Z") / 1000);
     const cachedPulse = {
       activeWatchers: 8,
       coinSubscriptions: 13,

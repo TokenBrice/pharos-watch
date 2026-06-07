@@ -23,6 +23,13 @@ export type MockFetchSpy = Mock<MockFetchFn> & {
   assertAllRoutesUsed(): void;
 };
 
+export function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  });
+}
+
 function requestUrl(input: string | Request | URL): string {
   if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
@@ -36,7 +43,7 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
   const spy = vi.fn<MockFetchFn>(async (input: string | Request | URL) => {
     const url = requestUrl(input);
     history.push({ url });
-    const route = routes.find((r) => options.strictUrl === true ? url === r.match : url.includes(r.match));
+    const route = routes.find((r) => (options.strictUrl === true ? url === r.match : url.includes(r.match)));
     if (!route) {
       if (options.requireMatch) {
         throw new Error(`mockFetch: no match for URL: ${url}`);
@@ -63,7 +70,10 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
   return spy;
 }
 
-export function mockFetchStrict(routes: MockRoute[] = [], options: Omit<MockFetchOptions, "requireMatch" | "strictUrl"> = {}): MockFetchSpy {
+export function mockFetchStrict(
+  routes: MockRoute[] = [],
+  options: Omit<MockFetchOptions, "requireMatch" | "strictUrl"> = {},
+): MockFetchSpy {
   return mockFetch(routes, { ...options, requireMatch: true, strictUrl: true });
 }
 

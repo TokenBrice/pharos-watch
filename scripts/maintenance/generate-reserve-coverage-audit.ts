@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../../shared/lib/live-reserve-adapters-definitions";
 import {
@@ -9,13 +9,25 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "../../shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "../../shared/lib/supply";
 import type { LiveReserveEvidenceClass } from "../../shared/types/live-reserves";
 import type { ReserveSlice, StablecoinMeta } from "../../shared/types";
+import {
+  PROD_ORIGIN,
+  PROD_REPORT_CARDS_URL,
+  PROD_STABLECOINS_URL,
+  extractStablecoinRows,
+  fetchJson,
+  formatUsd,
+  isRecord,
+  joinUrl,
+  marketCapForStablecoinRow,
+  markdownValue,
+  readRequiredJsonFile,
+  resolveGeneratedAt,
+  sortByMarketCapOrRank,
+  type UnknownRecord,
+} from "../lib/coverage-audit-cli";
 
-const PROD_ORIGIN = "https://pharos.watch";
-const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards`;
-const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 const SCORE_GRADE_GAP_LIMIT = 50;
 const CURATED_ONLY_CANDIDATE_LIMIT = 50;
 
@@ -271,10 +283,6 @@ const DEFAULT_SOURCE_QUALITY_NOTE: LiveReserveSourceQualityNote = {
   note: "No source-quality note has been recorded yet.",
 };
 
-interface UnknownRecord {
-  [key: string]: unknown;
-}
-
 export interface ReserveCoverageAuditInput {
   trackedCoins?: readonly StablecoinMeta[];
   activeCoins?: readonly StablecoinMeta[];
@@ -325,20 +333,12 @@ interface CliOptions {
   generatedAt: string | null;
 }
 
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function boolValue(value: unknown): boolean {
   return value === true;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function extractReportCardRows(payload: unknown): UnknownRecord[] | null {
@@ -351,22 +351,6 @@ function reserveSlicesFor(coin: StablecoinMeta): readonly ReserveSlice[] {
   return coin.reserves ?? [];
 }
 
-function extractStablecoinRows(payload: unknown): UnknownRecord[] {
-  const envelope = isRecord(payload) && isRecord(payload.payload) ? payload.payload : payload;
-  const rows = Array.isArray(envelope)
-    ? envelope
-    : isRecord(envelope) && Array.isArray(envelope.peggedAssets)
-      ? envelope.peggedAssets
-      : [];
-  return rows.filter(isRecord);
-}
-
-function marketCapForStablecoinRow(row: UnknownRecord): number {
-  const direct = numberValue(row.marketCapUsd ?? row.marketCap ?? row.mcapUsd);
-  if (direct != null) return direct;
-  return getCirculatingRaw(row as { circulating?: Record<string, number> | null | undefined });
-}
-
 function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string, number> | null {
   if (stablecoinsPayload === undefined) return null;
 
@@ -377,15 +361,6 @@ function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string,
     map.set(id, marketCapForStablecoinRow(row));
   }
   return map;
-}
-
-function sortByMarketCapOrRank<T extends { marketCapUsd: number | null; rank: number; coinId: string }>(rows: T[]): T[] {
-  return rows.sort((left, right) => {
-    if (left.marketCapUsd != null || right.marketCapUsd != null) {
-      return (right.marketCapUsd ?? -1) - (left.marketCapUsd ?? -1) || left.coinId.localeCompare(right.coinId);
-    }
-    return left.rank - right.rank || left.coinId.localeCompare(right.coinId);
-  });
 }
 
 function buildCuratedOnlyCandidates(
@@ -560,23 +535,6 @@ function renderNullableCount(value: number | null): string {
   return value == null ? "not supplied" : String(value);
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatUsd(value: number | null): string {
-  if (value == null) return "";
-  if (value >= 1_000_000_000) return `$${formatNumber(value / 1_000_000_000)}B`;
-  if (value >= 1_000_000) return `$${formatNumber(value / 1_000_000)}M`;
-  if (value >= 1_000) return `$${formatNumber(value / 1_000)}K`;
-  return `$${formatNumber(value)}`;
-}
-
-function markdownValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
-}
-
 function renderCuratedOnlyCandidates(rows: readonly CuratedOnlyReserveCandidateRow[]): string[] {
   const clipped = rows.slice(0, CURATED_ONLY_CANDIDATE_LIMIT);
   if (clipped.length === 0) return ["_None._"];
@@ -727,38 +685,6 @@ export function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-async function fetchJson(
-  url: string,
-  fetchImpl: typeof fetch,
-  apiKey: string | undefined,
-  extraHeaders: Record<string, string> = {},
-): Promise<unknown> {
-  const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
-  if (apiKey) headers["X-API-Key"] = apiKey;
-
-  const response = await fetchImpl(url, { headers });
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${body.slice(0, 160)}`);
-  }
-  return JSON.parse(body) as unknown;
-}
-
-function joinUrl(base: string, path: string): string {
-  return `${base.replace(/\/+$/, "")}${path}`;
-}
-
-function readRequiredJsonFile(path: string, label: string): unknown {
-  if (!existsSync(path)) {
-    throw new Error(`${label} file not found: ${path}`);
-  }
-  return readJsonFile(path);
-}
-
 async function loadReportCardInput(
   options: CliOptions,
   cwd: string,
@@ -797,11 +723,6 @@ async function loadReportCardInput(
     stablecoins,
     mode: reportCards !== undefined || stablecoins !== undefined ? "input" : "static",
   };
-}
-
-function resolveGeneratedAt(options: CliOptions): string {
-  if (options.generatedAt === "now") return new Date().toISOString();
-  return options.generatedAt ?? new Date().toISOString();
 }
 
 function writeOutput(path: string, output: string, cwd: string): void {

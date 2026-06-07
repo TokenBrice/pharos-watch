@@ -15,8 +15,6 @@ import type {
 import type { RedemptionCapacityModel, RedemptionCostModel } from "./redemption-backstops";
 import {
   getProviderIdForCapacityModelKind,
-  inferProviderCapacityConfidence,
-  inferProviderCapacitySemantics,
   REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS,
 } from "./redemption-backstop-providers";
 
@@ -51,19 +49,6 @@ export function resolveFeeModelKind(model: RedemptionCostModel): RedemptionFeeMo
   if (model.confidence === "formula") return "formula";
   if (model.feeDescription) return "documented-variable";
   return "undisclosed-reviewed";
-}
-
-export function inferStoredCapacityConfidence(args: {
-  provider: string;
-  sourceMode: RedemptionSourceMode;
-}): RedemptionCapacityConfidence {
-  return inferProviderCapacityConfidence(args);
-}
-
-export function inferStoredCapacitySemantics(args: {
-  provider: string;
-}): RedemptionCapacitySemantics {
-  return inferProviderCapacitySemantics(args);
 }
 
 export function inferStoredFeeConfidence(args: {

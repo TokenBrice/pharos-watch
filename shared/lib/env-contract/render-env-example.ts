@@ -83,6 +83,16 @@ function renderValueLine(key: string, value: string): string {
   return `${key}=${value}`;
 }
 
+function bindingOrder(binding: (typeof ENV_BINDINGS)[number]): number {
+  if (binding.example?.section === "frontend") {
+    return binding.runtimes.frontend?.order ?? Number.MAX_SAFE_INTEGER;
+  }
+  if (binding.runtimes.worker?.status === "required") return binding.runtimes.worker.order;
+  if (binding.runtimes.pagesOps?.status === "required") return binding.runtimes.pagesOps.order;
+  if (binding.runtimes.pagesSiteData?.status === "required") return binding.runtimes.pagesSiteData.order;
+  return Number.MAX_SAFE_INTEGER;
+}
+
 export function renderEnvExample(): string {
   const lines: string[] = [];
 
@@ -118,27 +128,7 @@ export function renderEnvExample(): string {
       continue;
     }
 
-    const ordered = bindings.slice().sort((left, right) => {
-      const leftOrder = left.example?.section === "frontend"
-        ? left.runtimes.frontend?.order ?? Number.MAX_SAFE_INTEGER
-        : left.runtimes.worker?.status === "required"
-          ? left.runtimes.worker.order
-          : left.runtimes.pagesOps?.status === "required"
-            ? left.runtimes.pagesOps.order
-            : left.runtimes.pagesSiteData?.status === "required"
-              ? left.runtimes.pagesSiteData.order
-              : Number.MAX_SAFE_INTEGER;
-      const rightOrder = right.example?.section === "frontend"
-        ? right.runtimes.frontend?.order ?? Number.MAX_SAFE_INTEGER
-        : right.runtimes.worker?.status === "required"
-          ? right.runtimes.worker.order
-          : right.runtimes.pagesOps?.status === "required"
-            ? right.runtimes.pagesOps.order
-            : right.runtimes.pagesSiteData?.status === "required"
-              ? right.runtimes.pagesSiteData.order
-              : Number.MAX_SAFE_INTEGER;
-      return leftOrder - rightOrder;
-    });
+    const ordered = bindings.slice().sort((left, right) => bindingOrder(left) - bindingOrder(right));
 
     for (const binding of ordered) {
       lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));

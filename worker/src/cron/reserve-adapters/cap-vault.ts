@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { formatAddress } from "@shared/lib/format";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressArg } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { resolveCoinContractAddress } from "./evm";
 import {
@@ -245,7 +245,7 @@ export async function fetchCapVaultReserves(
   const supplyUsd = tokenSupplyRaw != null ? decimalNumberFromBigInt(tokenSupplyRaw, 18) : null;
 
   const assetStates = await Promise.all(assetAddresses.map(async (address) => {
-    const encodedAddress = encodeAddressArg(address);
+    const encodedAddress = encodeAddress(address);
     const assetMetadataReads = Promise.all([
       fetchOnchainUint256({
         ...callBase,

@@ -1,7 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR, encodeAddressArg, encodeUint256Arg } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
 import {
@@ -237,7 +237,7 @@ async function loadFacilitators(
       const facilitatorRaw = await fetchOnchainRawCall({
         ...callBase,
         contract: GHO_TOKEN,
-        data: GET_FACILITATOR_SELECTOR + encodeAddressArg(address),
+        data: GET_FACILITATOR_SELECTOR + encodeAddress(address),
       });
       if (!facilitatorRaw) {
         return {
@@ -338,7 +338,7 @@ async function loadTrackedModule(
     const buyFee = await fetchOnchainUint256({
       ...callBase,
       contract: feeStrategyAddress,
-      data: GET_BUY_FEE_SELECTOR + encodeUint256Arg(ONE_GHO),
+      data: GET_BUY_FEE_SELECTOR + encodeUint256(ONE_GHO),
     });
     if (buyFee != null) {
       buyFeeBps = Number((buyFee * 10_000n) / ONE_GHO);

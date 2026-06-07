@@ -1,7 +1,6 @@
 import { z } from "zod";
-import type { DependencyType } from "./dependency-types";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
-import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveRisk, type ReserveSlice } from "./reserves";
+import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveSlice } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import {
   RedemptionHolderEligibilitySchema,
@@ -56,9 +55,7 @@ export type LiveReserveRedemptionRouteStatusSource =
   (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number];
 export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
-export type LiveReserveRisk = ReserveRisk;
 export type LiveReserveRpcMode = (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number];
-export type LiveReserveDependencyType = DependencyType;
 
 export type LiveReserveInput =
   | { kind: "http-json"; url: string }

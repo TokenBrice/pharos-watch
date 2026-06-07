@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
@@ -25,7 +26,7 @@ export function InfrastructureMethodologySection() {
         the original Liquity{" "}
         <Link
           href="/learn/mechanisms/cdp/"
-          className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+          className={METHODOLOGY_LINK_CLASS}
         >
           CDP
         </Link>

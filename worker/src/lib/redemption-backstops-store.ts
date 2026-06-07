@@ -45,11 +45,13 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import {
   deriveModelConfidence,
-  inferStoredCapacityConfidence,
-  inferStoredCapacitySemantics,
   inferStoredFeeConfidence,
   inferStoredFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
+import {
+  inferProviderCapacityConfidence,
+  inferProviderCapacitySemantics,
+} from "@shared/lib/redemption-backstop-providers";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
 import { isMissingColumnError, isMissingTableError } from "./db";
@@ -276,13 +278,13 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
   const capacityConfidence =
     details.capacityConfidence ??
-    inferStoredCapacityConfidence({
+    inferProviderCapacityConfidence({
       provider: row.provider,
       sourceMode: row.source_mode,
     });
   const capacitySemantics =
     details.capacitySemantics ??
-    inferStoredCapacitySemantics({
+    inferProviderCapacitySemantics({
       provider: row.provider,
     });
   const feeConfidence =

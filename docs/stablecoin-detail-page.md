@@ -250,7 +250,6 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/lib/stablecoin-detail-view-model.ts`                           | Pure derivation and fallback assembly                      |
 | `src/components/stablecoin-detail/hero-card.tsx`                    | Detail hero surface                                        |
 | `src/components/stablecoin-detail/section-banner.tsx`               | Section banner heading shared by the detail zones          |
-| `src/components/stablecoin-detail/overview-section.tsx`             | Compatibility wrapper for the Reserve View panel           |
 | `src/components/stablecoin-detail/reserve-panel.tsx`                | Reserve View panel, notices, links, retry action           |
 | `src/components/stablecoin-detail/reserve-presentation.ts`          | Pure reserve notice, footnote, and sync-copy helpers       |
 | `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card              |

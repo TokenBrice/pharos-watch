@@ -1,7 +1,7 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { TOTAL_SUPPLY_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR, encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -61,7 +61,7 @@ export async function fetchSghoWrapperReserves(
 
   const previewRedeemRawHex = await fetchOnchainRawCall({
     ...callBase,
-    data: `${PREVIEW_REDEEM_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
+    data: `${PREVIEW_REDEEM_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
   });
   if (!previewRedeemRawHex) {
     throw new Error(`sgho-wrapper: previewRedeem(totalSupply) call failed for ${coin.id}`);

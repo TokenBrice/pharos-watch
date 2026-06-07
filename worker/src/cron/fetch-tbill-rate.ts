@@ -165,6 +165,12 @@ function parseEuropeanDate(dateRaw: string): string | null {
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
+function parseSlashDmyToIso(dateRaw: string): string | null {
+  const match = dateRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
 function parseSixOauthToken(json: string): string | null {
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>;
@@ -335,64 +341,69 @@ interface ResolvedBenchmarkProvider {
   failureMode: string | null;
 }
 
+async function fetchAndParseBenchmark<T>({
+  url,
+  headers,
+  retries = BENCHMARK_FETCH_MAX_RETRIES,
+  parse,
+  warnLabel,
+  signal,
+}: {
+  url: string;
+  headers: Record<string, string>;
+  retries?: number;
+  parse: (body: string) => T | null;
+  warnLabel: string;
+  signal?: AbortSignal;
+}): Promise<T | null> {
+  try {
+    const res = await fetchWithRetry(url, {
+      headers,
+      signal,
+    }, retries, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+
+    if (!res?.ok) return null;
+
+    return parse(await res.text());
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    console.warn(`[fetch-tbill-rate] ${warnLabel} failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
 async function tryFredCsv(
   url: string,
   signal?: AbortSignal,
 ): Promise<{ rate: number; recordDate: string } | null> {
-  try {
-    const res = await fetchWithRetry(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-
-    if (!res?.ok) {
-      return null;
-    }
-
-    return parseFredLatest(await res.text());
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] FRED CSV failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url,
+    headers: { "User-Agent": USER_AGENT },
+    parse: parseFredLatest,
+    warnLabel: "FRED CSV",
+    signal,
+  });
 }
 
 async function tryEcbCompoundedEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
-  try {
-    const res = await fetchWithRetry(ECB_ESTR_3M_CSV_URL, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-
-    if (!res?.ok) {
-      return null;
-    }
-
-    return parseEcbCompoundedEstrCsv(await res.text());
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] ECB 3M compounded €STR CSV failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url: ECB_ESTR_3M_CSV_URL,
+    headers: { "User-Agent": USER_AGENT },
+    parse: parseEcbCompoundedEstrCsv,
+    warnLabel: "ECB 3M compounded €STR CSV",
+    signal,
+  });
 }
 
 async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
-  try {
-    const res = await fetchWithRetry(TREASURY_YIELD_XML_URL, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    }, 1, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-
-    if (!res?.ok) {
-      return null;
-    }
-
-    return parseTreasuryYieldXml(await res.text());
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] Treasury XML failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url: TREASURY_YIELD_XML_URL,
+    headers: { "User-Agent": USER_AGENT },
+    retries: 1,
+    parse: parseTreasuryYieldXml,
+    warnLabel: "Treasury XML",
+    signal,
+  });
 }
 
 function buildSixGuestHeaders(token?: string): Record<string, string> {
@@ -480,9 +491,9 @@ export function parseBanxicoSeries(json: string): { recordDate: string; rate: nu
       const rate = parseRate(typeof row?.dato === "string" ? row.dato : null);
       const fechaRaw = typeof row?.fecha === "string" ? row.fecha : null;
       if (!fechaRaw || !isValidBenchmarkRate(rate)) continue;
-      const match = fechaRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!match) continue;
-      return { rate, recordDate: `${match[3]}-${match[2]}-${match[1]}` };
+      const recordDate = parseSlashDmyToIso(fechaRaw);
+      if (!recordDate) continue;
+      return { rate, recordDate };
     }
     return null;
   } catch {
@@ -504,9 +515,9 @@ export function parseBcbSelicSeries(json: string): { recordDate: string; rate: n
       const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
       const dataRaw = typeof row?.data === "string" ? row.data : null;
       if (!dataRaw || !isValidBenchmarkRate(rate)) continue;
-      const match = dataRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!match) continue;
-      return { rate, recordDate: `${match[3]}-${match[2]}-${match[1]}` };
+      const recordDate = parseSlashDmyToIso(dataRaw);
+      if (!recordDate) continue;
+      return { rate, recordDate };
     }
     return null;
   } catch {
@@ -545,52 +556,40 @@ async function tryBanxicoCetes(
   signal?: AbortSignal,
 ): Promise<{ rate: number; recordDate: string } | null> {
   if (!banxicoToken) return null;
-  try {
-    const res = await fetchWithRetry(BANXICO_CETES_28D_URL, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
-        "Bmx-Token": banxicoToken,
-      },
-      signal,
-    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-    if (!res?.ok) return null;
-    return parseBanxicoSeries(await res.text());
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] Banxico CETES failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url: BANXICO_CETES_28D_URL,
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "application/json",
+      "Bmx-Token": banxicoToken,
+    },
+    parse: parseBanxicoSeries,
+    warnLabel: "Banxico CETES",
+    signal,
+  });
 }
 
 async function tryBcbSelic(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
-  try {
-    const res = await fetchWithRetry(BCB_SELIC_URL, {
-      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-      signal,
-    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-    if (!res?.ok) return null;
-    return parseBcbSelicSeries(await res.text());
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] BCB SELIC failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url: BCB_SELIC_URL,
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+    parse: parseBcbSelicSeries,
+    warnLabel: "BCB SELIC",
+    signal,
+  });
 }
 
 async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
-  try {
-    const res = await fetchWithRetry(BOC_CORRA_URL, {
-      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-      signal,
-    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
-    if (!res?.ok) return null;
-    return parseBocValetSeries(await res.text(), "V122530");
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[fetch-tbill-rate] BoC Valet CORRA failed: ${String(err).slice(0, 200)}`);
-    return null;
-  }
+  return fetchAndParseBenchmark({
+    url: BOC_CORRA_URL,
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "application/json",
+    },
+    parse: (body) => parseBocValetSeries(body, "V122530"),
+    warnLabel: "BoC Valet CORRA",
+    signal,
+  });
 }
 
 const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkProvider> = {

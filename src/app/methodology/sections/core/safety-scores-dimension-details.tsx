@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { METHODOLOGY_LINK_CLASS } from "../../methodology-shared";
 import { CollateralQualityMethodologyCopy } from "../core-sections-fragments";
 
 export function SafetyScoresDimensionDetails() {
@@ -129,7 +130,7 @@ export function SafetyScoresDimensionDetails() {
           (e.g., DAI &rarr; USDC via{" "}
           <Link
             href="/learn/mechanisms/cdp/"
-            className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+            className={METHODOLOGY_LINK_CLASS}
           >
             PSM
           </Link>

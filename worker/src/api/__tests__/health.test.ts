@@ -1,7 +1,52 @@
 import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { handleHealth } from "../health";
+
+type HealthDbOptions = {
+  extraCacheRows?: Record<string, unknown>[];
+  dexAge?: number;
+  blacklistEntry?: MockTableConfig;
+  symbolRows?: Record<string, unknown>[];
+  statusStartedAt?: number;
+  extras?: MockTableConfig[];
+};
+
+function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
+  const {
+    extraCacheRows = [],
+    dexAge = 60,
+    blacklistEntry = { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+    symbolRows = [{ symbol: "USDT", latest: now - 600 }],
+    statusStartedAt = now - 300,
+    extras = [],
+  } = options;
+
+  return mockD1([
+    {
+      match: "cache WHERE key IN",
+      rows: [
+        { key: "stablecoins", updated_at: now - 60, value: "{}" },
+        { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
+        { key: "usds-status", updated_at: now - 60, value: "{}" },
+        { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+        { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        ...extraCacheRows,
+      ],
+    },
+    { match: "dex_liquidity", rows: [], first: { age: dexAge } },
+    { match: "yield_data", rows: [], first: { age: 60 } },
+    { match: "stress_signals", rows: [], first: { age: 60 } },
+    blacklistEntry,
+    { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+    { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+    { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+    { match: "SELECT symbol, MAX(timestamp) as latest", rows: symbolRows },
+    { match: "SELECT status", rows: [], first: { status: "ok" } },
+    { match: "status = 'ok'", rows: [], first: { started_at: statusStartedAt } },
+    ...extras,
+  ]);
+}
 
 describe("handleHealth", () => {
   it("returns 200 with health status", async () => {
@@ -84,36 +129,15 @@ describe("handleHealth", () => {
 
   it("does not mark quiet majors stale when the critical lane is syncing on time", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      {
-        match: "SELECT symbol, MAX(timestamp) as latest",
-        rows: [
-          { symbol: "USDT", latest: now - 2 * 3600 },
-          { symbol: "GHO", latest: now - 8 * 3600 },
-          { symbol: "BOLD", latest: now - 9 * 3600 },
-          { symbol: "reUSD", latest: now - 12 * 3600 },
-        ],
-      },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 600 } },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      symbolRows: [
+        { symbol: "USDT", latest: now - 2 * 3600 },
+        { symbol: "GHO", latest: now - 8 * 3600 },
+        { symbol: "BOLD", latest: now - 9 * 3600 },
+        { symbol: "reUSD", latest: now - 12 * 3600 },
+      ],
+      statusStartedAt: now - 600,
+    });
 
     const res = await handleHealth(db);
     expect(res.status).toBe(200);
@@ -143,53 +167,38 @@ describe("handleHealth", () => {
 
   it("surfaces sentinel fallback metadata when a freshness sentinel is invalid", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-          {
-            key: "freshness:dex-liquidity",
-            updated_at: now - 120,
-            value: JSON.stringify({
-              updatedAt: now - 120,
-              source: "sync-yield-data",
-              publishStatus: "ok",
-            }),
-          },
-          {
-            key: "freshness:yield-data",
-            updated_at: now - 180,
-            value: JSON.stringify({
-              updatedAt: now - 180,
-              source: "sync-yield-data",
-              publishStatus: "ok",
-            }),
-          },
-          {
-            key: "freshness:dews",
-            updated_at: now - 240,
-            value: JSON.stringify({
-              updatedAt: now - 240,
-              source: "compute-dews",
-              publishStatus: "ok",
-            }),
-          },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 45 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      dexAge: 45,
+      extraCacheRows: [
+        {
+          key: "freshness:dex-liquidity",
+          updated_at: now - 120,
+          value: JSON.stringify({
+            updatedAt: now - 120,
+            source: "sync-yield-data",
+            publishStatus: "ok",
+          }),
+        },
+        {
+          key: "freshness:yield-data",
+          updated_at: now - 180,
+          value: JSON.stringify({
+            updatedAt: now - 180,
+            source: "sync-yield-data",
+            publishStatus: "ok",
+          }),
+        },
+        {
+          key: "freshness:dews",
+          updated_at: now - 240,
+          value: JSON.stringify({
+            updatedAt: now - 240,
+            source: "compute-dews",
+            publishStatus: "ok",
+          }),
+        },
+      ],
+    });
 
     const res = await handleHealth(db);
     expect(res.status).toBe(200);
@@ -233,31 +242,9 @@ describe("handleHealth", () => {
 
   it("degrades and surfaces warnings when subqueries fail", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], throwError: new Error("blacklist failed") },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      {
-        match: "SELECT symbol, MAX(timestamp) as latest",
-        rows: [{ symbol: "USDT", latest: now - 600 }],
-      },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      blacklistEntry: { match: "blacklist_events", rows: [], throwError: new Error("blacklist failed") },
+    });
 
     const res = await handleHealth(db);
     expect(res.status).toBe(200);
@@ -273,40 +260,22 @@ describe("handleHealth", () => {
 
   it("keeps health degraded rather than stale when FX is in repeated cached-fallback with fresh usable sync", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          {
-            key: "fx-rates-meta",
-            updated_at: now - 60,
-            value: JSON.stringify({
-              usableSyncAt: now - 60,
-              mode: "cached-fallback",
-              sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 },
-              sourceModeByPeg: { peggedEUR: "cached" },
-              sourceCadenceByPeg: { peggedEUR: "intraday" },
-              consecutiveFallbackRuns: 4,
-            }),
-          },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      extraCacheRows: [
+        {
+          key: "fx-rates-meta",
+          updated_at: now - 60,
+          value: JSON.stringify({
+            usableSyncAt: now - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 },
+            sourceModeByPeg: { peggedEUR: "cached" },
+            sourceCadenceByPeg: { peggedEUR: "intraday" },
+            consecutiveFallbackRuns: 4,
+          }),
+        },
+      ],
+    });
 
     const res = await handleHealth(db);
     const body = (await res.json()) as {
@@ -333,36 +302,18 @@ describe("handleHealth", () => {
         lastSuccessAt: null,
         openedAt,
       });
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      {
-        match: "key LIKE 'circuit:%'",
-        rows: [
-          { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
-          { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
-          { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
-        ],
-      },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "key LIKE 'circuit:%'",
+          rows: [
+            { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
+            { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
+            { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
+          ],
+        },
+      ],
+    });
 
     const res = await handleHealth(db);
     const body = (await res.json()) as {
@@ -384,36 +335,18 @@ describe("handleHealth", () => {
         lastSuccessAt: null,
         openedAt,
       });
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      {
-        match: "key LIKE 'circuit:%'",
-        rows: [
-          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
-          { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
-          { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
-        ],
-      },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "key LIKE 'circuit:%'",
+          rows: [
+            { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+            { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
+            { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
+          ],
+        },
+      ],
+    });
 
     const res = await handleHealth(db);
     const body = (await res.json()) as {
@@ -576,35 +509,17 @@ describe("handleHealth", () => {
         lastSuccessAt: null,
         openedAt,
       });
-    const db = mockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          { key: "stablecoins", updated_at: now - 60, value: "{}" },
-          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
-          { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
-      { match: "SELECT status", rows: [], first: { status: "ok" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
-      {
-        match: "key LIKE 'circuit:%'",
-        rows: [
-          { key: "circuit:live-reserves:pmusd-precious-metals", value: openCircuitValue(now - 600) },
-          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
-        ],
-      },
-    ]);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "key LIKE 'circuit:%'",
+          rows: [
+            { key: "circuit:live-reserves:pmusd-precious-metals", value: openCircuitValue(now - 600) },
+            { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+          ],
+        },
+      ],
+    });
 
     const res = await handleHealth(db);
     const body = (await res.json()) as {

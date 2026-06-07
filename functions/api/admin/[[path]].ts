@@ -45,10 +45,6 @@ const OPS_AUDIT_DEPEG_HISTORY_PROXY_TIMEOUT_MS = 45_000;
 
 type OpsAdminProxyContext = PagesProxyContext<OpsAdminProxyEnv>;
 
-function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
-  return resolveOpsAdminUpstreamPath(params);
-}
-
 function isCloudflareAccessLocation(location: string | null): boolean {
   if (!location) return false;
   try {
@@ -161,7 +157,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     }
     return null;
   },
-  resolveUpstreamPath: ({ params }) => resolveUpstreamPath(params),
+  resolveUpstreamPath: ({ params }) => resolveOpsAdminUpstreamPath(params),
   rejectUpstreamPath: (_context, upstreamPath) => (
     upstreamPath && isAdminPath(upstreamPath)
       ? null

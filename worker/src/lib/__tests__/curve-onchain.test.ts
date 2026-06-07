@@ -14,6 +14,24 @@ const mockBlockTimestamp = vi.mocked(fetchEvmBlockTimestamp);
 
 const FRESH_BLOCK_NUMBER = 19_000_000;
 const FRESH_BLOCK_TIMESTAMP = Math.floor(Date.now() / 1000) - 30; // 30s ago
+const THREE_POOL_ADDRESS = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7";
+
+function hexWord(value: bigint | number | string): `0x${string}` {
+  return `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
+}
+
+function makeCurveConfig(overrides: Partial<CurvePoolConfig> = {}): CurvePoolConfig {
+  return {
+    stablecoinId: "usdt-tether",
+    poolAddress: THREE_POOL_ADDRESS,
+    inputIndex: 1,
+    outputIndex: 2,
+    inputDecimals: 6,
+    outputDecimals: 6,
+    chain: "ethereum",
+    ...overrides,
+  };
+}
 
 beforeEach(() => {
   mockBlockNumber.mockResolvedValue(FRESH_BLOCK_NUMBER);
@@ -107,18 +125,10 @@ describe("fetchCurveOnchainPrices", () => {
   it("parses get_dy response into implied price", async () => {
     // get_dy(1, 2, 1e6) returns 999000 for USDT (6 decimals out)
     // Implied price = inputFloat/outputFloat = 1.0/0.999 ≈ 1.001
-    const mockHexResponse = ("0x" + BigInt(999000).toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHexResponse = hexWord(999000);
     mockEvmCall.mockResolvedValue(mockHexResponse);
 
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1,
-      outputIndex: 2,
-      inputDecimals: 6,
-      outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.size).toBe(1);
@@ -127,23 +137,21 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.routeTypeByCoinId.get("usdt-tether")).toBe("direct");
     expect(outcome.value.hopDepthByCoinId.get("usdt-tether")).toBe(0);
     expect(mockEvmCall).toHaveBeenCalledWith(
-      "ethereum", config.poolAddress, expect.any(String), FRESH_BLOCK_NUMBER, expect.any(Object),
+      "ethereum",
+      config.poolAddress,
+      expect.any(String),
+      FRESH_BLOCK_NUMBER,
+      expect.any(Object),
     );
   });
 
   it("computes correct implied price when pool is imbalanced (depeg scenario)", async () => {
     // Depeg: USDT at $0.95 → get_dy returns ~1.053e6 USDT per 1e6 USDC
     // Correct: inputFloat/outputFloat = 1.0/1.052632 ≈ 0.95
-    const mockHex = ("0x" + BigInt(1_052_632).toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHex = hexWord(1_052_632);
     mockEvmCall.mockResolvedValue(mockHex);
 
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 2,
-      inputDecimals: 6, outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(0.95, 2);
   });
@@ -151,29 +159,23 @@ describe("fetchCurveOnchainPrices", () => {
   it("computes correct implied price with different decimals (DAI 18 decimals)", async () => {
     // 1 USDC (1e6) → 1.001e18 DAI → price = 1.0/1.001 ≈ 0.999
     const daiOutput = BigInt("1001000000000000000");
-    const mockHex = ("0x" + daiOutput.toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHex = hexWord(daiOutput);
     mockEvmCall.mockResolvedValue(mockHex);
 
-    const config: CurvePoolConfig = {
+    const config = makeCurveConfig({
       stablecoinId: "dai-makerdao",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 0,
-      inputDecimals: 6, outputDecimals: 18,
-      chain: "ethereum",
-    };
+      inputIndex: 1,
+      outputIndex: 0,
+      inputDecimals: 6,
+      outputDecimals: 18,
+    });
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.value.prices.get("dai-makerdao")).toBeCloseTo(0.999, 3);
   });
 
   it("returns no-data outcome when RPC returns null for every pool", async () => {
     mockEvmCall.mockResolvedValue(null);
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 2,
-      inputDecimals: 6, outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
@@ -181,19 +183,18 @@ describe("fetchCurveOnchainPrices", () => {
 
   it("uses get_dy_underlying selector when useUnderlying is true", async () => {
     const lusdOutput = BigInt("999000000000000000"); // 0.999e18
-    const mockHex = ("0x" + lusdOutput.toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHex = hexWord(lusdOutput);
     mockEvmCall.mockResolvedValue(mockHex);
 
-    const config: CurvePoolConfig = {
+    const config = makeCurveConfig({
       stablecoinId: "lusd-liquity",
       poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
-      inputIndex: 2,  // USDC (underlying)
+      inputIndex: 2, // USDC (underlying)
       outputIndex: 0, // LUSD (underlying)
       inputDecimals: 6,
       outputDecimals: 18,
-      chain: "ethereum",
       useUnderlying: true,
-    };
+    });
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.001, 3);
 
@@ -206,23 +207,25 @@ describe("fetchCurveOnchainPrices", () => {
     const crvusdOutput = BigInt("999000000000000000"); // 0.999e18 crvUSD per 1 USDC
     const ghoOutput = BigInt("998000000000000000"); // 0.998e18 GHO per 1e18 crvUSD
 
-    mockEvmCall
-      .mockResolvedValueOnce(("0x" + crvusdOutput.toString(16).padStart(64, "0")) as `0x${string}`)
-      .mockResolvedValueOnce(("0x" + ghoOutput.toString(16).padStart(64, "0")) as `0x${string}`);
+    mockEvmCall.mockResolvedValueOnce(hexWord(crvusdOutput)).mockResolvedValueOnce(hexWord(ghoOutput));
 
     const configs: CurvePoolConfig[] = [
       {
         stablecoinId: "crvusd-curve",
         poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 6, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 6,
+        outputDecimals: 18,
         chain: "ethereum",
       },
       {
         stablecoinId: "gho-aave",
         poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
@@ -240,24 +243,26 @@ describe("fetchCurveOnchainPrices", () => {
     const ghoOutput = BigInt("998000000000000000"); // 0.998e18 GHO per 1e18 crvUSD
     const crvusdOutput = BigInt("999000000000000000"); // 0.999e18 crvUSD per 1 USDC
 
-    mockEvmCall
-      .mockResolvedValueOnce(("0x" + ghoOutput.toString(16).padStart(64, "0")) as `0x${string}`)
-      .mockResolvedValueOnce(("0x" + crvusdOutput.toString(16).padStart(64, "0")) as `0x${string}`);
+    mockEvmCall.mockResolvedValueOnce(hexWord(ghoOutput)).mockResolvedValueOnce(hexWord(crvusdOutput));
 
     const configs: CurvePoolConfig[] = [
       {
         stablecoinId: "gho-aave",
         poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
       {
         stablecoinId: "crvusd-curve",
         poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 6, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 6,
+        outputDecimals: 18,
         chain: "ethereum",
       },
     ];
@@ -270,21 +275,25 @@ describe("fetchCurveOnchainPrices", () => {
   it("excludes hop coin when via-token RPC fails", async () => {
     mockEvmCall
       .mockResolvedValueOnce(null) // crvUSD fails
-      .mockResolvedValueOnce(("0x" + BigInt("998000000000000000").toString(16).padStart(64, "0")) as `0x${string}`);
+      .mockResolvedValueOnce(hexWord("998000000000000000"));
 
     const configs: CurvePoolConfig[] = [
       {
         stablecoinId: "crvusd-curve",
         poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 6, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 6,
+        outputDecimals: 18,
         chain: "ethereum",
       },
       {
         stablecoinId: "gho-aave",
         poolAddress: "0x0001000100010001000100010001000100010001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
@@ -299,7 +308,7 @@ describe("fetchCurveOnchainPrices", () => {
     // Vyper metapools return thousands of bytes; only the first 32-byte word
     // is the actual get_dy_underlying result (~0.984 LUSD for 1 USDC)
     const actualValue = BigInt("984321781412057132"); // ~0.984e18 LUSD
-    const word0 = actualValue.toString(16).padStart(64, "0");
+    const word0 = hexWord(actualValue).slice(2);
     // Simulate Vyper response: word0 + extra trailing data
     const trailing = "00000002" + "0".repeat(56) + "0".repeat(64) + "000f4240" + "0".repeat(56);
     const vyperHex = ("0x" + word0 + trailing) as `0x${string}`;
@@ -307,51 +316,36 @@ describe("fetchCurveOnchainPrices", () => {
 
     mockEvmCall.mockResolvedValue(vyperHex);
 
-    const config: CurvePoolConfig = {
+    const config = makeCurveConfig({
       stablecoinId: "lusd-liquity",
       poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
-      inputIndex: 2, outputIndex: 0,
-      inputDecimals: 6, outputDecimals: 18,
-      chain: "ethereum",
+      inputIndex: 2,
+      outputIndex: 0,
+      inputDecimals: 6,
+      outputDecimals: 18,
       useUnderlying: true,
-    };
+    });
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.016, 2);
   });
 
   it("returns upstream-error outcome when every RPC call throws", async () => {
     mockEvmCall.mockRejectedValue(new Error("network down"));
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 2,
-      inputDecimals: 6, outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("returns ok with partial=true when some pools throw but others succeed", async () => {
-    mockEvmCall
-      .mockResolvedValueOnce(("0x" + BigInt(999000).toString(16).padStart(64, "0")) as `0x${string}`)
-      .mockRejectedValueOnce(new Error("rpc broke"));
+    mockEvmCall.mockResolvedValueOnce(hexWord(999000)).mockRejectedValueOnce(new Error("rpc broke"));
 
     const configs: CurvePoolConfig[] = [
       {
-        stablecoinId: "usdt-tether",
-        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-        inputIndex: 1, outputIndex: 2,
-        inputDecimals: 6, outputDecimals: 6,
-        chain: "ethereum",
+        ...makeCurveConfig(),
       },
       {
-        stablecoinId: "usdc-usd-coin",
-        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 6, outputDecimals: 6,
-        chain: "ethereum",
+        ...makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
       },
     ];
     const outcome = await fetchCurveOnchainPrices(configs);
@@ -365,29 +359,35 @@ describe("fetchCurveOnchainPrices", () => {
       {
         stablecoinId: "token-c",
         poolAddress: "0x0000000000000000000000000000000000000003",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
       },
       {
         stablecoinId: "token-b",
         poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-c" },
       },
       {
         stablecoinId: "token-a",
         poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-b" },
       },
     ];
 
-    mockEvmCall.mockResolvedValue(("0x" + BigInt("1000000000000000000").toString(16).padStart(64, "0")) as `0x${string}`);
+    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
 
     const outcome = await fetchCurveOnchainPrices(configs);
     expect(outcome.value.prices.has("token-b")).toBe(true);
@@ -400,16 +400,18 @@ describe("fetchCurveOnchainPrices", () => {
     const tokenCOutput = BigInt("999000000000000000");
 
     mockEvmCall
-      .mockResolvedValueOnce(("0x" + tokenAOutput.toString(16).padStart(64, "0")) as `0x${string}`)
-      .mockResolvedValueOnce(("0x" + tokenBOutput.toString(16).padStart(64, "0")) as `0x${string}`)
-      .mockResolvedValueOnce(("0x" + tokenCOutput.toString(16).padStart(64, "0")) as `0x${string}`);
+      .mockResolvedValueOnce(hexWord(tokenAOutput))
+      .mockResolvedValueOnce(hexWord(tokenBOutput))
+      .mockResolvedValueOnce(hexWord(tokenCOutput));
 
     const configs: CurvePoolConfig[] = [
       {
         stablecoinId: "token-a",
         poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-b" },
         routeType: "chained-hop",
@@ -418,16 +420,20 @@ describe("fetchCurveOnchainPrices", () => {
       {
         stablecoinId: "token-b",
         poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-c" },
       },
       {
         stablecoinId: "token-c",
         poolAddress: "0x0000000000000000000000000000000000000003",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
       },
     ];
@@ -440,14 +446,16 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("fails closed when hop configs form a cycle", async () => {
-    mockEvmCall.mockResolvedValue(("0x" + BigInt("1000000000000000000").toString(16).padStart(64, "0")) as `0x${string}`);
+    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
 
     const configs: CurvePoolConfig[] = [
       {
         stablecoinId: "token-a",
         poolAddress: "0x0000000000000000000000000000000000000001",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-b" },
         routeType: "chained-hop",
@@ -456,8 +464,10 @@ describe("fetchCurveOnchainPrices", () => {
       {
         stablecoinId: "token-b",
         poolAddress: "0x0000000000000000000000000000000000000002",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 18, outputDecimals: 18,
+        inputIndex: 0,
+        outputIndex: 1,
+        inputDecimals: 18,
+        outputDecimals: 18,
         chain: "ethereum",
         hop: { viaStablecoinId: "token-a" },
         routeType: "chained-hop",
@@ -471,13 +481,15 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("fails closed when a hop references a missing via config", async () => {
-    mockEvmCall.mockResolvedValue(("0x" + BigInt("1000000000000000000").toString(16).padStart(64, "0")) as `0x${string}`);
+    mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
 
     const config: CurvePoolConfig = {
       stablecoinId: "token-a",
       poolAddress: "0x0000000000000000000000000000000000000001",
-      inputIndex: 0, outputIndex: 1,
-      inputDecimals: 18, outputDecimals: 18,
+      inputIndex: 0,
+      outputIndex: 1,
+      inputDecimals: 18,
+      outputDecimals: 18,
       chain: "ethereum",
       hop: { viaStablecoinId: "token-b" },
     };
@@ -488,19 +500,18 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("emits route metadata for explicit trusted-wrapper routes", async () => {
-    const mockHexResponse = ("0x" + BigInt("1000000000000000000").toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHexResponse = hexWord("1000000000000000000");
     mockEvmCall.mockResolvedValue(mockHexResponse);
 
-    const config: CurvePoolConfig = {
+    const config = makeCurveConfig({
       stablecoinId: "wrapper-token",
       poolAddress: "0x0000000000000000000000000000000000000001",
       inputIndex: 0,
       outputIndex: 1,
       inputDecimals: 18,
       outputDecimals: 18,
-      chain: "ethereum",
       routeType: "trusted-wrapper",
-    };
+    });
 
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.value.prices.get("wrapper-token")).toBe(1);
@@ -509,24 +520,12 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("stamps each priced coin with the block timestamp as observedAt", async () => {
-    const mockHexResponse = ("0x" + BigInt(999000).toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHexResponse = hexWord(999000);
     mockEvmCall.mockResolvedValue(mockHexResponse);
 
     const configs: CurvePoolConfig[] = [
-      {
-        stablecoinId: "usdt-tether",
-        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-        inputIndex: 1, outputIndex: 2,
-        inputDecimals: 6, outputDecimals: 6,
-        chain: "ethereum",
-      },
-      {
-        stablecoinId: "usdc-usd-coin",
-        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-        inputIndex: 0, outputIndex: 1,
-        inputDecimals: 6, outputDecimals: 6,
-        chain: "ethereum",
-      },
+      makeCurveConfig(),
+      makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
     ];
     const outcome = await fetchCurveOnchainPrices(configs);
     expect(outcome.kind).toBe("ok");
@@ -540,16 +539,10 @@ describe("fetchCurveOnchainPrices", () => {
   it("rejects the whole run when block timestamp is older than 300s", async () => {
     const stale = Math.floor(Date.now() / 1000) - 400; // >300s old
     mockBlockTimestamp.mockResolvedValue(stale);
-    const mockHexResponse = ("0x" + BigInt(999000).toString(16).padStart(64, "0")) as `0x${string}`;
+    const mockHexResponse = hexWord(999000);
     mockEvmCall.mockResolvedValue(mockHexResponse);
 
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 2,
-      inputDecimals: 6, outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
@@ -557,13 +550,7 @@ describe("fetchCurveOnchainPrices", () => {
 
   it("returns upstream-error when block number RPC fails", async () => {
     mockBlockNumber.mockResolvedValue(null);
-    const config: CurvePoolConfig = {
-      stablecoinId: "usdt-tether",
-      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
-      inputIndex: 1, outputIndex: 2,
-      inputDecimals: 6, outputDecimals: 6,
-      chain: "ethereum",
-    };
+    const config = makeCurveConfig();
     const outcome = await fetchCurveOnchainPrices([config]);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);

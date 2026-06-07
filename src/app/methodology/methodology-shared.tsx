@@ -3,6 +3,9 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+export const METHODOLOGY_LINK_CLASS =
+  "text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors";
+
 export const METHODOLOGY_SECTIONS = [
   { id: "lifecycle-phases-methodology", label: "Lifecycle Phases" },
   { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
@@ -162,20 +165,17 @@ export function MethodologyDiagramCard({
 
 export function MethodologyDiagramArrow({
   direction = "down",
-  className,
 }: {
   direction?: "down" | "right";
-  className?: string;
 }) {
   return (
     <div
       aria-hidden="true"
-      className={cn(
+      className={
         direction === "right"
           ? "flex items-center text-xl font-bold text-muted-foreground"
-          : "text-xl font-bold text-muted-foreground",
-        className,
-      )}
+          : "text-xl font-bold text-muted-foreground"
+      }
     >
       {direction === "right" ? "\u2192" : "\u2193"}
     </div>

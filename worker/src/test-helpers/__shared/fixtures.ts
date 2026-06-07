@@ -3,7 +3,13 @@
  * Each returns a complete row with sensible defaults; pass `overrides` for specific values.
  */
 
-import type { BlacklistAmountSource, BlacklistAmountStatus, BlacklistStablecoin, StablecoinData } from "@shared/types/market";
+import type {
+  BlacklistAmountSource,
+  BlacklistAmountStatus,
+  BlacklistStablecoin,
+  StablecoinData,
+} from "@shared/types/market";
+import type { ApiKeyRow } from "../../lib/api-key-core";
 import { mockD1 } from "./mock-d1";
 
 type BlacklistRow = {
@@ -148,6 +154,8 @@ type DigestRow = {
   input_data: string | null;
 };
 
+type ApiKeyFixtureRow = ApiKeyRow & Record<string, unknown>;
+
 export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinData {
   const defaults: StablecoinData = {
     id: "usdt-tether",
@@ -183,10 +191,27 @@ export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinDa
   return { ...defaults, ...overrides };
 }
 
-export function makeReportCardsDb(
-  assets: StablecoinData[] = [],
-  nowSec = Math.floor(Date.now() / 1000),
-) {
+export function makeApiKeyRow(overrides: Partial<ApiKeyRow> = {}): ApiKeyFixtureRow {
+  const defaults: ApiKeyRow = {
+    id: 7,
+    key_prefix: "0123456789abcdef",
+    secret_hash: "hash",
+    name: "Ops",
+    owner_email: null,
+    tier: "standard",
+    traffic_class: "external",
+    rate_limit_per_minute: 120,
+    is_active: 1,
+    expires_at: null,
+    created_at: 1,
+    updated_at: 1,
+    last_used_at: null,
+    last_used_route: null,
+  };
+  return { ...defaults, ...overrides } as ApiKeyFixtureRow;
+}
+
+export function makeReportCardsDb(assets: StablecoinData[] = [], nowSec = Math.floor(Date.now() / 1000)) {
   const cacheValue = JSON.stringify({ peggedAssets: assets });
   return mockD1([
     {

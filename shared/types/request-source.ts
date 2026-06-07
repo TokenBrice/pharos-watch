@@ -178,9 +178,3 @@ export const ApiRequestAttributionResponseSchema: z.ZodType<ApiRequestAttributio
   apiKeys: z.array(ApiRequestAttributionApiKeyStatSchema),
   scope: ApiRequestAttributionScopeSchema,
 });
-
-export type PublicApiRequestSource = ApiRequestConsumerClass;
-export type PublicApiRequestSourceSplit = ApiRequestAttributionSplit;
-export type PublicApiRequestSourceRouteStat = ApiRequestAttributionRouteStat;
-export type PublicApiRequestSourceTimeBucket = ApiRequestAttributionTimeBucket;
-export type PublicApiRequestSourceStatsResponse = ApiRequestAttributionResponse;

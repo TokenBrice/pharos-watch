@@ -2,7 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeAddressArg, encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -59,7 +59,7 @@ export async function fetchOriginVaultBalancesReserves(
     const [raw, idleRaw] = await Promise.all([
       fetchOnchainUint256({
         contract: params.vaultAddress,
-        data: `${CHECK_BALANCE_SELECTOR}${encodeAddressArg(asset.address)}`,
+        data: `${CHECK_BALANCE_SELECTOR}${encodeAddress(asset.address)}`,
         signal,
         ctx,
         rpcMode: input.rpcMode,

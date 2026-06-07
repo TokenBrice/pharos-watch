@@ -1,10 +1,10 @@
 import type { RedemptionRouteFamily } from "../../types";
 import type { RedemptionBackstopConfig } from "./shared";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "./collateral-redeem";
-import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "./offchain-issuer";
+import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "./offchain-issuer/index";
 import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "./psm-and-basket";
 import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "./queue-redeem";
-import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "./stablecoin-redeem";
+import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "./stablecoin-redeem/index";
 
 export interface RedemptionBackstopConfigManifestEntry {
   name: string;

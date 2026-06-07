@@ -6,7 +6,7 @@ import {
   DECIMALS_SELECTOR,
   LATEST_ROUND_DATA_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
-  encodeAddressArg,
+  encodeAddress,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
@@ -209,7 +209,7 @@ export async function fetchChainlinkNavCore(
   } else if (method === "getAssetPrice") {
     const rawPrice = await fetchOnchainUint256({
       ...oracleCallBase,
-      data: `${GET_ASSET_PRICE_SELECTOR}${encodeAddressArg(params.tokenAddress)}`,
+      data: `${GET_ASSET_PRICE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
     });
     if (rawPrice == null) {
       throw new Error("chainlink-nav: getAssetPrice(address) call failed");
@@ -223,7 +223,7 @@ export async function fetchChainlinkNavCore(
 
     const rawWrapperAddress = await fetchOnchainRawCall({
       ...oracleCallBase,
-      data: `${TOKEN_TO_RWA_ORACLE_SELECTOR}${encodeAddressArg(params.tokenAddress)}`,
+      data: `${TOKEN_TO_RWA_ORACLE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
     });
     const wrapperAddress = parseAddressResult(rawWrapperAddress);
     if (wrapperAddress) {

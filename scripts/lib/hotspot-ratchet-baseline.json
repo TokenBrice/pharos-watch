@@ -96,7 +96,7 @@
     "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 229,
+    "fileLines": 230,
     "maxFunctionLines": 215,
     "branchCount": 0,
     "disposition": "stabilized",
@@ -384,9 +384,9 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 371,
-    "maxFunctionLines": 291,
-    "branchCount": 21,
+    "fileLines": 357,
+    "maxFunctionLines": 290,
+    "branchCount": 20,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,

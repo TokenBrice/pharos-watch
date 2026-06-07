@@ -1,5 +1,5 @@
 import type { LiveReserveInput, LiveReserveWarning } from "@shared/types/live-reserves";
-import { encodeUint256Arg } from "../../lib/evm-selectors";
+import { encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext } from "./types";
 import {
   fetchOnchainRawCall,
@@ -66,7 +66,7 @@ export async function computeErc4626CollateralizationRatio({
   }
 
   const convertResult = await call(
-    `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
+    `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
   );
   if (!convertResult) {
     return { warnings };

@@ -8,7 +8,7 @@ import {
   type SelectorInput,
   type SelectorOutput,
 } from "@shared/lib/selector";
-import { sha256Hex } from "@shared/lib/selector/hash";
+import { sha256Hex } from "@shared/lib/sha256";
 import { COLLATERAL_QUALITY_SCORE } from "@shared/lib/report-card-policy";
 import type {
   AltYieldSource,

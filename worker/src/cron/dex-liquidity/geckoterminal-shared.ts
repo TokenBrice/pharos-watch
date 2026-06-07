@@ -8,7 +8,7 @@ import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants"
 
 type GtPoolKind = "concentrated" | "stable-amm" | "amm";
 
-async function fetchGtTokenPoolsInternal(
+export function fetchGtTokenPools(
   tokenAddress: string,
   gtChain: string,
   signal?: AbortSignal,
@@ -37,16 +37,6 @@ async function fetchGtTokenPoolsInternal(
       return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
     },
   });
-}
-
-export function fetchGtTokenPools(
-  tokenAddress: string,
-  gtChain: string,
-  signal?: AbortSignal,
-  maxRetries = 0,
-  timeoutMs = 15_000,
-): Promise<GtPool[]> {
-  return fetchGtTokenPoolsInternal(tokenAddress, gtChain, signal, maxRetries, timeoutMs);
 }
 
 export function parseGtPool(pool: GtPool): ParsedPool | null {
@@ -83,6 +73,6 @@ export function getGtPoolKind(dexId: string): GtPoolKind {
   return "amm";
 }
 
-export function getGtPoolType(dexId: string, prefix = "gt"): string {
-  return `${prefix}-${getGtPoolKind(dexId)}`;
+export function getGtPoolType(dexId: string): string {
+  return `gt-${getGtPoolKind(dexId)}`;
 }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { jsonResponse } from "../../test-helpers/__shared/mock-fetch";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
@@ -7,13 +8,6 @@ vi.stubGlobal("fetch", fetchSpy);
 const { getCachedChatMember, getCachedChatAdministrators } = await import("../telegram-chat-member");
 
 const NOW_SEC = Math.floor(Date.now() / 1000);
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 describe("getCachedChatMember", () => {
   beforeEach(() => {
@@ -147,9 +141,7 @@ describe("getCachedChatAdministrators", () => {
   });
 
   it("returns the cached value without calling Telegram when fresh", async () => {
-    const cached = JSON.stringify([
-      { status: "creator", userId: "1", username: "alice", firstName: "Alice" },
-    ]);
+    const cached = JSON.stringify([{ status: "creator", userId: "1", username: "alice", firstName: "Alice" }]);
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -161,9 +153,7 @@ describe("getCachedChatAdministrators", () => {
 
     const result = await getCachedChatAdministrators(db, "bot-token", "-100");
 
-    expect(result).toEqual([
-      { status: "creator", userId: "1", username: "alice", firstName: "Alice" },
-    ]);
+    expect(result).toEqual([{ status: "creator", userId: "1", username: "alice", firstName: "Alice" }]);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

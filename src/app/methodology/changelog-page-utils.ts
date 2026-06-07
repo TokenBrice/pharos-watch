@@ -1,16 +1,5 @@
 import type { Metadata } from "next";
-import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
-
-interface ChangelogSourceEntry {
-  version: string;
-  title: string;
-  date: string;
-  effectiveAt: number;
-  summary: string;
-  commits: readonly string[];
-  reconstructed: boolean;
-}
 
 interface MethodologyChangelogMetadataConfig {
   title: string;
@@ -39,20 +28,4 @@ export function buildMethodologyChangelogMetadata({
       images: [{ url: "/og-editorial-methodology.png", width: 1200, height: 628 }],
     },
   };
-}
-
-export function mapMethodologyChangelogEntries<T extends ChangelogSourceEntry>(
-  entries: readonly T[],
-  selectImpact: (entry: T) => readonly string[],
-): MethodologyChangelogEntry[] {
-  return entries.map((entry) => ({
-    version: entry.version,
-    title: entry.title,
-    date: entry.date,
-    effectiveAt: entry.effectiveAt,
-    summary: entry.summary,
-    impact: selectImpact(entry),
-    commits: entry.commits,
-    reconstructed: entry.reconstructed,
-  }));
 }

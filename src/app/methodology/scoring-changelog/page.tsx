@@ -23,7 +23,6 @@ const route = createMethodologyChangelogRoute({
     </>
   ),
   entries: SAFETY_SCORE_CHANGELOG,
-  selectImpact: (entry) => entry.impact,
   sections: SAFETY_SCORE_CHANGELOG_NAV_VERSIONS.map((version) => ({
     id: scoringAnchorId(version),
     label: version,

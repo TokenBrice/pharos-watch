@@ -53,8 +53,8 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/overview-section", () => ({
-  OverviewSection: () => null,
+vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
+  ReservePanel: () => null,
 }));
 
 vi.mock("@/components/ai-summary", () => ({

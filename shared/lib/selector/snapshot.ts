@@ -1,6 +1,6 @@
 import { YIELD_TYPE_VALUES } from "../../types/core";
 import { canonicalizeForSid } from "./canonicalize";
-import { sha256Hex } from "./hash";
+import { sha256Hex } from "../sha256";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
   COMPOSABILITY_VALUES,

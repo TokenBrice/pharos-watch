@@ -178,10 +178,6 @@ function buildDdrrResponseEnvelope(input: {
   };
 }
 
-function safeJsonParse(value: string): unknown {
-  return JSON.parse(value);
-}
-
 function tryJsonParse(value: string | null | undefined): unknown {
   if (!value) return null;
   try {
@@ -359,9 +355,9 @@ function parseAssessmentRow(row: AssessmentDbRow): DdrrAssessment | null {
     durationSuppressedReason: row.duration_suppressed_reason,
     predictedRemainingSec: row.median_remaining_sec,
     iqrRemainingSec: toIqrRemainingSec(row),
-    horizonCells: safeJsonParse(row.horizons_json),
+    horizonCells: JSON.parse(row.horizons_json),
     stratum: row.stratum,
-    factors: safeJsonParse(row.factors_json),
+    factors: JSON.parse(row.factors_json),
   });
 
   return parsed.success ? parsed.data : null;

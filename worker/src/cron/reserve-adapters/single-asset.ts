@@ -62,6 +62,13 @@ export async function fetchSingleAssetReserves(
 ): Promise<AdapterResult> {
   const params = readParams(config);
   const primary = config.inputs.primary;
+  const slices: ReserveSlice[] = [{
+    name: params.label,
+    pct: 100,
+    risk: params.risk,
+    ...(params.coinId ? { coinId: params.coinId } : {}),
+    ...(params.depType ? { depType: params.depType } : {}),
+  }];
 
   if (isHttpJsonInput(primary)) {
     const reserveProbe = params.reserveProbe ?? params.probe;
@@ -108,13 +115,7 @@ export async function fetchSingleAssetReserves(
       : [];
 
     return {
-      slices: [{
-        name: params.label,
-        pct: 100,
-        risk: params.risk,
-        ...(params.coinId ? { coinId: params.coinId } : {}),
-        ...(params.depType ? { depType: params.depType } : {}),
-      }],
+      slices,
       ...(warnings.length > 0 ? { warnings } : {}),
       metadata: {
         ...freshnessMetadata,
@@ -160,13 +161,7 @@ export async function fetchSingleAssetReserves(
     const [, redemptionFeeBps] = await Promise.all([supplyProbe, redemptionFeeProbe]);
 
     return {
-      slices: [{
-        name: params.label,
-        pct: 100,
-        risk: params.risk,
-        ...(params.coinId ? { coinId: params.coinId } : {}),
-        ...(params.depType ? { depType: params.depType } : {}),
-      }],
+      slices,
       metadata: {
         ...notApplicableFreshnessMetadata({
           proofKind: "erc20-total-supply-liveness",

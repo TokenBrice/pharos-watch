@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { formatBytes } from "../lib/format-bytes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const argv = process.argv.slice(2);
@@ -12,18 +13,6 @@ const reportPath = reportIndex >= 0 ? argv[reportIndex + 1] : null;
 
 const SIGNATURES_PATH = path.join(root, "scripts/lib/build-attribution-signatures.json");
 const CHUNKS_DIR = path.join(root, "out/_next/static/chunks");
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KiB", "MiB", "GiB"];
-  let value = bytes / 1024;
-  let unit = units[0];
-  for (let i = 1; i < units.length && value >= 1024; i += 1) {
-    value /= 1024;
-    unit = units[i];
-  }
-  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
-}
 
 function loadSignatures() {
   const raw = readFileSync(SIGNATURES_PATH, "utf8");

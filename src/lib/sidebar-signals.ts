@@ -37,15 +37,11 @@ function getPsiSignalTone(band: string): SidebarNavSignal["tone"] {
   }
 }
 
-function formatDigestSeenTimestamp(value: string | null): number | null {
+export function parseSidebarDigestSeenAt(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
-}
-
-export function parseSidebarDigestSeenAt(value: string | null): number | null {
-  return formatDigestSeenTimestamp(value);
 }
 
 export function getDepegNavSignal(pegSummary: PegSummaryResponse | null | undefined): SidebarNavSignal | null {

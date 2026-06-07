@@ -11,7 +11,7 @@ import {
   THREAT_BAND_TEXT_COLORS,
   type ThreatBand,
 } from "@shared/lib/classification";
-import { MethodologyDetails } from "../../methodology-shared";
+import { METHODOLOGY_LINK_CLASS, MethodologyDetails } from "../../methodology-shared";
 
 const DEWS_SIGNAL_KEYS = Object.keys(DEWS_SIGNAL_WEIGHTS) as DewsSignalKey[];
 
@@ -303,7 +303,7 @@ function DewsTechnicalDetails() {
           <li>
             <Link
               href="/learn/mechanisms/tbill/"
-              className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+              className={METHODOLOGY_LINK_CLASS}
             >
               NAV tokens
             </Link>

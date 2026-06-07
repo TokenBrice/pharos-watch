@@ -1,4 +1,5 @@
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
   WorkedExample,
@@ -21,11 +22,11 @@ export function SafetyScoresOverview() {
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
-        <a href="#pegscore-dews-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">PegScore + DEWS</a>
+        <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
         {" · "}
-        <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+        <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
         {" · "}
-        <a href="#infrastructure-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Infrastructure</a>
+        <a href="#infrastructure-methodology" className={METHODOLOGY_LINK_CLASS}>Infrastructure</a>
       </p>
       <MethodologyFacts
         facts={[

@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  CIRCUIT_SOURCE,
-  RISK_FREE_RATE_FALLBACK,
-} from "../../lib/constants";
+import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -94,15 +91,21 @@ const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="appli
   },
 })}</script></body></html>`;
 
+type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
+
 function cloneResponse(response: Response | null): Response | null {
   if (!response) return null;
   return response.clone();
 }
 
-function mockByUrl(mapping: Record<string, Response | null>) {
-  vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
+  vi.mocked(fetchWithRetry).mockImplementation(async (url: string, opts?: RequestInit) => {
+    calls?.push(url);
     for (const [pattern, response] of Object.entries(mapping)) {
-      if (url.includes(pattern)) return cloneResponse(response);
+      if (url.includes(pattern)) {
+        const resolved = typeof response === "function" ? response(url, opts) : response;
+        return cloneResponse(resolved);
+      }
     }
     return null;
   });
@@ -115,13 +118,19 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
     "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
     "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
     "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
-    "banxico.org.mx": new Response(JSON.stringify({
-      bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
-    }), { status: 200 }),
+    "banxico.org.mx": new Response(
+      JSON.stringify({
+        bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
+      }),
+      { status: 200 },
+    ),
     "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
-    "bankofcanada.ca/valet": new Response(JSON.stringify({
-      observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-    }), { status: 200 }),
+    "bankofcanada.ca/valet": new Response(
+      JSON.stringify({
+        observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
+      }),
+      { status: 200 },
+    ),
   };
 }
 
@@ -190,11 +199,11 @@ describe("fetchTbillRate", () => {
     expect(metadata.chfSource).toBe("six-sar3mc");
     expect(metadata.chfRate).toBe(-0.0539);
     expect(metadata.gbpSource).toBe("fred-iudsoia");
-    expect(metadata.gbpRate).toBe(5.20);
+    expect(metadata.gbpRate).toBe(5.2);
     expect(metadata.jpySource).toBe("fred-jpy-overnight");
-    expect(metadata.jpyRate).toBe(0.10);
+    expect(metadata.jpyRate).toBe(0.1);
     expect(metadata.audSource).toBe("fred-aud-3m");
-    expect(metadata.audRate).toBe(4.30);
+    expect(metadata.audRate).toBe(4.3);
     expect(metadata.mxnSource).toBe("banxico-cetes-28d");
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlSource).toBe("bcb-selic");
@@ -569,12 +578,14 @@ describe("parseBanxicoSeries", () => {
   it("extracts the most recent CETES observation", () => {
     const payload = JSON.stringify({
       bmx: {
-        series: [{
-          datos: [
-            { fecha: "25/03/2026", dato: "10.43" },
-            { fecha: "26/03/2026", dato: "10.45" },
-          ],
-        }],
+        series: [
+          {
+            datos: [
+              { fecha: "25/03/2026", dato: "10.43" },
+              { fecha: "26/03/2026", dato: "10.45" },
+            ],
+          },
+        ],
       },
     });
     expect(parseBanxicoSeries(payload)).toEqual({ rate: 10.45, recordDate: "2026-03-26" });
@@ -583,12 +594,14 @@ describe("parseBanxicoSeries", () => {
   it("skips invalid trailing rows and returns the latest valid observation", () => {
     const payload = JSON.stringify({
       bmx: {
-        series: [{
-          datos: [
-            { fecha: "25/03/2026", dato: "10.43" },
-            { fecha: "26/03/2026", dato: "N/E" },
-          ],
-        }],
+        series: [
+          {
+            datos: [
+              { fecha: "25/03/2026", dato: "10.43" },
+              { fecha: "26/03/2026", dato: "N/E" },
+            ],
+          },
+        ],
       },
     });
     expect(parseBanxicoSeries(payload)).toEqual({ rate: 10.43, recordDate: "2026-03-25" });
@@ -675,54 +688,46 @@ describe("fetchTbillRate — new currency fetchers", () => {
 
   it("hits each new endpoint URL and parses its native shape", async () => {
     const calls: string[] = [];
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string, opts?: RequestInit) => {
-      calls.push(url);
-      if (url.includes("id=DGS3MO")) {
-        return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
-      }
-      if (url.includes("data-api.ecb.europa.eu")) {
-        return new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 });
-      }
-      if (url.includes("oauth/token")) {
-        return new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 });
-      }
-      if (url.includes("report-download")) {
-        return new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } });
-      }
-      if (url.includes("id=IUDSOIA")) {
-        return new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 });
-      }
-      if (url.includes("id=IRSTCB01JPM156N")) {
-        return new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 });
-      }
-      if (url.includes("id=IR3TIB01AUM156N")) {
-        return new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 });
-      }
-      if (url.includes("banxico.org.mx")) {
-        const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
-        expect(header).toBe("test-token");
-        return new Response(JSON.stringify({
-          bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
-        }), { status: 200 });
-      }
-      if (url.includes("api.bcb.gov.br")) {
-        return new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 });
-      }
-      if (url.includes("bankofcanada.ca/valet")) {
-        return new Response(JSON.stringify({
-          observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-        }), { status: 200 });
-      }
-      return null;
-    });
+    mockByUrl(
+      {
+        "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+        "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+        "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+        "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
+          status: 200,
+          headers: { "Content-Type": "text/csv" },
+        }),
+        "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
+        "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
+        "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+        "banxico.org.mx": (_url, opts) => {
+          const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
+          expect(header).toBe("test-token");
+          return new Response(
+            JSON.stringify({
+              bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
+            }),
+            { status: 200 },
+          );
+        },
+        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+        "bankofcanada.ca/valet": new Response(
+          JSON.stringify({
+            observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
+          }),
+          { status: 200 },
+        ),
+      },
+      calls,
+    );
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("ok");
-    expect(metadata.gbpRate).toBe(5.20);
-    expect(metadata.jpyRate).toBe(0.10);
-    expect(metadata.audRate).toBe(4.30);
+    expect(metadata.gbpRate).toBe(5.2);
+    expect(metadata.jpyRate).toBe(0.1);
+    expect(metadata.audRate).toBe(4.3);
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadRate).toBe(4.75);
@@ -736,42 +741,32 @@ describe("fetchTbillRate — new currency fetchers", () => {
 
   it("skips Banxico when BANXICO_TOKEN is missing", async () => {
     const calls: string[] = [];
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
-      calls.push(url);
-      if (url.includes("id=DGS3MO")) {
-        return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
-      }
-      if (url.includes("data-api.ecb.europa.eu")) {
-        return new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 });
-      }
-      if (url.includes("oauth/token")) {
-        return new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 });
-      }
-      if (url.includes("report-download")) {
-        return new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } });
-      }
-      if (url.includes("id=IUDSOIA")) {
-        return new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 });
-      }
-      if (url.includes("id=IRSTCB01JPM156N")) {
-        return new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 });
-      }
-      if (url.includes("id=IR3TIB01AUM156N")) {
-        return new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 });
-      }
-      if (url.includes("app.etherfuse.com/bonds/cetes")) {
-        return new Response(ETHERFUSE_CETES_HTML, { status: 200, headers: { "Content-Type": "text/html" } });
-      }
-      if (url.includes("api.bcb.gov.br")) {
-        return new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 });
-      }
-      if (url.includes("bankofcanada.ca/valet")) {
-        return new Response(JSON.stringify({
-          observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-        }), { status: 200 });
-      }
-      return null;
-    });
+    mockByUrl(
+      {
+        "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+        "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+        "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+        "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
+          status: 200,
+          headers: { "Content-Type": "text/csv" },
+        }),
+        "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
+        "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
+        "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+        "app.etherfuse.com/bonds/cetes": new Response(ETHERFUSE_CETES_HTML, {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+        "bankofcanada.ca/valet": new Response(
+          JSON.stringify({
+            observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
+          }),
+          { status: 200 },
+        ),
+      },
+      calls,
+    );
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: undefined });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -833,40 +828,25 @@ describe("fetchTbillRate — new currency fetchers", () => {
       }
       return null as never;
     });
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
-      if (url.includes("id=DGS3MO")) {
-        return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
-      }
-      if (url.includes("data-api.ecb.europa.eu")) {
-        return new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 });
-      }
-      if (url.includes("oauth/token")) {
-        return new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 });
-      }
-      if (url.includes("report-download")) {
-        return new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } });
-      }
-      if (url.includes("id=IUDSOIA")) {
-        return new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 });
-      }
-      if (url.includes("id=IRSTCB01JPM156N")) {
-        return new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 });
-      }
-      if (url.includes("id=IR3TIB01AUM156N")) {
-        return new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 });
-      }
-      if (url.includes("banxico.org.mx")) {
-        return null;
-      }
-      if (url.includes("api.bcb.gov.br")) {
-        return new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 });
-      }
-      if (url.includes("bankofcanada.ca/valet")) {
-        return new Response(JSON.stringify({
+    mockByUrl({
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
+        status: 200,
+        headers: { "Content-Type": "text/csv" },
+      }),
+      "id=IUDSOIA": new Response("DATE,IUDSOIA\n2026-03-02,5.20\n", { status: 200 }),
+      "id=IRSTCB01JPM156N": new Response("DATE,IRSTCB01JPM156N\n2026-03-02,0.10\n", { status: 200 }),
+      "id=IR3TIB01AUM156N": new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 }),
+      "banxico.org.mx": null,
+      "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 }),
+      "bankofcanada.ca/valet": new Response(
+        JSON.stringify({
           observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-        }), { status: 200 });
-      }
-      return null;
+        }),
+        { status: 200 },
+      ),
     });
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
@@ -920,7 +900,9 @@ describe("resolveBenchmarkForStablecoin", () => {
     };
   }
 
-  function buildRegistry(overrides: Partial<Record<"EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD", boolean>> = {}) {
+  function buildRegistry(
+    overrides: Partial<Record<"EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD", boolean>> = {},
+  ) {
     return {
       USD: buildHardcodedUsdBenchmark("test"),
       EUR: overrides.EUR ? buildMeta("EUR") : null,

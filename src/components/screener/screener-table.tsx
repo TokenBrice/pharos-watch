@@ -353,6 +353,16 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
   );
 }
 
+function DesktopScoreCell({ value }: { value: number | null }) {
+  return (
+    <TableCell className="text-right tabular-nums">
+      {value != null ? value.toFixed(0) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </TableCell>
+  );
+}
+
 function ScreenerRow({
   row,
   logo,
@@ -389,21 +399,9 @@ function ScreenerRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.pegScore != null ? row.pegScore.toFixed(0) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.dewsScore != null ? row.dewsScore.toFixed(0) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {row.liquidityScore != null ? row.liquidityScore.toFixed(0) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
+      <DesktopScoreCell value={row.pegScore} />
+      <DesktopScoreCell value={row.dewsScore} />
+      <DesktopScoreCell value={row.liquidityScore} />
       <TableCell className="text-center">
         {row.safetyGrade ? (
           <SafetyGradeBadge

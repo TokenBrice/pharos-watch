@@ -5,6 +5,7 @@ import {
   beginReserveSyncAttempt,
   computeReserveCompositionOverview,
   finalizeReserveSyncSuccess,
+  getMaxSyncAge,
   loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   pruneLiveReserveHistory,
@@ -16,6 +17,18 @@ import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
 describe("live-reserves-store", () => {
+  it("computes max sync age from the newest successful live reserve sync", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT MAX(last_success_at) AS max_ts FROM reserve_sync_state",
+        rows: [],
+        first: { max_ts: 950 },
+      },
+    ]);
+
+    await expect(getMaxSyncAge(db, 1_000)).resolves.toBe(50);
+  });
+
   it("falls back when reserve composition exists without a matching successful sync state", async () => {
     const db = mockD1([
       {

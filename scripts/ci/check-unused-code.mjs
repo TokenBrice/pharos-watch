@@ -23,23 +23,12 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/resvg-stub.ts",
   "worker/src/__mocks__/satori-stub.ts",
   "worker/src/__mocks__/wasm-module-stub.ts",
-  // Council scaffolds whose primary hosts already use the older
-  // MethodologyHint/Label/CardActions integration; the badge variant remains
-  // available for future score surfaces that prefer the inline `(method)`
-  // affordance over the tooltip.
-  "src/components/methodology-link-badge.tsx",
-  // Council scaffolds awaiting full host adoption — not in the Wave 8 brief.
   "src/components/console-signature.tsx",
-  "src/components/motion-preference-toggle.tsx",
-  "src/components/peg-cohort-ridge.tsx",
-  "src/components/peg-deviation-strip.tsx",
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
   // is now consumed by src/components/command-palette.tsx.)
   "src/lib/filter-summaries.ts",
-  // 404 / NotFound infrastructure scaffolds; full not-found adoption deferred.
-  "src/lib/route-guess.ts",
   "src/lib/route-labels.ts",
   // URL codec schemas waiting for per-tracker adoption (compare / yield /
   // liquidity / safety-scores / freezewatch).
@@ -174,13 +163,7 @@ const EXPORT_ALLOWLIST = new Set([
   // Consumed internally by buildAllCoinTrackerLinks; the static scan does not
   // resolve same-file references.
   "src/lib/coin-tracker-links.ts::buildCoinTrackerLink",
-  // Council scaffolds whose modules are allowlisted above; allowlist their
-  // primary exports so the named-exports pass doesn't re-surface them.
-  "src/components/methodology-link-badge.tsx::MethodologyLinkBadge",
   "src/components/console-signature.tsx::ConsoleSignature",
-  "src/components/motion-preference-toggle.tsx::MotionPreferenceToggle",
-  "src/components/peg-cohort-ridge.tsx::PegCohortRidge",
-  "src/components/peg-deviation-strip.tsx::PegDeviationStrip",
   // parsePaletteInput + buildCompareHrefFromCoinIds are consumed by
   // src/components/command-palette.tsx. resolveCoinIdFromToken is only consumed
   // internally by parsePaletteInput; the static scan does not resolve same-file
@@ -191,11 +174,8 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/filter-summaries.ts::summarizeLiquidityFilters",
   "src/lib/filter-summaries.ts::summarizeCompareFilters",
   "src/lib/filter-summaries.ts::getMechanismArchetypeLabel",
-  "src/lib/route-guess.ts::guessRoute",
   "src/lib/route-labels.ts::ROUTE_LABELS",
   "src/lib/route-labels.ts::normalizeRoutePath",
-  "src/lib/route-labels.ts::routeLabelFor",
-  "src/lib/route-labels.ts::buildRouteBreadcrumb",
   // Generic URL-codec hook + schemas: staged P2 infra. The codec is ready and the
   // per-surface schemas exist; tracker adoption (compare/yield/liquidity/etc.) lands
   // incrementally. Consumed together once a tracker swaps to useTypedUrlState.

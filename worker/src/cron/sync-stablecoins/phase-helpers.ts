@@ -46,33 +46,25 @@ function countChainEntries(chainCirculating: unknown): number {
   return Object.keys(chainCirculating as Record<string, unknown>).length;
 }
 
+function buildQualityVector(asset: PeggedAsset): number[] {
+  return [
+    sumPegBuckets(asset.circulating),
+    countChainEntries(asset.chainCirculating),
+    Array.isArray(asset.chains) ? asset.chains.length : 0,
+    countFiniteBuckets(asset.circulatingPrevDay ?? undefined) +
+      countFiniteBuckets(asset.circulatingPrevWeek ?? undefined) +
+      countFiniteBuckets(asset.circulatingPrevMonth ?? undefined),
+    asset.price != null && typeof asset.price === "number" && asset.price > 0 ? 1 : 0,
+    typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt) ? asset.priceUpdatedAt : 0,
+    asset.geckoId ? 1 : 0,
+    asset.cmcSlug ? 1 : 0,
+    asset.address ? 1 : 0,
+  ];
+}
+
 function compareCanonicalAssetQuality(left: PeggedAsset, right: PeggedAsset): number {
-  const leftVector = [
-    sumPegBuckets(left.circulating),
-    countChainEntries(left.chainCirculating),
-    Array.isArray(left.chains) ? left.chains.length : 0,
-    countFiniteBuckets(left.circulatingPrevDay ?? undefined) +
-      countFiniteBuckets(left.circulatingPrevWeek ?? undefined) +
-      countFiniteBuckets(left.circulatingPrevMonth ?? undefined),
-    left.price != null && typeof left.price === "number" && left.price > 0 ? 1 : 0,
-    typeof left.priceUpdatedAt === "number" && Number.isFinite(left.priceUpdatedAt) ? left.priceUpdatedAt : 0,
-    left.geckoId ? 1 : 0,
-    left.cmcSlug ? 1 : 0,
-    left.address ? 1 : 0,
-  ];
-  const rightVector = [
-    sumPegBuckets(right.circulating),
-    countChainEntries(right.chainCirculating),
-    Array.isArray(right.chains) ? right.chains.length : 0,
-    countFiniteBuckets(right.circulatingPrevDay ?? undefined) +
-      countFiniteBuckets(right.circulatingPrevWeek ?? undefined) +
-      countFiniteBuckets(right.circulatingPrevMonth ?? undefined),
-    right.price != null && typeof right.price === "number" && right.price > 0 ? 1 : 0,
-    typeof right.priceUpdatedAt === "number" && Number.isFinite(right.priceUpdatedAt) ? right.priceUpdatedAt : 0,
-    right.geckoId ? 1 : 0,
-    right.cmcSlug ? 1 : 0,
-    right.address ? 1 : 0,
-  ];
+  const leftVector = buildQualityVector(left);
+  const rightVector = buildQualityVector(right);
 
   for (let index = 0; index < leftVector.length; index += 1) {
     if (leftVector[index] === rightVector[index]) continue;

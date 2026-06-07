@@ -341,6 +341,32 @@ describe("site-data proxy", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats"))).toBe(false);
   });
 
+  it("proxies site-data requests when Pages attribution DB is not bound", async () => {
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(makeTestD1Database(), { DB: undefined }),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
   it("returns the upstream response when the background Pages cache write fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     cachePut.mockRejectedValueOnce(new Error("cache unavailable"));

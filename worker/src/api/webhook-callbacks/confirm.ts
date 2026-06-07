@@ -15,7 +15,7 @@ import {
 } from "../telegram-webhook-store";
 import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
-import type { ConfirmBulkPayload } from "../telegram-webhook-shared";
+import type { ConfirmBulkPayload, PendingAction, PendingActionType } from "../telegram-webhook-shared";
 import {
   callbackChatType,
   hasExactParts,
@@ -23,6 +23,57 @@ import {
   type CallbackHandler,
   type TelegramCallbackQuery,
 } from "./_shared";
+
+type ConfirmablePendingAction<T extends PendingActionType> = Extract<PendingAction, { actionType: T }>;
+
+async function loadConfirmablePending<T extends "forget-confirm" | "confirm-bulk">(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  options: {
+    actionType: T;
+    expiredText: string;
+    notPendingText: string;
+    cancelActionDetail: string;
+  },
+  action: "confirm" | "cancel",
+): Promise<ConfirmablePendingAction<T> | null> {
+  const pendingRow = await loadPendingDisambiguation(db, chatId);
+
+  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
+    if (pendingRow) {
+      await clearPendingDisambiguation(db, chatId);
+    }
+    await answerCallbackQuery(cb.id, botToken, { text: options.expiredText });
+    return null;
+  }
+
+  const pendingAction = parsePendingDisambiguation(pendingRow);
+  if (!pendingAction || pendingAction.actionType !== options.actionType) {
+    await answerCallbackQuery(cb.id, botToken, { text: options.notPendingText });
+    return null;
+  }
+
+  const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
+  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Only the user who started this confirmation can complete it.",
+    });
+    return null;
+  }
+
+  if (action === "cancel") {
+    await clearPendingDisambiguation(db, chatId);
+    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
+      actionDetail: options.cancelActionDetail,
+    });
+    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
+    return null;
+  }
+
+  return pendingAction as ConfirmablePendingAction<T>;
+}
 
 async function handleForgetConfirmCallback(
   db: D1Database,
@@ -36,38 +87,13 @@ async function handleForgetConfirmCallback(
     return;
   }
 
-  const pendingRow = await loadPendingDisambiguation(db, chatId);
-
-  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
-    if (pendingRow) {
-      await clearPendingDisambiguation(db, chatId);
-    }
-    await answerCallbackQuery(cb.id, botToken, { text: "This confirmation has expired. Re-run /forget." });
-    return;
-  }
-
-  const pendingAction = parsePendingDisambiguation(pendingRow);
-  if (!pendingAction || pendingAction.actionType !== "forget-confirm") {
-    await answerCallbackQuery(cb.id, botToken, { text: "No forget confirmation is pending." });
-    return;
-  }
-
-  const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
-  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Only the user who started this confirmation can complete it.",
-    });
-    return;
-  }
-
-  if (action === "cancel") {
-    await clearPendingDisambiguation(db, chatId);
-    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
-      actionDetail: "callback_forget",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
-    return;
-  }
+  const pendingAction = await loadConfirmablePending(db, botToken, cb, chatId, {
+    actionType: "forget-confirm",
+    expiredText: "This confirmation has expired. Re-run /forget.",
+    notPendingText: "No forget confirmation is pending.",
+    cancelActionDetail: "callback_forget",
+  }, action);
+  if (!pendingAction) return;
 
   try {
     await forgetSubscriber(db, chatId);
@@ -185,38 +211,13 @@ async function handleBulkConfirmCallback(
     return;
   }
 
-  const pendingRow = await loadPendingDisambiguation(db, chatId);
-
-  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
-    if (pendingRow) {
-      await clearPendingDisambiguation(db, chatId);
-    }
-    await answerCallbackQuery(cb.id, botToken, { text: "This confirmation has expired. Re-run the command." });
-    return;
-  }
-
-  const pendingAction = parsePendingDisambiguation(pendingRow);
-  if (!pendingAction || pendingAction.actionType !== "confirm-bulk") {
-    await answerCallbackQuery(cb.id, botToken, { text: "No bulk confirmation is pending." });
-    return;
-  }
-
-  const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
-  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Only the user who started this confirmation can complete it.",
-    });
-    return;
-  }
-
-  if (action === "cancel") {
-    await clearPendingDisambiguation(db, chatId);
-    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
-      actionDetail: "callback_bulk",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
-    return;
-  }
+  const pendingAction = await loadConfirmablePending(db, botToken, cb, chatId, {
+    actionType: "confirm-bulk",
+    expiredText: "This confirmation has expired. Re-run the command.",
+    notPendingText: "No bulk confirmation is pending.",
+    cancelActionDetail: "callback_bulk",
+  }, action);
+  if (!pendingAction) return;
 
   // Confirm path: execute the deferred action, then clear pending.
   const chatType = cb.message?.chat?.type ?? "private";

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
   buildDependencyGraphEdges,
@@ -8,20 +8,29 @@ import {
   type DependencyGraphEdge,
 } from "../../shared/lib/dependency-graph";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "../../shared/lib/supply";
 import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../../shared/types";
+import {
+  PROD_ORIGIN,
+  PROD_REPORT_CARDS_URL,
+  PROD_STABLECOINS_URL,
+  extractStablecoinRows,
+  fetchJson,
+  formatUsd,
+  isRecord,
+  joinUrl,
+  marketCapForStablecoinRow,
+  markdownValue,
+  numberValue,
+  readJsonFile,
+  readRequiredJsonFile,
+  resolveGeneratedAt,
+  sortByMarketCapOrRank,
+} from "../lib/coverage-audit-cli";
 
-const PROD_ORIGIN = "https://pharos.watch";
-const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards`;
-const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 const DEFAULT_BASELINE_PATH = "scripts/lib/dependency-coverage-baseline.json";
 const MISSING_CANDIDATE_LIMIT = 50;
 const RESERVE_SLICE_LIMIT = 50;
 const MANUAL_DEPENDENCY_LIMIT = 50;
-
-interface UnknownRecord {
-  [key: string]: unknown;
-}
 
 export interface DependencyGraphCoverageSummary {
   edgeCount: number;
@@ -122,16 +131,8 @@ interface CliOptions {
   generatedAt: string | null;
 }
 
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function dependencyTypeValue(value: unknown): DependencyType {
@@ -190,22 +191,6 @@ function extractReportCardEdges(payload: unknown): DependencyGraphEdge[] | null 
   });
 }
 
-function extractStablecoinRows(payload: unknown): UnknownRecord[] {
-  const envelope = isRecord(payload) && isRecord(payload.payload) ? payload.payload : payload;
-  const rows = Array.isArray(envelope)
-    ? envelope
-    : isRecord(envelope) && Array.isArray(envelope.peggedAssets)
-      ? envelope.peggedAssets
-      : [];
-  return rows.filter(isRecord);
-}
-
-function marketCapForStablecoinRow(row: UnknownRecord): number {
-  const direct = numberValue(row.marketCapUsd ?? row.marketCap ?? row.mcapUsd);
-  if (direct != null) return direct;
-  return getCirculatingRaw(row as { circulating?: Record<string, number> | null | undefined });
-}
-
 function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string, number> | null {
   if (stablecoinsPayload === undefined) return null;
 
@@ -221,15 +206,6 @@ function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string,
 
 function marketCapForId(marketCapById: ReadonlyMap<string, number> | null, id: string): number | null {
   return marketCapById?.get(id) ?? null;
-}
-
-function sortByMarketCapOrRank<T extends { marketCapUsd: number | null; rank: number; coinId: string }>(rows: T[]): T[] {
-  return rows.sort((left, right) => {
-    if (left.marketCapUsd != null || right.marketCapUsd != null) {
-      return (right.marketCapUsd ?? -1) - (left.marketCapUsd ?? -1) || left.coinId.localeCompare(right.coinId);
-    }
-    return left.rank - right.rank || left.coinId.localeCompare(right.coinId);
-  });
 }
 
 function findManualOnlyDependencies(activeCoins: readonly StablecoinMeta[]): ManualOnlyDependencyRow[] {
@@ -369,23 +345,6 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
     highestMarketCapMissingCandidates: missingCandidates,
     warnings,
   };
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatUsd(value: number | null): string {
-  if (value == null) return "";
-  if (value >= 1_000_000_000) return `$${formatNumber(value / 1_000_000_000)}B`;
-  if (value >= 1_000_000) return `$${formatNumber(value / 1_000_000)}M`;
-  if (value >= 1_000) return `$${formatNumber(value / 1_000)}K`;
-  return `$${formatNumber(value)}`;
-}
-
-function markdownValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 function renderMissingCandidates(rows: readonly MissingDependencyCandidateRow[]): string[] {
@@ -624,38 +583,6 @@ export function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-async function fetchJson(
-  url: string,
-  fetchImpl: typeof fetch,
-  apiKey: string | undefined,
-  extraHeaders: Record<string, string> = {},
-): Promise<unknown> {
-  const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
-  if (apiKey) headers["X-API-Key"] = apiKey;
-
-  const response = await fetchImpl(url, { headers });
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${body.slice(0, 160)}`);
-  }
-  return JSON.parse(body) as unknown;
-}
-
-function joinUrl(base: string, path: string): string {
-  return `${base.replace(/\/+$/, "")}${path}`;
-}
-
-function readRequiredJsonFile(path: string, label: string): unknown {
-  if (!existsSync(path)) {
-    throw new Error(`${label} file not found: ${path}`);
-  }
-  return readJsonFile(path);
-}
-
 async function loadOptionalInputs(
   options: CliOptions,
   cwd: string,
@@ -716,11 +643,6 @@ async function loadOptionalInputs(
     stablecoins,
     mode: reportCards !== undefined || stablecoins !== undefined ? "input" : "static",
   };
-}
-
-function resolveGeneratedAt(options: CliOptions): string {
-  if (options.generatedAt === "now") return new Date().toISOString();
-  return options.generatedAt ?? new Date().toISOString();
 }
 
 function writeOutput(path: string, output: string, cwd: string): void {

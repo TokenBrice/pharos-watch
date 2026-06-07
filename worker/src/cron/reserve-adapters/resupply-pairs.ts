@@ -3,7 +3,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeUint256Arg } from "../../lib/evm-selectors";
+import { encodeUint256 } from "../../lib/evm-selectors";
 import {
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
@@ -106,7 +106,7 @@ function decodeUint256Result(raw: string | null, context: string): bigint {
 }
 
 function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
-  return `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(shares)}` as `0x${string}`;
+  return `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(shares)}` as `0x${string}`;
 }
 
 export function adaptResupplyPairSnapshots(

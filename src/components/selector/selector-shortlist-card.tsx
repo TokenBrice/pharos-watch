@@ -172,12 +172,8 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     yieldSourceUrl,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
-  const recWithProse = rec as SelectorRecommendation & {
-    whyText?: string;
-    watchText?: string;
-  };
-  const resolvedWhyText = whyText ?? recWithProse.whyText;
-  const resolvedWatchText = watchText ?? recWithProse.watchText;
+  const resolvedWhyText = whyText ?? rec.whyText;
+  const resolvedWatchText = watchText ?? rec.watchText;
 
   const detailHref = `/stablecoin/${rec.id}/`;
   const profileLabel = selectorProfileLabel(profile);

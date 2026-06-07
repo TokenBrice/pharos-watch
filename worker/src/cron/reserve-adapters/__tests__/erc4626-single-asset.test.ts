@@ -1,25 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import type { ChainRpcConfig } from "../../../lib/chain-registry";
-
-const getChainRpcMock = vi.fn();
-const fetchWithRetryMock = vi.fn();
-
-vi.mock("../../../lib/chain-registry", () => ({
-  getChainRpc: getChainRpcMock,
-}));
-
-vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
-}));
-
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
+import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
@@ -33,22 +16,9 @@ function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReserv
   return cloned;
 }
 
-const testChainRpcs = new Map<string, ChainRpcConfig>([
-  ["ethereum", {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    type: "evm",
-    rpcUrl: "https://rpc.example",
-    explorerUrl: "https://etherscan.io",
-  }],
-]);
-
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    getChainRpcMock.mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
-      testChainRpcs.get(chainId),
-    );
+    resetRpcMocks();
   });
 
   it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
@@ -153,12 +123,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(coin?.liveReservesConfig).toBeDefined();
 
     await expect(
-      fetchErc4626SingleAssetReserves(
-        coin!,
-        coin!.liveReservesConfig!,
-        new AbortController().signal,
-        { chainRpcs: testChainRpcs },
-      ),
+      fetchErc4626SingleAssetReserves(coin!, coin!.liveReservesConfig!, new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
     ).rejects.toThrow(/asset\(\) returned/);
   });
 
@@ -179,12 +146,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(coin?.liveReservesConfig).toBeDefined();
 
     await expect(
-      fetchErc4626SingleAssetReserves(
-        coin!,
-        coin!.liveReservesConfig!,
-        new AbortController().signal,
-        { chainRpcs: testChainRpcs },
-      ),
+      fetchErc4626SingleAssetReserves(coin!, coin!.liveReservesConfig!, new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
     ).rejects.toThrow(/asset\(\) could not be read/);
   });
 

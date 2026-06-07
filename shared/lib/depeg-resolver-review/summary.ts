@@ -145,8 +145,6 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
     missedNoPredictionCount;
   const finalizedOpportunityCount =
     lockedPredictionCount + noCallCount + invalidatedPredictionCount + publicationFailedCount + missedNoPredictionCount;
-  const predictionRateDenominator =
-    lockedPredictionCount + noCallCount + invalidatedPredictionCount + publicationFailedCount + missedNoPredictionCount;
   const stateAssignedCount =
     lockedPredictionCount +
     noCallCount +
@@ -199,10 +197,10 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
     invalidatedPredictionCount,
     currentEligibleOpportunityCount,
     finalizedOpportunityCount,
-    predictionRatePct: pct(lockedPredictionCount, predictionRateDenominator),
+    predictionRatePct: pct(lockedPredictionCount, finalizedOpportunityCount),
     invalidationAdjustedPredictionRatePct: pct(
       lockedPredictionCount + invalidatedPredictionCount,
-      predictionRateDenominator,
+      finalizedOpportunityCount,
     ),
     decisionProgressPct: pct(
       lockedPredictionCount + noCallCount + invalidatedPredictionCount,
@@ -246,9 +244,7 @@ export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
   const headline =
     headlineScope === "current_policy"
       ? currentPolicyMetrics
-      : headlineScope === "all_ddrv2"
-        ? allMetrics
-        : allMetrics;
+      : allMetrics;
   const headlineLabel =
     headlineScope === "current_policy"
       ? "Current DDRv2 public prediction policy"

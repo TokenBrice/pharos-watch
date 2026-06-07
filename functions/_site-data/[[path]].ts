@@ -43,10 +43,6 @@ function methodNotAllowed(): Response {
   return jsonError(405, "Method not allowed", { Allow: SITE_DATA_ALLOWED_METHOD });
 }
 
-function resolveRequestedPath(params: SiteDataProxyContext["params"]): string | null {
-  return resolveSiteDataRequestedPath(params);
-}
-
 function buildUpstreamHeaders(request: Request, env: SiteDataProxyEnv): Headers {
   const secret = env.SITE_API_SHARED_SECRET?.trim() ?? "";
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
@@ -150,7 +146,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
         : null;
     },
     resolveUpstreamPath: ({ params }) => {
-      const requestedPath = resolveRequestedPath(params);
+      const requestedPath = resolveSiteDataRequestedPath(params);
       return requestedPath ? resolveSiteDataUpstreamPath(requestedPath) : null;
     },
     rejectUpstreamPath: (_context, upstreamPath) => (upstreamPath ? null : jsonError(404, "Not found")),

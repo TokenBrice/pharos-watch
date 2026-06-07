@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { DECIMALS_SELECTOR, encodeAddress, encodeUint256Arg } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
@@ -136,7 +136,7 @@ function decodeBoolResult(raw: string | null): boolean | null {
 }
 
 function encodeQuoteCall(amount: bigint): `0x${string}` {
-  return `${QUOTE_SELECTOR}${encodeUint256Arg(amount)}${encodeUint256Arg(APPLY_ISSUANCE_PREMIUM)}${encodeUint256Arg(FLOOR_ROUNDING)}` as `0x${string}`;
+  return `${QUOTE_SELECTOR}${encodeUint256(amount)}${encodeUint256(APPLY_ISSUANCE_PREMIUM)}${encodeUint256(FLOOR_ROUNDING)}` as `0x${string}`;
 }
 
 function encodeAddressCall(selector: string, address: string): `0x${string}` {

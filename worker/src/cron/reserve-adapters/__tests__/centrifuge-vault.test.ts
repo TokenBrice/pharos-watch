@@ -1,35 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import type { ChainRpcConfig } from "../../../lib/chain-registry";
-
-const getChainRpcMock = vi.fn();
-const fetchWithRetryMock = vi.fn();
-
-vi.mock("../../../lib/chain-registry", () => ({
-  getChainRpc: getChainRpcMock,
-}));
-
-vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
-}));
-
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const testChainRpcs = new Map<string, ChainRpcConfig>([
-  ["ethereum", {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    type: "evm",
-    rpcUrl: "https://rpc.example",
-    explorerUrl: "https://etherscan.io",
-  }],
-]);
+import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
+import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
 
 const JTRSY_VAULT = "0x8c213ee79581ff4984583c6a801e5263418c4b86";
 const USDC_ASSET = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -40,9 +13,7 @@ function makeCoin(): StablecoinMeta {
     id: "jtrsy-anemoy",
     name: "Janus Henderson Anemoy Treasury Fund",
     symbol: "JTRSY",
-    contracts: [
-      { chain: "ethereum", address: JTRSY_VAULT, decimals: 6 },
-    ],
+    contracts: [{ chain: "ethereum", address: JTRSY_VAULT, decimals: 6 }],
   } as unknown as StablecoinMeta;
 }
 
@@ -66,10 +37,7 @@ function makeConfig(): LiveReservesConfig {
 
 describe("fetchCentrifugeVaultReserves", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    getChainRpcMock.mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
-      testChainRpcs.get(chainId),
-    );
+    resetRpcMocks();
   });
 
   it("returns a single 100% T-bill slice after probing the ERC-7540 vault", async () => {
@@ -94,12 +62,9 @@ describe("fetchCentrifugeVaultReserves", () => {
 
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
-    const result = await fetchCentrifugeVaultReserves(
-      makeCoin(),
-      makeConfig(),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+      chainRpcs: testChainRpcs,
+    });
 
     expect(result.slices).toEqual([
       {
@@ -147,12 +112,9 @@ describe("fetchCentrifugeVaultReserves", () => {
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     await expect(
-      fetchCentrifugeVaultReserves(
-        makeCoin(),
-        makeConfig(),
-        new AbortController().signal,
-        { chainRpcs: testChainRpcs },
-      ),
+      fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
     ).rejects.toThrow(/asset\(\) returned/);
   });
 
@@ -178,12 +140,9 @@ describe("fetchCentrifugeVaultReserves", () => {
 
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
-    const result = await fetchCentrifugeVaultReserves(
-      makeCoin(),
-      makeConfig(),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+      chainRpcs: testChainRpcs,
+    });
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -215,12 +174,9 @@ describe("fetchCentrifugeVaultReserves", () => {
 
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
-    const result = await fetchCentrifugeVaultReserves(
-      makeCoin(),
-      makeConfig(),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+      chainRpcs: testChainRpcs,
+    });
 
     expect(result.slices).toEqual([
       {
@@ -258,12 +214,9 @@ describe("fetchCentrifugeVaultReserves", () => {
 
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
-    const result = await fetchCentrifugeVaultReserves(
-      makeCoin(),
-      makeConfig(),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+      chainRpcs: testChainRpcs,
+    });
 
     expect(result.slices).toEqual([
       {
@@ -272,16 +225,18 @@ describe("fetchCentrifugeVaultReserves", () => {
         risk: "very-low",
       },
     ]);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "centrifuge-vault-asset-unavailable",
-        effect: "info",
-      }),
-      expect.objectContaining({
-        code: "centrifuge-vault-total-assets-unavailable",
-        effect: "info",
-      }),
-    ]));
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "centrifuge-vault-asset-unavailable",
+          effect: "info",
+        }),
+        expect.objectContaining({
+          code: "centrifuge-vault-total-assets-unavailable",
+          effect: "info",
+        }),
+      ]),
+    );
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       chain: "ethereum",
@@ -308,12 +263,9 @@ describe("fetchCentrifugeVaultReserves", () => {
     const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     await expect(
-      fetchCentrifugeVaultReserves(
-        makeCoin(),
-        makeConfig(),
-        new AbortController().signal,
-        { chainRpcs: testChainRpcs },
-      ),
+      fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+        chainRpcs: testChainRpcs,
+      }),
     ).rejects.toThrow(/asset\(\) could not be read/);
   });
 });

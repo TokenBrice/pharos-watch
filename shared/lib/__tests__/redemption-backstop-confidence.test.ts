@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   deriveModelConfidence,
   deriveModelConfidenceWithDetails,
-  inferStoredCapacityConfidence,
-  inferStoredCapacitySemantics,
   inferStoredFeeConfidence,
   inferStoredFeeModelKind,
   resolveCapacityConfidence,
@@ -379,38 +377,6 @@ describe("deriveModelConfidence", () => {
         sourceMode: "static",
       }).confidenceDetails.sourceQuality,
     ).toBe(40);
-  });
-});
-
-describe("inferStoredCapacityConfidence", () => {
-  it("returns dynamic only when provider is reserve-sync-metadata and sourceMode is dynamic", () => {
-    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "dynamic" })).toBe("dynamic");
-  });
-
-  it("returns heuristic for non-dynamic source modes even with reserve-sync-metadata provider", () => {
-    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "estimated" })).toBe(
-      "heuristic",
-    );
-    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "static" })).toBe(
-      "heuristic",
-    );
-  });
-
-  it("returns heuristic for any other provider", () => {
-    expect(inferStoredCapacityConfidence({ provider: "supply-full-model", sourceMode: "dynamic" })).toBe("heuristic");
-    expect(inferStoredCapacityConfidence({ provider: "supply-ratio-model", sourceMode: "static" })).toBe("heuristic");
-  });
-});
-
-describe("inferStoredCapacitySemantics", () => {
-  it("returns eventual-only for supply-full-model", () => {
-    expect(inferStoredCapacitySemantics({ provider: "supply-full-model" })).toBe("eventual-only");
-  });
-
-  it("returns immediate-bounded for any other provider", () => {
-    expect(inferStoredCapacitySemantics({ provider: "reserve-sync-metadata" })).toBe("immediate-bounded");
-    expect(inferStoredCapacitySemantics({ provider: "supply-ratio-model" })).toBe("immediate-bounded");
-    expect(inferStoredCapacitySemantics({ provider: "sync-error" })).toBe("immediate-bounded");
   });
 });
 

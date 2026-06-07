@@ -1,4 +1,5 @@
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
   MethodologySectionShell,
@@ -19,7 +20,7 @@ export function ContagionStressTestMethodologySection() {
               </p>
               <p className="text-xs text-muted-foreground">
                 See also:{" "}
-                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
+                <a href="#safety-scores-methodology" className={METHODOLOGY_LINK_CLASS}>Safety Scores</a>
               </p>
               <MethodologyFacts
                 facts={[

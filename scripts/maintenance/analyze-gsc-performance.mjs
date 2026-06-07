@@ -2,7 +2,13 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { collectInputEntries, parseCsv } from "./analyze-gsc-coverage.mjs";
+import {
+  collectInputEntries,
+  compareText,
+  isDigit,
+  normalizeHeaderName,
+  parseCsv,
+} from "./analyze-gsc-coverage.mjs";
 
 const DEFAULT_TARGET_CTR = 0.045;
 const DEFAULT_MIN_IMPRESSIONS = 100;
@@ -31,26 +37,6 @@ const DASHBOARD_PATHS = new Set([
   "/compliance/",
   "/screener/",
 ]);
-
-function compareText(a, b) {
-  const left = String(a ?? "");
-  const right = String(b ?? "");
-  const lowerLeft = left.toLowerCase();
-  const lowerRight = right.toLowerCase();
-  if (lowerLeft < lowerRight) return -1;
-  if (lowerLeft > lowerRight) return 1;
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
-
-function normalizeHeaderName(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/^\uFEFF/, "")
-    .replace(/[^a-z0-9]+/g, "");
-}
 
 function stripBom(value) {
   return String(value ?? "").replace(/^\uFEFF/, "");
@@ -134,10 +120,6 @@ function firstNumberToken(value) {
     return token === "-" || token === "." || token === "-." ? "" : token;
   }
   return "";
-}
-
-function isDigit(char) {
-  return char >= "0" && char <= "9";
 }
 
 function parseFiniteNumber(value) {
