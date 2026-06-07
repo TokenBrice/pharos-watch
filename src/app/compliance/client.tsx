@@ -2,7 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
@@ -11,6 +11,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
+  TableSourceLink,
   TableRow,
 } from "@/components/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -547,17 +548,15 @@ function SourceLinks({ references }: { references: readonly { label: string; url
   return (
     <div className="ml-auto flex max-w-[300px] flex-col items-end gap-1 overflow-hidden">
       {references.map((reference) => (
-        <a
+        <TableSourceLink
           key={`${reference.label}:${reference.url}`}
           href={reference.url}
-          target="_blank"
-          rel="noopener noreferrer"
           title={reference.label}
           className="pharos-focus-ring inline-flex max-w-full items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
+          iconClassName="h-3 w-3"
         >
-          <span className="min-w-0 truncate">{reference.label}</span>
-          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-        </a>
+          {reference.label}
+        </TableSourceLink>
       ))}
     </div>
   );

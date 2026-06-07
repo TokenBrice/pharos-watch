@@ -1,9 +1,8 @@
 "use client";
 
-import { Download, Settings2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { DensityToggle } from "./density-toggle";
+import { TableSettingsMenu, TableToolbarFrame } from "@/components/table";
 import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";
 import type { TableDensity } from "@/hooks/use-table-density";
 import type { ColumnId } from "@/hooks/use-preferences";
@@ -54,53 +53,26 @@ export function TableToolbar({
   meta,
 }: TableToolbarProps) {
   return (
-    <div className="pharos-table-toolbar">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-baseline xl:justify-between">
-        <div className="min-w-0 space-y-1 xl:flex-1">
-          {titleId ? (
-            <h2
-              id={titleId}
-              className="font-mono text-base font-semibold uppercase tracking-tight text-foreground sm:text-lg"
-            >
-              {eyebrow}
-              {meta ? (
-                <span className="ml-3 align-middle font-mono text-xs tabular-nums text-muted-foreground">
-                  · {meta}
-                </span>
-              ) : null}
-            </h2>
-          ) : (
-            <p className="pharos-kicker">{eyebrow}</p>
-          )}
-          {description ? (
-            <p className="pharos-meta hidden sm:block">{description}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+    <TableToolbarFrame
+      eyebrow={eyebrow}
+      description={description}
+      titleId={titleId}
+      meta={meta}
+      actions={(
+        <>
           {additionalActions}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="min-h-11 gap-1.5 text-xs text-muted-foreground sm:min-h-8">
-                <Settings2 className="h-3.5 w-3.5" />
-                Table settings
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-[22rem] max-w-[calc(100vw-2rem)] space-y-4 p-4">
-              <div className="space-y-2">
-                <p className="pharos-kicker">Density</p>
-                <DensityToggle value={density} onChange={onDensityChange} />
-              </div>
-              <div className="space-y-2">
-                <p className="pharos-kicker">Columns</p>
-                <ColumnVisibilityDropdown
-                  visibleColumns={visibleColumns}
-                  setVisibleColumns={onVisibleColumnsChange}
-                  resetColumns={onResetColumns}
-                  defaultColumns={defaultColumns}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
+          <TableSettingsMenu
+            density={density}
+            onDensityChange={onDensityChange}
+            columnsSlot={(
+              <ColumnVisibilityDropdown
+                visibleColumns={visibleColumns}
+                setVisibleColumns={onVisibleColumnsChange}
+                resetColumns={onResetColumns}
+                defaultColumns={defaultColumns}
+              />
+            )}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -111,8 +83,8 @@ export function TableToolbar({
             <Download className="mr-1.5 h-3.5 w-3.5" />
             Export CSV
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    />
   );
 }
