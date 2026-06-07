@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useSidebar } from "@/components/sidebar";
+import { useSidebar } from "@/components/sidebar-context";
 import { routeLabelFor } from "@/lib/route-labels";
 
 function isChromelessPath(pathname: string | null): boolean {

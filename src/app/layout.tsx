@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
-import { Sidebar, SidebarProvider, SidebarSpacer } from "@/components/sidebar";
+import { DesktopSidebar } from "@/components/desktop-sidebar";
+import { SidebarProvider, SidebarSpacer } from "@/components/sidebar-context";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
@@ -113,7 +114,7 @@ export default function RootLayout({
             </RouteChrome>
             <div className="flex min-h-screen">
               <RouteChrome>
-                <Sidebar />
+                <DesktopSidebar />
                 <SidebarSpacer />
               </RouteChrome>
               <div className="flex-1 flex flex-col min-w-0">

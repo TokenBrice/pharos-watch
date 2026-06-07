@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useRef } from "react";
 import { ChevronRight } from "lucide-react";
 import { HomepageTape } from "@/components/homepage-tape";
-import { useSidebar } from "@/components/sidebar";
+import { useSidebar } from "@/components/sidebar-context";
 import { CORE_NAV_ITEMS, isCoreNavPath, normalizeNavPath } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
