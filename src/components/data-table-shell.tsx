@@ -14,8 +14,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeletonRows,
 } from "@/components/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import {
   TablePagination,
@@ -249,15 +249,16 @@ export function DataTableLoadingRows({
   // prevent a true absolute-positioned crossfade between row sets, but
   // animating the skeleton fade-in alone removes the perceptual pop without
   // touching consumer layout.
-  return Array.from({ length: rowCount }, (_, rowIndex) => (
-    <TableRow key={rowIndex} className="animate-fade-in">
-      {columns.map((column, columnIndex) => (
-        <TableCell key={column.id} className={column.className}>
-          <Skeleton className={cn(columnIndex === 0 ? "h-6 w-24" : "ml-auto h-5 w-16")} />
-        </TableCell>
-      ))}
-    </TableRow>
-  ));
+  return (
+    <TableSkeletonRows
+      rowCount={rowCount}
+      columns={columns.map((column, columnIndex) => ({
+        id: column.id,
+        cellClassName: column.className,
+        skeletonClassName: columnIndex === 0 ? "h-6 w-24" : "ml-auto h-5 w-16",
+      }))}
+    />
+  );
 }
 
 export interface DataTableSkeletonShellProps<K extends string>

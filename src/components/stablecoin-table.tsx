@@ -4,8 +4,16 @@ import { useMemo, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import type { QueryKey } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TableBody, TableCaption, TableHead, TableHeader, TableRow, VirtualTableFrame } from "@/components/table";
+import {
+  TableBody,
+  TableCaption,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeletonRows,
+  VirtualTableFrame,
+  type TableSkeletonColumn,
+} from "@/components/table";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS, type TableDensity } from "@/hooks/use-table-density";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -74,6 +82,23 @@ const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   backing: 92,
   type: 92,
   flags: 72,
+};
+const SKELETON_WIDTH_BY_COLUMN: Partial<Record<ColumnId, string>> = {
+  rank: "h-4 w-8",
+  name: "h-5 w-28",
+  price: "h-4 w-16",
+  peg: "h-4 w-14",
+  mcap: "h-4 w-20",
+  change24h: "h-4 w-14",
+  change7d: "h-4 w-14",
+  grade: "h-4 w-12",
+  stability: "h-4 w-16",
+  liquidity: "h-4 w-14",
+  blacklistable: "h-4 w-20",
+  mintAuthority: "h-4 w-20",
+  backing: "h-4 w-16",
+  type: "h-4 w-14",
+  flags: "h-4 w-12",
 };
 
 function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): boolean {
@@ -274,6 +299,23 @@ export function StablecoinTable({
     [showPinnedControls, visibleColumns],
   );
   const visibleColumnCount = visibleColumns.length + (showPinnedControls ? 1 : 0);
+  const skeletonColumns = useMemo<TableSkeletonColumn[]>(
+    () => [
+      ...(showPinnedControls
+        ? [{
+          id: "pinned",
+          cellClassName: "w-[44px] text-center xl:w-[26px]",
+          skeletonClassName: "mx-auto h-4 w-4 rounded-full",
+        }]
+        : []),
+      ...STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => ({
+        id: column.id,
+        cellClassName: column.className,
+        skeletonClassName: SKELETON_WIDTH_BY_COLUMN[column.id] ?? "h-4 w-16",
+      })),
+    ],
+    [isVisible, showPinnedControls],
+  );
 
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
 
@@ -390,22 +432,37 @@ export function StablecoinTable({
 
   if (isLoading) {
     return (
-      <div className="pharos-table-shell">
-        <div className="bg-muted/50 h-10" />
-        {SKELETON_ROWS.map((i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
-            <Skeleton className="h-4 w-8 shrink-0" />
-            <Skeleton className="h-6 w-6 rounded-full shrink-0" />
-            <Skeleton className="h-4 w-28" />
-            <div className="flex-1" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-12 hidden xl:block" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-4 w-14 hidden xl:block" />
-          </div>
-        ))}
-      </div>
+      <VirtualTableFrame
+        tableId="stablecoin-overview"
+        testId="stablecoin-overview-table"
+        density={density}
+        striped="indexed"
+        viewportClassName="max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"
+        mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
+        tableClassName="min-w-[420px] xl:min-w-[820px] table-fixed"
+        tableProps={{
+          style: isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined,
+        }}
+      >
+        <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
+        <TableHeader className="bg-muted">
+          <TableRow rowIntent="static">
+            {showPinnedControls ? (
+              <TableHead scope="col" className="w-[44px] text-center xl:w-[26px]">
+                <span className="sr-only">Starred</span>
+              </TableHead>
+            ) : null}
+            {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => (
+              <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
+                {column.label}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableSkeletonRows columns={skeletonColumns} rowCount={SKELETON_ROWS.length} />
+        </TableBody>
+      </VirtualTableFrame>
     );
   }
 
