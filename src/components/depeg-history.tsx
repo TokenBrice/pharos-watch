@@ -11,7 +11,7 @@ import { TablePagination } from "@/components/table-pagination";
 import {
   TableCell,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";

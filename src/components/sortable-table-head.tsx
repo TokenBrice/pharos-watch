@@ -1,4 +1,4 @@
-import { TableHead } from "@/components/ui/table";
+import { TableHead } from "@/components/table";
 import { SortIcon } from "@/components/sort-icon";
 import { cn } from "@/lib/utils";
 

@@ -43,6 +43,14 @@ export function YieldDetailSectionAltSources({
       setSortDir("desc");
     }
   };
+  const getAriaSort = (field: "apy" | "tvl") => {
+    if (sortField !== field) return "none";
+    return sortDir === "asc" ? "ascending" : "descending";
+  };
+  const getSortIndicator = (field: "apy" | "tvl") => {
+    if (sortField !== field) return "";
+    return sortDir === "desc" ? "↓" : "↑";
+  };
 
   const sorted = [...altSources].sort((a, b) => {
     const mul = sortDir === "asc" ? 1 : -1;
@@ -177,10 +185,19 @@ export function YieldDetailSectionAltSources({
             </TableHead>
             <TableHead
               scope="col"
-              className="h-auto cursor-pointer px-0 pb-2 text-right font-medium transition-colors hover:text-foreground"
-              onClick={() => toggleSort("apy")}
+              aria-sort={getAriaSort("apy")}
+              className="h-auto px-0 pb-2 text-right font-medium"
             >
-              APY 30d {sortField === "apy" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+              <button
+                type="button"
+                className="pharos-focus-ring inline-flex rounded-sm text-right transition-colors hover:text-foreground"
+                onClick={() => toggleSort("apy")}
+                aria-label={`Sort alternate sources by APY 30d ${
+                  sortField === "apy" && sortDir === "desc" ? "ascending" : "descending"
+                }`}
+              >
+                APY 30d {getSortIndicator("apy")}
+              </button>
             </TableHead>
             <TableHead
               scope="col"
@@ -191,10 +208,19 @@ export function YieldDetailSectionAltSources({
             </TableHead>
             <TableHead
               scope="col"
-              className="h-auto cursor-pointer px-0 pb-2 text-right font-medium transition-colors hover:text-foreground"
-              onClick={() => toggleSort("tvl")}
+              aria-sort={getAriaSort("tvl")}
+              className="h-auto px-0 pb-2 text-right font-medium"
             >
-              TVL {sortField === "tvl" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+              <button
+                type="button"
+                className="pharos-focus-ring inline-flex rounded-sm text-right transition-colors hover:text-foreground"
+                onClick={() => toggleSort("tvl")}
+                aria-label={`Sort alternate sources by TVL ${
+                  sortField === "tvl" && sortDir === "desc" ? "ascending" : "descending"
+                }`}
+              >
+                TVL {getSortIndicator("tvl")}
+              </button>
             </TableHead>
             <TableHead scope="col" className="h-auto px-0 pb-2 text-center font-medium">
               <span className="sr-only">Actions</span>

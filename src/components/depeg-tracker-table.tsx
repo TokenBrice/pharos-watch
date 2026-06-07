@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   TableCell,
-} from "@/components/ui/table";
+} from "@/components/table";
 import {
   DataTableEmptyRow,
   DataTableShell,

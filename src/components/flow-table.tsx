@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   TableCell,
-} from "@/components/ui/table";
+} from "@/components/table";
 import {
   DataTableEmptyRow,
   DataTableLoadingRows,

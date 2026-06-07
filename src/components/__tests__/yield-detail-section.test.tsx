@@ -322,6 +322,10 @@ describe("YieldDetailSection", () => {
       "yield-detail-alt-sources",
     );
     expect(screen.getByRole("table", { name: "Retained alternate yield sources" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: /APY 30d/ }).getAttribute("aria-sort")).toBe("descending");
+    expect(screen.getByRole("button", { name: /Sort alternate sources by APY 30d ascending/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Sort alternate sources by TVL descending/ }));
+    expect(screen.getByRole("columnheader", { name: /TVL/ }).getAttribute("aria-sort")).toBe("descending");
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-available-sources")).toBe(
       "primary-source,alt-source,second-alt-source",
     );

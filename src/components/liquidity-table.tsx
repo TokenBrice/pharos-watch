@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { TableCell } from "@/components/ui/table";
+import { TableCell } from "@/components/table";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { InteractiveTableRow } from "@/components/interactive-table-row";

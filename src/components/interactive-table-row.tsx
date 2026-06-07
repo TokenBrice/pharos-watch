@@ -1,6 +1,6 @@
 "use client";
 
-import { TableRow } from "@/components/ui/table";
+import { TableRow } from "@/components/table";
 
 interface InteractiveTableRowProps {
   id?: string;

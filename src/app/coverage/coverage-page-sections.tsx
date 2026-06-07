@@ -516,14 +516,15 @@ export function CoverageMatrixCard(
 
                     return (
                       <TableRow key={row.id} className={cn("group", stripeClass)}>
-                        <TableCell
+                        <TableHead
+                          scope="row"
                           className={cn(
-                            "sticky left-0 z-10 w-[200px] max-w-[200px] whitespace-normal px-4 py-3 group-hover:bg-muted/30",
+                            "sticky left-0 z-10 h-auto w-[200px] max-w-[200px] whitespace-normal px-4 py-3 text-left font-normal text-foreground group-hover:bg-muted/30",
                             stripeClass,
                           )}
                         >
                           <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
-                        </TableCell>
+                        </TableHead>
                         {COVERAGE_FEATURES.map((feature) => (
                           <TableCell key={feature.key} className="pb-2 pt-3 align-top">
                             <CoverageBadge status={row.statuses[feature.key]} />

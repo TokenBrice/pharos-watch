@@ -4,7 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/table";
 import {
   BACKING_COLORS,
   GOVERNANCE_COLORS,

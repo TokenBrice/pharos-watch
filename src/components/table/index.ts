@@ -14,9 +14,7 @@ export { TableSourceLink, type TableSourceLinkProps } from "./table-source-link"
 export { TableToolbarFrame } from "./table-toolbar-frame";
 export { VirtualTableFrame } from "./virtual-table-frame";
 export type {
-  TableAlign,
   TableChrome,
-  TableColumn,
   TableDensity,
   TableId,
   TableIdentityProps,

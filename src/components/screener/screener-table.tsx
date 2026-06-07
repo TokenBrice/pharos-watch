@@ -9,7 +9,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table-shell";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { buildLiveCompareUrl } from "@/lib/compare-links";

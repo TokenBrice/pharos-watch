@@ -102,7 +102,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
               className="mt-2"
               tableProps={{ "aria-label": "Healthy circuit breakers" }}
             >
-              {tripped.length === 0 && tableHead}
+              {tableHead}
               <TableBody>{healthy.map(renderRow)}</TableBody>
             </TableFrame>
           </details>

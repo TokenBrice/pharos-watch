@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/table";
 import {
   EmptyStateIllustration,
   type EmptyStateKind,

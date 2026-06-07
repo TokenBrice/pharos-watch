@@ -39,6 +39,7 @@ describe("CircuitBreakerTable", () => {
     const healthyTable = screen.getByTestId("circuit-breakers-healthy-table");
     expect(healthyTable.getAttribute("data-table-id")).toBe("circuit-breakers-healthy");
     expect(within(healthyTable).getByRole("table", { name: /healthy circuit breakers/i })).toBeTruthy();
+    expect(within(healthyTable).getByRole("columnheader", { name: "Name" })).toBeTruthy();
     expect(within(healthyTable).getByText("price-consensus")).toBeTruthy();
   });
 });

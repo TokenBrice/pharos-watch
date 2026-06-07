@@ -134,6 +134,7 @@ describe("CoverageMatrixCard", () => {
     expect(matrixTable.getAttribute("data-slot")).toBe("table");
     expect(screen.getAllByText("Coin 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
+    expect(within(matrixTable).getByRole("rowheader", { name: /Coin 1/ })).toBeTruthy();
     expect(screen.getAllByRole("columnheader", { name: /Backstop/ }).length).toBeGreaterThan(0);
   });
 

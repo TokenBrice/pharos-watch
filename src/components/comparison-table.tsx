@@ -381,7 +381,9 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
           <TableBody>
             {comparisonMetrics.map((metric) => (
               <TableRow key={metric.key}>
-                <TableCell className="pharos-table-sticky-metric font-medium">{metric.desktopLabel}</TableCell>
+                <TableHead scope="row" className="pharos-table-sticky-metric font-medium text-foreground">
+                  {metric.desktopLabel}
+                </TableHead>
                 {coins.map((coin, i) => (
                   <TableCell key={coin.id} className={metric.desktopValueClassName(coin, i)}>
                     {metric.renderValue(coin, i)}

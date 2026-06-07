@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, memo, useMemo } from "react";
-import { TableCell } from "@/components/ui/table";
+import { TableCell } from "@/components/table";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import {
   YieldCoinCell,

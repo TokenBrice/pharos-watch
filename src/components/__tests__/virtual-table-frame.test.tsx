@@ -94,4 +94,23 @@ describe("VirtualTableFrame", () => {
     expect(viewportRef.current).toBe(viewport);
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
   });
+
+  it("forwards the standard ref prop along with surfaceRef", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    const surfaceRef = React.createRef<HTMLDivElement>();
+
+    render(
+      <VirtualTableFrame ref={ref} surfaceRef={surfaceRef} testId="virtual-shell">
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </VirtualTableFrame>,
+    );
+
+    const shell = screen.getByTestId("virtual-shell");
+    expect(ref.current).toBe(shell);
+    expect(surfaceRef.current).toBe(shell);
+  });
 });

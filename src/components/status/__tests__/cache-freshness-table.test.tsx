@@ -30,6 +30,7 @@ describe("CacheFreshnessTable", () => {
     const tableShell = screen.getByTestId("cache-freshness-healthy-table");
     expect(tableShell.getAttribute("data-table-id")).toBe("cache-freshness-healthy");
     expect(within(tableShell).getByRole("table", { name: /healthy cache freshness/i })).toBeTruthy();
+    expect(within(tableShell).getByRole("columnheader", { name: "Lane" })).toBeTruthy();
     const row = screen.getByText("dex-liquidity").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLTableRowElement).getByText(/availability budget 12h/i)).toBeTruthy();
@@ -40,5 +41,26 @@ describe("CacheFreshnessTable", () => {
     expect(
       within(row as HTMLTableRowElement).getByText("Endpoint warning target. · Availability budget."),
     ).toBeTruthy();
+  });
+
+  it("keeps headers on the collapsed healthy table when unhealthy rows are visible", () => {
+    const degradedCache: CacheStatus = {
+      ageSeconds: 8_000,
+      maxAge: 1_000,
+      healthy: false,
+      producerJob: "sync-degraded",
+    };
+    const healthyCache: CacheStatus = {
+      ageSeconds: 60,
+      maxAge: 3_600,
+      healthy: true,
+      producerJob: "sync-healthy",
+    };
+
+    render(<CacheFreshnessTable caches={{ degraded: degradedCache, healthy: healthyCache }} />);
+
+    const healthyTable = screen.getByTestId("cache-freshness-healthy-table");
+    expect(within(healthyTable).getByRole("columnheader", { name: "Lane" })).toBeTruthy();
+    expect(within(healthyTable).getByText("healthy")).toBeTruthy();
   });
 });

@@ -151,6 +151,7 @@ describe("ComparisonTable – Net Flow 30D row", () => {
       <ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />,
     );
     expect(html).toContain("Net Flow 30D");
+    expect(html).toContain('<th scope="row"');
   });
 
   it("renders the desktop matrix inside the shared table foundation", () => {

@@ -1,0 +1,25 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import DocPage from "./page";
+
+vi.mock("next/link", () => ({
+  default: ({ children, href, className }: { children: ReactNode; href: string; className?: string }) => (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  ),
+}));
+
+describe("DocPage", () => {
+  it("renders markdown tables through the shared table primitives", async () => {
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "design-tokens" }) }));
+
+    expect(html).toContain('data-slot="table-viewport"');
+    expect(html).toContain('data-slot="table"');
+    expect(html).toContain('data-slot="table-header"');
+    expect(html).toContain('data-slot="table-head"');
+    expect(html).toContain('data-slot="table-cell"');
+  });
+});

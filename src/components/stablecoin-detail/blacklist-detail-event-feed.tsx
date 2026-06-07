@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   TableCell,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { Skeleton } from "@/components/ui/skeleton";

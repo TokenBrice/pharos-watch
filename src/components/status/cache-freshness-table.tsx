@@ -203,9 +203,9 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
                 chrome="content"
                 density="compact"
                 className="mt-2"
-                tableProps={{ "aria-label": "Healthy cache freshness" }}
-              >
-                {unhealthy.length === 0 && tableHead}
+              tableProps={{ "aria-label": "Healthy cache freshness" }}
+            >
+                {tableHead}
                 <TableBody>{ok.map(renderRow)}</TableBody>
               </TableFrame>
             </details>

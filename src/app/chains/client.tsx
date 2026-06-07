@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useSort } from "@/hooks/use-sort";
-import { TableCell } from "@/components/ui/table";
+import { TableCell } from "@/components/table";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";

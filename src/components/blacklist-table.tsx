@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/table";
 import { DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { Badge } from "@/components/ui/badge";

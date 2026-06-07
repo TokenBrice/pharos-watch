@@ -11,7 +11,9 @@ import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { safeJsonLd } from "@/lib/json-ld";
+import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
@@ -22,6 +24,8 @@ import {
 import docsMetadata from "@/generated/docs-metadata.json";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
+type MarkdownComponentProps<T extends keyof React.JSX.IntrinsicElements> =
+  React.ComponentProps<T> & { node?: unknown };
 
 function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
   if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
@@ -47,6 +51,36 @@ const mdxComponents = {
       </a>
     );
   },
+  table: ({ node: _node, children, className, ...props }: MarkdownComponentProps<"table">) => (
+    <TableFrame
+      chrome="content"
+      density="compact"
+      className={cn("my-4", className)}
+      tableProps={props}
+      viewportProps={{ mobileScrollHint: false }}
+    >
+      {children}
+    </TableFrame>
+  ),
+  thead: ({ node: _node, className, ...props }: MarkdownComponentProps<"thead">) => (
+    <TableHeader className={className} {...props} />
+  ),
+  tbody: ({ node: _node, className, ...props }: MarkdownComponentProps<"tbody">) => (
+    <TableBody className={className} {...props} />
+  ),
+  tr: ({ node: _node, className, ...props }: MarkdownComponentProps<"tr">) => (
+    <TableRow className={className} {...props} />
+  ),
+  th: ({ node: _node, className, scope, ...props }: MarkdownComponentProps<"th">) => (
+    <TableHead
+      scope={scope ?? "col"}
+      className={cn("h-auto whitespace-normal px-3 py-2 text-foreground", className)}
+      {...props}
+    />
+  ),
+  td: ({ node: _node, className, ...props }: MarkdownComponentProps<"td">) => (
+    <TableCell className={cn("whitespace-normal px-3 py-2 align-top", className)} {...props} />
+  ),
 };
 
 export function generateStaticParams() {
@@ -115,7 +149,7 @@ export default async function DocPage({
           }),
         }}
       />
-      <article className="space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border/60 [&_th]:p-2 [&_th]:text-left [&_td]:border [&_td]:border-border/60 [&_td]:p-2">
+      <article className="space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0">
         <ReactMarkdown
           components={mdxComponents}
           remarkPlugins={[remarkGfm]}

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import {
   TableCell,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
