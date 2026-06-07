@@ -274,6 +274,7 @@ export function ComplianceClient() {
                 tableId="compliance-authorization"
                 testId="compliance-authorization-table"
                 ariaLabel="Compliance authorization table"
+                showReserveDisclosure={regimeFilter === "genius"}
               />
             )}
           </div>
@@ -303,6 +304,7 @@ export function ComplianceClient() {
                   tableId="compliance-genius-watch"
                   testId="compliance-genius-watch-table"
                   ariaLabel="GENIUS implementation watch table"
+                  showReserveDisclosure={regimeFilter === "genius"}
                 />
               )}
             </div>
@@ -319,12 +321,14 @@ function ComplianceTable({
   tableId,
   testId,
   ariaLabel,
+  showReserveDisclosure = false,
 }: {
   rows: ComplianceRow[];
   logos: Record<string, string> | undefined;
   tableId: string;
   testId: string;
   ariaLabel: string;
+  showReserveDisclosure?: boolean;
 }) {
   return (
     <TableFrame
@@ -349,20 +353,33 @@ function ComplianceTable({
           <TableHead>Pathway / Type</TableHead>
           <TableHead>Authority</TableHead>
           <TableHead>Issuer Entity</TableHead>
-          <TableHead>Reserve Disclosure</TableHead>
+          {showReserveDisclosure ? <TableHead>Reserve Disclosure</TableHead> : null}
           <TableHead className="text-right">Sources</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <ComplianceTableRow key={`${row.regime}:${row.id}`} row={row} logo={logos?.[row.id]} />
+          <ComplianceTableRow
+            key={`${row.regime}:${row.id}`}
+            row={row}
+            logo={logos?.[row.id]}
+            showReserveDisclosure={showReserveDisclosure}
+          />
         ))}
       </TableBody>
     </TableFrame>
   );
 }
 
-function ComplianceTableRow({ row, logo }: { row: ComplianceRow; logo: string | undefined }) {
+function ComplianceTableRow({
+  row,
+  logo,
+  showReserveDisclosure,
+}: {
+  row: ComplianceRow;
+  logo: string | undefined;
+  showReserveDisclosure: boolean;
+}) {
   return (
     <TableRow>
       <TableCell>
@@ -397,7 +414,9 @@ function ComplianceTableRow({ row, logo }: { row: ComplianceRow; logo: string | 
           <EmptyCell />
         )}
       </TableCell>
-      <TableCell>{row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}</TableCell>
+      {showReserveDisclosure ? (
+        <TableCell>{row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}</TableCell>
+      ) : null}
       <TableCell className="text-right">
         <SourceLinks references={row.references} />
       </TableCell>
