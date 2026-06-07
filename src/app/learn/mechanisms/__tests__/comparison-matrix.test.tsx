@@ -9,6 +9,10 @@ describe("MechanismComparisonMatrix", () => {
   const html = renderToStaticMarkup(<MechanismComparisonMatrix />);
 
   it("renders a row for every archetype label", () => {
+    expect(html).toContain('data-table-id="mechanism-comparison-matrix"');
+    expect(html).toContain('data-testid="mechanism-comparison-matrix-table"');
+    expect(html).toContain('data-slot="table"');
+
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       expect(html).toContain(MECHANISM_ARCHETYPE_LABELS[archetype]);
     }

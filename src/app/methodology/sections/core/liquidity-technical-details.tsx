@@ -1,4 +1,12 @@
 import { LIQUIDITY_SCORE_WEIGHTS, type LiquidityScoreComponentKey } from "@shared/lib/liquidity-score-weights";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { MethodologyDetails } from "../../methodology-shared";
 
 const LIQUIDITY_COMPONENT_DETAILS: Record<LiquidityScoreComponentKey, { label: string; shortLabel: string; description: string }> = {
@@ -78,35 +86,39 @@ export function LiquidityTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Components</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
-                  Component
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
-                  Weight
-                </th>
-                <th scope="col" className="py-2 font-medium text-foreground">
-                  How it works
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {LIQUIDITY_SCORE_WEIGHTS.map((component) => {
-                const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
-                return (
-                  <tr key={component.key} className="hover:bg-muted/40 transition-colors">
-                    <td className="py-2 pr-4 text-foreground">{detail.label}</td>
-                    <td className="py-2 pr-4">{component.displayWeight}</td>
-                    <td className="py-2">{detail.description}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          chrome="content"
+          density="compact"
+          tableId="methodology-liquidity-components"
+          testId="methodology-liquidity-components-table"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow className="text-left">
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">
+                Component
+              </TableHead>
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">
+                Weight
+              </TableHead>
+              <TableHead scope="col" className="py-2 text-foreground">
+                How it works
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {LIQUIDITY_SCORE_WEIGHTS.map((component) => {
+              const detail = LIQUIDITY_COMPONENT_DETAILS[component.key];
+              return (
+                <TableRow key={component.key}>
+                  <TableCell className="py-2 pr-4 text-foreground">{detail.label}</TableCell>
+                  <TableCell className="py-2 pr-4">{component.displayWeight}</TableCell>
+                  <TableCell className="py-2 whitespace-normal">{detail.description}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </TableFrame>
       </div>
 
       <div className="space-y-2">

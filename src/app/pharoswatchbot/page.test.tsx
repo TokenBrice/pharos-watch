@@ -99,6 +99,12 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByRole("heading", { name: "PharosWatchBot" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Command Reference")).toBeTruthy();
+    expect(screen.getByTestId("pharoswatchbot-command-reference-table").getAttribute("data-table-id")).toBe(
+      "pharoswatchbot-command-reference",
+    );
+    expect(screen.getByRole("table", { name: "PharosWatchBot command reference" }).getAttribute("data-slot")).toBe(
+      "table",
+    );
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
     expect(screen.getByText(String(TRACKED_STABLECOIN_COUNT))).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();

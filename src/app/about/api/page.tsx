@@ -8,6 +8,14 @@ import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
@@ -130,7 +138,15 @@ function InlineMarkdown({ text }: { text: string }) {
   );
 }
 
-function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
+function MarkdownBlockRenderer({
+  block,
+  tableId,
+  tableLabel = "API reference table",
+}: {
+  block: MarkdownBlock;
+  tableId?: string;
+  tableLabel?: string;
+}) {
   if (block.type === "paragraph") {
     return <p className="text-sm leading-relaxed text-muted-foreground"><InlineMarkdown text={block.text} /></p>;
   }
@@ -149,30 +165,44 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
 
   if (block.type === "table") {
     return (
-      <div className="overflow-x-auto rounded-xl border border-border/60 bg-background/35">
-        <table className="min-w-full border-collapse text-left text-sm">
-          <thead className="bg-muted/35">
-            <tr>
-              {block.headers.map((header, index) => (
-                <th key={`${index}-${header}`} className="border-b border-border/60 px-3 py-2 font-semibold text-foreground">
-                  <InlineMarkdown text={header} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, rowIndex) => (
-              <tr key={`${rowIndex}-${row.join("|")}`} className="align-top">
-                {row.map((cell, cellIndex) => (
-                  <td key={`${rowIndex}-${cellIndex}`} className="border-t border-border/50 px-3 py-2 text-muted-foreground">
-                    <InlineMarkdown text={cell} />
-                  </td>
-                ))}
-              </tr>
+      <TableFrame
+        tableId={tableId}
+        testId={tableId ? `${tableId}-table` : undefined}
+        chrome="content"
+        density="compact"
+        className="bg-background/35"
+        tableClassName="min-w-full border-collapse text-left text-sm"
+        tableProps={{ "aria-label": tableLabel }}
+        viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
+      >
+        <TableHeader className="bg-muted/35">
+          <TableRow className="hover:bg-transparent">
+            {block.headers.map((header, index) => (
+              <TableHead
+                key={`${index}-${header}`}
+                scope="col"
+                className="h-auto whitespace-normal border-b border-border/60 px-3 py-2 font-semibold text-foreground"
+              >
+                <InlineMarkdown text={header} />
+              </TableHead>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {block.rows.map((row, rowIndex) => (
+            <TableRow key={`${rowIndex}-${row.join("|")}`} className="align-top hover:bg-transparent">
+              {row.map((cell, cellIndex) => (
+                <TableCell
+                  key={`${rowIndex}-${cellIndex}`}
+                  className="whitespace-normal border-t border-border/50 px-3 py-2 text-muted-foreground"
+                >
+                  <InlineMarkdown text={cell} />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </TableFrame>
     );
   }
 
@@ -210,7 +240,12 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
       {section.blocks.length > 0 ? (
         <div className="space-y-4">
           {section.blocks.map((block, index) => (
-            <MarkdownBlockRenderer key={`${section.id}-block-${index}`} block={block} />
+            <MarkdownBlockRenderer
+              key={`${section.id}-block-${index}`}
+              block={block}
+              tableId={`about-api-${section.id}-table-${index}`}
+              tableLabel={`${stripMarkdownHeadingFormatting(section.title)} table`}
+            />
           ))}
         </div>
       ) : null}
@@ -241,7 +276,12 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
               </h3>
               <div className="space-y-4">
                 {subsection.blocks.map((block, index) => (
-                  <MarkdownBlockRenderer key={`${subsection.id}-block-${index}`} block={block} />
+                  <MarkdownBlockRenderer
+                    key={`${subsection.id}-block-${index}`}
+                    block={block}
+                    tableId={`about-api-${subsection.id}-table-${index}`}
+                    tableLabel={`${stripMarkdownHeadingFormatting(subsection.title)} table`}
+                  />
                 ))}
               </div>
             </article>
@@ -474,7 +514,12 @@ export default async function AboutApiPage() {
           </div>
           <div className="mt-4 space-y-4">
             {document.introBlocks.map((block, index) => (
-              <MarkdownBlockRenderer key={`intro-${index}`} block={block} />
+              <MarkdownBlockRenderer
+                key={`intro-${index}`}
+                block={block}
+                tableId={`about-api-intro-table-${index}`}
+                tableLabel="API reference introduction table"
+              />
             ))}
           </div>
         </section>

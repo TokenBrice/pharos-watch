@@ -1,14 +1,11 @@
 import type { ReactNode } from "react";
-import {
-  SAFETY_SCORE_CHANGELOG,
-} from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 
-const SCORING_CHANGELOG_BY_VERSION = new Map(
-  SAFETY_SCORE_CHANGELOG.map((entry) => [entry.version, entry]),
-);
+const SCORING_CHANGELOG_BY_VERSION = new Map(SAFETY_SCORE_CHANGELOG.map((entry) => [entry.version, entry]));
 
 export function scoringAnchorId(version: string) {
   return `scoring-${slugifyId(version)}`;
@@ -39,13 +36,38 @@ function Pill({ children }: { children: ReactNode }) {
   );
 }
 
-export function VersionCard({
-  entry,
+export const changelogTableClassNames = {
+  head: "h-auto whitespace-normal px-0 py-2 pr-4 text-left font-medium text-foreground last:pr-0",
+  cell: "whitespace-normal px-0 py-2 pr-4 align-top last:pr-0",
+  rowHeader: "whitespace-normal px-0 py-2 pr-4 align-top font-medium text-foreground last:pr-0",
+};
+
+export function ChangelogTable({
+  ariaLabel,
   children,
+  tableId,
+  testId,
 }: {
-  entry: MethodologyChangelogEntry;
+  ariaLabel?: string;
   children: ReactNode;
+  tableId?: string;
+  testId?: string;
 }) {
+  return (
+    <TableFrame
+      chrome="content"
+      density="compact"
+      tableId={tableId}
+      testId={testId}
+      viewportProps={{ mobileScrollHint: false }}
+      tableProps={ariaLabel ? { "aria-label": ariaLabel } : undefined}
+    >
+      {children}
+    </TableFrame>
+  );
+}
+
+export function VersionCard({ entry, children }: { entry: MethodologyChangelogEntry; children: ReactNode }) {
   const anchorId = scoringAnchorId(`v${entry.version}`);
 
   return (
@@ -55,57 +77,37 @@ export function VersionCard({
           <span className="flex flex-wrap items-center gap-2">
             <Pill>{`v${entry.version}`}</Pill>
             {entry.title}
-            <span className="text-sm font-normal text-muted-foreground">
-              {formatScoringDate(entry.date)}
-            </span>
+            <span className="text-sm font-normal text-muted-foreground">{formatScoringDate(entry.date)}</span>
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
-        {children}
-      </CardContent>
+      <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">{children}</CardContent>
     </Card>
   );
 }
 
-export function WeightRow({
-  values,
-}: {
-  values: [string, string, string, string, string, string];
-}) {
-  const headers = [
-    "Peg",
-    "Liquidity",
-    "Safety",
-    "Resilience",
-    "Decentralization",
-    "Dep Risk",
-  ];
+export function WeightRow({ values }: { values: [string, string, string, string, string, string] }) {
+  const headers = ["Peg", "Liquidity", "Safety", "Resilience", "Decentralization", "Dep Risk"];
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left">
-            {headers.map((h) => (
-              <th
-                key={h}
-                className="py-2 pr-4 font-medium text-foreground last:pr-0"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {values.map((v, i) => (
-              <td key={i} className="py-2 pr-4 last:pr-0">
-                {v}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ChangelogTable>
+      <TableHeader>
+        <TableRow>
+          {headers.map((h) => (
+            <TableHead key={h} scope="col" className={changelogTableClassNames.head}>
+              {h}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow>
+          {values.map((v, i) => (
+            <TableCell key={i} className={changelogTableClassNames.cell}>
+              {v}
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableBody>
+    </ChangelogTable>
   );
 }

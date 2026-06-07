@@ -3,6 +3,14 @@ import {
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
 import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
+import {
   MethodologyDetails,
   MethodologyDiagramArrow,
   MethodologyDiagramCard,
@@ -210,35 +218,39 @@ export function PricingPipelineMethodologySection() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Source Weights</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Source</th>
-                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Type</th>
-                    <th scope="col" className="py-2 font-medium text-foreground">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">CoinGecko</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Aggregator</td><td className="py-2">Primary market data via <code className="text-xs">/simple/price</code></td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">CoinGecko ticker</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Exchange ticker</td><td className="py-2">Curated ticker corroboration path for tracked exchange pairs</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DefiLlama (list)</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Aggregator</td><td className="py-2">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Pyth Network</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Hermes endpoint with confidence intervals</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Binance</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Single batch call for all spot tickers</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Kraken</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Explicit pair mapping with alias-safe response handling</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Bitstamp</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">CEX</td><td className="py-2">Lower-weight corroboration via the all-tickers endpoint</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Coinbase</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Per-symbol spot prices</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">RedStone</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Per-venue breakdown; requires at least 2 venues and 60% agreement</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve oracle</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing, below-depth, or low-confidence assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <TableFrame
+              chrome="content"
+              density="compact"
+              tableId="methodology-pricing-source-weights"
+              testId="methodology-pricing-source-weights-table"
+              viewportProps={{ mobileScrollHint: false }}
+            >
+              <TableHeader>
+                <TableRow className="text-left">
+                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Source</TableHead>
+                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Weight</TableHead>
+                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Type</TableHead>
+                  <TableHead scope="col" className="py-2 text-foreground">Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Primary market data via <code className="text-xs">/simple/price</code></TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">CoinGecko ticker</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Exchange ticker</TableCell><TableCell className="py-2 whitespace-normal">Curated ticker corroboration path for tracked exchange pairs</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">DefiLlama (list)</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Aggregator</TableCell><TableCell className="py-2 whitespace-normal">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Pyth Network</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">Oracle</TableCell><TableCell className="py-2 whitespace-normal">Hermes endpoint with confidence intervals</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Binance</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Single batch call for all spot tickers</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Kraken</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Explicit pair mapping with alias-safe response handling</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Bitstamp</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Lower-weight corroboration via the all-tickers endpoint</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Coinbase</TableCell><TableCell className="py-2 pr-4">2</TableCell><TableCell className="py-2 pr-4">CEX</TableCell><TableCell className="py-2 whitespace-normal">Per-symbol spot prices</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">RedStone</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Oracle</TableCell><TableCell className="py-2 whitespace-normal">Per-venue breakdown; requires at least 2 venues and 60% agreement</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve on-chain</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Curve oracle</TableCell><TableCell className="py-2 pr-4">3</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">DEX pools</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Protocol DEX APIs</TableCell><TableCell className="py-2 pr-4">2-3</TableCell><TableCell className="py-2 pr-4">On-chain / pool-state API</TableCell><TableCell className="py-2 whitespace-normal">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">GeckoTerminal</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">On-chain</TableCell><TableCell className="py-2 whitespace-normal">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-foreground">Exact-address providers</TableCell><TableCell className="py-2 pr-4">1</TableCell><TableCell className="py-2 pr-4">Market / on-chain</TableCell><TableCell className="py-2 whitespace-normal">Targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing, below-depth, or low-confidence assets; exact chain+address only and non-depeg-authoritative on their own</TableCell></TableRow>
+              </TableBody>
+            </TableFrame>
           </div>
 
           <div className="space-y-2">
@@ -290,23 +302,27 @@ export function PricingPipelineMethodologySection() {
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Confidence Levels</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Level</th>
-                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Condition</th>
-                    <th scope="col" className="py-2 font-medium text-foreground">Downstream effect</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td><td className="py-2 pr-4">Independent agreeing cluster survives list-aggregator downgrade and pool challenge</td><td className="py-2">Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</td><td className="py-2 pr-4">One usable source, or a non-independent list-aggregator cluster treated as one source</td><td className="py-2">Depeg detection requires pending confirmation</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</td><td className="py-2 pr-4">Sources disagree beyond threshold, or pool challenge fired</td><td className="py-2">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</td><td className="py-2 pr-4">All primary sources down; enrichment or cache used</td><td className="py-2">Depeg mutations blocked; stale banner shown on frontend</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <TableFrame
+              chrome="content"
+              density="compact"
+              tableId="methodology-pricing-confidence-levels"
+              testId="methodology-pricing-confidence-levels-table"
+              viewportProps={{ mobileScrollHint: false }}
+            >
+              <TableHeader>
+                <TableRow className="text-left">
+                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Level</TableHead>
+                  <TableHead scope="col" className="py-2 pr-4 text-foreground">Condition</TableHead>
+                  <TableHead scope="col" className="py-2 text-foreground">Downstream effect</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow><TableCell className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</TableCell><TableCell className="py-2 pr-4 whitespace-normal">Independent agreeing cluster survives list-aggregator downgrade and pool challenge</TableCell><TableCell className="py-2 whitespace-normal">Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</TableCell><TableCell className="py-2 pr-4 whitespace-normal">One usable source, or a non-independent list-aggregator cluster treated as one source</TableCell><TableCell className="py-2 whitespace-normal">Depeg detection requires pending confirmation</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</TableCell><TableCell className="py-2 pr-4 whitespace-normal">Sources disagree beyond threshold, or pool challenge fired</TableCell><TableCell className="py-2 whitespace-normal">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</TableCell></TableRow>
+                <TableRow><TableCell className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</TableCell><TableCell className="py-2 pr-4 whitespace-normal">All primary sources down; enrichment or cache used</TableCell><TableCell className="py-2 whitespace-normal">Depeg mutations blocked; stale banner shown on frontend</TableCell></TableRow>
+              </TableBody>
+            </TableFrame>
           </div>
 
           <div className="space-y-2">

@@ -1,3 +1,12 @@
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
+
 export function SafetyScoresScoringDetails() {
   return (
     <>
@@ -89,55 +98,59 @@ export function SafetyScoresScoringDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Base Dimensions (weighted average)</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
-                  Dimension
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
-                  Weight
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
-                  Source
-                </th>
-                <th scope="col" className="py-2 font-medium text-foreground">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Exit Liquidity</td>
-                <td className="py-2 pr-4">30%</td>
-                <td className="py-2 pr-4">DEX liquidity + redemption backstop</td>
-                <td className="py-2">
-                  Best-path model: exit quality = best available path (DEX or redemption) + diversification bonus for
-                  having both
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Resilience</td>
-                <td className="py-2 pr-4">20%</td>
-                <td className="py-2 pr-4">Collateral, custody</td>
-                <td className="py-2">2-factor solvency measure; blacklist capability reported descriptively only</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Decentralization</td>
-                <td className="py-2 pr-4">15%</td>
-                <td className="py-2 pr-4">Governance type, chain risk</td>
-                <td className="py-2">Governance structure with chain-risk penalty</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                <td className="py-2 pr-4">25%</td>
-                <td className="py-2 pr-4">Upstream grades, collateral weights</td>
-                <td className="py-2">Inherited risk from upstream stablecoins, weighted by exposure</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          chrome="content"
+          density="compact"
+          tableId="methodology-safety-base-dimensions"
+          testId="methodology-safety-base-dimensions-table"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow className="text-left">
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">
+                Dimension
+              </TableHead>
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">
+                Weight
+              </TableHead>
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">
+                Source
+              </TableHead>
+              <TableHead scope="col" className="py-2 text-foreground">
+                Description
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Exit Liquidity</TableCell>
+              <TableCell className="py-2 pr-4">30%</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">DEX liquidity + redemption backstop</TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                Best-path model: exit quality = best available path (DEX or redemption) + diversification bonus for
+                having both
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Resilience</TableCell>
+              <TableCell className="py-2 pr-4">20%</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">Collateral, custody</TableCell>
+              <TableCell className="py-2 whitespace-normal">2-factor solvency measure; blacklist capability reported descriptively only</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Decentralization</TableCell>
+              <TableCell className="py-2 pr-4">15%</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">Governance type, chain risk</TableCell>
+              <TableCell className="py-2 whitespace-normal">Governance structure with chain-risk penalty</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Dependency Risk</TableCell>
+              <TableCell className="py-2 pr-4">25%</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">Upstream grades, collateral weights</TableCell>
+              <TableCell className="py-2 whitespace-normal">Inherited risk from upstream stablecoins, weighted by exposure</TableCell>
+            </TableRow>
+          </TableBody>
+        </TableFrame>
       </div>
 
       <div className="space-y-2">

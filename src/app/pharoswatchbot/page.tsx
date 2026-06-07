@@ -23,6 +23,14 @@ import {
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { CopyButton } from "@/components/copy-button";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -828,66 +836,74 @@ export default function PharosWatchBotPage() {
                   ))}
                 </dl>
               </div>
-              <div className="-mx-5 overflow-x-auto px-5">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/60 text-left">
-                      <th scope="col" className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Command
-                      </th>
-                      <th scope="col" className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Description
-                      </th>
-                      <th
-                        scope="col"
-                        className="hidden pb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell"
-                      >
-                        Example
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {TELEGRAM_COMMAND_GROUPS.map((group) => (
-                      <Fragment key={group.label}>
-                        <tr className="border-t border-border/60 first:border-t-0">
-                          <th
-                            scope="rowgroup"
-                            colSpan={3}
-                            className="pt-5 pb-2 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300"
-                          >
-                            {group.label}
-                          </th>
-                        </tr>
-                        {group.commands.map((cmd) => (
-                          <tr key={cmd.command} className="group/row border-t border-border/40 transition-colors hover:bg-muted/40">
-                            <td className="py-3 pr-4 align-top">
-                              <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
-                                <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
-                                  {cmd.command}
-                                </code>
-                                <CopyButton
-                                  text={cmd.command}
-                                  className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                                />
-                              </div>
-                            </td>
-                            <td className="py-3 pr-4 align-top text-muted-foreground">{cmd.description}</td>
-                            <td className="hidden py-3 align-top sm:table-cell">
-                              {cmd.example ? (
-                                <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
-                                  {cmd.example}
-                                </code>
-                              ) : (
-                                <span className="text-muted-foreground/50">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <TableFrame
+                tableId="pharoswatchbot-command-reference"
+                testId="pharoswatchbot-command-reference-table"
+                chrome="content"
+                density="compact"
+                className="bg-background/35"
+                tableClassName="min-w-[720px] text-sm"
+                tableProps={{ "aria-label": "PharosWatchBot command reference" }}
+                viewportClassName="-mx-1 px-1"
+                viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
+              >
+                <TableHeader>
+                  <TableRow className="border-b border-border/60 text-left hover:bg-transparent">
+                    <TableHead scope="col" className="h-auto whitespace-nowrap px-0 pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Command
+                    </TableHead>
+                    <TableHead scope="col" className="h-auto whitespace-nowrap px-0 pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Description
+                    </TableHead>
+                    <TableHead
+                      scope="col"
+                      className="hidden h-auto whitespace-nowrap px-0 pb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell"
+                    >
+                      Example
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {TELEGRAM_COMMAND_GROUPS.map((group) => (
+                    <Fragment key={group.label}>
+                      <TableRow className="border-t border-border/60 first:border-t-0 hover:bg-transparent">
+                        <TableHead
+                          scope="rowgroup"
+                          colSpan={3}
+                          className="h-auto px-0 pt-5 pb-2 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300"
+                        >
+                          {group.label}
+                        </TableHead>
+                      </TableRow>
+                      {group.commands.map((cmd) => (
+                        <TableRow key={cmd.command} className="group/row border-t border-border/40 transition-colors hover:bg-muted/40">
+                          <TableCell className="whitespace-normal px-0 py-3 pr-4 align-top">
+                            <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
+                              <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
+                                {cmd.command}
+                              </code>
+                              <CopyButton
+                                text={cmd.command}
+                                className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-normal px-0 py-3 pr-4 align-top text-muted-foreground">{cmd.description}</TableCell>
+                          <TableCell className="hidden whitespace-normal px-0 py-3 align-top sm:table-cell">
+                            {cmd.example ? (
+                              <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
+                                {cmd.example}
+                              </code>
+                            ) : (
+                              <span className="text-muted-foreground/50">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </TableFrame>
               <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
                 <p className="pharos-kicker">Tips</p>
                 <ul className="mt-2.5 space-y-1.5 text-xs leading-relaxed text-muted-foreground">

@@ -1,4 +1,12 @@
 import Link from "next/link";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { METHODOLOGY_LINK_CLASS } from "../../methodology-shared";
 import { CollateralQualityMethodologyCopy } from "../core-sections-fragments";
 
@@ -12,37 +20,41 @@ export function SafetyScoresDimensionDetails() {
           infrastructure is scored exclusively in the Decentralization dimension. Blacklist capability is reported
           descriptively but does not affect the Resilience score.
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">Sub-factor</th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">What it measures</th>
-                <th scope="col" className="py-2 font-medium text-foreground">Scoring</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
-                <td className="py-2 pr-4">Reserve composition risk</td>
-                <td className="py-2">
-                  Weighted avg of curated reserve slices: Very&nbsp;Low&nbsp;(100), Low&nbsp;(75),
-                  Medium&nbsp;(50), High&nbsp;(25), Very&nbsp;High&nbsp;(5). Falls back to enum scoring for coins
-                  without curated reserves.
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Custody Model</td>
-                <td className="py-2 pr-4">Who controls the economic backing?</td>
-                <td className="py-2">
-                  Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80),
-                  Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30),
-                  Sanctioned&nbsp;custodian&nbsp;(5), CEX&nbsp;/&nbsp;off&#8209;exchange&nbsp;custody&nbsp;(0)
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          chrome="content"
+          density="compact"
+          tableId="methodology-safety-resilience-scoring"
+          testId="methodology-safety-resilience-scoring-table"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow className="text-left">
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">Sub-factor</TableHead>
+              <TableHead scope="col" className="py-2 pr-4 text-foreground">What it measures</TableHead>
+              <TableHead scope="col" className="py-2 text-foreground">Scoring</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Collateral Quality</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">Reserve composition risk</TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                Weighted avg of curated reserve slices: Very&nbsp;Low&nbsp;(100), Low&nbsp;(75),
+                Medium&nbsp;(50), High&nbsp;(25), Very&nbsp;High&nbsp;(5). Falls back to enum scoring for coins
+                without curated reserves.
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-2 pr-4 text-foreground">Custody Model</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">Who controls the economic backing?</TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80),
+                Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30),
+                Sanctioned&nbsp;custodian&nbsp;(5), CEX&nbsp;/&nbsp;off&#8209;exchange&nbsp;custody&nbsp;(0)
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </TableFrame>
         <p>Tokenized RWA collateral is scored by the ultimate reserve or legal custody layer, not only by the smart-contract location of a wrapper token.</p>
         <CollateralQualityMethodologyCopy />
       </div>
@@ -146,66 +158,71 @@ export function SafetyScoresDimensionDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Grade Thresholds</h3>
-        <div className="overflow-x-auto">
-          <table className="text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="py-2 pr-8 font-medium text-foreground">Grade</th>
-                <th scope="col" className="py-2 font-medium text-foreground">Score Range</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">A+</td>
-                <td className="py-1.5">87&ndash;100</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">A</td>
-                <td className="py-1.5">83&ndash;86</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">A&minus;</td>
-                <td className="py-1.5">80&ndash;82</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">B+</td>
-                <td className="py-1.5">75&ndash;79</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">B</td>
-                <td className="py-1.5">70&ndash;74</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">B&minus;</td>
-                <td className="py-1.5">65&ndash;69</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">C+</td>
-                <td className="py-1.5">60&ndash;64</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">C</td>
-                <td className="py-1.5">55&ndash;59</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">C&minus;</td>
-                <td className="py-1.5">50&ndash;54</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">D</td>
-                <td className="py-1.5">40&ndash;49</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">F</td>
-                <td className="py-1.5">0&ndash;39</td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-1.5 pr-8 text-foreground">NR</td>
-                <td className="py-1.5">Not enough data</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          chrome="content"
+          density="compact"
+          tableId="methodology-safety-grade-thresholds"
+          testId="methodology-safety-grade-thresholds-table"
+          tableClassName="w-auto"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow className="text-left">
+              <TableHead scope="col" className="py-2 pr-8 text-foreground">Grade</TableHead>
+              <TableHead scope="col" className="py-2 text-foreground">Score Range</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">A+</TableCell>
+              <TableCell className="py-1.5">87&ndash;100</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">A</TableCell>
+              <TableCell className="py-1.5">83&ndash;86</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">A&minus;</TableCell>
+              <TableCell className="py-1.5">80&ndash;82</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">B+</TableCell>
+              <TableCell className="py-1.5">75&ndash;79</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">B</TableCell>
+              <TableCell className="py-1.5">70&ndash;74</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">B&minus;</TableCell>
+              <TableCell className="py-1.5">65&ndash;69</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">C+</TableCell>
+              <TableCell className="py-1.5">60&ndash;64</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">C</TableCell>
+              <TableCell className="py-1.5">55&ndash;59</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">C&minus;</TableCell>
+              <TableCell className="py-1.5">50&ndash;54</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">D</TableCell>
+              <TableCell className="py-1.5">40&ndash;49</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">F</TableCell>
+              <TableCell className="py-1.5">0&ndash;39</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-1.5 pr-8 text-foreground">NR</TableCell>
+              <TableCell className="py-1.5">Not enough data</TableCell>
+            </TableRow>
+          </TableBody>
+        </TableFrame>
       </div>
 
       <div className="space-y-2">

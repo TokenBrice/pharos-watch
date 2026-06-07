@@ -11,6 +11,14 @@ import {
   THREAT_BAND_TEXT_COLORS,
   type ThreatBand,
 } from "@shared/lib/classification";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { METHODOLOGY_LINK_CLASS, MethodologyDetails } from "../../methodology-shared";
 
 const DEWS_SIGNAL_KEYS = Object.keys(DEWS_SIGNAL_WEIGHTS) as DewsSignalKey[];
@@ -144,59 +152,73 @@ function PegScoreTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">PegScore Components</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">Component</th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                <th scope="col" className="py-2 pr-4 font-medium text-foreground">Range</th>
-                <th scope="col" className="py-2 font-medium text-foreground">How it works</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Time-at-Peg (pegPct)</td>
-                <td className="py-2 pr-4">50%</td>
-                <td className="py-2 pr-4">0&ndash;100</td>
-                <td className="py-2">
+        <TableFrame
+          chrome="content"
+          density="compact"
+          tableId="pegscore-components"
+          testId="pegscore-components-table"
+          tableClassName="min-w-[720px]"
+          tableProps={{ "aria-label": "PegScore components" }}
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow className="text-left">
+              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
+                Component
+              </TableHead>
+              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
+                Weight
+              </TableHead>
+              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
+                Range
+              </TableHead>
+              <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2 font-medium text-foreground">
+                How it works
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow className="align-top">
+              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Time-at-Peg (pegPct)</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">50%</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">0&ndash;100</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">
                   Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Event Severity</td>
-                <td className="py-2 pr-4">50%</td>
-                <td className="py-2 pr-4">0&ndash;100</td>
-                <td className="py-2">
+              </TableCell>
+            </TableRow>
+            <TableRow className="align-top">
+              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Event Severity</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">50%</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">0&ndash;100</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">
                   Penalizes magnitude, duration, and recency of each depeg event. Per-event penalty:
                   max(durationPenalty, magnitudeFloor), where durationPenalty = (peakBps&nbsp;/&nbsp;100) &times;
                   (durationDays&nbsp;/&nbsp;30) &times; recencyWeight, magnitudeFloor = (peakBps&nbsp;/&nbsp;2000)
                   &times; recencyWeight. The floor ensures even brief depegs carry a minimum penalty proportional
                   to their severity. Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events
                   count more. Duration capped at 90 days
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Active Depeg Penalty</td>
-                <td className="py-2 pr-4">subtracted</td>
-                <td className="py-2 pr-4">5&ndash;50</td>
-                <td className="py-2">
+              </TableCell>
+            </TableRow>
+            <TableRow className="align-top">
+              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Active Depeg Penalty</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">subtracted</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">5&ndash;50</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">
                   Applied only if an ongoing depeg exists (no end date). Scales with severity:
                   clamp(absBps&nbsp;/&nbsp;50, 5, 50)
-                </td>
-              </tr>
-              <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Spread Penalty</td>
-                <td className="py-2 pr-4">subtracted</td>
-                <td className="py-2 pr-4">0&ndash;15</td>
-                <td className="py-2">
+              </TableCell>
+            </TableRow>
+            <TableRow className="align-top">
+              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Spread Penalty</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">subtracted</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">0&ndash;15</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2">
                   Standard deviation of peak deviations across events, scaled. Penalizes erratic, unpredictable
                   depeg behaviour. Only applies when &ge;2 events exist
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </TableFrame>
       </div>
     </>
   );

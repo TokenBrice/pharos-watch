@@ -3,6 +3,14 @@ import {
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/chain-health-version";
 import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
+import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyFacts,
@@ -51,49 +59,61 @@ export function ChainHealthMethodologySection() {
     + 0.10 × backingDiversity`}
                 </pre>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-xs text-muted-foreground">
-                        <th scope="col" className="py-2 pr-4">Factor</th>
-                        <th scope="col" className="py-2 pr-4">Weight</th>
-                        <th scope="col" className="py-2">What it measures</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-foreground">
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Quality</td>
-                        <td className="py-2 pr-4">30%</td>
-                        <td className="py-2">Supply-weighted average of Pharos Safety Scores for stablecoins on the chain. Unrated coins default to 40. Returns null if rated supply &lt; 50% of total.</td>
-                      </tr>
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Chain Environment</td>
-                        <td className="py-2 pr-4">20%</td>
-                        <td className="py-2">
+                <TableFrame
+                  chrome="content"
+                  density="compact"
+                  tableId="chain-health-factor-weights"
+                  testId="chain-health-factor-weights-table"
+                  tableClassName="min-w-[640px]"
+                  tableProps={{ "aria-label": "Chain Health factor weights" }}
+                  viewportProps={{ mobileScrollHint: false }}
+                >
+                  <TableHeader>
+                    <TableRow className="text-left text-xs text-muted-foreground">
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Factor
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Weight
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        What it measures
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-foreground">
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Quality</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">30%</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Supply-weighted average of Pharos Safety Scores for stablecoins on the chain. Unrated coins default to 40. Returns null if rated supply &lt; 50% of total.</TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Chain Environment</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">20%</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">
                           Rates the chain&rsquo;s own infrastructure quality, decentralization, and censorship resistance
                           via a resilience tier: <strong>Tier&nbsp;1</strong>&nbsp;(100) for battle-tested, highly
                           decentralized L1s; <strong>Tier&nbsp;2</strong>&nbsp;(60) for established chains with moderate
                           centralization; <strong>Tier&nbsp;3</strong>&nbsp;(20) for unproven or problematic chains.
-                        </td>
-                      </tr>
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Concentration</td>
-                        <td className="py-2 pr-4">20%</td>
-                        <td className="py-2">100&nbsp;&times;&nbsp;(1&nbsp;&minus;&nbsp;HHI) where HHI&nbsp;=&nbsp;&Sigma;(market share)&sup2;. A single stablecoin scores 0; perfectly even N coins score 100&times;(1&minus;1/N).</td>
-                      </tr>
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Peg Stability</td>
-                        <td className="py-2 pr-4">20%</td>
-                        <td className="py-2">Supply-weighted average of per-coin peg proximity: 100&nbsp;&minus;&nbsp;deviationBps/5. Coins without a price get a neutral 50.</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 pr-4 font-medium">Backing Diversity</td>
-                        <td className="py-2 pr-4">10%</td>
-                        <td className="py-2">Normalized Shannon entropy across the two active backing types (RWA-backed and crypto-backed). 0 for monoculture, 100 for an even split.</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Concentration</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">20%</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">100&nbsp;&times;&nbsp;(1&nbsp;&minus;&nbsp;HHI) where HHI&nbsp;=&nbsp;&Sigma;(market share)&sup2;. A single stablecoin scores 0; perfectly even N coins score 100&times;(1&minus;1/N).</TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Peg Stability</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">20%</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Supply-weighted average of per-coin peg proximity: 100&nbsp;&minus;&nbsp;deviationBps/5. Coins without a price get a neutral 50.</TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Backing Diversity</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">10%</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Normalized Shannon entropy across the two active backing types (RWA-backed and crypto-backed). 0 for monoculture, 100 for an even split.</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </TableFrame>
               </MethodologyDetails>
 
               <MethodologyDetails summary="Chain Resilience Tiers">
@@ -102,59 +122,105 @@ export function ChainHealthMethodologySection() {
                   A fully on-chain, censorship-resistant stablecoin on Ethereum mainnet may lose those guarantees
                   on an L2 with a centralized sequencer. The chain environment factor captures this.
                 </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-xs text-muted-foreground">
-                        <th scope="col" className="py-2 pr-4">Tier</th>
-                        <th scope="col" className="py-2 pr-4">Score</th>
-                        <th scope="col" className="py-2 pr-4">Criteria</th>
-                        <th scope="col" className="py-2">Examples</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-foreground">
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Tier 1</td>
-                        <td className="py-2 pr-4 pharos-numeric">100</td>
-                        <td className="py-2 pr-4">Highly decentralized, battle-tested, censorship-resistant L1</td>
-                        <td className="py-2">Ethereum</td>
-                      </tr>
-                      <tr className="border-b border-border/40">
-                        <td className="py-2 pr-4 font-medium">Tier 2</td>
-                        <td className="py-2 pr-4 pharos-numeric">60</td>
-                        <td className="py-2 pr-4">Established chains with moderate centralization (default for unlisted chains)</td>
-                        <td className="py-2">Solana, BSC, Arbitrum, Tron, Base, Polygon</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 pr-4 font-medium">Tier 3</td>
-                        <td className="py-2 pr-4 pharos-numeric">20</td>
-                        <td className="py-2 pr-4">Unproven, known centralization issues, or compromised security</td>
-                        <td className="py-2">PulseChain, Harmony, BitTorrent</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <TableFrame
+                  chrome="content"
+                  density="compact"
+                  tableId="chain-health-resilience-tiers"
+                  testId="chain-health-resilience-tiers-table"
+                  tableClassName="min-w-[640px]"
+                  tableProps={{ "aria-label": "Chain resilience tiers" }}
+                  viewportProps={{ mobileScrollHint: false }}
+                >
+                  <TableHeader>
+                    <TableRow className="text-left text-xs text-muted-foreground">
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Tier
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Score
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Criteria
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Examples
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-foreground">
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Tier 1</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">100</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Highly decentralized, battle-tested, censorship-resistant L1</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Ethereum</TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Tier 2</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">60</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Established chains with moderate centralization (default for unlisted chains)</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Solana, BSC, Arbitrum, Tron, Base, Polygon</TableCell>
+                    </TableRow>
+                    <TableRow className="align-top">
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium">Tier 3</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">20</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Unproven, known centralization issues, or compromised security</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">PulseChain, Harmony, BitTorrent</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </TableFrame>
               </MethodologyDetails>
 
               <MethodologyDetails summary="Health Bands">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-xs text-muted-foreground">
-                        <th scope="col" className="py-2 pr-4">Band</th>
-                        <th scope="col" className="py-2 pr-4">Score Range</th>
-                        <th scope="col" className="py-2">Interpretation</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-foreground">
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-emerald-600 dark:text-emerald-400">Robust</td><td className="py-2 pr-4 pharos-numeric">80&ndash;100</td><td className="py-2">Strong, diversified stablecoin ecosystem on quality infrastructure</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-sky-600 dark:text-sky-400">Healthy</td><td className="py-2 pr-4 pharos-numeric">60&ndash;79</td><td className="py-2">Good ecosystem with room for improvement</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-amber-600 dark:text-amber-400">Mixed</td><td className="py-2 pr-4 pharos-numeric">40&ndash;59</td><td className="py-2">Moderate concerns &mdash; concentration, quality gaps, or chain risk</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-orange-600 dark:text-orange-400">Fragile</td><td className="py-2 pr-4 pharos-numeric">20&ndash;39</td><td className="py-2">Significant ecosystem weaknesses</td></tr>
-                      <tr><td className="py-2 pr-4 font-medium text-red-600 dark:text-red-400">Concentrated</td><td className="py-2 pr-4 pharos-numeric">0&ndash;19</td><td className="py-2">Minimal diversity or critically weak infrastructure</td></tr>
-                    </tbody>
-                  </table>
-                </div>
+                <TableFrame
+                  chrome="content"
+                  density="compact"
+                  tableId="chain-health-bands"
+                  testId="chain-health-bands-table"
+                  tableClassName="min-w-[520px]"
+                  tableProps={{ "aria-label": "Chain Health bands" }}
+                  viewportProps={{ mobileScrollHint: false }}
+                >
+                  <TableHeader>
+                    <TableRow className="text-left text-xs text-muted-foreground">
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Band
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Score Range
+                      </TableHead>
+                      <TableHead scope="col" className="h-auto whitespace-normal px-4 py-2">
+                        Interpretation
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-foreground">
+                    <TableRow>
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium text-emerald-600 dark:text-emerald-400">Robust</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">80&ndash;100</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Strong, diversified stablecoin ecosystem on quality infrastructure</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium text-sky-600 dark:text-sky-400">Healthy</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">60&ndash;79</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Good ecosystem with room for improvement</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium text-amber-600 dark:text-amber-400">Mixed</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">40&ndash;59</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Moderate concerns &mdash; concentration, quality gaps, or chain risk</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium text-orange-600 dark:text-orange-400">Fragile</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">20&ndash;39</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Significant ecosystem weaknesses</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="whitespace-normal px-4 py-2 font-medium text-red-600 dark:text-red-400">Concentrated</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">0&ndash;19</TableCell>
+                      <TableCell className="whitespace-normal px-4 py-2">Minimal diversity or critically weak infrastructure</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </TableFrame>
               </MethodologyDetails>
 
               <WorkedExample summary="Worked example: Ethereum vs PulseChain">

@@ -46,5 +46,8 @@ describe("AboutApiPage", () => {
       url: "https://pharos.watch/openapi.json",
     });
     expect(JSON.stringify([catalog, webApi, openApi])).not.toContain("/_site-data/");
+    expect(html).toContain('data-table-id="about-api-');
+    expect(html).toContain('data-slot="table-viewport"');
+    expect(html).toContain('data-slot="table"');
   });
 });

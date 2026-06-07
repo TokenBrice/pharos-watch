@@ -3,6 +3,14 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
 import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
+import {
   MethodologyDetails,
   MethodologyFacts,
   MethodologySectionShell,
@@ -227,54 +235,58 @@ export function MintBurnFlowMethodologySection() {
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
                     ecosystem-wide configured issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s canonical tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
                   </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left">
-                          <th scope="col" className="py-2 pr-4 font-medium text-foreground">Band</th>
-                          <th scope="col" className="py-2 pr-4 font-medium text-foreground">Score Range</th>
-                          <th scope="col" className="py-2 font-medium text-foreground">Meaning</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">CRISIS</td>
-                          <td className="py-1.5 pr-4">&minus;100 to &minus;70</td>
-                          <td className="py-1.5">Severe below-baseline redemption pressure across major coins</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">STRESS</td>
-                          <td className="py-1.5 pr-4">&minus;70 to &minus;40</td>
-                          <td className="py-1.5">Worsening coordinated pressure versus normal conditions</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">CAUTIOUS</td>
-                          <td className="py-1.5 pr-4">&minus;40 to &minus;10</td>
-                          <td className="py-1.5">Mild but broad pressure deterioration</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">NEUTRAL</td>
-                          <td className="py-1.5 pr-4">&minus;10 to 10</td>
-                          <td className="py-1.5">Close to 30D norms across the market</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">HEALTHY</td>
-                          <td className="py-1.5 pr-4">10 to 40</td>
-                          <td className="py-1.5">Improving aggregate pressure versus baseline</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">CONFIDENT</td>
-                          <td className="py-1.5 pr-4">40 to 70</td>
-                          <td className="py-1.5">Strong positive pressure shift across major coins</td>
-                        </tr>
-                        <tr className="hover:bg-muted/40 transition-colors">
-                          <td className="py-1.5 pr-4 text-foreground">SURGE</td>
-                          <td className="py-1.5 pr-4">70 to 100</td>
-                          <td className="py-1.5">Exceptional improvement versus recent norms</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <TableFrame
+                    chrome="content"
+                    density="compact"
+                    tableId="methodology-mint-burn-bank-run-gauge"
+                    testId="methodology-mint-burn-bank-run-gauge-table"
+                    viewportProps={{ mobileScrollHint: false }}
+                  >
+                    <TableHeader>
+                      <TableRow className="text-left">
+                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Band</TableHead>
+                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Score Range</TableHead>
+                        <TableHead scope="col" className="py-2 text-foreground">Meaning</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">CRISIS</TableCell>
+                        <TableCell className="py-1.5 pr-4">&minus;100 to &minus;70</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Severe below-baseline redemption pressure across major coins</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">STRESS</TableCell>
+                        <TableCell className="py-1.5 pr-4">&minus;70 to &minus;40</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Worsening coordinated pressure versus normal conditions</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">CAUTIOUS</TableCell>
+                        <TableCell className="py-1.5 pr-4">&minus;40 to &minus;10</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Mild but broad pressure deterioration</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">NEUTRAL</TableCell>
+                        <TableCell className="py-1.5 pr-4">&minus;10 to 10</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Close to 30D norms across the market</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">HEALTHY</TableCell>
+                        <TableCell className="py-1.5 pr-4">10 to 40</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Improving aggregate pressure versus baseline</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">CONFIDENT</TableCell>
+                        <TableCell className="py-1.5 pr-4">40 to 70</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Strong positive pressure shift across major coins</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="py-1.5 pr-4 text-foreground">SURGE</TableCell>
+                        <TableCell className="py-1.5 pr-4">70 to 100</TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">Exceptional improvement versus recent norms</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </TableFrame>
                   <p>
                     Returns null only when all tracked coins are NR (for example, insufficient history or no 24h mint/burn
                     activity). Coins with null pressure-shift values are skipped from the market-cap-weighted composite.
