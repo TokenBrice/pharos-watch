@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Critters from "critters";
+import Beasties from "beasties";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const outDir = path.join(root, "out");
@@ -15,7 +15,7 @@ if (!existsSync(homepagePath)) {
 }
 
 const before = readFileSync(homepagePath, "utf8");
-const optimizer = new Critters({
+const optimizer = new Beasties({
   path: outDir,
   publicPath: "/",
   preload: "media",
@@ -23,14 +23,14 @@ const optimizer = new Critters({
   reduceInlineStyles: false,
   inlineFonts: false,
   fonts: false,
-  logLevel: process.env.CRITTERS_LOG_LEVEL || "error",
+  logLevel: process.env.BEASTIES_LOG_LEVEL || "error",
 });
 
 const after = await optimizer.process(before);
 const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
 
 if (!/<style\b[^>]*>/.test(after)) {
-  console.error("[critical-css] Critters did not inline a critical style block.");
+  console.error("[critical-css] Beasties did not inline a critical style block.");
   process.exit(1);
 }
 

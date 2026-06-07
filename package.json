@@ -169,7 +169,7 @@
     "@types/react-dom": "^19",
     "@types/topojson-client": "3.1.5",
     "@vitest/coverage-v8": "^4.1.7",
-    "critters": "0.0.25",
+    "beasties": "0.4.2",
     "d3-geo": "3.1.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
