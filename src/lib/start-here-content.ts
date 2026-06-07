@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowLeftRight,
   ArrowUpDown,
+  BookMarked,
   BookOpen,
   Compass,
   Droplets,
@@ -413,6 +414,12 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
         description: "Plain-English explainers of each stablecoin design pattern Pharos tracks.",
         href: "/learn/mechanisms/",
         icon: Lightbulb,
+      },
+      {
+        title: "Stablecoin depeg case studies",
+        description: "Long-form retrospectives on the failures, stress events, and recovery paths that shaped the market.",
+        href: "/learn/case-studies/",
+        icon: BookMarked,
       },
       {
         title: "About",
