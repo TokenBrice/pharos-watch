@@ -78,8 +78,6 @@ vi.mock("../../lib/alchemy-logs", () => ({
   getAlchemyBlockNumber: vi.fn(async (url: string) =>
     url.includes("ethereum") ? 22_000_000 : 250_000_000,
   ),
-  getAlchemyTransactionByHash: vi.fn(async () => ({ hash: "0xtx", to: "0xrouter", input: "0x" })),
-  getAlchemyTransactionReceipt: vi.fn(async () => ({ transactionHash: "0xtx", to: "0xrouter", logs: [] })),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 0, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
