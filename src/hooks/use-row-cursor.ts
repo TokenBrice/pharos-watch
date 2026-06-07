@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type Virtualizer } from "@tanstack/react-virtual";
 
 export interface UseRowCursorOptions<T> {
@@ -50,24 +50,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
   const [cursorActive, setCursorActive] = useState(false);
 
   const rowsLength = rows.length;
-
-  // Reset cursor when row set changes meaningfully (e.g., filters reduce the list past the current index).
-  const prevLengthRef = useRef(rowsLength);
-  useEffect(() => {
-    if (prevLengthRef.current !== rowsLength) {
-      prevLengthRef.current = rowsLength;
-      if (rowsLength === 0) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setCursorActive(false);
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCursorIndexState((current) => {
-        if (rowsLength === 0) return 0;
-        if (current >= rowsLength) return 0;
-        return current;
-      });
-    }
-  }, [rowsLength]);
+  const cursorIndexBounded = rowsLength === 0 ? 0 : Math.min(cursorIndex, rowsLength - 1);
 
   const setCursorIndex = useCallback(
     (i: number) => {
@@ -91,10 +74,10 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
     if (virtualItems.length > 0) {
       const firstIndex = virtualItems[0].index;
       const lastIndex = virtualItems[virtualItems.length - 1].index;
-      if (cursorIndex >= firstIndex && cursorIndex <= lastIndex) return;
+      if (cursorIndexBounded >= firstIndex && cursorIndexBounded <= lastIndex) return;
     }
-    virtualizer.scrollToIndex(cursorIndex);
-  }, [cursorActive, cursorIndex, rowsLength, virtualizer]);
+    virtualizer.scrollToIndex(cursorIndexBounded);
+  }, [cursorActive, cursorIndexBounded, rowsLength, virtualizer]);
 
   // Keyboard handler
   useEffect(() => {
@@ -130,7 +113,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
         if (!onOpen) return;
         event.preventDefault();
         setCursorActive(true);
-        const row = rows[cursorIndex];
+        const row = rows[cursorIndexBounded];
         if (row) onOpen(row);
         return;
       }
@@ -138,7 +121,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
         if (!onToggleStar) return;
         event.preventDefault();
         setCursorActive(true);
-        const row = rows[cursorIndex];
+        const row = rows[cursorIndexBounded];
         if (row) onToggleStar(row);
         return;
       }
@@ -146,7 +129,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
         if (!onAddToCompare) return;
         event.preventDefault();
         setCursorActive(true);
-        const row = rows[cursorIndex];
+        const row = rows[cursorIndexBounded];
         if (row) onAddToCompare(row);
         return;
       }
@@ -157,7 +140,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [
-    cursorIndex,
+    cursorIndexBounded,
     enabled,
     onAddToCompare,
     onOpen,
@@ -167,26 +150,26 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
     scopeRef,
   ]);
 
-  const cursorRow = rowsLength > 0 && cursorIndex < rowsLength ? rows[cursorIndex] : null;
+  const cursorRow = rowsLength > 0 ? rows[cursorIndexBounded] : null;
   const cursorId = cursorRow ? getRowId(cursorRow) : null;
 
   const getRowProps = useCallback(
     (index: number, _rowId: string) => {
       if (!enabled) return {};
-      const isCursor = cursorActive && index === cursorIndex;
+      const isCursor = cursorActive && index === cursorIndexBounded;
       return {
         ...(isCursor ? { "data-cursor": "true" as const, tabIndex: 0 } : {}),
         onMouseEnter: () => {
           setCursorActive(true);
-          setCursorIndexState((current) => (current === index ? current : index));
+          setCursorIndex(index);
         },
       };
     },
-    [cursorActive, cursorIndex, enabled],
+    [cursorActive, cursorIndexBounded, enabled, setCursorIndex],
   );
 
   return {
-    cursorIndex,
+    cursorIndex: cursorIndexBounded,
     cursorId,
     setCursorIndex,
     getRowProps,
