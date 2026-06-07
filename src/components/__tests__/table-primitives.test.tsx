@@ -4,7 +4,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  assertContentTableRowsMatchColumns,
   ContentTable,
+  ContentTableFrame,
   TableBody,
   TableCell,
   TableFrame,
@@ -21,8 +23,7 @@ describe("Pharos table primitives", () => {
   it("renders a table frame with the shared surface, viewport, and data slots", () => {
     render(
       <TableFrame
-        tableId="test-table"
-        testId="test-table-shell"
+        tableId="stablecoin-overview"
         className="custom-shell"
         tableClassName="min-w-[480px]"
         density="compact"
@@ -44,10 +45,10 @@ describe("Pharos table primitives", () => {
     );
 
     const table = screen.getByRole("table");
-    const shell = screen.getByTestId("test-table-shell");
+    const shell = screen.getByTestId("stablecoin-overview-table");
     const viewport = table.parentElement;
 
-    expect(shell.getAttribute("data-table-id")).toBe("test-table");
+    expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
     expect(shell.className).toContain("pharos-table-shell");
     expect(shell.className).toContain("custom-shell");
     expect(shell.className).toContain("pharos-density-compact");
@@ -63,13 +64,47 @@ describe("Pharos table primitives", () => {
     expect(screen.getByText("Footer")).toBeTruthy();
   });
 
+  it("renders a children-first content table frame preset", () => {
+    render(
+      <ContentTableFrame
+        tableId="methodology-reference"
+        caption="Methodology reference"
+        captionClassName="sr-only"
+        tableAriaLabel="Reference table"
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">Metric</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell>Safety</TableCell>
+          </TableRow>
+        </TableBody>
+      </ContentTableFrame>,
+    );
+
+    const shell = screen.getByTestId("methodology-reference-table");
+    const table = screen.getByRole("table", { name: "Reference table" });
+
+    expect(shell.getAttribute("data-table-id")).toBe("methodology-reference");
+    expect(shell.className).toContain("pharos-density-compact");
+    expect(shell.className).toContain("rounded-xl");
+    expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
+    expect(table.getAttribute("aria-label")).toBe("Reference table");
+    expect(
+      screen.getByText("Methodology reference").closest("caption")?.className,
+    ).toContain("sr-only");
+  });
+
   it("renders a compact content table from column and row definitions", () => {
     render(
       <ContentTable
         tableId="methodology-example"
-        testId="methodology-example-table"
+        caption="Condition band meanings"
         columns={[
-          { id: "name", header: "Name", cellClassName: "text-foreground" },
+          { id: "name", header: "Name", rowHeader: true },
           { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
         ]}
         rows={[
@@ -88,7 +123,64 @@ describe("Pharos table primitives", () => {
     expect(shell.className).toContain("rounded-xl");
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
     expect(screen.getByText("Name").closest("th")?.getAttribute("scope")).toBe("col");
-    expect(screen.getByText("BEDROCK").closest("td")?.className).toContain("text-green-700");
+    expect(
+      screen.getByRole("table", { name: "Condition band meanings" }),
+    ).toBeTruthy();
+    expect(screen.getByText("BEDROCK").closest("th")?.getAttribute("scope")).toBe("row");
+    expect(screen.getByText("BEDROCK").closest("th")?.className).toContain("text-green-700");
+    expect(
+      screen.getByText("BEDROCK").closest("tr")?.getAttribute("data-row-intent"),
+    ).toBe("static");
+  });
+
+  it("throws when content table row cell keys do not match declared columns", () => {
+    const columns = [
+      { id: "name", header: "Name" },
+      { id: "meaning", header: "Meaning" },
+    ];
+
+    expect(() =>
+      assertContentTableRowsMatchColumns(columns, [
+        { id: "missing", cells: { name: "BEDROCK" } },
+      ]),
+    ).toThrow(/missing cells: meaning/);
+
+    expect(() =>
+      assertContentTableRowsMatchColumns(columns, [
+        {
+          id: "extra",
+          cells: { name: "BEDROCK", meaning: "Stable", typo: "ignored" },
+        },
+      ]),
+    ).toThrow(/extra cells: typo/);
+  });
+
+  it("marks row intent without changing the default row behavior", () => {
+    render(
+      <table>
+        <tbody>
+          <TableRow>
+            <TableCell>Default</TableCell>
+          </TableRow>
+          <TableRow rowIntent="static">
+            <TableCell>Static</TableCell>
+          </TableRow>
+          <TableRow rowIntent="scan">
+            <TableCell>Scan</TableCell>
+          </TableRow>
+        </tbody>
+      </table>,
+    );
+
+    expect(
+      screen.getByText("Default").closest("tr")?.getAttribute("data-row-intent"),
+    ).toBe("interactive");
+    expect(
+      screen.getByText("Static").closest("tr")?.getAttribute("data-row-intent"),
+    ).toBe("static");
+    expect(
+      screen.getByText("Scan").closest("tr")?.getAttribute("data-row-intent"),
+    ).toBe("scan");
   });
 
   it("can suppress the mobile scroll hint", () => {

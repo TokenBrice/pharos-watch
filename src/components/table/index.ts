@@ -6,7 +6,12 @@ export {
   TableHeader,
   TableRow,
 } from "./table-element";
-export { ContentTable } from "./content-table";
+export {
+  assertContentTableRowsMatchColumns,
+  ContentTable,
+  ContentTableFrame,
+  getContentTableCellKeyIssues,
+} from "./content-table";
 export { MatrixTable } from "./matrix-table";
 export { TableFrame } from "./table-frame";
 export { TableSettingsMenu } from "./table-settings-menu";
@@ -18,5 +23,6 @@ export type {
   TableDensity,
   TableId,
   TableIdentityProps,
+  TableRowIntent,
   TableStriping,
 } from "./types";

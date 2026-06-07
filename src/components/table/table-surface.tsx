@@ -38,12 +38,14 @@ export function TableSurface({
   ref,
   ...props
 }: TableSurfaceProps) {
+  const resolvedTestId = testId ?? (tableId ? `${tableId}-table` : undefined);
+
   return (
     <div
       {...props}
       ref={ref}
       data-table-id={tableId}
-      data-testid={testId}
+      data-testid={resolvedTestId}
       className={cn(
         CHROME_CLASS_NAMES[chrome],
         `pharos-density-${density}`,

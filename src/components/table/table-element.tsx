@@ -2,6 +2,8 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+import type { TableRowIntent } from "./types";
+
 export function TableElement({
   className,
   ...props
@@ -41,14 +43,20 @@ export function TableBody({
   );
 }
 
+export interface TableRowProps extends React.ComponentProps<"tr"> {
+  rowIntent?: TableRowIntent;
+}
+
 export function TableRow({
   className,
+  rowIntent = "interactive",
   ...props
-}: React.ComponentProps<"tr">) {
+}: TableRowProps) {
   return (
     <tr
       {...props}
       data-slot="table-row"
+      data-row-intent={rowIntent}
       className={cn(
         "border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted",
         className,
