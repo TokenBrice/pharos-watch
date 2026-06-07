@@ -62,6 +62,30 @@ describe("scanTablePrimitives", () => {
     ]);
   });
 
+  it("rejects relative and require shadcn table imports in product source", () => {
+    const cwd = makeTempRepo();
+    writeFixture(
+      cwd,
+      "src/app/demo/page.tsx",
+      'import { Table } from "../../components/ui/table";\nconst required = require("../../components/ui/table.tsx");\nexport function Page() { return <Table data-required={Boolean(required)} />; }\n',
+    );
+
+    expect(scanTablePrimitives({ cwd }).violations).toEqual([
+      {
+        file: "src/app/demo/page.tsx",
+        line: 1,
+        kind: "ui-table-import",
+        reason: "Import table primitives from @/components/table instead of @/components/ui/table.",
+      },
+      {
+        file: "src/app/demo/page.tsx",
+        line: 2,
+        kind: "ui-table-import",
+        reason: "Import table primitives from @/components/table instead of @/components/ui/table.",
+      },
+    ]);
+  });
+
   it("rejects visible raw table markup in product source", () => {
     const cwd = makeTempRepo();
     writeFixture(

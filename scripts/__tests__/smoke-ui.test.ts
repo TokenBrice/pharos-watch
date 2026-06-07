@@ -300,7 +300,18 @@ describe("chunkOverflowRoutes", () => {
 });
 
 describe("verifyAnalyticsSnippet", () => {
-  it("accepts the GA script tag before runtime analytics checks run", async () => {
+  it("accepts runtime-loaded GA without a first-paint preload", async () => {
+    const fetchMock = async (url: string) => {
+      if (url === "https://pharos.watch/") {
+        return new Response("<html><body>Pharos</body></html>");
+      }
+      return new Response("not found", { status: 404 });
+    };
+
+    await expect(verifyAnalyticsSnippet("https://pharos.watch/", "G-6TS0KG8H04", fetchMock)).resolves.toBeUndefined();
+  });
+
+  it("rejects GA script preloads in the HTML shell", async () => {
     const fetchMock = async (url: string) => {
       if (url === "https://pharos.watch/") {
         return new Response(
@@ -310,6 +321,8 @@ describe("verifyAnalyticsSnippet", () => {
       return new Response("not found", { status: 404 });
     };
 
-    await expect(verifyAnalyticsSnippet("https://pharos.watch/", "G-6TS0KG8H04", fetchMock)).resolves.toBeUndefined();
+    await expect(
+      verifyAnalyticsSnippet("https://pharos.watch/", "G-6TS0KG8H04", fetchMock),
+    ).rejects.toThrow("not a first-paint HTML preload");
   });
 });

@@ -677,12 +677,17 @@ export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetc
   }
 
   const response = await fetchImpl(url);
-  assert(response.ok, `Failed to fetch ${url} while checking analytics snippet (${response.status})`);
+  assert(response.ok, `Failed to fetch ${url} while checking analytics HTML contract (${response.status})`);
   const html = await response.text();
+  const gaUrl = `https://www.googletagmanager.com/gtag/js?id=${expectedGaId}`;
+  const hasPreload =
+    html.includes(`rel="preload" href="${gaUrl}"`) ||
+    html.includes(`href="${gaUrl}" rel="preload"`) ||
+    html.includes(`href="${gaUrl}" as="script"`);
 
   assert(
-    html.includes(`https://www.googletagmanager.com/gtag/js?id=${expectedGaId}`),
-    `Expected GA script tag for ${expectedGaId} in ${url}`,
+    !hasPreload,
+    `Expected GA ${expectedGaId} to load from the runtime component, not a first-paint HTML preload in ${url}`,
   );
 }
 
@@ -726,7 +731,7 @@ export async function run() {
   try {
     await verifyAnalyticsSnippet(url, expectedGaId);
     if (expectedGaId) {
-      console.log(`[smoke-ui] OK analytics snippet ${expectedGaId}`);
+      console.log(`[smoke-ui] OK analytics HTML preload contract ${expectedGaId}`);
     }
 
     const chromium = await loadChromium();

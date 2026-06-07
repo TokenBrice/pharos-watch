@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from "node:fs";
-import { extname, isAbsolute, relative, sep } from "node:path";
+import { extname, isAbsolute, posix, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
@@ -20,6 +20,7 @@ const DEFAULT_EXCLUDED_DIRS = new Set([
 ]);
 
 const UI_TABLE_MODULE = "@/components/ui/table";
+const UI_TABLE_RELATIVE_MODULE = "src/components/ui/table";
 const INVENTORY_PRIMITIVES = new Set([
   "ChartDataTable",
   "ContentTable",
@@ -114,6 +115,24 @@ function getModuleSpecifier(statement) {
     return moduleSpecifier && ts.isStringLiteral(moduleSpecifier) ? moduleSpecifier.text : null;
   }
   return null;
+}
+
+function stripSourceExtension(path) {
+  return path.replace(/\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$/, "");
+}
+
+function isUiTableModuleSpecifier(specifier, relativeFile) {
+  if (specifier === UI_TABLE_MODULE) return true;
+
+  let resolvedSpecifier = null;
+  if (specifier.startsWith("@/")) {
+    resolvedSpecifier = `src/${specifier.slice(2)}`;
+  } else if (specifier.startsWith(".")) {
+    resolvedSpecifier = posix.normalize(posix.join(posix.dirname(relativeFile), specifier));
+  }
+
+  return resolvedSpecifier != null
+    && stripSourceExtension(resolvedSpecifier) === UI_TABLE_RELATIVE_MODULE;
 }
 
 function getJsxTagName(tagName) {
@@ -238,7 +257,7 @@ function findPrimitiveViolationsInFile(file, cwd) {
 
   visitNodes(sourceFile, (node) => {
     const moduleSpecifier = getModuleSpecifier(node);
-    if (moduleSpecifier === UI_TABLE_MODULE && !isUiTableImportAllowed(relativeFile)) {
+    if (moduleSpecifier && isUiTableModuleSpecifier(moduleSpecifier, relativeFile) && !isUiTableImportAllowed(relativeFile)) {
       violations.push({
         file: relativeFile,
         line: getLine(sourceFile, node),
@@ -250,9 +269,13 @@ function findPrimitiveViolationsInFile(file, cwd) {
 
     if (
       ts.isCallExpression(node)
-      && node.expression.kind === ts.SyntaxKind.ImportKeyword
+      && (
+        node.expression.kind === ts.SyntaxKind.ImportKeyword
+        || (ts.isIdentifier(node.expression) && node.expression.text === "require")
+      )
+      && node.arguments.length > 0
       && ts.isStringLiteral(node.arguments[0])
-      && node.arguments[0].text === UI_TABLE_MODULE
+      && isUiTableModuleSpecifier(node.arguments[0].text, relativeFile)
       && !isUiTableImportAllowed(relativeFile)
     ) {
       violations.push({
