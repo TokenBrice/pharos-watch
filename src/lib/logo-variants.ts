@@ -1,9 +1,6 @@
-const COMPACT_LOGO_SRC_BY_CANONICAL_SRC: Record<string, string> = {
-  "/logos/nxusd-nereus.png": "/logos/compact/nxusd-nereus.webp",
-  "/logos/wbrl-ripio.png": "/logos/compact/wbrl-ripio.webp",
-  "/logos/wmxn-ripio.png": "/logos/compact/wmxn-ripio.webp",
-  "/logos/zarm-mento.png": "/logos/compact/zarm-mento.webp",
-};
+import MAP from "./logo-variants.generated.json";
+
+const COMPACT_LOGO_SRC_BY_CANONICAL_SRC: Record<string, string> = MAP;
 
 export function resolveCompactLogoSrc(src: string | undefined, size: number): string | undefined {
   if (!src || size > 24) return src;

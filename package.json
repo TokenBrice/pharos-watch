@@ -9,6 +9,13 @@
   "engines": {
     "node": ">=24 <26"
   },
+  "browserslist": [
+    "chrome >= 93",
+    "edge >= 93",
+    "firefox >= 92",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
+  ],
   "scripts": {
     "dev": "node scripts/maintenance/dev.mjs",
     "dev:next": "next dev",

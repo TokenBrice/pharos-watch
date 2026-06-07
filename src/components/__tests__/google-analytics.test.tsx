@@ -46,9 +46,16 @@ describe("GoogleAnalytics", () => {
       "page_view",
       expect.objectContaining({ page_path: "/" }),
     ]);
-    expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
-      "src",
-      "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+    // The gtag.js download is deferred to an idle window (requestIdleCallback,
+    // or a setTimeout fallback in jsdom) so its execution stays off the load
+    // critical path; the injected script still carries the measurement id.
+    await waitFor(
+      () =>
+        expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
+          "src",
+          "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+        ),
+      { timeout: 2500 },
     );
   });
 

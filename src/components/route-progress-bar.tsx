@@ -50,9 +50,9 @@ export function RouteProgressBar() {
       className="pointer-events-none fixed left-0 right-0 top-0 z-[59] h-[2px]"
     >
       <div
-        className="h-full bg-primary transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none"
+        className="h-full w-full origin-left bg-primary transition-[transform,opacity] duration-300 ease-out will-change-transform motion-reduce:transition-none"
         style={{
-          width: `${progress}%`,
+          transform: `scaleX(${progress / 100})`,
           opacity: active ? 1 : 0,
         }}
       />

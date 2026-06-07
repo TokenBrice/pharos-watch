@@ -69,9 +69,13 @@ function consolidatedDewsTitle(event: TapeEvent): string | null {
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
 type HomepageTapePlacement = "inline" | "top";
 
+// `min-h-[46px]` keeps the strip's box identical across the loading text state
+// and the populated track. Without it, events resolving (~loading→loaded) grows
+// the strip ~13px and pushes the whole page — including the hero LCP element —
+// down, which Lighthouse attributes as the top homepage layout shift.
 const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
-  inline: "pharos-tape-shell relative -mx-3 overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
-  top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]",
+  inline: "pharos-tape-shell relative -mx-3 min-h-[46px] overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
+  top: "pharos-tape-shell relative z-50 min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]",
 };
 
 function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
