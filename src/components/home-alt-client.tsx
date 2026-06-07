@@ -129,7 +129,7 @@ export function HomeAltClient() {
       <BelowFold forced={hashTargetForcesMount} minHeight={820}>
         <section
           aria-label="Daily digest"
-          className="mt-3 min-h-[560px] pt-2.5 sm:mt-3.5 sm:pt-3 lg:min-h-[660px]"
+          className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
         >
           <DailyDigest variant="preview" />
         </section>

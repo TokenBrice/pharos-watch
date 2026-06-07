@@ -74,6 +74,9 @@ describe("HomeAltClient", () => {
     expect(screen.getByTestId("daily-digest")).toBeTruthy();
     expect(screen.getByTestId("homepage-discovery-module")).toBeTruthy();
     expect(screen.getByTestId("home-alt-rankings-section")).toBeTruthy();
+    expect(
+      document.querySelector('section[aria-label="Daily digest"]')?.className,
+    ).not.toContain("min-h-");
     expect(document.getElementById("home-alt-rankings")).toBeTruthy();
     expect(homeAltRankingsPropsMock).toHaveBeenCalledWith({
       titleId: "home-alt-rankings-title",
