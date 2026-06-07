@@ -29,7 +29,7 @@ export function PharosLogo({ size = 32, className, priority = false }: PharosLog
         width={size}
         height={size}
         className="rounded-lg"
-        priority={priority}
+        decoding={priority ? "sync" : "async"}
       />
     </div>
   );

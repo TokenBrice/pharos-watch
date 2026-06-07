@@ -13,12 +13,19 @@ export function CoreTopRail() {
   const pathname = usePathname();
   const { expanded } = useSidebar();
   const activeRef = useRef<HTMLAnchorElement | null>(null);
+  const hasMountedRef = useRef(false);
 
   const normalizedPath = normalizeNavPath(pathname ?? "/");
 
-  // Keep the lit pill in view: center it on mount and whenever the route
-  // changes so the active anchor never scrolls off-screen with no affordance.
+  // Keep the lit pill in view after client-side route changes. The initial
+  // render already starts with Dashboard visible, and calling scrollIntoView
+  // during hydration shows up as forced layout work in Lighthouse.
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
     activeRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
   }, [normalizedPath]);
 

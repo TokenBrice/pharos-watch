@@ -63,6 +63,33 @@ describe("CoreTopRail", () => {
     expect(icon?.getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("does not center the active pill during initial dashboard hydration", () => {
+    pathnameMock.mockReturnValue("/");
+    sidebarMock.mockReturnValue({ expanded: true });
+
+    render(<CoreTopRail />);
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("centers the active pill after a client-side core route change", () => {
+    pathnameMock.mockReturnValue("/");
+    sidebarMock.mockReturnValue({ expanded: true });
+
+    const { rerender } = render(<CoreTopRail />);
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+    pathnameMock.mockReturnValue("/yield/");
+    rerender(<CoreTopRail />);
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      inline: "center",
+      block: "nearest",
+      behavior: "auto",
+    });
+  });
+
   it("only the active link mounts the beam", () => {
     pathnameMock.mockReturnValue("/");
     sidebarMock.mockReturnValue({ expanded: true });
