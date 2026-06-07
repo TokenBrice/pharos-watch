@@ -178,7 +178,12 @@ async function withHtmlCsp(response: Response, request: Request, pathname: strin
 
   const html = addNonceToInlineScripts(await response.text(), nonce);
 
-  if (!clientAcceptsGzip(request) || headers.has("Content-Encoding")) {
+  // `response.text()` yields the decoded body, so any inherited upstream
+  // Content-Encoding (e.g. a pre-compressed asset from the local dev server) is
+  // now stale and must be dropped before we decide how to re-encode.
+  headers.delete("Content-Encoding");
+
+  if (!clientAcceptsGzip(request)) {
     return new Response(html, {
       status: response.status,
       statusText: response.statusText,

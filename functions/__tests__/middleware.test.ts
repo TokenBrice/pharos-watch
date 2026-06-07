@@ -276,10 +276,14 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("");
   });
 
-  it("does not double-compress a response that already declares a Content-Encoding", async () => {
+  it("strips a stale upstream Content-Encoding and serves a single valid gzip", async () => {
     const req = new Request("https://pharos.watch/", {
       headers: { "Accept-Encoding": "gzip" },
     });
+    // The upstream body has already been decoded (as the local dev asset server
+    // hands it to us) but still carries a Content-Encoding header. After reading
+    // the text the body is plaintext, so the stale header must not survive onto
+    // our own gzip — otherwise the client would double-decode and fail.
     const next = vi.fn(async () =>
       new Response("<html><script>1</script></html>", {
         status: 200,
@@ -293,7 +297,9 @@ describe("pages middleware markdown negotiation", () => {
     });
 
     expect(res.headers.get("Content-Encoding")).toBe("gzip");
-    const body = await res.text();
+    // Decodes cleanly in a single gzip pass (not double-encoded) with the nonce
+    // injection intact.
+    const body = await decodeBody(res);
     expect(body).toMatch(/<script nonce="[^"]+">1<\/script>/);
   });
 
