@@ -49,7 +49,7 @@ const coin: StablecoinMeta = {
 
 const summary: StablecoinAiSummary = {
   title: "Test Dollar profile",
-  text: "The profile summary is concise and specific. Extra detail should stay short enough for the static block.",
+  text: "The profile summary uses {{term:money-market-fund}}MMFs{{/term}} and stays specific. Extra detail should stay short enough for the static block.",
   updatedAt: "2026-05-02",
   authoredBy: "ai",
   model: "claude-opus-4-7",
@@ -105,7 +105,8 @@ describe("StablecoinDetailSeoContent", () => {
       "/chains/solana/",
     );
     expect(screen.getByText("AI summary / Updated May 2, 2026")).toBeTruthy();
-    expect(screen.getByText(/The profile summary is concise and specific/)).toBeTruthy();
+    expect(screen.getByText(/The profile summary uses MMFs and stays specific/)).toBeTruthy();
+    expect(container.textContent).not.toContain("{{term:");
     expect(
       screen.getByText(
         "AI summary · drafted by claude-opus-4-7 · reviewed by @TokenBrice on May 2, 2026 · facts as of May 2, 2026",

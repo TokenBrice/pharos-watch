@@ -7,6 +7,7 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
+import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import {
@@ -402,7 +403,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {summary && (
         <section className="pharos-card-shell space-y-2 p-4 sm:p-5">
           <h3 className="text-lg font-semibold tracking-tight">{summary.title}</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">{summary.text}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <TermText text={summary.text} />
+          </p>
           <p className="text-[11px] text-muted-foreground/60">
             Updated <time dateTime={summary.updatedAt}>{summaryDateline}</time>
           </p>

@@ -14,6 +14,7 @@ import {
   buildGovernanceTaxonomyUrl,
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
+import { stripTermMarkup } from "@/lib/term-markup";
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;
@@ -37,7 +38,7 @@ function normalizeWhitespace(text: string): string {
 }
 
 function summarizeText(text: string, maxLength = 280): string {
-  const normalized = normalizeWhitespace(text);
+  const normalized = normalizeWhitespace(stripTermMarkup(text));
   if (normalized.length <= maxLength) return normalized;
 
   const truncated = normalized.slice(0, maxLength - 1);

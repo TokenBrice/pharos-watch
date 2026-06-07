@@ -27,6 +27,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { stripTermMarkup } from "@/lib/term-markup";
 import type { LaunchPhase } from "@shared/types";
 import aiSummaries from "../../data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
@@ -283,7 +284,8 @@ export function UpcomingClient() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((coin) => {
-            const teaser = typedSummaries[coin.id]?.text;
+            const teaserText = typedSummaries[coin.id]?.text;
+            const teaser = teaserText ? stripTermMarkup(teaserText) : null;
             const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
 
             return (
