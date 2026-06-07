@@ -247,6 +247,9 @@ jobs:
       - name: Deploy Pages with retry
         id: deploy-pages
         run: |
+          cat > out/__pharos_release.json <<EOF
+          {"commit":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}","runAttempt":"${GITHUB_RUN_ATTEMPT}","createdAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+          EOF
           max_attempts=6
           for attempt in $(seq 1 "$max_attempts"); do
             echo "[deploy-pages] Attempt ${attempt}/${max_attempts}"
@@ -274,6 +277,19 @@ jobs:
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
         run: |
           set +e
+
+          node scripts/maintenance/wait-pages-release-marker.mjs \
+            --url https://pharos.watch/__pharos_release.json \
+            --url https://ops.pharos.watch/__pharos_release.json
+          marker_status=$?
+
+          if [ "$marker_status" -ne 0 ]; then
+            echo "ui_status=failure" >> "$GITHUB_OUTPUT"
+            echo "ops_status=failure" >> "$GITHUB_OUTPUT"
+            echo "transport_status=failure" >> "$GITHUB_OUTPUT"
+            echo "post-publish smoke statuses: release-marker=failure"
+            exit "$marker_status"
+          fi
 
           npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!

@@ -11,6 +11,13 @@
 /portfolio/*
   X-Robots-Tag: noindex, follow
 
+/__pharos_release.json
+  X-Robots-Tag: noindex, nofollow
+  ! Cache-Control
+  Cache-Control: no-store
+  CDN-Cache-Control: no-store
+  Content-Type: application/json; charset=utf-8
+
 /compare/
   X-Robots-Tag: noindex, follow
 
