@@ -34,7 +34,10 @@ export function hasTableCaptionChild(children: React.ReactNode): boolean {
       found = true;
       return;
     }
-    if (typeof type === "function" && type.name === "TableCaption") {
+    const displayName = typeof type === "function"
+      ? (type as { displayName?: string }).displayName
+      : undefined;
+    if (displayName === "TableCaption" || (typeof type === "function" && type.name === "TableCaption")) {
       found = true;
       return;
     }

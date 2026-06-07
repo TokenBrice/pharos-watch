@@ -109,3 +109,5 @@ export function TableCaption({
     />
   );
 }
+
+TableCaption.displayName = "TableCaption";
