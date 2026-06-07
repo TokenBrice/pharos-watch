@@ -55,10 +55,18 @@ export function PsiBandCard(): React.JSX.Element {
     const chartData = buildPsiChartData(data?.history ?? [], current);
     return chartData.slice(-90).map((p) => p.score);
   }, [current, data?.history]);
+  const avgDelta = useMemo(() => {
+    if (!current || sparkValues.length === 0) return null;
+    const avg = sparkValues.reduce((sum, value) => sum + value, 0) / sparkValues.length;
+    return current.score - avg;
+  }, [current, sparkValues]);
 
   const band = (current?.band ?? "STEADY") as ConditionBand;
   const bandColor = PSI_HEX_COLORS[band] ?? PSI_HEX_COLORS.STEADY;
   const bandClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
+  const avgDeltaClass = avgDelta != null && avgDelta >= 0
+    ? "text-green-700 dark:text-green-400"
+    : "text-red-700 dark:text-red-400";
 
   return (
     <div className="pharos-card-shell flex items-center gap-4 p-4">
@@ -67,7 +75,7 @@ export function PsiBandCard(): React.JSX.Element {
         {isLoading || !current ? (
           <Skeleton className="mt-1.5 h-7 w-24" />
         ) : (
-          <div className="mt-1 flex items-baseline gap-2">
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="font-mono text-3xl font-semibold tabular-nums text-foreground">
               {current.score.toFixed(1)}
             </span>
@@ -76,10 +84,19 @@ export function PsiBandCard(): React.JSX.Element {
             >
               {band}
             </span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              raw instant
+            </span>
           </div>
         )}
         <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           Last 90 days
+          {avgDelta !== null && (
+            <span className={`ml-2 tabular-nums ${avgDeltaClass}`}>
+              {avgDelta >= 0 ? "+" : ""}
+              {avgDelta.toFixed(1)} vs avg
+            </span>
+          )}
         </p>
       </div>
       <div className="ml-auto h-12 flex-1">

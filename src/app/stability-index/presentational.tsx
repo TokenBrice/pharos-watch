@@ -211,6 +211,7 @@ export function StabilityIndexEmptyState() {
 export function StabilityIndexPanel({
   band,
   score,
+  scoreBasis,
   delta,
   daysInBand,
   historyStats,
@@ -218,6 +219,7 @@ export function StabilityIndexPanel({
 }: {
   band: string;
   score: number;
+  scoreBasis: string;
   delta: number | null;
   daysInBand: number;
   historyStats: HistoryStatItem[];
@@ -251,9 +253,12 @@ export function StabilityIndexPanel({
           <div className="flex min-w-0 flex-1 flex-col gap-4 xl:pt-1">
             <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
               <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
-                <div className="flex items-baseline gap-2">
+                <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 xl:justify-start">
                   <span className="text-xs text-muted-foreground">
                     <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {scoreBasis}
                   </span>
                   <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums xl:text-[4.15rem] ${colorClass}`}>
                     {formatScore(score)}

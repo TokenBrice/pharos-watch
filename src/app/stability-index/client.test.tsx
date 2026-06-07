@@ -116,8 +116,10 @@ describe("StabilityIndexClient", () => {
     stabilityState = {
       data: {
         current: {
-          score: 82,
-          band: "STEADY",
+          score: 92.2,
+          band: "BEDROCK",
+          avg24h: 89.4,
+          avg24hBand: "STEADY",
           components: { severity: 10, breadth: 5, stressBreadth: 2, trend: 4 },
           contributors: [
             { id: "usdc-circle", symbol: "USDC", bps: -120, mcapUsd: 60_000_000_000, ageDays: 3, factor: 1 },
@@ -152,7 +154,8 @@ describe("StabilityIndexClient", () => {
   it("renders the current PSI state, contributors, and methodology section", () => {
     render(<StabilityIndexClient />);
 
-    expect(screen.getAllByText("82.0").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("rolling 24h avg").length).toBeGreaterThan(0);
     expect(screen.getAllByText("STEADY").length).toBeGreaterThan(0);
     expect(screen.getByText("Top Contributors")).toBeTruthy();
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);

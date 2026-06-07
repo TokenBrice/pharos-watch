@@ -22,7 +22,9 @@ function makePsiResponse(): StabilityIndexResponse {
   return {
     current: {
       score: 40,
-      band: "STEADY",
+      band: "BEDROCK",
+      avg24h: 35,
+      avg24hBand: "STEADY",
       components: { severity: 1, breadth: 2, stressBreadth: 3, trend: 4 },
       contributors: [],
       totalMcapUsd: 100,
@@ -48,13 +50,18 @@ function makePsiResponse(): StabilityIndexResponse {
 }
 
 describe("PsiBandCard", () => {
-  it("renders the PSI sparkline from chronological history plus the current sample", () => {
+  it("renders the raw instant PSI and the sparkline from raw samples", () => {
     useStabilityIndexMock.mockReturnValue({
       data: makePsiResponse(),
       isLoading: false,
     });
 
-    const { container } = render(<PsiBandCard />);
+    const { container, getByText, queryByText } = render(<PsiBandCard />);
+
+    expect(getByText("40.0")).toBeTruthy();
+    expect(getByText("raw instant")).toBeTruthy();
+    expect(getByText("+15.0 vs avg")).toBeTruthy();
+    expect(queryByText("35.0")).toBeNull();
 
     const polyline = container.querySelector("polyline");
     expect(polyline?.getAttribute("points")).toBe("0.00,40.00 33.33,26.67 66.67,13.33 100.00,0.00");

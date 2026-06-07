@@ -21,6 +21,7 @@ import { formatScore } from "@shared/lib/format";
 import {
   buildPsiChartData,
   getDisplayedPsi,
+  getDisplayedPsiBasis,
   getPsiBandStreak,
   getPsiCompletedDayPoint,
 } from "@shared/lib/psi-view-model";
@@ -164,6 +165,7 @@ export function StabilityIndexClient() {
   );
 
   const displayPsi = useMemo(() => (current ? getDisplayedPsi(current) : null), [current]);
+  const displayBasis = useMemo(() => (current ? getDisplayedPsiBasis(current) : "raw instant"), [current]);
 
   const delta = useMemo(() => {
     if (!current || !displayPsi) return null;
@@ -201,6 +203,7 @@ export function StabilityIndexClient() {
       <StabilityIndexPanel
         band={displayPsi.band}
         score={displayPsi.score}
+        scoreBasis={displayBasis}
         delta={delta}
         daysInBand={daysInBand}
         historyStats={historyStats}

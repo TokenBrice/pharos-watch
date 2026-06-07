@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useStabilityIndexLight } from "@/hooks/use-stability-index-light";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
-import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
+import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
 
 const DAY_SECONDS = 86_400;
@@ -36,6 +36,7 @@ export function RegimeBar() {
   if (!current) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
 
   const displayedPsi = getDisplayedPsi(current);
+  const displayBasis = getDisplayedPsiBasis(current);
   const band = displayedPsi.band as ConditionBand;
   const score = displayedPsi.score;
   const color = PSI_HEX_COLORS[band];
@@ -63,7 +64,7 @@ export function RegimeBar() {
       style={{ backgroundColor: color }}
       onClick={() => setExpanded((prev) => !prev)}
       aria-expanded={expanded}
-      aria-label={`Market regime: ${band}, PSI ${Math.round(score)}`}
+      aria-label={`Market regime: ${band}, PSI ${Math.round(score)}, ${displayBasis}`}
     >
       {/* Use grid-template-rows for smooth expand/collapse (height:auto can't transition) */}
       <div
@@ -72,13 +73,13 @@ export function RegimeBar() {
       >
         <div className="min-h-0 overflow-hidden">
           <div className={cn(
-            "flex items-center justify-center gap-3 px-4 py-1 text-[11px] leading-none font-mono tabular-nums",
+            "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1 text-[11px] leading-none font-mono tabular-nums",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
             <span className="font-semibold tracking-wide">{band}</span>
             {daysInBand && <span>for {daysInBand}d</span>}
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
-            <span>PSI {Math.round(score)}</span>
+            <span>PSI {Math.round(score)} · {displayBasis}</span>
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>
               sev {current.components.severity.toFixed(1)} · breadth{" "}

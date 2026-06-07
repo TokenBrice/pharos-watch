@@ -39,6 +39,10 @@ export function getDisplayedPsi(current: PsiCurrentLike): { score: number; band:
   };
 }
 
+export function getDisplayedPsiBasis(current: PsiCurrentLike): "rolling 24h avg" | "raw instant" {
+  return current.avg24h != null ? "rolling 24h avg" : "raw instant";
+}
+
 export function getPsiTodayMidnight(computedAt: number): number {
   return computedAt - (computedAt % DAY_SECONDS);
 }
