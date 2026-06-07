@@ -16,8 +16,8 @@ import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
   SEVERITY_DOT_CLASS,
   SEVERITY_LABEL,
-  type TapeEvent,
-} from "@shared/types/tape-event";
+} from "@shared/types/tape-event-constants";
+import type { TapeEvent } from "@shared/types/tape-event";
 
 function durationFromCount(count: number): string {
   // ~4.5 seconds per item — slow news ticker pace

@@ -5,9 +5,9 @@ import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   TAPE_EVENT_SEVERITY_VALUES,
-  type TapeEvent,
   type TapeEventSeverity,
-} from "@shared/types/tape-event";
+} from "@shared/types/tape-event-constants";
+import type { TapeEvent } from "@shared/types/tape-event";
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";

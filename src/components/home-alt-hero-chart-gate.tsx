@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 
 function HomeAltHeroChartFallback() {
@@ -41,13 +42,16 @@ function scheduleIdle(callback: () => void): () => void {
 }
 
 export function HomeAltHeroChartGate(): React.JSX.Element {
+  const hydrated = useHydrated();
   const { ref, near } = useNearViewport<HTMLDivElement>("0px 0px -20% 0px");
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    if (!near || active) return;
+    // Wait for hydration to settle before scheduling the chart mount so its
+    // ~208KB of data fetches stay off the initial-load critical path.
+    if (!hydrated || !near || active) return;
     return scheduleIdle(() => setActive(true));
-  }, [active, near]);
+  }, [active, hydrated, near]);
 
   return (
     <div ref={ref}>
