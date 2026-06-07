@@ -1,8 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { TableSettingsMenu, TableToolbarFrame } from "@/components/table";
+import { TableControlsToolbar } from "@/components/table";
 import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";
 import type { TableDensity } from "@/hooks/use-table-density";
 import type { ColumnId } from "@/hooks/use-preferences";
@@ -53,38 +51,24 @@ export function TableToolbar({
   meta,
 }: TableToolbarProps) {
   return (
-    <TableToolbarFrame
+    <TableControlsToolbar
       eyebrow={eyebrow}
       description={description}
       titleId={titleId}
       meta={meta}
-      actions={(
-        <>
-          {additionalActions}
-          <TableSettingsMenu
-            density={density}
-            onDensityChange={onDensityChange}
-            columnsSlot={(
-              <ColumnVisibilityDropdown
-                visibleColumns={visibleColumns}
-                setVisibleColumns={onVisibleColumnsChange}
-                resetColumns={onResetColumns}
-                defaultColumns={defaultColumns}
-              />
-            )}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-h-11 sm:min-h-8"
-            onClick={onExport}
-            disabled={exportDisabled}
-          >
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            Export CSV
-          </Button>
-        </>
+      density={density}
+      onDensityChange={onDensityChange}
+      columnsSlot={(
+        <ColumnVisibilityDropdown
+          visibleColumns={visibleColumns}
+          setVisibleColumns={onVisibleColumnsChange}
+          resetColumns={onResetColumns}
+          defaultColumns={defaultColumns}
+        />
       )}
+      onExport={onExport}
+      exportDisabled={exportDisabled}
+      additionalActions={additionalActions}
     />
   );
 }

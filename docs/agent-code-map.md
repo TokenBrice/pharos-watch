@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 361 more files omitted; use `rg --files src/components` for the full list.
+- ... 362 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -704,6 +704,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-selector-banned-phrases.test.ts` - keys
 - `scripts/__tests__/check-seo-static.test.ts`
 - `scripts/__tests__/check-shared-types-imports.test.ts`
+- `scripts/__tests__/check-table-primitives.test.ts` - Page
 - `scripts/__tests__/check-telegram-load.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/vitest-ci-args.test.ts`
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
-- `scripts/__tests__/yield-pys-v8-calibration.test.ts`
-- ... 158 more files omitted; use `rg --files scripts` for the full list.
+- ... 160 more files omitted; use `rg --files scripts` for the full list.
