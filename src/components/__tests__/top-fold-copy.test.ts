@@ -26,4 +26,11 @@ describe("getTopFoldCopy", () => {
     expect(copy.title).toBe("Verify the rebound.");
     expect(copy.emphasis).toBe("recovery-hold");
   });
+
+  it("uses light-default admin hero shells with dark mode scoped explicitly", () => {
+    const copy = getTopFoldCopy("healthy", "healthy");
+
+    expect(copy.shell).toContain("bg-[linear-gradient(140deg");
+    expect(copy.shell).toContain("dark:bg-[linear-gradient(180deg");
+  });
 });

@@ -110,14 +110,14 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
   });
 
-  it("chunks cron history queries below D1's compound SELECT limit", async () => {
+  it("chunks cron history queries below D1's compound SELECT term limit", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = makeDb(NOW, rows);
     const snapshot = await loadCronHealth(db, NOW);
     const historyQueries = db.getHistory().filter((entry) => entry.sql.includes("UNION ALL"));
 
     expect(historyQueries.length).toBeGreaterThan(1);
-    expect(historyQueries.every((entry) => entry.binds.length <= 20)).toBe(true);
+    expect(historyQueries.every((entry) => entry.binds.length <= 5)).toBe(true);
     expect(snapshot.cronHistoryQueryFailed).toBe(false);
     expect(snapshot.crons["sync-stablecoins"]?.telemetryUnknown).toBe(false);
     expect(snapshot.crons["sync-stablecoins"]?.recentRuns.length).toBeGreaterThan(0);

@@ -17,7 +17,10 @@ export interface CronHealthSnapshot {
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
-const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 20;
+// D1's compound SELECT term limit is lower than upstream SQLite's default.
+// Each per-job branch here contributes two SELECT terms because it wraps a
+// latest-N subquery, so keep batches to five jobs or fewer.
+const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
 const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
 
