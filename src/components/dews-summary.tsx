@@ -54,9 +54,9 @@ function DEWSCalmDot({ x, y }: CalmDot) {
 }
 
 const DEWS_LOGO_SCALE_BY_BAND: Partial<Record<ElevatedCoin["band"], number>> = {
-  ALERT: 1,
-  WARNING: 1.2,
-  DANGER: 1.44,
+  ALERT: 2.25,
+  WARNING: 2.7,
+  DANGER: 3.24,
 };
 
 function dewsLogoRadius(coin: ElevatedCoin): number {

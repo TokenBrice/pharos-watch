@@ -89,6 +89,7 @@ describe("DEWSSummary radar logos", () => {
 
     expect(warningWidth).toBeGreaterThan(alertWidth);
     expect(dangerWidth).toBeGreaterThan(warningWidth);
+    expect(alertWidth).toBeCloseTo(27, 1);
     expect(warningWidth / alertWidth).toBeCloseTo(1.2, 1);
     expect(dangerWidth / warningWidth).toBeCloseTo(1.2, 1);
   });
