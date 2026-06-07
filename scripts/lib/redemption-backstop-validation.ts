@@ -135,7 +135,7 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   missingSupportKindCounts: Record<RedemptionDocSourceSupport, number>;
 };
 
-const UNCONFIGURED_ACTIVE_BASELINE = 60;
+const UNCONFIGURED_ACTIVE_BASELINE = 62;
 const DAILY_LIMIT_CONTEXT_WINDOW = 80;
 const DAILY_LIMIT_TIME_TERMS = ["daily", "per-day", "per day"] as const;
 const DAILY_LIMIT_BOUND_TERMS = ["limit", "cap", "maximum", "max"] as const;

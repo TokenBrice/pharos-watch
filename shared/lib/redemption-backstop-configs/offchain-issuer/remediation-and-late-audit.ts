@@ -14,7 +14,6 @@ import {
   REVIEWED_DIRECT_REDEMPTION_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_REMEDIATION_AT,
-  REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
 
 export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -157,26 +156,6 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
     ],
     notes: ["Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia"],
-  },
-  "mmxn-moneta-digital": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Moneta/TruBit terms govern MMXN purchase and redemption for verified users; public materials reviewed do not publish one fixed MMXN redemption fee",
-    ),
-    docs: [
-      sourceRef("Moneta Digital MMXN", "https://monetadigital.com/", ["route", "capacity", "fees", "access"]),
-      sourceRef(
-        "TruBit Pro User Agreement",
-        "https://help.trubit.live/hc/en-001/articles/41958454019860-TruBit-Pro-User-Agreement",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-    ],
-    notes: [
-      "Modeled as Moneta/TruBit verified-customer redemption into MXN or issuer-controlled reserve assets, not secondary-market MMXN liquidity.",
-      "Terms allow redemption delays when backing reserves are illiquid, unavailable, or lost, so settlement is modeled as delayed rather than same-day.",
-    ],
   },
   "ctusd-citrea": {
     ...issuerBase,

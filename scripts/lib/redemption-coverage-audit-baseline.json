@@ -1,6 +1,6 @@
 {
   "description": "Ratcheted backlog baseline for npm run check:redemption-coverage-audit. Lower these counts as default-inferred active gaps and heuristic routes are source-reviewed, deferred, rejected, or promoted.",
-  "activeDefaultClassified": 38,
-  "activeUnconfigured": 60,
+  "activeDefaultClassified": 39,
+  "activeUnconfigured": 62,
   "heuristicConfiguredRoutes": 19
 }

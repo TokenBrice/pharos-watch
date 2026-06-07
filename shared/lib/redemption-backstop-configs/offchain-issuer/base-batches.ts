@@ -157,7 +157,6 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       "gusd-gate",
       "usyc-hashnote",
       "ustb-superstate",
-      "tbill-openeden",
       "usdn-noble",
       "reur-royal-euro",
       "kgst-kyrgyz-som",

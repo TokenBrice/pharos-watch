@@ -10,7 +10,6 @@ import {
 import {
   reviewedDirectRedemptionSupplyFull,
   reviewedIssuerApiExpansionSupplyFull,
-  REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
 
 export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -143,26 +142,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "Modeled as the documented Juno issuer conversion rail between MXNB and USDC/USDT rather than as a separate fiat bank-wire redemption flow",
       "The published conversion pairs expose explicit per-quote and per-pair min/max limits, which establish reviewed route availability without separately publishing a deterministic fixed-fee schedule",
-    ],
-  },
-  "mmxn-moneta-digital": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    settlementModel: "days",
-    costModel: undisclosedReviewedFee(
-      "Moneta/TruBit terms govern MMXN purchase and redemption for verified users; public materials reviewed do not publish one fixed MMXN redemption fee",
-    ),
-    docs: [
-      sourceRef("Moneta Digital", "https://monetadigital.com/", ["route", "capacity", "access"]),
-      sourceRef(
-        "TruBit Pro User Agreement",
-        "https://help.trubit.live/hc/en-001/articles/41958454019860-TruBit-Pro-User-Agreement",
-        ["route", "capacity", "access", "settlement"],
-      ),
-    ],
-    notes: [
-      "Modeled as Moneta's documented verified-customer redemption right for MMXN into MXN or issuer reserve assets, not as secondary-market liquidity.",
-      "Terms allow delayed or in-kind redemption if reserves are illiquid, unavailable, or lost, so the route is documented-bound with delayed settlement rather than current executable capacity.",
     ],
   },
   "europ-schuman": {
@@ -496,22 +475,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
-  },
-  "tbill-openeden": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
-    settlementModel: "days",
-    costModel: fixedFee(5, "OpenEden TBILL FAQ lists a 5 bps redemption transaction fee"),
-    reviewedAt: "2026-05-17",
-    docs: [
-      sourceRef("OpenEden TBILL redemptions", "https://docs.openeden.com/tbill/redemptions", ["route", "capacity"]),
-      sourceRef("OpenEden TBILL FAQ", "https://docs.openeden.com/tbill/faq", ["fees"]),
-      sourceRef("OpenEden TBILL transparency", "https://openeden.com/tbill/transparency", ["capacity"]),
-    ],
-    notes: [
-      "Tracked TBILL metadata records a 5% USD cash buffer; Pharos uses that reserve slice as the documented hot-buffer lower bound while keeping issuer redemptions queued/next-business-day.",
-    ],
   },
   "eure-monerium": {
     ...issuerBase,
