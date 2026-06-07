@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
@@ -110,12 +110,12 @@ export function YieldDetailSectionAltSources({
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <YieldSourceLink
+                    <TableSourceLink
                       href={source.url}
                       className="max-w-full truncate text-sm font-medium text-foreground"
                     >
                       {source.displayLabel}
-                    </YieldSourceLink>
+                    </TableSourceLink>
                     {isBest ? (
                       <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                         Best
@@ -243,9 +243,9 @@ export function YieldDetailSectionAltSources({
               >
                 <TableCell className="px-0 py-2 pr-2">
                   <div className="flex items-center gap-1.5">
-                    <YieldSourceLink href={source.url} className="text-foreground">
+                    <TableSourceLink href={source.url} className="text-foreground">
                       {source.displayLabel}
-                    </YieldSourceLink>
+                    </TableSourceLink>
                     {isBest ? (
                       <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                         Best

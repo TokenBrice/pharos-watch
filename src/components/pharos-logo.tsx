@@ -24,7 +24,7 @@ export function PharosLogo({ size = 32, className, priority = false }: PharosLog
       style={{ width: size, height: size }}
     >
       <Image
-        src="/pharos-icon.png"
+        src="/pharos-icon.svg"
         alt="Pharos"
         width={size}
         height={size}

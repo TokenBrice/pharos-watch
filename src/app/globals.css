@@ -302,48 +302,38 @@
     }
   }
 
-  /* Column resize handle */
-  .pharos-resize-handle {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    cursor: col-resize;
-    opacity: 0;
-    transition: opacity var(--motion-duration-fast);
-    background: var(--brand-accent);
-  }
-  
-  [data-slot="table-head"]:hover .pharos-resize-handle,
-  .pharos-resize-handle.is-resizing {
-    opacity: 1;
-  }
-  
-  .pharos-resize-handle:hover,
-  .pharos-resize-handle.is-resizing {
-    width: 6px;
-  }
-  
-  /* Density modes - use !important to override Tailwind classes */
-  .pharos-density-compact [data-slot="table-cell"] {
-    padding: 0.25rem 0.5rem !important;
-    font-size: 0.75rem !important;
+  /* Table density tokens. Application rules live in the utilities layer so
+     caller padding utilities can still replace the shared TableCell defaults. */
+  .pharos-density-list {
+    --pharos-table-cell-padding-x: 0.5rem;
+    --pharos-table-cell-padding-y: 0.125rem;
+    --pharos-table-font-size: 0.75rem;
+    --pharos-table-line-height: 1rem;
+    --pharos-table-head-height: 1.75rem;
   }
 
-  .pharos-density-list [data-slot="table-cell"] {
-    padding: 0.125rem 0.5rem !important;
-    font-size: 0.75rem !important;
+  .pharos-density-compact {
+    --pharos-table-cell-padding-x: 0.5rem;
+    --pharos-table-cell-padding-y: 0.25rem;
+    --pharos-table-font-size: 0.75rem;
+    --pharos-table-line-height: 1rem;
+    --pharos-table-head-height: 2rem;
   }
   
-  .pharos-density-comfortable [data-slot="table-cell"] {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.875rem !important;
+  .pharos-density-comfortable {
+    --pharos-table-cell-padding-x: 0.75rem;
+    --pharos-table-cell-padding-y: 0.5rem;
+    --pharos-table-font-size: 0.875rem;
+    --pharos-table-line-height: 1.25rem;
+    --pharos-table-head-height: 2.5rem;
   }
   
-  .pharos-density-spacious [data-slot="table-cell"] {
-    padding: 0.75rem 1rem !important;
-    font-size: 1rem !important;
+  .pharos-density-spacious {
+    --pharos-table-cell-padding-x: 1rem;
+    --pharos-table-cell-padding-y: 0.75rem;
+    --pharos-table-font-size: 1rem;
+    --pharos-table-line-height: 1.5rem;
+    --pharos-table-head-height: 3.25rem;
   }
   [data-slot="button"][data-variant="default"] {
     box-shadow:
@@ -1013,6 +1003,78 @@
     background: var(--table-header-bg);
     box-shadow: var(--table-header-shadow);
   }
+
+  :where(
+    .pharos-density-list,
+    .pharos-density-compact,
+    .pharos-density-comfortable,
+    .pharos-density-spacious
+  )
+    :where([data-slot="table"]).text-sm {
+    font-size: var(--pharos-table-font-size);
+    line-height: var(--pharos-table-line-height);
+  }
+
+  :where(
+    .pharos-density-list,
+    .pharos-density-compact,
+    .pharos-density-comfortable,
+    .pharos-density-spacious
+  )
+    :where([data-slot="table-cell"], [data-slot="table-head"]).px-3 {
+    padding-inline: var(--pharos-table-cell-padding-x);
+  }
+
+  :where(
+    .pharos-density-list,
+    .pharos-density-compact,
+    .pharos-density-comfortable,
+    .pharos-density-spacious
+  )
+    :where([data-slot="table-cell"]).py-2 {
+    padding-block: var(--pharos-table-cell-padding-y);
+  }
+
+  :where(
+    .pharos-density-list,
+    .pharos-density-compact,
+    .pharos-density-comfortable,
+    .pharos-density-spacious
+  )
+    :where([data-slot="table-head"]).h-10 {
+    height: var(--pharos-table-head-height);
+  }
+
+  @media (hover: hover) {
+    [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
+      transform: translateX(1px);
+    }
+  }
+
+  [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
+    border-left-color: var(--brand-accent);
+    background-color: var(--table-row-hover);
+  }
+
+  [data-slot="table-row"][data-row-intent="scan"]:hover {
+    background-color: var(--table-row-hover);
+  }
+
+  [data-slot="table-row"][data-row-intent="static"]:hover {
+    background-color: transparent;
+  }
+
+  /* Risk rows keep their semantic left edge even when hover affordances apply. */
+  [data-slot="table-row"].pharos-row-risk-depeg:hover {
+    border-left-color: var(--p-red-500);
+  }
+  [data-slot="table-row"].pharos-row-risk-poor:hover {
+    border-left-color: var(--p-orange-500);
+  }
+  [data-slot="table-row"].pharos-row-risk-warning:hover {
+    border-left-color: var(--p-amber-500);
+  }
+
   /* Shadow appears when header is sticky (scrolled) */
   .table-header-sticky:has(tbody tr:first-child) thead {
     box-shadow: 0 4px 6px -2px oklch(0 0 0 / 0.1);
@@ -1306,12 +1368,22 @@
     fill-opacity: var(--psi-band-opacity);
   }
 
-  /* Enhanced table row interactions */
+  /* Intent-aware table row interactions. Rows without an intent keep the
+     legacy affordance until table callers finish migrating to data-row-intent. */
   [data-slot="table-row"] {
+    transition:
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  [data-slot="table-row"]:where([data-row-intent="interactive"], [data-row-intent="scan"], :not([data-row-intent])) {
     transition:
       background-color var(--motion-duration-fast) var(--motion-ease-standard),
       transform var(--motion-duration-fast) var(--motion-ease-standard),
       border-color var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])) {
     border-left: 3px solid transparent;
   }
 
@@ -1322,33 +1394,11 @@
     scroll-margin-bottom: var(--mobile-utility-safe-offset, 0px);
   }
 
-  @media (hover: hover) {
-    [data-slot="table-row"]:hover {
-      transform: translateX(1px);
-    }
-  }
-
-  [data-slot="table-row"]:hover {
-    border-left-color: var(--brand-accent);
-    background-color: var(--table-row-hover);
-  }
-
-  /* Override for risk rows - keep their color on hover */
-  [data-slot="table-row"].pharos-row-risk-depeg:hover {
-    border-left-color: var(--p-red-500);
-  }
-  [data-slot="table-row"].pharos-row-risk-poor:hover {
-    border-left-color: var(--p-orange-500);
-  }
-  [data-slot="table-row"].pharos-row-risk-warning:hover {
-    border-left-color: var(--p-amber-500);
-  }
-
   @media (prefers-reduced-motion: reduce) {
     [data-slot="table-row"] {
       transition: none;
     }
-    [data-slot="table-row"]:hover {
+    [data-slot="table-row"]:where([data-row-intent="interactive"], :not([data-row-intent])):hover {
       transform: none;
     }
   }

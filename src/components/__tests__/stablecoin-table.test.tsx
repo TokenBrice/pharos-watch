@@ -13,7 +13,8 @@ import {
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
-const { virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
+const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
+  scrollToIndexMock: vi.fn(),
   virtualItemsMock: [{ index: 0, start: 0, end: 40 }],
   virtualTotalSizeMock: { current: 40 },
 }));
@@ -38,6 +39,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: () => ({
     getVirtualItems: () => virtualItemsMock,
     getTotalSize: () => virtualTotalSizeMock.current,
+    scrollToIndex: scrollToIndexMock,
   }),
 }));
 
@@ -131,6 +133,7 @@ describe("StablecoinTable", () => {
   beforeEach(() => {
     resetBrowserStorage();
     push.mockReset();
+    scrollToIndexMock.mockReset();
     setMobileMedia(false);
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });
     virtualTotalSizeMock.current = 40;
@@ -468,5 +471,47 @@ describe("StablecoinTable", () => {
     expect(spacerCell?.style.height).toBe("40px");
     expect(spacerCell?.style.padding).toBe("0px");
     expect(usdcRow?.getAttribute("data-row-striped")).toBe("true");
+  });
+
+  it("keeps the virtual cursor idle until row intent", async () => {
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    const row = screen.getByText("USDT").closest("tr");
+
+    expect(row?.getAttribute("data-cursor")).toBeNull();
+    expect(scrollToIndexMock).not.toHaveBeenCalled();
+
+    fireEvent.mouseEnter(row as HTMLTableRowElement);
+
+    await waitFor(() => {
+      expect(row?.getAttribute("data-cursor")).toBe("true");
+    });
+    expect(scrollToIndexMock).not.toHaveBeenCalled();
+  });
+
+  it("scrolls the virtual cursor only when keyboard intent targets an offscreen row", async () => {
+    render(
+      <StablecoinTable
+        data={[coin, usdc]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    const firstLink = screen.getByRole("link", { name: /View Tether \(USDT\) details/i });
+    firstLink.focus();
+    fireEvent.keyDown(window, { key: "j" });
+
+    await waitFor(() => {
+      expect(scrollToIndexMock).toHaveBeenCalledWith(1);
+    });
   });
 });

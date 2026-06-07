@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -97,9 +97,9 @@ function YieldSourceSheetBody({
           </p>
           <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
             <div className="flex items-center gap-2">
-              <YieldSourceLink href={selectedSource.url} className="text-sm font-medium text-foreground">
+              <TableSourceLink href={selectedSource.url} className="text-sm font-medium text-foreground">
                 {selectedSource.displayLabel}
-              </YieldSourceLink>
+              </TableSourceLink>
               <Badge
                 variant="outline"
                 className={cn("text-xs", YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "")}

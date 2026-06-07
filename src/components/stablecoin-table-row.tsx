@@ -30,6 +30,7 @@ import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
 import type { TableDensity } from "@/hooks/use-table-density";
+import type { UseRowCursorResult } from "@/hooks/use-row-cursor";
 
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
@@ -54,6 +55,7 @@ interface StablecoinVirtualRowProps {
   onTogglePinned?: (coinId: string) => void;
   onNavigate: (coinId: string) => void;
   onPrefetch: (coinId: string) => void;
+  rowProps?: ReturnType<UseRowCursorResult["getRowProps"]>;
   measureElement?: (element: HTMLTableRowElement | null) => void;
 }
 
@@ -106,6 +108,7 @@ function StablecoinVirtualRowBase({
   onTogglePinned,
   onNavigate,
   onPrefetch,
+  rowProps,
   measureElement,
 }: StablecoinVirtualRowProps) {
   const circulating = getCirculatingRaw(coin);
@@ -140,9 +143,10 @@ function StablecoinVirtualRowBase({
 
   return (
     <TableRow
+      {...rowProps}
       ref={measureElement}
       key={coin.id}
-      className={`group cursor-pointer ${riskClass}`}
+      className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
       data-index={virtualIndex}
       data-row-striped={isStriped ? "true" : undefined}
@@ -150,7 +154,10 @@ function StablecoinVirtualRowBase({
         if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
         onNavigate(coin.id);
       }}
-      onMouseEnter={() => onPrefetch(coin.id)}
+      onMouseEnter={() => {
+        rowProps?.onMouseEnter?.();
+        onPrefetch(coin.id);
+      }}
     >
       {showPinnedControl && (
         <TableCell className="text-center">

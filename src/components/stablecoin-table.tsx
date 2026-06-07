@@ -81,45 +81,6 @@ function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): b
   return left.every((id, index) => id === right[index]);
 }
 
-// Resolve the detail-link href of the cursor row so the cursor highlight can be
-// matched against the rendered <tr> (see the cursor-paint effect). The shared
-// row component encodes the coin id in `buildStablecoinUrl`, so we match on that
-// href rather than reaching into the non-owned row markup.
-function cursorCoinId(rows: readonly StablecoinData[], index: number): string | null {
-  const coin = rows[index];
-  return coin ? buildStablecoinUrl(coin.id) : null;
-}
-
-function findCursorTableRow(scrollEl: HTMLElement, cursorHref: string): HTMLTableRowElement | null {
-  const links = scrollEl.querySelectorAll<HTMLAnchorElement>('tbody tr [data-stablecoin-detail-link="true"]');
-  for (const link of links) {
-    if (link.getAttribute("href") === cursorHref) {
-      return link.closest("tr");
-    }
-  }
-  return null;
-}
-
-function paintCursorTableRow(row: HTMLTableRowElement): void {
-  row.setAttribute("data-cursor", "true");
-  if (!row.hasAttribute("tabindex")) {
-    row.tabIndex = -1;
-    row.setAttribute("data-cursor-tabindex", "true");
-  }
-  row.style.boxShadow = "inset 3px 0 0 0 var(--brand-accent)";
-  row.style.backgroundColor = "color-mix(in oklab, var(--muted) 40%, transparent)";
-}
-
-function clearCursorTableRow(row: HTMLTableRowElement): void {
-  row.removeAttribute("data-cursor");
-  if (row.getAttribute("data-cursor-tabindex") === "true") {
-    row.removeAttribute("tabindex");
-    row.removeAttribute("data-cursor-tabindex");
-  }
-  row.style.boxShadow = "";
-  row.style.backgroundColor = "";
-}
-
 function getMobileTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
   const selectedWidth = visibleColumns.reduce(
     (total, id) => total + MOBILE_COLUMN_MIN_WIDTH_PX[id],
@@ -377,10 +338,6 @@ export function StablecoinTable({
   const totalHeight = virtualizer.getTotalSize();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
-  const lastVirtualItem = virtualItems[virtualItems.length - 1];
-  const virtualRangeKey = virtualItems.length > 0
-    ? `${virtualItems[0].index}:${lastVirtualItem.index}:${virtualItems.length}`
-    : "empty";
   const measureVirtualRow = useCallback(
     (element: HTMLTableRowElement | null) => {
       if (!element || typeof virtualizer.measureElement !== "function") return;
@@ -395,10 +352,8 @@ export function StablecoinTable({
 
   // P6 — j/k row cursor over the visible (post-pin) rows, scoped to the table.
   // o/Enter opens the dossier, s toggles the watchlist, c adds to /compare.
-  // Cursor scroll-into-view is handled inside the hook via the virtualizer. The
-  // highlight is painted onto the matching <tr> only when the cursor target or
-  // virtual range changes; each row carries a detail link whose href encodes the
-  // coin id, which we use to locate and mark the active row.
+  // Cursor scroll-into-view is handled inside the hook via the virtualizer; row
+  // highlighting is rendered through `data-cursor` props on the virtual row.
   const watchlist = useWatchlist();
   // Only hand the virtualizer to the cursor when it exposes `scrollToIndex`
   // (the hook calls it to keep the cursor visible). Guards against virtualizer
@@ -408,7 +363,7 @@ export function StablecoinTable({
     typeof virtualizer.scrollToIndex === "function"
       ? (virtualizer as unknown as Virtualizer<HTMLElement, Element>)
       : null;
-  const { cursorIndex } = useRowCursor<StablecoinData>({
+  const { getRowProps } = useRowCursor<StablecoinData>({
     rows: displayed,
     virtualizer: cursorVirtualizer,
     getRowId: (coin) => coin.id,
@@ -417,39 +372,6 @@ export function StablecoinTable({
     onAddToCompare: (coin) => router.push(buildLiveCompareUrl([coin.id])),
     scopeRef: tableRef as React.RefObject<HTMLElement>,
   });
-
-  const cursorHref = cursorCoinId(displayed, cursorIndex);
-  const paintedCursorRowRef = useRef<HTMLTableRowElement | null>(null);
-  useEffect(() => {
-    const scrollEl = scrollRef.current;
-    const previous = paintedCursorRowRef.current;
-    if (!scrollEl) {
-      if (previous) clearCursorTableRow(previous);
-      paintedCursorRowRef.current = null;
-      return;
-    }
-
-    if (previous && (!scrollEl.contains(previous) || cursorHref === null)) {
-      if (scrollEl.contains(previous)) clearCursorTableRow(previous);
-      paintedCursorRowRef.current = null;
-    }
-    if (cursorHref === null) return;
-
-    const current = paintedCursorRowRef.current;
-    if (current) {
-      const link = current.querySelector<HTMLAnchorElement>('[data-stablecoin-detail-link="true"]');
-      if (scrollEl.contains(current) && link?.getAttribute("href") === cursorHref) {
-        return;
-      }
-      clearCursorTableRow(current);
-      paintedCursorRowRef.current = null;
-    }
-
-    const next = findCursorTableRow(scrollEl, cursorHref);
-    if (!next) return;
-    paintCursorTableRow(next);
-    paintedCursorRowRef.current = next;
-  }, [cursorHref, virtualRangeKey]);
 
   // P8 — numeric column sort: providers broadcast the Nth visible column on
   // keys 1-9; map it to the matching sortable header and toggle its sort.
@@ -592,6 +514,7 @@ export function StablecoinTable({
                   showPinnedControl={showPinnedControls}
                   isPinned={pinnedStablecoinSet.has(coin.id)}
                   onTogglePinned={onTogglePinnedStablecoin}
+                  rowProps={getRowProps(virtualRow.index, coin.id)}
                   onNavigate={handleNavigate}
                   onPrefetch={prefetch}
                   measureElement={measureVirtualRow}

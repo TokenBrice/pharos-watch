@@ -49,8 +49,9 @@ vi.mock("@/components/yield-history-chart", () => ({
   ),
 }));
 
-vi.mock("@/components/yield-source-link", () => ({
-  YieldSourceLink: ({
+vi.mock("@/components/table", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/table")>()),
+  TableSourceLink: ({
     href,
     children,
     className,

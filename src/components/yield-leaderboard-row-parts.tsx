@@ -8,7 +8,7 @@ import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
@@ -387,9 +387,9 @@ export function YieldSourceDetailsCell({
               <TooltipContent className="text-[11px]">{confidenceLabel} confidence</TooltipContent>
             </Tooltip>
           ) : null}
-          <YieldSourceLink href={row.yieldSourceUrl} className="max-w-[160px]" iconClassName="h-3 w-3" stopPropagation>
+          <TableSourceLink href={row.yieldSourceUrl} className="max-w-[160px]" iconClassName="h-3 w-3" stopPropagation>
             {row.yieldSource}
-          </YieldSourceLink>
+          </TableSourceLink>
           {row.provenance?.sourceSwitch ? (
             <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
               source changed
@@ -650,13 +650,13 @@ export function YieldExpandedDetailsRow({
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source</p>
               <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                <YieldSourceLink
+                <TableSourceLink
                   href={row.yieldSourceUrl}
                   className="text-sm font-medium text-foreground"
                   stopPropagation
                 >
                   {row.yieldSource}
-                </YieldSourceLink>
+                </TableSourceLink>
                 {row.provenance?.sourceSwitch ? (
                   <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
                     source changed

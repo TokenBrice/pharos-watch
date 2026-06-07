@@ -6,34 +6,24 @@ export type TableDensity = "list" | "compact" | "comfortable" | "spacious";
 
 interface DensityConfig {
   rowHeight: number;
-  cellPadding: string;
-  fontSize: string;
   iconSize: number;
 }
 
 export const DENSITY_CONFIGS: Record<TableDensity, DensityConfig> = {
   list: {
     rowHeight: 28,
-    cellPadding: "px-2 py-0.5",
-    fontSize: "text-xs",
     iconSize: 18,
   },
   compact: {
     rowHeight: 32,
-    cellPadding: "px-2 py-1",
-    fontSize: "text-xs",
     iconSize: 20,
   },
   comfortable: {
     rowHeight: 40,
-    cellPadding: "px-3 py-2",
-    fontSize: "text-sm",
     iconSize: 24,
   },
   spacious: {
     rowHeight: 52,
-    cellPadding: "px-4 py-3",
-    fontSize: "text-base",
     iconSize: 28,
   },
 };

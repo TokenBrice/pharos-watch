@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
@@ -293,12 +293,12 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           </p>
           {yieldSourceUrl ? (
             <p className="mt-1.5">
-              <YieldSourceLink
+              <TableSourceLink
                 href={yieldSourceUrl}
                 className="text-xs font-medium text-foreground"
               >
                 Open yield source
-              </YieldSourceLink>
+              </TableSourceLink>
             </p>
           ) : null}
         </div>

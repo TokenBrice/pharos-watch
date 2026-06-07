@@ -92,7 +92,7 @@ export function HomeAltClient() {
   const discoverySuggestions = useHomepageDiscoverySuggestions();
 
   return (
-    <div>
+    <div id="data" tabIndex={-1}>
       <div className="space-y-3">
         <BelowFold forced={hashTargetForcesMount} minHeight={520} rootMargin="0px">
           <HomeAltMiniCardGrid />
@@ -115,6 +115,7 @@ export function HomeAltClient() {
 
       <section
         id="home-alt-rankings"
+        role="region"
         aria-labelledby="home-alt-rankings-title"
         className="mt-8 space-y-4 sm:mt-10"
       >

@@ -24,8 +24,9 @@ vi.mock("@/components/yield-history-chart", () => ({
   ),
 }));
 
-vi.mock("@/components/yield-source-link", () => ({
-  YieldSourceLink: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
+vi.mock("@/components/table", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/table")>()),
+  TableSourceLink: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
     <a href={href} className={className}>{children}</a>
   ),
 }));

@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -617,13 +617,13 @@ export function YieldMobileCard({
         >
           {altSourceCount > 0 ? `${1 + altSourceCount} sources` : "Source"}
         </button>
-        <YieldSourceLink
+        <TableSourceLink
           href={row.yieldSourceUrl}
           className="min-h-11 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium"
           iconClassName="h-3.5 w-3.5"
         >
           Provider
-        </YieldSourceLink>
+        </TableSourceLink>
         <Link
           href={`${buildStablecoinUrl(row.id)}yield/`}
           prefetch={false}

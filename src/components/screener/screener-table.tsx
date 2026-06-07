@@ -11,6 +11,7 @@ import {
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
@@ -127,6 +128,8 @@ export function ScreenerTable({
   const watchlist = useWatchlist();
   const tableRef = useRef<HTMLDivElement>(null);
   const compareLinkRef = useRef<HTMLAnchorElement>(null);
+  const isMobileLayout = useIsMobile(768);
+  const showDesktopSparklines = !useIsMobile(1280);
 
   // P6 — j/k row cursor over the desktop table rows. o/Enter opens the dossier,
   // s toggles the watchlist, c adds to /compare. The hook bails while an input
@@ -148,6 +151,7 @@ export function ScreenerTable({
     onToggleStar: (row) => watchlist.toggle(row.id),
     onAddToCompare: () => compareLinkRef.current?.click(),
     scopeRef: tableRef,
+    enabled: !isMobileLayout,
   });
   const compareHref = cursorId ? buildLiveCompareUrl([cursorId]) : null;
 
@@ -165,9 +169,9 @@ export function ScreenerTable({
     return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
   }, [toggleSort]);
 
-  return (
-    <>
-      <div className="space-y-3 md:hidden">
+  if (isMobileLayout) {
+    return (
+      <div className="space-y-3">
         <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
           <p className="pharos-kicker mb-2">Sort Results</p>
           <MobileSortPills
@@ -192,49 +196,52 @@ export function ScreenerTable({
           </div>
         )}
       </div>
+    );
+  }
 
-      <div ref={tableRef} className="hidden md:block">
-        {/* Hidden target for the cursor's `c` (add-to-compare) shortcut; a real
+  return (
+    <div ref={tableRef}>
+      {/* Hidden target for the cursor's `c` (add-to-compare) shortcut; a real
             Next <Link> so navigation stays client-side without `useRouter`. */}
-        {compareHref ? (
-          <Link
-            ref={compareLinkRef}
-            href={compareHref}
-            aria-hidden="true"
-            tabIndex={-1}
-            className="sr-only"
-          >
-            Compare cursor row
-          </Link>
-        ) : null}
-        <DataTableShell<ScreenerSortKey>
-          tableId="stablecoin-screener"
-          testId="stablecoin-screener-table"
-          columns={COLUMNS}
-          sort={sort}
-          striped
-          refreshingQueryKeys={SCREENER_REFRESH_QUERY_KEYS}
-          isPending={isLoading}
+      {compareHref ? (
+        <Link
+          ref={compareLinkRef}
+          href={compareHref}
+          aria-hidden="true"
+          tabIndex={-1}
+          className="sr-only"
         >
-          {isLoading ? (
-            <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
-          ) : rows.length === 0 ? (
-            <DataTableEmptyRow colSpan={COLUMNS.length}>
-              <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
-            </DataTableEmptyRow>
-          ) : (
-            rows.map((row, index) => (
-              <ScreenerRow
-                key={row.id}
-                row={row}
-                logo={logos?.[row.id]}
-                rowProps={getRowProps(index, row.id)}
-              />
-            ))
-          )}
-        </DataTableShell>
-      </div>
-    </>
+          Compare cursor row
+        </Link>
+      ) : null}
+      <DataTableShell<ScreenerSortKey>
+        tableId="stablecoin-screener"
+        testId="stablecoin-screener-table"
+        columns={COLUMNS}
+        sort={sort}
+        striped
+        refreshingQueryKeys={SCREENER_REFRESH_QUERY_KEYS}
+        isPending={isLoading}
+      >
+        {isLoading ? (
+          <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
+        ) : rows.length === 0 ? (
+          <DataTableEmptyRow colSpan={COLUMNS.length}>
+            <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
+          </DataTableEmptyRow>
+        ) : (
+          rows.map((row, index) => (
+            <ScreenerRow
+              key={row.id}
+              row={row}
+              logo={logos?.[row.id]}
+              rowProps={getRowProps(index, row.id)}
+              showSparklines={showDesktopSparklines}
+            />
+          ))
+        )}
+      </DataTableShell>
+    </div>
   );
 }
 
@@ -369,10 +376,12 @@ function ScreenerRow({
   row,
   logo,
   rowProps,
+  showSparklines,
 }: {
   row: ScreenerRow;
   logo?: string;
   rowProps?: ReturnType<UseRowCursorResult["getRowProps"]>;
+  showSparklines: boolean;
 }) {
   return (
     <TableRow
@@ -428,25 +437,29 @@ function ScreenerRow({
         data-column-id="peg30d"
         className="text-right w-[112px] hidden xl:table-cell"
       >
-        <RowSparkline
-          data={getRowPegDeviationSeries(row)}
-          signed
-          referenceValue={0}
-          ariaLabel={`30-day peg deviation for ${row.symbol}`}
-          width={96}
-          height={16}
-        />
+        {showSparklines ? (
+          <RowSparkline
+            data={getRowPegDeviationSeries(row)}
+            signed
+            referenceValue={0}
+            ariaLabel={`30-day peg deviation for ${row.symbol}`}
+            width={96}
+            height={16}
+          />
+        ) : null}
       </TableCell>
       <TableCell
         data-column-id="supply30d"
         className="text-right w-[112px] hidden xl:table-cell"
       >
-        <RowSparkline
-          data={getRowSupplySeries(row)}
-          ariaLabel={`30-day supply trajectory for ${row.symbol}`}
-          width={96}
-          height={16}
-        />
+        {showSparklines ? (
+          <RowSparkline
+            data={getRowSupplySeries(row)}
+            ariaLabel={`30-day supply trajectory for ${row.symbol}`}
+            width={96}
+            height={16}
+          />
+        ) : null}
       </TableCell>
     </TableRow>
   );

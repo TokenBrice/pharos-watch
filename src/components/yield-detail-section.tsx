@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { YieldSourceLink } from "@/components/yield-source-link";
+import { TableSourceLink } from "@/components/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -264,9 +264,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
           <span className="font-semibold text-foreground">
-            <YieldSourceLink href={view.sourceExplorer.sourceIdentity.url}>
+            <TableSourceLink href={view.sourceExplorer.sourceIdentity.url}>
               {view.sourceExplorer.sourceIdentity.displayLabel}
-            </YieldSourceLink>
+            </TableSourceLink>
           </span>
           <span className="text-muted-foreground/40">·</span>
           <span
@@ -344,9 +344,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                 key={source.sourceKey}
                 className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2"
               >
-                <YieldSourceLink href={source.url} className="max-w-full text-sm text-foreground">
+                <TableSourceLink href={source.url} className="max-w-full text-sm text-foreground">
                   {source.displayLabel}
-                </YieldSourceLink>
+                </TableSourceLink>
                 <span className="font-mono text-sm tabular-nums text-muted-foreground">
                   {formatPercent(source.currentApy)}
                 </span>
