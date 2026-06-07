@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
   DataTableEmptyRow,
   DataTableLoadingRows,
   DataTableShell,
+  DataTableSkeletonShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
 
@@ -32,8 +34,17 @@ describe("DataTableShell", () => {
         topSlot={<button type="button">Export rows</button>}
         mobileScrollHint={<span>Swipe matrix</span>}
         containerClassName="custom-shell"
+        viewportClassName="custom-viewport"
+        viewportProps={{
+          "aria-label": "Stablecoin overview scroll area",
+          compactBottomPadding: false,
+          mobileScrollHint: <span>Viewport hint</span>,
+          scrollShadow: false,
+        }}
         tableClassName="min-w-[720px]"
+        tableProps={{ "aria-label": "Stablecoin overview rows" }}
         headerClassName="sticky top-0"
+        stickyHeader
         tableId="stablecoin-overview"
         testId="stablecoin-overview-table"
         striped
@@ -63,17 +74,24 @@ describe("DataTableShell", () => {
     expect(shell?.className).toContain("custom-shell");
     expect(shell?.className).toContain("pharos-table-striped");
     expect(shell?.className).toContain("pharos-density-compact");
+    expect(shell?.className).toContain("table-header-sticky");
     expect(shell?.getAttribute("data-table-id")).toBe("stablecoin-overview");
     expect(screen.getByTestId("stablecoin-overview-table")).toBe(shell);
     expect(viewport?.getAttribute("data-slot")).toBe("table-viewport");
+    expect(viewport?.className).toContain("custom-viewport");
+    expect(viewport?.className).not.toContain("scroll-shadow");
+    expect(viewport?.className).not.toContain("pb-3");
+    expect(viewport?.getAttribute("aria-label")).toBe("Stablecoin overview scroll area");
     expect(viewport?.querySelector("[data-slot='table-container']")).toBeNull();
     expect(table.className).toContain("min-w-[720px]");
+    expect(table.getAttribute("aria-label")).toBe("Stablecoin overview rows");
     expect(table.querySelector("[data-slot='table-header']")?.className).toContain("sticky top-0");
     expect(row.parentElement?.getAttribute("data-slot")).toBe("table-body");
     expect(marketCapHeader?.className).toContain("text-right");
     expect(marketCapHeader?.getAttribute("title")).toBe("Market capitalization");
     expect(screen.getByRole("button", { name: "Export rows" })).toBeTruthy();
-    expect(screen.getByText("Swipe matrix")).toBeTruthy();
+    expect(screen.queryByText("Swipe matrix")).toBeNull();
+    expect(screen.getByText("Viewport hint")).toBeTruthy();
     const paginationStatus = document.querySelector("[aria-live='polite']");
     expect(paginationStatus?.textContent?.replace(/\s+/g, " ").trim()).toBe("Showing 1–1 of 3 rows");
     expect(screen.getByRole("button", { name: "Go to previous page" }).getAttribute("aria-disabled")).toBe("true");
@@ -198,5 +216,65 @@ describe("DataTableShell", () => {
     expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByRole("table")).toBeTruthy();
+  });
+
+  it("matches background refresh query keys by precomputed hash", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const queryKey = ["stablecoins", { scope: "overview", page: 1 }] as const;
+    let resolveQuery!: (value: string) => void;
+    const pendingQuery = new Promise<string>((resolve) => {
+      resolveQuery = resolve;
+    });
+    const fetchPromise = queryClient.fetchQuery({
+      queryKey,
+      queryFn: () => pendingQuery,
+    });
+
+    const renderTable = (refreshingQueryKeys: readonly QueryKey[]) => (
+      <QueryClientProvider client={queryClient}>
+        <DataTableShell
+          columns={columns}
+          refreshingQueryKeys={refreshingQueryKeys}
+          isPending={false}
+        >
+          <tr>
+            <td>USDT</td>
+          </tr>
+        </DataTableShell>
+      </QueryClientProvider>
+    );
+
+    const { rerender } = render(renderTable([queryKey]));
+
+    expect(screen.getByRole("status").getAttribute("aria-label")).toBe("Refreshing data");
+
+    rerender(renderTable([["stablecoins", { scope: "other", page: 1 }]]));
+
+    expect(screen.getByRole("status").getAttribute("aria-label")).toBeNull();
+
+    await act(async () => {
+      resolveQuery("ok");
+      await fetchPromise;
+    });
+    queryClient.clear();
+  });
+
+  it("renders a reusable skeleton shell with table semantics", () => {
+    render(
+      <DataTableSkeletonShell
+        columns={columns}
+        rowCount={3}
+        tableId="loading-table"
+        testId="loading-table-shell"
+      />,
+    );
+
+    const shell = screen.getByTestId("loading-table-shell");
+
+    expect(shell.getAttribute("data-table-id")).toBe("loading-table");
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
+    expect(screen.getAllByTestId("loading-table-shell")).toHaveLength(1);
   });
 });

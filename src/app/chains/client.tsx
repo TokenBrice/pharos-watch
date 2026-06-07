@@ -413,9 +413,11 @@ export function ChainsLeaderboardClient() {
             toggleSort,
             getAriaSortValue,
           }}
-          containerClassName="overflow-y-auto overscroll-x-contain pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 md:max-h-[70vh]"
+          mobileScrollHint={false}
+          viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 md:max-h-[70vh]"
+          viewportProps={{ compactBottomPadding: false, vertical: true }}
           tableClassName="min-w-[760px] w-full"
-          headerClassName="sticky top-0 z-10"
+          stickyHeader
         >
           {sorted.map((chain, i) => {
             const rank = i + 1;

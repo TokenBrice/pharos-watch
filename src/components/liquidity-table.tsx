@@ -90,7 +90,9 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           toggleSort,
           getAriaSortValue,
         }}
-        containerClassName="overscroll-x-contain pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0"
+        mobileScrollHint={false}
+        viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0"
+        viewportProps={{ compactBottomPadding: false }}
         tableClassName="min-w-[450px] table-fixed"
         pagination={{
           page: effectivePage,

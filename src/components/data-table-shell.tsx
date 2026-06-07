@@ -1,7 +1,8 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import {
+  hashKey,
   QueryClientContext,
   useIsFetching,
   type QueryKey,
@@ -23,6 +24,8 @@ import {
 import { RefreshingBar } from "@/components/refreshing-bar";
 import { cn } from "@/lib/utils";
 import type { TableDensity } from "@/hooks/use-table-density";
+
+type DataTableFrameProps = React.ComponentProps<typeof TableFrame>;
 
 interface DataTableColumnBase {
   id: string;
@@ -52,7 +55,7 @@ export interface DataTableSortControls<K extends string> {
   getAriaSortValue: (key: K) => "ascending" | "descending" | "none";
 }
 
-interface DataTableShellProps<K extends string> {
+export interface DataTableShellProps<K extends string> {
   tableId?: string;
   testId?: string;
   columns: readonly DataTableColumn<K>[];
@@ -61,8 +64,12 @@ interface DataTableShellProps<K extends string> {
   topSlot?: React.ReactNode;
   mobileScrollHint?: React.ReactNode | false;
   containerClassName?: string;
+  viewportClassName?: DataTableFrameProps["viewportClassName"];
+  viewportProps?: DataTableFrameProps["viewportProps"];
   tableClassName?: string;
+  tableProps?: DataTableFrameProps["tableProps"];
   headerClassName?: string;
+  stickyHeader?: DataTableFrameProps["stickyHeader"];
   pagination?: TablePaginationProps;
   /** Enable striped rows for horizontal scanning */
   striped?: boolean;
@@ -95,11 +102,12 @@ function TableRefreshingBar({
   isPending: boolean;
   className?: string;
 }) {
+  const queryKeyHashes = useMemo(
+    () => new Set(queryKeys.map((queryKey) => hashKey(queryKey))),
+    [queryKeys],
+  );
   const fetchingCount = useIsFetching({
-    predicate: (query) =>
-      queryKeys.some(
-        (key) => JSON.stringify(query.queryKey) === JSON.stringify(key),
-      ),
+    predicate: (query) => queryKeyHashes.has(query.queryHash),
   });
   return <RefreshingBar active={!isPending && fetchingCount > 0} className={className} />;
 }
@@ -137,25 +145,40 @@ export function DataTableShell<K extends string>({
   children,
   sort,
   topSlot,
-  mobileScrollHint = "Swipe sideways for more columns",
+  mobileScrollHint,
   containerClassName,
+  viewportClassName,
+  viewportProps,
   tableClassName,
+  tableProps,
   headerClassName,
+  stickyHeader,
   pagination,
   striped = false,
   density = "comfortable",
   refreshingQueryKeys,
   isPending = false,
 }: DataTableShellProps<K>) {
+  const resolvedViewportProps = {
+    ...viewportProps,
+    mobileScrollHint:
+      viewportProps?.mobileScrollHint ??
+      mobileScrollHint ??
+      "Swipe sideways for more columns",
+  };
+
   return (
     <TableFrame
       tableId={tableId}
       testId={testId}
       className={containerClassName}
+      viewportClassName={viewportClassName}
+      viewportProps={resolvedViewportProps}
       tableClassName={tableClassName}
-      viewportProps={{ mobileScrollHint }}
+      tableProps={tableProps}
       density={density}
       striped={striped}
+      stickyHeader={stickyHeader}
       topSlot={
         <>
           <TableBackgroundRefreshingBar queryKeys={refreshingQueryKeys} isPending={isPending} />
@@ -235,4 +258,26 @@ export function DataTableLoadingRows({
       ))}
     </TableRow>
   ));
+}
+
+export interface DataTableSkeletonShellProps<K extends string>
+  extends Omit<DataTableShellProps<K>, "children"> {
+  rowCount?: number;
+}
+
+export function DataTableSkeletonShell<K extends string>({
+  columns,
+  rowCount = 5,
+  isPending = true,
+  ...shellProps
+}: DataTableSkeletonShellProps<K>) {
+  return (
+    <DataTableShell
+      {...shellProps}
+      columns={columns}
+      isPending={isPending}
+    >
+      <DataTableLoadingRows columns={columns} rowCount={rowCount} />
+    </DataTableShell>
+  );
 }
