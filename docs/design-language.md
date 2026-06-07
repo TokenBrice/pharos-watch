@@ -300,21 +300,23 @@ Current high-use areas:
 
 ### Shared Tables
 
-Use the Pharos-owned table primitives in `src/components/table/` for visible product tables instead of raw `<table>` markup or direct shadcn `Table` composition. The primitives preserve semantic table slots without shadcn's nested overflow wrapper, so table shells, viewport overflow, density classes, striping, sticky headers, test ids, and source-link affordances stay consistent.
+Use the Pharos-owned table primitives in `src/components/table/` for visible product tables instead of raw `<table>` markup or direct shadcn `Table` composition. The default `@/components/table` barrel is server-safe; client-only affordances such as settings menus and source links live under `@/components/table/client`. The primitives preserve semantic table slots without shadcn's nested overflow wrapper, so table shells, viewport overflow, density classes, striping, sticky headers, test ids, and row naming stay consistent.
 
 Current component roles:
 
 | Component | Use when | Notes |
 | --- | --- | --- |
-| `TableFrame` | Standard children-first row tables, status/admin tables, embedded detail tables, and static content tables | Keep route-specific rows/cells as children; pass `tableId` and `testId` for stable selectors. |
+| `TableFrame` | Standard children-first row tables, status/admin tables, embedded detail tables, and static content tables | Keep route-specific rows/cells as children; pass `tableId` for stable selectors and fallback table naming; `data-testid` defaults to `${tableId}-table`. |
 | `DataTableShell` | Sortable/paginated analytics tables that already have column descriptors and custom row children | Compatibility layer over `TableFrame`; still supports route-owned top slots and pagination. |
 | `MatrixTable` | Comparison/coverage matrices with sticky row headers or metric columns | Do not force matrix behavior into row-table APIs. |
 | `VirtualTableFrame` | Virtualized large tables such as the homepage stablecoin overview | Keep domain-specific row rendering, preference keys, and actions in the route wrapper; share only the shell, viewport, and table element. |
 | `TableToolbarFrame` | Generic table toolbar layout with title/meta/actions | Use this before creating route-local toolbar chrome. |
-| `TableSettingsMenu` | Optional density, column, or custom table settings popovers | Column visibility remains caller-owned; do not force every table into the stablecoin column model. |
-| `TableSourceLink` | External source links inside table cells or row details | Keeps focus, truncation, external-link icon, and optional row-click propagation behavior consistent. |
+| `TableControlsToolbar` | Shared density/settings/export toolbar for client tables | Import from `@/components/table/client`; pass route-specific column pickers through `columnsSlot`. |
+| `TableSettingsMenu` | Optional density, column, or custom table settings popovers | Import from `@/components/table/client`; column visibility remains caller-owned. |
+| `TableSkeletonRows` | Loading rows that preserve table semantics and density classes | Use inside `TableFrame`/`VirtualTableFrame` rather than standalone `div.pharos-table-shell` skeletons. |
+| `TableSourceLink` | External source links inside table cells or row details | Import from `@/components/table/client`; keeps focus, truncation, external-link icon, and optional row-click propagation behavior consistent. |
 
-Content/reference tables should stay static: no sorting, export, toolbar, or pagination unless the route explicitly needs those controls. Accessibility-only chart data tables may remain specialized.
+Content/reference tables should stay static: no sorting, export, toolbar, or pagination unless the route explicitly needs those controls. Tables with captions keep caption-based accessible names; unnamed framed tables derive a fallback label from `tableId`. Accessibility-only chart data tables may remain specialized.
 
 ---
 
