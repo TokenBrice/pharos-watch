@@ -336,6 +336,7 @@ function ComplianceTable({
       testId={testId}
       chrome="bare"
       className="overflow-hidden rounded-2xl border border-border/60 bg-card/40"
+      tableClassName="table-fixed min-w-[1120px]"
       tableProps={{ "aria-label": ariaLabel }}
       viewportClassName="relative w-full"
       viewportProps={{
@@ -347,14 +348,14 @@ function ComplianceTable({
     >
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead>Coin</TableHead>
-          <TableHead>Regime</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Pathway / Type</TableHead>
-          <TableHead>Authority</TableHead>
-          <TableHead>Issuer Entity</TableHead>
-          {showReserveDisclosure ? <TableHead>Reserve Disclosure</TableHead> : null}
-          <TableHead className="text-right">Sources</TableHead>
+          <TableHead className="w-[190px]">Coin</TableHead>
+          <TableHead className="w-[80px]">Regime</TableHead>
+          <TableHead className="w-[130px]">Status</TableHead>
+          <TableHead className="w-[150px]">Pathway / Type</TableHead>
+          <TableHead className="w-[160px]">Authority</TableHead>
+          <TableHead className="w-[260px]">Issuer Entity</TableHead>
+          {showReserveDisclosure ? <TableHead className="w-[180px]">Reserve Disclosure</TableHead> : null}
+          <TableHead className="w-[300px] text-right">Sources</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -417,7 +418,7 @@ function ComplianceTableRow({
       {showReserveDisclosure ? (
         <TableCell>{row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}</TableCell>
       ) : null}
-      <TableCell className="text-right">
+      <TableCell className="w-[300px] whitespace-normal text-right align-top">
         <SourceLinks references={row.references} />
       </TableCell>
     </TableRow>
@@ -536,17 +537,18 @@ function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "gen
 function SourceLinks({ references }: { references: readonly { label: string; url: string }[] }) {
   if (references.length === 0) return <EmptyCell />;
   return (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="ml-auto flex max-w-[300px] flex-col items-end gap-1 overflow-hidden">
       {references.map((reference) => (
         <a
           key={`${reference.label}:${reference.url}`}
           href={reference.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
+          title={reference.label}
+          className="pharos-focus-ring inline-flex max-w-full items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
         >
-          {reference.label}
-          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          <span className="min-w-0 truncate">{reference.label}</span>
+          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
         </a>
       ))}
     </div>
