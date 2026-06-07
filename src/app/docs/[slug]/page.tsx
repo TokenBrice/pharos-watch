@@ -56,7 +56,7 @@ const mdxComponents = {
       chrome="content"
       density="compact"
       className={cn("my-4", className)}
-      tableProps={props}
+      tableProps={{ "aria-label": "Documentation table", ...props }}
       viewportProps={{ mobileScrollHint: false }}
     >
       {children}

@@ -49,7 +49,7 @@ describe("VirtualTableFrame", () => {
     );
 
     const shell = screen.getByTestId("stablecoin-overview-shell");
-    const table = screen.getByRole("table");
+    const table = screen.getByRole("table", { name: "Stablecoin Overview table" });
     const viewport = table.parentElement;
 
     expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");

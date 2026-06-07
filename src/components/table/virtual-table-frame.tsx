@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { TableElement } from "./table-element";
+import { hasTableCaptionChild, withFallbackTableAriaLabel } from "./table-label";
 import { TableSurface, type TableSurfaceProps } from "./table-surface";
 import { TableViewport, type TableViewportProps } from "./table-viewport";
 
@@ -66,6 +67,9 @@ export function VirtualTableFrame({
   } = viewportProps ?? {};
   const composedSurfaceRef = useComposedRef(ref, surfaceRef);
   const composedViewportRef = useComposedRef(viewportRef, viewportPropsRef);
+  const resolvedTablePropsWithLabel = withFallbackTableAriaLabel(surfaceProps.tableId, tableProps, {
+    hasCaption: hasTableCaptionChild(children),
+  });
 
   return (
     <TableSurface {...surfaceProps} ref={composedSurfaceRef} striped={striped}>
@@ -81,7 +85,7 @@ export function VirtualTableFrame({
         overscrollX={overscrollX}
         compactBottomPadding={compactBottomPadding}
       >
-        <TableElement className={tableClassName} {...tableProps}>
+        <TableElement className={tableClassName} {...resolvedTablePropsWithLabel}>
           {children}
         </TableElement>
       </TableViewport>

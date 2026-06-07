@@ -57,6 +57,7 @@ describe("Pharos table primitives", () => {
     expect(viewport?.className).toContain("overflow-x-auto");
     expect(viewport?.querySelector("[data-slot='table-container']")).toBeNull();
     expect(table.getAttribute("data-slot")).toBe("table");
+    expect(table.getAttribute("aria-label")).toBe("Stablecoin Overview table");
     expect(table.className).toContain("min-w-[480px]");
     expect(screen.getByText("Name").closest("th")?.getAttribute("data-slot")).toBe("table-head");
     expect(screen.getByText("USDC").closest("td")?.getAttribute("data-slot")).toBe("table-cell");
@@ -96,6 +97,23 @@ describe("Pharos table primitives", () => {
     expect(
       screen.getByText("Methodology reference").closest("caption")?.className,
     ).toContain("sr-only");
+  });
+
+  it("preserves explicit table labels over the table id fallback", () => {
+    render(
+      <TableFrame
+        tableId="fallback-id"
+        tableProps={{ "aria-label": "Explicit table label" }}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </TableFrame>,
+    );
+
+    expect(screen.getByRole("table", { name: "Explicit table label" })).toBeTruthy();
   });
 
   it("renders a compact content table from column and row definitions", () => {

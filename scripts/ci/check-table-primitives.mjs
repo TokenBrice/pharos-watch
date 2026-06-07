@@ -179,8 +179,9 @@ function hasTableCaption(node, sourceFile) {
   return /<\s*(TableCaption|caption)\b/.test(text);
 }
 
-function hasTableAriaLabel(node, sourceFile) {
+function hasTableAriaLabel(node, sourceFile, hasCaption = false) {
   if (hasAttribute(node, "aria-label") || hasAttribute(node, "tableAriaLabel")) return true;
+  if (!hasCaption && (hasAttribute(node, "tableId") || hasAttribute(node, "data-table-id"))) return true;
   const text = getOpeningText(node, sourceFile);
   return /["']aria-label["']\s*:/.test(text);
 }
@@ -304,7 +305,7 @@ function collectInventoryEntriesInFile(file, cwd) {
     if (!INVENTORY_PRIMITIVES.has(primitive)) return;
 
     const hasCaption = hasTableCaption(node, sourceFile);
-    const hasAriaLabel = hasTableAriaLabel(node, sourceFile);
+    const hasAriaLabel = hasTableAriaLabel(node, sourceFile, hasCaption);
     const mobileHint = getMobileHintState(primitive, node, sourceFile);
     entries.push({
       tableId: getAttributeValue(node, "tableId", sourceFile)
