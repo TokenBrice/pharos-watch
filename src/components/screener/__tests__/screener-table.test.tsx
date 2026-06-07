@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 
@@ -30,6 +31,32 @@ const row: ScreenerRow = {
   mintAuthority: "issuer-or-backend-mint",
 };
 
+const rowWithSeries: ScreenerRow = {
+  ...row,
+  pegDeviationSeries: [0, 3, -2, 1],
+  supplySeries: [98_000_000, 99_000_000, 100_000_000],
+};
+
+function installViewportMatchMedia(width: number) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => {
+      const maxWidth = /max-width:\s*(\d+)px/.exec(query)?.[1];
+      return {
+        matches: maxWidth ? width <= Number(maxWidth) : false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      };
+    }),
+  });
+}
+
 function makeSort(overrides: Partial<DataTableSortControls<ScreenerSortKey>> = {}): DataTableSortControls<ScreenerSortKey> {
   return {
     sortKey: "safetyScore",
@@ -40,9 +67,14 @@ function makeSort(overrides: Partial<DataTableSortControls<ScreenerSortKey>> = {
   };
 }
 
+afterEach(() => {
+  cleanupFrontendTest();
+});
+
 describe("ScreenerTable mobile cards", () => {
   it("renders the mobile card path with compact score facts and mobile sort controls", () => {
     const toggleSort = vi.fn();
+    installViewportMatchMedia(500);
 
     render(
       <ScreenerTable
@@ -62,5 +94,57 @@ describe("ScreenerTable mobile cards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Supply" }));
 
     expect(toggleSort).toHaveBeenCalledWith("supply");
+    expect(screen.queryByTestId("stablecoin-screener-table")).toBeNull();
+  });
+});
+
+describe("ScreenerTable desktop table", () => {
+  it("renders only the desktop table branch on desktop viewports", () => {
+    installViewportMatchMedia(1400);
+
+    render(
+      <ScreenerTable
+        rows={[row]}
+        isLoading={false}
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    expect(screen.queryByText("Sort Results")).toBeNull();
+  });
+
+  it("skips xl-only sparkline SVGs below the xl breakpoint", () => {
+    installViewportMatchMedia(900);
+
+    render(
+      <ScreenerTable
+        rows={[rowWithSeries]}
+        isLoading={false}
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /30-day peg deviation for USDT/i })).toBeNull();
+    expect(screen.queryByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeNull();
+  });
+
+  it("renders sparkline SVGs on xl desktop viewports", () => {
+    installViewportMatchMedia(1400);
+
+    render(
+      <ScreenerTable
+        rows={[rowWithSeries]}
+        isLoading={false}
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: /30-day peg deviation for USDT/i })).toBeTruthy();
+    expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
   });
 });

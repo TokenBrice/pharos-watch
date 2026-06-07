@@ -141,14 +141,14 @@
        full viewport in one coordinated act on theme swap. */
     view-transition-name: root;
   }
-
+  
   /* M17 — orchestrated theme cross-dissolve. 220ms with standard ease. */
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: 220ms;
     animation-timing-function: var(--motion-ease-standard);
   }
-
+  
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-old(root),
     ::view-transition-new(root) {
@@ -158,7 +158,7 @@
       animation: none;
     }
   }
-  
+
   /* Respect reduced motion for scroll behavior */
   @media (prefers-reduced-motion: reduce) {
     html {
@@ -226,7 +226,7 @@
     transform: translateY(1px);
     transition-duration: 0.05s;
   }
-  
+
   /* Enhanced button press feedback */
   [data-slot="button"][data-variant="default"]:not(:disabled):active {
     box-shadow: 
@@ -319,7 +319,7 @@
     --pharos-table-line-height: 1rem;
     --pharos-table-head-height: 2rem;
   }
-  
+
   .pharos-density-comfortable {
     --pharos-table-cell-padding-x: 0.75rem;
     --pharos-table-cell-padding-y: 0.5rem;
@@ -327,7 +327,7 @@
     --pharos-table-line-height: 1.25rem;
     --pharos-table-head-height: 2.5rem;
   }
-  
+
   .pharos-density-spacious {
     --pharos-table-cell-padding-x: 1rem;
     --pharos-table-cell-padding-y: 0.75rem;
@@ -1004,43 +1004,23 @@
     box-shadow: var(--table-header-shadow);
   }
 
-  :where(
-    .pharos-density-list,
-    .pharos-density-compact,
-    .pharos-density-comfortable,
-    .pharos-density-spacious
-  )
+  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
     :where([data-slot="table"]).text-sm {
     font-size: var(--pharos-table-font-size);
     line-height: var(--pharos-table-line-height);
   }
 
-  :where(
-    .pharos-density-list,
-    .pharos-density-compact,
-    .pharos-density-comfortable,
-    .pharos-density-spacious
-  )
+  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
     :where([data-slot="table-cell"], [data-slot="table-head"]).px-3 {
     padding-inline: var(--pharos-table-cell-padding-x);
   }
 
-  :where(
-    .pharos-density-list,
-    .pharos-density-compact,
-    .pharos-density-comfortable,
-    .pharos-density-spacious
-  )
+  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
     :where([data-slot="table-cell"]).py-2 {
     padding-block: var(--pharos-table-cell-padding-y);
   }
 
-  :where(
-    .pharos-density-list,
-    .pharos-density-compact,
-    .pharos-density-comfortable,
-    .pharos-density-spacious
-  )
+  :where(.pharos-density-list, .pharos-density-compact, .pharos-density-comfortable, .pharos-density-spacious)
     :where([data-slot="table-head"]).h-10 {
     height: var(--pharos-table-head-height);
   }
@@ -1498,16 +1478,25 @@
  * map each severity slot to a brightness gradation of phosphor green. */
 .phosphor-green .text-zinc-600,
 .phosphor-green .text-zinc-400,
-.phosphor-green .dark\:text-zinc-400 { color: rgba(51, 255, 51, 0.5) !important; }
+.phosphor-green .dark\:text-zinc-400 {
+  color: rgba(51, 255, 51, 0.5) !important;
+}
 .phosphor-green .text-sky-700,
 .phosphor-green .text-sky-400,
-.phosphor-green .dark\:text-sky-400 { color: rgba(51, 255, 51, 0.72) !important; }
+.phosphor-green .dark\:text-sky-400 {
+  color: rgba(51, 255, 51, 0.72) !important;
+}
 .phosphor-green .text-amber-700,
 .phosphor-green .text-amber-400,
-.phosphor-green .dark\:text-amber-400 { color: #33ff33 !important; }
+.phosphor-green .dark\:text-amber-400 {
+  color: #33ff33 !important;
+}
 .phosphor-green .text-orange-700,
 .phosphor-green .text-orange-400,
-.phosphor-green .dark\:text-orange-400 { color: #33ff33 !important; font-weight: 600; }
+.phosphor-green .dark\:text-orange-400 {
+  color: #33ff33 !important;
+  font-weight: 600;
+}
 .phosphor-green .text-red-700,
 .phosphor-green .text-red-400,
 .phosphor-green .dark\:text-red-400 {
@@ -1518,7 +1507,9 @@
 .phosphor-green .text-emerald-500,
 .phosphor-green .text-emerald-600,
 .phosphor-green .text-emerald-400,
-.phosphor-green .dark\:text-emerald-400 { color: #33ff33 !important; }
+.phosphor-green .dark\:text-emerald-400 {
+  color: #33ff33 !important;
+}
 
 /* Per-class row + chip tints — collapse all hues to a faint uniform wash so
  * class identity comes from the slug text, not from color. */
@@ -1569,5 +1560,9 @@
   padding: 0;
 }
 .phosphor-toggle:hover,
-.phosphor-toggle:focus-visible { color: var(--foreground); }
-.phosphor-green .phosphor-toggle { color: #33ff33; }
+.phosphor-toggle:focus-visible {
+  color: var(--foreground);
+}
+.phosphor-green .phosphor-toggle {
+  color: #33ff33;
+}

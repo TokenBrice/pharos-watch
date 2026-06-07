@@ -28,16 +28,8 @@ export const DENSITY_CONFIGS: Record<TableDensity, DensityConfig> = {
   },
 };
 
-export function useTableDensity(): [
-  TableDensity,
-  (density: TableDensity) => void,
-  () => void,
-  DensityConfig,
-] {
-  const [density, setDensity, reset] = usePreference<TableDensity>(
-    "pharos-table-density",
-    "comfortable"
-  );
+export function useTableDensity(): [TableDensity, (density: TableDensity) => void, () => void, DensityConfig] {
+  const [density, setDensity, reset] = usePreference<TableDensity>("pharos-table-density", "comfortable");
 
   const config = DENSITY_CONFIGS[density];
 
