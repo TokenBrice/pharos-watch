@@ -12,6 +12,7 @@ export {
   ContentTableFrame,
 } from "./content-table";
 export { MatrixTable } from "./matrix-table";
+export { TableControlsToolbar } from "./table-controls-toolbar";
 export { TableFrame } from "./table-frame";
 export { TableSettingsMenu } from "./table-settings-menu";
 export { TableSourceLink } from "./table-source-link";
