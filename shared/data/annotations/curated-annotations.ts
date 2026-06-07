@@ -1734,6 +1734,19 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       href: "https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident",
     },
   ],
+  "apxusd-apyx": [
+    {
+      // 2026-06-04 — STRC (Strategy preferred equity) traded below its $100
+      // par as BTC fell under $63K, dragging apxUSD's reserve value; apxUSD
+      // briefly slipped to ~$0.93 before mean-reverting. Apyx framed it as
+      // expected behavior for a preferred-equity-backed dollar, not a break.
+      ts: Date.UTC(2026, 5, 4),
+      kind: "depeg",
+      label: "STRC preferred-equity drawdown — apxUSD depeg low ~$0.93",
+      severity: "med",
+      href: "https://www.coindesk.com/markets/2026/06/04/apyx-s-stablecoin-suffers-a-brief-depeg-protocol-says-its-a-feature-not-bug",
+    },
+  ],
   "cusd-celo": [
     {
       // 2020-06-28 — Governance activated the Celo stability protocol and
@@ -1834,6 +1847,19 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "Secondary-market discount — USP low ~$0.916",
       severity: "high",
       href: "https://coins.llama.fi/chart/coingecko:pareto-usp?start=1763000000&span=120&period=1d&searchWidth=4h",
+    },
+  ],
+  "usr-resolv": [
+    {
+      // 2026-03-22 — Attacker compromised a Resolv signing key (AWS KMS) and
+      // exploited a missing max-mint check to print 80M unbacked USR from
+      // ~$100K USDC, dumping on Curve. USR crashed ~70% (lows near $0.02),
+      // recovered only to ~$0.80; ~$25M extracted, protocol paused.
+      ts: Date.UTC(2026, 2, 22),
+      kind: "depeg",
+      label: "Resolv signing-key exploit — 80M unbacked USR minted, ~70% crash",
+      severity: "high",
+      href: "https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident",
     },
   ],
   "zeusd-zoth": [
