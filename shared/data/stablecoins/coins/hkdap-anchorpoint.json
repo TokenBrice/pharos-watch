@@ -42,7 +42,7 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint and OSL Group completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments; no tokens are yet in public circulation and no deployment contract address has been disclosed as of early June, with the Q2 window (ends June 30) nearly closed",
   "featuredContent": [
     {
       "type": "article",
@@ -66,6 +66,12 @@
       "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
       "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
       "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+    },
+    {
+      "date": "2026-04-28",
+      "type": "regulatory",
+      "title": "HKMA warns of fake HKDAP and HSBC tokens; confirms no licensed issuer has tokens in circulation",
+      "sourceUrl": "https://www.cryptotimes.io/2026/04/29/hong-kong-hkma-warns-of-fake-hkdap-and-hsbc-tokens-in-market/"
     },
     {
       "date": "2026-05-13",

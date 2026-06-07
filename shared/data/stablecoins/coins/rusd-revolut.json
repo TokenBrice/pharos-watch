@@ -42,7 +42,7 @@
   "announcedDate": "2025-10-23",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot covering payments, wholesale settlement, and crypto trading — results will inform the FCA's crypto framework targeting October 2027. A Revolut-branded proprietary USD stablecoin has not been officially confirmed; Polymarket puts the probability at ~25% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
+  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot — though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). A Revolut-branded proprietary USD stablecoin has not been officially confirmed; the USD path runs through the Lithuanian EMI / MiCA EMT route, and Polymarket currently puts the probability at ~33% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
   "featuredContent": [
     {
       "type": "article",
@@ -57,6 +57,12 @@
       "title": "Revolut secures MiCA license in Cyprus, is a stablecoin next?",
       "description": "EU counsel describes a Revolut stablecoin in 2026 as 'plausible' under MiCA; clarifies that the Cyprus CASP licence does not itself authorise issuance, which must come via Revolut's Lithuanian EMI.",
       "source": "Decrypt"
+    },
+    {
+      "type": "article",
+      "url": "https://thedefiant.io/converge/tradfi-and-fintech/revolut-plans-2027-us-bank-launch-stablecoin-services-day-one",
+      "title": "Revolut Plans 2027 US Bank Launch With Stablecoin Services Built In From Day One",
+      "source": "The Defiant"
     }
   ],
   "milestones": [
@@ -80,6 +86,20 @@
       "title": "FCA selects Revolut for UK stablecoin payment testing pilot",
       "description": "Revolut is one of 4 firms chosen from 20 applicants to trial stablecoin products in real-world UK conditions from Q1 2026; use cases include stablecoin payments, wholesale settlement, and crypto trading. Results will inform the FCA's crypto regulatory framework targeting October 2027.",
       "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "regulatory",
+      "title": "Revolut files OCC national bank charter application (Revolut Bank US, N.A.)",
+      "description": "Revolut applies for a US national bank charter with a $500M investment commitment, targeting a 2027 US bank launch with built-in stablecoin access (third-party USDC/USDT, not confirmed own issuance).",
+      "sourceUrl": "https://www.revolut.com/en-US/news/revolut_files_u_s_bank_charter_application_names_new_u_s_ceo/"
+    },
+    {
+      "date": "2026-03-11",
+      "type": "regulatory",
+      "title": "Revolut receives full UK banking licence from the PRA",
+      "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
     }
   ]
 }

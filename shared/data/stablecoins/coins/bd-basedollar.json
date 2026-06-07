@@ -43,7 +43,7 @@
   "status": "pre-launch",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); not yet deployed to mainnet; targeting Q2 2026",
+  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); GitHub shows an expanded multi-collateral scope (ETH, wstETH, rETH, cbETH, cbBTC, AERO, and LP tokens) with launch parameters updated for safety; not yet deployed to mainnet, with the Q2 2026 target window (ends June 30) nearing and no official slip announced",
   "milestones": [
     {
       "date": "2026-04-03",

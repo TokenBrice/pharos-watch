@@ -101,7 +101,7 @@
     }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path",
+  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path. On June 4 2026 Bybit became the first major exchange to list USDPT, adding LatAm fiat on/off-ramp access",
   "featuredContent": [
     {
       "type": "tweet",
@@ -130,6 +130,12 @@
       "title": "Western Union's Solana-Based Stablecoin Could Reshape Its Payment Model",
       "description": "Analyst coverage of the May 4 USDPT launch: B2B agent settlement first, consumer-facing 'Stable by Western Union' product planned for 40+ markets later in 2026.",
       "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://coincentral.com/bybit-and-western-union-launch-usdpt-trading-to-boost-stablecoin-adoption/",
+      "title": "Bybit and Western Union Launch USDPT Trading to Boost Stablecoin Adoption",
+      "source": "CoinCentral"
     }
   ],
   "custodyModel": "institutional-regulated",
@@ -195,6 +201,13 @@
       "title": "Fireblocks selected as core settlement infrastructure partner",
       "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
       "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "milestone",
+      "title": "Bybit becomes first major exchange to list USDPT",
+      "description": "Bybit lists USDPT with fiat on/off-ramp access for Latin American users.",
+      "sourceUrl": "https://crypto.news/bybit-launches-support-for-western-unions-usdpt-stablecoin/"
     }
   ],
   "launchDate": "2026-05-04"

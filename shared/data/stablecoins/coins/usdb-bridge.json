@@ -96,7 +96,7 @@
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; Payoneer integration announced Feb 17 will roll USDB into the Payoneer platform across select Q2 2026 markets; Visa + Bridge stablecoin-linked cards expanding from 18 to 100+ countries by end of 2026; distinct from Blast's USDB (usdb-blast)",
+  "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026. At Stripe Sessions 2026 (Apr 29) Bridge expanded stablecoin-backed cards to 30 countries (targeting 100+ by year-end via Visa) and added Tempo/Plasma/Celo/Sui support, COP/GBP on-off-ramps, and SWIFT/FedNow/ACH integration. Bridge Open Issuance now also powers MoneyGram's MGUSD (Stellar, Jun 2) and Deel's DLUSD (Tempo, Jun 3) alongside USDH, CASH, and USDSui; distinct from Blast's USDB (usdb-blast)",
   "featuredContent": [
     {
       "type": "article",
@@ -133,6 +133,27 @@
       "title": "Visa and Bridge expand stablecoin-linked cards from 18 to 100+ countries",
       "description": "Visa + Bridge program lets fintechs and wallets issue cards that spend stablecoin balances at Visa's 175M merchant locations; expansion targeted across Europe, Asia Pacific, Africa, and the Middle East by end of 2026.",
       "sourceUrl": "https://thedefiant.io/news/tradfi-and-fintech/visa-and-stripe-owned-bridge-roll-out-stablecoin-linked-cards-to-100-countries"
+    },
+    {
+      "date": "2026-04-29",
+      "type": "milestone",
+      "title": "Stripe Sessions 2026: USDB cards live in 30 countries; new chains and rails added",
+      "description": "Bridge announced stablecoin-backed cards live in 30 countries (targeting 100+ by year-end via Visa), Tempo/Plasma/Celo/Sui support, COP and GBP on/off-ramps, and SWIFT/FedNow/ACH pull integration.",
+      "sourceUrl": "https://stripe.com/blog/everything-we-announced-at-sessions-2026"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "partnership",
+      "title": "MoneyGram launches MGUSD on Stellar via Bridge Open Issuance",
+      "description": "MoneyGram issued MGUSD on Stellar using Bridge Open Issuance with M0 contracts and Fireblocks custody, serving 60M users across 200 countries.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/06/02/moneygram-launches-stablecoin-on-stellar-joining-rush-toward-digital-dollar-payments"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "partnership",
+      "title": "Deel launches DLUSD on Tempo via Bridge Open Issuance and Privy",
+      "description": "Deel became the first enterprise to combine Bridge, Privy wallets, and Tempo, launching DLUSD to pay workers starting in Argentina.",
+      "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/deel-launches-dlusd-pay-workers-060149026.html"
     }
   ]
 }

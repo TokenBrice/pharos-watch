@@ -36,7 +36,7 @@
   "announcedDate": "2026-05",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies; pilot announced May 2026; symbol and ticker not yet confirmed",
+  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. Pilot announced May 2026; symbol and ticker not yet confirmed",
   "featuredContent": [
     {
       "type": "article",

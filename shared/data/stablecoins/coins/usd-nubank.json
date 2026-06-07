@@ -41,7 +41,7 @@
   "announcedDate": "2025-09-18",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. The credit-card pilot is the first product surface, with a broader 'tokenize deposits and issue credit against tokenized assets' roadmap behind it. Whether Nubank issues its own dollar token or routes through an existing stablecoin (Campos Neto noted the open product question) is undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
+  "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. As of mid-2026 no own-token issuance has materialized: activity has centered on deepening USDC integration and on TradFi/crypto infrastructure (Nu Holdings won OCC conditional approval to form Nubank, N.A. in Jan 2026; Nubank is a design partner on Stripe/Paradigm's Tempo blockchain). Whether Nubank issues its own dollar token or routes through an existing stablecoin remains undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
   "featuredContent": [
     {
       "type": "article",
@@ -65,6 +65,13 @@
       "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
       "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
       "sourceUrl": "https://financefeeds.com/nubank-to-pilot-stablecoin-payments-via-credit-cards/"
+    },
+    {
+      "date": "2026-01-29",
+      "type": "regulatory",
+      "title": "Nu Holdings receives OCC conditional approval to form Nubank, N.A.",
+      "description": "US national bank charter (conditional) enables future digital asset custody; no stablecoin issuance named in the charter.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/01/30/latin-america-s-largest-crypto-friendly-fintech-nubank-secures-u-s-banking-approval"
     }
   ]
 }

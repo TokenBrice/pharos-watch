@@ -46,7 +46,7 @@
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Private testnet live (shared infrastructure with pUSD)",
+  "launchPhaseDetail": "Gated testnet live (shared infrastructure with pUSD); security review and audit-preparation phase underway; mainnet date uncommitted",
   "featuredContent": [
     {
       "type": "blog",
@@ -92,6 +92,13 @@
       "type": "testnet",
       "title": "Private testnet live (shared infrastructure with pUSD)",
       "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+    },
+    {
+      "date": "2026-04-13",
+      "type": "milestone",
+      "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
+      "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to participants (including pGOLD CDPs) by holdings.",
+      "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
     },
     {
       "date": "2026-04-27",

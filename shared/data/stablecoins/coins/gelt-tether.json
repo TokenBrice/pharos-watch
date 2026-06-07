@@ -44,7 +44,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-05",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
+  "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava. Tether signed an MOU with Georgia in June 2023 and has invested in CityPay.io (active at 2,000+ Georgian merchant locations); GEL₮ is stated to be issued on multiple blockchains. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
   "featuredContent": [
     {
       "type": "blog",
@@ -52,6 +52,12 @@
       "title": "Tether and the Government of Georgia to Launch GEL₮, the Official Stablecoin of Georgia",
       "description": "Tether and Georgia announce GEL₮, a Lari-pegged stablecoin under a purpose-built NBG framework designed for compatibility with the US GENIUS Act.",
       "source": "Tether"
+    },
+    {
+      "type": "article",
+      "url": "https://news.bitcoin.com/tether-partners-with-georgia-government-to-launch-gelt-stablecoin/",
+      "title": "Tether Partners With Georgia Government to Launch GEL₮ Stablecoin",
+      "source": "Bitcoin.com News"
     }
   ],
   "milestones": [

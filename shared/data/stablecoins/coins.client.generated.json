@@ -2121,7 +2121,7 @@
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H1",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "announced",
     "milestones": [
       {
@@ -2130,6 +2130,19 @@
         "title": "B3 announces BRL stablecoin and tokenization platform",
         "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
         "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+      },
+      {
+        "date": "2026-05-26",
+        "type": "milestone",
+        "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
+        "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
+        "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-H1",
+        "setOn": "2026-06-07"
       }
     ],
     "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
@@ -5561,7 +5574,7 @@
         "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
       }
     ],
-    "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet",
+    "collateral": "Planned 100% reserve backing — at least 40% in bank deposits with the remainder in short-term euro-area sovereign bonds diversified across EU countries, with 24/7 redemption; Qivalis states that no stablecoins or tokens have been issued yet",
     "blacklistStatus": true
   },
   {
@@ -7413,6 +7426,13 @@
         "title": "FIUSD featured at Fiserv 2026 Investor Day as a strategic growth vector",
         "description": "Fiserv positions FIUSD on an 'issued through banks, accepted through merchants' model with real-time clearing/settlement and white-label issuance; interbank-money-movement pilots with Bank of North Dakota, Huntington, and others remain on track for summer 2026.",
         "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "milestone",
+        "title": "CEO Lyons confirms FIUSD goes live in July 2026 at Bernstein conference",
+        "description": "At the Bernstein Strategic Decisions conference, CEO Michael Lyons stated 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch.",
+        "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
       }
     ],
     "genius": {
@@ -9555,6 +9575,12 @@
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       },
       {
+        "date": "2026-04-28",
+        "type": "regulatory",
+        "title": "HKMA warns of fake HKDAP and HSBC tokens; confirms no licensed issuer has tokens in circulation",
+        "sourceUrl": "https://www.cryptotimes.io/2026/04/29/hong-kong-hkma-warns-of-fake-hkdap-and-hsbc-tokens-in-market/"
+      },
+      {
         "date": "2026-05-13",
         "type": "testnet",
         "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
@@ -9591,6 +9617,18 @@
         "title": "RD InnoTech enters HKMA Stablecoin Issuer Sandbox (first cohort)",
         "description": "HKDR begins sandbox testing for digital asset trading and cross-border trade payments under HKMA supervision.",
         "sourceUrl": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/"
+      },
+      {
+        "date": "2024-08-07",
+        "type": "partnership",
+        "title": "Cobo designated preferred wallet partner for HKDR custody infrastructure",
+        "sourceUrl": "https://www.cobo.com/post/cobo-partners-rd-technologies-to-drive-the-adoption-of-hong-kong-dollar-stablecoin-hkdr"
+      },
+      {
+        "date": "2024-10-28",
+        "type": "partnership",
+        "title": "RD InnoTech names HashKey Exchange as distribution partner; Ethereum confirmed as deployment chain",
+        "sourceUrl": "https://rd.group/news/press-releases/RDinnoTech_future_stablecoin_launch_with_hashkey/"
       },
       {
         "date": "2025-05-21",
@@ -10956,6 +10994,13 @@
         "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
         "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
+      },
+      {
+        "date": "2026-06-01",
+        "type": "regulatory",
+        "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
+        "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
+        "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
       }
     ],
     "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch",
@@ -11597,6 +11642,13 @@
         "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
         "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
         "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "milestone",
+        "title": "Klarna Q1 2026 earnings make no mention of KlarnaUSD",
+        "description": "Klarna reported ~$1B revenue (+44% YoY) and 118M users; the earnings narrative focused on BNPL/GMV with no KlarnaUSD or stablecoin update.",
+        "sourceUrl": "https://investors.klarna.com/News--Events/news/news-details/2026/Klarna-Delivers-Strong-Start-to-2026-With-1Bn-Revenue-and-68M-Adj--Operating-Profit/default.aspx"
       }
     ],
     "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch",
@@ -11694,6 +11746,18 @@
         "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
         "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
         "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
+      },
+      {
+        "date": "2026-02-23",
+        "type": "partnership",
+        "title": "BDACS and Com2uS Holdings sign MoU to build KRW1 payment infrastructure on XPLA/CONX",
+        "sourceUrl": "https://en.sedaily.com/news/2026/02/23/bidax-com2us-holdings-partner-on-won-stablecoin"
+      },
+      {
+        "date": "2026-05-12",
+        "type": "regulatory",
+        "title": "Korea Digital Asset Basic Act excluded from National Assembly pre-recess agenda; H2 2026 earliest for resumed debate",
+        "sourceUrl": "https://www.cryptopolitan.com/south-korea-delays-digital-asset-basic-act/"
       },
       {
         "date": "2026-05-13",
@@ -15170,6 +15234,13 @@
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
       },
       {
+        "date": "2026-04-13",
+        "type": "milestone",
+        "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
+        "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to participants (including pGOLD CDPs) by holdings.",
+        "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
+      },
+      {
         "date": "2026-04-27",
         "type": "milestone",
         "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
@@ -15476,6 +15547,13 @@
         "type": "testnet",
         "title": "Private testnet goes live",
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      },
+      {
+        "date": "2026-04-13",
+        "type": "milestone",
+        "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
+        "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to pUSD Stability Pool participants by holdings.",
+        "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
       },
       {
         "date": "2026-04-27",
@@ -16094,6 +16172,13 @@
         "title": "Bank of England drops £20k individual holding cap for aggregate issuer caps",
         "description": "At CityWeek 2026 the BoE confirms it is abandoning the proposed £20,000 per-person holding limit in favour of aggregate issuance caps; revised draft rules expected June 2026.",
         "sourceUrl": "https://invezz.com/news/2026/05/19/bank-of-england-weighs-stablecoin-guardrail-alternatives-ahead-of-draft-rules/"
+      },
+      {
+        "date": "2026-06-02",
+        "type": "regulatory",
+        "title": "House of Lords committee urges BoE to drop individual holding limits and reconsider 40% reserve floor",
+        "description": "The Financial Services Regulation Committee called on the Bank of England to scrap per-person stablecoin holding limits entirely and reconsider the 40% unremunerated-reserve requirement, warning it would harm issuer viability.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/06/02/uk-house-of-lords-committee-calls-on-bank-of-england-to-reconsider-proposed-stablecoin-restrictions"
       }
     ],
     "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
@@ -16216,6 +16301,18 @@
     "launchPhase": "beta",
     "milestones": [
       {
+        "date": "2025-06-23",
+        "type": "milestone",
+        "title": "Fiserv launches FIUSD platform on Solana — Roughrider to be first white-label deployment",
+        "sourceUrl": "https://www.businesswire.com/news/home/20250623052523/en/Fiserv-Launches-New-FIUSD-Stablecoin-for-Financial-Institutions"
+      },
+      {
+        "date": "2025-07-18",
+        "type": "regulatory",
+        "title": "GENIUS Act signed into US law — federal framework cited by BND as enabling the pilot",
+        "sourceUrl": "https://www.gtlaw.com/en/insights/2025/7/genius-act-enacted-establishing-a-regulatory-framework-for-payment-stablecoins-issued-or-sold-in-the-united-states"
+      },
+      {
         "date": "2025-10-08",
         "type": "announcement",
         "title": "Bank of North Dakota announces Roughrider Coin",
@@ -16241,6 +16338,13 @@
         "title": "ND Industrial Commission unanimously approves bank-to-bank use case",
         "description": "10 local banks express pilot interest; risk rated 'low to moderate'; project cost-neutral; September 2026 launch reaffirmed; Fiserv contract finalization underway.",
         "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "milestone",
+        "title": "Fiserv CEO confirms FIUSD platform slips to July 2026; Roughrider September pilot still planned",
+        "description": "At the Bernstein Strategic Decisions conference, Fiserv's CEO confirmed the FIUSD platform goes live in July 2026 (from an earlier end-2025 target), compressing the runway to Roughrider's September 2026 state-bank pilot.",
+        "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
       }
     ],
     "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta",
@@ -16426,6 +16530,20 @@
         "title": "FCA selects Revolut for UK stablecoin payment testing pilot",
         "description": "Revolut is one of 4 firms chosen from 20 applicants to trial stablecoin products in real-world UK conditions from Q1 2026; use cases include stablecoin payments, wholesale settlement, and crypto trading. Results will inform the FCA's crypto regulatory framework targeting October 2027.",
         "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
+      },
+      {
+        "date": "2026-03-05",
+        "type": "regulatory",
+        "title": "Revolut files OCC national bank charter application (Revolut Bank US, N.A.)",
+        "description": "Revolut applies for a US national bank charter with a $500M investment commitment, targeting a 2027 US bank launch with built-in stablecoin access (third-party USDC/USDT, not confirmed own issuance).",
+        "sourceUrl": "https://www.revolut.com/en-US/news/revolut_files_u_s_bank_charter_application_names_new_u_s_ceo/"
+      },
+      {
+        "date": "2026-03-11",
+        "type": "regulatory",
+        "title": "Revolut receives full UK banking licence from the PRA",
+        "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
       }
     ],
     "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
@@ -20520,6 +20638,13 @@
         "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
         "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
         "sourceUrl": "https://financefeeds.com/nubank-to-pilot-stablecoin-payments-via-credit-cards/"
+      },
+      {
+        "date": "2026-01-29",
+        "type": "regulatory",
+        "title": "Nu Holdings receives OCC conditional approval to form Nubank, N.A.",
+        "description": "US national bank charter (conditional) enables future digital asset custody; no stablecoin issuance named in the charter.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/30/latin-america-s-largest-crypto-friendly-fintech-nubank-secures-u-s-banking-approval"
       }
     ],
     "collateral": "Pre-launch: backing not disclosed. Nubank vice-chair Roberto Campos Neto announced a USD-pegged stablecoin pilot at Meridian 2025, framed inside a broader plan to tokenize deposits and issue credit against tokenized assets. Whether Nubank issues its own dollar token or routes through an existing stablecoin (USDC/PYUSD/other) is undecided.",
@@ -21478,6 +21603,27 @@
         "title": "Visa and Bridge expand stablecoin-linked cards from 18 to 100+ countries",
         "description": "Visa + Bridge program lets fintechs and wallets issue cards that spend stablecoin balances at Visa's 175M merchant locations; expansion targeted across Europe, Asia Pacific, Africa, and the Middle East by end of 2026.",
         "sourceUrl": "https://thedefiant.io/news/tradfi-and-fintech/visa-and-stripe-owned-bridge-roll-out-stablecoin-linked-cards-to-100-countries"
+      },
+      {
+        "date": "2026-04-29",
+        "type": "milestone",
+        "title": "Stripe Sessions 2026: USDB cards live in 30 countries; new chains and rails added",
+        "description": "Bridge announced stablecoin-backed cards live in 30 countries (targeting 100+ by year-end via Visa), Tempo/Plasma/Celo/Sui support, COP and GBP on/off-ramps, and SWIFT/FedNow/ACH pull integration.",
+        "sourceUrl": "https://stripe.com/blog/everything-we-announced-at-sessions-2026"
+      },
+      {
+        "date": "2026-06-02",
+        "type": "partnership",
+        "title": "MoneyGram launches MGUSD on Stellar via Bridge Open Issuance",
+        "description": "MoneyGram issued MGUSD on Stellar using Bridge Open Issuance with M0 contracts and Fireblocks custody, serving 60M users across 200 countries.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/06/02/moneygram-launches-stablecoin-on-stellar-joining-rush-toward-digital-dollar-payments"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "partnership",
+        "title": "Deel launches DLUSD on Tempo via Bridge Open Issuance and Privy",
+        "description": "Deel became the first enterprise to combine Bridge, Privy wallets, and Tempo, launching DLUSD to pay workers starting in Argentina.",
+        "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/deel-launches-dlusd-pay-workers-060149026.html"
       }
     ],
     "genius": {
@@ -23926,6 +24072,13 @@
         "title": "Fireblocks selected as core settlement infrastructure partner",
         "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
         "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
+      },
+      {
+        "date": "2026-06-04",
+        "type": "milestone",
+        "title": "Bybit becomes first major exchange to list USDPT",
+        "description": "Bybit lists USDPT with fiat on/off-ramp access for Latin American users.",
+        "sourceUrl": "https://crypto.news/bybit-launches-support-for-western-unions-usdpt-stablecoin/"
       }
     ],
     "dateHistory": [

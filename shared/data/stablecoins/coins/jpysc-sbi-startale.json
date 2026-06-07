@@ -45,7 +45,7 @@
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Q2 2026 launch pending FSA approval — Japan's PSA amendments take full effect June 13; deployment chain not publicly confirmed",
+  "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Japan's PSA amendments take full effect June 13 and the FSA activated rules for qualified foreign stablecoins June 1. As of early June no JPYSC deployment has been confirmed and the Q2 2026 window (ends June 30) is nearly elapsed, so a slip to H2 2026 is increasingly likely absent FSA approval; deployment chain not publicly confirmed",
   "featuredContent": [
     {
       "type": "blog",
@@ -90,6 +90,13 @@
       "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
       "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
       "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
+    },
+    {
+      "date": "2026-06-01",
+      "type": "regulatory",
+      "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
+      "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
+      "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
     }
   ]
 }

@@ -43,7 +43,7 @@
   "announcedDate": "2025-10",
   "expectedLaunchDate": "2026-09",
   "launchPhase": "beta",
-  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; September 2026 on track; Fiserv contract entering finalization",
+  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), compressing the runway to Roughrider's September 2026 pilot target, which remains planned",
   "featuredContent": [
     {
       "type": "tweet",
@@ -70,6 +70,18 @@
   "custodyModel": "institutional-regulated",
   "milestones": [
     {
+      "date": "2025-06-23",
+      "type": "milestone",
+      "title": "Fiserv launches FIUSD platform on Solana — Roughrider to be first white-label deployment",
+      "sourceUrl": "https://www.businesswire.com/news/home/20250623052523/en/Fiserv-Launches-New-FIUSD-Stablecoin-for-Financial-Institutions"
+    },
+    {
+      "date": "2025-07-18",
+      "type": "regulatory",
+      "title": "GENIUS Act signed into US law — federal framework cited by BND as enabling the pilot",
+      "sourceUrl": "https://www.gtlaw.com/en/insights/2025/7/genius-act-enacted-establishing-a-regulatory-framework-for-payment-stablecoins-issued-or-sold-in-the-united-states"
+    },
+    {
       "date": "2025-10-08",
       "type": "announcement",
       "title": "Bank of North Dakota announces Roughrider Coin",
@@ -95,6 +107,13 @@
       "title": "ND Industrial Commission unanimously approves bank-to-bank use case",
       "description": "10 local banks express pilot interest; risk rated 'low to moderate'; project cost-neutral; September 2026 launch reaffirmed; Fiserv contract finalization underway.",
       "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "milestone",
+      "title": "Fiserv CEO confirms FIUSD platform slips to July 2026; Roughrider September pilot still planned",
+      "description": "At the Bernstein Strategic Decisions conference, Fiserv's CEO confirmed the FIUSD platform goes live in July 2026 (from an earlier end-2025 target), compressing the runway to Roughrider's September 2026 state-bank pilot.",
+      "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
     }
   ]
 }

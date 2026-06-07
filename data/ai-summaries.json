@@ -1611,13 +1611,23 @@
   },
   "fiusd-fiserv": {
     "title": "The Payments Stack Play",
-    "text": "FIUSD is Fiserv's pre-launch Solana dollar stablecoin built on Circle and Paxos infrastructure — a payments-rails play with four-partner coordination risk. Fiserv processes $2 trillion in payments annually for 6,000+ financial institutions and wants to make stablecoins just another rail in that plumbing. FIUSD is less a single stablecoin and more a platform: Paxos handles issuance, Circle provides ecosystem interop, PayPal enables interoperability, and Mastercard connects the payments network. The centralized-dependent classification captures this architecture accurately — FIUSD depends on an entire constellation of {{term:custody}}custody{{/term}} and {{term:redemption}}redemption{{/term}} partners, any of which could become a {{term:bridge}}bottleneck{{/term}}. The end-of-2025 launch target has quietly slipped into 2026 with no firm date, which either means careful regulatory preparation or the inherent difficulty of coordinating four major fintech companies on a shared timeline.",
-    "updatedAt": "2026-05-15",
+    "text": "FIUSD is Fiserv's pre-launch Solana dollar stablecoin built on Circle and Paxos infrastructure — a payments-rails play with four-partner coordination risk. Fiserv processes $2 trillion in payments annually for 6,000+ financial institutions and wants to make stablecoins just another rail in that plumbing. FIUSD is less a single stablecoin and more a platform: Paxos handles issuance, Circle provides ecosystem interop, PayPal enables interoperability, and Mastercard connects the payments network. The centralized-dependent classification captures this architecture accurately — FIUSD depends on an entire constellation of {{term:custody}}custody{{/term}} and {{term:redemption}}redemption{{/term}} partners, any of which could become a {{term:bridge}}bottleneck{{/term}}. After the original end-of-2025 target quietly slipped, CEO Mike Lyons finally planted a flag in June 2026: FIUSD goes live in July, opening with an interbank settlement pilot. The real test isn't the token — it's whether four fintech giants can ship on one timeline, with Bank of North Dakota's white-labeled Roughrider Coin already queued behind it for September.",
+    "updatedAt": "2026-06-07",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-07",
+    "factsAsOf": "2026-06-07"
+  },
+  "gelt-tether": {
+    "title": "Georgia's Lari, Tether's Rails",
+    "text": "GEL₮ is Tether's pre-launch Georgian Lari stablecoin, announced in May 2026 alongside the Government of Georgia and framed — by Tether — as the country's 'official' stablecoin. The framing is the story: a sovereign government handing its national currency's digital rails to the world's largest stablecoin issuer, while the National Bank of Georgia runs its own separate digital-lari pilot. The legal scaffolding is real — NBG Order No. 52/04 lets licensed issuers mint Lari-pegged tokens under 100% reserves, full redemption rights, and a GEL 500,000 capital floor, deliberately built for compatibility with the US GENIUS Act — but everything that matters for an assessment is still blank: no chains, no contracts, no reserve {{term:attestation}}attestation{{/term}}, no named {{term:custody}}custodian{{/term}}, no launch date. With prime-minister and central-bank endorsements but a non-USD peg Pharos doesn't yet price, this is a flag planted on a map rather than a token you can hold. Whether 'official' means anything more than a sharper logo on a 1:1 Tether liability is the question the missing disclosures will eventually answer.",
+    "updatedAt": "2026-06-07",
+    "authoredBy": "ai",
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-07",
+    "factsAsOf": "2026-06-07"
   },
   "eur-qivalis": {
     "title": "Thirty-Seven Banks, One Euro",
@@ -2711,13 +2721,13 @@
   },
   "brl-b3": {
     "title": "The Stock Exchange Mints Money",
-    "text": "BRL-B3 is a pre-launch Brazilian real settlement stablecoin from B3, Latin America's largest stock exchange, designed for its tokenized {{term:rwa}}real-world-asset{{/term}} trading platform. When Latin America's largest stock exchange decides it needs its own stablecoin for tokenized asset settlement, the signal is less about crypto adoption and more about what traditional financial infrastructure considers table stakes in 2026. B3's BRL stablecoin fills the gap left by Brazil's Drex CBDC narrowing its scope — the central bank's digital currency was supposed to handle settlement, but as the project slowed, B3 apparently decided to build the plumbing itself. The H1 2026 target, the exchange-as-issuer model, and the settlement-first use case make this less a DeFi primitive and more a capital markets upgrade with a token wrapper, with {{term:custody}}custody{{/term}} expected to sit inside B3's existing clearing infrastructure. The question isn't whether B3 can issue a BRL stablecoin — it clears $3 trillion annually — but whether the regulatory environment will let a stock exchange compete with the central bank's own digital currency project.",
-    "updatedAt": "2026-05-15",
+    "text": "BRL-B3 is a pre-launch Brazilian real settlement stablecoin from B3, Latin America's largest stock exchange, designed for its tokenized {{term:rwa}}real-world-asset{{/term}} trading platform. When Latin America's largest stock exchange decides it needs its own stablecoin for tokenized asset settlement, the signal is less about crypto adoption and more about what traditional financial infrastructure considers table stakes in 2026. B3's BRL stablecoin — now branded B3RL — fills the gap left by Brazil's Drex CBDC narrowing its scope: the central bank's digital currency was meant to handle settlement, but as that project slowed, B3 decided to build the plumbing itself, backed by cash and government bonds inside its own clearing infrastructure. At its May 2026 Tokenization Day the exchange confirmed the target had slipped from H1 to H2 2026, and that the first phase is a blockchain replica of its depository database — direct on-chain trading will have to wait. The question was never whether B3 can issue a BRL stablecoin — it clears trillions annually — but whether Brazil's regulators will let a stock exchange run the settlement rails the central bank once reserved for itself.",
+    "updatedAt": "2026-06-07",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-07",
+    "factsAsOf": "2026-06-07"
   },
   "usdf-flipcash": {
     "title": "Coinbase's White-Label Dollar",

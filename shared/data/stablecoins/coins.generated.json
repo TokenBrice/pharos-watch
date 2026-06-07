@@ -1683,7 +1683,7 @@
     "announcedDate": "2025-11",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance",
+    "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance. The tentative January 2026 debut has passed with no RBI confirmation, no live circulating supply, and no ARC mention on anq.finance — status uncertain as of mid-2026",
     "featuredContent": [
       {
         "type": "article",
@@ -3862,7 +3862,7 @@
     "status": "pre-launch",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "auditing",
-    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); not yet deployed to mainnet; targeting Q2 2026",
+    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); GitHub shows an expanded multi-collateral scope (ETH, wstETH, rETH, cbETH, cbBTC, AERO, and LP tokens) with launch parameters updated for safety; not yet deployed to mainnet, with the Q2 2026 target window (ends June 30) nearing and no official slip announced",
     "milestones": [
       {
         "date": "2026-04-03",
@@ -4914,9 +4914,9 @@
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H1",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing its own BRL settlement stablecoin for tokenized asset trading; H1 2026 target; fills gap left by narrowing of Brazil's Drex CBDC scope; symbol and ticker not yet confirmed",
+    "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing B3RL, its own BRL settlement stablecoin for tokenized asset trading. At B3's Tokenization Day (May 26 2026) the target shifted to H2 2026 (from the original H1 2026); the stablecoin will be backed by cash and government bonds and settle tokenized equity. Fills gap left by narrowing of Brazil's Drex CBDC scope; ticker B3RL cited in Brazilian press but not yet officially confirmed by B3 IR/CVM",
     "featuredContent": [
       {
         "type": "article",
@@ -4930,6 +4930,12 @@
         "url": "https://borainvestir.b3.com.br/tipos-de-investimentos/renda-variavel/criptoativos/b3-anuncia-lancamento-de-stablecoin-para-2026/",
         "title": "B3 anuncia lançamento de stablecoin para 2026",
         "source": "B3 (Bora Investir)"
+      },
+      {
+        "type": "article",
+        "url": "https://brazilcrypto.substack.com/p/230-b3-to-launch-tokenized-stocks",
+        "title": "B3 to launch tokenized stocks, stablecoin in 2026",
+        "source": "Brazil Crypto Report"
       }
     ],
     "milestones": [
@@ -4939,6 +4945,19 @@
         "title": "B3 announces BRL stablecoin and tokenization platform",
         "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
         "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+      },
+      {
+        "date": "2026-05-26",
+        "type": "milestone",
+        "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
+        "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
+        "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-H1",
+        "setOn": "2026-06-07"
       }
     ]
   },
@@ -12243,7 +12262,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet",
+    "collateral": "Planned 100% reserve backing — at least 40% in bank deposits with the remainder in short-term euro-area sovereign bonds diversified across EU countries, with 24/7 redemption; Qivalis states that no stablecoins or tokens have been issued yet",
     "pegMechanism": "Pre-launch MiCA-oriented euro stablecoin design: Qivalis describes a regulated 1:1-backed euro token with safeguarded reserves and reliable on-demand access once official issuance begins",
     "mechanismArchetype": "fiat-cash",
     "links": [
@@ -16350,7 +16369,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'), with the interbank pilot still targeted for summer 2026",
+    "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch; Bank of North Dakota's Roughrider Coin white-label is expected to begin its state-bank pilot in September 2026",
     "featuredContent": [
       {
         "type": "article",
@@ -16419,6 +16438,13 @@
         "title": "FIUSD featured at Fiserv 2026 Investor Day as a strategic growth vector",
         "description": "Fiserv positions FIUSD on an 'issued through banks, accepted through merchants' model with real-time clearing/settlement and white-label issuance; interbank-money-movement pilots with Bank of North Dakota, Huntington, and others remain on track for summer 2026.",
         "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "milestone",
+        "title": "CEO Lyons confirms FIUSD goes live in July 2026 at Bernstein conference",
+        "description": "At the Bernstein Strategic Decisions conference, CEO Michael Lyons stated 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch.",
+        "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
       }
     ]
   },
@@ -18730,7 +18756,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-05",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
+    "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava. Tether signed an MOU with Georgia in June 2023 and has invested in CityPay.io (active at 2,000+ Georgian merchant locations); GEL₮ is stated to be issued on multiple blockchains. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
     "featuredContent": [
       {
         "type": "blog",
@@ -18738,6 +18764,12 @@
         "title": "Tether and the Government of Georgia to Launch GEL₮, the Official Stablecoin of Georgia",
         "description": "Tether and Georgia announce GEL₮, a Lari-pegged stablecoin under a purpose-built NBG framework designed for compatibility with the US GENIUS Act.",
         "source": "Tether"
+      },
+      {
+        "type": "article",
+        "url": "https://news.bitcoin.com/tether-partners-with-georgia-government-to-launch-gelt-stablecoin/",
+        "title": "Tether Partners With Georgia Government to Launch GEL₮ Stablecoin",
+        "source": "Bitcoin.com News"
       }
     ],
     "milestones": [
@@ -21379,6 +21411,12 @@
         "title": "HSBC to launch HKD-denominated stablecoin in second half of 2026",
         "description": "HSBC plans to integrate HKD stablecoin into PayMe and HSBC HK App for peer-to-peer payments and tokenized investment subscriptions.",
         "source": "The Asian Banker"
+      },
+      {
+        "type": "article",
+        "url": "https://www.scmp.com/business/banking-finance/article/3350089/how-paymes-33-million-users-and-hong-kong-firms-could-start-using-stablecoins",
+        "title": "How PayMe's 3.3 million users and Hong Kong firms could start using stablecoins",
+        "source": "South China Morning Post"
       }
     ],
     "milestones": [
@@ -21435,7 +21473,7 @@
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint and OSL Group completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments",
+    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments; no tokens are yet in public circulation and no deployment contract address has been disclosed as of early June, with the Q2 window (ends June 30) nearly closed",
     "featuredContent": [
       {
         "type": "article",
@@ -21459,6 +21497,12 @@
         "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
         "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+      },
+      {
+        "date": "2026-04-28",
+        "type": "regulatory",
+        "title": "HKMA warns of fake HKDAP and HSBC tokens; confirms no licensed issuer has tokens in circulation",
+        "sourceUrl": "https://www.cryptotimes.io/2026/04/29/hong-kong-hkma-warns-of-fake-hkdap-and-hsbc-tokens-in-market/"
       },
       {
         "date": "2026-05-13",
@@ -21551,6 +21595,18 @@
         "title": "RD InnoTech enters HKMA Stablecoin Issuer Sandbox (first cohort)",
         "description": "HKDR begins sandbox testing for digital asset trading and cross-border trade payments under HKMA supervision.",
         "sourceUrl": "https://www.rd.group/news/blogs/Announcement-RD-Technologies-Joins-the-HKMA-Stablecoin-Issuer-Sandbox/"
+      },
+      {
+        "date": "2024-08-07",
+        "type": "partnership",
+        "title": "Cobo designated preferred wallet partner for HKDR custody infrastructure",
+        "sourceUrl": "https://www.cobo.com/post/cobo-partners-rd-technologies-to-drive-the-adoption-of-hong-kong-dollar-stablecoin-hkdr"
+      },
+      {
+        "date": "2024-10-28",
+        "type": "partnership",
+        "title": "RD InnoTech names HashKey Exchange as distribution partner; Ethereum confirmed as deployment chain",
+        "sourceUrl": "https://rd.group/news/press-releases/RDinnoTech_future_stablecoin_launch_with_hashkey/"
       },
       {
         "date": "2025-05-21",
@@ -24553,7 +24609,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Q2 2026 launch pending FSA approval — Japan's PSA amendments take full effect June 13; deployment chain not publicly confirmed",
+    "launchPhaseDetail": "Brand and logo unveiled Feb 27; first trust bank-backed JPY stablecoin under Japan's Type III electronic payment instrument framework; issuer Shinsei Trust & Banking, distributor SBI VC Trade, technical lead Startale Group; Startale closed $63M Series A (SBI $50M + Sony $13M) Mar 26 earmarked for JPYSC/USDSC; Strium L1 unveiled Feb 5 as likely deployment target alongside Soneium; SBI VC Trade now distributing RLUSD (distributor infra live); Japan's PSA amendments take full effect June 13 and the FSA activated rules for qualified foreign stablecoins June 1. As of early June no JPYSC deployment has been confirmed and the Q2 2026 window (ends June 30) is nearly elapsed, so a slip to H2 2026 is increasingly likely absent FSA approval; deployment chain not publicly confirmed",
     "featuredContent": [
       {
         "type": "blog",
@@ -24598,6 +24654,13 @@
         "title": "SBI VC Trade begins RLUSD distribution in Japan — JPYSC distributor infrastructure now live",
         "description": "SBI VC Trade, JPYSC's designated distributor, operationally distributing Ripple's RLUSD stablecoin, de-risking the JPYSC distribution pathway.",
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
+      },
+      {
+        "date": "2026-06-01",
+        "type": "regulatory",
+        "title": "Japan FSA activates rules for foreign stablecoins as electronic payment instruments",
+        "description": "Japan's regulated framework for qualified foreign stablecoins took effect, advancing the regime JPYSC will launch under.",
+        "sourceUrl": "https://en.spaziocrypto.com/stablecoins/japan-foreign-stablecoins-yen-on-chain-2026/"
       }
     ]
   },
@@ -25931,7 +25994,7 @@
     "announcedDate": "2025-11",
     "expectedLaunchDate": "2026",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Tempo mainnet live since March 18 but KlarnaUSD still absent — USD1 (WLFI) launched on Tempo May 8 as first native stablecoin, beating KlarnaUSD to market; Bridge OCC charter approved Feb 2026; KlarnaUSD absent from Bridge Open Issuance live issuer list; Klarna Q1 2026 earnings May 14 is next likely update venue; IPO completed Sep 2025 (NYSE: KLAR), KlarnaUSD in F-1 prospectus as strategic initiative",
+    "launchPhaseDetail": "Tempo mainnet live since March 18 but KlarnaUSD still absent — USD1 (WLFI) launched on Tempo May 8 as first native stablecoin, beating KlarnaUSD to market; Bridge OCC charter approved Feb 2026; KlarnaUSD absent from Bridge Open Issuance live issuer list. Klarna's Q1 2026 earnings (May 14) made no mention of KlarnaUSD, and it was absent from Stripe Sessions 2026 Open Issuance partner announcements — no new official KlarnaUSD communication since the Nov 2025 announcement; IPO completed Sep 2025 (NYSE: KLAR), KlarnaUSD in F-1 prospectus as strategic initiative",
     "featuredContent": [
       {
         "type": "tweet",
@@ -25973,6 +26036,13 @@
         "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
         "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
         "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "milestone",
+        "title": "Klarna Q1 2026 earnings make no mention of KlarnaUSD",
+        "description": "Klarna reported ~$1B revenue (+44% YoY) and 118M users; the earnings narrative focused on BNPL/GMV with no KlarnaUSD or stablecoin update.",
+        "sourceUrl": "https://investors.klarna.com/News--Events/news/news-details/2026/Klarna-Delivers-Strong-Start-to-2026-With-1Bn-Revenue-and-68M-Adj--Operating-Profit/default.aspx"
       }
     ]
   },
@@ -26014,7 +26084,7 @@
     "announcedDate": "2026-05",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies; pilot announced May 2026; symbol and ticker not yet confirmed",
+    "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. Pilot announced May 2026; symbol and ticker not yet confirmed",
     "featuredContent": [
       {
         "type": "article",
@@ -26083,7 +26153,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. The Bank of Korea nominee (April 2026) signalled CBDC and bank-issued deposit tokens should lead Korea's digital money system, with private stablecoins in a secondary role — a headwind for commercial launch timing. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework.",
+    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. A February 2026 MoU with Com2uS Holdings targets KRW1-based payment infrastructure on the XPLA/CONX chain. Korea's Digital Asset Basic Act — the gate for commercial launch — was excluded from the National Assembly's pre-recess agenda on May 12 2026, with debate not expected to resume until a new parliamentary session after the June 3 elections, pushing any enactment into H2 2026 or later. Commercial launch contingent on that framework.",
     "featuredContent": [
       {
         "type": "article",
@@ -26170,6 +26240,18 @@
         "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
         "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
         "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
+      },
+      {
+        "date": "2026-02-23",
+        "type": "partnership",
+        "title": "BDACS and Com2uS Holdings sign MoU to build KRW1 payment infrastructure on XPLA/CONX",
+        "sourceUrl": "https://en.sedaily.com/news/2026/02/23/bidax-com2us-holdings-partner-on-won-stablecoin"
+      },
+      {
+        "date": "2026-05-12",
+        "type": "regulatory",
+        "title": "Korea Digital Asset Basic Act excluded from National Assembly pre-recess agenda; H2 2026 earliest for resumed debate",
+        "sourceUrl": "https://www.cryptopolitan.com/south-korea-delays-digital-asset-basic-act/"
       },
       {
         "date": "2026-05-13",
@@ -34034,7 +34116,7 @@
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Private testnet live (shared infrastructure with pUSD)",
+    "launchPhaseDetail": "Gated testnet live (shared infrastructure with pUSD); security review and audit-preparation phase underway; mainnet date uncommitted",
     "featuredContent": [
       {
         "type": "blog",
@@ -34080,6 +34162,13 @@
         "type": "testnet",
         "title": "Private testnet live (shared infrastructure with pUSD)",
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      },
+      {
+        "date": "2026-04-13",
+        "type": "milestone",
+        "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
+        "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to participants (including pGOLD CDPs) by holdings.",
+        "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
       },
       {
         "date": "2026-04-27",
@@ -34734,7 +34823,7 @@
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Private testnet live",
+    "launchPhaseDetail": "Gated testnet live; security review and audit-preparation phase underway; mainnet date uncommitted",
     "featuredContent": [
       {
         "type": "tweet",
@@ -34779,6 +34868,13 @@
         "type": "testnet",
         "title": "Private testnet goes live",
         "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      },
+      {
+        "date": "2026-04-13",
+        "type": "milestone",
+        "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
+        "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to pUSD Stability Pool participants by holdings.",
+        "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
       },
       {
         "date": "2026-04-27",
@@ -35900,7 +35996,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2027",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review; UK full authorisation regime not active until October 2027",
+    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor; the BoE's revised draft rules are expected in June 2026. UK full authorisation regime not active until October 2027",
     "featuredContent": [
       {
         "type": "article",
@@ -35952,6 +36048,13 @@
         "title": "Bank of England drops £20k individual holding cap for aggregate issuer caps",
         "description": "At CityWeek 2026 the BoE confirms it is abandoning the proposed £20,000 per-person holding limit in favour of aggregate issuance caps; revised draft rules expected June 2026.",
         "sourceUrl": "https://invezz.com/news/2026/05/19/bank-of-england-weighs-stablecoin-guardrail-alternatives-ahead-of-draft-rules/"
+      },
+      {
+        "date": "2026-06-02",
+        "type": "regulatory",
+        "title": "House of Lords committee urges BoE to drop individual holding limits and reconsider 40% reserve floor",
+        "description": "The Financial Services Regulation Committee called on the Bank of England to scrap per-person stablecoin holding limits entirely and reconsider the 40% unremunerated-reserve requirement, warning it would harm issuer viability.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/06/02/uk-house-of-lords-committee-calls-on-bank-of-england-to-reconsider-proposed-stablecoin-restrictions"
       }
     ]
   },
@@ -36185,7 +36288,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-09",
     "launchPhase": "beta",
-    "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; September 2026 on track; Fiserv contract entering finalization",
+    "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), compressing the runway to Roughrider's September 2026 pilot target, which remains planned",
     "featuredContent": [
       {
         "type": "tweet",
@@ -36210,6 +36313,18 @@
       }
     ],
     "milestones": [
+      {
+        "date": "2025-06-23",
+        "type": "milestone",
+        "title": "Fiserv launches FIUSD platform on Solana — Roughrider to be first white-label deployment",
+        "sourceUrl": "https://www.businesswire.com/news/home/20250623052523/en/Fiserv-Launches-New-FIUSD-Stablecoin-for-Financial-Institutions"
+      },
+      {
+        "date": "2025-07-18",
+        "type": "regulatory",
+        "title": "GENIUS Act signed into US law — federal framework cited by BND as enabling the pilot",
+        "sourceUrl": "https://www.gtlaw.com/en/insights/2025/7/genius-act-enacted-establishing-a-regulatory-framework-for-payment-stablecoins-issued-or-sold-in-the-united-states"
+      },
       {
         "date": "2025-10-08",
         "type": "announcement",
@@ -36236,6 +36351,13 @@
         "title": "ND Industrial Commission unanimously approves bank-to-bank use case",
         "description": "10 local banks express pilot interest; risk rated 'low to moderate'; project cost-neutral; September 2026 launch reaffirmed; Fiserv contract finalization underway.",
         "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "milestone",
+        "title": "Fiserv CEO confirms FIUSD platform slips to July 2026; Roughrider September pilot still planned",
+        "description": "At the Bernstein Strategic Decisions conference, Fiserv's CEO confirmed the FIUSD platform goes live in July 2026 (from an earlier end-2025 target), compressing the runway to Roughrider's September 2026 state-bank pilot.",
+        "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
       }
     ]
   },
@@ -36612,7 +36734,7 @@
     "announcedDate": "2025-10-23",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot covering payments, wholesale settlement, and crypto trading — results will inform the FCA's crypto framework targeting October 2027. A Revolut-branded proprietary USD stablecoin has not been officially confirmed; Polymarket puts the probability at ~25% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
+    "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania — the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot — though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). A Revolut-branded proprietary USD stablecoin has not been officially confirmed; the USD path runs through the Lithuanian EMI / MiCA EMT route, and Polymarket currently puts the probability at ~33% by year-end 2026. Specific ticker, chain selection, and reserve disclosure model remain unannounced.",
     "featuredContent": [
       {
         "type": "article",
@@ -36627,6 +36749,12 @@
         "title": "Revolut secures MiCA license in Cyprus, is a stablecoin next?",
         "description": "EU counsel describes a Revolut stablecoin in 2026 as 'plausible' under MiCA; clarifies that the Cyprus CASP licence does not itself authorise issuance, which must come via Revolut's Lithuanian EMI.",
         "source": "Decrypt"
+      },
+      {
+        "type": "article",
+        "url": "https://thedefiant.io/converge/tradfi-and-fintech/revolut-plans-2027-us-bank-launch-stablecoin-services-day-one",
+        "title": "Revolut Plans 2027 US Bank Launch With Stablecoin Services Built In From Day One",
+        "source": "The Defiant"
       }
     ],
     "milestones": [
@@ -36650,6 +36778,20 @@
         "title": "FCA selects Revolut for UK stablecoin payment testing pilot",
         "description": "Revolut is one of 4 firms chosen from 20 applicants to trial stablecoin products in real-world UK conditions from Q1 2026; use cases include stablecoin payments, wholesale settlement, and crypto trading. Results will inform the FCA's crypto regulatory framework targeting October 2027.",
         "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
+      },
+      {
+        "date": "2026-03-05",
+        "type": "regulatory",
+        "title": "Revolut files OCC national bank charter application (Revolut Bank US, N.A.)",
+        "description": "Revolut applies for a US national bank charter with a $500M investment commitment, targeting a 2027 US bank launch with built-in stablecoin access (third-party USDC/USDT, not confirmed own issuance).",
+        "sourceUrl": "https://www.revolut.com/en-US/news/revolut_files_u_s_bank_charter_application_names_new_u_s_ceo/"
+      },
+      {
+        "date": "2026-03-11",
+        "type": "regulatory",
+        "title": "Revolut receives full UK banking licence from the PRA",
+        "description": "Revolut exits mobilisation; 13M UK customers gain FSCS protection. A GBP stablecoin would be issued from Revolut's e-money entity, not the UK bank.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
       }
     ]
   },
@@ -44439,7 +44581,7 @@
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$0.27M market cap, ~60 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate — live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; Chainlink CCIP multichain expansion announced May 2026.",
+    "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$232K market cap, ~54 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate — live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP.",
     "featuredContent": [
       {
         "type": "article",
@@ -44686,7 +44828,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+    "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); Hypernative real-time security monitoring added; mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
     "featuredContent": [
       {
         "type": "tweet",
@@ -45994,7 +46136,7 @@
     "announcedDate": "2025-09-18",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. The credit-card pilot is the first product surface, with a broader 'tokenize deposits and issue credit against tokenized assets' roadmap behind it. Whether Nubank issues its own dollar token or routes through an existing stablecoin (Campos Neto noted the open product question) is undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
+    "launchPhaseDetail": "Nubank vice-chair Roberto Campos Neto (former Central Bank of Brazil governor) announced a dollar-pegged stablecoin pilot tied to credit-card payments at Meridian 2025. Nubank serves 100M+ customers across Brazil, Mexico, and Colombia; integrated USDC inside the app since 2023. As of mid-2026 no own-token issuance has materialized: activity has centered on deepening USDC integration and on TradFi/crypto infrastructure (Nu Holdings won OCC conditional approval to form Nubank, N.A. in Jan 2026; Nubank is a design partner on Stripe/Paradigm's Tempo blockchain). Whether Nubank issues its own dollar token or routes through an existing stablecoin remains undecided; ticker, chain, and reserve disclosure model not yet confirmed. Pharos opens this pre-launch entry against the announced own-issuance interpretation; will be retired if Nubank's pilot instead routes through USDC/PYUSD/other tracked tokens.",
     "featuredContent": [
       {
         "type": "article",
@@ -46018,6 +46160,13 @@
         "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
         "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
         "sourceUrl": "https://financefeeds.com/nubank-to-pilot-stablecoin-payments-via-credit-cards/"
+      },
+      {
+        "date": "2026-01-29",
+        "type": "regulatory",
+        "title": "Nu Holdings receives OCC conditional approval to form Nubank, N.A.",
+        "description": "US national bank charter (conditional) enables future digital asset custody; no stablecoin issuance named in the charter.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/30/latin-america-s-largest-crypto-friendly-fintech-nubank-secures-u-s-banking-approval"
       }
     ]
   },
@@ -48019,7 +48168,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; Payoneer integration announced Feb 17 will roll USDB into the Payoneer platform across select Q2 2026 markets; Visa + Bridge stablecoin-linked cards expanding from 18 to 100+ countries by end of 2026; distinct from Blast's USDB (usdb-blast)",
+    "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026. At Stripe Sessions 2026 (Apr 29) Bridge expanded stablecoin-backed cards to 30 countries (targeting 100+ by year-end via Visa) and added Tempo/Plasma/Celo/Sui support, COP/GBP on-off-ramps, and SWIFT/FedNow/ACH integration. Bridge Open Issuance now also powers MoneyGram's MGUSD (Stellar, Jun 2) and Deel's DLUSD (Tempo, Jun 3) alongside USDH, CASH, and USDSui; distinct from Blast's USDB (usdb-blast)",
     "featuredContent": [
       {
         "type": "article",
@@ -48056,6 +48205,27 @@
         "title": "Visa and Bridge expand stablecoin-linked cards from 18 to 100+ countries",
         "description": "Visa + Bridge program lets fintechs and wallets issue cards that spend stablecoin balances at Visa's 175M merchant locations; expansion targeted across Europe, Asia Pacific, Africa, and the Middle East by end of 2026.",
         "sourceUrl": "https://thedefiant.io/news/tradfi-and-fintech/visa-and-stripe-owned-bridge-roll-out-stablecoin-linked-cards-to-100-countries"
+      },
+      {
+        "date": "2026-04-29",
+        "type": "milestone",
+        "title": "Stripe Sessions 2026: USDB cards live in 30 countries; new chains and rails added",
+        "description": "Bridge announced stablecoin-backed cards live in 30 countries (targeting 100+ by year-end via Visa), Tempo/Plasma/Celo/Sui support, COP and GBP on/off-ramps, and SWIFT/FedNow/ACH pull integration.",
+        "sourceUrl": "https://stripe.com/blog/everything-we-announced-at-sessions-2026"
+      },
+      {
+        "date": "2026-06-02",
+        "type": "partnership",
+        "title": "MoneyGram launches MGUSD on Stellar via Bridge Open Issuance",
+        "description": "MoneyGram issued MGUSD on Stellar using Bridge Open Issuance with M0 contracts and Fireblocks custody, serving 60M users across 200 countries.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/06/02/moneygram-launches-stablecoin-on-stellar-joining-rush-toward-digital-dollar-payments"
+      },
+      {
+        "date": "2026-06-03",
+        "type": "partnership",
+        "title": "Deel launches DLUSD on Tempo via Bridge Open Issuance and Privy",
+        "description": "Deel became the first enterprise to combine Bridge, Privy wallets, and Tempo, launching DLUSD to pay workers starting in Argentina.",
+        "sourceUrl": "https://finance.yahoo.com/markets/crypto/articles/deel-launches-dlusd-pay-workers-060149026.html"
       }
     ]
   },
@@ -49801,7 +49971,7 @@
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
+    "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
     "featuredContent": [
       {
         "type": "article",
@@ -53521,7 +53691,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path",
+    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path. On June 4 2026 Bybit became the first major exchange to list USDPT, adding LatAm fiat on/off-ramp access",
     "featuredContent": [
       {
         "type": "tweet",
@@ -53550,6 +53720,12 @@
         "title": "Western Union's Solana-Based Stablecoin Could Reshape Its Payment Model",
         "description": "Analyst coverage of the May 4 USDPT launch: B2B agent settlement first, consumer-facing 'Stable by Western Union' product planned for 40+ markets later in 2026.",
         "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://coincentral.com/bybit-and-western-union-launch-usdpt-trading-to-boost-stablecoin-adoption/",
+        "title": "Bybit and Western Union Launch USDPT Trading to Boost Stablecoin Adoption",
+        "source": "CoinCentral"
       }
     ],
     "milestones": [
@@ -53607,6 +53783,13 @@
         "title": "Fireblocks selected as core settlement infrastructure partner",
         "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
         "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
+      },
+      {
+        "date": "2026-06-04",
+        "type": "milestone",
+        "title": "Bybit becomes first major exchange to list USDPT",
+        "description": "Bybit lists USDPT with fiat on/off-ramp access for Latin American users.",
+        "sourceUrl": "https://crypto.news/bybit-launches-support-for-western-unions-usdpt-stablecoin/"
       }
     ],
     "dateHistory": [

@@ -89,7 +89,7 @@
     { "date": "2026", "setOn": "2026-05-31" }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
+  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
   "dependencies": [
     {
       "id": "usdc-circle",

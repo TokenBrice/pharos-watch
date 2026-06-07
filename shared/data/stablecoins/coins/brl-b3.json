@@ -40,9 +40,15 @@
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2025-12",
-  "expectedLaunchDate": "2026-H1",
+  "dateHistory": [
+    {
+      "date": "2026-H1",
+      "setOn": "2026-06-07"
+    }
+  ],
+  "expectedLaunchDate": "2026-H2",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing its own BRL settlement stablecoin for tokenized asset trading; H1 2026 target; fills gap left by narrowing of Brazil's Drex CBDC scope; symbol and ticker not yet confirmed",
+  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) developing B3RL, its own BRL settlement stablecoin for tokenized asset trading. At B3's Tokenization Day (May 26 2026) the target shifted to H2 2026 (from the original H1 2026); the stablecoin will be backed by cash and government bonds and settle tokenized equity. Fills gap left by narrowing of Brazil's Drex CBDC scope; ticker B3RL cited in Brazilian press but not yet officially confirmed by B3 IR/CVM",
   "featuredContent": [
     {
       "type": "article",
@@ -56,6 +62,12 @@
       "url": "https://borainvestir.b3.com.br/tipos-de-investimentos/renda-variavel/criptoativos/b3-anuncia-lancamento-de-stablecoin-para-2026/",
       "title": "B3 anuncia lançamento de stablecoin para 2026",
       "source": "B3 (Bora Investir)"
+    },
+    {
+      "type": "article",
+      "url": "https://brazilcrypto.substack.com/p/230-b3-to-launch-tokenized-stocks",
+      "title": "B3 to launch tokenized stocks, stablecoin in 2026",
+      "source": "Brazil Crypto Report"
     }
   ],
   "milestones": [
@@ -65,6 +77,13 @@
       "title": "B3 announces BRL stablecoin and tokenization platform",
       "description": "Latin America's largest stock exchange plans a BRL-pegged settlement stablecoin for tokenized asset trading.",
       "sourceUrl": "https://www.coindesk.com/business/2025/12/17/brazilian-stock-exchange-b3-to-launch-its-own-tokenization-platform-and-stablecoin/"
+    },
+    {
+      "date": "2026-05-26",
+      "type": "milestone",
+      "title": "B3 Tokenization Day: B3RL stablecoin and tokenized share registry confirmed for H2 2026",
+      "description": "B3 confirmed its tokenized share registry and B3RL settlement stablecoin target H2 2026 (slipped from H1 2026); stablecoin to be backed by cash and government bonds.",
+      "sourceUrl": "https://cryptonews.net/news/finance/32952205/"
     }
   ]
 }

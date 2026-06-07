@@ -46,7 +46,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); Hypernative real-time security monitoring added; mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
   "featuredContent": [
     {
       "type": "tweet",
