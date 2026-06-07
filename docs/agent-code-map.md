@@ -214,6 +214,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
+- `src/lib/api-url.ts` - API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
 - `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
 - `src/lib/blacklist-status-buckets.ts` - BLACKLIST_STATUS_BUCKET_COLORS, BLACKLIST_STATUS_BUCKET_DESCRIPTIONS, BLACKLIST_STATUS_BUCKET_LABELS, BLACKLIST_STATUS_BUCKET_ORDER, BlacklistStatusBucket, BlacklistStatusBucketKey
@@ -247,8 +248,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
-- `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
-- ... 128 more files omitted; use `rg --files src/lib` for the full list.
+- ... 130 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -724,6 +724,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
 - `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
+- `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
 - `scripts/__tests__/remote-d1.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/__tests__/vitest-ci-args.test.ts`
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
-- `scripts/__tests__/worker-boundary-waivers.test.ts`
-- ... 160 more files omitted; use `rg --files scripts` for the full list.
+- ... 161 more files omitted; use `rg --files scripts` for the full list.

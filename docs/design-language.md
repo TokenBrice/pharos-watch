@@ -21,7 +21,7 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 
 ### Typography carve-out
 
-Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. The Cemetery obituary plaques (`cemetery-tombstones.tsx`) are a third Newsreader serif carve-out (Design Council B11), allow-listed in the design-invariants test alongside `AiSummary`. The `/timeline/` route is a further carve-out: Geist Mono dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside the Digest, `AiSummary`, and Cemetery obituary carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
+Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. The Cemetery obituary plaques (`cemetery-tombstones.tsx`) are a third Newsreader serif carve-out (Design Council B11), allow-listed in the design-invariants test alongside `AiSummary`. The `/timeline/` route is a further carve-out: the mono token dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses the sans token at all weights. Do not introduce new serif usage outside the Digest, `AiSummary`, and Cemetery obituary carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
 
 ### Masthead tagline
 
@@ -41,9 +41,9 @@ On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` 
 
 ### Root + Fonts
 
-- Body classes: `geist_*` font variables + `antialiased`
-- Sans font: `Geist`
-- Mono font: `Geist Mono`
+- Body classes: `pharos-font-sans pharos-font-mono antialiased`
+- Sans font token: system-first Geist-style stack
+- Mono font token: system-first Geist Mono-style stack
 - Default corner radius token: `--radius: .5rem`
 - Body background adds two subtle radial glow layers via `--page-glow-top` and `--page-glow-bottom`
 
@@ -170,9 +170,9 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 
 ### Tape (Special)
 
-The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthetic** that diverges from the standard `pharos-card-shell` analytics surface. Where Digest is the broadsheet, Timeline is the syslog: Geist Mono everywhere, hairline dividers in place of card chrome, severity expressed as text color, per-class background tints (hue signals class, text-color signals severity), and row time prefixes that use `HH:MM` on larger screens and compact relative tokens on mobile.
+The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthetic** that diverges from the standard `pharos-card-shell` analytics surface. Where Digest is the broadsheet, Timeline is the syslog: mono-token typography everywhere, hairline dividers in place of card chrome, severity expressed as text color, per-class background tints (hue signals class, text-color signals severity), and row time prefixes that use `HH:MM` on larger screens and compact relative tokens on mobile.
 
-This is a third intentional non-Geist-Sans treatment alongside the Digest dual-font system (Newsreader serif + Courier italic) and the stablecoin-detail `AiSummary` Georgia paragraph. Tape is distinct from both: it leans on Geist Mono as the primary typeface across the stream, not serif for editorial gravitas.
+This is a third intentional non-sans-token treatment alongside the Digest dual-font system (Newsreader serif + Courier italic) and the stablecoin-detail `AiSummary` Georgia paragraph. Tape is distinct from both: it leans on the mono token as the primary typeface across the stream, not serif for editorial gravitas.
 
 The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, pinned linked-event block, and the filter row is **intentional, not an oversight**. The filter row is a flat wire-control surface with hairline `border-y` dividers and shared control primitives, not a card shell.
 

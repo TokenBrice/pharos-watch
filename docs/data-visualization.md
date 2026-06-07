@@ -231,7 +231,7 @@ Auto-cycles must pause under `prefers-reduced-motion` and must yield to user sel
 
 ### Inside the scene
 
-- **Font:** `ui-monospace` for numbers and tickers; Geist Sans for prose. No serif inside a scene.
+- **Font:** `ui-monospace` for numbers and tickers; the core sans token for prose. No serif inside a scene.
 - **Size:** 8–11px. Labels are atmospheric, not the main read.
 - **Opacity:** 0.45–0.65 for atmospheric labels (“DOMINANCE DRAFT”), 0.8+ for primary (ship names, band counts).
 - **Placement:** below or beside the glyph at a fixed offset. Collision avoidance is not attempted at ≤8 labels; at higher density, lean on hover cards instead of more labels.

@@ -47,7 +47,7 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomeAltClient`
 
-The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live: `HomeAltHeroChartGate` mounts `HomeAltHeroLiveChart` once the chart surface reaches the viewport, then the chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
 
 `HomeAltRankingsSection` query inputs:
 
@@ -151,12 +151,13 @@ The `Mint Auth` column reads `coin.mintAuthoritySummary` from the slim client re
 
 ## Loading Strategy
 
-`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport.
+`HomeAltHero` keeps the headline and cohort rows in the eager homepage experience. The market-cap chart uses a lightweight SVG renderer in `src/components/home-alt-hero-chart.tsx`, avoiding the shared Recharts runtime, and `HomeAltHeroChartGate` defers the live chart client until the chart surface reaches the viewport and the browser reaches an idle slice.
 
-The heavier homepage sections are dynamically imported in `src/components/home-alt-client.tsx`:
+The heavier homepage sections are client-only dynamic imports in `src/components/home-alt-client.tsx`:
 
-- `HomeAltRankingsSection`, which owns `PegBrowseStrip`, `StablecoinTable`, pinned stablecoin state, and the table view model
+- `HomeAltMiniCardGrid`, which owns the below-hero signal cards
 - `DailyDigest`
+- `HomeAltRankingsSection`, which owns `PegBrowseStrip`, `StablecoinTable`, pinned stablecoin state, and the table view model
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.
 
