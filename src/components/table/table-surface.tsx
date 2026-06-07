@@ -18,7 +18,7 @@ function getStripingClassName(striped: TableStriping | undefined) {
 }
 
 export interface TableSurfaceProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.ComponentPropsWithRef<"div">,
     TableIdentityProps {
   density?: TableDensity;
   striped?: TableStriping;
@@ -35,11 +35,13 @@ export function TableSurface({
   stickyHeader = false,
   tableId,
   testId,
+  ref,
   ...props
 }: TableSurfaceProps) {
   return (
     <div
       {...props}
+      ref={ref}
       data-table-id={tableId}
       data-testid={testId}
       className={cn(

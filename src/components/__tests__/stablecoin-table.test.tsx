@@ -221,11 +221,20 @@ describe("StablecoinTable", () => {
     );
 
     const table = screen.getAllByRole("table")[0];
+    const shell = screen.getByTestId("stablecoin-overview-table");
     const scrollContainer = table?.parentElement;
 
+    expect(shell.getAttribute("data-table-id")).toBe("stablecoin-overview");
+    expect(shell.className).toContain("pharos-table-shell");
+    expect(shell.className).toContain("pharos-density-comfortable");
+    expect(shell.className).toContain("pharos-table-striped-indexed");
+    expect(scrollContainer?.getAttribute("data-slot")).toBe("table-viewport");
+    expect(scrollContainer?.className).toContain("scroll-shadow");
     expect(scrollContainer?.className).toContain("overflow-x-auto");
+    expect(scrollContainer?.className).toContain("overflow-y-auto");
     expect(scrollContainer?.className).not.toContain("overflow-x-hidden");
     expect(scrollContainer?.className).not.toContain("xl:overflow-x-hidden");
+    expect(shell.querySelector("[data-slot='table-container']")).toBeNull();
   });
 
   it("can suppress desktop horizontal scrolling while keeping mobile overflow enabled", () => {
@@ -450,10 +459,14 @@ describe("StablecoinTable", () => {
     );
 
     const bodyRows = document.querySelectorAll("tbody tr");
+    const spacerCell = bodyRows[0]?.querySelector("td");
     const usdcRow = screen.getByText("USDC").closest("tr");
 
     expect(bodyRows).toHaveLength(2);
     expect(bodyRows[0]?.getAttribute("data-row-striped")).toBeNull();
+    expect(spacerCell?.getAttribute("colspan")).toBe(String(screen.getAllByRole("columnheader").length));
+    expect(spacerCell?.style.height).toBe("40px");
+    expect(spacerCell?.style.padding).toBe("0px");
     expect(usdcRow?.getAttribute("data-row-striped")).toBe("true");
   });
 });

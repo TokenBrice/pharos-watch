@@ -12,6 +12,7 @@ export { MatrixTable, type MatrixTableProps } from "./matrix-table";
 export { TableFrame, type TableFrameProps } from "./table-frame";
 export { TableSurface, type TableSurfaceProps } from "./table-surface";
 export { TableViewport, type TableViewportProps } from "./table-viewport";
+export { VirtualTableFrame, type VirtualTableFrameProps } from "./virtual-table-frame";
 export type {
   TableAlign,
   TableChrome,

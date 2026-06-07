@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface TableViewportProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface TableViewportProps extends React.ComponentPropsWithRef<"div"> {
   mobileScrollHint?: React.ReactNode | false;
   scrollShadow?: boolean;
   horizontal?: boolean;
@@ -14,6 +14,7 @@ export interface TableViewportProps extends React.HTMLAttributes<HTMLDivElement>
 export function TableViewport({
   className,
   children,
+  ref,
   mobileScrollHint = "Swipe sideways for more columns",
   scrollShadow = true,
   horizontal = true,
@@ -31,6 +32,7 @@ export function TableViewport({
       ) : null}
       <div
         {...props}
+        ref={ref}
         data-slot="table-viewport"
         className={cn(
           scrollShadow && "scroll-shadow",

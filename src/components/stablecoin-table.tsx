@@ -4,8 +4,8 @@ import { useMemo, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import type { QueryKey } from "@tanstack/react-query";
-import { TableBody, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableBody, TableCaption, TableHead, TableHeader, TableRow, VirtualTableFrame } from "@/components/table";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS, type TableDensity } from "@/hooks/use-table-density";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -312,6 +312,7 @@ export function StablecoinTable({
     () => getMobileTableMinWidthPx(visibleColumns, showPinnedControls),
     [showPinnedControls, visibleColumns],
   );
+  const visibleColumnCount = visibleColumns.length + (showPinnedControls ? 1 : 0);
 
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
 
@@ -487,41 +488,54 @@ export function StablecoinTable({
   }
 
   return (
-    <div ref={tableRef} className="pharos-table-shell animate-in fade-in duration-300">
-      <TableBackgroundRefreshingBar
-        queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS}
-        isPending={isLoading}
-      />
-      <TableToolbar
-        density={density}
-        onDensityChange={setDensity}
-        visibleColumns={visibleColumns}
-        onVisibleColumnsChange={setVisibleColumns}
-        onResetColumns={resetColumns}
-        defaultColumns={deviceDefault}
-        onExport={handleCsvExport}
-        exportDisabled={displayed.length === 0}
-        additionalActions={toolbarActions}
-        eyebrow={toolbarEyebrow}
-        description={toolbarDescription}
-        titleId={toolbarTitleId}
-        meta={toolbarMeta}
-      />
-      {filterPanel}
-
-      {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div className="border-y border-border/50 px-4 py-2 text-[11px] font-medium text-muted-foreground sm:hidden">
-        Swipe sideways for more columns. Risk cues stay visible in each row.
-      </div>
-
-      <div
-        ref={scrollRef}
-        className={`scroll-shadow max-h-[50vh] overscroll-x-contain overscroll-y-auto overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
-      >
-        <table
-          className={`min-w-[420px] xl:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
-          style={isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined}
-        >
+    <VirtualTableFrame
+      surfaceRef={tableRef}
+      tableId="stablecoin-overview"
+      testId="stablecoin-overview-table"
+      className="animate-in fade-in duration-300"
+      density={density}
+      viewportRef={scrollRef}
+      viewportClassName={`max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
+      mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
+      tableClassName="min-w-[420px] xl:min-w-[820px] table-fixed"
+      tableProps={{
+        style: isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined,
+      }}
+      topSlot={(
+        <>
+          <TableBackgroundRefreshingBar
+            queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS}
+            isPending={isLoading}
+          />
+          <TableToolbar
+            density={density}
+            onDensityChange={setDensity}
+            visibleColumns={visibleColumns}
+            onVisibleColumnsChange={setVisibleColumns}
+            onResetColumns={resetColumns}
+            defaultColumns={deviceDefault}
+            onExport={handleCsvExport}
+            exportDisabled={displayed.length === 0}
+            additionalActions={toolbarActions}
+            eyebrow={toolbarEyebrow}
+            description={toolbarDescription}
+            titleId={toolbarTitleId}
+            meta={toolbarMeta}
+          />
+          {filterPanel}
+        </>
+      )}
+      footerSlot={displayed.length > 0 ? (
+        <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-sm text-muted-foreground">
+            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString()}</span> stablecoins
+          </span>
+          <span className="pharos-meta">
+            Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
+          </span>
+        </div>
+      ) : null}
+    >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
@@ -555,7 +569,7 @@ export function StablecoinTable({
           <TableBody>
             {paddingTop > 0 && (
               <tr>
-                <td style={{ height: paddingTop, padding: 0 }} />
+                <td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0 }} />
               </tr>
             )}
             {virtualItems.map((virtualRow) => {
@@ -586,7 +600,7 @@ export function StablecoinTable({
             })}
             {paddingBottom > 0 && (
               <tr>
-                <td style={{ height: paddingBottom, padding: 0 }} />
+                <td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0 }} />
               </tr>
             )}
             {displayed.length === 0 && (
@@ -600,20 +614,6 @@ export function StablecoinTable({
               />
             )}
           </TableBody>
-        </table>
-      </div>
-
-      {/* Stable footer: avoid rewriting visible virtual ranges on every scroll tick. */}
-      {displayed.length > 0 && (
-        <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-sm text-muted-foreground">
-            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString()}</span> stablecoins
-          </span>
-          <span className="pharos-meta">
-            Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
-          </span>
-        </div>
-      )}
-    </div>
+    </VirtualTableFrame>
   );
 }
