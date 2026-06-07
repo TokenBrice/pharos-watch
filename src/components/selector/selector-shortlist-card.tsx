@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";

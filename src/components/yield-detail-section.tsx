@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";

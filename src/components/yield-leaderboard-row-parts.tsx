@@ -8,7 +8,7 @@ import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";

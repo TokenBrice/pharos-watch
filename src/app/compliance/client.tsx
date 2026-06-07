@@ -11,9 +11,9 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableSourceLink,
   TableRow,
 } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";

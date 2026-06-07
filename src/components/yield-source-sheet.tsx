@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";

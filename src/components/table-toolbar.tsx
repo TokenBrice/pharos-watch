@@ -1,6 +1,6 @@
 "use client";
 
-import { TableControlsToolbar } from "@/components/table";
+import { TableControlsToolbar } from "@/components/table/client";
 import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";
 import type { TableDensity } from "@/hooks/use-table-density";
 import type { ColumnId } from "@/hooks/use-preferences";

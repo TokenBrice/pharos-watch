@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";

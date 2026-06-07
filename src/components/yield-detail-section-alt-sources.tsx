@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
-import { TableSourceLink } from "@/components/table";
+import { TableSourceLink } from "@/components/table/client";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";

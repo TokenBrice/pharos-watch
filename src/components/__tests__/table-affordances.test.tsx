@@ -3,7 +3,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TableControlsToolbar, TableSettingsMenu, TableSourceLink, TableToolbarFrame } from "@/components/table";
+import { TableToolbarFrame } from "@/components/table";
+import { TableControlsToolbar, TableSettingsMenu, TableSourceLink } from "@/components/table/client";
 
 describe("table affordances", () => {
   afterEach(() => {
