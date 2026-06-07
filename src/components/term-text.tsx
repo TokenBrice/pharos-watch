@@ -6,7 +6,7 @@ interface TermTextProps {
   text: string;
 }
 
-export function renderTermMarkup(text: string): ReactNode[] {
+function renderTermMarkup(text: string): ReactNode[] {
   return parseTermMarkup(text).map((segment, index) => {
     if (segment.type === "term") {
       return (
