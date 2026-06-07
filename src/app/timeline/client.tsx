@@ -1,5 +1,6 @@
 "use client";
 
+import "./phosphor.css";
 import { useCallback, useMemo, useState } from "react";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { TapeFilters, readTapeFilterState, tapeWindowSince, TAPE_DEFAULT_SEVERITY } from "@/components/tape/tape-filters";
