@@ -81,7 +81,9 @@ export function LiquidityMethodologySection() {
           <p>
             Orderbook fallback rows now validate observable ticker quality directly. CoinGecko deprecated `trust_score`, so
             Pharos filters those tickers by freshness flags, finite USD price/volume, exchange identity, and USD-equivalent
-            quote assets instead of relying on a legacy badge.
+            quote assets instead of relying on a legacy badge. The scoring-cron orderbook fallback is reserved for absent,
+            no-price, or tiny DEX coverage; weak but already-covered DEX assets stay on the on-chain repair path instead
+            of receiving time-budget-dependent centralized synthetic books.
           </p>
           <p>
             PancakeSwap V3 volume now uses a bounded trailing-hour window from the official subgraph&apos;s

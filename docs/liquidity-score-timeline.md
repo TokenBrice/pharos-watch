@@ -9,6 +9,7 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 - Retained pools below the documented `$50K` DEX price-observation floor can still contribute to liquidity scoring when otherwise eligible, but no longer publish `dex_price_usd` or `price_sources_json`
 - DEX price median weighting now keys on source family rather than protocol label: DeFiLlama/direct API `1.0x`, CoinGecko Onchain/GeckoTerminal `0.85x`, DexScreener/CoinGecko tickers `0.55x`
 - Fallback rows that claim high-trust protocol names can no longer receive primary-source median weight solely from that venue label
+- CoinGecko ticker/orderbook scoring fallback is now limited to absent, no-price, or tiny DEX coverage. DexScreener still repairs weak partial on-chain coverage, but centralized synthetic books no longer churn already-covered DEX assets such as USDe during time-budgeted fallback passes
 
 ---
 

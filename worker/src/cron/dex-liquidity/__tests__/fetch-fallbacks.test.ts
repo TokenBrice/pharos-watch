@@ -43,9 +43,9 @@ import {
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../coingecko-tickers-shared";
-import { fetchCgTickersFallback } from "../fetch-fallbacks";
+import { fetchCgTickersFallback, getCgTickersFallbackTargets } from "../fetch-fallbacks";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
-import type { CgTicker } from "../types";
+import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 
 function createMockDb(): D1Database {
@@ -77,6 +77,43 @@ function makeTicker(overrides: Partial<CgTicker> = {}): CgTicker {
     is_anomaly: false,
     is_stale: false,
     trust_score: null,
+    ...overrides,
+  };
+}
+
+function makeMetric(overrides: Partial<LiquidityMetrics> = {}): LiquidityMetrics {
+  return {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    totalTvlUsd: 1_000_000,
+    totalVolume24hUsd: 100_000,
+    totalVolume7dUsd: 700_000,
+    poolCount: 5,
+    chains: new Set(["ethereum"]),
+    pairs: new Set(["USDC/USDT"]),
+    protocolTvl: { curve: 1_000_000 },
+    chainTvl: { ethereum: 1_000_000 },
+    qualityAdjustedTvl: 850_000,
+    topPools: [],
+    effectiveTvl: 850_000,
+    organicTvlWeightedSum: 0,
+    totalTvlForOrganic: 0,
+    balanceRatioWeightedSum: 0,
+    totalTvlForBalance: 0,
+    stressWeightedSum: 0,
+    oldestPoolDays: 30,
+    lockedLiqWeightedSum: 0,
+    totalTvlForLocked: 0,
+    ...overrides,
+  };
+}
+
+function makeObservation(overrides: Partial<DexPriceObs> = {}): DexPriceObs {
+  return {
+    price: 1,
+    tvl: 1_000_000,
+    chain: "ethereum",
+    protocol: "curve",
     ...overrides,
   };
 }
@@ -242,6 +279,46 @@ describe("CoinGecko tickers shared helpers", () => {
 });
 
 describe("fetchCgTickersFallback", () => {
+  it("targets absent or tiny DEX coverage but skips already-covered DEX assets", () => {
+    const metrics = new Map<string, LiquidityMetrics>([
+      [
+        "usdc-circle",
+        makeMetric({
+          stablecoinId: "usdc-circle",
+          totalTvlUsd: 100_000_000,
+          poolCount: 80,
+          totalTvlForBalance: 10_000_000,
+        }),
+      ],
+      [
+        "usdt-tether",
+        makeMetric({
+          stablecoinId: "usdt-tether",
+          totalTvlUsd: 50_000,
+          poolCount: 1,
+        }),
+      ],
+    ]);
+    const priceObservations = new Map<string, DexPriceObs[]>([
+      ["usdc-circle", [makeObservation()]],
+      ["usdt-tether", [makeObservation({ tvl: 50_000 })]],
+    ]);
+
+    expect(getCgTickersFallbackTargets(metrics, priceObservations).map((meta) => meta.id)).toEqual(["usdt-tether"]);
+  });
+
+  it("keeps orderbook fallback for assets with no pool or no price observation", () => {
+    const metrics = new Map<string, LiquidityMetrics>([
+      ["usdc-circle", makeMetric({ stablecoinId: "usdc-circle", poolCount: 0, totalTvlUsd: 0 })],
+      ["usdt-tether", makeMetric({ stablecoinId: "usdt-tether", poolCount: 5, totalTvlUsd: 1_000_000 })],
+    ]);
+
+    expect(getCgTickersFallbackTargets(metrics, new Map()).map((meta) => meta.id)).toEqual([
+      "usdc-circle",
+      "usdt-tether",
+    ]);
+  });
+
   it("emits distinct synthetic orderbook pool ids for different stablecoins on the same exchange", async () => {
     vi.mocked(fetchWithRetry).mockImplementation(async () => new Response(JSON.stringify({
       tickers: [makeTicker({

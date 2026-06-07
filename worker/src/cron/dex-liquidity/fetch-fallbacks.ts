@@ -55,6 +55,19 @@ function needsCoverageEnrichment(
   return false;
 }
 
+function needsOrderbookFallback(
+  metric: LiquidityMetrics | undefined,
+  observations: DexPriceObs[],
+): boolean {
+  if (!metric) return true;
+  if ((metric.poolCount ?? 0) === 0) return true;
+  if (observations.length === 0) return true;
+  if ((metric.poolCount ?? 0) < WEAK_COVERAGE_MIN_POOL_COUNT && metric.totalTvlUsd < WEAK_COVERAGE_MIN_TVL_USD) {
+    return true;
+  }
+  return false;
+}
+
 export function getFallbackTargets(
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
@@ -69,6 +82,18 @@ export function getFallbackTargets(
     const metric = metrics.get(meta.id);
     const observations = priceObservations.get(meta.id) ?? [];
     return needsCoverageEnrichment(metric, observations);
+  });
+}
+
+export function getCgTickersFallbackTargets(
+  metrics: Map<string, LiquidityMetrics>,
+  priceObservations: Map<string, DexPriceObs[]>,
+): typeof ACTIVE_STABLECOINS {
+  return ACTIVE_STABLECOINS.filter((meta) => {
+    if (!meta.geckoId) return false;
+    const metric = metrics.get(meta.id);
+    const observations = priceObservations.get(meta.id) ?? [];
+    return needsOrderbookFallback(metric, observations);
   });
 }
 
@@ -346,7 +371,7 @@ export async function fetchCgTickersFallback(
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
 
-  const targetCoins = getFallbackTargets(metrics, priceObservations, { requireGeckoId: true });
+  const targetCoins = getCgTickersFallbackTargets(metrics, priceObservations);
 
   if (targetCoins.length === 0) {
     await logCronEvent(db, {
