@@ -248,7 +248,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
-- ... 127 more files omitted; use `rg --files src/lib` for the full list.
+- ... 128 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 349 more files omitted; use `rg --files src/components` for the full list.
+- ... 350 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -413,7 +413,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/bnusd-balanced.json` - 22 keys
 - `shared/data/stablecoins/coins/bold-liquity.json` - 24 keys
 - `shared/data/stablecoins/coins/brd-volpon.json` - 21 keys
-- `shared/data/stablecoins/coins/brl-b3.json` - 22 keys
+- `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 24 keys
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 24 keys
