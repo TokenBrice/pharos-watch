@@ -275,12 +275,16 @@
       "tokenType": "EMT",
       "references": [
         {
-          "label": "Anchored Coins AEUR (issuer winding down to comply with MiCAR)",
+          "label": "Anchored Coins AEUR — issuer confirms no new issuance and orderly wind-down due to MiCAR",
           "url": "https://www.anchoredcoins.com/en/landing/aeur"
         },
         {
-          "label": "ESMA interim MiCA EMT register - AEUR not listed",
+          "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv) — Anchored Coins not listed",
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Binance official announcement — AEUR among nine non-MiCA-compliant stablecoins delisted for EEA users effective 31 March 2025",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
         }
       ]
     },
@@ -351,16 +355,24 @@
       "issuerPathway": "unknown",
       "issuerEntity": "GAIB",
       "issuerDomicile": "Singapore",
-      "reserveDisclosureUrl": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+      "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "label": "OCC Bulletin 2026-3: GENIUS Act NPRM",
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "GAIB AID docs",
+          "label": "Federal Register 2026-04089: OCC GENIUS Act proposed rule",
+          "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the"
+        },
+        {
+          "label": "GAIB AID product documentation",
           "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+        },
+        {
+          "label": "GAIB 2026 outlook blog post",
+          "url": "https://blog.gaib.ai/gaib-2026-outlook/"
         }
       ]
     },
@@ -784,22 +796,22 @@
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "AUDD Coinbase listing announcement",
-          "url": "https://www.audd.digital/coinbase-partners-with-audc-to-list-audd/"
+          "url": "https://www.audd.digital/audd-launches-on-coinbase/"
         },
         {
-          "label": "Coinbase AUDD United States buy page",
-          "url": "https://www.coinbase.com/en/how-to-buy/australian-digital-dollar"
+          "label": "Coinbase AUDD listing blog (global, not US trading)",
+          "url": "https://www.coinbase.com/blog/audd-and-xsgd-live"
         },
         {
           "label": "AUDD terms",
           "url": "https://www.audd.digital/audd-terms-and-conditions/"
         },
         {
-          "label": "AUDD transparency",
+          "label": "AUDD transparency (monthly William Buck attestations through May 2026)",
           "url": "https://www.audd.digital/transparency/"
         }
       ]
@@ -1121,10 +1133,10 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Agora Bermuda Limited",
       "issuerDomicile": "Bermuda",
-      "licensingRegulator": "BMA; OCC national trust bank application for Agora National Trust Bank",
+      "licensingRegulator": "BMA (current); OCC national trust bank application for Agora National Trust Bank (filed 2026-04-20, under review)",
       "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
       "redemptionPolicyPresent": true,
       "references": [
@@ -1133,12 +1145,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "OCC digital asset licensing applications - Agora National Trust Bank",
+          "label": "OCC digital asset licensing applications — Agora National Trust Bank application received 2026-04-20",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
         },
         {
-          "label": "Agora national trust bank charter post",
+          "label": "Agora blog — national trust bank charter filing",
           "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter"
+        },
+        {
+          "label": "ChainCatcher — Agora CEO on OCC charter and GENIUS Act federal pathway intent",
+          "url": "https://www.chaincatcher.com/en/article/2262780"
         },
         {
           "label": "Agora transparency",
@@ -1225,7 +1241,7 @@
       "applicability": "non-payment-token",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Alloy by Tether",
+      "issuerEntity": "Moon Gold El Salvador, S.A. de C.V. / Moon Gold NA, S.A. de C.V.",
       "references": [
         {
           "label": "Alloy aUSDT vault docs",
@@ -1234,6 +1250,10 @@
         {
           "label": "Alloy tethered assets",
           "url": "https://docs.alloy.tether.to/get-started/tethered-assets.md"
+        },
+        {
+          "label": "CNAD Moon Gold El Salvador registration",
+          "url": "https://cnad.gob.sv/assets-providers/moon-gold-el-salvador-s-a-de-c-v/"
         }
       ]
     },
@@ -1327,22 +1347,22 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Avant Protocol",
+      "issuerEntity": "Avant Protocol Foundation",
       "issuerDomicile": "British Virgin Islands",
       "reserveDisclosureUrl": "https://docs.avantprotocol.com/overview/core-tokens",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Avant core tokens",
           "url": "https://docs.avantprotocol.com/overview/core-tokens"
         },
         {
-          "label": "Avant docs",
-          "url": "https://docs.avantprotocol.com/"
+          "label": "Avant Terms of Use (BVI governing law; Avant Protocol Foundation)",
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use"
         }
       ]
     },
@@ -1829,11 +1849,15 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Backed Assets",
-      "issuerDomicile": "Switzerland",
-      "licensingRegulator": "Swiss DLT Act registered uncertificated securities context",
+      "issuerEntity": "Backed Assets (JE) Limited",
+      "issuerDomicile": "Jersey",
+      "licensingRegulator": "Swiss DLT Act registered uncertificated securities framework",
       "redemptionPolicyPresent": false,
       "references": [
+        {
+          "label": "GENIUS Act Pub. L. 119-27 full text (Congress.gov)",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text"
+        },
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
@@ -3135,6 +3159,14 @@
       "redemptionPolicyPresent": true,
       "references": [
         {
+          "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+          "url": "https://www.occ.treas.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf"
+        },
+        {
+          "label": "Bridge blog: OCC conditional approval announcement",
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
+        },
+        {
           "label": "Bridge Open Issuance",
           "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
@@ -3419,6 +3451,20 @@
     },
     "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",
     "geckoId": "celo-euro",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Mento website — no MiCA/EMI regulatory posture disclosed",
+          "url": "https://www.mento.org/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -3569,7 +3615,8 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Cygnus Finance",
+      "issuerEntity": "Cygnus Information Limited",
+      "issuerDomicile": "Hong Kong (primary); US presence via ARKS Labs FinCEN MSB registration No. 31000226418649 (Aurora, CO)",
       "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
       "redemptionPolicyPresent": true,
       "references": [
@@ -3588,6 +3635,14 @@
         {
           "label": "Cygnus cgUSD redemption",
           "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md"
+        },
+        {
+          "label": "ARKS Labs website — FinCEN MSB registration and addresses",
+          "url": "https://www.arkslabs.io/"
+        },
+        {
+          "label": "Cygnus Finance website — Cygnus Information Limited entity",
+          "url": "https://www.cygnus.finance/"
         }
       ]
     },
@@ -3678,12 +3733,20 @@
       "authorizedEntity": "AllUnity GmbH",
       "references": [
         {
+          "label": "AllUnity secures BaFin EMI license (July 2025)",
+          "url": "https://allunity.com/news/allunity-secures-bafin-emi-license-to-launch-its-micar-compliant-euro-stablecoin/"
+        },
+        {
+          "label": "AllUnity CHFAU launch (February 2026)",
+          "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+        },
+        {
           "label": "ESMA MiCA register (issuers of EMTs)",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
           "label": "AllUnity CHFAU whitepaper",
-          "url": "https://framerusercontent.com/assets/a3Xne7fRRNHBpFxng0CHdzN58u4.pdf"
+          "url": "https://allunity.com/whitepaper/"
         }
       ]
     },
@@ -4120,7 +4183,7 @@
       "issuerPathway": "unknown",
       "issuerEntity": "MoonPay USA LLC",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
+      "licensingRegulator": "NYDFS (Limited Purpose Trust Charter + BitLicense) / state Money Transmitter Licenses (49 states); potential GENIUS pathway undeclared",
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": true,
       "references": [
@@ -4135,6 +4198,14 @@
         {
           "label": "Citrea ctUSD announcement",
           "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+        },
+        {
+          "label": "MoonPay VP Harrison on GENIUS Act at Consensus Miami 2026",
+          "url": "https://www.coindesk.com/policy/2026/05/08/stablecoins-have-their-permission-slip-now-comes-the-hard-part"
+        },
+        {
+          "label": "MoonPay NY Trust Charter press release (April 2026)",
+          "url": "https://www.prnewswire.com/news-releases/moonpay-launches-virtual-accounts-in-new-york-expanding-enterprise-stablecoin-infrastructure-302750808.html"
         }
       ]
     },
@@ -4221,7 +4292,15 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Cap docs",
+          "label": "FDIC GENIUS Act prudential requirements NPRM (FR 2026-06974)",
+          "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and"
+        },
+        {
+          "label": "FinCEN/OFAC AML NPRM (FR 2026-06963)",
+          "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism"
+        },
+        {
+          "label": "Cap docs — introduction",
           "url": "https://docs.cap.app/"
         },
         {
@@ -4229,7 +4308,7 @@
           "url": "https://docs.cap.app/concepts/vault"
         },
         {
-          "label": "Cap cUSD reserves",
+          "label": "Cap cUSD reserves dashboard",
           "url": "https://cap.app/vault/reserves/cUSD"
         }
       ]
@@ -4359,6 +4438,15 @@
     },
     "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
     "geckoId": "celo-dollar",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Mento Labs GmbH",
+      "issuerDomicile": "Germany",
+      "reserveDisclosureUrl": "https://reserve.mento.org/",
+      "redemptionPolicyPresent": false
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -4655,6 +4743,19 @@
     "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
     "mechanismArchetype": "cdp",
     "geckoId": "decentralized-euro",
+    "mica": {
+      "status": "non-compliant",
+      "references": [
+        {
+          "label": "dEURO website — MiCA position: qualifies as crypto-asset under MiCA but Titles II–IV not applicable due to no central issuer (LEXR Germany Rechtsanwalts GmbH legal opinion)",
+          "url": "https://www.deuro.com/"
+        },
+        {
+          "label": "dEURO Association — Swiss non-profit, disclaims all protocol control and regulated activities",
+          "url": "https://www.deuro.com/association.html"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -5115,7 +5216,8 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "dTRINITY protocol governance",
+      "issuerEntity": "Trinity Foundation Ltd.",
+      "issuerDomicile": "Singapore",
       "reserveDisclosureUrl": "https://docs.dtrinity.org/protocol-components/dusd",
       "redemptionPolicyPresent": true,
       "references": [
@@ -5126,6 +5228,14 @@
         {
           "label": "dTRINITY dUSD docs",
           "url": "https://docs.dtrinity.org/protocol-components/dusd"
+        },
+        {
+          "label": "dTRINITY Restricted Regions",
+          "url": "https://docs.dtrinity.org/informational/restricted-regions"
+        },
+        {
+          "label": "dTRINITY website – Trinity Foundation Ltd. legal entity",
+          "url": "https://www.dtrinity.org"
         }
       ]
     },
@@ -5475,6 +5585,14 @@
         {
           "label": "Telcoin Digital Asset Bank terms",
           "url": "https://bank.telco.in/terms-of-use"
+        },
+        {
+          "label": "Telcoin and the GENIUS Act (Telcoin Magazine)",
+          "url": "https://telcoinmagazine.substack.com/p/genius-act"
+        },
+        {
+          "label": "Nebraska Governor: First-in-nation Digital Asset Bank Charter",
+          "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter"
         }
       ]
     },
@@ -5599,11 +5717,11 @@
       "tokenType": "EMT",
       "references": [
         {
-          "label": "ESMA interim MiCA EMT register - Usual/EUR0 not listed",
-          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+          "label": "ESMA interim MiCA EMT register (last updated 4 Jun 2026) — Usual/EUR0 not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "EBA - ART/EMT issuers require EU authorisation",
+          "label": "EBA — ART/EMT issuers require EU authorisation",
           "url": "https://www.eba.europa.eu/regulation-and-policy/asset-referenced-and-e-money-tokens-mica"
         },
         {
@@ -5666,12 +5784,16 @@
       "authorizedEntity": "AllUnity GmbH",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA MiCA interim register — Issuers of EMT (EMTWP.csv, accessed 2026-06-07; AllUnity GmbH listed with EURAU, WP notification date 20/06/2025, supervised by BaFin)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "AllUnity EURAU whitepaper",
-          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
+          "label": "AllUnity whitepaper (MiCA-compliant, referenced in ESMA register)",
+          "url": "https://allunity.com/whitepaper"
+        },
+        {
+          "label": "AllUnity BaFin EMI license announcement (July 2025)",
+          "url": "https://allunity.com/news/allunity-secures-bafin-emi-license-to-launch-its-micar-compliant-euro-stablecoin/"
         }
       ]
     },
@@ -5750,12 +5872,20 @@
       "authorizedEntity": "Circle Internet Financial Europe SAS",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 4 Jun 2026)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "Circle EURC MiCA white paper",
+          "label": "Circle press release: first global stablecoin issuer to comply with MiCA (1 Jul 2024)",
+          "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law"
+        },
+        {
+          "label": "Circle EURC MiCA white paper (ACPR-filed)",
           "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
+        },
+        {
+          "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license #17788",
+          "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
         }
       ]
     },
@@ -5840,11 +5970,15 @@
       "authorizedEntity": "Société Générale - Forge",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 2026-06-04)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "SG-FORGE EURCV MiCA white paper",
+          "label": "SG-Forge official announcement: EMI license from ACPR, July 2024",
+          "url": "https://www.sgforge.com/stablecoin-elevation/"
+        },
+        {
+          "label": "SG-FORGE EURCV MiCA white paper (Oct 2025)",
           "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
         }
       ]
@@ -5929,8 +6063,8 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "Monerium EURe MiCA white paper",
-          "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
+          "label": "Monerium EURe MiCA white paper (2026)",
+          "url": "https://monerium.com/whitepapers/eure-whitepaper/"
         }
       ]
     },
@@ -6012,16 +6146,28 @@
       "authorizedEntity": "Banking Circle S.A.",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
+          "label": "ESMA MiCA interim register – EMT issuers (EMTWP.csv, Banking Circle S.A. entry, whitepaper date 28/08/2024)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "ESMA MiCA register landing page",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "CSSF list of EMT issuers",
+          "label": "CSSF – Issuers of E-Money Tokens (EMTs)",
           "url": "https://www.cssf.lu/en/issuers-of-e-money-tokens-emts/"
         },
         {
+          "label": "Banking Circle regulatory information (credit institution, LEI 213800W1NGBLERUS6M39, LUB00000408)",
+          "url": "https://www.bankingcircle.com/regulatory-information/"
+        },
+        {
+          "label": "Paperjam: Banking Circle first to hold banking, EMT and CASP licences in Luxembourg (CASP effective 15 April 2026)",
+          "url": "https://en.paperjam.lu/article/banking-circle-first-to-hold-banking-emt-and-casp-licences-in-luxembourg"
+        },
+        {
           "label": "EURI whitepaper",
-          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+          "url": "https://www.eurite.com/download-whitepaper/"
         }
       ]
     },
@@ -6099,6 +6245,24 @@
     },
     "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
     "mechanismArchetype": "cdp",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "ESMA Interim MiCA Register – EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "3A DAO website – issuer disclosed as 3A DAO LLC, Marshall Islands (Reg. RMI-2022-33), no EU regulatory entity",
+          "url": "https://3adao.org/"
+        },
+        {
+          "label": "3A DAO docs – EURO3 described as decentralized EUR-pegged CDP stablecoin; no MiCA authorization or EMI license mentioned",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Whitelisted vault crypto and stablecoin collateral",
@@ -6218,8 +6382,8 @@
       "authorizedEntity": "SALVUS",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA Interim MiCA Register — EMT issuers (EMTWP.csv), SALVUS entry dated 22/11/2024",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
           "label": "Schuman EUROP whitepaper",
@@ -6362,15 +6526,15 @@
       "authorizedEntity": "Quantoz Payments B.V.",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA Interim MiCA Register — Issuers of EMT (EMTWP.csv)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "Quantoz EURQ whitepaper",
+          "label": "Quantoz EURQ whitepaper v1.4 (30-04-2026)",
           "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8aa5175db824c8a5190cc_EURQ-WP-1.4%20(30-4-2026).pdf"
         },
         {
-          "label": "DNB public register - Quantoz Payments B.V.",
+          "label": "DNB public register — Quantoz Payments B.V.",
           "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
         }
       ]
@@ -6465,6 +6629,14 @@
         {
           "label": "StablR EURR whitepaper",
           "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_EURR_V3.2.pdf"
+        },
+        {
+          "label": "CoinDesk: StablR freezes USDR and EURR after attacker mints $13.5M in unbacked tokens (2026-05-26) — MiCA 1:1 backing breach acknowledged; MFSA notification filed under MiCA and DORA; minting/redemption suspended",
+          "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+        },
+        {
+          "label": "EFRI urges MFSA to review StablR EMI licence — formal reassessment request citing AML and ownership concerns (2025-07)",
+          "url": "https://efri.io/efri-urges-mfsa-to-review-stablrs-emi-license/"
         }
       ]
     },
@@ -6544,12 +6716,16 @@
       "authorizedEntity": "STSS (Malta) Limited",
       "references": [
         {
-          "label": "ESMA interim MiCA register (issuers of EMTs) - STASIS not listed",
+          "label": "ESMA interim MiCA register — EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "ESMA MiCA register portal (weekly-updated interim CSV files)",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "STASIS EURS information",
-          "url": "https://stasis.net/eurs-info"
+          "label": "MiCA-compliant stablecoins 2026 full list (eco.com) — EURS absent",
+          "url": "https://eco.com/support/en/articles/15192006-mica-compliant-stablecoins-2026-full-list-with-issuers"
         }
       ]
     },
@@ -6902,7 +7078,7 @@
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "Telcoin eUSD",
+          "label": "Telcoin eUSD reserve disclosure page",
           "url": "https://bank.telco.in/eUSD"
         },
         {
@@ -6910,8 +7086,16 @@
           "url": "https://bank.telco.in/terms-of-use"
         },
         {
-          "label": "Nebraska digital asset bank charter announcement",
+          "label": "Nebraska Governor signs first-in-nation Digital Asset Bank charter (November 12, 2025)",
           "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter"
+        },
+        {
+          "label": "Telcoin eUSD launch press release (December 26, 2025)",
+          "url": "https://www.businesswire.com/news/home/20251226357792/en/Telcoin-Begins-Digital-Asset-Banking-Operations-with-Launch-of-eUSD-Stablecoin"
+        },
+        {
+          "label": "Banking Dive: Telcoin Digital Asset Bank nabs final charter approval",
+          "url": "https://www.bankingdive.com/news/telcoin-digital-asset-bank-nabs-final-charter-approval/805337/"
         }
       ]
     },
@@ -7056,7 +7240,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
+      "issuerPathway": "foreign-registered",
       "issuerEntity": "FD121 (BVI) Limited",
       "issuerDomicile": "British Virgin Islands",
       "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
@@ -7067,12 +7251,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "Federal Register OCC GENIUS Act NPRM (FR 2026-04089)",
+          "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the"
+        },
+        {
           "label": "First Digital Labs transparency",
           "url": "https://www.firstdigitallabs.com/transparency"
         },
         {
           "label": "First Digital Labs FDD terms",
           "url": "https://www.firstdigitallabs.com/legal/fdd-terms"
+        },
+        {
+          "label": "First Digital Labs BVI issuance transition",
+          "url": "https://firstdigitallabs.com/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure"
         }
       ]
     },
@@ -7281,8 +7473,16 @@
       "redemptionPolicyPresent": true,
       "references": [
         {
+          "label": "OCC Conditional Approval — Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
+        },
+        {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Fidelity FIDD launch press release (Feb 4, 2026)",
+          "url": "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4"
         },
         {
           "label": "Fidelity Digital Assets stablecoin",
@@ -7438,8 +7638,8 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
-      "issuerEntity": "Fiserv, Inc.",
+      "issuerPathway": "idi-subsidiary",
+      "issuerEntity": "Fiserv, Inc. (platform/infrastructure provider); participating bank clients as IDI-subsidiary issuers",
       "issuerDomicile": "United States",
       "reserveDisclosureUrl": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
       "redemptionPolicyPresent": true,
@@ -7455,6 +7655,10 @@
         {
           "label": "Fiserv FIUSD launch announcement",
           "url": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
+        },
+        {
+          "label": "Payments Dive: Fiserv stablecoin arrives next month (June 2026)",
+          "url": "https://www.paymentsdive.com/news/fiserv-stablecoin-arrives-next-month/821877/"
         }
       ]
     },
@@ -7646,10 +7850,10 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
-      "issuerEntity": "Financial Reserves and Asset Exploration Inc.",
+      "issuerPathway": "federal-qualified-nonbank",
+      "issuerEntity": "Financial Reserves and Asset Exploration Inc. (dba FRAX Inc)",
       "issuerDomicile": "United States",
-      "licensingRegulator": "Not publicly identified",
+      "licensingRegulator": "OCC (targeted; GENIUS Act nonbank PPSI pathway; no application on file as of 2026-06-07)",
       "reserveDisclosureUrl": "https://frax.com/transparency",
       "redemptionPolicyPresent": true,
       "references": [
@@ -7658,12 +7862,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "OCC Digital Assets Licensing Applications (no Frax application on file)",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
+        },
+        {
           "label": "frxUSD docs",
           "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
         },
         {
           "label": "FIP-430 payment-stablecoin compliance proposal",
           "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        },
+        {
+          "label": "FIP-432 transfer of compliance to FRAX Inc (passed July 2025)",
+          "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748"
         },
         {
           "label": "Frax transparency",
@@ -7828,9 +8040,9 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "FinChain",
+      "issuerEntity": "FinChain Bermuda Limited",
       "issuerDomicile": "Bermuda",
-      "licensingRegulator": "Bermuda Monetary Authority digital asset business context",
+      "licensingRegulator": "Bermuda Monetary Authority (digital asset business license)",
       "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
       "redemptionPolicyPresent": true,
       "references": [
@@ -7845,6 +8057,10 @@
         {
           "label": "FinChain FUSD introduction",
           "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain FUSD structuring and legal entity",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring"
         },
         {
           "label": "FinChain FUSD reserves",
@@ -9032,15 +9248,24 @@
       "applicability": "non-payment-token",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Gate",
+      "issuerEntity": "Gate Technology Inc. (Cayman Islands)",
+      "issuerDomicile": "Cayman Islands",
       "references": [
         {
-          "label": "Gate GUSD",
+          "label": "Gate GUSD product page",
           "url": "https://www.gate.com/gusd"
         },
         {
           "label": "Gate GUSD mint and redeem guide",
           "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd"
+        },
+        {
+          "label": "Gate GUSD launch press release (Chainwire, Aug 29 2025)",
+          "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/"
+        },
+        {
+          "label": "CoinGecko: What Is Gate's GUSD?",
+          "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin"
         }
       ]
     },
@@ -9269,6 +9494,10 @@
         {
           "label": "GMO Trust stablecoin overview",
           "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/"
+        },
+        {
+          "label": "GMO Trust wind-down announcement (May 15, 2026)",
+          "url": "https://stablecoin.z.com/press/"
         }
       ]
     },
@@ -9937,17 +10166,22 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Berachain / BGT governance",
-      "reserveDisclosureUrl": "https://docs.berachain.com/learn/pol/tokens/honey",
+      "issuerEntity": "Berachain Foundation (Cayman Islands)",
+      "issuerDomicile": "Cayman Islands",
+      "reserveDisclosureUrl": "https://honey.berachain.com/",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Berachain HONEY docs",
           "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        },
+        {
+          "label": "Berachain honey.berachain.com reserve display",
+          "url": "https://honey.berachain.com/"
         }
       ]
     },
@@ -11149,8 +11383,8 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Jupiter / Ethena stablecoin infrastructure",
-      "reserveDisclosureUrl": "https://jupusd.money/",
+      "issuerEntity": "Jupiter (Solana DEX aggregator, no disclosed US legal entity; Ethena Labs operates issuance backend)",
+      "reserveDisclosureUrl": "https://jupusd.money/transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
@@ -11166,8 +11400,12 @@
           "url": "https://developers.jup.ag/docs/jupusd"
         },
         {
-          "label": "JupUSD site",
-          "url": "https://jupusd.money/"
+          "label": "Anchorage Digital — Ethena USDtb GENIUS-compliant issuance announcement (July 24 2025)",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-partners-with-ethena-labs-to-launch-first-genius-compliant-federally-regulated-stablecoin"
+        },
+        {
+          "label": "JupUSD launch — The Block (Jan 2026)",
+          "url": "https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb"
         }
       ]
     },
@@ -12232,7 +12470,7 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "M0 Foundation / M0 protocol minter network",
+      "issuerEntity": "M0 Foundation (Swiss protocol/governance entity); actual minting by separately permissioned Minter entities (e.g. MXON, Anchorage Digital, Bridge/Stripe)",
       "issuerDomicile": "Switzerland",
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": true,
@@ -12252,6 +12490,14 @@
         {
           "label": "M0 dashboard",
           "url": "https://dashboard.m0.org/"
+        },
+        {
+          "label": "Anchorage Digital partners with M0 on US stablecoin issuance stack",
+          "url": "https://thedefiant.io/news/tradfi-and-fintech/anchorage-m0-partner-on-regulated-stablecoin-issuance-united-states"
+        },
+        {
+          "label": "MoneyGram MGUSD launch — M0 infrastructure, Bridge as regulated issuer",
+          "url": "https://en.cryptonomist.ch/2026/06/03/moneygram-mgusd-stablecoin-launch-stellar/"
         }
       ]
     },
@@ -12976,11 +13222,19 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "Federal Register OCC GENIUS NPRM 2026-04089",
+          "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the"
+        },
+        {
+          "label": "FinCEN/OFAC AML NPRM FR 2026-06963",
+          "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism"
+        },
+        {
           "label": "MNEE terms of use",
           "url": "https://www.mnee.io/terms"
         },
         {
-          "label": "MNEE transparency",
+          "label": "MNEE transparency page",
           "url": "https://www.mnee.io/transparency"
         }
       ]
@@ -13128,7 +13382,6 @@
       "issuerEntity": "CFX Labs Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators; Metropolitan Capital Bank & Trust banking partner context",
-      "reserveDisclosureUrl": "https://docs.moveusd.com/docs/disclosures-disclaimers",
       "redemptionPolicyPresent": true,
       "references": [
         {
@@ -13136,12 +13389,12 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "MoveUSD disclosures and disclaimers",
-          "url": "https://docs.moveusd.com/docs/disclosures-disclaimers"
+          "label": "CFX platform overview (docs.cfx.to)",
+          "url": "https://docs.cfx.to/docs/key-features"
         },
         {
-          "label": "CFX platform overview",
-          "url": "https://docs.cfx.to/docs/key-features"
+          "label": "CFX launches GENIUS-ready MOVEUSD on Ethereum and Base (July 30 2025)",
+          "url": "https://www.bitwire.com/feed/cfx-launches-genius-ready-stablecoin-moveusd-on-ethereum-and-base-with-wormhole"
         }
       ]
     },
@@ -13469,9 +13722,9 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Midas",
+      "issuerEntity": "Midas Software GmbH",
       "issuerDomicile": "Germany",
-      "licensingRegulator": "EU Prospectus Regulation / MiFID financial-instrument context",
+      "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority for Liechtenstein Derivative Debt Instrument; issuer domiciled in Germany under EU Prospectus Regulation / MiFID II financial-instrument framework)",
       "redemptionPolicyPresent": false,
       "references": [
         {
@@ -13481,6 +13734,14 @@
         {
           "label": "Midas mTBILL docs",
           "url": "https://docs.midas.app/tokens/mtbill"
+        },
+        {
+          "label": "Readi.fi mTBILL analysis — MiFID II debt security, Liechtenstein FMA prospectus",
+          "url": "https://readi.fi/asset/structured-product-mtbill-midas-mtbill-by-midas/"
+        },
+        {
+          "label": "GENIUS Act S.1582 text — payment stablecoin definition excludes securities",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text"
         }
       ]
     },
@@ -13571,7 +13832,7 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / state money transmitter regulators",
+      "licensingRegulator": "FinCEN / state money transmitter regulators (NMLS #2450917); OCC conditionally approved a new entity 'Bridge National Trust Bank' (CD-1365, Feb 2026) — not yet a final federal charter for Bridge Building Inc.",
       "reserveDisclosureUrl": "https://dashboard.m0.org",
       "redemptionPolicyPresent": true,
       "references": [
@@ -13586,6 +13847,10 @@
         {
           "label": "M0 Dashboard",
           "url": "https://dashboard.m0.org"
+        },
+        {
+          "label": "OCC Conditional Approval for Bridge National Trust Bank (CD-1365)",
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
         }
       ]
     },
@@ -13720,7 +13985,7 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Brale MXNe",
+          "label": "Brale MXNe stablecoin page",
           "url": "https://brale.xyz/stablecoins/MXNe"
         },
         {
@@ -13730,6 +13995,10 @@
         {
           "label": "Brale terms",
           "url": "https://brale.xyz/legal/terms"
+        },
+        {
+          "label": "Brale Review 2026 — Stablecoin Infrastructure Platform",
+          "url": "https://stablecoininsider.org/brale-review-2026/"
         }
       ]
     },
@@ -14757,8 +15026,12 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Ondo OUSG docs",
+          "label": "Ondo OUSG docs — qualified-access product",
           "url": "https://docs.ondo.finance/qualified-access-products/ousg"
+        },
+        {
+          "label": "SEC drops Ondo Finance investigation — no charges (Nov 2025)",
+          "url": "https://unchainedcrypto.com/sec-drops-biden-era-investigation-into-ondo-finance/"
         }
       ]
     },
@@ -14856,10 +15129,10 @@
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
-      "issuerEntity": "Bridge Building Inc.",
+      "issuerPathway": "federal-qualified-nonbank",
+      "issuerEntity": "Bridge Building Inc. (OCC national trust bank applicant; wholly owned by Stripe)",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / state money transmitter regulators",
+      "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
       "references": [
@@ -14874,6 +15147,14 @@
         {
           "label": "Bridge issuance FAQ",
           "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+        },
+        {
+          "label": "Bridge OCC conditional trust charter approval (Feb 2026)",
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
+        },
+        {
+          "label": "CoinDesk: Bridge wins OCC initial approval for national trust bank charter",
+          "url": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter"
         }
       ]
     },
@@ -15448,8 +15729,8 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Plume",
-      "issuerDomicile": "Cayman Islands",
+      "issuerEntity": "Nest (Marshall Islands DAO LLC)",
+      "issuerDomicile": "Marshall Islands",
       "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
       "redemptionPolicyPresent": true,
       "references": [
@@ -15464,6 +15745,10 @@
         {
           "label": "Plume pUSD website",
           "url": "https://plume.org/pusd"
+        },
+        {
+          "label": "RWA.xyz pUSD asset page — lists Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892) as issuer; eligible investors: Non-U.S. Investor",
+          "url": "https://app.rwa.xyz/assets/pUSD"
         }
       ]
     },
@@ -15645,11 +15930,15 @@
       "tokenType": "EMT",
       "references": [
         {
+          "label": "Kraken EEA stablecoin restrictions – PYUSD explicitly listed",
+          "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        },
+        {
           "label": "Coinbase MiCA non-compliant stablecoin restrictions",
           "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
         },
         {
-          "label": "ESMA interim MiCA register (issuers of EMTs) - no PYUSD row found",
+          "label": "ESMA interim MiCA register (issuers of EMTs) – no PYUSD/Paxos row found",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ]
@@ -15657,16 +15946,24 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Paxos Trust Company, N.A.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "OCC / NYDFS historical trust-company context",
+      "licensingRegulator": "OCC",
       "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
+          "label": "OCC NR-2025-125: Conditional approval for Paxos Trust Company, N.A. national trust charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
+        },
+        {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Paxos press release: OCC approves Paxos conversion to OCC Trust",
+          "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider"
         },
         {
           "label": "PayPal PYUSD page",
@@ -15898,25 +16195,25 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "re-protocol-reusd",
     "genius": {
-      "applicability": "unclear",
-      "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
-      "issuerEntity": "Re Protocol",
-      "issuerDomicile": "British Virgin Islands",
+      "applicability": "non-payment-token",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Resilience Foundation",
+      "issuerDomicile": "Cayman Islands",
       "reserveDisclosureUrl": "https://app.re.xyz/transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "label": "Re Protocol disclosure page",
+          "url": "https://re.xyz/disclosure"
         },
         {
-          "label": "Re Protocol docs",
-          "url": "https://docs.re.xyz/"
+          "label": "Re Protocol docs — What is reUSD",
+          "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
         },
         {
-          "label": "Re transparency",
-          "url": "https://app.re.xyz/transparency"
+          "label": "Re Protocol disclaimers",
+          "url": "https://docs.re.xyz/disclaimers"
         }
       ]
     },
@@ -16203,10 +16500,10 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "state-qualified",
       "issuerEntity": "Standard Custody & Trust Company, LLC",
       "issuerDomicile": "United States",
-      "licensingRegulator": "NYDFS; proposed OCC national trust bank context",
+      "licensingRegulator": "NYDFS (current issuer charter); OCC conditional national trust bank charter pending (Ripple National Trust Bank)",
       "stateRegulator": "NYDFS",
       "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
       "redemptionPolicyPresent": true,
@@ -16214,6 +16511,14 @@
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "OCC NR-2025-125: Conditional approvals for five national trust bank charters including Ripple",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
+        },
+        {
+          "label": "Ripple press release: Secures Federal Approval for National Trust Bank",
+          "url": "https://ripple.com/ripple-press/ripple-secures-federal-approval-to-establish-national-trust-bank/"
         },
         {
           "label": "Ripple RLUSD issuer page",
@@ -16370,13 +16675,18 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Reservoir Protocol",
+      "issuerEntity": "Reservoir Protocol (incubated by Fortunafi)",
+      "issuerDomicile": "Cayman Islands",
       "reserveDisclosureUrl": "https://app.reservoir.xyz/reserves",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Reservoir Terms of Service (US person exclusion, Cayman Islands governing law)",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
         },
         {
           "label": "Reservoir rUSD docs",
@@ -16591,6 +16901,10 @@
         {
           "label": "RUSD whitepaper",
           "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+        },
+        {
+          "label": "RIBG Digital stablecoins website",
+          "url": "https://ribg.digital/"
         }
       ]
     },
@@ -17006,12 +17320,12 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Brale Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / state money transmitter regulators",
+      "licensingRegulator": "FinCEN / state money transmitter regulators (registered MSB, 45 US jurisdictions)",
       "reserveDisclosureUrl": "https://brale.xyz/stablecoins/SBC",
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "Brale SBC",
+          "label": "Brale SBC reserve disclosure",
           "url": "https://brale.xyz/stablecoins/SBC"
         },
         {
@@ -17765,6 +18079,10 @@
         {
           "label": "SoFiUSD launch announcement",
           "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+        },
+        {
+          "label": "Deloitte April 2026 attestation (SEC ABS-15G filing, SoFi Bank N.A., filed 2026-04-24)",
+          "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm"
         }
       ]
     },
@@ -18643,7 +18961,8 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Solayer",
+      "issuerEntity": "Solayer Labs, Inc.",
+      "issuerDomicile": "United States",
       "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
       "redemptionPolicyPresent": true,
       "references": [
@@ -18652,12 +18971,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "OCC GENIUS Act NPRM (Federal Register)",
+          "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the"
+        },
+        {
           "label": "Solayer sUSD FAQ",
           "url": "https://docs.solayer.org/susd/protocol-info/faqs.md"
         },
         {
           "label": "Solayer sUSD litepaper",
           "url": "https://docs.solayer.org/susd/protocol-info/litepaper.md"
+        },
+        {
+          "label": "Perkins Coie: OCC GENIUS yield prohibition analysis",
+          "url": "https://perkinscoie.com/insights/update/stablecoin-interest-yield-and-rewards-occ-proposes-sweeping-regulations-under"
         }
       ]
     },
@@ -19730,9 +20057,9 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "OpenEden",
+      "issuerEntity": "Treasury Bills Institutional Liquidity Limited (OpenEden)",
       "issuerDomicile": "British Virgin Islands",
-      "licensingRegulator": "BVI FSC professional fund context",
+      "licensingRegulator": "BVI FSC — Registered Professional Fund",
       "redemptionPolicyPresent": false,
       "references": [
         {
@@ -20195,6 +20522,10 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "SEC Press Release 2024-145 — TrueCoin/TrustToken settled charges",
+          "url": "https://www.sec.gov/newsroom/press-releases/2024-145"
+        },
+        {
           "label": "TUSD transparency",
           "url": "https://tusd.io/transparency"
         },
@@ -20301,11 +20632,11 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "United Stables",
+          "label": "United Stables website — regulatory disclosure",
           "url": "https://www.u.tech/"
         },
         {
-          "label": "United Stables terms",
+          "label": "United Stables terms — regulatory disclosure",
           "url": "https://u.tech/terms/"
         }
       ]
@@ -20434,7 +20765,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
@@ -20442,15 +20773,27 @@
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "OCC: Anchorage national trust bank charter",
+          "label": "OCC: Anchorage national trust bank charter (January 2021)",
           "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
-          "label": "Tether USAT announcement",
-          "url": "https://tether.io/news/tether-unveils-usat-its-planned-u-s-regulated-dollar-backed-stablecoin-and-will-appoint-bo-hines-as-ceo-of-tether-usat/"
+          "label": "Tether USAT launch announcement (January 27, 2026)",
+          "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/"
         },
         {
-          "label": "Anchorage USAT attestations",
+          "label": "Anchorage Digital Bank: First federally chartered stablecoin issuer following GENIUS Act",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act"
+        },
+        {
+          "label": "Anchorage Digital comment letter on OCC GENIUS Act NPRM",
+          "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act"
+        },
+        {
+          "label": "OCC GENIUS Act NPRM Bulletin 2026-3 (February 25, 2026)",
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Anchorage USAT reserve attestations",
           "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
         }
       ]
@@ -20666,6 +21009,28 @@
     "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     "mechanismArchetype": "tbill",
     "geckoId": "usual-usd",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "ESMA Interim MiCA Register — EMTWP.csv (EMT issuers)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Coindoo: Europe still has just 17 authorized EMT issuers (2026)",
+          "url": "https://coindoo.com/mica-stablecoin-update-europe-still-has-just-17-authorized-issuers-in-2026/"
+        },
+        {
+          "label": "Cryptonomist: France launch of USD0, Usual Protocol",
+          "url": "https://en.cryptonomist.ch/2024/02/29/france-the-usual-protocol-launches-usd0-the-stablecoin-that-rewards-the-community/"
+        },
+        {
+          "label": "ChainArgos: USD as Usual — MiCA analysis",
+          "url": "https://www.chainargos.com/usd-as-usual/"
+        }
+      ]
+    },
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -20690,6 +21055,10 @@
         {
           "label": "RWA.xyz USD0 asset page",
           "url": "https://app.rwa.xyz/assets/USD0"
+        },
+        {
+          "label": "Usual DAO governance — UIP-15 protocol ownership",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0"
         }
       ]
     },
@@ -20817,10 +21186,10 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
-      "issuerEntity": "BitGo Bank & Trust, N.A.",
+      "issuerPathway": "federal-qualified-nonbank",
+      "issuerEntity": "BitGo Trust Company / BitGo Bank & Trust, N.A. (OCC conditional approval Dec 2025; current issuer); WLTC Holdings LLC / World Liberty Trust Company, N.A. (de novo OCC national trust charter application pending, filed Jan 2026)",
       "issuerDomicile": "United States",
-      "licensingRegulator": "OCC / South Dakota trust-company context",
+      "licensingRegulator": "OCC (BitGo Bank & Trust conditional approval Dec 2025; WLTC Holdings OCC application Jan 2026)",
       "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
       "redemptionPolicyPresent": true,
       "references": [
@@ -20829,12 +21198,28 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "OCC Dec 12 2025 conditional approval — BitGo Bank & Trust, N.A. national trust charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125c.pdf"
+        },
+        {
+          "label": "OCC digital assets licensing — World Liberty Trust Company application",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/world-liberty-trust-company.pdf"
+        },
+        {
           "label": "World Liberty Financial USD1 page",
           "url": "https://worldlibertyfinancial.com/usd1"
         },
         {
           "label": "BitGo USD1 attestations",
           "url": "https://www.bitgo.com/usd1/attestations/"
+        },
+        {
+          "label": "WLTC Holdings OCC charter application announcement (BusinessWire Jan 2026)",
+          "url": "https://www.businesswire.com/news/home/20260107876750/en/World-Liberty-Financial-Announces-that-WLTC-Holdings-LLC-has-Submitted-an-Application-for-a-National-Trust-Bank-Charter-to-Issue-and-Custody-USD1-Stablecoins"
+        },
+        {
+          "label": "WLFI USD1 official documentation — BitGo as legal issuer",
+          "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1"
         }
       ]
     },
@@ -21108,8 +21493,7 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Anzens Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN MSB / state no-objection-letter context; BitGo Trust account context",
-      "reserveDisclosureUrl": "https://www.anzens.com/",
+      "licensingRegulator": "FinCEN MSB / 17 US state no-objection letters; BitGo Trust qualified custodian",
       "redemptionPolicyPresent": true,
       "references": [
         {
@@ -21117,12 +21501,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Anzens USDA page",
+          "label": "Anzens USDA homepage",
           "url": "https://www.anzens.com/"
         },
         {
           "label": "Anzens terms and conditions",
           "url": "https://www.anzens.com/landing/terms-and-conditions"
+        },
+        {
+          "label": "EMURGO post: Anzens publishes first proof-of-reserves report for USDA",
+          "url": "https://www.linkedin.com/posts/emurgo-io_examination-over-usda-reserve-assets-report-activity-7328334550667821056-s0vH"
         }
       ]
     },
@@ -21337,6 +21725,10 @@
         {
           "label": "USD.AI proof of reserves",
           "url": "https://docs.usd.ai/app-guide/proof-of-reserves"
+        },
+        {
+          "label": "USD.AI Foundation and CHIP announcement",
+          "url": "https://usd.ai/insights/usdai-foundation-chip"
         }
       ]
     },
@@ -21629,10 +22021,10 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / state money transmitter regulators; OCC conditional national trust bank charter context",
+      "licensingRegulator": "OCC (conditional national trust bank charter — Bridge National Trust Bank, NY); FinCEN/state MTLs for current MSB operations",
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
       "references": [
@@ -21641,7 +22033,7 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "OCC Corporate Decision 1365 - Bridge National Trust Bank",
+          "label": "OCC Corporate Decision 1365 — Bridge National Trust Bank",
           "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf"
         },
         {
@@ -21649,8 +22041,12 @@
           "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
         },
         {
-          "label": "Bridge stablecoins FAQ",
+          "label": "Bridge stablecoins FAQ — reserve and compliance disclosure",
           "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+        },
+        {
+          "label": "Stripe Open Issuance announcement — GENIUS-ready reserve management",
+          "url": "https://stripe.com/blog/introducing-open-issuance-from-bridge"
         }
       ]
     },
@@ -21681,8 +22077,12 @@
       "authorizedEntity": "Circle Internet Financial Europe SAS",
       "references": [
         {
-          "label": "ESMA MiCA register (issuers of EMTs)",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA Interim MiCA Register – Issuers of EMTs (EMTWP.csv)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Circle – First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
+          "url": "https://www.businesswire.com/news/home/20240701820713/en/Circle-is-First-Global-Stablecoin-Issuer-to-Comply-with-MiCA-EU%E2%80%99s-Landmark-Crypto-Law"
         },
         {
           "label": "Circle USDC MiCA white paper",
@@ -21693,16 +22093,20 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Circle Internet Financial, LLC",
       "issuerDomicile": "United States",
-      "licensingRegulator": "U.S. state money-transmitter regulators / NYDFS BitLicense context; proposed OCC national trust bank",
+      "licensingRegulator": "OCC (conditional national trust bank charter for First National Digital Currency Bank, N.A.; current issuer licensed as state MTL/NYDFS BitLicense)",
       "reserveDisclosureUrl": "https://www.circle.com/transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Circle – OCC Conditional Approval for National Trust Charter (Business Wire, 12 Dec 2025)",
+          "url": "https://www.businesswire.com/news/home/20251210456415/en/Circle-Receives-Conditional-Approval-from-OCC-for-National-Trust-Charter"
         },
         {
           "label": "Circle GENIUS Act hub",
@@ -21824,12 +22228,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "SG-FORGE CoinVertible",
+          "label": "SG-FORGE CoinVertible product page",
           "url": "https://www.sgforge.com/product/coinvertible/"
         },
         {
-          "label": "SG-FORGE USDCV MiCA white paper",
+          "label": "SG-FORGE USDCV MiCA white paper v2.0",
           "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+        },
+        {
+          "label": "Paul Hastings: GENIUS Act foreign stablecoin issuer provisions",
+          "url": "https://www.paulhastings.com/insights/client-alerts/what-the-genius-act-means-for-uk-and-foreign-stablecoin-issuers"
         }
       ]
     },
@@ -21945,19 +22353,32 @@
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
       "issuerEntity": "TRON DAO Reserve",
-      "reserveDisclosureUrl": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency",
+      "issuerDomicile": "Dominica",
+      "reserveDisclosureUrl": "https://usdd.io/data",
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+          "label": "OCC GENIUS Act NPRM (Bulletin 2026-3)",
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "USDD over-collateralization and transparency",
+          "label": "FinCEN/OFAC Joint GENIUS Act AML/CFT NPRM (FR 2026-06963)",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435"
+        },
+        {
+          "label": "Treasury GENIUS Act state-regime comparability NPRM",
+          "url": "https://www.consumerfinancemonitor.com/2026/04/14/treasury-issues-nprm-on-state-oversight-of-stablecoin-issuers-under-the-genius-act/"
+        },
+        {
+          "label": "USDD live reserve data",
+          "url": "https://usdd.io/data"
+        },
+        {
+          "label": "USDD over-collateralization and transparency (legacy docs)",
           "url": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency"
         },
         {
-          "label": "USDD PSM",
+          "label": "USDD PSM documentation",
           "url": "https://legacy-docs.usdd.io/psm/the-psm"
         }
       ]
@@ -22052,7 +22473,7 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Ethena Protocol / Ethena",
+      "issuerEntity": "Ethena (BVI) Limited",
       "issuerDomicile": "British Virgin Islands",
       "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
       "redemptionPolicyPresent": true,
@@ -22068,6 +22489,10 @@
         {
           "label": "Ethena transparency dashboard",
           "url": "https://app.ethena.fi/dashboards/transparency"
+        },
+        {
+          "label": "CoinDesk: Ethena taps Anchorage to issue USDtb in U.S. under GENIUS Act",
+          "url": "https://www.coindesk.com/business/2025/07/24/ethena-taps-anchorage-to-issue-usd1-5b-usdtb-stablecoin-in-u-s-under-genius-act"
         }
       ]
     },
@@ -22204,6 +22629,33 @@
     "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "falcon-finance",
+    "genius": {
+      "applicability": "non-payment-token",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Falcon Digital Limited",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://app.falcon.finance/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "Falcon Finance Terms of Use — US persons restriction",
+          "url": "https://docs.falcon.finance/resources/terms-of-use"
+        },
+        {
+          "label": "Falcon Finance / Anchorage Digital fUSD launch announcement",
+          "url": "https://falcon.finance/news/falcon-finance-and-anchorage-digital-bank-launch-fusd-a-genius-ready-stablecoin-with-rewards-on-ceffu"
+        },
+        {
+          "label": "Anchorage Digital: fUSD is Falcon's US federally regulated stablecoin",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin"
+        },
+        {
+          "label": "Falcon Finance Q4-2025 Quarterly Audit confirming full reserve backing (BVI)",
+          "url": "https://x.com/press_newswire/status/1973314120960131348"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -22316,7 +22768,7 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Coinbase, Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; state money transmitter context",
+      "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; OCC conditional national trust charter (April 2026, custody-only, not a PPSI approval)",
       "stateRegulator": "NYDFS",
       "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
       "redemptionPolicyPresent": false,
@@ -22326,12 +22778,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Coinbase USDF announcement",
+          "label": "Coinbase USDF / Custom Stablecoin announcement",
           "url": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin"
         },
         {
           "label": "NYDFS virtual currency businesses",
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "Coinbase OCC conditional national trust charter approval (April 2, 2026)",
+          "url": "https://www.cryptotimes.io/2026/04/03/coinbase-receives-conditional-approval-for-national-trust-charter/"
         }
       ]
     },
@@ -22384,6 +22840,10 @@
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "OCC conditional approval of Paxos national trust charter (Dec 12 2025)",
+          "url": "https://www.prnewswire.com/news-releases/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider-302640292.html"
         },
         {
           "label": "Paxos USDG transparency",
@@ -22571,7 +23031,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
@@ -22583,11 +23043,19 @@
           "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
-          "label": "Anchorage USDGO launch",
+          "label": "Anchorage to serve as USDGO issuer under U.S. federal bank charter",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-serve-issuer-osls-new-us-regulated-stablecoin-usdgo"
+        },
+        {
+          "label": "Anchorage USDGO launch under federal oversight",
           "url": "https://www.anchorage.com/insights/usdgo-officially-launches-under-federal-oversight"
         },
         {
-          "label": "Anchorage USDGO attestations",
+          "label": "Anchorage Digital Bank first federally chartered stablecoin issuer following GENIUS Act",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act"
+        },
+        {
+          "label": "Anchorage USDGO reserve attestations",
           "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
         }
       ]
@@ -22754,13 +23222,17 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "FinCEN / state money transmitter regulators",
+      "licensingRegulator": "OCC (conditional national trust bank charter granted Feb 12 2026) / FinCEN MSB",
       "reserveDisclosureUrl": "https://usdh.com/reserves",
       "redemptionPolicyPresent": true,
       "references": [
+        {
+          "label": "OCC Conditional Approval — Bridge National Trust Bank (CD-1365, Feb 12 2026)",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf"
+        },
         {
           "label": "USDH reserves",
           "url": "https://usdh.com/reserves"
@@ -22772,6 +23244,10 @@
         {
           "label": "Bridge issuance overview",
           "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+        },
+        {
+          "label": "USDH migration / sunset page",
+          "url": "https://usdh.com/migration"
         }
       ]
     },
@@ -22863,7 +23339,7 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "KAST / KAST Tech",
+      "issuerEntity": "KAST Tech (Reg No. 16223, Anjouan, Comoros)",
       "issuerDomicile": "Union of Comoros",
       "licensingRegulator": "Anjouan Offshore Finance Authority",
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
@@ -22874,16 +23350,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "KAST USDK announcement",
+          "label": "KAST USDK announcement blog post",
           "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
         },
         {
-          "label": "M0 Solana launch with KAST",
+          "label": "M0 Solana launch with KAST press release",
           "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem"
         },
         {
-          "label": "M0 dashboard",
+          "label": "M0 dashboard (protocol reserve attestation)",
           "url": "https://dashboard.m0.org/"
+        },
+        {
+          "label": "KAST Terms and Conditions (legal entity confirmation)",
+          "url": "https://www.kast.xyz/legal/terms-and-conditions-of-service"
         }
       ]
     },
@@ -23092,7 +23572,7 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Gold Dollar / LLC Virelint Group",
+      "issuerEntity": "OJSC Virtual Asset Issuer (state-owned, Ministry of Finance of the Kyrgyz Republic); Gold Dollar operates the issuance; LLC Virelint Group previously cited as operator",
       "issuerDomicile": "Kyrgyz Republic",
       "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
       "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
@@ -23107,8 +23587,16 @@
           "url": "https://www.usdkg.com/"
         },
         {
-          "label": "USDKG transparency",
+          "label": "USDKG transparency page",
           "url": "https://www.usdkg.com/transparency"
+        },
+        {
+          "label": "USDKG blog: Building for regulated markets in 2026",
+          "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026"
+        },
+        {
+          "label": "OSL HK USDKG listing announcement (May 2026) — no US regulatory event",
+          "url": "https://chainwire.org/2026/05/21/osl-strengthens-asias-digital-asset-ecosystem-with-listing-of-state-supervised-gold-backed-stablecoin-usdkg/"
         }
       ]
     },
@@ -23170,8 +23658,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "MegaUSD",
+          "label": "MegaUSD website",
           "url": "https://megausd.money/"
+        },
+        {
+          "label": "MegaUSD Terms of Service (confirms MegaUSD (BVI) Ltd, BVI governing law, US user exclusion)",
+          "url": "https://app.megausd.money/terms"
+        },
+        {
+          "label": "MegaUSD Mint User Agreement (confirms BVI incorporation, no US regulatory authorization)",
+          "url": "https://app.megausd.money/mint-agreement"
         },
         {
           "label": "MegaETH docs",
@@ -23272,7 +23768,11 @@
           "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
         },
         {
-          "label": "ESMA interim MiCA EMT register - USDM not listed",
+          "label": "Norway kryptoeiendelsloven (MiCA) enacted 1 Jul 2025 - Finanstilsynet is NCA",
+          "url": "https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2025/lov-om-kryptoeiendeler-kryptoeiendelsloven-og-lov-om-endringer-i-hvitvaskingsloven-tfr-ii-trer-i/"
+        },
+        {
+          "label": "ESMA interim MiCA EMT register (EMTWP.csv, re-checked Jun 2026) - NBX/USDM not listed",
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ]
@@ -23283,7 +23783,7 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
       "issuerDomicile": "United States / Norway",
-      "licensingRegulator": "FinCEN MSB; Finanstilsynet / NBX EEA issuance",
+      "licensingRegulator": "FinCEN MSB #31000327040139; Finanstilsynet / NBX EEA issuance",
       "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
       "redemptionPolicyPresent": true,
       "references": [
@@ -23292,7 +23792,7 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Moneta USDM",
+          "label": "Moneta USDM - FinCEN MSB #31000327040139",
           "url": "https://moneta.global/"
         },
         {
@@ -23357,11 +23857,11 @@
       "m0"
     ],
     "genius": {
-      "applicability": "unclear",
-      "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
-      "issuerEntity": "Noble / M0 stablecoin infrastructure",
-      "issuerDomicile": "United States / Switzerland",
+      "applicability": "non-payment-token",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "NASD Inc (Noble)",
+      "issuerDomicile": "United States",
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": false,
       "references": [
@@ -23370,15 +23870,19 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Noble USDN",
+          "label": "GENIUS Act text S.1582 – payment stablecoin definition and yield prohibition",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text"
+        },
+        {
+          "label": "Noble USDN – yield-bearing rebasing design",
           "url": "https://noble.xyz/usdn"
         },
         {
-          "label": "Noble docs",
-          "url": "https://docs.noble.xyz/"
+          "label": "Noble blog – introducing USDN",
+          "url": "https://noble.xyz/blog/introducing-usdn"
         },
         {
-          "label": "M0 dashboard",
+          "label": "M0 dashboard – reserve transparency",
           "url": "https://dashboard.m0.org/"
         }
       ]
@@ -23605,16 +24109,25 @@
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-open-dollar",
     "genius": {
-      "applicability": "unclear",
+      "applicability": "non-payment-token",
       "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
-      "issuerEntity": "OpenEden",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "OpenEden Digital (OED)",
+      "issuerDomicile": "Bermuda",
       "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "GENIUS Act Sec. 4(a)(11) yield prohibition WilmerHale analysis",
+          "url": "https://www.wilmerhale.com/en/insights/client-alerts/20250718-what-the-genius-act-means-for-payment-stablecoin-issuers-banks-and-custodians"
+        },
+        {
+          "label": "OpenEden USDO launch US person exclusion",
+          "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin/"
         },
         {
           "label": "OpenEden USDO FAQ",
@@ -23721,13 +24234,17 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Ondo Global Markets",
-      "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/available-assets",
+      "issuerEntity": "Ondo Global Markets (BVI) Limited",
+      "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Ondo Global Markets trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
         },
         {
           "label": "Ondo Global Markets available assets",
@@ -23738,8 +24255,8 @@
           "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming"
         },
         {
-          "label": "Ondo legal and regulatory",
-          "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory"
+          "label": "RWA.xyz USDon asset page — confirms Non-U.S. Investor only, BVI FSC regulation",
+          "url": "https://app.rwa.xyz/assets/USDon"
         }
       ]
     },
@@ -23915,16 +24432,28 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Paxos Trust Company, N.A.",
       "issuerDomicile": "United States",
-      "licensingRegulator": "OCC / NYDFS historical trust-company context",
+      "licensingRegulator": "OCC",
       "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
       "redemptionPolicyPresent": true,
       "references": [
         {
+          "label": "OCC Conditional Approval — Paxos Trust Company Charter Conversion (December 2025)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf"
+        },
+        {
+          "label": "OCC National Trust Charter Announcement — Five Digital Asset Firms (December 12, 2025)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
+        },
+        {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Paxos newsroom — OCC national trust charter approval",
+          "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider"
         },
         {
           "label": "Paxos USDP page",
@@ -24090,7 +24619,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
@@ -24102,8 +24631,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "OCC: Anchorage national trust bank charter",
+          "label": "OCC: Anchorage national trust bank charter conditional approval (2021)",
           "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
+        },
+        {
+          "label": "OCC consent order against Anchorage Digital Bank for BSA/AML (April 2022, terminated August 2025)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2022/nr-occ-2022-41.html"
+        },
+        {
+          "label": "Anchorage Digital: GENIUS Act comment letter and PPSI intent statement",
+          "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act"
+        },
+        {
+          "label": "Anchorage Digital: First federally chartered stablecoin issuer post-GENIUS Act",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act"
         },
         {
           "label": "Western Union USDPT page",
@@ -24487,6 +25028,10 @@
         {
           "label": "StablR USDR whitepaper",
           "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
+        },
+        {
+          "label": "CoinDesk: StablR freezes USDR and EURR (May 2026)",
+          "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
         }
       ]
     },
@@ -24738,6 +25283,10 @@
         {
           "label": "M0 Startale USDSC docs",
           "url": "https://docs.m0.org/home/build-with-m0/m-extensions/startale-usdsc"
+        },
+        {
+          "label": "Startale USD FAQ",
+          "url": "https://startale.com/en/blog/usdsc-faq"
         }
       ]
     },
@@ -24811,7 +25360,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
@@ -24829,6 +25378,10 @@
         {
           "label": "Bridge issuance FAQ",
           "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+        },
+        {
+          "label": "Bridge OCC conditional approval blog",
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
         }
       ]
     },
@@ -24897,8 +25450,8 @@
     },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
-      "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "foreign-registered",
       "issuerEntity": "Tether International, S.A. de C.V.",
       "issuerDomicile": "El Salvador",
       "licensingRegulator": "CNAD",
@@ -24908,6 +25461,14 @@
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Tether USAT launch press release — USDT progressing towards GENIUS Act compliance",
+          "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/"
+        },
+        {
+          "label": "CoinDesk: Tether CEO says he'll comply with GENIUS to come to U.S.",
+          "url": "https://www.coindesk.com/policy/2025/07/18/tether-ceo-says-he-ll-comply-with-genius-to-come-to-u-s-circle-says-it-s-set-now"
         },
         {
           "label": "Tether token terms",
@@ -24999,7 +25560,7 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
-      "issuerPathway": "unknown",
+      "issuerPathway": "federal-qualified-nonbank",
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
@@ -25007,15 +25568,19 @@
       "redemptionPolicyPresent": true,
       "references": [
         {
-          "label": "OCC: Anchorage national trust bank charter",
+          "label": "OCC: Anchorage Digital Bank national trust bank charter approval (2021)",
           "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
-          "label": "Anchorage USDtb launch",
+          "label": "Anchorage USDtb launch announcement — America's first federally regulated stablecoin",
           "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin"
         },
         {
-          "label": "Anchorage USDtb attestations",
+          "label": "Anchorage comment letter on OCC GENIUS Act NPRM — confirms ADB expects to become a PPSI",
+          "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act"
+        },
+        {
+          "label": "Anchorage USDtb reserve attestations",
           "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
         }
       ]
@@ -25483,11 +26048,16 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Ondo Finance",
+      "issuerEntity": "Ondo Global Markets (BVI) Limited",
+      "issuerDomicile": "British Virgin Islands",
       "references": [
         {
           "label": "Ondo USDY basics",
           "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+        },
+        {
+          "label": "Ondo Global Markets legal and regulatory",
+          "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory"
         }
       ]
     },
@@ -25580,7 +26150,7 @@
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
       "issuerPathway": "unknown",
-      "issuerEntity": "Anzen",
+      "issuerEntity": "Anzen Group Ltd",
       "issuerDomicile": "British Virgin Islands",
       "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
       "redemptionPolicyPresent": true,
@@ -25590,12 +26160,12 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Anzen docs",
-          "url": "https://docs.anzen.finance/"
+          "label": "Anzen Terms of Service — confirms Anzen Group Ltd (BVI), no regulatory registration",
+          "url": "https://anzen.finance/terms"
         },
         {
-          "label": "Anzen website",
-          "url": "https://anzen.finance/"
+          "label": "Anzen docs — no GENIUS or regulatory disclosures",
+          "url": "https://docs.anzen.finance/"
         },
         {
           "label": "Anzen transparency",
@@ -25781,6 +26351,10 @@
         {
           "label": "Noon reserve transparency",
           "url": "https://noon.accountable.capital/"
+        },
+        {
+          "label": "Noon Capital launch press release (BVI domicile confirmed)",
+          "url": "https://www.globenewswire.com/news-release/2025/05/08/3076787/0/en/Noon-Capital-Launches-with-a-Bold-Promise-Smarter-Yields-Fairer-Returns-and-Transparent-Staking-for-All.html"
         }
       ]
     },
@@ -26165,9 +26739,9 @@
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
       "issuerPathway": "unknown",
-      "issuerEntity": "Sonic Labs / Frax stablecoin infrastructure",
+      "issuerEntity": "Sonic Labs / Sonic USA LLC (Delaware)",
       "issuerDomicile": "United States",
-      "reserveDisclosureUrl": "https://docs.soniclabs.com/sonic/ussd",
+      "reserveDisclosureUrl": "https://facts.frax.finance/frxusd/balance-sheet",
       "redemptionPolicyPresent": true,
       "references": [
         {
@@ -26175,8 +26749,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
+          "label": "Sonic USSD product page — GENIUS compatibility claim",
+          "url": "https://www.soniclabs.com/ussd"
+        },
+        {
           "label": "Sonic USSD docs",
           "url": "https://docs.soniclabs.com/sonic/ussd"
+        },
+        {
+          "label": "Sonic Labs USSD launch — Crowdfund Insider",
+          "url": "https://www.crowdfundinsider.com/2026/03/266190-sonic-labs-launches-ussd-stablecoin/"
         }
       ]
     },
@@ -26261,18 +26843,30 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Superstate",
+      "issuerEntity": "Superstate Trust (d/b/a Superstate Short Duration U.S. Government Securities Fund; pending rename to Invesco Short-Duration U.S. Government Securities Fund upon Invesco takeover, expected mid-2026)",
       "issuerDomicile": "United States",
-      "licensingRegulator": "SEC Reg D / Delaware statutory trust context",
+      "licensingRegulator": "SEC — private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
       "redemptionPolicyPresent": false,
       "references": [
+        {
+          "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text"
+        },
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "Superstate USTB docs",
-          "url": "https://docs.superstate.com/ustb"
+          "label": "Superstate USTB product page — fund share structure",
+          "url": "https://superstate.com/assets/ustb"
+        },
+        {
+          "label": "Fortune — Invesco takes over Superstate USTB (March 2026)",
+          "url": "https://fortune.com/2026/03/24/invesco-superstate-ustb/"
+        },
+        {
+          "label": "SEC EDGAR N-1A filing for Superstate USTB Money Market Fund (April 2025)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1982577/000110465925042142/tm2513524d1_n1a.htm"
         }
       ]
     },
@@ -26569,11 +27163,16 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "Circle / Hashnote",
+      "issuerEntity": "Circle International Bermuda Limited (token administrator, BMA-licensed); Hashnote International Short Duration Fund Ltd. (Cayman Islands mutual fund)",
+      "issuerDomicile": "Bermuda / Cayman Islands",
       "references": [
         {
           "label": "Circle USYC",
           "url": "https://www.circle.com/usyc"
+        },
+        {
+          "label": "USYC Docs — Introduction",
+          "url": "https://usyc.docs.hashnote.com/"
         }
       ]
     },
@@ -26955,12 +27554,16 @@
       "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
-          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026) – VNX Commodities AG not listed",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
+          "label": "FMA Liechtenstein – EMT issuance under MiCAR reserved to credit institutions and e-money institutions",
           "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+        },
+        {
+          "label": "Bitstamp – VEUR and VCHF trading disabled for EU/EEA customers Jan 2025 for MiCA non-compliance; deposits/withdrawals suspended May 2025, balances auto-converted to USDC May 2025",
+          "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea/"
         }
       ]
     },
@@ -27096,16 +27699,18 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "FMA Liechtenstein",
-      "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
-          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "label": "ESMA interim MiCA register (EMTWP.csv, updated 4 Jun 2026) — VNX Commodities AG not listed as authorized EMT issuer",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
-          "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+          "label": "FMA Liechtenstein — MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions; VNX holds TVTG registration, not an EMT authorization)",
+          "url": "https://www.fma-li.li/en/supervision-regulation/fintech/micar"
+        },
+        {
+          "label": "VNX transparency page — regulatory basis is Liechtenstein TVTG (TT Service Provider), no MiCA EMI or credit-institution license disclosed",
+          "url": "https://vnx.li/transparency/"
         }
       ]
     },
@@ -27182,16 +27787,18 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "FMA Liechtenstein",
-      "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
-          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "label": "ESMA interim MiCA register (issuers of EMTs) — VNX not listed",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
+          "label": "FMA Liechtenstein — MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
           "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+        },
+        {
+          "label": "Bitstamp MiCA update — VEUR and VCHF delisted for EEA users (same issuer, confirms non-compliant status)",
+          "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea/"
         }
       ]
     },
@@ -27333,15 +27940,14 @@
       "status": "non-compliant",
       "tokenType": "ART",
       "competentAuthority": "FMA Liechtenstein",
-      "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
-          "label": "ESMA interim MiCA ART register - VNX not listed",
-          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+          "label": "ESMA Interim MiCA Register – ART issuers (ARTZZ.csv) – VNX not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "FMA Liechtenstein - MiCAR asset-referenced token authorisation requirements",
-          "url": "https://www.fma-li.li/en/supervision-regulation/fintech/micar"
+          "label": "FMA Liechtenstein – MiCAR activities and register",
+          "url": "https://www.fma-li.li/en/financial-intermediaries/asset-management-and-markets-division/activities-under-micar"
         }
       ]
     },
@@ -27705,6 +28311,14 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wemix-dollar",
     "protocolSlug": "wemix",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "WEMIX PTE. LTD.",
+      "issuerDomicile": "Singapore",
+      "redemptionPolicyPresent": false
+    },
     "reserves": [
       {
         "name": "USDC and fiat reserve assets",
@@ -28134,18 +28748,30 @@
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
       "issuerPathway": "not-applicable",
-      "issuerEntity": "WisdomTree",
+      "issuerEntity": "WisdomTree Digital Management, Inc. (fund manager) / WisdomTree Digital Trust (fund issuer)",
       "issuerDomicile": "United States",
-      "licensingRegulator": "SEC registered money market fund context",
+      "licensingRegulator": "SEC — registered under Investment Company Act of 1940, Rule 2a-7 government money market fund",
       "redemptionPolicyPresent": false,
       "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27 — payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf"
+        },
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "WisdomTree Government Money Market Digital Fund",
-          "url": "https://www.wisdomtreeprime.com/digital-funds/wtgxx/"
+          "label": "WisdomTree GENIUS Act compliance disclosure — WTGXX as reserve asset",
+          "url": "https://www.marketsmedia.com/wisdomtree-to-offer-only-sec-registered-genius-act-compliant-fund/"
+        },
+        {
+          "label": "WisdomTree USDW stablecoin launch — separate GENIUS Act-intent payment stablecoin",
+          "url": "https://coincentral.com/wisdomtree-expands-into-stablecoins-with-usdw-and-tokenized-yield/"
+        },
+        {
+          "label": "WisdomTree Treasury Money Market Digital Fund (WTGXX) product page",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
         }
       ]
     },
@@ -28245,6 +28871,10 @@
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "FinCEN/OFAC AML NPRM for PPSIs",
+          "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism"
         },
         {
           "label": "WSPN WUSD",
@@ -28679,6 +29309,14 @@
         {
           "label": "Metal Dollar whitepaper",
           "url": "https://cdn.metallicus.com/Metal_Dollar_Whitepaper_v1.1.pdf"
+        },
+        {
+          "label": "Metal Dollar site (metaldollar.com)",
+          "url": "https://metaldollar.com/"
+        },
+        {
+          "label": "Metallicus newsroom",
+          "url": "https://www.metallicus.com/news"
         }
       ]
     },
@@ -28814,10 +29452,11 @@
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "unknown",
+      "issuerPathway": "state-qualified",
       "issuerEntity": "MoonPay USA LLC",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
+      "stateRegulator": "NYDFS",
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": true,
       "references": [
@@ -28832,6 +29471,10 @@
         {
           "label": "MoonPay licenses",
           "url": "https://www.moonpay.com/de/legal/licenses"
+        },
+        {
+          "label": "MoonPay NYDFS Limited Purpose Trust Charter press release",
+          "url": "https://www.prnewswire.com/news-releases/moonpay-secures-new-york-trust-charter-to-expand-regulated-financial-infrastructure-302625161.html"
         }
       ]
     },
@@ -29295,12 +29938,16 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "StraitsX XUSD",
+          "label": "StraitsX XUSD product page",
           "url": "https://www.straitsx.com/xusd"
         },
         {
           "label": "StraitsX token terms",
           "url": "https://www.straitsx.com/legal/token"
+        },
+        {
+          "label": "StraitsX USDT vs USDC vs XUSD blog post",
+          "url": "https://www.straitsx.com/blog-post/usdt-vs-usdc-vs-xusd"
         }
       ]
     },
@@ -29468,7 +30115,7 @@
       "issuerPathway": "not-applicable",
       "issuerEntity": "Figure Certificate Company",
       "issuerDomicile": "United States",
-      "licensingRegulator": "SEC registered security context",
+      "licensingRegulator": "SEC (Investment Company Act of 1940, face-amount certificate company)",
       "redemptionPolicyPresent": false,
       "references": [
         {
@@ -29476,8 +30123,20 @@
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
-          "label": "YLDS prospectus",
+          "label": "YLDS prospectus (SEC S-1, File No. 333-275154)",
           "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
+        },
+        {
+          "label": "Figure Certificate Company SEC EDGAR filings (CIK 0001974395)",
+          "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001974395&type=&dateb=&owner=include&count=10"
+        },
+        {
+          "label": "GENIUS Act enacted text (Public Law 119-27)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf"
+        },
+        {
+          "label": "YLDS website — confirms GENIUS Act yield exemption",
+          "url": "https://www.ylds.com/"
         }
       ]
     },

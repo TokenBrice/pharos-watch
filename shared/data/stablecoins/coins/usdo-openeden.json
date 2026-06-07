@@ -44,20 +44,40 @@
     "license": "DABA License"
   },
   "genius": {
-    "applicability": "unclear",
-    "issuerPathway": "unknown",
-    "issuerEntity": "OpenEden",
-    "foreignExceptionStatus": "unknown",
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USDO is a rebasing yield-bearing stablecoin: it distributes yield as additional tokens to holders daily. The GENIUS Act defines payment stablecoin to exclude instruments that pay interest or yield (Sec. 4(a)(11)) and prohibits PPSI issuers from paying any yield. USDOs core design is therefore incompatible with the payment stablecoin definition. Additionally, OpenEden explicitly geo-blocks US persons and states the token may not be offered or sold in the US, removing it further from GENIUS Act scope."
+    },
+    "issuerEntity": "OpenEden Digital (OED)",
+    "issuerDomicile": "Bermuda",
+    "issuerPathway": "foreign-registered",
+    "authorizationStatus": "no-public-authorization-found",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDO is described as a rebasing, yield-bearing stablecoin redeemable to USDC and backed by tokenized Treasury exposure, making GENIUS treatment unresolved.",
+    "notes": "USDO is a rebasing yield-bearing stablecoin pegged to $1 and issued by OpenEden Digital under a Bermuda DABA license. Its yield-distributing rebase mechanism structurally excludes it from the GENIUS Act payment stablecoin definition (which bans yield payments). US persons are explicitly geo-blocked. No GENIUS Act authorization, application, or foreign-exception registration found. foreignExceptionStatus is not-applicable because the instrument is a non-payment-token.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "GENIUS Act Sec. 4(a)(11) yield prohibition WilmerHale analysis",
+        "url": "https://www.wilmerhale.com/en/insights/client-alerts/20250718-what-the-genius-act-means-for-payment-stablecoin-issuers-banks-and-custodians",
+        "sourceKind": "news",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OpenEden USDO launch US person exclusion",
+        "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "OpenEden USDO FAQ",
@@ -70,21 +90,20 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Issuer disclosures, token documentation, and launch announcements",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OpenEden USDO launch announcement US person access restriction confirmed",
+        "WilmerHale GENIUS Act analysis yield prohibition and payment stablecoin definition"
       ],
-      "summary": "USDO materials describe a rebasing yield-bearing stablecoin pegged to $1, redeemable to USDC, and backed by tokenized Treasuries/BUIDL, but no public GENIUS authorization or application source was located.",
+      "summary": "USDO is a yield-bearing rebasing stablecoin explicitly excluded from the GENIUS Act payment stablecoin definition by its yield mechanism; US persons are geo-blocked from access. No PPSI application, foreign-exception registration, or authorization found in any public source.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

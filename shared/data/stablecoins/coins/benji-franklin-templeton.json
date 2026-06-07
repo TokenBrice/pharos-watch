@@ -39,6 +39,11 @@
       "url": "https://digitalassets.franklintempleton.com/benji/"
     }
   ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Investment Company Act of 1940 (registered money market fund)"
+  },
   "genius": {
     "applicability": "excluded-security",
     "authorizationStatus": "not-applicable",
@@ -66,12 +71,7 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
-  },
-  "jurisdiction": {
-    "country": "United States",
-    "regulator": "SEC",
-    "license": "Investment Company Act of 1940 (registered money market fund)"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

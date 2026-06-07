@@ -59,7 +59,7 @@
       "summary": "USDsui is a Bridge-issued U.S. dollar payment stablecoin for Sui with 1:1 redemption through Bridge Open Issuance."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "unknown",
+    "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
     "licensingRegulator": "FinCEN / state money transmitter regulators",
@@ -70,7 +70,7 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge and Sui materials describe USDsui issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
+    "notes": "Bridge received conditional OCC approval (Feb 12, 2026) to organize Bridge National Trust Bank, NA — an uninsured national trust bank, which maps to the 'federal-qualified-nonbank' PPSI pathway under the OCC's GENIUS Act NPRM. Bridge publicly states its compliance framework 'already positions Bridge to be GENIUS ready.' This is a trust-charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act (which remains in proposed-rules phase). No PPSI approvals exist as of 2026-06-07.",
     "references": [
       {
         "label": "Sui Dollar launch",
@@ -86,20 +86,29 @@
         "label": "Bridge issuance FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge OCC conditional approval blog",
+        "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-12",
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC conditional charter approval for Bridge National Trust Bank, NA (Feb 12, 2026)",
         "Sui Dollar launch materials",
-        "Bridge Open Issuance documentation and legal terms"
+        "Bridge Open Issuance documentation and legal terms",
+        "Bridge OCC approval blog post"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for USDsui.",
+      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or approved for Bridge or USDsui. Bridge's OCC conditional charter approval is a trust-charter action under existing OCC authority, not a GENIUS Act PPSI authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

@@ -45,6 +45,57 @@
     "regulator": "ACPR",
     "license": "EMI (MiCA)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Société Générale - FORGE",
+    "issuerDomicile": "France",
+    "licensingRegulator": "ACPR; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MiCA authorization and SG-FORGE reserve/redemption disclosures do not establish a public U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. SG-FORGE actively restricts US persons from holding USDCV (Regulation S offshore-transaction carve-out only). The GENIUS Act foreign-issuer exception requires a Treasury MiCA-comparability determination plus OCC registration — a pathway still in proposed-rulemaking as of 2026-06-07 with no determination issued. No public indication SG-FORGE has initiated or intends to initiate that process.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "SG-FORGE CoinVertible product page",
+        "url": "https://www.sgforge.com/product/coinvertible/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "SG-FORGE USDCV MiCA white paper v2.0",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Paul Hastings: GENIUS Act foreign stablecoin issuer provisions",
+        "url": "https://www.paulhastings.com/insights/client-alerts/what-the-genius-act-means-for-uk-and-foreign-stablecoin-issuers",
+        "sourceKind": "news"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act NPRM (Bulletin 2026-3, Federal Register 2026-04089) — no SG-FORGE or USDCV-specific approval",
+        "SG-FORGE product page and USDCV white paper v2.0 — confirms US selling restrictions, no GENIUS mention",
+        "Paul Hastings GENIUS Act foreign issuer alert — confirms Treasury comparability + OCC registration pathway still in proposed-rulemaking, no determination issued",
+        "Web search for SG-FORGE GENIUS Act application, foreign-issuer registration, qualifying foreign issuer status — no results found"
+      ],
+      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, foreign-exception determination, or comparability finding was located for USDCV or SG-FORGE. SG-FORGE actively restricts US persons and has not announced intent to seek US market access under GENIUS. The foreign-exception framework itself remains in proposed-rulemaking.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-07"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  },
   "mica": {
     "status": "authorized",
     "tokenType": "EMT",
@@ -61,51 +112,6 @@
         "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
       }
     ]
-  },
-  "genius": {
-    "applicability": "apparent-payment-stablecoin",
-    "issuerPathway": "unknown",
-    "issuerEntity": "Société Générale - FORGE",
-    "issuerDomicile": "France",
-    "licensingRegulator": "ACPR; MiCA electronic money institution",
-    "foreignExceptionStatus": "unknown",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "MiCA authorization and SG-FORGE reserve/redemption disclosures do not establish a public U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception; SG-FORGE also discloses U.S. selling restrictions.",
-    "references": [
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "SG-FORGE CoinVertible",
-        "url": "https://www.sgforge.com/product/coinvertible/",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "SG-FORGE USDCV MiCA white paper",
-        "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf",
-        "sourceKind": "issuer-disclosure"
-      }
-    ],
-    "authorizationStatus": "no-public-authorization-found",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
-      ],
-      "summary": "MiCA issuer authorization and SG-FORGE token disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDCV.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
-    },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {

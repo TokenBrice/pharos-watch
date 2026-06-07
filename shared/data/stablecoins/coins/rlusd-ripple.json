@@ -45,13 +45,13 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "RLUSD is a U.S. dollar payment stablecoin issued through Ripple's regulated stablecoin program with 1:1 redemption and monthly reserve attestations."
+      "summary": "RLUSD is a U.S. dollar payment stablecoin issued through Ripple's NYDFS-chartered subsidiary with 1:1 redemption and monthly reserve attestations."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "unknown",
+    "issuerPathway": "state-qualified",
     "issuerEntity": "Standard Custody & Trust Company, LLC",
     "issuerDomicile": "United States",
-    "licensingRegulator": "NYDFS; proposed OCC national trust bank context",
+    "licensingRegulator": "NYDFS (current issuer charter); OCC conditional national trust bank charter pending (Ripple National Trust Bank)",
     "primaryFederalRegulator": "OCC",
     "stateRegulator": "NYDFS",
     "foreignExceptionStatus": "not-applicable",
@@ -61,12 +61,26 @@
     "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Ripple disclosures establish the U.S. regulated stablecoin issuer model, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves — this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-07; the GENIUS Act rulemaking remains at the NPRM stage.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC NR-2025-125: Conditional approvals for five national trust bank charters including Ripple",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ripple press release: Secures Federal Approval for National Trust Bank",
+        "url": "https://ripple.com/ripple-press/ripple-secures-federal-approval-to-establish-national-trust-bank/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Ripple RLUSD issuer page",
@@ -82,16 +96,18 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC NR-2025-125 conditional trust bank charter announcements",
         "Ripple national trust bank and OCC materials",
         "NYDFS virtual-currency and stablecoin materials",
-        "Ripple RLUSD transparency pages"
+        "Ripple RLUSD transparency pages",
+        "GENIUS Act PPSI rulemaking tracker (Chapman & Cutler)"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for RLUSD.",
+      "summary": "No GENIUS Act PPSI application, state-qualified PPSI approval, or official PPSI filing was located for RLUSD or Standard Custody & Trust Company. OCC December 2025 conditional approval is a trust bank charter under existing OCC authority, not a PPSI approval under the GENIUS Act.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

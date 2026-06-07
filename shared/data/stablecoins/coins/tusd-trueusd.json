@@ -64,36 +64,49 @@
     "reserveDisclosureUrl": "https://tusd.io/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "TUSD reserve and redemption materials support payment-stablecoin monitoring, but Pharos found no public U.S. GENIUS approval, application, or foreign-issuer exception source.",
+    "notes": "Techteryx (current TUSD issuer, BVI-incorporated) has no confirmed U.S. GENIUS approval, application, or foreign-issuer exception. Note: the SEC settled charges in September 2024 against prior TUSD operators TrueCoin LLC and TrustToken Inc. (not Techteryx) for fraudulent unregistered sales and false reserve representations through April 2023; enforcementStatus here reflects Techteryx's own posture as current issuer. Ongoing civil litigation in Hong Kong and Dubai (worldwide asset freeze of $456M tied to First Digital Trust/Aria Commodities reserve dispute) does not constitute a U.S. enforcement action against Techteryx. TUSD delisted from EEA-regulated venues by Q1 2025 (Kraken, Binance) and several Binance spot pairs delisted April 2026.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "SEC Press Release 2024-145 — TrueCoin/TrustToken settled charges",
+        "url": "https://www.sec.gov/newsroom/press-releases/2024-145",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2024-09-24",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "TUSD transparency",
         "url": "https://tusd.io/transparency",
-        "sourceKind": "auditor-report"
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "TrueUSD white paper",
         "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "TrueUSD transparency and white paper materials",
-        "Public foreign payment stablecoin issuer exception materials"
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
+        "SEC press release 2024-145 and litigation release LR-26126 (action against prior operators TrueCoin/TrustToken; Techteryx not named)",
+        "TrueUSD transparency page and white paper materials",
+        "Public foreign payment stablecoin issuer exception materials (Treasury NPRM FR 2026-06489)",
+        "FinCEN/OFAC enforcement pages — no Techteryx-specific action found",
+        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025) — civil litigation, not U.S. enforcement"
       ],
-      "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD.",
+      "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD/Techteryx. SEC action against prior operators TrueCoin/TrustToken (settled Sep 2024) does not constitute a Techteryx enforcement action. No FinCEN or OFAC action against Techteryx found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

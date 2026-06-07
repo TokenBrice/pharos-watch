@@ -61,37 +61,54 @@
     "reserveDisclosureUrl": "https://www.mnee.io/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Antigua FSRC licensing and reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception for MNEE.",
+    "notes": "MNEE Limited is an Antigua-incorporated issuer holding an FSRC Class A Digital Asset Business License. The GENIUS Act was enacted July 18, 2025 but is not yet effective (effective date: January 18, 2027 at the latest, or 120 days after final rules). MNEE holds no U.S. PPSI approval, state-qualified status, or public foreign-issuer registration. The foreign payment stablecoin issuer (FPSI) registration pathway (OCC) is still being defined through NPRMs with comment periods through mid-2026; no FPSI registration is yet possible. No issuer announcement of a formal GENIUS Act compliance filing was found — a third-party Medium article describes a possible compliance strategy but is not an issuer disclosure.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Federal Register OCC GENIUS NPRM 2026-04089",
+        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "FinCEN/OFAC AML NPRM FR 2026-06963",
+        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "MNEE terms of use",
         "url": "https://www.mnee.io/terms",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       },
       {
-        "label": "MNEE transparency",
+        "label": "MNEE transparency page",
         "url": "https://www.mnee.io/transparency",
-        "sourceKind": "auditor-report"
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "MNEE terms and transparency pages",
-        "Antigua and Barbuda FSRC digital asset license context",
-        "Public foreign payment stablecoin issuer exception materials"
+        "OCC Bulletin 2026-3 and Federal Register NPRM 2026-04089 — no MNEE PPSI approval or application",
+        "FinCEN/OFAC AML NPRM FR 2026-06963 — foreign issuer framework still proposed, no registrations possible",
+        "FDIC and NCUA NPRM sources — no MNEE-specific action",
+        "MNEE website terms and transparency pages — no U.S. GENIUS filing announced",
+        "Web search for MNEE GENIUS Act authorization or foreign-issuer registration — no issuer announcement found",
+        "Antigua and Barbuda FSRC Class A license — offshore license only, no U.S. equivalent"
       ],
-      "summary": "FSRC licensing and MNEE reserve disclosures were found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for MNEE.",
+      "summary": "No U.S. GENIUS Act PPSI approval, state-qualified status, official application, or FPSI registration found for MNEE Limited. The FPSI registration framework is still under proposed rulemaking. Antiguan FSRC licensing provides no U.S. GENIUS status.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

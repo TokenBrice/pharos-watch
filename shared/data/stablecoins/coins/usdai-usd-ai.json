@@ -52,7 +52,7 @@
     "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDai supports whitelisted direct mint/redeem flows, but no public GENIUS approval, application, or foreign registration was located.",
+    "notes": "USDai supports whitelisted direct mint/redeem flows, but no public GENIUS approval, application, or foreign registration was located. The USD.AI Foundation is a Cayman Islands entity serving as off-chain steward of the USD.AI DAO (developed by Permian Labs). The GENIUS Act FPSI registration pathway does not open until July 18, 2028 per statutory text; no foreign issuer registration framework exists yet.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -73,6 +73,11 @@
         "label": "USD.AI proof of reserves",
         "url": "https://docs.usd.ai/app-guide/proof-of-reserves",
         "sourceKind": "auditor-report"
+      },
+      {
+        "label": "USD.AI Foundation and CHIP announcement",
+        "url": "https://usd.ai/insights/usdai-foundation-chip",
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "authorizationStatus": "no-public-authorization-found",
@@ -80,16 +85,17 @@
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
         "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "USD.AI Foundation announcement confirming Cayman Islands domicile"
       ],
-      "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; direct mint/redeem is now whitelisted.",
+      "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; USD.AI Foundation confirmed as Cayman Islands DAO steward with no U.S. regulatory presence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

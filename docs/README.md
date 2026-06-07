@@ -97,6 +97,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [tape-page.md](./tape-page.md) - `/timeline/` cross-class event feed route, URL filter contract, digest grouping, projector pipeline, and homepage marquee integration
 - [compliance-page.md](./compliance-page.md) - `/compliance/` combined MiCA authorization and GENIUS implementation-watch route contract
 - [mica-tracker.md](./mica-tracker.md) - EU MiCA metadata: the `mica` extension, status criteria, and maintenance via the `mica-research` skill
+- [genius-tracker.md](./genius-tracker.md) - U.S. GENIUS Act metadata: the `genius` extension, applicability/status criteria, and maintenance via the `genius-research` skill
 
 ## Public Route Coverage
 

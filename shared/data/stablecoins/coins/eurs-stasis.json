@@ -51,12 +51,16 @@
     "authorizedEntity": "STSS (Malta) Limited",
     "references": [
       {
-        "label": "ESMA interim MiCA register (issuers of EMTs) - STASIS not listed",
+        "label": "ESMA interim MiCA register — EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA MiCA register portal (weekly-updated interim CSV files)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "STASIS EURS information",
-        "url": "https://stasis.net/eurs-info"
+        "label": "MiCA-compliant stablecoins 2026 full list (eco.com) — EURS absent",
+        "url": "https://eco.com/support/en/articles/15192006-mica-compliant-stablecoins-2026-full-list-with-issuers"
       }
     ]
   },
@@ -104,10 +108,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "STASIS Transparency", "url": "https://stasis.net/transparency" }
+        {
+          "label": "STASIS Transparency",
+          "url": "https://stasis.net/transparency"
+        }
       ],
       "sourceFreeRationale": "Classification based on issuer model in project materials; the on-chain owner/minter admin on Ethereum/Polygon and the Stellar issuer account were not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin (Ethereum/Polygon) and Stellar issuer account for EURS before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin (Ethereum/Polygon) and Stellar issuer account for EURS before raising confidence."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

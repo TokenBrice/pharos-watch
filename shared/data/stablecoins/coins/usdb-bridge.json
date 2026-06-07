@@ -32,13 +32,13 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge."
+      "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge Building Inc."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "unknown",
+    "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / state money transmitter regulators; OCC conditional national trust bank charter context",
+    "licensingRegulator": "OCC (conditional national trust bank charter — Bridge National Trust Bank, NY); FinCEN/state MTLs for current MSB operations",
     "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
@@ -47,7 +47,7 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge has OCC preliminary conditional approval to organize Bridge National Trust Bank, but Pharos found no token-specific public GENIUS PPSI approval or official GENIUS application source for USDB.",
+    "notes": "Bridge Building Inc. (BBI), a Stripe subsidiary, received OCC conditional approval Feb 12, 2026 (CD1365) to organize Bridge National Trust Bank — a federal nonbank trust charter that maps to the federal-qualified-nonbank GENIUS pathway. Bridge publicly markets USDB and its Open Issuance platform as 'GENIUS-ready' (per bridge.xyz blog and Stripe Open Issuance announcement). No PPSI approval or official GENIUS application has been filed or granted; the application framework is still in proposed-rules rulemaking. GENIUS Act is not yet effective (effective date: Jan 18, 2027 at latest). Bridge is also a registered MSB with state MTLs for current operations.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -55,7 +55,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "OCC Corporate Decision 1365 - Bridge National Trust Bank",
+        "label": "OCC Corporate Decision 1365 — Bridge National Trust Bank",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator"
       },
@@ -65,24 +65,31 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Bridge stablecoins FAQ",
+        "label": "Bridge stablecoins FAQ — reserve and compliance disclosure",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Stripe Open Issuance announcement — GENIUS-ready reserve management",
+        "url": "https://stripe.com/blog/introducing-open-issuance-from-bridge",
         "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC Corporate Decision 1365 and Bridge national trust bank materials",
-        "Bridge USDB and issuance documentation",
-        "Bridge legal terms"
+        "OCC GENIUS Act rulemaking bulletin (Bulletin 2026-3) and Federal Register NPRM 2026-04089",
+        "OCC Corporate Decision 1365 — Bridge National Trust Bank conditional approval Feb 2026",
+        "bridge.xyz blog — OCC conditional approval announcement",
+        "Bridge stablecoins FAQ (apidocs.bridge.xyz)",
+        "Stripe Open Issuance blog — GENIUS-ready compliance positioning",
+        "Federal Register GENIUS Act tracker (Chapman & Cutler, accessed 2026-06-07)"
       ],
-      "summary": "Bridge OCC national trust bank charter context was found, but no token-specific public GENIUS PPSI approval, state-qualified approval, or official GENIUS application source was located for USDB.",
+      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application found for Bridge or USDB. Bridge holds a conditional OCC trust bank charter (not a PPSI grant) and self-describes as GENIUS-ready. GENIUS Act rulemaking remains at proposed-rules stage with no approvals granted to any issuer as of 2026-06-07.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

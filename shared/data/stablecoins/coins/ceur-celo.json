@@ -181,5 +181,19 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     }
+  },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Mento website — no MiCA/EMI regulatory posture disclosed",
+        "url": "https://www.mento.org/"
+      }
+    ]
   }
 }

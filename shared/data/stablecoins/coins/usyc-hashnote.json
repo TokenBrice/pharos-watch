@@ -39,21 +39,39 @@
   },
   "genius": {
     "applicability": "excluded-security",
-    "issuerEntity": "Circle / Hashnote",
-    "notes": "USYC is treated here as outside GENIUS payment-stablecoin tracking because Circle describes it as a tokenized money-market fund strategy.",
+    "applicabilityBasis": {
+      "summary": "USYC represents shares of the Hashnote International Short Duration Fund Ltd., a Cayman Islands mutual fund investing in short-term U.S. Treasuries and reverse repos, administered by Circle International Bermuda Limited. The GENIUS Act defines payment stablecoins as fixed-value instruments redeemable at a predetermined fixed amount; USYC accrues yield through NAV appreciation and is therefore not a payment stablecoin. The SEC/CFTC March 2026 Joint Interpretive Release (Release Nos. 33-11412 and 34-105020) classifies tokenized fund shares in the digital-securities bucket, consistent with existing Howey analysis. Shares are restricted to non-U.S. persons under Regulation S.",
+      "references": [
+        {
+          "label": "Astraea Counsel — Tokenized Treasury Funds: Securities Compliance 2026",
+          "url": "https://astraea.law/insights/tokenized-treasury-funds-securities-compliance-2026",
+          "sourceKind": "news"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Circle International Bermuda Limited (token administrator, BMA-licensed); Hashnote International Short Duration Fund Ltd. (Cayman Islands mutual fund)",
+    "issuerDomicile": "Bermuda / Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "USYC is a tokenized fund share in the Hashnote International Short Duration Fund Ltd. (Cayman Islands registered mutual fund), not a payment stablecoin. The GENIUS Act payment-stablecoin framework does not apply: USYC is yield-bearing via NAV appreciation, not fixed-value, and represents a securities interest. Circle acquired Hashnote in January 2025; the token administrator is Circle International Bermuda Limited, regulated by the Bermuda Monetary Authority (BMA) under its DABA License.",
     "references": [
       {
         "label": "Circle USYC",
         "url": "https://www.circle.com/usyc",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USYC Docs — Introduction",
+        "url": "https://usyc.docs.hashnote.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       }
     ],
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

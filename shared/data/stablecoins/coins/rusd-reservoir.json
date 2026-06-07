@@ -48,19 +48,28 @@
   ],
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "rUSD is a USD-pegged, 1:1 mintable/redeemable stablecoin that structurally meets the GENIUS Act definition of a payment stablecoin. However, the issuer explicitly excludes US persons from the protocol and interface via its Terms of Service, and the ToS is governed by Cayman Islands law, indicating the issuer has not sought any US regulatory pathway."
+    },
     "issuerPathway": "unknown",
-    "issuerEntity": "Reservoir Protocol",
+    "issuerEntity": "Reservoir Protocol (incubated by Fortunafi)",
+    "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.reservoir.xyz/reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reservoir documents 1:1 mint/redeem mechanics, but no public GENIUS issuer pathway was located.",
+    "notes": "The Reservoir Terms of Service explicitly state that rUSD is not offered to US persons and that US persons are not permitted to use the Interface or Protocol. The ToS is governed by Cayman Islands law. No named legal issuer entity is disclosed; the protocol is operated by Reservoir Protocol, incubated by Fortunafi. No GENIUS Act pathway, PPSI application, or foreign exception engagement was identified.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Reservoir Terms of Service (US person exclusion, Cayman Islands governing law)",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service",
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Reservoir rUSD docs",
@@ -70,24 +79,25 @@
       {
         "label": "Reservoir reserves",
         "url": "https://app.reservoir.xyz/reserves",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
+        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service) — confirmed US person exclusion and Cayman Islands governing law",
+        "Reservoir rUSD docs and protocol documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
       ],
-      "summary": "Reservoir documents 1:1 mint/redeem mechanics, but no public GENIUS PPSI approval, state-qualified approval, official application, or foreign registration source was located for rUSD.",
+      "summary": "Reservoir's ToS explicitly bars US persons from rUSD; Cayman Islands governing law and absence of any named US legal entity confirm the issuer has not engaged with GENIUS Act compliance. No PPSI approval, state-qualified approval, official application, or foreign exception registration was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

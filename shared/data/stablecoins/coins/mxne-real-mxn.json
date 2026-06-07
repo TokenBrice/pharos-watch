@@ -54,7 +54,7 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/MXNe",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MXNe is a Brale-issued peso stablecoin with U.S. money-transmitter context, but no GENIUS permitted-issuer approval or official application was located.",
+    "notes": "MXNe is a Brale-issued peso stablecoin with U.S. money-transmitter context, but no GENIUS permitted-issuer approval or official application was located. Brale operates as a FinCEN-registered MSB and licensed money transmitter (NMLS #2376957). The June 2026 Visa/Brale SBC proof-of-concept on Canton Network does not change MXNe's GENIUS status. Brale has not announced a PPSI pathway election (state-qualified vs. federal nonbank) as of 2026-06-07.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -62,7 +62,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Brale MXNe",
+        "label": "Brale MXNe stablecoin page",
         "url": "https://brale.xyz/stablecoins/MXNe",
         "sourceKind": "issuer-disclosure"
       },
@@ -75,23 +75,32 @@
         "label": "Brale terms",
         "url": "https://brale.xyz/legal/terms",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Brale Review 2026 — Stablecoin Infrastructure Platform",
+        "url": "https://stablecoininsider.org/brale-review-2026/",
+        "sourceKind": "news",
+        "accessedAt": "2026-06-07"
       }
     ],
     "authorizationStatus": "no-public-authorization-found",
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3, Feb 25 2026) and Federal Register",
+        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026)",
+        "FinCEN/OFAC joint AML NPRM (Apr 8 2026)",
+        "Brale issuer disclosure pages and blog (brale.xyz)",
+        "Brale Review 2026 (stablecoininsider.org)",
+        "No Brale PPSI application, state-qualified approval, or official-application announcement found in any federal or state regulatory source"
       ],
-      "summary": "Brale issuer, reserve, and redemption materials were found, but no token-specific public U.S. GENIUS approval, state-qualified approval, or official application source was located for MXNe.",
+      "summary": "Brale operates as a FinCEN-registered MSB and state money transmitter; no PPSI application, state-qualified approval, or official GENIUS authorization source was found for Brale or MXNe specifically as of 2026-06-07.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {
@@ -149,10 +158,18 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Brale MXNe", "url": "https://brale.xyz/stablecoins/MXNe" },
-        { "label": "Brale: Introducing MXNe", "url": "https://brale.xyz/blog/introducing-mxne" }
+        {
+          "label": "Brale MXNe",
+          "url": "https://brale.xyz/stablecoins/MXNe"
+        },
+        {
+          "label": "Brale: Introducing MXNe",
+          "url": "https://brale.xyz/blog/introducing-mxne"
+        }
       ],
-      "unresolvedQuestions": ["Read the on-chain minter/owner role on Base and the Solana/Stellar mint authorities to confirm Brale control before raising confidence."]
+      "unresolvedQuestions": [
+        "Read the on-chain minter/owner role on Base and the Solana/Stellar mint authorities to confirm Brale control before raising confidence."
+      ]
     }
   }
 }

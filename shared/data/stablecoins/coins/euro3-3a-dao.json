@@ -88,7 +88,9 @@
         }
       ],
       "sourceFreeRationale": "Vault mechanism and DAO governance confirmed from 3A docs; on-chain vault admin owner and DAO execution path not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve the on-chain 3A vault admin/owner and DAO execution authority on Polygon/Linea."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain 3A vault admin/owner and DAO execution authority on Polygon/Linea."
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -108,5 +110,23 @@
       "title": "Live collateral mix not modeled",
       "message": "3A documents the approved vault collateral set and redemption mechanics, but no Pharos-supported live adapter or stable public mainnet collateral-composition feed was found during this addition."
     }
-  ]
+  ],
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register – EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "3A DAO website – issuer disclosed as 3A DAO LLC, Marshall Islands (Reg. RMI-2022-33), no EU regulatory entity",
+        "url": "https://3adao.org/"
+      },
+      {
+        "label": "3A DAO docs – EURO3 described as decentralized EUR-pegged CDP stablecoin; no MiCA authorization or EMI license mentioned",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      }
+    ]
+  }
 }

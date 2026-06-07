@@ -46,12 +46,17 @@
     "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "WSPN materials describe WUSD reserves and redemption, while terms restrict U.S. persons; no GENIUS foreign-issuer registration was found.",
+    "notes": "WSPN is a BVI-domiciled entity with a stated FinCEN MSB registration and pending BVI VASP application. WUSD terms restrict U.S. persons. The GENIUS Act foreign-exception comparability framework remains in proposed-rulemaking (Treasury FR 2026-06489; comment deadline June 2, 2026) — no foreign registration can yet be granted. No PPSI approval or US authorization of any kind found.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "FinCEN/OFAC AML NPRM for PPSIs",
+        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
+        "sourceKind": "federal-register"
       },
       {
         "label": "WSPN WUSD",
@@ -73,17 +78,20 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
+        "FinCEN/OFAC AML NPRM (FR 2026-06963) — no PPSI approvals issued",
+        "Treasury state-regime comparability NPRM (FR 2026-06489) — foreign exception framework not yet final",
+        "FinCEN MSB registrant search (msb.fincen.gov)",
+        "WSPN issuer disclosures, reserve documentation, and terms of service",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
       ],
-      "summary": "WSPN issuer, reserve, redemption, and terms materials were found, but no token-specific public U.S. GENIUS approval, official application, or registered/comparable foreign-issuer exception source was located for WUSD.",
+      "summary": "WSPN issuer, reserve, redemption, and terms materials were reviewed; no token-specific public U.S. GENIUS approval, official application, or registered/comparable foreign-issuer exception source was located for WUSD. The foreign-exception comparability framework remains in proposed rulemaking.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

@@ -108,7 +108,9 @@
         }
       ],
       "sourceFreeRationale": "Immutable-contract + veto-governance model confirmed from dEURO/Frankencoin docs; exact deployed module set and nDEPS quorum not independently read on-chain.",
-      "unresolvedQuestions": ["Enumerate the currently approved dEURO minting modules and the nDEPS veto quorum on-chain."]
+      "unresolvedQuestions": [
+        "Enumerate the currently approved dEURO minting modules and the nDEPS veto quorum on-chain."
+      ]
     }
   },
   "deploymentModel": "canonical-bridge",
@@ -146,5 +148,18 @@
       "pricesUrl": "https://api.deuro.com/prices/mapping",
       "otherThresholdPct": 2
     }
+  },
+  "mica": {
+    "status": "non-compliant",
+    "references": [
+      {
+        "label": "dEURO website — MiCA position: qualifies as crypto-asset under MiCA but Titles II–IV not applicable due to no central issuer (LEXR Germany Rechtsanwalts GmbH legal opinion)",
+        "url": "https://www.deuro.com/"
+      },
+      {
+        "label": "dEURO Association — Swiss non-profit, disclaims all protocol control and regulated activities",
+        "url": "https://www.deuro.com/association.html"
+      }
+    ]
   }
 }

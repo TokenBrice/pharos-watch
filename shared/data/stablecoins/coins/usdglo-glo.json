@@ -67,6 +67,7 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
     "references": [
       {
         "label": "Brale USDGLO",
@@ -88,14 +89,16 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "Brale USDGLO reserve, terms, and disclosure pages",
-        "state money-transmitter public licensing context"
+        "state money-transmitter public licensing context",
+        "Brale blog (brale.xyz/blog) — no GENIUS Act / PPSI filing announcements found as of 2026-06-07",
+        "Web searches for Brale PPSI authorization, OCC charter, and GENIUS Act intent — no public filing or announced intent found"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO.",
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO. Brale operates as a FinCEN-registered MSB with state money-transmitter licenses; no OCC charter application or PPSI announcement found as of 2026-06-07.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

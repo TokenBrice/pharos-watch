@@ -49,6 +49,52 @@
     "regulator": "DNB",
     "license": "EMI (MiCAR)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Quantoz Payments B.V.",
+    "issuerDomicile": "Netherlands",
+    "licensingRegulator": "DNB; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located. The GENIUS Act foreign-exception framework remains in proposed-rules phase as of 2026-06-07; no foreign exception registry or comparability determination has been established.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Quantoz EURQ/USDQ",
+        "url": "https://www.quantoz.com/products/eurq-usdq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Web search for Quantoz Payments GENIUS Act foreign issuer registration 2026",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ. The GENIUS Act foreign exception framework rules remain in proposed-rules phase as of 2026-06-07.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-07"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  },
   "mica": {
     "status": "authorized",
     "tokenType": "EMT",
@@ -69,51 +115,6 @@
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ]
-  },
-  "genius": {
-    "applicability": "apparent-payment-stablecoin",
-    "issuerPathway": "unknown",
-    "issuerEntity": "Quantoz Payments B.V.",
-    "issuerDomicile": "Netherlands",
-    "licensingRegulator": "DNB; MiCA electronic money institution",
-    "foreignExceptionStatus": "unknown",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located.",
-    "references": [
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "Quantoz EURQ/USDQ",
-        "url": "https://www.quantoz.com/products/eurq-usdq",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "Quantoz transparency",
-        "url": "https://www.quantoz.com/transparency",
-        "sourceKind": "issuer-disclosure"
-      }
-    ],
-    "authorizationStatus": "no-public-authorization-found",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
-      ],
-      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
-    },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {
@@ -197,11 +198,11 @@
           "url": "https://www.quantoz.com/products/eurq-usdq"
         }
       ],
-    "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 and owner threshold = 3/5 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 and owner threshold = 2/5 at block 87368488.",
+      "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 and owner threshold = 3/5 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 and owner threshold = 2/5 at block 87368488.",
       "reviewer": "Codex mint-authority top100 batch-b",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-      "Identify proxy-admin address thresholds and signer models.",
+        "Identify proxy-admin address thresholds and signer models.",
         "Enumerate Polygon roles and confirm whether Polygon can independently mint or only bridge."
       ]
     }

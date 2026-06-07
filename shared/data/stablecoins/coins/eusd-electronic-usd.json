@@ -46,7 +46,7 @@
     "reserveDisclosureUrl": "https://app.reserve.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "eUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found.",
+    "notes": "eUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found. The payment use case via RPay (Latin America) makes applicability genuinely unclear rather than a clean non-payment-token exclusion.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -67,14 +67,15 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Reserve Protocol documentation and app disclosures"
+        "Reserve Protocol documentation and app disclosures",
+        "Web search for Reserve Protocol / eUSD GENIUS Act compliance 2026"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD. No GENIUS approvals have been granted to any issuer as of 2026-06-07; rulemaking remains at NPRM stage.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

@@ -38,42 +38,55 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Berachain docs describe HONEY as a USD-soft-pegged, fully collateralized native stablecoin for payments and remittances."
+      "summary": "Berachain docs describe HONEY as a USD-soft-pegged, fully collateralized native stablecoin minted 1:1 from whitelisted collateral for payments and remittances."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Berachain / BGT governance",
+    "issuerEntity": "Berachain Foundation (Cayman Islands)",
+    "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.berachain.com/learn/pol/tokens/honey",
+    "reserveDisclosureUrl": "https://honey.berachain.com/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "HONEY has stablecoin mint/redeem disclosures, but no public GENIUS approval or issuer pathway source was found.",
+    "notes": "HONEY is a governance-controlled DeFi stablecoin issued on Berachain by a Cayman Islands foundation; minting is permissioned through the HoneyFactory contract with collateral whitelisting controlled by BGT governance. No PPSI application, OCC filing, or GENIUS authorization has been announced. The Berachain Foundation is headquartered in George Town, Cayman Islands, making a foreign-issuer exception pathway the most likely route if authorization were ever sought, but no such intent has been publicly disclosed. Reserve transparency is on-chain via the HoneyFactory vaults, visible at honey.berachain.com; no formal third-party attestation report exists.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Berachain HONEY docs",
         "url": "https://docs.berachain.com/learn/pol/tokens/honey",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Berachain honey.berachain.com reserve display",
+        "url": "https://honey.berachain.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Berachain HONEY documentation"
+        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3, FR 2026-04089)",
+        "FinCEN/OFAC joint NPRM (FR 2026-06963)",
+        "Federal Register search for Berachain or HONEY PPSI filings",
+        "Berachain HONEY documentation (docs.berachain.com)",
+        "Berachain Foundation corporate profile (Cayman Islands, George Town)",
+        "Web search for Berachain GENIUS Act compliance filings 2026"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for HONEY.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or announced intent was located for HONEY or the Berachain Foundation. The issuer is a Cayman Islands foundation with no publicly disclosed U.S. regulatory pathway under the GENIUS Act.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

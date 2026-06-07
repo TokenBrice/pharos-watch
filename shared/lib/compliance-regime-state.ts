@@ -47,8 +47,20 @@ export const GENIUS_REGIME_STATE = {
       label: "Treasury proposed state regime comparability rule",
       url: "https://home.treasury.gov/news/press-releases/sb0435",
     },
+    {
+      label: "FDIC proposed PPSI requirements and standards (May 2026)",
+      url: "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+    },
+    {
+      label: "NCUA proposed PPSI application procedures",
+      url: "https://ncua.gov/newsroom/press-release/2026/ncua-proposes-rule-permitted-payment-stablecoin-issuer-applications",
+    },
+    {
+      label: "NCUA proposed PPSI requirements and standards (May 2026)",
+      url: "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards",
+    },
   ],
-  reviewedAt: "2026-05-27",
+  reviewedAt: "2026-06-07",
 } as const satisfies GeniusRegimeState;
 
 export function isGeniusRegimeEffective(state: GeniusRegimeState = GENIUS_REGIME_STATE): boolean {

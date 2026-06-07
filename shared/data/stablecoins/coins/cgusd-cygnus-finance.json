@@ -36,51 +36,88 @@
   },
   "genius": {
     "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "cgUSD is a fixed-price USD-pegged stablecoin with 1:1 USDC redemption designed for broad DeFi and payment use, which fits the functional profile of a payment stablecoin. However, the legal issuer (Cygnus Information Limited) appears operated by ARKS Labs, which is primarily domiciled in Hong Kong with only a FinCEN MSB registration (31000226418649) in the US, creating genuine ambiguity over whether GENIUS Act jurisdiction applies via a domestic or foreign-issuer pathway.",
+      "references": [
+        {
+          "label": "ARKS Labs website — FinCEN MSB registration and HK/US addresses",
+          "url": "https://www.arkslabs.io/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "Cygnus Finance website footer — Cygnus Information Limited copyright",
+          "url": "https://www.cygnus.finance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        }
+      ]
+    },
+    "issuerEntity": "Cygnus Information Limited",
+    "issuerDomicile": "Hong Kong (primary); US presence via ARKS Labs FinCEN MSB registration No. 31000226418649 (Aurora, CO)",
     "issuerPathway": "unknown",
-    "issuerEntity": "Cygnus Finance",
     "foreignExceptionStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — OCC GENIUS NPRM; no Cygnus/cgUSD application found",
+        "https://www.cygnus.finance/ — issuer website; entity identified as Cygnus Information Limited; no regulatory authorization disclosed",
+        "https://www.arkslabs.io/ — ARKS Labs; FinCEN MSB registration confirmed; no PPSI application",
+        "https://wiki.cygnus.finance/whitepaper/ — token docs; no licensing or authorization disclosure",
+        "https://app.rwa.xyz/platforms/cygnus-finance — RWA tracker; no regulatory status listed",
+        "https://www.coingecko.com/en/coins/cygnus-finance-global-usd — CoinGecko; no regulatory status listed"
+      ],
+      "summary": "No GENIUS Act PPSI approval, state-qualified status, official application, or foreign exception registration found across issuer disclosures, OCC NPRM materials, and third-party trackers. ARKS Labs holds a FinCEN MSB registration but no PPSI-pathway filing.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-07"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "cgUSD is a protocol stablecoin integrated into Cygnus LVS; GENIUS issuer treatment remains unresolved.",
+    "notes": "cgUSD is issued by Cygnus Information Limited (confirmed from website footer copyright), operated by ARKS Labs which is HK-based with a US FinCEN MSB registration. Functionally fits payment-stablecoin profile but issuer domicile ambiguity keeps applicability as unclear. GENIUS Act still in proposed-rules phase; no PPSI approvals exist for any issuer as of 2026-06-07.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Cygnus cgUSD overview",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Cygnus cgUSD token docs",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Cygnus cgUSD redemption",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "ARKS Labs website — FinCEN MSB registration and addresses",
+        "url": "https://www.arkslabs.io/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Cygnus Finance website — Cygnus Information Limited entity",
+        "url": "https://www.cygnus.finance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       }
     ],
-    "authorizationStatus": "no-public-authorization-found",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
-      ],
-      "summary": "cgUSD materials describe a protocol stablecoin and redemption mechanics, but no public GENIUS authorization, official application, or foreign registration source was located.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
-    },
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {
@@ -105,7 +142,10 @@
         "canRaiseCap": "unknown",
         "evidence": "The cgUSD vault contract exposes handleOracleReport(), which is gated to the accountingOracle address loaded from the Cygnus locator rather than to the vault owner. A 2026-05-25 Base RPC read resolved the locator oracleReportComponents() accountingOracle to this address.",
         "sources": [
-          { "label": "Cygnus cgUSD mint mechanics", "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint" }
+          {
+            "label": "Cygnus cgUSD mint mechanics",
+            "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint"
+          }
         ]
       },
       {
@@ -125,10 +165,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Cygnus cgUSD v1 docs", "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1" }
+        {
+          "label": "Cygnus cgUSD v1 docs",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+        }
       ],
       "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Owner/oracle addresses were read, but governance and operator custody were not decoded.",
-      "unresolvedQuestions": ["Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence."
+      ]
     }
   },
   "deploymentModel": "single-chain",

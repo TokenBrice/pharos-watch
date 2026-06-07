@@ -43,10 +43,13 @@
       "url": "https://aid.gaib.ai/transparency"
     }
   ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "AID is presented as a 1:1 mintable and redeemable AI-dollar stablecoin backed by U.S. Treasuries and stable assets."
+      "summary": "AID is presented as a 1:1 mintable and redeemable AI-dollar stablecoin backed by U.S. Treasuries and stable assets, consistent with a payment stablecoin as defined under the GENIUS Act."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -56,36 +59,48 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+    "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures, but no public GENIUS authorization or foreign-issuer exception source was found.",
+    "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-07 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "label": "OCC Bulletin 2026-3: GENIUS Act NPRM",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "GAIB AID docs",
+        "label": "Federal Register 2026-04089: OCC GENIUS Act proposed rule",
+        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
+        "sourceKind": "federal-register"
+      },
+      {
+        "label": "GAIB AID product documentation",
         "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "GAIB 2026 outlook blog post",
+        "url": "https://blog.gaib.ai/gaib-2026-outlook/",
         "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "GAIB AID product documentation"
+        "OCC Bulletin 2026-3 and Federal Register 2026-04089 (GENIUS Act NPRM)",
+        "FDIC GENIUS Act NPRMs (FR 2025-23510, 2026-06974)",
+        "FinCEN/OFAC joint AML NPRM (FR 2026-06963)",
+        "Treasury state-regime comparability NPRM (FR 2026-06489)",
+        "GAIB AID product documentation and blog",
+        "GAIB transparency page (aid.gaib.ai/transparency)",
+        "Web search for GAIB GENIUS Act authorization, PPSI filings, and Singapore comparability determination"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for AID.",
+      "summary": "No PPSI approval, state-qualified approval, official application, registered foreign-exception, or Singapore comparability determination was found for GAIB or AID. The foreign-exception framework is still being built through NPRMs; no state has been certified as substantially similar and no third-country comparability determination has been issued by Treasury as of 2026-06-07.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
-  },
-  "jurisdiction": {
-    "country": "Singapore"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {

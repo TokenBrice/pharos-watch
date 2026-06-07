@@ -40,6 +40,8 @@ The main authorization table excludes frozen and pre-launch assets. MiCA rows ca
 
 ## GENIUS Modeling
 
+**`docs/genius-tracker.md` is the source of truth** for the `genius` schema, applicability/status criteria, sourcing requirements, and legal framing — the companion to `docs/mica-tracker.md`. Read it before editing `genius` metadata.
+
 GENIUS should not be modeled as one broad "compliant" label. The `GeniusProfile` shape keeps separate public dimensions for:
 
 - applicability;

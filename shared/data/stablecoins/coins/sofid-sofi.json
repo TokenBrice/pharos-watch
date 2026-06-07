@@ -60,7 +60,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-09",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -76,20 +77,28 @@
         "label": "SoFiUSD launch announcement",
         "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Deloitte April 2026 attestation (SEC ABS-15G filing, SoFi Bank N.A., filed 2026-04-24)",
+        "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-04-09",
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "OCC SoFi Bank approval and charter materials",
-        "SoFiUSD product and investor-relations pages"
+        "SoFiUSD product and investor-relations pages",
+        "Web search for SoFi PPSI application filings June 2026"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID.",
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID as of 2026-06-07. GENIUS Act is law (enacted July 2025) but implementing regulations remain in proposed-rules phase; no PPSI applications have been accepted yet. SoFi Bank N.A. is an OCC-supervised IDI and under GENIUS would issue via a subsidiary; no such subsidiary PPSI application was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      "reviewedAt": "2026-06-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-05-27"
+    "reviewedAt": "2026-06-07"
   },
   "contracts": [
     {
