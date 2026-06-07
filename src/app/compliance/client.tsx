@@ -50,6 +50,8 @@ import {
   type ComplianceStatusFilter,
 } from "./model";
 
+const COMPLIANCE_TEXT_CELL_CLASS = "whitespace-normal break-words align-top leading-snug";
+
 function normalizePegFilter(value: string): PegCurrency | "all" {
   return value === "all" || value in PEG_METADATA ? (value as PegCurrency | "all") : "all";
 }
@@ -401,9 +403,13 @@ function ComplianceTableRow({
         </span>
       </TableCell>
       <TableCell>{row.regime === "mica" ? <MicaStatusCell row={row} /> : <GeniusStatusCell row={row} />}</TableCell>
-      <TableCell>{row.regime === "mica" ? <MicaPathwayCell row={row} /> : <GeniusPathwayCell row={row} />}</TableCell>
-      <TableCell>{row.regime === "mica" ? <MicaAuthorityCell row={row} /> : <GeniusAuthorityCell row={row} />}</TableCell>
-      <TableCell>
+      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+        {row.regime === "mica" ? <MicaPathwayCell row={row} /> : <GeniusPathwayCell row={row} />}
+      </TableCell>
+      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+        {row.regime === "mica" ? <MicaAuthorityCell row={row} /> : <GeniusAuthorityCell row={row} />}
+      </TableCell>
+      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
         {row.regime === "mica" ? (
           row.authorizedEntity ? <span className="text-sm">{row.authorizedEntity}</span> : <EmptyCell />
         ) : row.issuerEntity ? (
@@ -416,7 +422,9 @@ function ComplianceTableRow({
         )}
       </TableCell>
       {showReserveDisclosure ? (
-        <TableCell>{row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}</TableCell>
+        <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+          {row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}
+        </TableCell>
       ) : null}
       <TableCell className="w-[300px] whitespace-normal text-right align-top">
         <SourceLinks references={row.references} />
