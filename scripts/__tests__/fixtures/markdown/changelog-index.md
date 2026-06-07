@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-06-01 to 2026-06-06
+
+Navigation redesign reshapes the sidebar and homepage, a compare hub launches, and the depeg resolver locks forecasts.
+
+- **Navigation & homepage redesign**: The sidebar becomes a lit 'watch column', a sticky core tape rail spans the top routes, and the homepage swaps static callouts for a rotating discovery module. The depeg resolver is promoted in primary navigation.
+- **Public compare hub**: A new indexable compare hub launches for side-by-side stablecoin lookups, the DEWS radar now surfaces high-risk coin logos scaled by escalation tier, and the public dataset catalog gains JSON-LD structured data.
+- **Resolver readiness & apxUSD**: The depeg resolver now locks predictions by forecast readiness or backstop, persisting lock metadata behind a readiness contract. The apxUSD incident reopened across DDR/DDRR with hardened pricing and projection.
+- **Reserves & Royco yield**: A structured tranche-yield safety model lands and ingests Royco Dawn rows, while live-reserve coverage gains audit hardening, finalization fixes, and corrected source mappings for assigned assets.
+- **Scoring updates**: Safety Score advances to v7.291, and PegScore coverage extends to more priced assets.
+- **Pipeline fail-closed hardening**: Pricing, depeg, DEWS, yield, reserves, and blacklist paths now fail closed on stale or uncorroborated data, with freshness guards, input gating, and hardened parsing. The ops proxy now requires Access JWTs.
+- **Codebase consolidation**: A broad refactor wave shares helpers across worker, Telegram, and UI layers, derives types from schemas, and prunes dead code; perf work defers heavy detail bundles, memoizes the coverage matrix, and chunks cron queries.
+
 ## 2026-05-25 to 2026-05-31
 
 The Depeg Resolver (DDR/DDRR) v2 ships at /depeg, dashboard cards flatten, and the data layer gets a two-pass audit.
