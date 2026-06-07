@@ -194,6 +194,8 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
         />
       ) : null}
       <DataTableShell
+        tableId="mint-burn-event-feed"
+        testId="mint-burn-event-feed-table"
         columns={FLOW_EVENT_COLUMNS}
         containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"

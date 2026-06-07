@@ -138,6 +138,8 @@ export function BlacklistTable({
   if (isLoading) {
     return (
       <DataTableShell
+        tableId="freezewatch-events"
+        testId="freezewatch-events-table"
         columns={BLACKLIST_COLUMNS}
         striped
         containerClassName="rounded-xl border"
@@ -193,6 +195,8 @@ export function BlacklistTable({
 
       <div className="hidden md:block">
         <DataTableShell
+          tableId="freezewatch-events"
+          testId="freezewatch-events-table"
           columns={BLACKLIST_COLUMNS}
           sort={{
             sortKey,

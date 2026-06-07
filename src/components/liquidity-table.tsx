@@ -80,6 +80,8 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
         Swipe table for volume, pool, chain, and protocol fields.
       </p>
       <DataTableShell
+        tableId="liquidity-leaderboard"
+        testId="liquidity-leaderboard-table"
         columns={LIQUIDITY_COLUMNS}
         striped
         sort={{

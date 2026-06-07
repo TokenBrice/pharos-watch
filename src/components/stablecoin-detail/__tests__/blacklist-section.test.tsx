@@ -126,10 +126,13 @@ describe("BlacklistSection", () => {
       isError: false,
     } as unknown as ReturnType<typeof useBlacklistEventsPage>);
 
-    const { getByRole } = render(
+    const { getByRole, getByTestId } = render(
       <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
     );
 
+    expect(getByTestId("stablecoin-blacklist-events-table").getAttribute("data-table-id")).toBe(
+      "stablecoin-blacklist-events",
+    );
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe(
       "/freezewatch/?stablecoin=USDC",
     );

@@ -60,6 +60,9 @@ describe("BlacklistTable", () => {
   it("renders amount provenance and unresolved status badges", () => {
     renderTable();
 
+    expect(screen.getByTestId("freezewatch-events-table").getAttribute("data-table-id")).toBe(
+      "freezewatch-events",
+    );
     expect(screen.getAllByText("Snapshot").length).toBeGreaterThan(0);
     expect(screen.getAllByText("provider failed").length).toBeGreaterThan(0);
   });

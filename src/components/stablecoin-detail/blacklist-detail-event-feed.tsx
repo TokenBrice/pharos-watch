@@ -132,6 +132,8 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
   return (
     <>
       <DataTableShell
+        tableId="stablecoin-blacklist-events"
+        testId="stablecoin-blacklist-events-table"
         columns={COLUMNS}
         containerClassName="rounded-xl border overflow-hidden"
         tableClassName="min-w-[520px]"

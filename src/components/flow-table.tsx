@@ -77,7 +77,12 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
 
   if (isLoading) {
     return (
-      <DataTableShell columns={FLOW_TABLE_COLUMNS} striped>
+      <DataTableShell
+        tableId="mint-burn-flow"
+        testId="mint-burn-flow-table"
+        columns={FLOW_TABLE_COLUMNS}
+        striped
+      >
         <DataTableLoadingRows columns={FLOW_TABLE_COLUMNS} rowCount={5} />
       </DataTableShell>
     );
@@ -85,6 +90,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
 
   return (
     <DataTableShell
+      tableId="mint-burn-flow"
+      testId="mint-burn-flow-table"
       columns={FLOW_TABLE_COLUMNS}
       striped
       tableClassName="min-w-[364px] table-fixed"

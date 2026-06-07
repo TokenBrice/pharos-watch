@@ -213,6 +213,8 @@ export function DepegHistory({
         />
       ) : null}
       <DataTableShell
+        tableId="stablecoin-depeg-history"
+        testId="stablecoin-depeg-history-table"
         columns={DEPEG_HISTORY_COLUMNS}
         containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"

@@ -133,6 +133,8 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
 
   return (
     <DataTableShell
+      tableId="depeg-tracker"
+      testId="depeg-tracker-table"
       columns={DEPEG_TRACKER_COLUMNS}
       sort={{
         sortKey,

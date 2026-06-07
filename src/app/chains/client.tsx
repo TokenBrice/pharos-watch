@@ -403,6 +403,8 @@ export function ChainsLeaderboardClient() {
           Swipe table horizontally for health, supply, share, and stablecoin counts.
         </p>
         <DataTableShell
+          tableId="chains-leaderboard"
+          testId="chains-leaderboard-table"
           columns={CHAIN_COLUMNS}
           striped
           sort={{

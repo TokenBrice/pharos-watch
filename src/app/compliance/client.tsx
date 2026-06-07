@@ -6,13 +6,13 @@ import { Check, ExternalLink } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
-  Table,
+  TableFrame,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -268,7 +268,13 @@ export function ComplianceClient() {
                   : "No stablecoins match these filters."}
               </div>
             ) : (
-              <ComplianceTable rows={rows} logos={logos} />
+              <ComplianceTable
+                rows={rows}
+                logos={logos}
+                tableId="compliance-authorization"
+                testId="compliance-authorization-table"
+                ariaLabel="Compliance authorization table"
+              />
             )}
           </div>
 
@@ -291,7 +297,13 @@ export function ComplianceClient() {
                   No GENIUS implementation-watch rows match these filters.
                 </div>
               ) : (
-                <ComplianceTable rows={watchRows} logos={logos} />
+                <ComplianceTable
+                  rows={watchRows}
+                  logos={logos}
+                  tableId="compliance-genius-watch"
+                  testId="compliance-genius-watch-table"
+                  ariaLabel="GENIUS implementation watch table"
+                />
               )}
             </div>
           ) : null}
@@ -304,32 +316,49 @@ export function ComplianceClient() {
 function ComplianceTable({
   rows,
   logos,
+  tableId,
+  testId,
+  ariaLabel,
 }: {
   rows: ComplianceRow[];
   logos: Record<string, string> | undefined;
+  tableId: string;
+  testId: string;
+  ariaLabel: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>Coin</TableHead>
-            <TableHead>Regime</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Pathway / Type</TableHead>
-            <TableHead>Authority</TableHead>
-            <TableHead>Issuer Entity</TableHead>
-            <TableHead>Reserve Disclosure</TableHead>
-            <TableHead className="text-right">Sources</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <ComplianceTableRow key={`${row.regime}:${row.id}`} row={row} logo={logos?.[row.id]} />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <TableFrame
+      tableId={tableId}
+      testId={testId}
+      chrome="bare"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card/40"
+      tableProps={{ "aria-label": ariaLabel }}
+      viewportClassName="relative w-full"
+      viewportProps={{
+        compactBottomPadding: false,
+        mobileScrollHint: false,
+        overscrollX: false,
+        scrollShadow: false,
+      }}
+    >
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Coin</TableHead>
+          <TableHead>Regime</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Pathway / Type</TableHead>
+          <TableHead>Authority</TableHead>
+          <TableHead>Issuer Entity</TableHead>
+          <TableHead>Reserve Disclosure</TableHead>
+          <TableHead className="text-right">Sources</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <ComplianceTableRow key={`${row.regime}:${row.id}`} row={row} logo={logos?.[row.id]} />
+        ))}
+      </TableBody>
+    </TableFrame>
   );
 }
 

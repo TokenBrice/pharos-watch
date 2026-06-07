@@ -208,6 +208,8 @@ export function ScreenerTable({
           </Link>
         ) : null}
         <DataTableShell<ScreenerSortKey>
+          tableId="stablecoin-screener"
+          testId="stablecoin-screener-table"
           columns={COLUMNS}
           sort={sort}
           striped

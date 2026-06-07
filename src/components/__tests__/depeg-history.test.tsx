@@ -60,6 +60,9 @@ describe("DepegHistory provenance badges", () => {
 
     render(<DepegHistory stablecoinId="usdc-circle" />);
 
+    expect(screen.getByTestId("stablecoin-depeg-history-table").getAttribute("data-table-id")).toBe(
+      "stablecoin-depeg-history",
+    );
     expect(screen.getByTestId("event-source").textContent).toContain("live");
     expect(screen.getByTestId("event-pending-reason").textContent).toContain("large cap");
     expect(screen.getByTestId("event-confirmed-by").textContent).toContain("DEX, CEX");

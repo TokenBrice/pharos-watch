@@ -298,6 +298,8 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
 
       <div className="hidden md:block">
         <DataTableShell
+          tableId="yield-leaderboard"
+          testId="yield-leaderboard-table"
           columns={YIELD_COLUMNS}
           striped
           containerClassName="-mx-4 max-w-[calc(100%+2rem)] px-4 sm:mx-0 sm:max-w-none sm:px-0"
