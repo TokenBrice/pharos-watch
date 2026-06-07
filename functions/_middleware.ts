@@ -101,6 +101,24 @@ function addVaryAccept(headers: Headers): void {
   }
 }
 
+function addVaryAcceptEncoding(headers: Headers): void {
+  const existing = headers.get("Vary");
+  if (!hasVaryToken(existing, "Accept-Encoding")) {
+    headers.set("Vary", existing ? `${existing}, Accept-Encoding` : "Accept-Encoding");
+  }
+}
+
+function clientAcceptsGzip(request: Request): boolean {
+  const ae = request.headers.get("Accept-Encoding") ?? "";
+  return /(^|,)\s*gzip\s*(;|,|$)/i.test(ae);
+}
+
+async function gzipString(text: string): Promise<ArrayBuffer> {
+  const bytes = new TextEncoder().encode(text);
+  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
+}
+
 function addNegotiationCacheHeaders(headers: Headers): void {
   addVaryAccept(headers);
   headers.set("Cloudflare-CDN-Cache-Control", "no-store");
@@ -145,18 +163,33 @@ function withNegotiationHeaders(response: Response, method: string): Response {
   return cloneForMethod(response, method, headers);
 }
 
-async function withHtmlCsp(response: Response, method: string, pathname: string): Promise<Response> {
+async function withHtmlCsp(response: Response, request: Request, pathname: string): Promise<Response> {
   if (!isHtmlResponse(response)) return response;
 
+  const method = request.method;
   const nonce = createCspNonce();
   const headers = new Headers(response.headers);
   addCspHeaders(headers, nonce, { telegramMiniApp: isTelegramMiniAppPath(pathname) });
+  addVaryAcceptEncoding(headers);
 
   if (method === "HEAD") {
     return cloneForMethod(response, method, headers);
   }
 
-  return new Response(addNonceToInlineScripts(await response.text(), nonce), {
+  const html = addNonceToInlineScripts(await response.text(), nonce);
+
+  if (!clientAcceptsGzip(request) || headers.has("Content-Encoding")) {
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
+  const gzipped = await gzipString(html);
+  headers.set("Content-Encoding", "gzip");
+  headers.delete("Content-Length");
+  return new Response(gzipped, {
     status: response.status,
     statusText: response.statusText,
     headers,
@@ -201,5 +234,5 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   const negotiated = matchesMarkdownRoute(url.pathname)
     ? withNegotiationHeaders(fallback, ctx.request.method)
     : fallback;
-  return withHtmlCsp(negotiated, ctx.request.method, url.pathname);
+  return withHtmlCsp(negotiated, ctx.request, url.pathname);
 };

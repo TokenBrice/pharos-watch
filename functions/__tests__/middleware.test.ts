@@ -29,6 +29,13 @@ function ctx(request: Request, assetsFiles: Record<string, string>) {
   return { request, env, next };
 }
 
+async function decodeBody(res: Response): Promise<string> {
+  if (res.headers.get("Content-Encoding") === "gzip") {
+    return new Response(res.body!.pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+  return res.text();
+}
+
 function scriptSrc(csp: string | null): string {
   return csp
     ?.split(";")
@@ -130,7 +137,7 @@ describe("pages middleware markdown negotiation", () => {
     });
     const res = await onRequest(ctx(req, { "/about/index.html": "<html>About</html>" }));
     expect(res.headers.get("Content-Type")).toMatch(/text\/html/);
-    expect(res.headers.get("Vary")).toBeNull();
+    expect(res.headers.get("Vary")).toBe("Accept-Encoding");
     expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
   });
 
@@ -226,6 +233,68 @@ describe("pages middleware markdown negotiation", () => {
     const res = await onRequest(ctx(req, { "/index.html": "<html><script>1</script></html>" }));
     expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
     expect(await res.text()).toBe("");
+  });
+
+  it("gzips the HTML response when the client accepts gzip while preserving nonce injection", async () => {
+    const req = new Request("https://pharos.watch/", {
+      headers: { "Accept-Encoding": "gzip, deflate, br" },
+    });
+    const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
+    const res = await onRequest(ctx(req, { "/index.html": html }));
+
+    expect(res.headers.get("Content-Encoding")).toBe("gzip");
+    expect(res.headers.get("Vary")).toContain("Accept-Encoding");
+    expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
+
+    const body = await decodeBody(res);
+    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
+  });
+
+  it("serves plaintext HTML with the nonce when the client does not accept gzip", async () => {
+    const req = new Request("https://pharos.watch/", {
+      headers: { "Accept-Encoding": "identity" },
+    });
+    const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
+    const res = await onRequest(ctx(req, { "/index.html": html }));
+
+    expect(res.headers.get("Content-Encoding")).toBeNull();
+    expect(res.headers.get("Vary")).toContain("Accept-Encoding");
+
+    const body = await res.text();
+    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
+  });
+
+  it("does not gzip HEAD responses even when the client accepts gzip", async () => {
+    const req = new Request("https://pharos.watch/", {
+      method: "HEAD",
+      headers: { "Accept-Encoding": "gzip" },
+    });
+    const res = await onRequest(ctx(req, { "/index.html": "<html><script>1</script></html>" }));
+
+    expect(res.headers.get("Content-Encoding")).toBeNull();
+    expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
+    expect(await res.text()).toBe("");
+  });
+
+  it("does not double-compress a response that already declares a Content-Encoding", async () => {
+    const req = new Request("https://pharos.watch/", {
+      headers: { "Accept-Encoding": "gzip" },
+    });
+    const next = vi.fn(async () =>
+      new Response("<html><script>1</script></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html", "Content-Encoding": "gzip" },
+      }),
+    );
+    const res = await onRequest({
+      request: req,
+      env: { ASSETS: { fetch: makeAssetsFetch({}) } },
+      next,
+    });
+
+    expect(res.headers.get("Content-Encoding")).toBe("gzip");
+    const body = await res.text();
+    expect(body).toMatch(/<script nonce="[^"]+">1<\/script>/);
   });
 
   it("allows Telegram bridge script and framing only on the Mini App route", async () => {
