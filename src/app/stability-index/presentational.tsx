@@ -6,6 +6,14 @@ import { Compass } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +85,10 @@ export const STABILITY_COMPONENT_DETAIL: Array<{
     color: STABILITY_COMPONENT_COLORS.trend,
   },
 ];
+
+const CONTRIBUTOR_HEAD_CLASS =
+  "h-auto px-0 pb-2 pr-4 text-xs uppercase tracking-wider";
+const CONTRIBUTOR_CELL_CLASS = "px-0 py-2.5 pr-4";
 
 type PsiHistoryStatsLayout = "grid" | "row" | "compact";
 
@@ -410,75 +422,137 @@ export function PsiContributorsTableCard({
               Which stablecoins are currently pushing the score below 100, ranked by total impact.
               Long-lasting depegs (over 30 days) receive a scoring depreciation - the percentage in parentheses next to the age shows the remaining impact weight.
             </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" aria-label="Stablecoins currently contributing to PSI score reduction">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Coin</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Deviation</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">MCap</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">Severity</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">Breadth</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Total</th>
-                    <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Age</th>
-                  </tr>
-                </thead>
-                <tbody className="text-muted-foreground">
-                  {rows.map((row, index) => (
-                    <tr
-                      key={row.id}
+            <TableFrame
+              tableId="stability-index-top-contributors"
+              testId="stability-index-top-contributors-table"
+              chrome="bare"
+              density="compact"
+              tableProps={{
+                "aria-label": "Stablecoins currently contributing to PSI score reduction",
+              }}
+              viewportProps={{
+                compactBottomPadding: false,
+                mobileScrollHint: false,
+                scrollShadow: false,
+              }}
+            >
+              <TableHeader>
+                <TableRow className="text-left hover:bg-transparent">
+                  <TableHead scope="col" className={CONTRIBUTOR_HEAD_CLASS}>
+                    Coin
+                  </TableHead>
+                  <TableHead scope="col" className={cn(CONTRIBUTOR_HEAD_CLASS, "text-right")}>
+                    Deviation
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className={cn(CONTRIBUTOR_HEAD_CLASS, "hidden text-right sm:table-cell")}
+                  >
+                    MCap
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className={cn(CONTRIBUTOR_HEAD_CLASS, "hidden text-right sm:table-cell")}
+                  >
+                    Severity
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className={cn(CONTRIBUTOR_HEAD_CLASS, "hidden text-right sm:table-cell")}
+                  >
+                    Breadth
+                  </TableHead>
+                  <TableHead scope="col" className={cn(CONTRIBUTOR_HEAD_CLASS, "text-right")}>
+                    Total
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto px-0 pb-2 text-right text-xs uppercase tracking-wider">
+                    Age
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="text-muted-foreground">
+                {rows.map((row, index) => (
+                  <TableRow
+                    key={row.id}
+                    className={cn("hover:bg-muted/30", index === 0 && "bg-amber-500/5")}
+                  >
+                    <TableCell className={CONTRIBUTOR_CELL_CLASS}>
+                      <Link
+                        href={buildStablecoinUrl(row.id)}
+                        className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
+                      >
+                        <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
+                        <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>
+                        {index === 0 && (
+                          <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                            Top
+                          </span>
+                        )}
+                      </Link>
+                    </TableCell>
+                    <TableCell
                       className={cn(
-                        "border-b last:border-0 transition-colors hover:bg-muted/30",
-                        index === 0 && "bg-amber-500/5",
+                        CONTRIBUTOR_CELL_CLASS,
+                        "text-right tabular-nums",
+                        row.bps < 0
+                          ? "text-red-700 dark:text-red-400"
+                          : "text-amber-700 dark:text-amber-400",
                       )}
                     >
-                      <td className="py-2.5 pr-4">
-                        <Link
-                          href={buildStablecoinUrl(row.id)}
-                          className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
-                        >
-                          <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
-                          <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>
-                          {index === 0 && (
-                            <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                              Top
-                            </span>
-                          )}
-                        </Link>
-                      </td>
-                      <td className={cn("py-2.5 pr-4 text-right tabular-nums", row.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
-                        {row.bps > 0 ? "+" : ""}
-                        {(row.bps / 100).toFixed(2)}%
-                      </td>
-                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono text-xs">
-                        {formatCurrency(row.mcapUsd)}
-                      </td>
-                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono">{row.severity.toFixed(2)}</td>
-                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono">{row.breadth.toFixed(2)}</td>
-                      <td className="py-2.5 pr-4 text-right tabular-nums">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                            <div
-                              className="h-full rounded-full bg-foreground/60"
-                              style={{ width: `${Math.min(100, (row.total / (rows[0]?.total ?? 1)) * 100)}%` }}
-                            />
-                          </div>
-                          <span className={cn("font-mono font-medium", index === 0 ? "text-foreground" : "text-foreground/70")}>
-                            {row.total.toFixed(2)}
-                          </span>
+                      {row.bps > 0 ? "+" : ""}
+                      {(row.bps / 100).toFixed(2)}%
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        CONTRIBUTOR_CELL_CLASS,
+                        "hidden text-right font-mono text-xs tabular-nums sm:table-cell",
+                      )}
+                    >
+                      {formatCurrency(row.mcapUsd)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        CONTRIBUTOR_CELL_CLASS,
+                        "hidden text-right font-mono tabular-nums sm:table-cell",
+                      )}
+                    >
+                      {row.severity.toFixed(2)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        CONTRIBUTOR_CELL_CLASS,
+                        "hidden text-right font-mono tabular-nums sm:table-cell",
+                      )}
+                    >
+                      {row.breadth.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={cn(CONTRIBUTOR_CELL_CLASS, "text-right tabular-nums")}>
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                          <div
+                            className="h-full rounded-full bg-foreground/60"
+                            style={{ width: `${Math.min(100, (row.total / (rows[0]?.total ?? 1)) * 100)}%` }}
+                          />
                         </div>
-                      </td>
-                      <td className="py-2.5 text-right tabular-nums">
-                        <span className="font-mono text-xs">{row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}</span>
-                        {row.factor < 1 && (
-                          <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(row.factor * 100)}%)</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span className={cn("font-mono font-medium", index === 0 ? "text-foreground" : "text-foreground/70")}>
+                          {row.total.toFixed(2)}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-0 py-2.5 text-right tabular-nums">
+                      <span className="font-mono text-xs">
+                        {row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}
+                      </span>
+                      {row.factor < 1 && (
+                        <span className="ml-1 text-xs text-muted-foreground/60">
+                          ({Math.round(row.factor * 100)}%)
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </TableFrame>
           </>
         )}
       </CardContent>

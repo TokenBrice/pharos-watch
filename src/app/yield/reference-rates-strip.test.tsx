@@ -65,6 +65,9 @@ describe("ReferenceRatesStrip", () => {
     expect(screen.getByRole("heading", { name: /Risk-free benchmark per currency/i })).toBeTruthy();
     expect(screen.getByText(/Each yield in the leaderboard is graded against the local risk-free benchmark/i)).toBeTruthy();
 
+    const tableShell = screen.getByTestId("yield-reference-rates-table");
+    expect(tableShell.getAttribute("data-table-id")).toBe("yield-reference-rates");
+
     const table = screen.getByRole("table", { name: "Per-currency reference rates" });
     expect(within(table).getByRole("columnheader", { name: "Currency" })).toBeTruthy();
     expect(within(table).getByRole("columnheader", { name: "Rate" })).toBeTruthy();

@@ -156,6 +156,14 @@ describe("StabilityIndexClient", () => {
     expect(screen.getAllByText("STEADY").length).toBeGreaterThan(0);
     expect(screen.getByText("Top Contributors")).toBeTruthy();
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
+    const contributorsTable = screen.getByRole("table", {
+      name: "Stablecoins currently contributing to PSI score reduction",
+    });
+    expect(contributorsTable).toBeTruthy();
+    expect(contributorsTable.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
+    const contributorsShell = screen.getByTestId("stability-index-top-contributors-table");
+    expect(contributorsShell.getAttribute("data-table-id")).toBe("stability-index-top-contributors");
+    expect(contributorsShell.className).toContain("pharos-density-compact");
     expect(screen.getByText("Methodology")).toBeTruthy();
     expect(screen.getByText("score-chart-3")).toBeTruthy();
   });

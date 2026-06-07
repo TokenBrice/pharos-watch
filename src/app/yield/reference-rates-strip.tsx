@@ -1,6 +1,14 @@
 "use client";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
@@ -140,79 +148,87 @@ export function ReferenceRatesStrip({
           </div>
 
           {rows.length > 0 ? (
-            <div className="-mx-1 overflow-x-auto px-1">
-              <table className="w-full min-w-[640px] border-collapse text-sm" aria-label="Per-currency reference rates">
-                <thead>
-                  <tr className="border-b border-border/40 text-left text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">
-                    <th scope="col" colSpan={2} className="py-2 pl-5 pr-3 font-medium">
-                      Currency
-                    </th>
-                    {showCountColumn ? (
-                      <th scope="col" className="px-3 py-2 text-right font-medium">
-                        Tracked
-                      </th>
-                    ) : null}
-                    <th scope="col" className="px-3 py-2 text-right font-medium">
-                      Rate
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">
-                      vs USD
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      Benchmark
-                    </th>
-                    <th scope="col" className="py-2 pl-3 text-right font-medium">
-                      As of
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {rows.map((row) => {
-                    const isUsd = row.currency === "USD";
-                    const spreadBps = usdRow ? (row.rate - usdRow.rate) * 100 : null;
-                    return (
-                      <tr key={row.key} className="transition-colors hover:bg-muted/20">
-                        <td className="py-2 pr-2">
-                          <CurrencyFlag currency={row.currency} />
-                        </td>
-                        <td className="py-2 pr-3 font-mono text-xs tracking-[0.08em] text-foreground">
-                          <span className="inline-flex items-baseline gap-2">
-                            <span>{row.currency}</span>
-                            {row.currencySymbol ? (
-                              <span aria-hidden="true" className="text-muted-foreground/70">
-                                {row.currencySymbol}
-                              </span>
-                            ) : null}
-                          </span>
-                        </td>
-                        {showCountColumn ? (
-                          <td className="px-3 py-2 text-right font-mono tabular-nums text-xs text-muted-foreground">
-                            {currencyCounts[row.currency] ?? 0}
-                          </td>
-                        ) : null}
-                        <td className="px-3 py-2 text-right font-mono tabular-nums text-base font-semibold text-foreground">
-                          {formatPercent(row.rate)}
-                        </td>
-                        <td
-                          className={cn(
-                            "px-3 py-2 text-right font-mono tabular-nums text-xs",
-                            isUsd || spreadBps === null
-                              ? "text-muted-foreground/60"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{row.benchmarkLabel}</td>
-                        <td className="py-2 pl-3 text-right font-mono text-xs tabular-nums text-muted-foreground/80">
-                          {row.recordDate ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <TableFrame
+              tableId="yield-reference-rates"
+              testId="yield-reference-rates-table"
+              chrome="content"
+              density="compact"
+              className="bg-card/20"
+              tableClassName="min-w-[640px] border-collapse text-sm"
+              tableProps={{ "aria-label": "Per-currency reference rates" }}
+              viewportClassName="-mx-1 px-1"
+              viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
+            >
+              <TableHeader>
+                <TableRow className="border-b border-border/40 text-left text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70 hover:bg-transparent">
+                  <TableHead scope="col" colSpan={2} className="py-2 pl-5 pr-3 font-medium">
+                    Currency
+                  </TableHead>
+                  {showCountColumn ? (
+                    <TableHead scope="col" className="px-3 py-2 text-right font-medium">
+                      Tracked
+                    </TableHead>
+                  ) : null}
+                  <TableHead scope="col" className="px-3 py-2 text-right font-medium">
+                    Rate
+                  </TableHead>
+                  <TableHead scope="col" className="px-3 py-2 text-right font-medium">
+                    vs USD
+                  </TableHead>
+                  <TableHead scope="col" className="px-3 py-2 font-medium">
+                    Benchmark
+                  </TableHead>
+                  <TableHead scope="col" className="py-2 pl-3 text-right font-medium">
+                    As of
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-border/40">
+                {rows.map((row) => {
+                  const isUsd = row.currency === "USD";
+                  const spreadBps = usdRow ? (row.rate - usdRow.rate) * 100 : null;
+                  return (
+                    <TableRow key={row.key} className="transition-colors hover:bg-muted/20">
+                      <TableCell className="py-2 pr-2">
+                        <CurrencyFlag currency={row.currency} />
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 font-mono text-xs tracking-[0.08em] text-foreground">
+                        <span className="inline-flex items-baseline gap-2">
+                          <span>{row.currency}</span>
+                          {row.currencySymbol ? (
+                            <span aria-hidden="true" className="text-muted-foreground/70">
+                              {row.currencySymbol}
+                            </span>
+                          ) : null}
+                        </span>
+                      </TableCell>
+                      {showCountColumn ? (
+                        <TableCell className="px-3 py-2 text-right font-mono tabular-nums text-xs text-muted-foreground">
+                          {currencyCounts[row.currency] ?? 0}
+                        </TableCell>
+                      ) : null}
+                      <TableCell className="px-3 py-2 text-right font-mono tabular-nums text-base font-semibold text-foreground">
+                        {formatPercent(row.rate)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "px-3 py-2 text-right font-mono tabular-nums text-xs",
+                          isUsd || spreadBps === null ? "text-muted-foreground/60" : "text-muted-foreground",
+                        )}
+                      >
+                        {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-muted-foreground">
+                        {row.benchmarkLabel}
+                      </TableCell>
+                      <TableCell className="py-2 pl-3 text-right font-mono text-xs tabular-nums text-muted-foreground/80">
+                        {row.recordDate ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </TableFrame>
           ) : null}
         </div>
 

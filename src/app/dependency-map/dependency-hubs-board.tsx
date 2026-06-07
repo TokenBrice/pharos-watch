@@ -1,6 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import {
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -33,8 +42,8 @@ function DependencyHubRow({
     maxWeight > 0 ? Math.max(4, Math.min(100, (hub.summedDirectDependencyWeight / maxWeight) * 100)) : 4;
 
   return (
-    <tr className="border-t border-border/60 transition-colors hover:bg-muted/20">
-      <td className="px-3 py-3 align-top">
+    <TableRow className="border-t border-b-0 border-border/60 transition-colors hover:bg-muted/20">
+      <TableCell className="px-3 py-3 align-top">
         <div className="flex min-w-0 items-start gap-3">
           <span className="mt-0.5 font-mono text-[11px] text-muted-foreground">
             {String(index + 1).padStart(2, "0")}
@@ -50,8 +59,8 @@ function DependencyHubRow({
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{hub.symbol}</p>
           </div>
         </div>
-      </td>
-      <td className="px-3 py-3 align-top">
+      </TableCell>
+      <TableCell className="px-3 py-3 align-top whitespace-normal">
         <div className="flex flex-wrap gap-1.5" aria-label="Edge type breakdown">
           {hub.edgeTypeBreakdown.map((entry) => (
             <span
@@ -76,25 +85,25 @@ function DependencyHubRow({
             </span>
           ))}
         </div>
-      </td>
-      <td className="px-3 py-3 align-top font-mono text-sm font-semibold tabular-nums text-foreground">
+      </TableCell>
+      <TableCell className="px-3 py-3 align-top font-mono text-sm font-semibold tabular-nums text-foreground">
         {hub.dependentCount}
-      </td>
-      <td className="px-3 py-3 align-top">
+      </TableCell>
+      <TableCell className="px-3 py-3 align-top">
         <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
           {hub.summedDirectDependencyWeight.toFixed(2)}
         </p>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">
           <div className="h-full rounded-full bg-frost-blue" style={{ width: `${weightPct}%` }} />
         </div>
-      </td>
-      <td className="px-3 py-3 align-top">
+      </TableCell>
+      <TableCell className="px-3 py-3 align-top">
         <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
           {formatCurrency(hub.uniqueDependentMcapUsd, 1)}
         </p>
         <p className="text-[11px] text-muted-foreground">Hub own market cap {formatCurrency(hub.hubMcapUsd, 1)}</p>
-      </td>
-      <td className="max-w-xs px-3 py-3 align-top text-xs leading-relaxed text-muted-foreground">
+      </TableCell>
+      <TableCell className="max-w-xs whitespace-normal px-3 py-3 align-top text-xs leading-relaxed text-muted-foreground">
         {hub.examples.length > 0 ? (
           <>
             Example direct dependents:{" "}
@@ -105,8 +114,8 @@ function DependencyHubRow({
         ) : (
           "No direct dependent examples in the displayed hub model."
         )}
-      </td>
-      <td className="px-3 py-3 align-top">
+      </TableCell>
+      <TableCell className="px-3 py-3 align-top">
         <Link
           href={buildStablecoinUrl(hub.id)}
           className="pharos-focus-ring rounded-sm font-mono text-[11px] uppercase tracking-[0.14em] text-frost-blue hover:text-foreground"
@@ -114,8 +123,8 @@ function DependencyHubRow({
         >
           Trace
         </Link>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -168,41 +177,47 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
           />
         </div>
 
-        <div className="overflow-x-auto rounded-md border border-border/70 bg-background/35">
-          <table className="w-full min-w-[64rem] text-left">
-            <caption className="sr-only">Direct dependency hubs</caption>
-            <thead>
-              <tr className="border-b border-border/70 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Dependency
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Kind
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Direct dependents
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Summed direct dependency weight
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Modeled dependent market-cap context
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Role / description
-                </th>
-                <th scope="col" className="px-3 py-2 font-mono font-medium">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {hubs.map((hub, index) => (
-                <DependencyHubRow key={hub.id} hub={hub} index={index} maxWeight={maxWeight} logos={logos} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          tableId="dependency-hubs-board"
+          testId="dependency-hubs-board-table"
+          density="compact"
+          chrome="embedded"
+          className="rounded-md border-border/70 bg-background/35"
+          tableClassName="min-w-[64rem] text-left"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableCaption className="sr-only">Direct dependency hubs</TableCaption>
+          <TableHeader>
+            <TableRow className="border-b border-border/70 text-[10px] uppercase tracking-[0.16em] text-muted-foreground hover:bg-transparent">
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Dependency
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Kind
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Direct dependents
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Summed direct dependency weight
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Modeled dependent market-cap context
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Role / description
+              </TableHead>
+              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {hubs.map((hub, index) => (
+              <DependencyHubRow key={hub.id} hub={hub} index={index} maxWeight={maxWeight} logos={logos} />
+            ))}
+          </TableBody>
+        </TableFrame>
       </CardContent>
     </Card>
   );

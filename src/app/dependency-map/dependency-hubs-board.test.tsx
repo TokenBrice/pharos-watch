@@ -39,6 +39,11 @@ describe("DependencyHubsBoard", () => {
   it("renders the dependency hub contract with exact modeled values", () => {
     render(<DependencyHubsBoard model={MODEL} />);
 
+    const tableSurface = screen.getByTestId("dependency-hubs-board-table");
+    expect(tableSurface.getAttribute("data-table-id")).toBe("dependency-hubs-board");
+    expect(tableSurface.className).toContain("pharos-density-compact");
+    expect(screen.getByRole("table", { name: "Direct dependency hubs" })).toBeTruthy();
+    expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
     expect(screen.getAllByText("Upstream hubs").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Direct dependency hubs").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Direct dependents").length).toBeGreaterThan(0);
