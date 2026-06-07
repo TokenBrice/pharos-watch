@@ -12,7 +12,6 @@ const baseConfig: NextConfig = {
       "lucide-react",
       "@tanstack/react-query",
       "@tanstack/react-virtual",
-      "zod",
     ],
   },
 };
