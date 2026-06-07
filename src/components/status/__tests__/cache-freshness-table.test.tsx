@@ -27,6 +27,9 @@ describe("CacheFreshnessTable", () => {
     render(<CacheFreshnessTable caches={{ "dex-liquidity": dexCache }} />);
 
     expect(screen.getByText(/Availability uses ratio thresholds/i)).toBeTruthy();
+    const tableShell = screen.getByTestId("cache-freshness-healthy-table");
+    expect(tableShell.getAttribute("data-table-id")).toBe("cache-freshness-healthy");
+    expect(within(tableShell).getByRole("table", { name: /healthy cache freshness/i })).toBeTruthy();
     const row = screen.getByText("dex-liquidity").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLTableRowElement).getByText(/availability budget 12h/i)).toBeTruthy();
@@ -34,6 +37,8 @@ describe("CacheFreshnessTable", () => {
     expect(within(row as HTMLTableRowElement).getByText(/basis 1h/i)).toBeTruthy();
     expect(within(row as HTMLTableRowElement).getByText(/warning after 8h/i)).toBeTruthy();
     expect(within(row as HTMLTableRowElement).getByText(/endpoint basis differs/i)).toBeTruthy();
-    expect(within(row as HTMLTableRowElement).getByText("Endpoint warning target. · Availability budget.")).toBeTruthy();
+    expect(
+      within(row as HTMLTableRowElement).getByText("Endpoint warning target. · Availability budget."),
+    ).toBeTruthy();
   });
 });

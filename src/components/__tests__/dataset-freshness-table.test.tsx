@@ -8,7 +8,8 @@ describe("DatasetFreshnessTable", () => {
   it("uses writer-oriented copy and discovery expectations", () => {
     const nowSeconds = 2_000_000;
     const getDomainRow = (label: string) =>
-      screen.getAllByText(label)
+      screen
+        .getAllByText(label)
         .find((element) => element.closest("td")?.cellIndex === 0)
         ?.closest("tr") ?? null;
 
@@ -33,6 +34,9 @@ describe("DatasetFreshnessTable", () => {
     expect(screen.getByText("Pipeline Freshness")).toBeTruthy();
     expect(screen.getByText(/last successful writer evaluation per domain/i)).toBeTruthy();
     expect(screen.getByText(/Cadence is the writer schedule/i)).toBeTruthy();
+    const tableShell = screen.getByTestId("dataset-freshness-table");
+    expect(tableShell.getAttribute("data-table-id")).toBe("dataset-freshness");
+    expect(screen.getByRole("table", { name: /pipeline freshness/i })).toBeTruthy();
 
     const discoveryRow = getDomainRow("Coverage discovery");
     expect(discoveryRow).not.toBeNull();

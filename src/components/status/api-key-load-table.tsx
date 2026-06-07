@@ -1,6 +1,7 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { PublicSignalCard } from "./public-signal-card";
 
@@ -37,11 +38,17 @@ export function ApiKeyLoadTable({
       description={
         <>
           Authenticated API-key requests on the public{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+            api.pharos.watch
+          </code>{" "}
           lane. Excludes{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+            /_site-data/*
+          </code>
           , the{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">site-api</code>{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+            site-api
+          </code>{" "}
           lane, and admin/telegram-webhook routes.
         </>
       }
@@ -52,13 +59,13 @@ export function ApiKeyLoadTable({
               Keyed {formatPercent(summary.keyedSharePct, 1)}
             </span>
             <span className="rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-              {formatCompactCount(summary.keyedRequests)} / {formatCompactCount(summary.totalRequests)} public-api requests
+              {formatCompactCount(summary.keyedRequests)} / {formatCompactCount(summary.totalRequests)} public-api
+              requests
             </span>
           </div>
         ) : null
       }
     >
-
       {error ? (
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           {error}
@@ -81,56 +88,90 @@ export function ApiKeyLoadTable({
 
           {summary.truncated ? (
             <div className="rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
-              Showing the top {stats?.window.apiKeyLimit ?? apiKeys.length} keys by volume. {formatCompactCount(summary.omittedKeys)} more key{summary.omittedKeys === 1 ? "" : "s"} account for {formatCompactCount(summary.omittedRequests)} additional keyed requests in this window.
+              Showing the top {stats?.window.apiKeyLimit ?? apiKeys.length} keys by volume.{" "}
+              {formatCompactCount(summary.omittedKeys)} more key{summary.omittedKeys === 1 ? "" : "s"} account for{" "}
+              {formatCompactCount(summary.omittedRequests)} additional keyed requests in this window.
             </div>
           ) : (
             <div className="text-xs text-muted-foreground">
-              {formatCompactCount(summary.returnedKeys)} key{summary.returnedKeys === 1 ? "" : "s"} recorded in this window.
+              {formatCompactCount(summary.returnedKeys)} key{summary.returnedKeys === 1 ? "" : "s"} recorded in this
+              window.
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th scope="col" className="pb-2 font-medium">Key</th>
-                  <th scope="col" className="pb-2 font-medium">Class</th>
-                  <th scope="col" className="pb-2 font-medium">Requests</th>
-                  <th scope="col" className="pb-2 font-medium">Keyed Share</th>
-                  <th scope="col" className="pb-2 font-medium">Public API Share</th>
-                  <th scope="col" className="pb-2 font-medium">Rate Limit</th>
-                  <th scope="col" className="pb-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apiKeys.map((row) => {
-                  const status = getApiKeyStatus(row, nowSeconds);
-                  return (
-                    <tr key={row.apiKeyId} className="border-b last:border-0">
-                      <td className="py-2 align-top">
-                        <div className="font-medium text-foreground">{row.name}</div>
-                        <div className="mt-1 font-mono tabular-nums text-xs text-muted-foreground">{row.maskedToken}</div>
-                      </td>
-                      <td className="py-2 align-top">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${trafficClassBadgeClassName(row.trafficClass)}`}>
-                          {row.trafficClass}
-                        </span>
-                      </td>
-                      <td className="py-2 align-top pharos-numeric text-foreground">{formatCompactCount(row.requestCount)}</td>
-                      <td className="py-2 align-top pharos-numeric text-foreground">{formatPercent(row.shareOfKeyedRequestsPct, 1)}</td>
-                      <td className="py-2 align-top pharos-numeric text-foreground">{formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}</td>
-                      <td className="py-2 align-top pharos-numeric text-muted-foreground">{formatCompactCount(row.rateLimitPerMinute)}/min</td>
-                      <td className="py-2 align-top">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(status)}`}>
-                          {status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TableFrame
+            tableId="api-key-load"
+            testId="api-key-load-table"
+            chrome="content"
+            density="compact"
+            tableClassName="min-w-[760px]"
+            tableProps={{ "aria-label": "API key load" }}
+          >
+            <TableHeader>
+              <TableRow className="border-b text-left text-muted-foreground">
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Key
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Class
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Requests
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Keyed Share
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Public API Share
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Rate Limit
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Status
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {apiKeys.map((row) => {
+                const status = getApiKeyStatus(row, nowSeconds);
+                return (
+                  <TableRow key={row.apiKeyId} className="border-b last:border-0">
+                    <TableCell className="py-2 align-top">
+                      <div className="font-medium text-foreground">{row.name}</div>
+                      <div className="mt-1 font-mono tabular-nums text-xs text-muted-foreground">{row.maskedToken}</div>
+                    </TableCell>
+                    <TableCell className="py-2 align-top">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${trafficClassBadgeClassName(row.trafficClass)}`}
+                      >
+                        {row.trafficClass}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2 align-top pharos-numeric text-foreground">
+                      {formatCompactCount(row.requestCount)}
+                    </TableCell>
+                    <TableCell className="py-2 align-top pharos-numeric text-foreground">
+                      {formatPercent(row.shareOfKeyedRequestsPct, 1)}
+                    </TableCell>
+                    <TableCell className="py-2 align-top pharos-numeric text-foreground">
+                      {formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}
+                    </TableCell>
+                    <TableCell className="py-2 align-top pharos-numeric text-muted-foreground">
+                      {formatCompactCount(row.rateLimitPerMinute)}/min
+                    </TableCell>
+                    <TableCell className="py-2 align-top">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(status)}`}
+                      >
+                        {status}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </TableFrame>
         </div>
       )}
     </PublicSignalCard>

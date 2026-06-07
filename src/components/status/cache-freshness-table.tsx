@@ -2,6 +2,7 @@ import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/sta
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { PublicSignalCard } from "./public-signal-card";
 
 interface CacheFreshnessTableProps {
@@ -55,9 +56,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   };
 
   const describeProducer = (cache: CacheStatus): string => {
-    const interval = cache.producerIntervalSec != null
-      ? `every ${formatElapsedSeconds(cache.producerIntervalSec)}`
-      : null;
+    const interval =
+      cache.producerIntervalSec != null ? `every ${formatElapsedSeconds(cache.producerIntervalSec)}` : null;
     return [cache.producerJob, interval].filter(Boolean).join(" · ") || "—";
   };
 
@@ -73,7 +73,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const renderRow = ([key, cache]: [string, CacheStatus]) => {
     const band = describeBand(cache);
     const modeLabel = cache.mode ?? "live";
-    const budgetsDiffer = cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
+    const budgetsDiffer =
+      cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
     const noteParts = [
       cache.warning,
       budgetsDiffer ? cache.endpointBudgetReason : null,
@@ -84,22 +85,22 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     ].filter((part): part is string => !!part);
 
     return (
-      <tr key={key} className="border-b last:border-0">
-        <td className="py-2 align-top">
+      <TableRow key={key} className="border-b last:border-0">
+        <TableCell className="py-2 align-top">
           <div className="font-mono tabular-nums text-xs">{key}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
             availability budget {formatElapsedSeconds(cache.availabilityMaxAge ?? cache.maxAge)}
           </div>
-        </td>
-        <td className="py-2 align-top text-xs">{cache.upstreamProvider ?? "—"}</td>
-        <td className="py-2 align-top text-xs">{describeProducer(cache)}</td>
-        <td className="py-2 align-top">
+        </TableCell>
+        <TableCell className="py-2 align-top text-xs">{cache.upstreamProvider ?? "—"}</TableCell>
+        <TableCell className="py-2 align-top text-xs">{describeProducer(cache)}</TableCell>
+        <TableCell className="py-2 align-top">
           <div>{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
           <div className="mt-1 pharos-numeric text-xs text-muted-foreground">
             {band.ratio != null ? `${band.ratio.toFixed(2)}x` : "—"}
           </div>
-        </td>
-        <td className="py-2 align-top text-xs">
+        </TableCell>
+        <TableCell className="py-2 align-top text-xs">
           {cache.endpointMaxAge != null ? `basis ${formatElapsedSeconds(cache.endpointMaxAge)}` : "—"}
           {cache.endpointMaxAge != null ? (
             <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
@@ -111,9 +112,9 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
               endpoint basis differs from availability budget
             </div>
           ) : null}
-        </td>
-        <td className="py-2 align-top">{describeSource(cache)}</td>
-        <td className="py-2 align-top">
+        </TableCell>
+        <TableCell className="py-2 align-top">{describeSource(cache)}</TableCell>
+        <TableCell className="py-2 align-top">
           <span
             className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
               modeLabel === "cached-fallback"
@@ -123,57 +124,90 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           >
             {modeLabel}
           </span>
-        </td>
-        <td className="py-2 align-top">
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${band.className}`}>
-            {band.label}
-          </span>
-        </td>
-        <td className="py-2 align-top text-xs leading-relaxed text-muted-foreground">
+        </TableCell>
+        <TableCell className="py-2 align-top">
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${band.className}`}>{band.label}</span>
+        </TableCell>
+        <TableCell className="py-2 align-top text-xs leading-relaxed text-muted-foreground">
           {noteParts.length > 0 ? noteParts.join(" · ") : "No extra warning"}
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     );
   };
 
   const tableHead = (
-    <thead>
-      <tr className="border-b text-left text-muted-foreground">
-                <th scope="col" className="pb-2 font-medium">Lane</th>
-                <th scope="col" className="pb-2 font-medium">Provider</th>
-                <th scope="col" className="pb-2 font-medium">Producer</th>
-                <th scope="col" className="pb-2 font-medium">Cache</th>
-                <th scope="col" className="pb-2 font-medium">Endpoint Basis</th>
-                <th scope="col" className="pb-2 font-medium">Source</th>
-        <th scope="col" className="pb-2 font-medium">Mode</th>
-        <th scope="col" className="pb-2 font-medium">Band</th>
-        <th scope="col" className="pb-2 font-medium">Actionable Note</th>
-      </tr>
-    </thead>
+    <TableHeader>
+      <TableRow className="border-b text-left text-muted-foreground">
+        <TableHead scope="col" className="pb-2 font-medium">
+          Lane
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Provider
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Producer
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Cache
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Endpoint Basis
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Source
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Mode
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Band
+        </TableHead>
+        <TableHead scope="col" className="pb-2 font-medium">
+          Actionable Note
+        </TableHead>
+      </TableRow>
+    </TableHeader>
   );
 
   return (
     <PublicSignalCard title="Cache Freshness">
       <div>
         <div className="mb-3 text-xs text-muted-foreground">
-          Availability uses ratio thresholds of {">"}{STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}{STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale) against each lane availability budget. Endpoint basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
+          Availability uses ratio thresholds of {">"}
+          {STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}
+          {STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale) against each lane availability budget. Endpoint
+          basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after{" "}
+          {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
         </div>
-        <div className="overflow-x-auto">
+        <div>
           {unhealthy.length > 0 && (
-            <table className="w-full text-sm">
+            <TableFrame
+              tableId="cache-freshness-unhealthy"
+              testId="cache-freshness-unhealthy-table"
+              chrome="content"
+              density="compact"
+              tableProps={{ "aria-label": "Unhealthy cache freshness" }}
+            >
               {tableHead}
-              <tbody>{unhealthy.map(renderRow)}</tbody>
-            </table>
+              <TableBody>{unhealthy.map(renderRow)}</TableBody>
+            </TableFrame>
           )}
           {ok.length > 0 && (
             <details className={unhealthy.length > 0 ? "mt-4" : undefined}>
               <summary className="cursor-pointer text-sm text-muted-foreground">
                 {ok.length} healthy cache{ok.length !== 1 ? "s" : ""}
               </summary>
-              <table className="mt-2 w-full text-sm">
+              <TableFrame
+                tableId="cache-freshness-healthy"
+                testId="cache-freshness-healthy-table"
+                chrome="content"
+                density="compact"
+                className="mt-2"
+                tableProps={{ "aria-label": "Healthy cache freshness" }}
+              >
                 {unhealthy.length === 0 && tableHead}
-                <tbody>{ok.map(renderRow)}</tbody>
-              </table>
+                <TableBody>{ok.map(renderRow)}</TableBody>
+              </TableFrame>
             </details>
           )}
         </div>

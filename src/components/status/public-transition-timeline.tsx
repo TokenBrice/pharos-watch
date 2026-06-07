@@ -1,6 +1,7 @@
 "use client";
 import type { PublicStatusHistoryWindow, PublicStatusTransition } from "@shared/types";
 import { PUBLIC_STATUS_HISTORY_WINDOWS } from "@shared/types/status";
+import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -55,52 +56,57 @@ export function PublicTransitionTimeline({
         ) : transitions.length === 0 ? (
           <p className="text-sm text-muted-foreground">No status changes recorded in this window.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <caption className="sr-only">Public status transition history</caption>
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th scope="col" className="pb-2 font-medium">
-                    Time
-                  </th>
-                  <th scope="col" className="pb-2 font-medium">
-                    Transition
-                  </th>
-                  <th scope="col" className="pb-2 font-medium">
-                    Type
-                  </th>
-                  <th scope="col" className="pb-2 font-medium">
-                    Reason
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {transitions.map((transition) => {
-                  const toTone = getStatusTone(transition.to as "healthy" | "degraded" | "stale");
-                  return (
-                    <tr key={transition.id} className="border-b last:border-0">
-                      <td className="py-2.5 pharos-numeric text-xs text-muted-foreground">
-                        {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: "short" })}
-                      </td>
-                      <td className="py-2.5">
-                        <span className="font-mono tabular-nums text-xs">
-                          {transition.from ?? "init"} → {transition.to}
-                        </span>
-                      </td>
-                      <td className="py-2.5">
-                        <span
-                          className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toTone.badgeClassName}`}
-                        >
-                          {TYPE_LABELS[transition.transitionType] ?? transition.transitionType}
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-xs leading-relaxed text-muted-foreground">{transition.reason}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TableFrame
+            tableId="public-status-transition-timeline"
+            testId="public-status-transition-timeline-table"
+            chrome="content"
+            density="compact"
+          >
+            <TableCaption className="sr-only">Public status transition history</TableCaption>
+            <TableHeader>
+              <TableRow className="border-b text-left text-muted-foreground">
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Time
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Transition
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Type
+                </TableHead>
+                <TableHead scope="col" className="pb-2 font-medium">
+                  Reason
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transitions.map((transition) => {
+                const toTone = getStatusTone(transition.to as "healthy" | "degraded" | "stale");
+                return (
+                  <TableRow key={transition.id} className="border-b last:border-0">
+                    <TableCell className="py-2.5 pharos-numeric text-xs text-muted-foreground">
+                      {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: "short" })}
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <span className="font-mono tabular-nums text-xs">
+                        {transition.from ?? "init"} → {transition.to}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toTone.badgeClassName}`}
+                      >
+                        {TYPE_LABELS[transition.transitionType] ?? transition.transitionType}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-xs leading-relaxed text-muted-foreground">
+                      {transition.reason}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </TableFrame>
         )}
       </div>
     </div>

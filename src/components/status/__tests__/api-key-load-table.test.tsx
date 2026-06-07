@@ -90,26 +90,33 @@ describe("ApiKeyLoadTable", () => {
     expect(screen.getByText("Partner A")).toBeTruthy();
     expect(screen.getByText("Site Automation")).toBeTruthy();
     expect(screen.getByText(/Showing the top 25 keys by volume/i)).toBeTruthy();
+    const tableShell = screen.getByTestId("api-key-load-table");
+    expect(tableShell.getAttribute("data-table-id")).toBe("api-key-load");
+    expect(screen.getByRole("table", { name: /api key load/i })).toBeTruthy();
     expect(screen.getByText("external")).toBeTruthy();
     expect(screen.getByText("site")).toBeTruthy();
   });
 
   it("renders an empty state when there is no keyed traffic", () => {
-    render(<ApiKeyLoadTable stats={makeStats({
-      keyedPublicApi: {
-        keyedRequests: 0,
-        unkeyedRequests: 500,
-        totalRequests: 500,
-        keyedSharePct: 0,
-        unkeyedSharePct: 100,
-        totalKeys: 0,
-        returnedKeys: 0,
-        omittedKeys: 0,
-        omittedRequests: 0,
-        truncated: false,
-      },
-      apiKeys: [],
-    })} />);
+    render(
+      <ApiKeyLoadTable
+        stats={makeStats({
+          keyedPublicApi: {
+            keyedRequests: 0,
+            unkeyedRequests: 500,
+            totalRequests: 500,
+            keyedSharePct: 0,
+            unkeyedSharePct: 100,
+            totalKeys: 0,
+            returnedKeys: 0,
+            omittedKeys: 0,
+            omittedRequests: 0,
+            truncated: false,
+          },
+          apiKeys: [],
+        })}
+      />,
+    );
 
     expect(screen.getByText(/No authenticated API-key load recorded in this window/i)).toBeTruthy();
   });

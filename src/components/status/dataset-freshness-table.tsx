@@ -1,5 +1,6 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import type { StatusResponse } from "@shared/types";
+import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
@@ -120,62 +121,69 @@ export function DatasetFreshnessTable({
       </CardHeader>
       <CardContent>
         <div className="mb-3 text-xs text-muted-foreground">
-          Informational view of the last successful writer evaluation per domain. Cadence is the writer schedule;
-          grace basis is the reference window for this table, with green status held through 4x that basis and late
-          after 6x so quiet event-backed domains follow writer health rather than the most recent emitted event.
+          Informational view of the last successful writer evaluation per domain. Cadence is the writer schedule; grace
+          basis is the reference window for this table, with green status held through 4x that basis and late after 6x
+          so quiet event-backed domains follow writer health rather than the most recent emitted event.
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th scope="col" className="pb-2 font-medium">
-                  Domain
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Updated
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Age
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Cadence
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Grace Basis
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Writers
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Band
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.key} className="border-b last:border-0">
-                  <td className="py-2">{row.label}</td>
-                  <td className="py-2 text-xs text-muted-foreground">
-                    {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
-                  </td>
-                  <td className="py-2">{row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}</td>
-                  <td className="py-2">
-                    {row.cadenceSec != null ? formatElapsedSeconds(row.cadenceSec) : "—"}
-                  </td>
-                  <td className="py-2">
-                    {row.expectedFreshnessSec != null ? formatElapsedSeconds(row.expectedFreshnessSec) : "—"}
-                  </td>
-                  <td className="py-2 text-xs text-muted-foreground">{row.owners}</td>
-                  <td className="py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${row.band.className}`}>
-                      {row.band.label}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          tableId="dataset-freshness"
+          testId="dataset-freshness-table"
+          chrome="content"
+          density="compact"
+          tableProps={{ "aria-label": "Pipeline freshness" }}
+        >
+          <TableCaption className="sr-only">Pipeline freshness by data domain</TableCaption>
+          <TableHeader>
+            <TableRow className="border-b text-left text-muted-foreground">
+              <TableHead scope="col" className="pb-2 font-medium">
+                Domain
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Updated
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Age
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Cadence
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Grace Basis
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Writers
+              </TableHead>
+              <TableHead scope="col" className="pb-2 font-medium">
+                Band
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.key} className="border-b last:border-0">
+                <TableCell className="py-2">{row.label}</TableCell>
+                <TableCell className="py-2 text-xs text-muted-foreground">
+                  {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
+                </TableCell>
+                <TableCell className="py-2">
+                  {row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}
+                </TableCell>
+                <TableCell className="py-2">
+                  {row.cadenceSec != null ? formatElapsedSeconds(row.cadenceSec) : "—"}
+                </TableCell>
+                <TableCell className="py-2">
+                  {row.expectedFreshnessSec != null ? formatElapsedSeconds(row.expectedFreshnessSec) : "—"}
+                </TableCell>
+                <TableCell className="py-2 text-xs text-muted-foreground">{row.owners}</TableCell>
+                <TableCell className="py-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${row.band.className}`}>
+                    {row.band.label}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableFrame>
       </CardContent>
     </Card>
   );
