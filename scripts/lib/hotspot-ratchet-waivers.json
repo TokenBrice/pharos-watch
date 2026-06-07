@@ -7,6 +7,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "src/components/stablecoin-table.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Table-shell refactor removed DOM cursor painting and moved skeleton rendering onto shared table primitives, but the home stablecoin table still owns column visibility, virtualization, density, cursor actions, sorting, and row rendering orchestration. Keep explicitly waived for this release; split orchestration from table rendering in a focused table-shell cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-07",
+    "reviewAfter": "2026-09-07",
+    "nextAction": "Extract column/sort/cursor orchestration from the table render shell after the shared table primitives stabilize."
+  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
@@ -182,13 +190,5 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
-  },
-  "src/app/about/page.tsx": {
-    "disposition": "queued-p4",
-    "notes": "About page now includes responsive density and table controls copy that is temporarily retained to coordinate with the route-level refactor plan for stablecoin shell behavior.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-07",
-    "reviewAfter": "2026-09-07",
-    "nextAction": "Split route orchestration, hero copy, and density-control wiring into focused helpers once the pending table-control refactor lands."
   }
 }
