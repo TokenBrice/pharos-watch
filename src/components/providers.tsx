@@ -7,10 +7,6 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
-import {
-  readHomepageBootstrapPayloadFromDocument,
-  seedHomepageBootstrapQueries,
-} from "@/lib/homepage-bootstrap-runtime";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality
@@ -37,6 +33,8 @@ const KeyboardShortcuts = dynamic(() => import("./keyboard-shortcuts").then((mod
 const ToastContainer = dynamic(() => import("./toast-container").then((mod) => mod.ToastContainer), {
   ssr: false,
 });
+
+const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
 
 interface ToastContextType {
   addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
@@ -163,10 +161,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         },
       });
-      seedHomepageBootstrapQueries(client, readHomepageBootstrapPayloadFromDocument());
       return client;
     }
   );
+
+  useEffect(() => {
+    if (!document.getElementById(HOMEPAGE_BOOTSTRAP_SCRIPT_ID)) {
+      return;
+    }
+
+    let cancelled = false;
+    void import("@/lib/homepage-bootstrap-runtime").then((mod) => {
+      if (cancelled) return;
+      mod.seedHomepageBootstrapQueries(queryClient, mod.readHomepageBootstrapPayloadFromDocument());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

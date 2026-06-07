@@ -188,7 +188,7 @@ export function DataTableShell<K extends string>({
       footerSlot={pagination ? <TablePagination {...pagination} /> : null}
     >
       <TableHeader className={cn("bg-muted", headerClassName)}>
-        <TableRow>
+        <TableRow rowIntent="static">
           {columns.map((column) =>
             column.sortKey && sort ? (
               <SortableTableHead
@@ -230,7 +230,7 @@ export function DataTableEmptyRow({
   className?: string;
 }) {
   return (
-    <TableRow>
+    <TableRow rowIntent="static">
       <TableCell colSpan={colSpan} className={cn("py-12 text-center text-muted-foreground", className)}>
         {children}
       </TableCell>

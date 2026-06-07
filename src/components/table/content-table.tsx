@@ -74,7 +74,17 @@ function getContentTableCellKeyIssues(
 export function assertContentTableRowsMatchColumns(
   columns: readonly ContentTableColumn[],
   rows: readonly ContentTableRow[],
+  rowHeaderColumnId?: string,
 ) {
+  if (
+    rowHeaderColumnId
+    && !columns.some((column) => column.id === rowHeaderColumnId)
+  ) {
+    throw new Error(
+      `ContentTable rowHeaderColumnId must match a declared column. Unknown rowHeaderColumnId: ${rowHeaderColumnId}.`,
+    );
+  }
+
   const issues = getContentTableCellKeyIssues(columns, rows);
 
   if (issues.length === 0) return;
@@ -138,7 +148,7 @@ export function ContentTable({
   ...frameProps
 }: ContentTableProps) {
   if (process.env.NODE_ENV !== "production") {
-    assertContentTableRowsMatchColumns(columns, rows);
+    assertContentTableRowsMatchColumns(columns, rows, rowHeaderColumnId);
   }
 
   return (

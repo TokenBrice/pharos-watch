@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
+const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /* ------------------------------------------------------------------ */
 /*  Context — shares pinned state between Sidebar and SidebarSpacer   */
@@ -59,12 +60,9 @@ function useExpanded(): SidebarState {
   const [hovered, setHovered] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      const storage = getWindowStorage("local");
-      setPinned(safeStorageGetItem(storage, STORAGE_KEY) !== "false");
-    }, 0);
-    return () => window.clearTimeout(timeout);
+  useBrowserLayoutEffect(() => {
+    const storage = getWindowStorage("local");
+    setPinned(safeStorageGetItem(storage, STORAGE_KEY) !== "false");
   }, []);
 
   const togglePin = useCallback(() => {
@@ -371,7 +369,7 @@ export function Sidebar() {
       {/* Brand lockup — the tower. A thin shaft of frost light rides the
           header divider and fades to the right like a real beam. */}
       <div className={`relative flex items-center h-14 shrink-0 border-b border-border/55 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
-        <Link prefetch={false} href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
+        <Link prefetch={false} href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="PHAROS home">
           <PharosLogo size={28} />
           {expanded && <span className="text-sm font-mono uppercase tracking-[0.2em] font-semibold text-foreground">PHAROS</span>}
         </Link>
@@ -383,7 +381,7 @@ export function Sidebar() {
       <button type="button"
         onClick={openCommandPalette}
         title={expanded ? undefined : "Search (Ctrl+K)"}
-        aria-label="Search (Ctrl+K)"
+        aria-label="Search Ctrl+K"
         className={`pharos-focus-ring group/search flex items-center rounded-md border border-border/70 bg-background/40 text-muted-foreground transition-[color,background-color,border-color] duration-200 hover:border-frost-blue/45 hover:bg-background/70 hover:text-foreground ${
           expanded ? "mx-2 mt-2 gap-2.5 px-3 py-2" : "mx-auto mt-2 w-10 justify-center py-2"
         }`}

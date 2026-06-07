@@ -89,7 +89,7 @@ export function MintBurnCard(): React.JSX.Element {
                 <Link
                   prefetch={false}
                   href={buildStablecoinUrl(row.id)}
-                  className="pharos-focus-ring -mx-1 grid grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-0.5 font-mono tabular-nums transition-colors hover:bg-muted/50"
+                  className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 font-mono tabular-nums transition-colors hover:bg-muted/50"
                 >
                   <CoinCell logoSrc={logoSrc} size="compact" />
                   <span className="truncate uppercase tracking-tight text-foreground">

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
@@ -72,7 +73,22 @@ afterEach(() => {
 });
 
 describe("ScreenerTable mobile cards", () => {
-  it("renders the mobile card path with compact score facts and mobile sort controls", () => {
+  it("server-renders a cheap pending branch before viewport hydration", () => {
+    const html = renderToStaticMarkup(
+      <ScreenerTable
+        rows={[rowWithSeries]}
+        isLoading={false}
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    expect(html).toContain("stablecoin-screener-layout-pending");
+    expect(html).not.toContain("stablecoin-screener-table");
+    expect(html).not.toContain("<svg");
+  });
+
+  it("renders the mobile card path with compact score facts and mobile sort controls", async () => {
     const toggleSort = vi.fn();
     installViewportMatchMedia(500);
 
@@ -85,8 +101,10 @@ describe("ScreenerTable mobile cards", () => {
       />,
     );
 
+    await waitFor(() => {
+      expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
+    });
     expect(screen.getByText("Sort Results")).toBeTruthy();
-    expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Peg/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/DEWS/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
@@ -99,7 +117,7 @@ describe("ScreenerTable mobile cards", () => {
 });
 
 describe("ScreenerTable desktop table", () => {
-  it("renders only the desktop table branch on desktop viewports", () => {
+  it("renders only the desktop table branch on desktop viewports", async () => {
     installViewportMatchMedia(1400);
 
     render(
@@ -111,11 +129,13 @@ describe("ScreenerTable desktop table", () => {
       />,
     );
 
-    expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    });
     expect(screen.queryByText("Sort Results")).toBeNull();
   });
 
-  it("skips xl-only sparkline SVGs below the xl breakpoint", () => {
+  it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
     installViewportMatchMedia(900);
 
     render(
@@ -127,12 +147,14 @@ describe("ScreenerTable desktop table", () => {
       />,
     );
 
-    expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
+    });
     expect(screen.queryByRole("img", { name: /30-day peg deviation for USDT/i })).toBeNull();
     expect(screen.queryByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeNull();
   });
 
-  it("renders sparkline SVGs on xl desktop viewports", () => {
+  it("renders sparkline SVGs on xl desktop viewports", async () => {
     installViewportMatchMedia(1400);
 
     render(
@@ -144,7 +166,9 @@ describe("ScreenerTable desktop table", () => {
       />,
     );
 
-    expect(screen.getByRole("img", { name: /30-day peg deviation for USDT/i })).toBeTruthy();
-    expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole("img", { name: /30-day peg deviation for USDT/i })).toBeTruthy();
+      expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
+    });
   });
 });

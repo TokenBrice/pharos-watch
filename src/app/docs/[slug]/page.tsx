@@ -26,12 +26,56 @@ import docsMetadata from "@/generated/docs-metadata.json";
 const DOCS_DIR = path.join(process.cwd(), "docs");
 type MarkdownComponentProps<T extends keyof React.JSX.IntrinsicElements> =
   React.ComponentProps<T> & { node?: unknown };
+interface MarkdownAstNode {
+  tagName?: string;
+  value?: string;
+  children?: MarkdownAstNode[];
+  position?: {
+    start?: {
+      line?: number;
+    };
+  };
+}
 
 function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
   if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
   if (doc.group === "methodology") return `${doc.title} Methodology - Pharos Docs`;
   if (doc.group === "design") return `${doc.title} System - Pharos Docs`;
   return `${doc.title} Guide - Pharos Docs`;
+}
+
+function getMarkdownNodeText(node: MarkdownAstNode | undefined): string {
+  if (!node) return "";
+  if (typeof node.value === "string") return node.value;
+  return (node.children ?? [])
+    .map((child) => getMarkdownNodeText(child))
+    .join(" ");
+}
+
+function findFirstMarkdownNodeByTag(node: MarkdownAstNode | undefined, tagName: string): MarkdownAstNode | undefined {
+  if (!node) return undefined;
+  if (node.tagName === tagName) return node;
+  for (const child of node.children ?? []) {
+    const found = findFirstMarkdownNodeByTag(child, tagName);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function getMarkdownTableLabel(node: unknown): string {
+  const tableNode = node as MarkdownAstNode | undefined;
+  const firstRow = findFirstMarkdownNodeByTag(findFirstMarkdownNodeByTag(tableNode, "thead") ?? tableNode, "tr");
+  const headers = (firstRow?.children ?? [])
+    .filter((child) => child.tagName === "th")
+    .map((child) => getMarkdownNodeText(child).replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 4);
+  const headerText = headers.join(", ");
+  const line = tableNode?.position?.start?.line;
+  const lineText = typeof line === "number" ? ` (line ${line})` : "";
+  return headerText
+    ? `Documentation table: ${headerText}${lineText}`
+    : `Documentation table${lineText}`;
 }
 
 const mdxComponents = {
@@ -51,12 +95,12 @@ const mdxComponents = {
       </a>
     );
   },
-  table: ({ node: _node, children, className, ...props }: MarkdownComponentProps<"table">) => (
+  table: ({ node, children, className, ...props }: MarkdownComponentProps<"table">) => (
     <TableFrame
       chrome="content"
       density="compact"
       className={cn("my-4", className)}
-      tableProps={{ "aria-label": "Documentation table", ...props }}
+      tableProps={{ "aria-label": getMarkdownTableLabel(node), ...props }}
       viewportProps={{ mobileScrollHint: false }}
     >
       {children}

@@ -26,9 +26,33 @@ function MiniCardGridFallback() {
   );
 }
 
+function DailyDigestFallback() {
+  return (
+    <div className="min-h-[560px] animate-pulse border-y border-border py-6 lg:min-h-[660px]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-3 w-48" />
+        <Skeleton className="h-3 w-36" />
+      </div>
+      <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
+        <div className="space-y-4">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-40 w-full max-w-[20rem] sm:max-w-[24rem] lg:h-64" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-4 w-11/12" />
+          <Skeleton className="h-4 w-9/12" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const HomeAltMiniCardGrid = dynamic(
   () => import("@/components/home-alt-mini-card-grid").then((mod) => mod.HomeAltMiniCardGrid),
   {
+    ssr: false,
     loading: MiniCardGridFallback,
   },
 );
@@ -36,13 +60,15 @@ const HomeAltMiniCardGrid = dynamic(
 const DailyDigest = dynamic(
   () => import("@/components/daily-digest").then((mod) => mod.DailyDigest),
   {
-    loading: () => <Skeleton className="h-32 w-full" />,
+    ssr: false,
+    loading: DailyDigestFallback,
   },
 );
 
 const HomeAltRankingsSection = dynamic(
   () => import("@/components/home-alt-rankings-section").then((mod) => mod.HomeAltRankingsSection),
   {
+    ssr: false,
     loading: () => (
       <div className="space-y-4">
         <Skeleton className="h-20 w-full" />
@@ -100,10 +126,10 @@ export function HomeAltClient() {
       </div>
 
       {/* Editorial band — single hairline divides it from the dashboard above */}
-      <BelowFold forced={hashTargetForcesMount} minHeight={220}>
+      <BelowFold forced={hashTargetForcesMount} minHeight={820}>
         <section
           aria-label="Daily digest"
-          className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
+          className="mt-3 min-h-[560px] pt-2.5 sm:mt-3.5 sm:pt-3 lg:min-h-[660px]"
         >
           <DailyDigest variant="preview" />
         </section>

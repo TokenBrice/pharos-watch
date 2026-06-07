@@ -21,5 +21,10 @@ describe("DocPage", () => {
     expect(html).toContain('data-slot="table-header"');
     expect(html).toContain('data-slot="table-head"');
     expect(html).toContain('data-slot="table-cell"');
+
+    const labels = Array.from(html.matchAll(/aria-label="(Documentation table:[^"]+)"/g), (match) => match[1]);
+    expect(labels.length).toBeGreaterThan(1);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels.some((label) => label.includes("Category, Examples, Notes"))).toBe(true);
   });
 });

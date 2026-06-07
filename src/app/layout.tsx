@@ -13,7 +13,7 @@ import { RegimeBar } from "@/components/regime-bar";
 import { CoreTopRail } from "@/components/core-top-rail";
 import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
-import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
@@ -74,8 +74,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href={API_URL} />
-        {gaId && <link rel="preload" href={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} as="script" />}
         <link rel="alternate" type="application/rss+xml" title="Pharos · Daily digest" href="/feed/digest.xml" />
         <link rel="alternate" type="application/rss+xml" title="Pharos · Depeg events" href="/feed/depeg.xml" />
         <link

@@ -1,11 +1,30 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 scans plain text, so keep non-browser prose/data/test fixtures out
+   of the generated utility set. Runtime class maps in shared/lib stay included. */
+@source not "../../docs";
+@source not "../../scripts";
+@source not "../../functions";
+@source not "../../worker";
+@source not "../../shared/data";
+@source not "../**/__tests__";
+@source not "../test";
+@source not "../test-utils";
+
 /* ── Design Tokens ─────────────────────────────────────────────── */
 @import "../styles/tokens/primitives.css";
 @import "../styles/tokens/semantic.css";
 
 @custom-variant dark (&:is(.dark *));
+
+.pharos-font-sans {
+  --font-geist-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pharos-font-mono {
+  --font-geist-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
 
 @theme inline {
   --color-background: var(--background);

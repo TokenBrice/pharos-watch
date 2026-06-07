@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 type CoinCellSize = "default" | "compact";
 
@@ -28,14 +29,15 @@ export function CoinCell({
   size?: CoinCellSize;
 }): React.JSX.Element {
   const spec = COIN_CELL_SIZE[size];
+  const effectiveLogoSrc = resolveCompactLogoSrc(logoSrc, spec.width);
 
-  if (!logoSrc) {
+  if (!effectiveLogoSrc) {
     return <span aria-hidden="true" />;
   }
 
   return (
     <Image
-      src={logoSrc}
+      src={effectiveLogoSrc}
       alt=""
       width={spec.width}
       height={spec.height}

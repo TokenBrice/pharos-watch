@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ServerCrash } from "lucide-react";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PageErrorEditorial } from "@/components/page-error-editorial";
-import { buildRequestUrl } from "@/lib/api";
+import { buildRequestUrl } from "@/lib/api-url";
 import { isHardReloadableRouteError } from "@/lib/route-error-recovery";
 
 type HealthState = "unknown" | "ok" | "degraded";

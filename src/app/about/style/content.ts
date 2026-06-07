@@ -110,7 +110,7 @@ export const STYLE_ANTI_TERMS: readonly StyleAntiTerm[] = [
 export const STYLE_NUMBER_RULES: readonly StyleNumberRule[] = [
   {
     topic: "Mono everywhere",
-    body: "Every number Pharos renders is set in Geist Mono with tabular figures and a slashed zero. The pharos-numeric utility is the canonical handle. Proportional figures are reserved for body copy where digits are part of a sentence, not part of a table.",
+    body: "Every number Pharos renders is set in the mono token with tabular figures and a slashed zero. The pharos-numeric utility is the canonical handle. Proportional figures are reserved for body copy where digits are part of a sentence, not part of a table.",
   },
   {
     topic: "Basis points under 1%",

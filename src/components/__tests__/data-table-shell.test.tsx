@@ -86,6 +86,7 @@ describe("DataTableShell", () => {
     expect(table.className).toContain("min-w-[720px]");
     expect(table.getAttribute("aria-label")).toBe("Stablecoin overview rows");
     expect(table.querySelector("[data-slot='table-header']")?.className).toContain("sticky top-0");
+    expect(table.querySelector("[data-slot='table-header'] tr")?.getAttribute("data-row-intent")).toBe("static");
     expect(row.parentElement?.getAttribute("data-slot")).toBe("table-body");
     expect(marketCapHeader?.className).toContain("text-right");
     expect(marketCapHeader?.getAttribute("title")).toBe("Market capitalization");
@@ -197,6 +198,7 @@ describe("DataTableShell", () => {
 
     expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
     expect(screen.getByText("No rows").getAttribute("colspan")).toBe("1");
+    expect(screen.getByText("No rows").closest("tr")?.getAttribute("data-row-intent")).toBe("static");
   });
 
   it("can suppress mobile hints and skip refresh subscriptions without a query client", () => {

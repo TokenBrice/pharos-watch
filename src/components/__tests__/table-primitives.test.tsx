@@ -151,6 +151,30 @@ describe("Pharos table primitives", () => {
     ).toBe("static");
   });
 
+  it("supports rowHeaderColumnId and rejects unknown row-header column ids", () => {
+    const columns = [
+      { id: "code", header: "Code" },
+      { id: "meaning", header: "Meaning" },
+    ];
+    const rows = [
+      { id: "bedrock", cells: { code: "BEDROCK", meaning: "Near-ideal" } },
+    ];
+
+    render(
+      <ContentTable
+        tableId="methodology-row-header-id"
+        columns={columns}
+        rows={rows}
+        rowHeaderColumnId="code"
+      />,
+    );
+
+    expect(screen.getByText("BEDROCK").closest("th")?.getAttribute("scope")).toBe("row");
+    expect(() => assertContentTableRowsMatchColumns(columns, rows, "typo")).toThrow(
+      /Unknown rowHeaderColumnId: typo/,
+    );
+  });
+
   it("throws when content table row cell keys do not match declared columns", () => {
     const columns = [
       { id: "name", header: "Name" },

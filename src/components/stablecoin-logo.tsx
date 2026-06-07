@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 interface StablecoinLogoProps {
   src: string | undefined;
@@ -10,8 +11,9 @@ interface StablecoinLogoProps {
 
 export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
   const innerSize = Math.max(size - 6, 12);
+  const effectiveSrc = resolveCompactLogoSrc(src, innerSize);
 
-  if (!src) {
+  if (!effectiveSrc) {
     return (
       <span
         role="img"
@@ -30,7 +32,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
       style={{ width: size, height: size }}
     >
       <Image
-        src={src}
+        src={effectiveSrc}
         alt={`${name} logo`}
         width={innerSize}
         height={innerSize}

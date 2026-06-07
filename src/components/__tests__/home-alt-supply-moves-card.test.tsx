@@ -65,7 +65,7 @@ describe("SupplyMovesCard", () => {
     render(<SupplyMovesCard />);
 
     const peakLink = screen.getByRole("link", {
-      name: "USDR supply moved +202% over 7 days",
+      name: "+202% USDR Peak 7d supply moved over 7 days",
     });
     expect(peakLink.getAttribute("href")).toBe("/stablecoin/usdr-real");
     expect(peakLink.textContent).toContain("Peak 7d");

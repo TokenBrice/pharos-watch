@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   DataTableEmptyRow,
@@ -108,6 +108,20 @@ const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
   { key: "liquidityScore", label: "Liquidity" },
 ];
 
+function subscribeHydratedLayout(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const timeout = window.setTimeout(onStoreChange, 0);
+  return () => window.clearTimeout(timeout);
+}
+
+function getHydratedLayoutSnapshot(): boolean {
+  return typeof window !== "undefined";
+}
+
+function getServerLayoutSnapshot(): boolean {
+  return false;
+}
+
 interface ScreenerTableProps {
   rows: readonly ScreenerRow[];
   logos?: Record<string, string>;
@@ -129,7 +143,13 @@ export function ScreenerTable({
   const tableRef = useRef<HTMLDivElement>(null);
   const compareLinkRef = useRef<HTMLAnchorElement>(null);
   const isMobileLayout = useIsMobile(768);
-  const showDesktopSparklines = !useIsMobile(1280);
+  const isBelowXl = useIsMobile(1280);
+  const layoutResolved = useSyncExternalStore(
+    subscribeHydratedLayout,
+    getHydratedLayoutSnapshot,
+    getServerLayoutSnapshot,
+  );
+  const showDesktopSparklines = layoutResolved && !isBelowXl;
 
   // P6 — j/k row cursor over the desktop table rows. o/Enter opens the dossier,
   // s toggles the watchlist, c adds to /compare. The hook bails while an input
@@ -168,6 +188,10 @@ export function ScreenerTable({
     window.addEventListener(SORT_COLUMN_EVENT, handleSortColumn);
     return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
   }, [toggleSort]);
+
+  if (!layoutResolved) {
+    return <ScreenerLayoutPending />;
+  }
 
   if (isMobileLayout) {
     return (
@@ -241,6 +265,26 @@ export function ScreenerTable({
           ))
         )}
       </DataTableShell>
+    </div>
+  );
+}
+
+function ScreenerLayoutPending() {
+  return (
+    <div data-testid="stablecoin-screener-layout-pending" className="space-y-3">
+      <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
+        <p className="pharos-kicker mb-2">Sort Results</p>
+        <div className="flex flex-wrap gap-2" aria-hidden="true">
+          {MOBILE_SORT_OPTIONS.map((option) => (
+            <span key={option.key} className="h-8 w-16 animate-pulse rounded-full bg-muted/40" />
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div key={index} className="pharos-card-shell h-28 animate-pulse rounded-xl bg-muted/20" />
+        ))}
+      </div>
     </div>
   );
 }
