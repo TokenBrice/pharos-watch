@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
@@ -19,18 +20,11 @@ export interface LightApiQueryOptions {
   retry?: number | boolean;
 }
 
-function getLightPollingWindow(cronInterval: number) {
-  return {
-    staleTime: cronInterval,
-    refetchInterval: 2 * cronInterval,
-  };
-}
-
 export function useLightApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   options: LightApiQueryOptions = { retry: 1 },
 ) {
-  const { staleTime, refetchInterval } = getLightPollingWindow(descriptor.producerIntervalMs);
+  const { staleTime, refetchInterval } = getPollingWindow(descriptor.producerIntervalMs);
   const retryOption = Object.prototype.hasOwnProperty.call(options, "retry")
     ? { retry: options.retry }
     : {};
