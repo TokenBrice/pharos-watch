@@ -113,4 +113,55 @@ describe("VirtualTableFrame", () => {
     expect(ref.current).toBe(shell);
     expect(surfaceRef.current).toBe(shell);
   });
+
+  it("keeps composed refs stable across rerenders", () => {
+    const surfaceCalls: Array<HTMLDivElement | null> = [];
+    const viewportCalls: Array<HTMLDivElement | null> = [];
+    const surfaceRef = (node: HTMLDivElement | null) => {
+      surfaceCalls.push(node);
+    };
+    const viewportRef = (node: HTMLDivElement | null) => {
+      viewportCalls.push(node);
+    };
+
+    const { rerender } = render(
+      <VirtualTableFrame
+        surfaceRef={surfaceRef}
+        viewportRef={viewportRef}
+        testId="virtual-shell"
+        topSlot={<div>First toolbar</div>}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDT</TableCell>
+          </TableRow>
+        </TableBody>
+      </VirtualTableFrame>,
+    );
+
+    const shell = screen.getByTestId("virtual-shell");
+    const viewport = screen.getByRole("table").parentElement as HTMLDivElement;
+
+    expect(surfaceCalls).toEqual([shell]);
+    expect(viewportCalls).toEqual([viewport]);
+
+    rerender(
+      <VirtualTableFrame
+        surfaceRef={surfaceRef}
+        viewportRef={viewportRef}
+        testId="virtual-shell"
+        topSlot={<div>Updated toolbar</div>}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell>USDC</TableCell>
+          </TableRow>
+        </TableBody>
+      </VirtualTableFrame>,
+    );
+
+    expect(screen.getByText("Updated toolbar")).toBeTruthy();
+    expect(surfaceCalls).toEqual([shell]);
+    expect(viewportCalls).toEqual([viewport]);
+  });
 });

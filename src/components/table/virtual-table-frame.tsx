@@ -19,19 +19,24 @@ export interface VirtualTableFrameProps
   ref?: React.Ref<HTMLDivElement>;
 }
 
-function composeRefs<T>(...refs: Array<React.Ref<T> | undefined>) {
-  const activeRefs = refs.filter((ref): ref is Exclude<React.Ref<T>, null> => ref != null);
-  if (activeRefs.length === 0) return undefined;
+function assignRef<T>(ref: React.Ref<T> | undefined, node: T | null) {
+  if (ref == null) return;
+  if (typeof ref === "function") {
+    ref(node);
+  } else {
+    ref.current = node;
+  }
+}
 
-  return (node: T | null) => {
-    activeRefs.forEach((ref) => {
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        ref.current = node;
-      }
-    });
-  };
+function useComposedRef<T>(firstRef: React.Ref<T> | undefined, secondRef: React.Ref<T> | undefined) {
+  return React.useMemo(() => {
+    if (firstRef == null && secondRef == null) return undefined;
+
+    return (node: T | null) => {
+      assignRef(firstRef, node);
+      assignRef(secondRef, node);
+    };
+  }, [firstRef, secondRef]);
 }
 
 export function VirtualTableFrame({
@@ -59,13 +64,15 @@ export function VirtualTableFrame({
     compactBottomPadding = false,
     ...resolvedViewportProps
   } = viewportProps ?? {};
+  const composedSurfaceRef = useComposedRef(ref, surfaceRef);
+  const composedViewportRef = useComposedRef(viewportRef, viewportPropsRef);
 
   return (
-    <TableSurface {...surfaceProps} ref={composeRefs(ref, surfaceRef)} striped={striped}>
+    <TableSurface {...surfaceProps} ref={composedSurfaceRef} striped={striped}>
       {topSlot}
       <TableViewport
         {...resolvedViewportProps}
-        ref={composeRefs(viewportRef, viewportPropsRef)}
+        ref={composedViewportRef}
         className={viewportClassName}
         mobileScrollHint={viewportPropsMobileScrollHint}
         scrollShadow={scrollShadow}
