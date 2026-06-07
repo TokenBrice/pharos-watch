@@ -108,17 +108,6 @@ function addVaryAcceptEncoding(headers: Headers): void {
   }
 }
 
-function clientAcceptsGzip(request: Request): boolean {
-  const ae = request.headers.get("Accept-Encoding") ?? "";
-  return /(^|,)\s*gzip\s*(;|,|$)/i.test(ae);
-}
-
-async function gzipString(text: string): Promise<ArrayBuffer> {
-  const bytes = new TextEncoder().encode(text);
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
-  return new Response(stream).arrayBuffer();
-}
-
 function addNegotiationCacheHeaders(headers: Headers): void {
   addVaryAccept(headers);
   headers.set("Cloudflare-CDN-Cache-Control", "no-store");
@@ -179,22 +168,11 @@ async function withHtmlCsp(response: Response, request: Request, pathname: strin
   const html = addNonceToInlineScripts(await response.text(), nonce);
 
   // `response.text()` yields the decoded body, so any inherited upstream
-  // Content-Encoding (e.g. a pre-compressed asset from the local dev server) is
-  // now stale and must be dropped before we decide how to re-encode.
+  // Content-Encoding is now stale. Return decoded HTML and let Cloudflare's edge
+  // compression handle the final transport encoding for Pages Functions.
   headers.delete("Content-Encoding");
 
-  if (!clientAcceptsGzip(request)) {
-    return new Response(html, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
-  }
-
-  const gzipped = await gzipString(html);
-  headers.set("Content-Encoding", "gzip");
-  headers.delete("Content-Length");
-  return new Response(gzipped, {
+  return new Response(html, {
     status: response.status,
     statusText: response.statusText,
     headers,

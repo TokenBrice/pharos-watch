@@ -29,13 +29,6 @@ function ctx(request: Request, assetsFiles: Record<string, string>) {
   return { request, env, next };
 }
 
-async function decodeBody(res: Response): Promise<string> {
-  if (res.headers.get("Content-Encoding") === "gzip") {
-    return new Response(res.body!.pipeThrough(new DecompressionStream("gzip"))).text();
-  }
-  return res.text();
-}
-
 function scriptSrc(csp: string | null): string {
   return csp
     ?.split(";")
@@ -235,18 +228,18 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("");
   });
 
-  it("gzips the HTML response when the client accepts gzip while preserving nonce injection", async () => {
+  it("serves decoded HTML when the client accepts gzip while preserving nonce injection", async () => {
     const req = new Request("https://pharos.watch/", {
       headers: { "Accept-Encoding": "gzip, deflate, br" },
     });
     const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
     const res = await onRequest(ctx(req, { "/index.html": html }));
 
-    expect(res.headers.get("Content-Encoding")).toBe("gzip");
+    expect(res.headers.get("Content-Encoding")).toBeNull();
     expect(res.headers.get("Vary")).toContain("Accept-Encoding");
     expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
 
-    const body = await decodeBody(res);
+    const body = await res.text();
     expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
   });
 
@@ -264,7 +257,7 @@ describe("pages middleware markdown negotiation", () => {
     expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
   });
 
-  it("does not gzip HEAD responses even when the client accepts gzip", async () => {
+  it("keeps HEAD responses unencoded even when the client accepts gzip", async () => {
     const req = new Request("https://pharos.watch/", {
       method: "HEAD",
       headers: { "Accept-Encoding": "gzip" },
@@ -276,14 +269,13 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("");
   });
 
-  it("strips a stale upstream Content-Encoding and serves a single valid gzip", async () => {
+  it("strips a stale upstream Content-Encoding and serves decoded HTML", async () => {
     const req = new Request("https://pharos.watch/", {
       headers: { "Accept-Encoding": "gzip" },
     });
     // The upstream body has already been decoded (as the local dev asset server
     // hands it to us) but still carries a Content-Encoding header. After reading
-    // the text the body is plaintext, so the stale header must not survive onto
-    // our own gzip — otherwise the client would double-decode and fail.
+    // the text the body is plaintext, so the stale header must not survive.
     const next = vi.fn(async () =>
       new Response("<html><script>1</script></html>", {
         status: 200,
@@ -296,10 +288,8 @@ describe("pages middleware markdown negotiation", () => {
       next,
     });
 
-    expect(res.headers.get("Content-Encoding")).toBe("gzip");
-    // Decodes cleanly in a single gzip pass (not double-encoded) with the nonce
-    // injection intact.
-    const body = await decodeBody(res);
+    expect(res.headers.get("Content-Encoding")).toBeNull();
+    const body = await res.text();
     expect(body).toMatch(/<script nonce="[^"]+">1<\/script>/);
   });
 
