@@ -16,13 +16,13 @@ const SAFETY_GRADE_ORDER: Record<ReportCardGrade, number> = {
 };
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
-  Table,
+  MatrixTable,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/table";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -345,46 +345,52 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
 
       {/* Desktop: side-by-side table */}
       <div className="hidden sm:block">
-        <div className="pharos-table-shell overflow-x-auto" role="region" aria-label="Comparison table" tabIndex={0}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col" className="pharos-table-sticky-metric min-w-[110px]">Metric</TableHead>
-                {coins.map((coin) => (
+        <MatrixTable
+          tableId="live-comparison-matrix"
+          testId="live-comparison-matrix-table"
+          role="region"
+          aria-label="Comparison table"
+          tabIndex={0}
+          tableAriaLabel="Comparison table"
+          viewportProps={{ mobileScrollHint: false }}
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col" className="pharos-table-sticky-metric min-w-[110px]">Metric</TableHead>
+              {coins.map((coin) => (
                 <TableHead scope="col" key={coin.id} className="text-center min-w-[120px]">
-                    <Link href={buildStablecoinUrl(coin.id)} className="pharos-focus-ring inline-flex w-full flex-col items-center gap-1 rounded-xl px-2 py-2">
-                      <StablecoinLogo
-                        src={logos?.[coin.id]}
-                        name={coin.name}
-                        size={28}
-                      />
-                      <span className="text-xs font-semibold">
-                        {coin.symbol}
-                        {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
-                      {detailErrors?.[coin.id] && (
-                        <span className="text-xs text-destructive">Chart data unavailable</span>
-                      )}
-                    </Link>
-                  </TableHead>
+                  <Link href={buildStablecoinUrl(coin.id)} className="pharos-focus-ring inline-flex w-full flex-col items-center gap-1 rounded-xl px-2 py-2">
+                    <StablecoinLogo
+                      src={logos?.[coin.id]}
+                      name={coin.name}
+                      size={28}
+                    />
+                    <span className="text-xs font-semibold">
+                      {coin.symbol}
+                      {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
+                    {detailErrors?.[coin.id] && (
+                      <span className="text-xs text-destructive">Chart data unavailable</span>
+                    )}
+                  </Link>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {comparisonMetrics.map((metric) => (
+              <TableRow key={metric.key}>
+                <TableCell className="pharos-table-sticky-metric font-medium">{metric.desktopLabel}</TableCell>
+                {coins.map((coin, i) => (
+                  <TableCell key={coin.id} className={metric.desktopValueClassName(coin, i)}>
+                    {metric.renderValue(coin, i)}
+                  </TableCell>
                 ))}
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {comparisonMetrics.map((metric) => (
-                <TableRow key={metric.key}>
-                  <TableCell className="pharos-table-sticky-metric font-medium">{metric.desktopLabel}</TableCell>
-                  {coins.map((coin, i) => (
-                    <TableCell key={coin.id} className={metric.desktopValueClassName(coin, i)}>
-                      {metric.renderValue(coin, i)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+            ))}
           </TableBody>
-        </Table>
-        </div>
+        </MatrixTable>
       </div>
     </>
   );

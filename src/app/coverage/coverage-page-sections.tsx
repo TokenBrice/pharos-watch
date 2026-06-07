@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
-import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MatrixTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -475,56 +475,65 @@ export function CoverageMatrixCard(
                 logos={model.logos}
               />
             ) : (
-              <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
-                <div className="overflow-auto">
-                  <table className="min-w-[64rem] w-full table-fixed caption-bottom text-sm">
-                    <TableCaption className="sr-only">
-                      Per-coin feature availability across {model.rows.length} active stablecoins.
-                    </TableCaption>
-                    <TableHeader className="bg-muted/22 [&_tr]:border-border/70">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead
-                          scope="col"
-                          className="sticky left-0 z-20 h-11 w-[200px] bg-muted/22 px-4 text-sm font-medium text-foreground"
+              <MatrixTable
+                tableId="coverage-matrix"
+                testId="coverage-matrix-table"
+                caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
+                captionClassName="sr-only"
+                chrome="bare"
+                className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block"
+                tableClassName="min-w-[64rem] table-fixed"
+                viewportClassName="overflow-auto"
+                viewportProps={{
+                  compactBottomPadding: false,
+                  horizontal: false,
+                  mobileScrollHint: false,
+                  overscrollX: false,
+                  scrollShadow: false,
+                }}
+              >
+                <TableHeader className="bg-muted/22 [&_tr]:border-border/70">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead
+                      scope="col"
+                      className="sticky left-0 z-20 h-11 w-[200px] bg-muted/22 px-4 text-sm font-medium text-foreground"
+                    >
+                      Stablecoin
+                    </TableHead>
+                    {COVERAGE_FEATURES.map((feature) => (
+                      <TableHead key={feature.key} scope="col" className="h-11 text-sm font-medium text-foreground">
+                        <span>{feature.shortLabel}</span>
+                        <span className="sr-only">
+                          : {feature.label}. {feature.description}
+                        </span>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {model.filteredRows.map((row, index) => {
+                    const stripeClass = index % 2 === 0 ? "bg-background/10" : "bg-muted/6";
+
+                    return (
+                      <TableRow key={row.id} className={cn("group", stripeClass)}>
+                        <TableCell
+                          className={cn(
+                            "sticky left-0 z-10 w-[200px] max-w-[200px] whitespace-normal px-4 py-3 group-hover:bg-muted/30",
+                            stripeClass,
+                          )}
                         >
-                          Stablecoin
-                        </TableHead>
+                          <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
+                        </TableCell>
                         {COVERAGE_FEATURES.map((feature) => (
-                          <TableHead key={feature.key} scope="col" className="h-11 text-sm font-medium text-foreground">
-                            <span>{feature.shortLabel}</span>
-                            <span className="sr-only">
-                              : {feature.label}. {feature.description}
-                            </span>
-                          </TableHead>
+                          <TableCell key={feature.key} className="pb-2 pt-3 align-top">
+                            <CoverageBadge status={row.statuses[feature.key]} />
+                          </TableCell>
                         ))}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {model.filteredRows.map((row, index) => {
-                        const stripeClass = index % 2 === 0 ? "bg-background/10" : "bg-muted/6";
-
-                        return (
-                          <TableRow key={row.id} className={cn("group", stripeClass)}>
-                            <TableCell
-                              className={cn(
-                                "sticky left-0 z-10 w-[200px] max-w-[200px] whitespace-normal px-4 py-3 group-hover:bg-muted/30",
-                                stripeClass,
-                              )}
-                            >
-                              <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
-                            </TableCell>
-                            {COVERAGE_FEATURES.map((feature) => (
-                              <TableCell key={feature.key} className="pb-2 pt-3 align-top">
-                                <CoverageBadge status={row.statuses[feature.key]} />
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </table>
-                </div>
-              </div>
+                    );
+                  })}
+                </TableBody>
+              </MatrixTable>
             )}
           </>
         )}

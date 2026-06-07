@@ -5,6 +5,15 @@ import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/class
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/table";
+import {
   buildComparisonAtAGlanceRows,
   buildComparisonFaqItems,
   buildComparisonResearchLinks,
@@ -163,29 +172,33 @@ export default async function StaticComparisonPage({ params }: { params: Promise
             Static structural differences between the two stablecoins before you switch to the live comparison tool.
           </p>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-border/60">
-          <table className="w-full text-sm">
-            <caption className="sr-only">{page.shortTitle} comparison summary</caption>
-            <thead className="bg-muted/35 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Metric</th>
-                <th className="px-4 py-3 font-medium text-foreground">{page.left.symbol}</th>
-                <th className="px-4 py-3 font-medium text-foreground">{page.right.symbol}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparisonRows.map((row) => (
-                <tr key={row.label} className="border-t border-border/50 align-top">
-                  <th scope="row" className="px-4 py-3 font-medium text-foreground">
-                    {row.label}
-                  </th>
-                  <td className="px-4 py-3 text-muted-foreground">{row.left}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{row.right}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TableFrame
+          tableId="static-compare-at-a-glance"
+          testId="static-compare-at-a-glance-table"
+          chrome="bare"
+          className="overflow-hidden rounded-2xl border border-border/60"
+          viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
+        >
+          <TableCaption className="sr-only">{page.shortTitle} comparison summary</TableCaption>
+          <TableHeader className="bg-muted/35 text-left [&_tr]:border-0">
+            <TableRow className="border-0 hover:bg-transparent">
+              <TableHead className="px-4 py-3 font-medium text-muted-foreground">Metric</TableHead>
+              <TableHead className="px-4 py-3 font-medium text-foreground">{page.left.symbol}</TableHead>
+              <TableHead className="px-4 py-3 font-medium text-foreground">{page.right.symbol}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {comparisonRows.map((row) => (
+              <TableRow key={row.label} className="border-t border-border/50 align-top">
+                <TableHead scope="row" className="whitespace-normal px-4 py-3 font-medium text-foreground">
+                  {row.label}
+                </TableHead>
+                <TableCell className="whitespace-normal px-4 py-3 text-muted-foreground">{row.left}</TableCell>
+                <TableCell className="whitespace-normal px-4 py-3 text-muted-foreground">{row.right}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableFrame>
         <p className="text-xs leading-relaxed text-muted-foreground">
           Source: checked-in StablecoinMeta profile fields in the current Pharos build. Static deployment counts and
           reserve-provider labels are structural context; open the live detail and compare tools for current market,

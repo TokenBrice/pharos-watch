@@ -124,9 +124,14 @@ describe("CoverageMatrixCard", () => {
   });
 
   it("renders the desktop comparison table with per-feature badges", () => {
-    render(<CoverageMatrixCard {...makeMatrixModel()} />);
+    const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
+    const view = within(container);
 
-    expect(screen.getAllByRole("table", { name: /Per-coin feature availability/ }).length).toBeGreaterThan(0);
+    const matrixSurface = view.getByTestId("coverage-matrix-table");
+    const matrixTable = view.getByRole("table", { name: /Per-coin feature availability/ });
+
+    expect(matrixSurface.getAttribute("data-table-id")).toBe("coverage-matrix");
+    expect(matrixTable.getAttribute("data-slot")).toBe("table");
     expect(screen.getAllByText("Coin 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("columnheader", { name: /Backstop/ }).length).toBeGreaterThan(0);

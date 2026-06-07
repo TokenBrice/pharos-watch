@@ -152,4 +152,19 @@ describe("ComparisonTable – Net Flow 30D row", () => {
     );
     expect(html).toContain("Net Flow 30D");
   });
+
+  it("renders the desktop matrix inside the shared table foundation", () => {
+    const coins: ComparisonCoin[] = [makeCoin("usdt", "USDT", 100e9, 0)];
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />,
+    );
+
+    expect(html).toContain('data-table-id="live-comparison-matrix"');
+    expect(html).toContain('data-testid="live-comparison-matrix-table"');
+    expect(html).toContain('role="region"');
+    expect(html).toContain('aria-label="Comparison table"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('data-slot="table-viewport"');
+    expect(html).toContain('data-slot="table"');
+  });
 });
