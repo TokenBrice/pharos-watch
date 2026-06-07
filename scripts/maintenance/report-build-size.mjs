@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { formatBytes } from "../lib/format-bytes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -22,6 +23,9 @@ const DEFAULT_BUDGETS = {
   // Keep this tight so future registry growth still has to justify itself.
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,
+  // Lighthouse mobile reports the global CSS transfer as render-blocking, so
+  // track compressed CSS too instead of relying only on raw chunk size.
+  largestCssGzipBytes: 64_000,
   totalStaticMediaBytes: 2_000_000,
   // Allow documented App Router + RSC payload growth on docs-heavy release pages.
   largestHtmlBytes: 2_700_000,
@@ -41,6 +45,7 @@ const BUDGET_ENV = {
   totalJsBytes: "PHAROS_SIZE_BUDGET_TOTAL_JS_BYTES",
   largestJsBytes: "PHAROS_SIZE_BUDGET_LARGEST_JS_BYTES",
   totalCssBytes: "PHAROS_SIZE_BUDGET_TOTAL_CSS_BYTES",
+  largestCssGzipBytes: "PHAROS_SIZE_BUDGET_LARGEST_CSS_GZIP_BYTES",
   totalStaticMediaBytes: "PHAROS_SIZE_BUDGET_TOTAL_STATIC_MEDIA_BYTES",
   largestHtmlBytes: "PHAROS_SIZE_BUDGET_LARGEST_HTML_BYTES",
   homepageHtmlBytes: "PHAROS_SIZE_BUDGET_HOMEPAGE_HTML_BYTES",
@@ -102,6 +107,28 @@ function printTop(title, files, limit = 20) {
   }
 }
 
+function withGzipSize(files) {
+  return files
+    .map((file) => ({
+      ...file,
+      gzipSize: gzipSync(readFileSync(file.path)).byteLength,
+    }))
+    .sort((a, b) => b.gzipSize - a.gzipSize || a.rel.localeCompare(b.rel));
+}
+
+function printTopCompressed(title, files, limit = 20) {
+  console.log(`\n${title}`);
+  if (files.length === 0) {
+    console.log("  (none)");
+    return;
+  }
+  for (const file of files.slice(0, limit)) {
+    console.log(
+      `  ${formatBytes(file.gzipSize).padStart(9)} gzip  ${formatBytes(file.size).padStart(9)} raw  ${file.rel}`,
+    );
+  }
+}
+
 function readFontManifestSummary() {
   const manifestPath = path.join(root, ".next/server/next-font-manifest.json");
   if (!existsSync(manifestPath)) {
@@ -147,6 +174,7 @@ if (!existsSync(outDir)) {
 const allOutFiles = collectFiles(outDir);
 const jsFiles = collectFiles(chunksDir, (file) => file.endsWith(".js"));
 const cssFiles = collectFiles(chunksDir, (file) => file.endsWith(".css"));
+const cssFilesWithGzip = withGzipSize(cssFiles);
 const mediaFiles = collectFiles(mediaDir);
 const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
 const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
@@ -164,6 +192,7 @@ console.log(`TXT/RSC helpers: ${formatBytes(sum(txtFiles))} across ${txtFiles.le
 
 printTop("Top out files", allOutFiles, 50);
 printTop("Top JS chunks", jsFiles, 30);
+printTopCompressed("Top CSS chunks", cssFilesWithGzip, 30);
 printTop("Top HTML files", htmlFiles, 30);
 printTop("Top TXT/RSC helper files", txtFiles, 30);
 
@@ -195,6 +224,7 @@ if (check) {
   checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
   checkBudget("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes, failures);
   checkBudget("total CSS chunks", sum(cssFiles), budgets.totalCssBytes, failures);
+  checkBudget("largest CSS chunk gzip", cssFilesWithGzip[0]?.gzipSize ?? 0, budgets.largestCssGzipBytes, failures);
   checkBudget("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes, failures);
   checkBudget("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes, failures);
   checkBudget("homepage HTML file", homepageHtmlSize, budgets.homepageHtmlBytes, failures);
