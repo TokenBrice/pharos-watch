@@ -2,14 +2,7 @@ import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ContentTable } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
@@ -20,6 +13,68 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { STABILITY_INDEX_SECTION_CONTENT } from "../methodology-content";
+
+const STABILITY_COMPONENT_COLUMNS = [
+  { id: "component", header: "Component", cellClassName: "text-foreground" },
+  { id: "range", header: "Range" },
+  { id: "formula", header: "Formula", cellClassName: "pharos-numeric text-xs whitespace-normal" },
+  { id: "purpose", header: "Purpose", cellClassName: "whitespace-normal" },
+];
+
+const STABILITY_COMPONENT_ROWS = [
+  {
+    id: "severity",
+    cells: {
+      component: "Severity",
+      range: "0–68",
+      formula: <>min(68, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))</>,
+      purpose: "Magnitude-weighted depeg damage with extra emphasis on mega-cap instability",
+    },
+  },
+  {
+    id: "breadth",
+    cells: {
+      component: "Breadth",
+      range: "0–17",
+      formula: <>min(17, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))</>,
+      purpose: "How widely depegs are spreading across unique coins",
+    },
+  },
+  {
+    id: "stress-breadth",
+    cells: {
+      component: "Stress Breadth",
+      range: "0–5",
+      formula: "min(5, dewsStressBreadth)",
+      purpose: "Early-warning pressure from DEWS stress signals before full depegs",
+    },
+  },
+  {
+    id: "trend",
+    cells: {
+      component: "Trend",
+      range: "−5 to +5",
+      formula: "clamp(-5, 5, mcap7dChangePct)",
+      purpose: "7-day stablecoin market-cap momentum (supports or offsets penalties)",
+    },
+  },
+];
+
+const STABILITY_BAND_COLUMNS = [
+  { id: "range", header: "Range" },
+  { id: "band", header: "Band", cellClassName: "font-medium" },
+  { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
+];
+
+const STABILITY_BAND_ROWS = [
+  { id: "bedrock", cells: { range: "90–100", band: "BEDROCK", meaning: "Near-ideal market stability" }, cellClassNames: { band: "text-green-700 dark:text-green-400" } },
+  { id: "steady", cells: { range: "75–89", band: "STEADY", meaning: "Normal conditions with minor stress" }, cellClassNames: { band: "text-teal-700 dark:text-teal-400" } },
+  { id: "tremor", cells: { range: "60–74", band: "TREMOR", meaning: "Meaningful instability emerging" }, cellClassNames: { band: "text-yellow-700 dark:text-yellow-400" } },
+  { id: "fracture", cells: { range: "40–59", band: "FRACTURE", meaning: "Broad, significant market stress" }, cellClassNames: { band: "text-orange-700 dark:text-orange-400" } },
+  { id: "crisis", cells: { range: "20–39", band: "CRISIS", meaning: "Contagion-level instability" }, cellClassNames: { band: "text-red-700 dark:text-red-400" } },
+  { id: "meltdown", cells: { range: "0–19", band: "MELTDOWN", meaning: "Systemic peg failure conditions" }, cellClassNames: { band: "text-red-800" } },
+];
+
 export function StabilityIndexMethodologySection() {
   return (
           <MethodologySectionShell
@@ -114,54 +169,12 @@ export function StabilityIndexMethodologySection() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Components</h3>
-                  <TableFrame
-                    chrome="content"
-                    density="compact"
+                  <ContentTable
                     tableId="methodology-stability-index-components"
                     testId="methodology-stability-index-components-table"
-                    viewportProps={{ mobileScrollHint: false }}
-                  >
-                    <TableHeader>
-                      <TableRow className="text-left">
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Component</TableHead>
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Range</TableHead>
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Formula</TableHead>
-                        <TableHead scope="col" className="py-2 text-foreground">Purpose</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4 text-foreground">Severity</TableCell>
-                        <TableCell className="py-2 pr-4">0&ndash;68</TableCell>
-                        <TableCell className="py-2 pr-4 pharos-numeric text-xs whitespace-normal">
-                          min(68, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))
-                        </TableCell>
-                        <TableCell className="py-2 whitespace-normal">
-                          Magnitude-weighted depeg damage with extra emphasis on mega-cap instability
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4 text-foreground">Breadth</TableCell>
-                        <TableCell className="py-2 pr-4">0&ndash;17</TableCell>
-                        <TableCell className="py-2 pr-4 pharos-numeric text-xs whitespace-normal">
-                          min(17, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))
-                        </TableCell>
-                        <TableCell className="py-2 whitespace-normal">How widely depegs are spreading across unique coins</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4 text-foreground">Stress Breadth</TableCell>
-                        <TableCell className="py-2 pr-4">0&ndash;5</TableCell>
-                        <TableCell className="py-2 pr-4 pharos-numeric text-xs whitespace-normal">min(5, dewsStressBreadth)</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Early-warning pressure from DEWS stress signals before full depegs</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4 text-foreground">Trend</TableCell>
-                        <TableCell className="py-2 pr-4">&minus;5 to +5</TableCell>
-                        <TableCell className="py-2 pr-4 pharos-numeric text-xs whitespace-normal">clamp(-5, 5, mcap7dChangePct)</TableCell>
-                        <TableCell className="py-2 whitespace-normal">7-day stablecoin market-cap momentum (supports or offsets penalties)</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </TableFrame>
+                    columns={STABILITY_COMPONENT_COLUMNS}
+                    rows={STABILITY_COMPONENT_ROWS}
+                  />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Depeg Handling Rules</h3>
@@ -191,53 +204,12 @@ export function StabilityIndexMethodologySection() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Condition Bands</h3>
-                  <TableFrame
-                    chrome="content"
-                    density="compact"
+                  <ContentTable
                     tableId="methodology-stability-index-condition-bands"
                     testId="methodology-stability-index-condition-bands-table"
-                    viewportProps={{ mobileScrollHint: false }}
-                  >
-                    <TableHeader>
-                      <TableRow className="text-left">
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Range</TableHead>
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Band</TableHead>
-                        <TableHead scope="col" className="py-2 text-foreground">Meaning</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">90&ndash;100</TableCell>
-                        <TableCell className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">BEDROCK</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Near-ideal market stability</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">75&ndash;89</TableCell>
-                        <TableCell className="py-2 pr-4 text-teal-700 dark:text-teal-400 font-medium">STEADY</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Normal conditions with minor stress</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">60&ndash;74</TableCell>
-                        <TableCell className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">TREMOR</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Meaningful instability emerging</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">40&ndash;59</TableCell>
-                        <TableCell className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">FRACTURE</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Broad, significant market stress</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">20&ndash;39</TableCell>
-                        <TableCell className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">CRISIS</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Contagion-level instability</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-2 pr-4">0&ndash;19</TableCell>
-                        <TableCell className="py-2 pr-4 text-red-800 font-medium">MELTDOWN</TableCell>
-                        <TableCell className="py-2 whitespace-normal">Systemic peg failure conditions</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </TableFrame>
+                    columns={STABILITY_BAND_COLUMNS}
+                    rows={STABILITY_BAND_ROWS}
+                  />
                 </div>
               </MethodologyDetails>
           </MethodologySectionShell>

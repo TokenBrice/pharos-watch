@@ -2,14 +2,7 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ContentTable } from "@/components/table";
 import {
   MethodologyDetails,
   MethodologyFacts,
@@ -17,6 +10,23 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { MINT_BURN_FLOW_SECTION_CONTENT } from "../methodology-content";
+
+const BANK_RUN_GAUGE_COLUMNS = [
+  { id: "band", header: "Band", cellClassName: "text-foreground" },
+  { id: "scoreRange", header: "Score Range" },
+  { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
+];
+
+const BANK_RUN_GAUGE_ROWS = [
+  { id: "crisis", cells: { band: "CRISIS", scoreRange: "−100 to −70", meaning: "Severe below-baseline redemption pressure across major coins" } },
+  { id: "stress", cells: { band: "STRESS", scoreRange: "−70 to −40", meaning: "Worsening coordinated pressure versus normal conditions" } },
+  { id: "cautious", cells: { band: "CAUTIOUS", scoreRange: "−40 to −10", meaning: "Mild but broad pressure deterioration" } },
+  { id: "neutral", cells: { band: "NEUTRAL", scoreRange: "−10 to 10", meaning: "Close to 30D norms across the market" } },
+  { id: "healthy", cells: { band: "HEALTHY", scoreRange: "10 to 40", meaning: "Improving aggregate pressure versus baseline" } },
+  { id: "confident", cells: { band: "CONFIDENT", scoreRange: "40 to 70", meaning: "Strong positive pressure shift across major coins" } },
+  { id: "surge", cells: { band: "SURGE", scoreRange: "70 to 100", meaning: "Exceptional improvement versus recent norms" } },
+];
+
 export function MintBurnFlowMethodologySection() {
   return (
           <MethodologySectionShell
@@ -235,58 +245,12 @@ export function MintBurnFlowMethodologySection() {
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
                     ecosystem-wide configured issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s canonical tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
                   </p>
-                  <TableFrame
-                    chrome="content"
-                    density="compact"
+                  <ContentTable
                     tableId="methodology-mint-burn-bank-run-gauge"
                     testId="methodology-mint-burn-bank-run-gauge-table"
-                    viewportProps={{ mobileScrollHint: false }}
-                  >
-                    <TableHeader>
-                      <TableRow className="text-left">
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Band</TableHead>
-                        <TableHead scope="col" className="py-2 pr-4 text-foreground">Score Range</TableHead>
-                        <TableHead scope="col" className="py-2 text-foreground">Meaning</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">CRISIS</TableCell>
-                        <TableCell className="py-1.5 pr-4">&minus;100 to &minus;70</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Severe below-baseline redemption pressure across major coins</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">STRESS</TableCell>
-                        <TableCell className="py-1.5 pr-4">&minus;70 to &minus;40</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Worsening coordinated pressure versus normal conditions</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">CAUTIOUS</TableCell>
-                        <TableCell className="py-1.5 pr-4">&minus;40 to &minus;10</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Mild but broad pressure deterioration</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">NEUTRAL</TableCell>
-                        <TableCell className="py-1.5 pr-4">&minus;10 to 10</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Close to 30D norms across the market</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">HEALTHY</TableCell>
-                        <TableCell className="py-1.5 pr-4">10 to 40</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Improving aggregate pressure versus baseline</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">CONFIDENT</TableCell>
-                        <TableCell className="py-1.5 pr-4">40 to 70</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Strong positive pressure shift across major coins</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="py-1.5 pr-4 text-foreground">SURGE</TableCell>
-                        <TableCell className="py-1.5 pr-4">70 to 100</TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">Exceptional improvement versus recent norms</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </TableFrame>
+                    columns={BANK_RUN_GAUGE_COLUMNS}
+                    rows={BANK_RUN_GAUGE_ROWS}
+                  />
                   <p>
                     Returns null only when all tracked coins are NR (for example, insufficient history or no 24h mint/burn
                     activity). Coins with null pressure-shift values are skipped from the market-cap-weighted composite.

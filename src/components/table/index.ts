@@ -8,6 +8,7 @@ export {
   TableHeader,
   TableRow,
 } from "./table-element";
+export { ContentTable, type ContentTableColumn, type ContentTableProps, type ContentTableRow } from "./content-table";
 export { MatrixTable, type MatrixTableProps } from "./matrix-table";
 export { TableFrame, type TableFrameProps } from "./table-frame";
 export { TableSettingsMenu, type TableSettingsMenuProps } from "./table-settings-menu";

@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  ContentTable,
   TableBody,
   TableCell,
   TableFrame,
@@ -60,6 +61,34 @@ describe("Pharos table primitives", () => {
     expect(screen.getByText("USDC").closest("td")?.getAttribute("data-slot")).toBe("table-cell");
     expect(screen.getByText("Toolbar")).toBeTruthy();
     expect(screen.getByText("Footer")).toBeTruthy();
+  });
+
+  it("renders a compact content table from column and row definitions", () => {
+    render(
+      <ContentTable
+        tableId="methodology-example"
+        testId="methodology-example-table"
+        columns={[
+          { id: "name", header: "Name", cellClassName: "text-foreground" },
+          { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
+        ]}
+        rows={[
+          {
+            id: "bedrock",
+            cells: { name: "BEDROCK", meaning: "Near-ideal market stability" },
+            cellClassNames: { name: "text-green-700" },
+          },
+        ]}
+      />,
+    );
+
+    const shell = screen.getByTestId("methodology-example-table");
+    expect(shell.getAttribute("data-table-id")).toBe("methodology-example");
+    expect(shell.className).toContain("pharos-density-compact");
+    expect(shell.className).toContain("rounded-xl");
+    expect(screen.queryByText("Swipe sideways for more columns")).toBeNull();
+    expect(screen.getByText("Name").closest("th")?.getAttribute("scope")).toBe("col");
+    expect(screen.getByText("BEDROCK").closest("td")?.className).toContain("text-green-700");
   });
 
   it("can suppress the mobile scroll hint", () => {
