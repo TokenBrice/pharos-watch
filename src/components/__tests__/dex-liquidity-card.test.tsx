@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
-import type { DexLiquidityData, DexLiquidityHistoryPoint } from "@shared/types";
+import type { DexLiquidityData, DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 
 const { useDexLiquidityMock, useDexLiquidityHistoryMock } = vi.hoisted(() => ({
   useDexLiquidityMock: vi.fn(),
@@ -145,10 +145,7 @@ describe("DexLiquidityCard", () => {
       isLoading: false,
     });
     useDexLiquidityHistoryMock.mockReturnValue({
-      data: [
-        makeHistoryPoint(),
-        makeHistoryPoint({ date: 1_775_779_200 }),
-      ],
+      data: [makeHistoryPoint(), makeHistoryPoint({ date: 1_775_779_200 })],
       isLoading: false,
     });
 
@@ -156,11 +153,63 @@ describe("DexLiquidityCard", () => {
 
     expect(screen.getByText("No observed direct DEX market for this token in the current pipeline.")).toBeTruthy();
     expect(
-      screen.getByText("Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset."),
+      screen.getByText(
+        "Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.",
+      ),
     ).toBeTruthy();
     expect(
       screen.getByText("Related-asset liquidity is intentionally not merged into the canonical Liquidity Score."),
     ).toBeTruthy();
     expect(screen.queryByLabelText("TVL trend chart")).toBeNull();
+  });
+
+  it("renders top pools through the shared embedded table frame", () => {
+    const topPool: DexLiquidityPool = {
+      project: "curve",
+      chain: "Ethereum",
+      tvlUsd: 1_250_000,
+      symbol: "USDC/USDT",
+      volumeUsd1d: 420_000,
+      poolType: "stable",
+      price: 0.9998,
+      extra: {
+        balanceRatio: 0.96,
+        organicFraction: 0.82,
+        feeTier: 100,
+        stressIndex: 12,
+      },
+    };
+    useDexLiquidityMock.mockReturnValue({
+      data: {
+        "usdc-circle": makeLiquidityData({
+          totalTvlUsd: 1_250_000,
+          effectiveTvlUsd: 1_250_000,
+          totalVolume24hUsd: 420_000,
+          totalVolume7dUsd: 2_500_000,
+          poolCount: 1,
+          chainCount: 1,
+          topPools: [topPool],
+          coverageClass: "primary",
+          liquidityEvidenceClass: "measured",
+          hasMeasuredLiquidityEvidence: true,
+        }),
+      },
+      isLoading: false,
+    });
+    useDexLiquidityHistoryMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+
+    const shell = screen.getByTestId("dex-liquidity-top-pools-table");
+    const table = screen.getByRole("table", { name: "Top DEX liquidity pools" });
+
+    expect(shell.getAttribute("data-table-id")).toBe("dex-liquidity-top-pools");
+    expect(shell.className).toContain("pharos-density-compact");
+    expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
+    expect(table.getAttribute("data-slot")).toBe("table");
+    expect(screen.getByText("USDC/USDT")).toBeTruthy();
   });
 });

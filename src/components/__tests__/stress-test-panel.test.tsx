@@ -65,6 +65,24 @@ function Harness({
   return <StressTestPanel stressTest={stressTest} mcapMap={new Map()} />;
 }
 
+function makeStressTestState(overrides: Partial<StressTestState> = {}): StressTestState {
+  return {
+    targetCoinId: "usdc-circle",
+    targetGrade: "D",
+    stressedCards: null,
+    impacts: [],
+    allAffectedIds: new Set(),
+    headline: null,
+    systemicRisks: [],
+    targetableCoins: [],
+    gradeOptions: [],
+    setTarget: vi.fn(),
+    setGrade: vi.fn(),
+    clear: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("StressTestPanel", () => {
   it("expands and wires custom and systemic simulation controls", () => {
     const onSetTarget = vi.fn();
@@ -86,5 +104,41 @@ describe("StressTestPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Simulate USDC downgrade" }));
     expect(onSetTarget).toHaveBeenLastCalledWith("usdc-circle");
     expect(onSetGrade).toHaveBeenLastCalledWith("D");
+  });
+
+  it("renders stress impacts through the shared compact table frame", () => {
+    render(
+      <StressTestPanel
+        isOpen
+        stressTest={makeStressTestState({
+          headline: {
+            affectedCount: 1,
+            totalAtRisk: 1_500_000,
+            totalSupply: 2_000_000,
+          },
+          impacts: [
+            {
+              coinId: "usdt-tether",
+              name: "Tether",
+              symbol: "USDT",
+              gradeBefore: "B+",
+              scoreBefore: 78,
+              gradeAfter: "C",
+              scoreAfter: 62,
+              delta: -16,
+            },
+          ],
+        })}
+        mcapMap={new Map([["usdt-tether", 100_000_000]])}
+      />,
+    );
+
+    const shell = screen.getByTestId("stress-test-results-table");
+    const table = screen.getByRole("table", { name: "Stress test results" });
+
+    expect(shell.getAttribute("data-table-id")).toBe("stress-test-results");
+    expect(shell.className).toContain("pharos-density-compact");
+    expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
+    expect(screen.getByText("Tether")).toBeTruthy();
   });
 });

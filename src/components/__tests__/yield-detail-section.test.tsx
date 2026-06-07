@@ -173,7 +173,9 @@ describe("YieldDetailSection", () => {
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(
-      screen.getByText("Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."),
+      screen.getByText(
+        "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet.",
+      ),
     ).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });
@@ -209,15 +211,9 @@ describe("YieldDetailSection", () => {
 
     expect(nav).toBeTruthy();
     // Next.js Link normalizes /foo/#bar → /foo#bar; the deep-link page is still served at /foo/.
-    expect(warningLink.getAttribute("href")).toBe(
-      "/stablecoin/usdn-smardex/yield#warning-signals",
-    );
-    expect(switchesLink.getAttribute("href")).toBe(
-      "/stablecoin/usdn-smardex/yield#source-switches",
-    );
-    expect(comparisonLink.getAttribute("href")).toBe(
-      "/stablecoin/usdn-smardex/yield#source-comparison",
-    );
+    expect(warningLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#warning-signals");
+    expect(switchesLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#source-switches");
+    expect(comparisonLink.getAttribute("href")).toBe("/stablecoin/usdn-smardex/yield#source-comparison");
   });
 
   it("renders source-risk penalty in the PYS breakdown", () => {
@@ -242,13 +238,16 @@ describe("YieldDetailSection", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
         makeRanking({
-          sourceRisk: mergeSourceRiskGoldenFixtures([
-            "reward-heavy",
-            "low-source-depth",
-            "stale-source-age",
-            "bootstrap-observation-count",
-            "source-switch-churn",
-          ], { sourceRiskPenalty: 1.8 }),
+          sourceRisk: mergeSourceRiskGoldenFixtures(
+            [
+              "reward-heavy",
+              "low-source-depth",
+              "stale-source-age",
+              "bootstrap-observation-count",
+              "source-switch-churn",
+            ],
+            { sourceRiskPenalty: 1.8 },
+          ),
           provenance: {
             sourceKey: "primary-source",
             sourceObservedAt: 1_700_000_000,
@@ -319,6 +318,10 @@ describe("YieldDetailSection", () => {
     const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Retained alternates")).toBeTruthy();
+    expect(screen.getByTestId("yield-detail-alt-sources-table").getAttribute("data-table-id")).toBe(
+      "yield-detail-alt-sources",
+    );
+    expect(screen.getByRole("table", { name: "Retained alternate yield sources" })).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-available-sources")).toBe(
       "primary-source,alt-source,second-alt-source",
     );

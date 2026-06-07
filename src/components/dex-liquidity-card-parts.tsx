@@ -3,11 +3,7 @@
 import { useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import {
-  buildBreakdownEntries,
-  BreakdownBar,
-  BreakdownLegend,
-} from "@/components/liquidity-breakdown";
+import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/components/liquidity-breakdown";
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format";
@@ -23,11 +19,8 @@ import {
 import { CHAIN_META } from "@shared/lib/chains";
 import { getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
-import {
-  formatFeeTierLabel,
-  getPoolVariantLabel,
-  formatBalanceDetails,
-} from "@/components/dex-liquidity-card-model";
+import { formatFeeTierLabel, getPoolVariantLabel, formatBalanceDetails } from "@/components/dex-liquidity-card-model";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
@@ -36,9 +29,7 @@ export function TrendArrow({ value }: { value: number | null }) {
   if (Math.abs(value) < 0.05) return null;
   const isPositive = value >= 0;
   return (
-    <span
-      className={`text-xs font-mono ${getNetColor(value, { positiveInclusiveZero: true })}`}
-    >
+    <span className={`text-xs font-mono ${getNetColor(value, { positiveInclusiveZero: true })}`}>
       {isPositive ? "\u2191" : "\u2193"}
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -55,9 +46,10 @@ export function PoolSourceLabel({
   priceSources: Array<{ protocol: string }> | null;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const protocols = priceSources && priceSources.length > 0
-    ? [...new Set(priceSources.map((s) => prettifyProtocol(s.protocol)))]
-    : null;
+  const protocols =
+    priceSources && priceSources.length > 0
+      ? [...new Set(priceSources.map((s) => prettifyProtocol(s.protocol)))]
+      : null;
   const summary = `from ${count} ${count === 1 ? "pool" : "pools"}`;
   const tvlSuffix = tvl != null ? ` (${formatCurrency(tvl)} TVL)` : "";
 
@@ -65,26 +57,24 @@ export function PoolSourceLabel({
     const protocolLabel = protocols ? protocols.join(" / ") : "DEX";
     return (
       <span className="text-xs text-muted-foreground">
-        from {count} {protocolLabel} {count === 1 ? "pool" : "pools"}{tvlSuffix}
+        from {count} {protocolLabel} {count === 1 ? "pool" : "pools"}
+        {tvlSuffix}
       </span>
     );
   }
 
   return (
     <span className="text-xs text-muted-foreground">
-      {summary}{tvlSuffix}
-      {" "}
-      <button type="button"
+      {summary}
+      {tvlSuffix}{" "}
+      <button
+        type="button"
         onClick={() => setExpanded((v) => !v)}
         className="pharos-focus-ring rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
       >
         {expanded ? "hide sources" : "show all"}
       </button>
-      {expanded && (
-        <span className="mt-1 block leading-relaxed">
-          {protocols.join(" / ")}
-        </span>
-      )}
+      {expanded && <span className="mt-1 block leading-relaxed">{protocols.join(" / ")}</span>}
     </span>
   );
 }
@@ -187,100 +177,125 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
           ? `Top ${displayed} of ${totalPoolCount} pools`
           : "Top Pools"}
       </p>
-      <div className="rounded-lg border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">Pool</th>
-              <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
-                Chain
-              </th>
-              <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground">TVL</th>
-              <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden md:table-cell">
-                Price
-              </th>
-              <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden md:table-cell">
-                Balance
-              </th>
-              <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden sm:table-cell">
-                24h Vol
-              </th>
-              <th className="px-3 py-1.5 text-right text-xs text-muted-foreground hidden lg:table-cell">
-                Detail
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pools.slice(0, 5).map((pool) => (
-              <tr key={`${pool.chain}-${pool.symbol}-${pool.project}`} className="border-t">
-                <td className="px-3 py-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <StressDot stress={pool.extra?.stressIndex} />
-                    <span className="font-medium">{pool.symbol}</span>
-                    <span className="text-xs text-muted-foreground">({pool.project})</span>
+      <TableFrame
+        tableId="dex-liquidity-top-pools"
+        testId="dex-liquidity-top-pools-table"
+        chrome="embedded"
+        density="compact"
+        tableClassName="text-sm"
+        tableProps={{ "aria-label": "Top DEX liquidity pools" }}
+        viewportProps={{ mobileScrollHint: false, compactBottomPadding: false }}
+      >
+        <TableHeader className="bg-muted/50">
+          <TableRow className="hover:bg-transparent">
+            <TableHead scope="col" className="h-auto px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">
+              Pool
+            </TableHead>
+            <TableHead
+              scope="col"
+              className="hidden h-auto px-3 py-1.5 text-left text-xs font-medium text-muted-foreground sm:table-cell"
+            >
+              Chain
+            </TableHead>
+            <TableHead scope="col" className="h-auto px-3 py-1.5 text-right text-xs font-medium text-muted-foreground">
+              TVL
+            </TableHead>
+            <TableHead
+              scope="col"
+              className="hidden h-auto px-3 py-1.5 text-right text-xs font-medium text-muted-foreground md:table-cell"
+            >
+              Price
+            </TableHead>
+            <TableHead
+              scope="col"
+              className="hidden h-auto px-3 py-1.5 text-right text-xs font-medium text-muted-foreground md:table-cell"
+            >
+              Balance
+            </TableHead>
+            <TableHead
+              scope="col"
+              className="hidden h-auto px-3 py-1.5 text-right text-xs font-medium text-muted-foreground sm:table-cell"
+            >
+              24h Vol
+            </TableHead>
+            <TableHead
+              scope="col"
+              className="hidden h-auto px-3 py-1.5 text-right text-xs text-muted-foreground lg:table-cell"
+            >
+              Detail
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pools.slice(0, 5).map((pool) => (
+            <TableRow key={`${pool.chain}-${pool.symbol}-${pool.project}`} className="border-t">
+              <TableCell className="px-3 py-1.5">
+                <div className="flex items-center gap-1.5">
+                  <StressDot stress={pool.extra?.stressIndex} />
+                  <span className="font-medium">{pool.symbol}</span>
+                  <span className="text-xs text-muted-foreground">({pool.project})</span>
+                </div>
+                {pool.extra?.organicFraction != null && (
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
+                    <OrganicBadge fraction={pool.extra.organicFraction} maturityDays={pool.extra.maturityDays} />
                   </div>
-                  {(pool.extra?.organicFraction != null) && (
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
-                      <OrganicBadge fraction={pool.extra.organicFraction} maturityDays={pool.extra.maturityDays} />
+                )}
+                {pool.extra?.organicFraction == null && (
+                  <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
+                )}
+              </TableCell>
+              <TableCell className="hidden px-3 py-1.5 text-muted-foreground sm:table-cell">{pool.chain}</TableCell>
+              <TableCell className="px-3 py-1.5 text-right font-mono tabular-nums">
+                {formatCurrency(pool.tvlUsd)}
+              </TableCell>
+              <TableCell className="hidden px-3 py-1.5 text-right font-mono tabular-nums md:table-cell">
+                {pool.price != null ? (
+                  `$${pool.price.toFixed(4)}`
+                ) : (
+                  <span className="text-muted-foreground text-xs">&mdash;</span>
+                )}
+              </TableCell>
+              <TableCell
+                className="hidden px-3 py-1.5 text-right md:table-cell"
+                title={formatBalanceDetails(pool.extra?.balanceDetails) ?? undefined}
+              >
+                {pool.extra?.balanceRatio != null ? (
+                  <BalanceBar ratio={pool.extra.balanceRatio} />
+                ) : (
+                  <span className="text-muted-foreground text-xs">&mdash;</span>
+                )}
+              </TableCell>
+              <TableCell className="hidden px-3 py-1.5 text-right font-mono tabular-nums sm:table-cell">
+                {formatCurrency(pool.volumeUsd1d)}
+              </TableCell>
+              <TableCell className="hidden px-3 py-1.5 text-right text-xs text-muted-foreground lg:table-cell">
+                {(() => {
+                  const variantLabel = getPoolVariantLabel(pool.poolType);
+                  return (
+                    <div className="flex justify-end gap-1.5">
+                      {pool.extra?.amplificationCoefficient != null && (
+                        <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
+                      )}
+                      {pool.extra?.amplificationCoefficient == null && variantLabel && (
+                        <span title="Pool variant">{variantLabel}</span>
+                      )}
+                      {pool.extra?.feeTier != null && (
+                        <span title="Fee tier">{formatFeeTierLabel(pool.extra.feeTier)}</span>
+                      )}
+                      {pool.extra?.isMetaPool && <span className="opacity-60">meta</span>}
+                      {pool.extra?.amplificationCoefficient == null &&
+                        pool.extra?.feeTier == null &&
+                        !pool.extra?.isMetaPool &&
+                        !variantLabel && <span>&mdash;</span>}
                     </div>
-                  )}
-                  {pool.extra?.organicFraction == null && (
-                    <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
-                  )}
-                </td>
-                <td className="px-3 py-1.5 text-muted-foreground hidden sm:table-cell">{pool.chain}</td>
-                <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatCurrency(pool.tvlUsd)}</td>
-                <td className="px-3 py-1.5 text-right font-mono tabular-nums hidden md:table-cell">
-                  {pool.price != null ? (
-                    `$${pool.price.toFixed(4)}`
-                  ) : (
-                    <span className="text-muted-foreground text-xs">&mdash;</span>
-                  )}
-                </td>
-                <td
-                  className="px-3 py-1.5 text-right hidden md:table-cell"
-                  title={formatBalanceDetails(pool.extra?.balanceDetails) ?? undefined}
-                >
-                  {pool.extra?.balanceRatio != null ? (
-                    <BalanceBar ratio={pool.extra.balanceRatio} />
-                  ) : (
-                    <span className="text-muted-foreground text-xs">&mdash;</span>
-                  )}
-                </td>
-                <td className="px-3 py-1.5 text-right font-mono tabular-nums hidden sm:table-cell">
-                  {formatCurrency(pool.volumeUsd1d)}
-                </td>
-                <td className="px-3 py-1.5 text-right text-xs text-muted-foreground hidden lg:table-cell">
-                  {(() => {
-                    const variantLabel = getPoolVariantLabel(pool.poolType);
-                    return (
-                      <div className="flex justify-end gap-1.5">
-                        {pool.extra?.amplificationCoefficient != null && (
-                          <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
-                        )}
-                        {pool.extra?.amplificationCoefficient == null && variantLabel && (
-                          <span title="Pool variant">{variantLabel}</span>
-                        )}
-                        {pool.extra?.feeTier != null && (
-                          <span title="Fee tier">{formatFeeTierLabel(pool.extra.feeTier)}</span>
-                        )}
-                        {pool.extra?.isMetaPool && <span className="opacity-60">meta</span>}
-                        {pool.extra?.amplificationCoefficient == null &&
-                          pool.extra?.feeTier == null &&
-                          !pool.extra?.isMetaPool &&
-                          !variantLabel && (
-                            <span>&mdash;</span>
-                          )}
-                      </div>
-                    );
-                  })()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  );
+                })()}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </TableFrame>
     </div>
   );
 }
@@ -291,13 +306,11 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const hasOnlyUnobservedHistory = Boolean(
     history &&
-      history.length > 0 &&
-      history.every(
-        (point) =>
-          point.coverageClass === "unobserved" &&
-          point.liquidityEvidenceClass === "unobserved" &&
-          !point.trendworthy,
-      ),
+    history.length > 0 &&
+    history.every(
+      (point) =>
+        point.coverageClass === "unobserved" && point.liquidityEvidenceClass === "unobserved" && !point.trendworthy,
+    ),
   );
 
   const chartData = useMemo(() => {
@@ -323,7 +336,9 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
         <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           <p>Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.</p>
-          <p className="mt-1">Related-asset liquidity is intentionally not merged into the canonical Liquidity Score.</p>
+          <p className="mt-1">
+            Related-asset liquidity is intentionally not merged into the canonical Liquidity Score.
+          </p>
         </div>
       </div>
     );
@@ -361,7 +376,10 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
             />
             <Tooltip
               {...RECHARTS_TOOLTIP_STYLES}
-              formatter={(value) => [formatCurrency(typeof value === "number" ? value : Number(value ?? 0) || 0), "TVL"]}
+              formatter={(value) => [
+                formatCurrency(typeof value === "number" ? value : Number(value ?? 0) || 0),
+                "TVL",
+              ]}
             />
             <Area type="monotone" dataKey="tvl" stroke={CHART_BLUE} fill={`url(#${gradientId})`} strokeWidth={1.5} />
           </AreaChart>

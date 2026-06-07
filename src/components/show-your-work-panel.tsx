@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShowWorkMode } from "@/hooks/use-show-work-mode";
 import { FeedbackModal } from "@/components/feedback-modal";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import {
   formatChainHealth,
@@ -73,9 +74,7 @@ function buildTable(props: ShowYourWorkPanelProps): ShowYourWorkTable {
   }
 }
 
-function getContextLabels(
-  props: ShowYourWorkPanelProps,
-): { stablecoinId?: string; stablecoinName?: string } {
+function getContextLabels(props: ShowYourWorkPanelProps): { stablecoinId?: string; stablecoinName?: string } {
   if (props.kind === "psi") return {};
   if (props.kind === "chain-health") {
     return { stablecoinName: props.chainName };
@@ -114,13 +113,9 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
         aria-controls={panelId}
       >
         <span className="flex items-center gap-2">
-          <span className="pharos-kicker text-sky-700 dark:text-sky-400">
-            Inputs · {item.title}
-          </span>
+          <span className="pharos-kicker text-sky-700 dark:text-sky-400">Inputs · {item.title}</span>
           {item.versionLabel ? (
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {item.versionLabel}
-            </span>
+            <span className="font-mono text-[10px] text-muted-foreground">{item.versionLabel}</span>
           ) : null}
         </span>
         <ChevronDown
@@ -133,40 +128,54 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
         <div id={panelId} className="mt-2 space-y-2">
           <p className="font-mono text-[11px] text-muted-foreground">{table.formula}</p>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-border/40 text-left text-muted-foreground">
-                  <th className="py-1 pr-2 font-normal">Input</th>
-                  <th className="py-1 pr-2 text-right font-normal">Value</th>
+          <TableFrame
+            tableId={`show-your-work-${table.topic}`}
+            testId={`show-your-work-${table.topic}-table`}
+            chrome="bare"
+            density="compact"
+            tableClassName="border-collapse text-xs"
+            tableProps={{ "aria-label": `${item.title} inputs` }}
+            viewportProps={{ mobileScrollHint: false, compactBottomPadding: false }}
+          >
+            <TableHeader>
+              <TableRow className="border-b border-border/40 text-left text-muted-foreground hover:bg-transparent">
+                <TableHead scope="col" className="h-auto px-0 py-1 pr-2 font-normal">
+                  Input
+                </TableHead>
+                <TableHead scope="col" className="h-auto px-0 py-1 pr-2 text-right font-normal">
+                  Value
+                </TableHead>
+                {hasWeights ? (
+                  <TableHead scope="col" className="h-auto px-0 py-1 pr-2 text-right font-normal">
+                    Weight
+                  </TableHead>
+                ) : null}
+                {hasContribution ? (
+                  <TableHead scope="col" className="h-auto px-0 py-1 text-right font-normal">
+                    Contribution
+                  </TableHead>
+                ) : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {table.rows.map((row) => (
+                <TableRow key={row.label} className="border-b border-border/20 last:border-b-0 hover:bg-transparent">
+                  <TableCell className="px-0 py-1 pr-2 text-foreground/80">{row.label}</TableCell>
+                  <TableCell className="px-0 py-1 pr-2 text-right font-mono tabular-nums">{row.value}</TableCell>
                   {hasWeights ? (
-                    <th className="py-1 pr-2 text-right font-normal">Weight</th>
+                    <TableCell className="px-0 py-1 pr-2 text-right font-mono tabular-nums text-muted-foreground">
+                      {row.weight ?? ""}
+                    </TableCell>
                   ) : null}
                   {hasContribution ? (
-                    <th className="py-1 text-right font-normal">Contribution</th>
+                    <TableCell className="px-0 py-1 text-right font-mono tabular-nums">
+                      {row.contribution ?? ""}
+                    </TableCell>
                   ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row) => (
-                  <tr key={row.label} className="border-b border-border/20 last:border-b-0">
-                    <td className="py-1 pr-2 text-foreground/80">{row.label}</td>
-                    <td className="py-1 pr-2 text-right font-mono tabular-nums">{row.value}</td>
-                    {hasWeights ? (
-                      <td className="py-1 pr-2 text-right font-mono tabular-nums text-muted-foreground">
-                        {row.weight ?? ""}
-                      </td>
-                    ) : null}
-                    {hasContribution ? (
-                      <td className="py-1 text-right font-mono tabular-nums">
-                        {row.contribution ?? ""}
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </TableRow>
+              ))}
+            </TableBody>
+          </TableFrame>
 
           <button
             type="button"

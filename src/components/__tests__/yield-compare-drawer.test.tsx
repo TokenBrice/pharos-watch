@@ -62,14 +62,7 @@ afterEach(() => {
 describe("YieldCompareDrawer", () => {
   it("renders metric rows side-by-side for the selected coins", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    render(
-      <YieldCompareDrawer
-        open
-        onOpenChange={vi.fn()}
-        rows={[usdc, usdt]}
-        logos={{}}
-      />,
-    );
+    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
 
     expect(screen.getByText("Compare yield sources")).toBeTruthy();
     expect(screen.getByText("USDC")).toBeTruthy();
@@ -79,18 +72,16 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getByText("5.10%")).toBeTruthy();
     expect(screen.getByText("Aave")).toBeTruthy();
     expect(screen.getByText("Morpho")).toBeTruthy();
+
+    const shell = screen.getByTestId("yield-compare-drawer-table");
+    const table = screen.getByRole("table", { name: "Yield source comparison" });
+    expect(shell.getAttribute("data-table-id")).toBe("yield-compare-drawer");
+    expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
   });
 
   it("renders 'Coin not in current view' placeholder when a selected id is filtered out", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,absent-coin");
-    render(
-      <YieldCompareDrawer
-        open
-        onOpenChange={vi.fn()}
-        rows={[usdc]}
-        logos={{}}
-      />,
-    );
+    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);
 
     const placeholders = screen.getAllByText("Coin not in current view");
     expect(placeholders.length).toBeGreaterThan(0);
@@ -98,14 +89,7 @@ describe("YieldCompareDrawer", () => {
 
   it("exposes a share link mirroring the current compare ids", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
-    render(
-      <YieldCompareDrawer
-        open
-        onOpenChange={vi.fn()}
-        rows={[usdc, usdt]}
-        logos={{}}
-      />,
-    );
+    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
 
     const link = screen.getByRole("link", { name: /Share this comparison/i });
     expect(link.getAttribute("href")).toMatch(/\/yield\/?\?compare=usdc-circle%2Cusdt-tether/);
@@ -114,12 +98,7 @@ describe("YieldCompareDrawer", () => {
   it("renders nothing when the drawer is closed", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
     const { container } = render(
-      <YieldCompareDrawer
-        open={false}
-        onOpenChange={vi.fn()}
-        rows={[usdc, usdt]}
-        logos={{}}
-      />,
+      <YieldCompareDrawer open={false} onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />,
     );
     expect(container.firstChild).toBeNull();
   });
