@@ -51,7 +51,8 @@ describe("CoreTopRail", () => {
     expect(nav.className).toContain("sticky");
     expect(nav.className).toContain("top-[3px]");
     expect(nav.className).toContain("lg:relative");
-    expect(nav.className).not.toContain("lg:ml-[var(--pharos-core-rail-offset)]");
+    expect(nav.className).toContain("lg:ml-[var(--pharos-core-rail-offset)]");
+    expect(nav.className).toContain("lg:w-[calc(100%-var(--pharos-core-rail-offset))]");
     expect(nav.querySelector(".justify-center")).toBeTruthy();
     const active = screen.getByRole("link", { name: "Dashboard" });
     expect(active.getAttribute("aria-current")).toBe("page");
