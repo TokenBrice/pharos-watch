@@ -100,7 +100,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
           <span className="font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.16em] [color:color-mix(in_oklab,var(--brand-accent)_72%,var(--foreground))]">
             On the Horizon
           </span>
-          <span className="text-xs text-muted-foreground">Announced stablecoins at different readiness levels</span>
+          <span className="text-xs text-muted-foreground">Announced stablecoins at varying levels of readiness</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
@@ -122,13 +122,6 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
 
       {/* ── Approach rail (constellations) ─────────────────────── */}
       <div className="pharos-rail-ground px-4 py-6 sm:px-6">
-        <div className="mb-5 flex items-center justify-between gap-2">
-          <span className="pharos-kicker">Approach to launch</span>
-          <span className="hidden font-mono text-[10px] uppercase leading-none tracking-[0.14em] [color:color-mix(in_oklab,var(--brand-accent)_64%,var(--muted-foreground))] sm:inline">
-            Toward live market
-          </span>
-        </div>
-
         {/* Wide layout (xl+): a phase-colored circular constellation per stage,
             sized by coin count, strung along the horizon beam. */}
         <div className="relative hidden items-start justify-between gap-x-3 xl:flex">
