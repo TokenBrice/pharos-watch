@@ -10,26 +10,20 @@ import { LAUNCH_PHASE_LABELS, PHASE_DOT, dateScore } from "@/lib/pre-launch";
 
 // Phases ordered far-from-launch → nearest-to-launch. The approach rail reads
 // left (announced) to right (launching soon = the live-market threshold).
-const PHASE_ORDER: readonly LaunchPhase[] = [
-  "announced",
-  "testnet",
-  "auditing",
-  "beta",
-  "launching-soon",
-];
+const PHASE_ORDER: readonly LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-const LOGO = 40; // logo diameter — the "stars" of the constellation
-const S = 46; // center-to-center spacing between adjacent stars
+const LOGO = 40;
+const STAR_SPACING = 46;
 
 // Phase → tinted circular field (static strings for the Tailwind scanner). Each
 // stage's cluster sits on its own phase-colored disc so the five zones read as
 // distinct constellations. Hues mirror PHASE_BADGE.
 const PHASE_FIELD: Record<LaunchPhase, string> = {
-  announced: "border-amber-500/25 bg-amber-500/[0.06]",
-  testnet: "border-indigo-500/25 bg-indigo-500/[0.06]",
-  auditing: "border-violet-500/25 bg-violet-500/[0.06]",
-  beta: "border-emerald-500/25 bg-emerald-500/[0.06]",
-  "launching-soon": "border-sky-500/45 bg-sky-500/[0.09]",
+  announced: "border-amber-500/25 bg-amber-500/[0.06] dark:border-amber-400/25 dark:bg-amber-400/[0.08]",
+  testnet: "border-indigo-500/25 bg-indigo-500/[0.06] dark:border-indigo-400/25 dark:bg-indigo-400/[0.08]",
+  auditing: "border-violet-500/25 bg-violet-500/[0.06] dark:border-violet-400/25 dark:bg-violet-400/[0.08]",
+  beta: "border-emerald-500/25 bg-emerald-500/[0.06] dark:border-emerald-400/25 dark:bg-emerald-400/[0.08]",
+  "launching-soon": "border-sky-500/45 bg-sky-500/[0.09] dark:border-sky-400/45 dark:bg-sky-400/[0.11]",
 };
 
 interface Packed {
@@ -43,10 +37,10 @@ interface Packed {
 // apart, so the disc grows with the count and fills both axes.
 function packCircle(n: number): Packed {
   const pad = 10;
-  if (n <= 0) return { pts: [], fieldR: S * 0.7 };
+  if (n <= 0) return { pts: [], fieldR: STAR_SPACING * 0.7 };
   if (n === 1) return { pts: [{ x: 0, y: 0 }], fieldR: LOGO / 2 + pad };
   if (n <= 6) {
-    const r = S / (2 * Math.sin(Math.PI / n));
+    const r = STAR_SPACING / (2 * Math.sin(Math.PI / n));
     const pts = Array.from({ length: n }, (_, k) => {
       const a = (k / n) * 2 * Math.PI - Math.PI / 2;
       return { x: Math.cos(a) * r, y: Math.sin(a) * r };
@@ -58,8 +52,8 @@ function packCircle(n: number): Packed {
   let ring = 1;
   let lastR = 0;
   while (rem > 0) {
-    const r = ring * S;
-    const cap = Math.max(1, Math.round((2 * Math.PI * r) / S));
+    const r = ring * STAR_SPACING;
+    const cap = Math.max(1, Math.round((2 * Math.PI * r) / STAR_SPACING));
     const cnt = Math.min(cap, rem);
     for (let k = 0; k < cnt; k++) {
       // Offset each ring's start so outer stars nest between inner ones.
@@ -74,7 +68,7 @@ function packCircle(n: number): Packed {
 }
 
 function logoLinkClass(): string {
-  return "pharos-focus-ring block rounded-full transition-transform duration-200 hover:z-10 hover:scale-110";
+  return "pharos-focus-ring block rounded-full transition-transform duration-200 hover:z-10 hover:scale-110 focus-visible:z-20 active:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100";
 }
 
 export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null {
@@ -95,10 +89,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
   const maxDiameter = 2 * Math.max(...packs.map((p) => p.fieldR));
 
   return (
-    <section
-      aria-labelledby="upcoming-horizon-constellation-title"
-      className="pharos-card-shell overflow-hidden p-0"
-    >
+    <section aria-labelledby="upcoming-horizon-constellation-title" className="pharos-card-shell overflow-hidden p-0">
       <h2 id="upcoming-horizon-constellation-title" className="sr-only">
         Upcoming stablecoins on the horizon — constellation view
       </h2>
@@ -109,9 +100,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
           <span className="font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.16em] [color:color-mix(in_oklab,var(--brand-accent)_72%,var(--foreground))]">
             On the Horizon
           </span>
-          <span className="text-xs text-muted-foreground">
-            Pre-launch stablecoins approaching the live market
-          </span>
+          <span className="text-xs text-muted-foreground">Announced stablecoins at different readiness levels</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
@@ -119,7 +108,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
           </span>
           <Link
             href="/upcoming/"
-            className="pharos-focus-ring group inline-flex items-center gap-1 rounded-full border border-border/60 px-2.5 py-1 font-mono text-[11px] font-medium text-foreground transition-colors hover:border-frost-blue/40 hover:bg-frost-blue/5"
+            className="pharos-focus-ring group inline-flex min-h-8 items-center gap-1 rounded-full border border-border/60 px-3 py-1.5 font-mono text-[11px] font-medium text-foreground transition-colors hover:border-frost-blue/40 hover:bg-frost-blue/5"
           >
             Open tracker
             <ArrowRight
@@ -133,9 +122,16 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
 
       {/* ── Approach rail (constellations) ─────────────────────── */}
       <div className="pharos-rail-ground px-4 py-6 sm:px-6">
+        <div className="mb-5 flex items-center justify-between gap-2">
+          <span className="pharos-kicker">Approach to launch</span>
+          <span className="hidden font-mono text-[10px] uppercase leading-none tracking-[0.14em] [color:color-mix(in_oklab,var(--brand-accent)_64%,var(--muted-foreground))] sm:inline">
+            Toward live market
+          </span>
+        </div>
+
         {/* Wide layout (xl+): a phase-colored circular constellation per stage,
             sized by coin count, strung along the horizon beam. */}
-        <div className="relative hidden items-start justify-between gap-x-2 xl:flex">
+        <div className="relative hidden items-start justify-between gap-x-3 xl:flex">
           {/* The horizon beam: a hairline dimming far from launch and
               brightening into the frost-lit live-market threshold at the right,
               threading behind every constellation. */}
@@ -152,10 +148,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
             const diameter = 2 * fieldR;
             return (
               <div key={phase} className="relative flex shrink-0 flex-col items-center gap-3">
-                <div
-                  className="relative flex items-center justify-center"
-                  style={{ height: maxDiameter }}
-                >
+                <div className="relative flex items-center justify-center" style={{ height: maxDiameter }}>
                   <div className="relative" style={{ width: diameter, height: diameter }}>
                     <span className="sr-only">
                       {LAUNCH_PHASE_LABELS[phase]}: {count} {count === 1 ? "coin" : "coins"}
@@ -189,22 +182,16 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
                           }}
                           className={`absolute -translate-x-1/2 -translate-y-1/2 ${logoLinkClass()}`}
                         >
-                          <StablecoinLogo
-                            src={logosById[coin.id]}
-                            name={coin.name}
-                            size={LOGO}
-                          />
+                          <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={LOGO} />
                         </Link>
                       ))
                     )}
                   </div>
                 </div>
                 <span className="flex items-center gap-1.5 text-center text-[11px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
-                  <span
-                    aria-hidden="true"
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]}`}
-                  />
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]}`} />
                   {LAUNCH_PHASE_LABELS[phase]}
+                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70">{count}</span>
                 </span>
               </div>
             );
@@ -219,15 +206,20 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
             const count = coins.length;
             return (
               <div key={phase} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="flex w-20 shrink-0 items-center gap-1.5">
+                <div className="flex w-24 shrink-0 items-center gap-1.5 sm:w-32">
                   <span
                     aria-hidden="true"
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]} ${
                       count === 0 ? "opacity-40" : ""
                     }`}
                   />
-                  <span className="text-[11px] font-medium leading-tight text-muted-foreground">
-                    {LAUNCH_PHASE_LABELS[phase]}
+                  <span className="min-w-0">
+                    <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
+                      {LAUNCH_PHASE_LABELS[phase]}
+                    </span>
+                    <span className="block font-mono text-[10px] leading-tight text-muted-foreground/65">
+                      {count} {count === 1 ? "coin" : "coins"}
+                    </span>
                   </span>
                 </div>
                 <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -248,11 +240,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
                         aria-label={`${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[phase]}`}
                         className={logoLinkClass()}
                       >
-                        <StablecoinLogo
-                          src={logosById[coin.id]}
-                          name={coin.name}
-                          size={LOGO}
-                        />
+                        <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={LOGO} />
                       </Link>
                     ))
                   )}
