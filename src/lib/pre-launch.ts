@@ -12,6 +12,15 @@ export const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
   "launching-soon": "Launching Soon",
 };
 
+/** Phase → solid accent dot class (static for Tailwind scanner). */
+export const PHASE_DOT: Record<LaunchPhase, string> = {
+  announced: "bg-amber-500",
+  testnet: "bg-indigo-500",
+  auditing: "bg-violet-500",
+  beta: "bg-emerald-500",
+  "launching-soon": "bg-sky-500",
+};
+
 /** Phase → full badge class string (static for Tailwind scanner). */
 export const PHASE_BADGE: Record<LaunchPhase, string> = {
   announced:
