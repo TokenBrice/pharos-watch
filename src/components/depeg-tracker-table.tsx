@@ -47,10 +47,10 @@ interface DepegTrackerTableProps {
 
 const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "rank", label: <span aria-label="Rank">#</span>, className: "w-[50px] text-right" },
-  { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "name", label: "Name", className: "w-[64px] sm:w-[70px] xl:w-[200px] max-w-[64px] sm:max-w-[70px] xl:max-w-none" },
   { id: "status", label: "Status", className: "text-left" },
   { id: "pegScore", label: "Peg Score", headerAdornment: <MethodologyHint topic="pegScore" />, sortKey: "pegScore", className: "text-right" },
-  { id: "dewsScore", label: "DEWS", headerAdornment: <MethodologyHint topic="dews" />, sortKey: "dewsScore", className: "text-right" },
+  { id: "dewsScore", label: "DEWS", headerAdornment: <MethodologyHint topic="dews" />, sortKey: "dewsScore", className: "text-right hidden sm:table-cell" },
   { id: "currentDeviationBps", label: "Deviation", sortKey: "currentDeviationBps", className: "text-right" },
   { id: "pegPct", label: "Peg %", sortKey: "pegPct", className: "text-right hidden md:table-cell" },
   { id: "eventCount", label: "Events", sortKey: "eventCount", className: "text-right hidden md:table-cell" },
@@ -143,7 +143,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
         getAriaSortValue,
       }}
       striped
-      tableClassName="min-w-[420px]"
+      tableClassName="min-w-[360px] sm:min-w-[420px] table-fixed"
       refreshingQueryKeys={DEPEG_REFRESH_QUERY_KEYS}
       pagination={{
         page: effectivePage,
@@ -175,7 +175,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
             return (
               <InteractiveTableRow
                 key={coin.id}
-                className={`hover:bg-muted/50 transition-colors ${accent}`}
+                className={`h-11 hover:bg-muted/50 transition-colors ${accent}`}
                 onActivate={() => onRowClick(coin.id)}
                 onHover={() => prefetch(coin.id)}
                 role="link"
@@ -196,7 +196,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                       <>
                         {trustBadge && (
                           <span
-                            className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                            className="hidden shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:inline-flex"
                             title={`Primary price requires confirmation (${provenanceLabel})`}
                             aria-label={`Primary price requires confirmation (${provenanceLabel})`}
                           >
@@ -218,7 +218,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="text-muted-foreground">NR</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums text-sm">
+                <TableCell className="text-right font-mono tabular-nums text-sm hidden sm:table-cell">
                   {dews ? (
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center justify-end gap-1.5">
