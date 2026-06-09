@@ -6,7 +6,7 @@ import type { Result } from "axe-core";
  * Wave 6 IDEA-16: automated axe-core regression floor.
  *
  * Boots the static export (served by `playwright.config.ts` via
- * `npm run serve:static-export` on http://localhost:4173) and asserts that
+ * `npm run serve:static-export`) and asserts that
  * one canonical route per product tier has zero WCAG 2.0 AA / 2.2 AA
  * violations under @axe-core/playwright.
  *
