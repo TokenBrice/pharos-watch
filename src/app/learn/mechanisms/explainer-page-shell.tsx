@@ -23,7 +23,7 @@ export function ExplainerPageShell({
       breadcrumbItems={breadcrumbItems}
       visibleBreadcrumbs={[
         { label: "Dashboard", href: "/" },
-        { label: "Learn", href: "/learn/" },
+        { label: "Learn" },
         { label: breadcrumbLabel },
       ]}
       title={title}

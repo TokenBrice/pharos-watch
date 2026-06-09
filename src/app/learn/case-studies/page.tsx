@@ -26,7 +26,6 @@ export default function CaseStudiesHub() {
     <CaseStudyPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
-        { name: "Learn", url: "/learn/" },
         { name: "Case Studies", url: "/learn/case-studies/" },
       ]}
       title="When the peg broke"

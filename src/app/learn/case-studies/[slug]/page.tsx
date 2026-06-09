@@ -47,7 +47,6 @@ export default async function CaseStudyPage({
     <CaseStudyPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
-        { name: "Learn", url: "/learn/" },
         { name: "Case Studies", url: "/learn/case-studies/" },
         { name: study.title, url: `/learn/case-studies/${slug}/` },
       ]}

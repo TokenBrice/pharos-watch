@@ -78,7 +78,6 @@ export default async function ArchetypeExplainerPage({
     <ExplainerPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
-        { name: "Learn", url: "/learn/" },
         { name: "Mechanisms", url: "/learn/mechanisms/" },
         { name: label, url: explainerPath },
       ]}
