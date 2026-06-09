@@ -81,6 +81,11 @@ const LENDING_PROTOCOLS = {
   "curvance": { label: "Curvance" },
   "scallop-lend": { label: "Scallop" },
   "tydro": { label: "Tydro" },
+  // YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR
+  // Future allowlist rounds start from the monthly yield-coverage-audit
+  // operatorQueue.recommendationCandidates entries with kind "lending-allowlist".
+  // Promote only category-gated unmatched-high-TVL queue candidates; do not
+  // do broad protocol hunting here.
 } as const;
 
 export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS));

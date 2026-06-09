@@ -3,7 +3,7 @@ import {
   SOURCE_RISK_GOLDEN_ROWS,
   type YieldSourceRiskGoldenCaseId,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
-import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
+import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
 import { buildHistoryKey, evaluateYieldSources } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import type { ResolvedYield } from "../yield-sync/types";
@@ -25,6 +25,7 @@ function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {})
       BRL: null,
       AUD: null,
       CAD: null,
+      TRY: null,
       SGD: null,
     },
     tier1PrevRates: new Map(),
@@ -56,6 +57,24 @@ function resolvedYield(overrides: Partial<ResolvedYield>): ResolvedYield {
     yieldSource: "Fixture source",
     yieldType: "lending-vault",
     ...overrides,
+  };
+}
+
+function benchmarkMeta(key: "USD_EFFR", rate: number) {
+  return {
+    ...withYieldBenchmarkStaticMeta(key, {
+      rate,
+      recordDate: "2026-03-26",
+      fetchedAt: 1774479600,
+      ageSeconds: 0,
+      source: `${key.toLowerCase()}-test`,
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: "2026-03-26",
+    lastMarketFetchedAt: 1774479600,
+    lastMarketSource: `${key.toLowerCase()}-test`,
   };
 }
 
@@ -540,6 +559,7 @@ describe("evaluateYieldSources", () => {
         BRL: null,
         AUD: null,
         CAD: null,
+        TRY: null,
         SGD: null,
       },
       tier1PrevRates: new Map(),
@@ -615,6 +635,7 @@ describe("evaluateYieldSources", () => {
         BRL: null,
         AUD: null,
         CAD: null,
+        TRY: null,
         SGD: null,
       },
       tier1PrevRates: new Map(),
@@ -677,5 +698,33 @@ describe("evaluateYieldSources", () => {
     const [source] = result.evaluatedSources;
     expect(source?.apy30d).toBeCloseTo(5.5, 4);
     expect(source?.apy7d).toBeCloseTo(5.5, 4);
+  });
+
+  it("uses a source-level benchmark override for PYS provenance without changing resolved APY", () => {
+    const input = baseEvaluationInput({
+      resolved: [{
+        id: "usdc-circle",
+        symbol: "USDC",
+        yield: resolvedYield({
+          currentApy: 4.2,
+          apyBase: 4.2,
+          dataSource: "rate-derived",
+          sourceKey: "rate-derived",
+          yieldSource: "T-bill proxy",
+          benchmarkOverrideKey: "USD_EFFR",
+        }),
+      }],
+      safetyScores: new Map([["usdc-circle", { score: 80, grade: "B+" }]]),
+      riskFreeRates: {
+        ...baseEvaluationInput().riskFreeRates,
+        USD_EFFR: benchmarkMeta("USD_EFFR", 3.9),
+      },
+    });
+
+    const [source] = evaluateYieldSources(input).evaluatedSources;
+    expect(source?.currentApy).toBe(4.2);
+    expect(source?.benchmarkKey).toBe("USD_EFFR");
+    expect(source?.benchmarkRate).toBe(3.9);
+    expect(source?.benchmarkSelectionMode).toBe("manual-override");
   });
 });

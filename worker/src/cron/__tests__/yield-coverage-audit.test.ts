@@ -192,7 +192,12 @@ describe("identifyCoverageGaps", () => {
       { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
 
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["morpho-blue"]));
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      new Set(["morpho-blue"]),
+      new Map([["new-lender", "Lending"]]),
+    );
 
     expect(gaps.sourceFamilyAdapterRecommendations).toContainEqual(
       expect.objectContaining({
@@ -203,11 +208,67 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.lendingAllowlistRecommendations).toContainEqual(
       expect.objectContaining({
         project: "new-lender",
+        protocolCategory: "Lending",
         totalTvlUsd: 12_000_000,
+        sourceLinks: expect.arrayContaining([
+          expect.objectContaining({ url: "https://yields.llama.fi/chart/new-usdc" }),
+        ]),
+        suggestedConfig: expect.objectContaining({
+          targetFile: "worker/src/cron/yield-config-lending-protocols.ts",
+          exportName: "LENDING_PROTOCOLS",
+          anchor: "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR",
+          snippet: expect.stringContaining('"new-lender": { label: "New Lender" }'),
+        }),
+        promotionMetadata: expect.objectContaining({
+          sourceQueue: "monthly-unmatched-high-tvl",
+          sourceQueueField: "unmatchedHighTvlPools",
+          minPoolTvlUsd: 5_000_000,
+          queueQualifiedPoolCount: 1,
+          passedCategoryGate: true,
+          existingAllowlistMember: false,
+        }),
       }),
     );
     expect(gaps.lendingAllowlistRecommendations).not.toContainEqual(
       expect.objectContaining({ project: "morpho-blue" }),
+    );
+  });
+
+  it("drives lending allowlist recommendations from the high-TVL queue and category gate", () => {
+    const dlPools: DlPool[] = [
+      { pool: "queued-usdc", chain: "Ethereum", project: "queued-lender", symbol: "USDC", tvlUsd: 6_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "aggregate-a", chain: "Ethereum", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "aggregate-b", chain: "Base", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "aggregate-c", chain: "Arbitrum", project: "aggregate-only-lender", symbol: "USDT", tvlUsd: 2_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "aggregator-usdc", chain: "Ethereum", project: "yield-aggregator", symbol: "USDC", tvlUsd: 20_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "missing-category-usdc", chain: "Ethereum", project: "missing-category-lender", symbol: "USDC", tvlUsd: 20_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([
+        ["queued-lender", "Lending"],
+        ["aggregate-only-lender", "Lending"],
+        ["yield-aggregator", "Yield Aggregator"],
+      ]),
+    );
+
+    expect(gaps.lendingAllowlistRecommendations.map((row) => row.project)).toEqual(["queued-lender"]);
+    expect(gaps.lendingAllowlistRecommendations[0]).toMatchObject({
+      recommendedTier: "review-needed",
+      promotionMetadata: expect.objectContaining({
+        queueQualifiedPoolCount: 1,
+        passedCategoryGate: true,
+      }),
+    });
+    expect(gaps.protocolRecommendations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ project: "aggregate-only-lender" }),
+        expect.objectContaining({ project: "yield-aggregator" }),
+        expect.objectContaining({ project: "missing-category-lender" }),
+      ]),
     );
   });
 
@@ -256,7 +317,12 @@ describe("identifyCoverageGaps", () => {
       { pool: "morpho-usdc", chain: "Ethereum", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
       { pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["morpho-blue"]));
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      new Set(["morpho-blue"]),
+      new Map([["new-lender", "Lending"]]),
+    );
 
     const queue = buildCoverageAuditOperatorQueue({
       gaps,
@@ -278,7 +344,36 @@ describe("identifyCoverageGaps", () => {
       expect.arrayContaining([
         expect.objectContaining({ kind: "native-exact-pool", pool: "susde-native" }),
         expect.objectContaining({ kind: "source-family-adapter", project: "morpho-blue" }),
-        expect.objectContaining({ kind: "lending-allowlist", project: "new-lender" }),
+        expect.objectContaining({
+          kind: "lending-allowlist",
+          project: "new-lender",
+          protocolCategory: "Lending",
+          examplePools: ["new-usdc"],
+          examplePoolDetails: [
+            expect.objectContaining({
+              pool: "new-usdc",
+              sourceUrl: "https://yields.llama.fi/chart/new-usdc",
+            }),
+          ],
+          sourceLinks: expect.arrayContaining([
+            expect.objectContaining({
+              label: "DeFiLlama protocols category source",
+              url: "https://api.llama.fi/protocols",
+            }),
+            expect.objectContaining({ url: "https://yields.llama.fi/chart/new-usdc" }),
+          ]),
+          suggestedConfig: expect.objectContaining({
+            anchor: "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR",
+            snippet: '  "new-lender": { label: "New Lender" },',
+          }),
+          promotionMetadata: expect.objectContaining({
+            sourceQueue: "monthly-unmatched-high-tvl",
+            sourceQueueField: "unmatchedHighTvlPools",
+            minPoolTvlUsd: 5_000_000,
+            queueQualifiedPoolCount: 1,
+            passedCategoryGate: true,
+          }),
+        }),
       ]),
     );
   });

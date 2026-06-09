@@ -252,6 +252,11 @@ const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "al
 const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
 const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
 const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
+const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>([
+  "lending-opportunity",
+  "fixed-yield",
+  "structured-tranche",
+]);
 
 const DEFAULT_FILTERS: YieldViewModelFilters = {
   peg: "all",
@@ -416,9 +421,7 @@ function getBenchmarkKey(row: YieldRanking): YieldBenchmarkKey {
 }
 
 function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all"> {
-  return row.yieldType === "lending-opportunity" ||
-    row.yieldType === "fixed-yield" ||
-    row.yieldType === "structured-tranche"
+  return EXTERNAL_OPPORTUNITY_YIELD_TYPES.has(row.yieldType)
     ? "lending-opportunity"
     : "holder-yield";
 }
@@ -613,7 +616,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
     opportunity: [
       { value: "all", label: "All opportunities", count: facets.length },
       { value: "holder-yield", label: "Holder yield", count: holderYieldCount },
-      { value: "lending-opportunity", label: "Opportunity rows", count: lendingOpportunityCount },
+      { value: "lending-opportunity", label: "External opportunities", count: lendingOpportunityCount },
     ],
     depth: [
       { value: "all", label: "All depth", count: facets.length },
@@ -730,6 +733,8 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   if (filters.depth !== "all") return `${YIELD_SOURCE_DEPTH_DEFINITIONS[filters.depth].label} source depth`;
   if (filters.sourceChanged === "only") return "Rows with source changed";
   if (filters.sourceChanged === "none") return "Rows without source changed";
+  if (filters.opportunity === "holder-yield") return "Holder yield";
+  if (filters.opportunity === "lending-opportunity") return "External opportunities";
   return "Current view";
 }
 

@@ -144,6 +144,7 @@ function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial
     BRL: null,
     AUD: null,
     CAD: null,
+    TRY: null,
     SGD: null,
   };
 

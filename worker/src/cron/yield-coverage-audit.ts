@@ -41,6 +41,9 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
+const ALLOWLIST_AUDIT_QUEUE_ANCHOR = "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR";
+const DEFILLAMA_PROTOCOLS_SOURCE_URL = "https://api.llama.fi/protocols";
+const DEFILLAMA_YIELD_POOL_CHART_URL = "https://yields.llama.fi/chart";
 const OPERATOR_QUEUE_ACTIONS = [
   "accept",
   "dismiss",
@@ -221,8 +224,8 @@ export function summarizeAdapterLifecycle(
 export interface CoverageAuditOperatorQueue {
   persistence: "deferred";
   allowedActions: YieldCoverageAuditQueueAction[];
-  headlineGaps: YieldCoverageAuditQueueItem[];
-  recommendationCandidates: YieldCoverageAuditQueueItem[];
+  headlineGaps: CoverageAuditQueueItem[];
+  recommendationCandidates: CoverageAuditQueueItem[];
 }
 
 export interface CoverageGapPool {
@@ -235,6 +238,33 @@ export interface CoverageGapPool {
   apy: number;
 }
 
+export interface ProtocolRecommendationExamplePool extends CoverageGapPool {
+  sourceUrl: string;
+}
+
+export interface ProtocolRecommendationSourceLink {
+  label: string;
+  url: string;
+}
+
+export interface ProtocolRecommendationSuggestedConfig {
+  targetFile: "worker/src/cron/yield-config-lending-protocols.ts";
+  exportName: "LENDING_PROTOCOLS";
+  anchor: typeof ALLOWLIST_AUDIT_QUEUE_ANCHOR;
+  snippet: string;
+  notes: string[];
+}
+
+export interface ProtocolRecommendationPromotionMetadata {
+  sourceQueue: "monthly-unmatched-high-tvl" | "uncovered-stablecoin-pools";
+  sourceQueueField: "unmatchedHighTvlPools" | "uncoveredStablecoinPools";
+  minPoolTvlUsd: number;
+  queueQualifiedPoolCount: number;
+  categoryGate: string[];
+  passedCategoryGate: boolean;
+  existingAllowlistMember: boolean;
+}
+
 export interface ProtocolRecommendation {
   project: string;
   protocolCategory: string | null;
@@ -242,6 +272,10 @@ export interface ProtocolRecommendation {
   totalTvlUsd: number;
   recommendedTier: "high-confidence" | "review-needed";
   examplePools: string[];
+  examplePoolDetails: ProtocolRecommendationExamplePool[];
+  sourceLinks: ProtocolRecommendationSourceLink[];
+  suggestedConfig: ProtocolRecommendationSuggestedConfig | null;
+  promotionMetadata: ProtocolRecommendationPromotionMetadata;
 }
 
 export interface NativeExactPoolRecommendation extends CoverageGapPool {
@@ -261,6 +295,15 @@ export interface CoverageGaps {
   sourceFamilyAdapterRecommendations: ProtocolRecommendation[];
   /** High-TVL non-allowlisted lending protocols that may warrant allowlist review. */
   lendingAllowlistRecommendations: ProtocolRecommendation[];
+}
+
+export interface CoverageAuditQueueItem extends YieldCoverageAuditQueueItem {
+  protocolCategory?: string | null;
+  examplePools?: string[];
+  examplePoolDetails?: ProtocolRecommendationExamplePool[];
+  sourceLinks?: ProtocolRecommendationSourceLink[];
+  suggestedConfig?: ProtocolRecommendationSuggestedConfig | null;
+  promotionMetadata?: ProtocolRecommendationPromotionMetadata;
 }
 
 const SOURCE_FAMILY_ADAPTER_PROJECTS = new Set([
@@ -286,7 +329,43 @@ function buildCoverageGapPool(pool: DlPool, protocolCategory: string | null): Co
   };
 }
 
-function buildProtocolRecommendations(pools: CoverageGapPool[]): ProtocolRecommendation[] {
+function buildYieldPoolSourceUrl(poolId: string): string {
+  return `${DEFILLAMA_YIELD_POOL_CHART_URL}/${encodeURIComponent(poolId)}`;
+}
+
+function inferProtocolLabel(project: string): string {
+  return project
+    .split(/[-_.]+/u)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function buildSuggestedLendingAllowlistConfig(project: string): ProtocolRecommendationSuggestedConfig {
+  return {
+    targetFile: "worker/src/cron/yield-config-lending-protocols.ts",
+    exportName: "LENDING_PROTOCOLS",
+    anchor: ALLOWLIST_AUDIT_QUEUE_ANCHOR,
+    snippet: `  "${project}": { label: ${JSON.stringify(inferProtocolLabel(project))} },`,
+    notes: [
+      "Verify the display label before promoting.",
+      "Keep the protocol near the audit-queue comment anchor for the current round.",
+    ],
+  };
+}
+
+function buildProtocolRecommendations(
+  pools: CoverageGapPool[],
+  options: {
+    sourceQueue: ProtocolRecommendationPromotionMetadata["sourceQueue"];
+    sourceQueueField: ProtocolRecommendationPromotionMetadata["sourceQueueField"];
+    includeAllowlistConfig: boolean;
+  } = {
+    sourceQueue: "uncovered-stablecoin-pools",
+    sourceQueueField: "uncoveredStablecoinPools",
+    includeAllowlistConfig: false,
+  },
+): ProtocolRecommendation[] {
   const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
   for (const pool of pools) {
     const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
@@ -298,20 +377,50 @@ function buildProtocolRecommendations(pools: CoverageGapPool[]): ProtocolRecomme
   return [...byProject.entries()]
     .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
     .map(([project, v]) => {
-      const protocolCategory = v.pools.find((pool) => pool.protocolCategory != null)?.protocolCategory ?? null;
+      const sortedPools = [...v.pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
+      const protocolCategory = sortedPools.find((pool) => pool.protocolCategory != null)?.protocolCategory ?? null;
       const recommendedTier: ProtocolRecommendation["recommendedTier"] =
         v.tvl >= 10_000_000 &&
         v.pools.length >= 3 &&
         isHighConfidenceProtocolCategory(protocolCategory)
           ? "high-confidence"
           : "review-needed";
+      const examplePoolDetails = sortedPools.slice(0, 3).map((pool) => ({
+        ...pool,
+        sourceUrl: buildYieldPoolSourceUrl(pool.pool),
+      }));
+      const queueQualifiedPoolCount = sortedPools
+        .filter((pool) => pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD).length;
       return {
         project,
         protocolCategory,
         poolCount: v.pools.length,
         totalTvlUsd: v.tvl,
         recommendedTier,
-        examplePools: v.pools.slice(0, 3).map((p) => p.pool),
+        examplePools: examplePoolDetails.map((p) => p.pool),
+        examplePoolDetails,
+        sourceLinks: [
+          {
+            label: "DeFiLlama protocols category source",
+            url: DEFILLAMA_PROTOCOLS_SOURCE_URL,
+          },
+          ...examplePoolDetails.map((pool) => ({
+            label: `DeFiLlama yield chart: ${pool.symbol} on ${pool.chain}`,
+            url: pool.sourceUrl,
+          })),
+        ],
+        suggestedConfig: options.includeAllowlistConfig
+          ? buildSuggestedLendingAllowlistConfig(project)
+          : null,
+        promotionMetadata: {
+          sourceQueue: options.sourceQueue,
+          sourceQueueField: options.sourceQueueField,
+          minPoolTvlUsd: HIGH_TVL_THRESHOLD_USD,
+          queueQualifiedPoolCount,
+          categoryGate: [...HIGH_CONFIDENCE_PROTOCOL_CATEGORIES].sort(),
+          passedCategoryGate: isHighConfidenceProtocolCategory(protocolCategory),
+          existingAllowlistMember: LENDING_PROTOCOL_ALLOWLIST.has(project),
+        },
       };
     })
     .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
@@ -364,7 +473,7 @@ function buildPoolQueueItem(
 function buildProtocolQueueItem(
   kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
   recommendation: ProtocolRecommendation,
-): YieldCoverageAuditQueueItem {
+): CoverageAuditQueueItem {
   return {
     id: queueId(kind, recommendation.project),
     kind,
@@ -375,6 +484,12 @@ function buildProtocolQueueItem(
     poolCount: recommendation.poolCount,
     totalTvlUsd: recommendation.totalTvlUsd,
     recommendedTier: recommendation.recommendedTier,
+    protocolCategory: recommendation.protocolCategory,
+    examplePools: recommendation.examplePools,
+    examplePoolDetails: recommendation.examplePoolDetails,
+    sourceLinks: recommendation.sourceLinks,
+    suggestedConfig: kind === "lending-allowlist" ? recommendation.suggestedConfig : null,
+    promotionMetadata: recommendation.promotionMetadata,
   };
 }
 
@@ -389,7 +504,7 @@ export function buildCoverageAuditOperatorQueue({
   yieldBearingMissingFromRankings: string[];
   quarantineReadyToRestore?: QuarantineRestoreCandidate[];
 }): CoverageAuditOperatorQueue {
-  const headlineGaps: YieldCoverageAuditQueueItem[] = [
+  const headlineGaps: CoverageAuditQueueItem[] = [
     ...manifestMissingIds.map((stablecoinId) => ({
       id: queueId("manifest-missing", stablecoinId),
       kind: "manifest-missing" as const,
@@ -410,7 +525,7 @@ export function buildCoverageAuditOperatorQueue({
     ...gaps.missingProtocols.map((pool) => buildPoolQueueItem("missing-protocol", pool, "watch")),
   ];
 
-  const recommendationCandidates: YieldCoverageAuditQueueItem[] = [
+  const recommendationCandidates: CoverageAuditQueueItem[] = [
     ...gaps.nativeExactPoolRecommendations.map((pool) => ({
       id: queueId("native-exact-pool", pool.pool),
       kind: "native-exact-pool" as const,
@@ -513,8 +628,19 @@ export function identifyCoverageGaps(
   const sourceFamilyAdapterRecommendations = buildProtocolRecommendations(
     uncoveredStablecoinPools.filter((pool) => SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)),
   );
+  const unmatchedHighTvlStablecoinPoolIds = new Set(unmatchedHighTvlPools.map((pool) => pool.pool));
   const lendingAllowlistRecommendations = buildProtocolRecommendations(
-    uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project) && !SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)),
+    uncoveredStablecoinPools.filter((pool) =>
+      unmatchedHighTvlStablecoinPoolIds.has(pool.pool) &&
+      !supportedProtocols.has(pool.project) &&
+      !SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project) &&
+      isHighConfidenceProtocolCategory(pool.protocolCategory)
+    ),
+    {
+      sourceQueue: "monthly-unmatched-high-tvl",
+      sourceQueueField: "unmatchedHighTvlPools",
+      includeAllowlistConfig: true,
+    },
   );
   const protocolRecommendations = buildProtocolRecommendations(
     uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project)),

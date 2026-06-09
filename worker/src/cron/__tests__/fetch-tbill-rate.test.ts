@@ -23,6 +23,7 @@ import {
   parseBoeSoniaCompoundedIndexCsv,
   parseBojCallRateJson,
   parseBocValetSeries,
+  parseCbrtEvdsSeries,
   parseEcbCompoundedEstrCsv,
   parseRbaF1MoneyMarketCsv,
   parseSixSar3mcCsv,
@@ -69,6 +70,13 @@ const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;
 
 const FRED_DFF_CSV_SNIPPET = "DATE,DFF\n2026-03-02,4.33\n";
 const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
+const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
+  totalCount: 2,
+  items: [
+    { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
+    { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
+  ],
+});
 
 const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
   props: {
@@ -148,6 +156,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
       }),
       { status: 200 },
     ),
+    "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
   };
 }
 
@@ -245,6 +254,8 @@ describe("fetchTbillRate", () => {
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadSource).toBe("boc-valet-v122530");
     expect(metadata.cadRate).toBe(4.75);
+    expect(metadata.trySource).toBe("cbrt-evds-tlref");
+    expect(metadata.tryRate).toBe(40);
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
     expect(latestCachePayload()).toMatchObject({
       rate: 3.72,
@@ -257,6 +268,13 @@ describe("fetchTbillRate", () => {
       key: "USD_EFFR",
       rate: 4.33,
       source: "fred-dff",
+      isFallback: false,
+      fallbackMode: null,
+    });
+    expect(latestStructuredCachePayload().benchmarks.TRY).toMatchObject({
+      key: "TRY",
+      rate: 40,
+      source: "cbrt-evds-tlref",
       isFallback: false,
       fallbackMode: null,
     });
@@ -485,6 +503,7 @@ describe("fetchTbillRate", () => {
               BRL: null,
               AUD: null,
               CAD: null,
+              TRY: null,
               SGD: null,
             },
           }),
@@ -527,7 +546,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
     );
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
     expect(latestCachePayload()).toMatchObject({
@@ -584,7 +603,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -634,7 +653,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed",
+      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -869,6 +888,48 @@ describe("parseBocValetSeries", () => {
   });
 });
 
+describe("parseCbrtEvdsSeries", () => {
+  it("extracts the latest BIST TLREF observation above the standard 20% cap", () => {
+    expect(parseCbrtEvdsSeries(CBRT_TLREF_JSON_SNIPPET)).toEqual({
+      rate: 40,
+      recordDate: "2026-06-08",
+    });
+  });
+
+  it("skips invalid trailing rows and returns the latest valid TLREF observation", () => {
+    const payload = JSON.stringify({
+      items: [
+        { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
+        { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "ND" },
+      ],
+    });
+    expect(parseCbrtEvdsSeries(payload)).toEqual({
+      rate: 39.99,
+      recordDate: "2026-06-05",
+    });
+  });
+
+  it("returns null when the TRY observation exceeds the TRY-specific sanity band", () => {
+    const payload = JSON.stringify({
+      items: [{ Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "125.00" }],
+    });
+    expect(parseCbrtEvdsSeries(payload)).toBeNull();
+  });
+
+  it("selects the newest valid TLREF observation regardless of response order", () => {
+    const payload = JSON.stringify({
+      items: [
+        { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
+        { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
+      ],
+    });
+    expect(parseCbrtEvdsSeries(payload)).toEqual({
+      rate: 40,
+      recordDate: "2026-06-08",
+    });
+  });
+});
+
 describe("fetchTbillRate — new currency fetchers", () => {
   const db = {} as D1Database;
 
@@ -921,6 +982,11 @@ describe("fetchTbillRate — new currency fetchers", () => {
           }),
           { status: 200 },
         ),
+        "evds3.tcmb.gov.tr/igmevdsms-dis/fe": (_url, opts) => {
+          expect(opts?.method).toBe("POST");
+          expect(String(opts?.body ?? "")).toContain('"series":"TP.BISTTLREF.ORAN"');
+          return new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 });
+        },
       },
       calls,
     );
@@ -936,6 +1002,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadRate).toBe(4.75);
+    expect(metadata.tryRate).toBe(40);
     expect(calls.some((u) => u.includes("id=DFF"))).toBe(true);
     expect(calls.some((u) => u.includes("bankofengland.co.uk") && u.includes("SeriesCodes=IUDZOS2"))).toBe(true);
     expect(calls.some((u) => u.includes("stat-search.boj.or.jp"))).toBe(true);
@@ -943,6 +1010,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(true);
     expect(calls.some((u) => u.includes("api.bcb.gov.br"))).toBe(true);
     expect(calls.some((u) => u.includes("bankofcanada.ca/valet"))).toBe(true);
+    expect(calls.some((u) => u.includes("evds3.tcmb.gov.tr/igmevdsms-dis/fe"))).toBe(true);
   });
 
   it("skips Banxico when BANXICO_TOKEN is missing", async () => {
@@ -980,6 +1048,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
           }),
           { status: 200 },
         ),
+        "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
       },
       calls,
     );
@@ -1036,6 +1105,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
               BRL: null,
               AUD: null,
               CAD: null,
+              TRY: null,
               SGD: null,
             },
           }),
@@ -1073,6 +1143,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
         }),
         { status: 200 },
       ),
+      "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
     });
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
@@ -1096,11 +1167,11 @@ describe("getBenchmarkKeyForPegCurrency", () => {
     expect(getBenchmarkKeyForPegCurrency("BRL")).toBe("BRL");
     expect(getBenchmarkKeyForPegCurrency("AUD")).toBe("AUD");
     expect(getBenchmarkKeyForPegCurrency("CAD")).toBe("CAD");
+    expect(getBenchmarkKeyForPegCurrency("TRY")).toBe("TRY");
   });
 
   it("returns null for currencies without a fetcher so callers fall back to USD", () => {
     expect(getBenchmarkKeyForPegCurrency("SGD")).toBeNull();
-    expect(getBenchmarkKeyForPegCurrency("TRY")).toBeNull();
     expect(getBenchmarkKeyForPegCurrency("AED")).toBeNull();
     expect(getBenchmarkKeyForPegCurrency(null)).toBeNull();
     expect(getBenchmarkKeyForPegCurrency(undefined)).toBeNull();
@@ -1109,7 +1180,7 @@ describe("getBenchmarkKeyForPegCurrency", () => {
 
 describe("resolveBenchmarkForStablecoin", () => {
   function buildMeta(
-    key: "USD" | "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "SGD",
+    key: "USD" | "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "TRY" | "SGD",
   ) {
     return {
       ...withYieldBenchmarkStaticMeta(key, {
@@ -1130,7 +1201,7 @@ describe("resolveBenchmarkForStablecoin", () => {
 
   function buildRegistry(
     overrides: Partial<Record<
-      "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD",
+      "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "TRY",
       boolean
     >> = {},
   ) {
@@ -1145,6 +1216,7 @@ describe("resolveBenchmarkForStablecoin", () => {
       BRL: overrides.BRL ? buildMeta("BRL") : null,
       AUD: overrides.AUD ? buildMeta("AUD") : null,
       CAD: overrides.CAD ? buildMeta("CAD") : null,
+      TRY: overrides.TRY ? buildMeta("TRY") : null,
       SGD: null,
     };
   }
@@ -1184,6 +1256,16 @@ describe("resolveBenchmarkForStablecoin", () => {
     expect(result.key).toBe("USD_EFFR");
     expect(result.selectionMode).toBe("manual-override");
     expect(result.meta.source).toBe("usd_effr-test");
+  });
+
+  it("routes the TRY-pegged wiTRY asset to TRY when the native benchmark is available", () => {
+    const benchmarks = buildRegistry({ TRY: true });
+    const result = resolveBenchmarkForStablecoin({
+      stablecoinId: "witry-brix",
+      benchmarks,
+    });
+    expect(result.key).toBe("TRY");
+    expect(result.selectionMode).toBe("native");
   });
 
   it("falls back to USD for USDGO when the optional EFFR benchmark is unavailable", () => {

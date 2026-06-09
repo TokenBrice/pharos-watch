@@ -1,5 +1,5 @@
 import type { YieldType } from "@shared/types/core";
-import type { YieldSourceRisk } from "@shared/types/yield";
+import type { YieldBenchmarkKey, YieldSourceRisk } from "@shared/types/yield";
 
 export interface DlPool {
   pool: string;
@@ -33,6 +33,7 @@ export interface ResolvedYield {
   sourceObservedAt?: number | null;
   comparisonAnchorObservedAt?: number | null;
   sourceRisk?: YieldSourceRisk | null;
+  benchmarkOverrideKey?: YieldBenchmarkKey | null;
 }
 
 export interface ResolvedYieldCandidate {

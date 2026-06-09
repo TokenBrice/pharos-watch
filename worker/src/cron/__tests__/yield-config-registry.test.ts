@@ -364,6 +364,7 @@ describe("yield config registry", () => {
       "wtgxx-wisdomtree",
       "ustbl-spiko",
       "eutbl-spiko",
+      "witry-brix",
     ]) {
       expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
     }
@@ -396,6 +397,56 @@ describe("yield config registry", () => {
     });
     expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
     expect(INTENTIONAL_GAP_REASONS["usdgo-osl"]).toBeUndefined();
+  });
+
+  it("wires TRY and tokenized-treasury benchmark overrides for rate-derived rows", () => {
+    const configsById = new Map(RATE_DERIVED_CONFIGS.map((entry) => [entry.stablecoinId, entry] as const));
+
+    expect(configsById.get("witry-brix")).toMatchObject({
+      stablecoinId: "witry-brix",
+      spreadBps: 0,
+      benchmarkCurrency: "TRY",
+    });
+
+    for (const stablecoinId of [
+      "buidl-blackrock",
+      "cgusd-cygnus-finance",
+      "ylds-figure",
+      "mtbill-midas",
+      "usdn-noble",
+      "ousg-ondo-finance",
+      "susd-solayer",
+      "benji-franklin-templeton",
+      "wtgxx-wisdomtree",
+      "ustbl-spiko",
+      "fusd-finchain",
+    ]) {
+      expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
+        benchmarkOverrideKey: "USD_EFFR",
+      });
+    }
+
+    expect(configsById.get("eutbl-spiko")).toMatchObject({
+      benchmarkCurrency: "EUR",
+      benchmarkOverrideKey: "EUR",
+    });
+    expect(configsById.get("uktbl-spiko")).toMatchObject({
+      benchmarkCurrency: "GBP",
+      benchmarkOverrideKey: "GBP",
+    });
+  });
+
+  it("wires mMEV to the Midas NAV oracle protocol source", () => {
+    expect(directProtocolApiIds.has("mmev-midas")).toBe(true);
+    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "mmev-midas")).toMatchObject({
+      status: "covered",
+      strategies: expect.arrayContaining([
+        expect.objectContaining({
+          kind: "protocol-api",
+          sourceKey: "protocol-api:midas-mmev-nav-oracle",
+        }),
+      ]),
+    });
   });
 
   it("wires v8.16 coverage additions to runtime source keys", () => {

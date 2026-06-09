@@ -55,6 +55,7 @@ export interface RateDerivedConfig {
   spreadBps: number;
   label: string;
   benchmarkCurrency?: YieldBenchmarkKey;
+  benchmarkOverrideKey?: YieldBenchmarkKey;
 }
 
 export interface YieldRegistryEntry {

@@ -240,6 +240,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const benchmarkSelection = resolveBenchmarkForStablecoin({
         stablecoinId,
         benchmarks: input.riskFreeRates,
+        benchmarkCurrency: y.benchmarkOverrideKey ?? null,
       });
       const benchmarkMeta = benchmarkSelection.meta;
       const benchmarkRate = benchmarkMeta.rate;

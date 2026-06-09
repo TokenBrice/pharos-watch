@@ -87,6 +87,7 @@ export async function loadRiskFreeRateRegistry(
         BRL: null,
         AUD: null,
         CAD: null,
+        TRY: null,
         SGD: null,
       };
     }
@@ -105,6 +106,7 @@ export async function loadRiskFreeRateRegistry(
     BRL: null,
     AUD: null,
     CAD: null,
+    TRY: null,
     SGD: null,
   };
 }

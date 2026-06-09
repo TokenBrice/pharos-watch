@@ -218,25 +218,26 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
 ]);
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
-  { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
-  { stablecoinId: "cgusd-cygnus-finance", spreadBps: 35, label: "T-bill proxy (net of 0.35% protocol fee)" },
-  { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
-  { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
-  { stablecoinId: "usdn-noble", spreadBps: 0, label: "M0 T-bill rebase proxy" },
-  { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
-  { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy" },
-  { stablecoinId: "benji-franklin-templeton", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
-  { stablecoinId: "wtgxx-wisdomtree", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)" },
-  { stablecoinId: "ustbl-spiko", spreadBps: 10, label: "T-bill proxy (net of 0.10% fee)" },
-  { stablecoinId: "eutbl-spiko", spreadBps: 15, label: "EUR T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "EUR" },
-  { stablecoinId: "uktbl-spiko", spreadBps: 15, label: "GBP T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "GBP" },
+  { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "cgusd-cygnus-finance", spreadBps: 35, label: "T-bill proxy (net of 0.35% protocol fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "usdn-noble", spreadBps: 0, label: "M0 T-bill rebase proxy", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "benji-franklin-templeton", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "wtgxx-wisdomtree", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "ustbl-spiko", spreadBps: 10, label: "T-bill proxy (net of 0.10% fee)", benchmarkOverrideKey: "USD_EFFR" },
+  { stablecoinId: "eutbl-spiko", spreadBps: 15, label: "EUR T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "EUR", benchmarkOverrideKey: "EUR" },
+  { stablecoinId: "uktbl-spiko", spreadBps: 15, label: "GBP T-bill proxy (net of 0.15% fee)", benchmarkCurrency: "GBP", benchmarkOverrideKey: "GBP" },
   { stablecoinId: "eursafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (EUR)", benchmarkCurrency: "EUR" },
   { stablecoinId: "gbpsafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (GBP)", benchmarkCurrency: "GBP" },
   { stablecoinId: "eurspkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (EUR risk-free leg)", benchmarkCurrency: "EUR" },
-  { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy" },
+  { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "safo-spiko-usd", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (USD)" },
   { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
   { stablecoinId: "usdgo-osl", spreadBps: 38, label: "EFFR-linked reserve-yield proxy (net of 0.38% fee)", benchmarkCurrency: "USD_EFFR" },
+  { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
 ];
 
 /**
@@ -291,6 +292,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "usbd-bima": "BIMA savings",
   "cetes-etherfuse": "Etherfuse CETES current issuance",
   "usyc-hashnote": "Hashnote NAV feed",
+  "mmev-midas": "Midas mMEV NAV oracle",
   "usdy-ondo-finance": "Ondo USDY oracle",
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
@@ -301,6 +303,7 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "usbd-bima": "protocol-api:bima-susbd",
   "cetes-etherfuse": "protocol-api:etherfuse-cetes-current-issuance",
   "usyc-hashnote": "protocol-api:hashnote-usyc",
+  "mmev-midas": "protocol-api:midas-mmev-nav-oracle",
   "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
   "zys-zephyr-protocol": "protocol-api:zys-zephyr-protocol",
 };

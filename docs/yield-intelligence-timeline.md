@@ -1,6 +1,21 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.28`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.29`.
+
+---
+
+## v8.29 - NAV Oracle, TRY TLREF, and Queue-Guided Coverage (June 9, 2026)
+
+- `mmev-midas` gains a curated Midas mMEV NAV oracle source at `protocol-api:midas-mmev-nav-oracle`, using the issuer-listed Ethereum mMEV/USD oracle as the current NAV and prior published oracle rows as the APY anchor
+- The Midas oracle row requires positive oracle answers, valid oracle decimals, and source freshness within three days; the first successful row can seed `exchange_rate` history with `currentApy=0` until a 7-45 day anchor exists
+- The benchmark registry adds `TRY`, sourced from CBRT EVDS BIST TLREF series `TP.BISTTLREF.ORAN`, with source metadata `cbrt-evds-tlref` and failure mode `cbrt-tlref-failed`
+- TRY benchmark validation uses a wider `[-10%, 100%]` range so Turkish reference rates above the normal 20% ceiling are accepted
+- `witry-brix` now resolves through a rate-derived `BIST TLREF overnight proxy (TRY)` row
+- Rate-derived configs can set `benchmarkOverrideKey`; APY derivation still uses the configured product benchmark, while PYS/excess-yield benchmark selection and provenance can use the override
+- USD tokenized T-bill/MMF-style rate-derived proxies now compare against `USD_EFFR` for PYS/excess-yield provenance, while EUR/GBP treasury proxy rows carry explicit same-currency override keys
+- `structured-tranche` keeps its runtime taxonomy but renders as `Structured Tranche`, and frontend external-opportunity grouping now includes structured tranches alongside lending and fixed-yield rows
+- Monthly coverage-audit allowlist recommendations now start from the unmatched high-TVL queue, require the existing protocol-category gate for `high-confidence` candidates, and include source links, promotion metadata, and suggested allowlist snippets
+- PYS formula, source-risk calibration, history semantics, and publication guards are unchanged except where row-level benchmark selection uses the explicit override
 
 ---
 

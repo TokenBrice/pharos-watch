@@ -67,7 +67,8 @@ type FilterTabTone =
   | "orange"
   | "purple"
   | "cyan"
-  | "amber";
+  | "amber"
+  | "rose";
 
 // Selected/unselected variants per tone. Classes must be static strings so
 // Tailwind's purge can see them.
@@ -104,6 +105,10 @@ const TONE_STYLES: Record<FilterTabTone, { active: string; inactive: string }> =
     active: "border-amber-500/60 bg-amber-500/20 text-amber-700 dark:text-amber-200 font-semibold",
     inactive: "border-amber-500/25 bg-amber-500/5 text-amber-700/80 hover:bg-amber-500/10 dark:text-amber-400/90",
   },
+  rose: {
+    active: "border-rose-500/60 bg-rose-500/20 text-rose-700 dark:text-rose-200 font-semibold",
+    inactive: "border-rose-500/25 bg-rose-500/5 text-rose-700/80 hover:bg-rose-500/10 dark:text-rose-400/90",
+  },
 };
 
 // Mirrors YIELD_TYPE_STYLES in shared/lib/classification/badges.ts so each
@@ -117,6 +122,7 @@ const YIELD_TYPE_TONE: Record<string, FilterTabTone> = {
   rebase: "purple",
   "fee-sharing": "cyan",
   "lp-receipt": "amber",
+  "structured-tranche": "rose",
 };
 
 function FilterTab({

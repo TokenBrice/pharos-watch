@@ -19,6 +19,8 @@ import {
   BANXICO_CETES_28D_URL,
   BCB_SELIC_URL,
   BOC_CORRA_URL,
+  CBRT_EVDS_FE_URL,
+  CBRT_TLREF_SERIES_CODE,
   BENCHMARK_FETCH_TIMEOUT_MS,
   BENCHMARK_FETCH_MAX_RETRIES,
 } from "../lib/constants";
@@ -67,6 +69,7 @@ const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
   BRL: "brl",
   AUD: "aud",
   CAD: "cad",
+  TRY: "try",
 };
 
 const BENCHMARK_METADATA_KEYS = Object.keys(BENCHMARK_METADATA_PREFIXES) as MetadataBenchmarkKey[];
@@ -95,8 +98,13 @@ function parseRate(rateRaw: string | number | null | undefined): number {
   return parseFloat(rateRaw);
 }
 
+function isValidBenchmarkRateForKey(key: YieldBenchmarkKey, rate: number): boolean {
+  const maxRate = key === "TRY" ? 100 : 20;
+  return Number.isFinite(rate) && rate >= -10 && rate <= maxRate;
+}
+
 function isValidBenchmarkRate(rate: number): boolean {
-  return Number.isFinite(rate) && rate >= -10 && rate <= 20;
+  return isValidBenchmarkRateForKey("USD", rate);
 }
 
 function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
@@ -299,6 +307,19 @@ function parseSlashDmyToIso(dateRaw: string): string | null {
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
+function parseCbrtEvdsDate(dateRaw: string): string | null {
+  const trimmed = dateRaw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const slashDmy = parseSlashDmyToIso(trimmed);
+  if (slashDmy) return slashDmy;
+
+  const match = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return null;
+  // EVDS3 returns this shape as MM-DD-YYYY when dateFormat=1 and lang=en.
+  return `${match[3]}-${match[1]}-${match[2]}`;
+}
+
 function parseSixOauthToken(json: string): string | null {
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>;
@@ -377,6 +398,7 @@ async function writeStructuredBenchmarks(
         BRL: toCacheEntry(benchmarks.BRL),
         AUD: toCacheEntry(benchmarks.AUD),
         CAD: toCacheEntry(benchmarks.CAD),
+        TRY: toCacheEntry(benchmarks.TRY),
         SGD: toCacheEntry(benchmarks.SGD),
       }),
     ),
@@ -473,6 +495,8 @@ interface ResolvedBenchmarkProvider {
 async function fetchAndParseBenchmark<T>({
   url,
   headers,
+  method = "GET",
+  body,
   retries = BENCHMARK_FETCH_MAX_RETRIES,
   parse,
   warnLabel,
@@ -480,6 +504,8 @@ async function fetchAndParseBenchmark<T>({
 }: {
   url: string;
   headers: Record<string, string>;
+  method?: string;
+  body?: BodyInit | null;
   retries?: number;
   parse: (body: string) => T | null;
   warnLabel: string;
@@ -487,7 +513,9 @@ async function fetchAndParseBenchmark<T>({
 }): Promise<T | null> {
   try {
     const res = await fetchWithRetry(url, {
+      method,
       headers,
+      body: body ?? undefined,
       signal,
     }, retries, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
@@ -523,6 +551,10 @@ function addDays(date: Date, days: number): Date {
 function formatBoeRequestDate(date: Date): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${String(date.getUTCDate()).padStart(2, "0")}/${months[date.getUTCMonth()]}/${date.getUTCFullYear()}`;
+}
+
+function formatCbrtEvdsRequestDate(date: Date): string {
+  return `${String(date.getUTCDate()).padStart(2, "0")}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${date.getUTCFullYear()}`;
 }
 
 function buildBoeIadbCsvUrl(seriesCode: string, now = new Date(), lookbackDays = 21): string {
@@ -755,6 +787,39 @@ export function parseBocValetSeries(
   }
 }
 
+export function parseCbrtEvdsSeries(
+  json: string,
+  seriesCode = CBRT_TLREF_SERIES_CODE,
+): { recordDate: string; rate: number } | null {
+  try {
+    const parsed = JSON.parse(json) as { items?: Array<Record<string, unknown>> };
+    const items = parsed.items;
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    const seriesField = seriesCode.replace(/\./g, "_");
+    let latest: { recordDate: string; rate: number } | null = null;
+    for (const row of items) {
+      const dateRaw = typeof row?.Tarih === "string"
+        ? row.Tarih
+        : typeof row?.DATE === "string"
+          ? row.DATE
+          : null;
+      const valueRaw = row?.[seriesField];
+      const rate = parseRate(
+        typeof valueRaw === "string" || typeof valueRaw === "number" ? valueRaw : null,
+      );
+      const recordDate = dateRaw ? parseCbrtEvdsDate(dateRaw) : null;
+      if (!recordDate || !isValidBenchmarkRateForKey("TRY", rate)) continue;
+      if (!latest || recordDate > latest.recordDate) {
+        latest = { recordDate, rate };
+      }
+    }
+    return latest;
+  } catch {
+    return null;
+  }
+}
+
 async function tryBanxicoCetes(
   banxicoToken: string | null,
   signal?: AbortSignal,
@@ -792,6 +857,44 @@ async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; record
     },
     parse: (body) => parseBocValetSeries(body, "V122530"),
     warnLabel: "BoC Valet CORRA",
+    signal,
+  });
+}
+
+async function tryCbrtTlref(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  const now = new Date();
+  const body = JSON.stringify({
+    type: "json",
+    series: CBRT_TLREF_SERIES_CODE,
+    aggregationTypes: "avg",
+    formulas: "0",
+    startDate: formatCbrtEvdsRequestDate(addDays(now, -14)),
+    endDate: formatCbrtEvdsRequestDate(now),
+    frequency: "2",
+    decimalSeperator: ".",
+    decimal: "2",
+    dateFormat: "1",
+    lang: "en",
+    yon: "desc",
+    sira: "Tarih",
+    ozelFormuller: [],
+    groupSeperator: true,
+    isRaporSayfasi: false,
+  });
+
+  return fetchAndParseBenchmark({
+    url: CBRT_EVDS_FE_URL,
+    method: "POST",
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "application/json",
+      "Content-Type": "application/json;charset=UTF-8",
+      Origin: "https://evds3.tcmb.gov.tr",
+      Referer: "https://evds3.tcmb.gov.tr/",
+    },
+    body,
+    parse: (responseBody) => parseCbrtEvdsSeries(responseBody, CBRT_TLREF_SERIES_CODE),
+    warnLabel: "CBRT EVDS TLREF",
     signal,
   });
 }
@@ -845,6 +948,12 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
     source: "boc-valet-v122530",
     fallbackMode: "boc-corra-failed",
   },
+  TRY: {
+    key: "TRY",
+    fetch: ({ signal }) => tryCbrtTlref(signal),
+    source: "cbrt-evds-tlref",
+    fallbackMode: "cbrt-tlref-failed",
+  },
 } as const;
 
 const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
@@ -857,6 +966,7 @@ const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
   "MXN",
   "BRL",
   "CAD",
+  "TRY",
 ] as const;
 
 const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
@@ -869,6 +979,7 @@ const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
   "BRL",
   "AUD",
   "CAD",
+  "TRY",
 ] as const;
 
 async function resolveBenchmarkProvider(params: {
@@ -983,6 +1094,7 @@ export async function fetchTbillRate(
       BRL: buildRetainedBenchmark(previous.BRL, "circuit-open"),
       AUD: buildRetainedBenchmark(previous.AUD, "circuit-open"),
       CAD: buildRetainedBenchmark(previous.CAD, "circuit-open"),
+      TRY: buildRetainedBenchmark(previous.TRY, "circuit-open"),
       SGD: null,
     };
     await writeStructuredBenchmarks(db, benchmarks);
@@ -1046,6 +1158,7 @@ export async function fetchTbillRate(
     BRL: resolvedByKey.BRL.meta,
     AUD: resolvedByKey.AUD.meta,
     CAD: resolvedByKey.CAD.meta,
+    TRY: resolvedByKey.TRY.meta,
     SGD: null,
   };
 

@@ -300,6 +300,7 @@ export async function resolveTrackedYieldSources(params: {
           yieldSource: rateDerivedConfig.label,
           sourceObservedAt: getBenchmarkSourceObservedAt(benchmarkSelection.meta, params.startSec),
           comparisonAnchorObservedAt: null,
+          benchmarkOverrideKey: rateDerivedConfig.benchmarkOverrideKey ?? null,
         },
       });
       hasAnySource = true;

@@ -135,20 +135,33 @@ describe("buildYieldViewModel", () => {
     });
   });
 
-  it("groups fixed-yield PT rows with external opportunity rows", () => {
-    const model = buildYieldViewModel([
+  it("groups fixed-yield PT and structured-tranche rows with external opportunity rows", () => {
+    const opportunityRows = [
       makeYieldRanking({ id: "native", symbol: "NATIVE", yieldType: "lending-vault" }),
       makeYieldRanking({ id: "lend", symbol: "LEND", yieldType: "lending-opportunity" }),
       makeYieldRanking({ id: "fixed", symbol: "FIXED", yieldType: "fixed-yield" }),
       makeYieldRanking({ id: "tranche", symbol: "TRANCHE", yieldType: "structured-tranche" }),
-    ], { opportunity: "lending-opportunity" });
+    ];
+    const model = buildYieldViewModel(opportunityRows, { opportunity: "lending-opportunity" });
 
     expect(model.visibleRows.map((row) => row.id).sort()).toEqual(["fixed", "lend", "tranche"]);
+    expect(model.comparisonLabel).toBe("External opportunities");
+    expect(model.visibleRows[0]?.rankLabel).toContain("External opportunities");
     expect(model.options.opportunity).toEqual([
       { value: "all", label: "All opportunities", count: 4 },
       { value: "holder-yield", label: "Holder yield", count: 1 },
-      { value: "lending-opportunity", label: "Opportunity rows", count: 3 },
+      { value: "lending-opportunity", label: "External opportunities", count: 3 },
     ]);
+
+    const trancheModel = buildYieldViewModel(opportunityRows, { yieldType: "structured-tranche" });
+    expect(trancheModel.filters.yieldType).toBe("structured-tranche");
+    expect(trancheModel.visibleRows.map((row) => row.id)).toEqual(["tranche"]);
+    expect(trancheModel.comparisonLabel).toBe("Structured Tranche");
+    expect(trancheModel.options.yieldType).toContainEqual({
+      value: "structured-tranche",
+      label: "Structured Tranche",
+      count: 1,
+    });
   });
 
   it("keeps expanded benchmark registry values valid when matching rows exist", () => {

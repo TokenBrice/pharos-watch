@@ -25,6 +25,7 @@ export interface ParsedYieldBenchmarkRegistry {
   BRL: ParsedYieldBenchmarkMeta | null;
   AUD: ParsedYieldBenchmarkMeta | null;
   CAD: ParsedYieldBenchmarkMeta | null;
+  TRY: ParsedYieldBenchmarkMeta | null;
   SGD: ParsedYieldBenchmarkMeta | null;
 }
 
@@ -85,6 +86,12 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     currency: "CAD",
     isProxy: true,
   },
+  TRY: {
+    // CBRT EVDS TP.BISTTLREF.ORAN — BIST Turkish Lira Overnight Reference Rate.
+    label: "TRY BIST TLREF overnight",
+    currency: "TRY",
+    isProxy: false,
+  },
   SGD: {
     // TODO: wire MAS SORA feed when a stable public endpoint is identified.
     label: "SGD SORA (unavailable)",
@@ -138,6 +145,7 @@ const NATIVE_BENCHMARK_PEG_CURRENCIES = new Set<YieldBenchmarkKey>([
   "BRL",
   "AUD",
   "CAD",
+  "TRY",
 ]);
 
 export function getBenchmarkKeyForPegCurrency(
@@ -210,6 +218,7 @@ export function toYieldBenchmarkRegistry(
     BRL: parsed.BRL,
     AUD: parsed.AUD,
     CAD: parsed.CAD,
+    TRY: parsed.TRY,
     SGD: parsed.SGD,
   };
 }

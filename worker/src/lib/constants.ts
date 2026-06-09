@@ -108,6 +108,10 @@ export const ETHERFUSE_CETES_BOND_PAGE_URL = "https://app.etherfuse.com/bonds/ce
 export const BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json";
 /** Bank of Canada Valet — overnight repo rate (V122530), latest observation as JSON. */
 export const BOC_CORRA_URL = "https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1";
+/** CBRT EVDS3 frontend data endpoint used for BIST TLREF benchmark observations. */
+export const CBRT_EVDS_FE_URL = "https://evds3.tcmb.gov.tr/igmevdsms-dis/fe";
+/** EVDS series code for BIST TLREF, the Turkish Lira Overnight Reference Rate. */
+export const CBRT_TLREF_SERIES_CODE = "TP.BISTTLREF.ORAN";
 export const BENCHMARK_FETCH_TIMEOUT_MS = 15_000;
 export const BENCHMARK_FETCH_MAX_RETRIES = 2;
 export const PYS_SCALING_FACTOR = 8;

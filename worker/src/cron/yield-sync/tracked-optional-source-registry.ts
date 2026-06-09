@@ -9,6 +9,7 @@ import {
   fetchOndoUsdyOracleSource,
   fetchZephyrZysSource,
 } from "./sources";
+import { fetchMidasMmevNavOracleSource } from "./midas-mmev-nav-oracle";
 import { runTimedOptionalSource } from "./optional-source-runtime";
 import type { ResolvedYield } from "./types";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -18,8 +19,10 @@ const SCRVUSD_CURVE_ID = "scrvusd-curve";
 const BIMA_USBD_ID = "usbd-bima";
 const CETES_ETHERFUSE_ID = "cetes-etherfuse";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
+const MIDAS_MMEV_ID = "mmev-midas";
 const ONDO_USDY_ID = "usdy-ondo-finance";
 const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
+const MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY = "protocol-api:midas-mmev-nav-oracle";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 
 export interface TrackedOptionalSourceContext {
@@ -68,6 +71,25 @@ export async function loadOndoOracleAnchorRow(
        ORDER BY recorded_at DESC LIMIT 1`,
     )
     .bind(ONDO_USDY_ID, startSec - 3 * DAY_SECONDS, startSec - 14 * DAY_SECONDS)
+    .first<{ exchange_rate: number; recorded_at: number }>();
+}
+
+async function loadMidasMmevOracleAnchorRow(
+  db: D1Database,
+  startSec: number,
+): Promise<{ exchange_rate: number; recorded_at: number } | null> {
+  return db
+    .prepare(
+      `SELECT /* pharos:yield-sync:midas-mmev-prior-anchor */
+         exchange_rate, recorded_at FROM yield_history
+       WHERE stablecoin_id = ? AND source_key = ?
+         AND exchange_rate IS NOT NULL
+         AND recorded_at <= ?
+         AND recorded_at >= ?
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
+       ORDER BY recorded_at DESC LIMIT 1`,
+    )
+    .bind(MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec - 7 * DAY_SECONDS, startSec - 45 * DAY_SECONDS)
     .first<{ exchange_rate: number; recorded_at: number }>();
 }
 
@@ -142,6 +164,28 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
         ),
         null,
       );
+    },
+  },
+  {
+    stablecoinId: MIDAS_MMEV_ID,
+    sourceKey: MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY,
+    run: async (context) => {
+      const anchorRow = await loadMidasMmevOracleAnchorRow(context.db, context.startSec);
+      const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
+
+      const candidate = await runTimedOptionalSource(
+        "Midas mMEV NAV oracle source",
+        context.signal,
+        (budgetSignal) => fetchMidasMmevNavOracleSource({
+          prevExchangeRate: anchorRow?.exchange_rate ?? null,
+          daysDelta,
+          comparisonAnchorObservedAt: anchorRow?.recorded_at ?? null,
+          signal: budgetSignal,
+          chainRpcs: context.chainRpcs,
+        }),
+        null,
+      );
+      return candidate?.yield ?? null;
     },
   },
   {

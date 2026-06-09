@@ -82,7 +82,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Ratings & Reference",
     sources:
-      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, SIX delayed SARON compound-rate downloads via public guest access, Bank of England IADB IUDSOIA (GBP SONIA proxy), Bank of Japan Time-Series Data Search STRDCLUCON (JPY call-rate proxy), Banxico SIE SF43936 (MXN CETES 28d, token-gated), BCB SGS series 11 (BRL SELIC), Reserve Bank of Australia F1 money-market CSV (AUD cash-rate target), and Bank of Canada Valet V122530 (CAD CORRA proxy)",
+      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, FRED DFF, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, SIX delayed SARON compound-rate downloads via public guest access, Bank of England IADB IUDZOS2 (GBP SONIA Compounded Index), Bank of Japan Time-Series Data Search STRDCLUCON (JPY call-rate proxy), Banxico SIE SF43936 (MXN CETES 28d, token-gated), BCB SGS series 11 (BRL SELIC), Reserve Bank of Australia F1 money-market CSV (AUD cash-rate target), Bank of Canada Valet V122530 (CAD CORRA proxy), and CBRT EVDS BIST TLREF TP.BISTTLREF.ORAN (TRY overnight reference rate)",
   },
   {
     label: "Regulatory Registers",
@@ -92,7 +92,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "DEX Data",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Midas NAV oracles, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest and Monday weekly recap)" },
 ] as const;

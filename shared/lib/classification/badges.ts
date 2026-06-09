@@ -160,7 +160,7 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "governance-set": "Gov. Set",
   "lending-opportunity": "Lending Opp.",
   "fixed-yield": "Fixed Yield",
-  "structured-tranche": "Tranche",
+  "structured-tranche": "Structured Tranche",
 };
 
 export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {

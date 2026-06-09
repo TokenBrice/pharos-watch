@@ -2,6 +2,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.29",
+    title: "NAV Oracle, TRY TLREF, and Queue-Guided Coverage",
+    date: "2026-06-09",
+    effectiveAt: 1780984800,
+    summary:
+      "Yield Intelligence adds the first Midas NAV-oracle adapter, a TRY benchmark lane backed by CBRT EVDS TLREF, rate-derived benchmark overrides for treasury-like products, structured-tranche filter cleanup, and audit-queue-driven allowlist promotion metadata.",
+    impact: [
+      "`mmev-midas` gains a curated `protocol-api:midas-mmev-nav-oracle` source from the issuer-listed Ethereum mMEV/USD oracle, using the oracle value as a NAV anchor with a three-day freshness guard",
+      "The benchmark registry adds optional `TRY`, sourced from CBRT EVDS BIST TLREF series `TP.BISTTLREF.ORAN`; TRY validation uses a wider `[-10%, 100%]` band so Turkish reference rates are not rejected by the normal 20% ceiling",
+      "`witry-brix` now has rate-derived TRY coverage through the BIST TLREF overnight proxy",
+      "Rate-derived configs can set `benchmarkOverrideKey`; the APY formula still derives from the configured product benchmark, while PYS/excess-yield provenance can compare the row against a distinct benchmark hurdle",
+      "USD tokenized T-bill/MMF proxy rows now compare against `USD_EFFR` in PYS/excess-yield provenance, and EUR/GBP treasury proxy rows carry explicit same-currency override keys for future-safe provenance",
+      "`structured-tranche` keeps its runtime taxonomy but now renders as `Structured Tranche`; frontend opportunity grouping treats structured tranches alongside lending and fixed-yield external opportunities",
+      "Monthly coverage-audit allowlist recommendations now derive from the unmatched high-TVL queue plus the protocol-category gate, with suggested config snippets, source links, and promotion metadata for cheap reviewed rounds",
+      "PYS formula, source-risk calibration, history semantics, and publication guards are unchanged except where row-level benchmark selection uses the explicit override",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.28",
     title: "GBP SONIA Compounded Index Benchmark",
     date: "2026-06-09",

@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.28`
+- **Current methodology version:** `v8.29`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.29 adds the first Midas NAV-oracle adapter, a TRY benchmark lane, explicit rate-derived benchmark overrides, structured-tranche filter cleanup, and queue-guided allowlist promotion metadata. `mmev-midas` now has a curated `protocol-api:midas-mmev-nav-oracle` row from the issuer-listed Ethereum mMEV/USD oracle, using the oracle value as a NAV anchor with a three-day freshness guard. The benchmark registry adds `TRY` from CBRT EVDS BIST TLREF series `TP.BISTTLREF.ORAN`, with source metadata `cbrt-evds-tlref`, failure mode `cbrt-tlref-failed`, and a TRY-specific `[-10%, 100%]` validation band. `witry-brix` now resolves through a rate-derived BIST TLREF proxy. Rate-derived configs can set `benchmarkOverrideKey`, leaving APY derivation on the configured product benchmark while letting PYS/excess-yield provenance compare treasury-like products against an explicit benchmark hurdle such as `USD_EFFR`. The `structured-tranche` taxonomy now renders as `Structured Tranche`, and external opportunity grouping includes structured tranches alongside lending and fixed-yield rows. Monthly coverage-audit allowlist recommendations now start from unmatched high-TVL queue candidates, include category-gate metadata, source links, and suggested config snippets, and avoid broad protocol hunting. PYS formula, source-risk calibration, history semantics, and publication guards are unchanged except where row-level benchmark selection uses the explicit override.
 
 Yield v8.28 upgrades the GBP benchmark from the Bank of England overnight SONIA proxy to the Bank of England SONIA Compounded Index (`IUDZOS2`). The daily benchmark cron annualizes the trailing 90-day index change, records source metadata as `boe-sonia-compounded-index`, and uses fallback mode `gbp-sonia-compounded-index-failed` when the feed cannot resolve. GBP benchmark labels now represent `GBP 3M compounded SONIA`; PYS formula, source arbitration, source-risk calibration, publication guards, and non-GBP benchmark paths are unchanged.
 
@@ -48,7 +50,7 @@ The `/yield` route-level Yield Sources board is presentation-only: it derives ch
 
 Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, source changes, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
 
-Yield v8.13 expands the benchmark registry to GBP, JPY, MXN, BRL, AUD, and CAD, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. The same release derives `sourceRisk.sourceRiskScore` from the resolved source-risk penalty when no upstream value is provided (ending the 100% null rate documented in the v8 production-sample calibration) and lands the first reviewed venue tier batch: Aave V3, Compound V3, and Spark move to `low` (currently a no-op penalty), and Morpho Blue moves to `medium` (+0.15 penalty contribution). Remaining tracked venue families stay `unknown` with rationale/evidence fields until the next monthly coverage audit. AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired for each.
+Yield v8.13 expands the benchmark registry to GBP, JPY, MXN, BRL, AUD, and CAD, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. The same release derives `sourceRisk.sourceRiskScore` from the resolved source-risk penalty when no upstream value is provided (ending the 100% null rate documented in the v8 production-sample calibration) and lands the first reviewed venue tier batch: Aave V3, Compound V3, and Spark move to `low` (currently a no-op penalty), and Morpho Blue moves to `medium` (+0.15 penalty contribution). Remaining tracked venue families stay `unknown` with rationale/evidence fields until the next monthly coverage audit. At that release, AED, IDR, TRY, ZAR, and SGD stayed on USD fallback; TRY later gained native TLREF coverage in v8.29.
 
 Rankings provenance now carries source-native freshness for derived sources:
 
@@ -102,7 +104,7 @@ Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/regi
 | `governance-set`      | Gov. Set     | Yield rate set by governance vote                              |
 | `lending-opportunity` | Lending Opp. | Auto-discovered best lending market from the curated allowlist |
 | `fixed-yield`         | Fixed Yield  | Fixed-maturity principal-token opportunity over an underlying stablecoin |
-| `structured-tranche`  | Tranche      | Senior/junior tranche opportunity over an underlying yield market |
+| `structured-tranche`  | Structured Tranche | Senior/junior tranche opportunity over an underlying yield market |
 
 Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
 
@@ -282,6 +284,7 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 | `cetes-etherfuse` | `Etherfuse CETES current issuance` | Etherfuse first-party Next data at `https://app.etherfuse.com/bonds/cetes` |
 | `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
+| `mmev-midas` | `Midas mMEV/USD Oracle` | on-chain issuer-listed mMEV/USD NAV oracle with historical anchor rows |
 | `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
 | `zys-zephyr-protocol` | `Zephyr Scanner ZYS returns` | `https://zephyrprotocol.com/api/v1/historicalreturns` |
 
@@ -290,6 +293,8 @@ The BIMA adapter uses the protocol's published Ethereum earn feed, selects the U
 The Royco Dawn adapter maps APY ratios to percent APY, tranche vault TVL to `sourceTvlUsd`, and market coverage/utilization/status/drawdown plus share-token addresses into nested `sourceRisk` fields. Royco rows carry `venueRiskTier: "unknown"` until a reviewed venue-risk audit assigns a sourced tier. They also carry investability flags for withdrawal constraints, verified listing status, and whether the row is senior protected or junior first-loss. KYC/access booleans are nullable; the current Dawn market payload does not expose explicit KYC or jurisdiction restriction fields, so those penalties apply only if future source evidence populates them.
 
 The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Etherfuse's first-party Next data and maps `interestRateBps / 100` to APY. It publishes `protocol-api:etherfuse-cetes-current-issuance` with the current token amount as the exchange-rate observation when available. This source prevents MXN NAV appreciation plus USD/MXN FX movement from being annualized by the generic price-derived fallback.
+
+The Midas mMEV adapter reads the issuer-listed Ethereum mMEV/USD oracle, decodes its Chainlink-style `latestRoundData()` answer using the oracle `decimals()`, and publishes `protocol-api:midas-mmev-nav-oracle` as a NAV-appreciation row. Oracle answers must be positive, decimals must be within the supported range, and `updatedAt` must be no older than three days. Like other NAV-oracle rows, the first successful observation can seed `exchange_rate` history with `currentApy=0`; later runs compute APY from a prior published oracle anchor between 7 and 45 days old.
 
 The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
 
@@ -323,7 +328,7 @@ For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token min
 apy = max(0, benchmarkRate - spreadBps / 100)
 ```
 
-Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native or product-specific benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. USDGO uses `USD_EFFR`, sourced from FRED DFF, because OSL's public material describes the product against the Effective Federal Funds Rate net of fees. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
+Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native or product-specific benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. TRY rows use CBRT EVDS BIST TLREF (`TP.BISTTLREF.ORAN`). USDGO uses `USD_EFFR`, sourced from FRED DFF, because OSL's public material describes the product against the Effective Federal Funds Rate net of fees. Rate-derived configs can also set `benchmarkOverrideKey`: APY is still computed from the configured product benchmark, but PYS/excess-yield benchmark selection and provenance use the override. USD tokenized T-bill/MMF-style proxies use this to compare against `USD_EFFR`; EUR and GBP treasury proxies carry explicit same-currency override keys. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
 
 **Configured tokens:**
 
@@ -348,6 +353,7 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | SAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, USD-denominated |
 | SPKCC | 0 | Spiko cash-and-carry strategy proxy, USD risk-free leg |
 | USDGO | 38 | OSL/Anchorage USDGO, EFFR-linked reserve-yield proxy using `USD_EFFR` net of 0.38% |
+| wiTRY | 0 | Brix TRY yield product, BIST TLREF overnight proxy using `TRY` |
 
 Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
 VBILL is intentionally not rate-derived in v8.23; its coin metadata documents an on-chain NAVLink-style NAV feed, so it belongs to a future NAV-oracle source lane rather than this benchmark-proxy roster.
@@ -374,6 +380,8 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, and reserved-pool exclusion. Resolution prefers underlying-token address matches over symbol matches. Symbol-only matching is allowed only when the coin remains unambiguous after chain scoping; otherwise the candidate is dropped. Current quality gates require `apy >= 0.1`, a chain-specific absolute TVL floor (`$100K` default, `$25K` on configured smaller/pre-mainnet ecosystems), and for tracked stablecoins a supply-relative floor of `0.1%` of the asset's current circulating supply.
 
 **Source-management audit inputs:** the DEX-liquidity job caches DeFiLlama `/protocols` metadata under the `defillama-protocols` cache key. The monthly yield coverage audit reuses that cache to annotate protocol recommendations with DeFiLlama category metadata. `high-confidence` allowlist recommendations require both the existing TVL/pool-count shape and a category of Lending, CDP, RWA Lending, or Uncollateralized Lending; missing categories or non-lending categories stay `review-needed`. The 2026-06-09 Wave 2 allowlist additions are category-gated Lending protocols with live single-asset stablecoin pools on smaller/pre-mainnet or app-chain ecosystems; speculative non-lending categories were excluded by the same protocol category gate. The monthly audit also re-probes explicit generic `convertToAssets` quarantines through monthly `chainRpcs` when available, emitting restore-readiness metadata and a `quarantine-ready-to-restore` candidate only after a nonzero rate passes the deterministic envelope.
+
+**Queue-guided allowlist rounds:** Future lending allowlist expansions start from the monthly coverage audit's `operatorQueue.recommendationCandidates` entries with kind `lending-allowlist`. Those candidates are derived from unmatched high-TVL single-exposure stablecoin pools outside the current allowlist, must pass the protocol-category gate for `high-confidence` status, and include DeFiLlama source links, pool examples, promotion metadata, and a suggested `LENDING_PROTOCOLS` snippet anchored near `YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR`. Operators can still review or reject candidates, but broad manual protocol hunting is no longer the default expansion path.
 
 **Chain-specific absolute floor:** the absolute lending-opportunity TVL gate is table-driven through `CHAIN_LENDING_TVL_FLOOR_USD`. The default floor remains `$100K`; Aptos, Berachain, Cardano, Ink, Monad, Plasma, Solana, Stacks, Stellar, and Sui use the configured `$25K` smaller/pre-mainnet floor. The supply-relative gate (`0.1%` of tracked stablecoin supply) still applies on top of the chain floor for eligible stablecoins.
 
@@ -449,7 +457,7 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - `sourceRisk.sourceRiskScore` is the 0–100 display normalization of the resolved source-risk penalty. As of v8.13, when no upstream score is provided, the publisher fills it via `computeSourceRiskScoreFromPenalty` (`penalty = 1.0` → `0`; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) → `100`). The score is informational and does not change PYS — PYS continues to consume the `sourceRiskPenalty` directly. Rollback compatibility: legacy v7.48 payloads still resolve to a neutral penalty when source-risk is absent, and an explicit upstream `sourceRiskScore` value still wins over derivation.
 - `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
 - v8 rollout calibration evidence is split between `docs/process/archive/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/archive/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the prior `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts. The v8.13 delta — benchmark registry expansion, `sourceRiskScore` derivation rule, and the first venue tier batch — is documented in `docs/process/archive/yield-pys-v8-13-calibration-2026-05-15.md`.
-- External opportunity rows (`lending-opportunity` and `fixed-yield`) do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may inform opportunity-level yield risk labels or DEWS yield anomaly inputs only through explicitly versioned consumer methodology; report-card modifiers still require a separate report-card methodology update.
+- External opportunity rows (`lending-opportunity`, `fixed-yield`, and `structured-tranche`) do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may inform opportunity-level yield risk labels or DEWS yield anomaly inputs only through explicitly versioned consumer methodology; report-card modifiers still require a separate report-card methodology update.
 - Report-card consumers ignore yield source-risk today: external lending opportunities and structured tranches belong to opportunity scoring, and native yield source-risk does not emit report-card score modifiers, Resilience caps, or Dependency Risk caps.
 - Any future report-card score impact from yield source-risk requires a report-card methodology update and matching report-card timeline entry before runtime scoring can consume those fields.
 - DEWS methodology (introduced in v5.99, current v6.07) consumes a bounded subset of populated structured yield evidence inside the existing Yield Anomaly sub-signal: reward-heavy rows, thin or stale sources, source switches, high source-risk penalties, reviewed medium/high-risk venue tiers, and rank-attribution drivers for source-risk or source-switch moves. Missing, malformed, or neutral source-risk fields and legacy warning-only rows remain explicit no-ops.
@@ -489,6 +497,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
 | `AUD` | AUD cash-rate target | Reserve Bank of Australia F1 money-market CSV | RBA cash-rate target used as the AUD local cash hurdle |
 | `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
+| `TRY` | TRY BIST TLREF overnight | CBRT EVDS (`TP.BISTTLREF.ORAN`) | Native benchmark for TRY pegs; validation accepts up to 100% so Turkish reference-rate regimes are not rejected by the standard 20% ceiling |
 | `SGD` | SGD SORA (unavailable) | — | Reserved for a future MAS SORA feed; SGD pegs fall back to USD until a stable public source is wired |
 
 **Source URLs:**
@@ -508,15 +517,17 @@ https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
 https://app.etherfuse.com/bonds/cetes
 https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
 https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
+https://evds3.tcmb.gov.tr/igmevdsms-dis/fe
+https://evds3.tcmb.gov.tr/igmevdsms-dis/serieList/fe/type=json&code=bie_bisttlref
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
 **Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN additionally tries Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable.
 
-**Self-reference caveat (CETES):** Benchmarking the CETES (Etherfuse) yield against the MXN CETES rate produces a ~0% spread, which under-rewards the asset. The MXN benchmark is wired here and may use Etherfuse as a fallback proxy when Banxico is unavailable; a future tokenized-treasury rule can override per-source by selecting the next-tier-up safe rate in the same currency. The same pattern applies to EUTBL (vs €STR) and to any future UKTBL (vs SONIA).
+**Tokenized-treasury benchmark overrides:** Some rate-derived treasury-like products tokenize the same instrument as their local benchmark, which can compress excess-yield and PYS context toward zero. `benchmarkOverrideKey` lets a rate-derived row compute APY from its configured product benchmark while comparing PYS/excess-yield against an explicit benchmark hurdle. USD T-bill/MMF-style proxies use `USD_EFFR` as the comparison hurdle; EUTBL and UKTBL carry explicit same-currency override keys. CETES still uses its protocol-native issuance adapter plus the MXN CETES benchmark path, so CETES-specific override policy remains a separate future decision.
 
-**Currencies still falling back to USD:** AED, IDR, TRY, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
+**Currencies still falling back to USD:** AED, IDR, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
 
 **Selection rules:**
 
@@ -729,8 +740,9 @@ Fetches the benchmark registry used by Yield Intelligence:
 - BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
 - AUD cash-rate target from the Reserve Bank of Australia F1 money-market CSV (v8.22)
 - CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
+- TRY BIST TLREF overnight from CBRT EVDS series `TP.BISTTLREF.ORAN` (v8.29)
 
-Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
+Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes; TRY uses `[-10, 100]` because recent Turkish reference rates can exceed the normal 20% ceiling. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
 
 When a fetch fails but a prior benchmark exists, the cache preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded or proxy default.
 
@@ -821,7 +833,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
   "benchmarks": {
     "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
     "EUR": { "key": "EUR", "label": "EUR 3M compounded €STR", "currency": "EUR", "rate": 1.9358, "recordDate": "2026-03-26", "source": "ecb-estr-3m", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
+    "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "TRY": { "key": "TRY", "label": "TRY BIST TLREF overnight", "currency": "TRY", "rate": 40.0, "recordDate": "2026-06-08", "source": "cbrt-evds-tlref", "isFallback": false, "fallbackMode": null, "isProxy": false }
   },
   "scalingFactor": 8,
   "medianApy": 4.21,
@@ -834,8 +847,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.28",
-    "currentVersion": "8.28",
+    "version": "8.29",
+    "currentVersion": "8.29",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
@@ -1017,6 +1030,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `SIX_SARON_3M_CSV_URL`          | `https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv` | Delayed public CSV for `SAR3MC` |
 | `SIX_BROWSER_USER_AGENT`        | `Mozilla/5.0` | Browser-compatible UA required by SIX guest endpoints |
 | `BOE_SONIA_CSV_BASE_URL`        | `https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp` | Bank of England IADB SONIA Compounded Index CSV base path (`SeriesCodes=IUDZOS2`) |
+| `CBRT_EVDS_FE_URL`              | `https://evds3.tcmb.gov.tr/igmevdsms-dis/fe` | CBRT EVDS3 feed endpoint used for BIST TLREF (`TP.BISTTLREF.ORAN`) |
 | `BOJ_CALL_RATE_JSON_BASE_URL`   | `https://www.stat-search.boj.or.jp/api/v1/getDataCode` | Bank of Japan call-rate API base path |
 | `RBA_F1_MONEY_MARKET_CSV_URL`   | `https://www.rba.gov.au/statistics/tables/csv/f1-data.csv` | Reserve Bank of Australia F1 money-market CSV |
 | `PYS_SCALING_FACTOR`            | 8                                                           | PYS distribution tuning parameter after safety-curve steepening |
@@ -1099,7 +1113,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP 3M compounded SONIA, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD cash-rate target, CAD CORRA proxy) |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, USD EFFR, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP 3M compounded SONIA, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD cash-rate target, CAD CORRA proxy, TRY BIST TLREF) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |

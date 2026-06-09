@@ -33,12 +33,12 @@ export function YieldIntelligenceMethodologySection() {
                 ecosystems do not surface as recommended base-asset routes. Eligible tracked wrapper variants can also
                 surface their native/wrapper sources as linked parent routes, so parent assets such as BOLD can show
                 yBOLD and sBOLD context without removing the variants&apos; own rows. The curated auto-discovery lane also
-                pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, and EUTBL, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
+                pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Future allowlist rounds start from the monthly unmatched-high-TVL audit queue and protocol-category gate rather than broad protocol hunting. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, EUTBL, and wiTRY, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
                 supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
                 with missing source-risk evidence treated as neutral. Royco Dawn structured-tranche rows now attach senior
                 and junior opportunities to the tracked underlying stablecoin when the deposit token resolves, using
-                opportunity-level tranche safety for PYS without changing the underlying Report Card score. Curve Savings crvUSD now follows the active on-chain
+                opportunity-level tranche safety for PYS without changing the underlying Report Card score. Midas mMEV now has a curated NAV-oracle row, and Curve Savings crvUSD now follows the active on-chain
                 profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible
                 as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
@@ -166,7 +166,7 @@ export function YieldIntelligenceMethodologySection() {
                       not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
                       inheriting Tier 1 deterministic precedence reserved for native wrapper readers. Royco Dawn senior
                       and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded">structured-tranche</code>{" "}
-                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>
+                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>, while Midas mMEV publishes a NAV-appreciation row from the issuer-listed mMEV/USD oracle
                     </li>
                     <li>
                       <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
@@ -175,8 +175,8 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
                       Treasury-tracking tokens, derives APY from the selected benchmark registry entry net of known fee
-                      spreads, using USD by default, 3-month compounded €STR for EUR pegs, and 3-month compounded SARON
-                      for Swiss-franc pegs
+                      spreads, using USD by default, product-specific EFFR where configured, 3-month compounded €STR for EUR pegs, 3-month compounded SARON
+                      for Swiss-franc pegs, and BIST TLREF for TRY pegs. Rate-derived rows can also carry an explicit benchmark override for PYS/excess-yield provenance without changing the APY derivation benchmark
                     </li>
                   </ul>
                   <p>
