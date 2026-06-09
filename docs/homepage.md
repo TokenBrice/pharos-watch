@@ -11,6 +11,7 @@ Route contract for `/`, the main Pharos dashboard.
 - **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
 - **Page discovery module:** `src/components/homepage-discovery-module.tsx` + `src/hooks/use-homepage-discovery.ts` + `src/lib/homepage-discovery.ts`
+- **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
@@ -131,6 +132,7 @@ Under the fold (`HomeAltClient`):
 2. `HomepageDiscoveryModule`
 3. `PegBrowseStrip`
 4. `StablecoinTable`
+5. `HomeAltUpcomingHorizonConstellation`
 
 ### Key Stablecoin Data
 

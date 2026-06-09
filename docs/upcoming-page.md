@@ -41,15 +41,15 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 
 `UpcomingClient` builds entirely from checked-in metadata and static assets:
 
-| Source                   | Used for                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`), filtered on `status: "pre-launch"` in `upcoming-client.tsx` | the client card/filter universe                                                             |
-| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) | server-only: JSON-LD and the crawlable `sr-only` nav in `page.tsx`                                                             |
-| `shared/data/stablecoins/coins/*.json` | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"` |
-| `shared/data/stablecoins/coins.generated.json` | generated/runtime aggregate regenerated with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
-| `data/logos.json`        | per-coin logo display                                                                             |
-| `data/ai-summaries.json` | teaser copy shown on cards when available                                                         |
-| `src/lib/pre-launch.ts`  | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring |
+| Source                                                                                                                                | Used for                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`), filtered on `status: "pre-launch"` in `upcoming-client.tsx` | the client card/filter universe                                                                              |
+| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`)                                                                         | server-only: JSON-LD and the crawlable `sr-only` nav in `page.tsx`                                           |
+| `shared/data/stablecoins/coins/*.json`                                                                                                | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"`         |
+| `shared/data/stablecoins/coins.generated.json`                                                                                        | generated/runtime aggregate regenerated with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
+| `data/logos.json`                                                                                                                     | per-coin logo display                                                                                        |
+| `data/ai-summaries.json`                                                                                                              | teaser copy shown on cards when available                                                                    |
+| `src/lib/pre-launch.ts`                                                                                                               | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring            |
 
 The route does not call the Worker API directly. It is a metadata-driven surface over pre-launch stablecoin entries already checked into the repo.
 
@@ -108,7 +108,7 @@ The route now promotes the Telegram launch-alert workflow in two layers:
 - `src/app/upcoming/page.tsx` renders an `sr-only` nav containing links for every `PRE_LAUNCH_STABLECOIN`, so the page remains crawlable even though the visible card grid is client-rendered.
 - The page emits `CollectionPage` and `ItemList` JSON-LD for the current pre-launch detail routes.
 
-The visible route entrypoint is `/upcoming/`; the homepage does not render a separate upcoming-asset section.
+The visible route entrypoint is `/upcoming/`. The homepage renders only a compact `On the Horizon` logo constellation that links back to this route; `/upcoming/` remains the full filterable tracker and crawlable pre-launch surface.
 
 ---
 

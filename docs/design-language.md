@@ -127,8 +127,7 @@ Behavioral contract: [Homepage](./homepage.md)
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
 - Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop. The lazy boundary may reserve space before mount, but the loaded preview itself stays content-height so the page-discovery board follows without a dead desktop band.
-- Upcoming horizon module: a server-rendered `On the Horizon` panel below the main stablecoin board (`home-alt-upcoming-horizon.tsx`) that summarizes the pre-launch universe. It keeps the analytics `pharos-card-shell` treatment with a frost mono kicker and pairs two parts. The *approach rail* draws the five launch phases as circular phase badges sized by coin count, sitting along a hairline lane that brightens left→right toward a frost-lit live-market threshold; the launching-soon node carries a frost halo, and labels abbreviate below `sm`. The *Nearest launches* strip lists up to six pre-launch coins sorted by phase readiness then soonest expected date, each a flat hover tile linking to its detail page that surfaces the expected date or a red Overdue/Delayed drift flag. Phase colors reuse `PHASE_BADGE`/`PHASE_DOT` from `src/lib/pre-launch.ts`, the whole panel links to `/upcoming/`, and it uses flat hover tiles rather than nested cards with no edge accent stripe.
-- Upcoming horizon — constellation variant: an alternative `On the Horizon` panel rendered directly beneath the count-badge one (`home-alt-upcoming-horizon-constellation.tsx`). It keeps the same header and approach rail, but drops the *Nearest launches* strip and replaces each phase's count badge with that phase's ~40px coin logos — no connecting lines. At `xl+` each stage is a circular constellation on its own phase-colored tinted disc (`PHASE_FIELD`, hues mirroring `PHASE_BADGE`) so the five zones read as distinct; the disc diameter scales with coin count (a `packCircle` packer lays ≤6 coins as a single polygon ring and 7+ as a center star wrapped by concentric rings spaced one logo apart), so Announced is the largest cluster and the sparse stages are small pairs. All discs center on the brightening horizon beam, with the frost-lit launching-soon threshold carrying an extra glow; labels sit below with a `PHASE_DOT` chip. Below `xl` the phases stack as full-width labelled lanes whose logos wrap. Each logo links to its detail page.
+- Upcoming horizon module: a server-rendered `On the Horizon` panel below the main stablecoin board (`home-alt-upcoming-horizon-constellation.tsx`) that summarizes the pre-launch universe. It keeps the analytics `pharos-card-shell` treatment with a frost mono kicker and an approach rail, but represents phases with the actual upcoming coin logos instead of count-only badges. At `xl+` each stage is a circular constellation on its own phase-colored tinted disc (`PHASE_FIELD`, hues mirroring `PHASE_DOT`) so the five zones read as distinct; the disc diameter scales with coin count (a `packCircle` packer lays ≤6 coins as a single polygon ring and 7+ as a center star wrapped by concentric rings spaced one logo apart), so Announced is the largest cluster and sparse stages are small pairs. All discs center on the brightening horizon beam, with the frost-lit launching-soon threshold carrying an extra glow; labels sit below with a `PHASE_DOT` chip and count. Below `xl` the phases stack as full-width labelled lanes whose logos wrap. Each logo links to its detail page, the module links to `/upcoming/`, and there is no separate nearest-launches strip or edge accent stripe.
 
 ### Stablecoin Detail (Special)
 
@@ -158,15 +157,16 @@ Digest entries use a distinctive **"intelligence briefing"** editorial aesthetic
 
 The digest feature employs a dual-font hierarchy that evokes newspaper headlines over wire-service dispatches:
 
-| Element | Font | Rationale |
-|---------|------|-----------|
-| **Headlines** | `font-serif` + route-local `Newsreader` usage where needed | Editorial authority — magazine headline gravitas |
-| **Body copy** | `Courier New` italic | Raw urgency — telegrams, terminals, raw intel |
-| **Metadata** | `Courier New` upright | Systematic precision — timestamps, edition numbers |
+| Element       | Font                                                       | Rationale                                          |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| **Headlines** | `font-serif` + route-local `Newsreader` usage where needed | Editorial authority — magazine headline gravitas   |
+| **Body copy** | `Courier New` italic                                       | Raw urgency — telegrams, terminals, raw intel      |
+| **Metadata**  | `Courier New` upright                                      | Systematic precision — timestamps, edition numbers |
 
 This pairing creates a "broadsheet newspaper" aesthetic that signals both authority and real-time urgency. It is one of three intentional non-Geist text treatments in Pharos, alongside the stablecoin-detail `AiSummary` Georgia serif paragraph and the `/timeline/` wire-service stream documented in `### Tape (Special)` below.
 
 **Implementation**: Import styles from `@/lib/digest`:
+
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
 - `EDITORIAL_META_STYLE` — Courier upright for labels
 
@@ -197,27 +197,27 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 
 ### Heading Scale
 
-| Role                      | Live class pattern                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                  |
-| Shared page title utility | `pharos-page-title`                                                                           |
+| Role                      | Live class pattern                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                                                          |
+| Shared page title utility | `pharos-page-title`                                                                                                                  |
 | Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
-| Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
-| Home logotype label       | `text-sm font-mono font-semibold uppercase tracking-[0.14em] md:text-[1.02rem] md:tracking-[0.16em]` |
-| Primary section heading   | `leading-none font-semibold`                                                                 |
-| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                            |
-| Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground` |
-| Subsection heading        | `text-foreground font-medium`                                                                |
+| Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]`                              |
+| Home logotype label       | `text-sm font-mono font-semibold uppercase tracking-[0.14em] md:text-[1.02rem] md:tracking-[0.16em]`                                 |
+| Primary section heading   | `leading-none font-semibold`                                                                                                         |
+| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                                                                    |
+| Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`                                         |
+| Subsection heading        | `text-foreground font-medium`                                                                                                        |
 
 ### Body + Supporting Text
 
-| Role               | Live class pattern                             |
-| ------------------ | ---------------------------------------------- |
-| Standard body copy | `text-sm text-muted-foreground`                |
-| Shared lead copy   | `pharos-lead`                                 |
-| Small metadata     | `text-xs text-muted-foreground`                |
-| Shared metadata    | `pharos-meta`                                 |
-| Card micro-labels  | `text-xs uppercase tracking-wide`              |
+| Role               | Live class pattern                                                          |
+| ------------------ | --------------------------------------------------------------------------- |
+| Standard body copy | `text-sm text-muted-foreground`                                             |
+| Shared lead copy   | `pharos-lead`                                                               |
+| Small metadata     | `text-xs text-muted-foreground`                                             |
+| Shared metadata    | `pharos-meta`                                                               |
+| Card micro-labels  | `text-xs uppercase tracking-wide`                                           |
 | Footer legal group | `flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground` |
 
 ### Numeric Language
@@ -306,17 +306,17 @@ Use the Pharos-owned table primitives in `src/components/table/` for visible pro
 
 Current component roles:
 
-| Component | Use when | Notes |
-| --- | --- | --- |
-| `TableFrame` | Standard children-first row tables, status/admin tables, embedded detail tables, and static content tables | Keep route-specific rows/cells as children; pass `tableId` for stable selectors and fallback table naming; `data-testid` defaults to `${tableId}-table`. |
-| `DataTableShell` | Sortable/paginated analytics tables that already have column descriptors and custom row children | Compatibility layer over `TableFrame`; still supports route-owned top slots and pagination. |
-| `MatrixTable` | Comparison/coverage matrices with sticky row headers or metric columns | Do not force matrix behavior into row-table APIs. |
-| `VirtualTableFrame` | Virtualized large tables such as the homepage stablecoin overview | Keep domain-specific row rendering, preference keys, and actions in the route wrapper; share only the shell, viewport, and table element. |
-| `TableToolbarFrame` | Generic table toolbar layout with title/meta/actions | Use this before creating route-local toolbar chrome. |
-| `TableControlsToolbar` | Shared density/settings/export toolbar for client tables | Import from `@/components/table/client`; pass route-specific column pickers through `columnsSlot`. |
-| `TableSettingsMenu` | Optional density, column, or custom table settings popovers | Import from `@/components/table/client`; column visibility remains caller-owned. |
-| `TableSkeletonRows` | Loading rows that preserve table semantics and density classes | Use inside `TableFrame`/`VirtualTableFrame` rather than standalone `div.pharos-table-shell` skeletons. |
-| `TableSourceLink` | External source links inside table cells or row details | Import from `@/components/table/client`; keeps focus, truncation, external-link icon, and optional row-click propagation behavior consistent. |
+| Component              | Use when                                                                                                   | Notes                                                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TableFrame`           | Standard children-first row tables, status/admin tables, embedded detail tables, and static content tables | Keep route-specific rows/cells as children; pass `tableId` for stable selectors and fallback table naming; `data-testid` defaults to `${tableId}-table`. |
+| `DataTableShell`       | Sortable/paginated analytics tables that already have column descriptors and custom row children           | Compatibility layer over `TableFrame`; still supports route-owned top slots and pagination.                                                              |
+| `MatrixTable`          | Comparison/coverage matrices with sticky row headers or metric columns                                     | Do not force matrix behavior into row-table APIs.                                                                                                        |
+| `VirtualTableFrame`    | Virtualized large tables such as the homepage stablecoin overview                                          | Keep domain-specific row rendering, preference keys, and actions in the route wrapper; share only the shell, viewport, and table element.                |
+| `TableToolbarFrame`    | Generic table toolbar layout with title/meta/actions                                                       | Use this before creating route-local toolbar chrome.                                                                                                     |
+| `TableControlsToolbar` | Shared density/settings/export toolbar for client tables                                                   | Import from `@/components/table/client`; pass route-specific column pickers through `columnsSlot`.                                                       |
+| `TableSettingsMenu`    | Optional density, column, or custom table settings popovers                                                | Import from `@/components/table/client`; column visibility remains caller-owned.                                                                         |
+| `TableSkeletonRows`    | Loading rows that preserve table semantics and density classes                                             | Use inside `TableFrame`/`VirtualTableFrame` rather than standalone `div.pharos-table-shell` skeletons.                                                   |
+| `TableSourceLink`      | External source links inside table cells or row details                                                    | Import from `@/components/table/client`; keeps focus, truncation, external-link icon, and optional row-click propagation behavior consistent.            |
 
 Content/reference tables should stay static: no sorting, export, toolbar, or pagination unless the route explicitly needs those controls. Tables with captions keep caption-based accessible names; unnamed framed tables derive a fallback label from `tableId`. Accessibility-only chart data tables may remain specialized.
 
@@ -421,13 +421,13 @@ The preferred finish-level control language is now the shared pill system:
 
 `POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines a 5-tier categorical color ladder used for the per-coin proof-of-reserves badge on detail pages. The ladder maps directly to `AttestorTier` from `shared/types/core.ts`:
 
-| Tier       | Color            | Token classes                                                                                  | Meaning                                                          |
-| ---------- | ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `big4`     | emerald          | `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30`               | Big-4 firm independent attestation                               |
-| `regional` | blue             | `bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30`                           | Licensed regional CPA / auditor                                  |
-| `niche`    | muted / neutral  | `bg-muted/40 text-muted-foreground border-border/60`                                           | Single-jurisdiction or small-practice attestor                   |
-| `self`     | amber            | `bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30`                       | Issuer self-attestation, no third-party signoff                  |
-| `none`     | red              | `bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30`                               | No attestation surface published                                 |
+| Tier       | Color           | Token classes                                                                    | Meaning                                         |
+| ---------- | --------------- | -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `big4`     | emerald         | `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30` | Big-4 firm independent attestation              |
+| `regional` | blue            | `bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30`             | Licensed regional CPA / auditor                 |
+| `niche`    | muted / neutral | `bg-muted/40 text-muted-foreground border-border/60`                             | Single-jurisdiction or small-practice attestor  |
+| `self`     | amber           | `bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30`         | Issuer self-attestation, no third-party signoff |
+| `none`     | red             | `bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30`                 | No attestation surface published                |
 
 This is the canonical 5-tier categorical ladder for evidence-quality badges. Reuse `POR_TIER_STYLES` rather than redefining the palette inline. The ladder degrades cleanly to a 3-tier emerald / amber / red flatten for severity-style surfaces; do not introduce a competing "audit quality" palette.
 
@@ -529,7 +529,7 @@ The desktop sidebar (`src/components/sidebar.tsx`) frames navigation as a lighth
 
 - Active sidebar item: `pharos-nav-active` — a frost wash falling from the icon side, a hairline frost inset ring + soft halo (no border stripe), `text-foreground`, and the Lucide icon lit `text-frost-blue`. The row also mounts a one-shot `pharos-nav-beam` light sweep on activation (gated on `prefers-reduced-motion: no-preference`).
 - Inactive sidebar item: `text-muted-foreground hover:bg-muted/50 hover:text-foreground` (no left border at any state).
-- When a live signal supplies an `accentClass` (the `/stability-index/` PSI band tint), the band background composes *beneath* `pharos-nav-active`, so an active item shows frost light on the icon side with the regime band persisting to the right.
+- When a live signal supplies an `accentClass` (the `/stability-index/` PSI band tint), the band background composes _beneath_ `pharos-nav-active`, so an active item shows frost light on the icon side with the regime band persisting to the right.
 - The brand lockup casts a thin frost shaft (`pharos-brand-beam`) along the header divider; the Search row is a bordered inset command field, not a nav link, and brightens its border toward frost on hover.
 
 The **core top rail** (`src/components/core-top-rail.tsx`) is the horizontal echo of the watch column. Each destination is a `.pharos-rail-tab` ghost chip; the active item gains `.pharos-rail-tab-active`, which reuses the exact frost `color-mix` recipe from `.pharos-nav-active` — frost wash + hairline frost inset ring + soft halo — scaled for a small inline pill rather than a full-width sidebar row. The active pill also mounts the `.pharos-nav-beam` one-shot frost sweep on activation (reduced-motion gated), and the nav bar sits on a very faint frost-tinted `.pharos-rail-ground` to distinguish it visually from the neutral-card live ticker tape directly above it. There is no left-edge accent stripe, consistent with the May 2026 harmonization and the June 2026 watch-column pass.
@@ -611,7 +611,7 @@ Live app-wide patterns:
 
 ## Draw the Metaphor
 
-When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines. On `/depeg/`, the Depeg Duration Resolver (DDR) draws each open event as a forecast timeline — the deviation path *so far* (peak → now spark), the verdict at a pulsing **NOW** marker, and the projected resolution band (median diamond + IQR over the 6h/24h/7d/30d landmark axis) reaching into the future — while its Reviewer (DDRR) draws a track-record timeline where every graded past call seats above the rail (correct) or below it (miss), so accuracy reads at a glance. The kill-vs-anchor tug-of-war and the DDRR calibration ledger remain beneath these as the "why" and the honesty check.
+When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines. On `/depeg/`, the Depeg Duration Resolver (DDR) draws each open event as a forecast timeline — the deviation path _so far_ (peak → now spark), the verdict at a pulsing **NOW** marker, and the projected resolution band (median diamond + IQR over the 6h/24h/7d/30d landmark axis) reaching into the future — while its Reviewer (DDRR) draws a track-record timeline where every graded past call seats above the rail (correct) or below it (miss), so accuracy reads at a glance. The kill-vs-anchor tug-of-war and the DDRR calibration ledger remain beneath these as the "why" and the honesty check.
 
 Rules that keep this from drifting into decoration:
 
