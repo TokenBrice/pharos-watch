@@ -1,7 +1,4 @@
 import { formatCompactCount } from "@shared/lib/format";
-import type { ConditionBand } from "@shared/lib/psi-colors";
-import { PSI_BG_OVERLAY_CLASSES } from "@shared/lib/psi-colors";
-import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import type {
   BlacklistSummaryResponse,
   HealthResponse,
@@ -21,21 +18,6 @@ export interface SidebarNavSignal {
 
 export const SIDEBAR_DIGEST_SEEN_STORAGE_KEY = "pharos-sidebar-digest-seen-generated-at";
 
-function getPsiSignalTone(band: string): SidebarNavSignal["tone"] {
-  switch (band as ConditionBand) {
-    case "BEDROCK":
-    case "STEADY":
-      return "healthy";
-    case "TREMOR":
-    case "FRACTURE":
-      return "warning";
-    case "CRISIS":
-    case "MELTDOWN":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
 
 export function parseSidebarDigestSeenAt(value: string | null): number | null {
   if (!value) return null;
@@ -70,17 +52,8 @@ export function getTapeNavSignal(pegSummary: PegSummaryResponse | null | undefin
   };
 }
 
-export function getStabilityIndexNavSignal(stabilityIndex: StabilityIndexResponse | null | undefined): SidebarNavSignal | null {
-  const current = stabilityIndex?.current;
-  if (!current) return null;
-
-  const displayed = getDisplayedPsi(current);
-  return {
-    kind: "accent",
-    title: `PSI ${displayed.score.toFixed(1)} (${displayed.band})`,
-    tone: getPsiSignalTone(displayed.band),
-    accentClass: PSI_BG_OVERLAY_CLASSES[displayed.band as ConditionBand],
-  };
+export function getStabilityIndexNavSignal(_stabilityIndex: StabilityIndexResponse | null | undefined): SidebarNavSignal | null {
+  return null;
 }
 
 export function getBlacklistNavSignal(blacklistSummary: BlacklistSummaryResponse | null | undefined): SidebarNavSignal | null {
