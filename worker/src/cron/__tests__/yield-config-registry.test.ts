@@ -14,6 +14,7 @@ import {
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
 } from "../yield-config";
+import { INTENTIONAL_GAP_REASONS } from "../yield-config-rate-sources";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));
@@ -26,7 +27,27 @@ const directProtocolApiIds = new Set(
     .filter((entry) => entry.directProtocolApiLabel)
     .map((entry) => entry.stablecoinId),
 );
+const trackedCoinsById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin] as const));
 const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["bold-liquity", "usdf-falcon"]);
+const WAVE_1_DETERMINISTIC_PROMOTION_IDS = [
+  "gtusdc-gauntlet",
+  "susdc-spark",
+  "susdt-spark",
+  "syrupusdc-maple",
+  "syrupusdt-maple",
+  "yvusdc-yearn",
+  "sgho-aave",
+  "wsrusd-reservoir",
+  "stcusd-cap",
+  "savusd-avant",
+  "yousd-yield-optimizer",
+] as const;
+const WAVE_1_RATE_DERIVED_IDS = [
+  "fusd-finchain",
+  "safo-spiko-usd",
+  "spkcc-spiko",
+] as const;
+const ONE_E18_INPUT_AMOUNT = 10n ** 18n;
 
 function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     return (
@@ -78,9 +99,89 @@ describe("yield config registry", () => {
     }
   });
 
+  it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {
+    const configsById = new Map(ON_CHAIN_RATE_CONFIGS.map((config) => [config.stablecoinId, config] as const));
+    const unsupportedLocalTargets = WAVE_1_DETERMINISTIC_PROMOTION_IDS.filter((stablecoinId) => {
+      const coin = trackedCoinsById.get(stablecoinId);
+      return !coin
+        || coin.status === "pre-launch"
+        || coin.status === "frozen"
+        || !coin.flags.yieldBearing
+        || !coin.flags.navToken
+        || !coin.yieldConfig
+        || (coin.contracts ?? []).length === 0;
+    });
+
+    expect(unsupportedLocalTargets).toEqual([]);
+
+    for (const stablecoinId of WAVE_1_DETERMINISTIC_PROMOTION_IDS) {
+      const config = configsById.get(stablecoinId);
+      expect(config, stablecoinId).toBeDefined();
+      if (!config) continue;
+
+      const coin = trackedCoinsById.get(stablecoinId);
+      const hasMatchingContract = coin?.contracts?.some(
+        (contract) =>
+          contract.chain === config.chain &&
+          contract.address.toLowerCase() === config.contract.toLowerCase(),
+      );
+      expect(hasMatchingContract, `${stablecoinId} ${config.chain} ${config.contract}`).toBe(true);
+      expect(config.selector, stablecoinId).toMatch(/^0x[0-9a-fA-F]{8}$/);
+      expect(BigInt(config.inputAmount), stablecoinId).toBeGreaterThan(0n);
+      expect(config.decimals, stablecoinId).toBeGreaterThan(0);
+
+      const manifestEntry = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId);
+      expect(manifestEntry?.status, stablecoinId).toBe("covered");
+      expect(manifestEntry?.strategies, stablecoinId).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "deterministic-onchain",
+            sourceKey: `onchain:${stablecoinId}`,
+          }),
+        ]),
+      );
+    }
+
+    expect(configsById.get("gtusdc-gauntlet")).toMatchObject({
+      decimals: 6,
+      inputAmount: expect.any(String),
+    });
+    expect(BigInt(configsById.get("gtusdc-gauntlet")?.inputAmount ?? "0")).toBe(ONE_E18_INPUT_AMOUNT);
+  });
+
   it("keeps rate-derived configs unique", () => {
     const ids = RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("wires Wave 1 rate-derived coverage through active manifest entries", () => {
+    const configsById = new Map(RATE_DERIVED_CONFIGS.map((config) => [config.stablecoinId, config] as const));
+
+    for (const stablecoinId of WAVE_1_RATE_DERIVED_IDS) {
+      const coin = trackedCoinsById.get(stablecoinId);
+      expect(coin?.status ?? "active", stablecoinId).toBe("active");
+      expect(coin?.flags.yieldBearing, stablecoinId).toBe(true);
+      expect(configsById.has(stablecoinId), stablecoinId).toBe(true);
+      expect(INTENTIONAL_GAP_REASONS[stablecoinId], stablecoinId).toBeUndefined();
+
+      const manifestEntry = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId);
+      expect(manifestEntry?.status, stablecoinId).toBe("covered");
+      expect(manifestEntry?.strategies, stablecoinId).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "rate-derived",
+            sourceKey: "rate-derived",
+          }),
+        ]),
+      );
+    }
+
+    for (const stablecoinId of ["safo-spiko-usd", "spkcc-spiko"] as const) {
+      expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
+        spreadBps: 0,
+      });
+      expect(configsById.get(stablecoinId)?.benchmarkCurrency ?? "USD", stablecoinId).toBe("USD");
+    }
   });
 
   it("requires every safety-bypass id to have a deterministic lending override", () => {
@@ -191,6 +292,11 @@ describe("yield config registry", () => {
     });
   });
 
+  it("includes Aave v4 in lending discovery allowlist labels", () => {
+    expect(LENDING_PROTOCOL_ALLOWLIST.has("aave-v4")).toBe(true);
+    expect(LENDING_PROTOCOL_LABELS["aave-v4"]).toBe("Aave v4");
+  });
+
   it("pins May 2026 native wrapper and rate-derived coverage without using invalid DL pools", () => {
     expect(YIELD_POOL_MAP).toMatchObject({
       "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
@@ -263,6 +369,17 @@ describe("yield config registry", () => {
         ],
       });
     }
+  });
+
+  it("does not keep unreachable STBT in the intentional gap inventory", () => {
+    expect(trackedCoinsById.has("stbt-matrixdock")).toBe(false);
+    expect(INTENTIONAL_GAP_REASONS["stbt-matrixdock"]).toBeUndefined();
+    expect(
+      YIELD_SOURCE_REGISTRY.some((entry) => entry.stablecoinId === "stbt-matrixdock"),
+    ).toBe(false);
+    expect(
+      YIELD_ADAPTER_MANIFEST.some((entry) => entry.stablecoinId === "stbt-matrixdock"),
+    ).toBe(false);
   });
 
   it("pins sBOLD's Liquity alt source to the explicit K3 wrapper label", () => {

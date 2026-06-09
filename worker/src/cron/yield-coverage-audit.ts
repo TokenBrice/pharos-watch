@@ -173,6 +173,7 @@ export interface CoverageGaps {
 
 const SOURCE_FAMILY_ADAPTER_PROJECTS = new Set([
   "aave-v3",
+  "aave-v4",
   "beefy",
   "compound-v3",
   "morpho-blue",

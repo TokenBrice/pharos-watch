@@ -1,5 +1,6 @@
 const LENDING_PROTOCOLS = {
   "aave-v3": { label: "Aave v3" },
+  "aave-v4": { label: "Aave v4" },
   "compound-v3": { label: "Compound v3" },
   "sparklend": { label: "SparkLend" },
   "spark-savings": { label: "Spark Savings" },

@@ -111,6 +111,105 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     inputAmount:
       "0x00000000000000000000000000000000000000000000000000000000000f4240",
   },
+  {
+    stablecoinId: "susdc-spark",
+    chain: "ethereum",
+    contract: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  {
+    stablecoinId: "susdt-spark",
+    chain: "ethereum",
+    contract: "0xe2e7a17dff93280dec073c995595155283e3c372",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  {
+    stablecoinId: "syrupusdc-maple",
+    chain: "ethereum",
+    contract: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  {
+    stablecoinId: "syrupusdt-maple",
+    chain: "ethereum",
+    contract: "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  {
+    stablecoinId: "yvusdc-yearn",
+    chain: "ethereum",
+    contract: "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  {
+    stablecoinId: "gtusdc-gauntlet",
+    chain: "ethereum",
+    contract: "0xdd0f28e19c1780eb6396170735d45153d261490d",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "sgho-aave",
+    chain: "ethereum",
+    contract: "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "wsrusd-reservoir",
+    chain: "ethereum",
+    contract: "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "stcusd-cap",
+    chain: "ethereum",
+    contract: "0x88887be419578051ff9f4eb6c858a951921d8888",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "savusd-avant",
+    chain: "avalanche",
+    contract: "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "yousd-yield-optimizer",
+    chain: "base",
+    contract: "0x0000000f2eb9f69274678c76222b35eec7588a65",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
 ];
 
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
@@ -134,6 +233,9 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "eursafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (EUR)", benchmarkCurrency: "EUR" },
   { stablecoinId: "gbpsafo-spiko", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (GBP)", benchmarkCurrency: "GBP" },
   { stablecoinId: "eurspkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (EUR risk-free leg)", benchmarkCurrency: "EUR" },
+  { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy" },
+  { stablecoinId: "safo-spiko-usd", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (USD)" },
+  { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
 ];
 
 /**
@@ -209,11 +311,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   },
-  "fusd-finchain": {
-    code: "issuer-distributed-yield",
-    since: "2026-05-24",
-    note: "daily reserve-yield rebase has no reliable runtime APY source wired yet",
-  },
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",
@@ -258,11 +355,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     code: "no-public-yield-source",
     since: "2026-04-14",
     note: "asset with no reliable runtime yield source yet",
-  },
-  "stbt-matrixdock": {
-    code: "off-chain-distribution",
-    since: "2026-04-14",
-    note: "Matrixdock STBT rebases daily off T-bill yield distributed off-chain; no public APY oracle wired yet",
   },
   "stkgho-umbrella-aave": {
     code: "external-emissions-only",
