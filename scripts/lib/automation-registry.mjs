@@ -523,8 +523,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   },
 ];
 
-export function buildGeneratedArtifactCommands({ check = false } = {}) {
-  return GENERATED_ARTIFACT_REGISTRY.map((artifact) => {
+export function buildGeneratedArtifactCommands({ check = false, skip = [] } = {}) {
+  const skipIds = new Set(skip);
+  return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => !skipIds.has(artifact.id)).map((artifact) => {
     if (check && artifact.checkCommand) {
       return artifact.checkCommand;
     }

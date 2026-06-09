@@ -527,7 +527,6 @@ describe("validate-ci parity", () => {
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
       "npm run generate:public-datasets",
       "npm run build",
-      "npm run test:a11y",
       "npm run check:feature-flag-inlining",
       "npm run check:phishing-signatures",
       "npm run check:classifier-sensitive-copy",
@@ -539,6 +538,7 @@ describe("validate-ci parity", () => {
       "Start local export smoke server",
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
+      "npm run test:a11y",
       "Wait for validation gate",
       "Wait for worker promotion gate",
       "Run local artifact smoke against promoted worker",
@@ -565,7 +565,6 @@ describe("validate-ci parity", () => {
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
       "npm run generate:public-datasets",
       "npm run build",
-      "npm run test:a11y",
       "npm run check:feature-flag-inlining",
       "npm run check:phishing-signatures",
       "npm run check:classifier-sensitive-copy",
@@ -577,6 +576,7 @@ describe("validate-ci parity", () => {
       "Start local export smoke server",
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
+      "npm run test:a11y",
     ]);
   });
 

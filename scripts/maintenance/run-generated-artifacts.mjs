@@ -4,8 +4,15 @@ import { pathToFileURL } from "node:url";
 import { createExecutionUnit, runCommandBatches, runShellCommand } from "../lib/command-runner.mjs";
 import { buildGeneratedArtifactCommands } from "../lib/automation-registry.mjs";
 
-export function buildGeneratedArtifactExecutionBatches({ check = false } = {}) {
-  return buildGeneratedArtifactCommands({ check }).map((cmd) => [createExecutionUnit([cmd])]);
+export function buildGeneratedArtifactExecutionBatches({ check = false, skip = [] } = {}) {
+  return buildGeneratedArtifactCommands({ check, skip }).map((cmd) => [createExecutionUnit([cmd])]);
+}
+
+function parseSkipFromEnv(env = process.env) {
+  return (env.GENERATED_ARTIFACTS_SKIP ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 }
 
 export async function runGeneratedArtifacts({
@@ -16,7 +23,13 @@ export async function runGeneratedArtifacts({
   const args = new Set(argv);
   const check = args.has("--check");
 
-  await runCommandBatches(buildGeneratedArtifactExecutionBatches({ check }), {
+  // Never skip in --check mode: the freshness gate must verify every committed artifact.
+  const skip = check ? [] : parseSkipFromEnv();
+  if (skip.length > 0) {
+    console.log(`[generated-artifacts] Skipping (verified separately by check:generated-artifacts): ${skip.join(", ")}`);
+  }
+
+  await runCommandBatches(buildGeneratedArtifactExecutionBatches({ check, skip }), {
     exit,
     label: check ? "generated-artifacts:check" : "generated-artifacts",
     runCommandImpl,

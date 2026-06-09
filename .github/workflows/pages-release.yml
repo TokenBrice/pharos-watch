@@ -75,14 +75,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
           tooling-cache: "true"
           install-playwright-chromium: "true"
-          install-playwright-firefox: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - name: Fetch depeg events from the target API environment
@@ -91,12 +90,16 @@ jobs:
         run: npm run generate:public-datasets
       - run: npm run build
         env:
+          # OG images are committed, weekly-refreshed (og-refresh.yml), and byte-verified
+          # fresh by check:generated-artifacts in the parallel validate-prebuild gate that
+          # blocks deploy. Skipping their Firefox render here removes them from the deploy
+          # critical path without changing output. Also drops the Firefox install need.
+          GENERATED_ARTIFACTS_SKIP: og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""
           SMOKE_API_BASE: ""
           API_BASE_URL: ""
-      - run: npm run test:a11y
       - run: npm run check:feature-flag-inlining
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
@@ -166,6 +169,9 @@ jobs:
       - name: Run local pre-publish checks in parallel
         env:
           PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}
+          # a11y reuses the static-export server started above instead of spawning its own,
+          # so it can run concurrently inside this block instead of as a standalone step.
+          PW_REUSE_SERVER: "1"
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
@@ -181,6 +187,9 @@ jobs:
           npm run seo:check &
           seo_pid=$!
 
+          npm run test:a11y &
+          a11y_pid=$!
+
           npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local &
           ui_pid=$!
 
@@ -192,6 +201,8 @@ jobs:
 
           wait "$seo_pid"
           seo_status=$?
+          wait "$a11y_pid"
+          a11y_status=$?
           wait "$ui_pid"
           ui_status=$?
 
@@ -201,8 +212,8 @@ jobs:
             mobile_status=$?
           fi
 
-          if [ "$seo_status" -ne 0 ] || [ "$ui_status" -ne 0 ] || [ "$mobile_status" -ne 0 ]; then
-            echo "local pre-publish statuses: seo=${seo_status}, ui=${ui_status}, mobile=${mobile_status}"
+          if [ "$seo_status" -ne 0 ] || [ "$a11y_status" -ne 0 ] || [ "$ui_status" -ne 0 ] || [ "$mobile_status" -ne 0 ]; then
+            echo "local pre-publish statuses: seo=${seo_status}, a11y=${a11y_status}, ui=${ui_status}, mobile=${mobile_status}"
             exit 1
           fi
       - name: Wait for validation gate

@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: {
     command: "npm run serve:static-export",
     url: staticExportBaseUrl,
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PW_REUSE_SERVER === "1",
     timeout: 120_000,
   },
   expect: {
