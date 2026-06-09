@@ -100,8 +100,9 @@ import {
 } from "../yield-sync/supplemental-source-families";
 
 async function flushMicrotasks() {
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let i = 0; i < 8; i += 1) {
+    await Promise.resolve();
+  }
 }
 
 describe("syncYieldSupplemental", () => {

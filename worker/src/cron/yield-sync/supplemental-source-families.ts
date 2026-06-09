@@ -14,6 +14,7 @@ import {
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
 } from "./sources";
+import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
@@ -44,6 +45,8 @@ export interface SupplementalSourceFamilyResult {
   status: "ok" | "failed";
   telemetry?: OptionalRpcFamilyTelemetry;
 }
+
+type SupplementalSourceFamilyStatus = SupplementalSourceFamilyResult["status"];
 
 export type SupplementalSourceFamilyKey =
   | "morpho"
@@ -149,16 +152,13 @@ async function runOptionalSupplementalFamily<T>(
   signal: AbortSignal | undefined,
   fn: () => Promise<T>,
   fallback: T,
-): Promise<{ value: T; status: SupplementalSourceFamilyResult["status"] }> {
-  try {
-    return { value: await fn(), status: "ok" };
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
-    console.warn(`[yield] ${label} failed:`, error);
-    return { value: fallback, status: "failed" };
-  }
+): Promise<{ value: T; status: SupplementalSourceFamilyStatus }> {
+  return runOptionalSourceFamily<{ value: T; status: SupplementalSourceFamilyStatus }>(
+    label,
+    signal,
+    async () => ({ value: await fn(), status: "ok" }),
+    { value: fallback, status: "failed" as const },
+  );
 }
 
 function isStructurallyValidSupplementalCandidate(candidate: ResolvedYieldCandidate): boolean {
