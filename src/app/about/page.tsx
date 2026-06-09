@@ -26,6 +26,11 @@ import {
   type AboutFeatureItem,
 } from "./content";
 import {
+  PRINCIPLES_AI_POLICY,
+  PRINCIPLES_AXIOMS,
+  PRINCIPLES_CORRECTIONS,
+} from "./principles/content";
+import {
   ACTIVE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
   PRE_LAUNCH_STABLECOIN_COUNT,
@@ -87,15 +92,15 @@ const ABOUT_PAGE_JSON_LD = {
     },
     {
       "@type": "WebPage",
-      "@id": `${SITE_ORIGIN}/about/principles/#principles`,
+      "@id": `${SITE_ORIGIN}/about/#principles`,
       name: "Pharos Principles",
-      url: `${SITE_ORIGIN}/about/principles/`,
+      url: `${SITE_ORIGIN}/about/#principles`,
     },
     {
       "@type": "WebPage",
-      "@id": `${SITE_ORIGIN}/about/editorial/#editorial-policy`,
+      "@id": `${SITE_ORIGIN}/about/#editorial-ai-policy`,
       name: "Editorial Policy",
-      url: `${SITE_ORIGIN}/about/editorial/`,
+      url: `${SITE_ORIGIN}/about/#editorial-ai-policy`,
     },
     {
       "@type": "WebPage",
@@ -163,18 +168,20 @@ function AboutFeatureRow({ item }: { item: AboutFeatureItem }) {
 }
 
 function AboutSection({
+  id,
   eyebrow,
   title,
   children,
   contentClassName,
 }: {
+  id?: string;
   eyebrow: string;
   title: string;
   children: ReactNode;
   contentClassName?: string;
 }) {
   return (
-    <Card className="rounded-xl">
+    <Card id={id} className="scroll-mt-24 rounded-xl">
       <CardHeader className="space-y-2">
         <div className="flex items-center gap-3">
           <p className="pharos-kicker">{eyebrow}</p>
@@ -234,6 +241,13 @@ export default function AboutPage() {
     deadStablecoins: deadStablecoinCount,
   });
   const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: activeStablecoinCount });
+  const operatingPrinciples = [
+    PRINCIPLES_AXIOMS[0],
+    PRINCIPLES_AXIOMS[1],
+    PRINCIPLES_AXIOMS[6],
+    PRINCIPLES_AXIOMS[8],
+    PRINCIPLES_AXIOMS[9],
+  ];
 
   return (
     <FeaturePageShell
@@ -321,19 +335,52 @@ export default function AboutPage() {
             and make the most of it.
           </p>
           <p>
-            For the editorial position that drives what Pharos computes and refuses to compute, read the{" "}
-            <Link href="/about/principles/" className={INLINE_EXTERNAL_LINK_CLASS}>
-              Pharos Principles
-            </Link>
-            .
-          </p>
-          <p>
             For architecture, methodology, and design references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
             </Link>
             .
           </p>
+        </AboutSection>
+
+        <AboutSection
+          id="principles"
+          eyebrow="Operating stance"
+          title="Principles, AI Policy, and Corrections"
+          contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            {operatingPrinciples.map((axiom) => (
+              <article key={axiom.title} className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">{axiom.title}</h3>
+                <p className="mt-1">{axiom.body}</p>
+              </article>
+            ))}
+          </div>
+          <div
+            id="editorial-ai-policy"
+            className="scroll-mt-24 rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+          >
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              {PRINCIPLES_AI_POLICY.title}
+            </h3>
+            <p className="mt-1">{PRINCIPLES_AI_POLICY.body}</p>
+          </div>
+          <div
+            id="corrections-policy"
+            className="scroll-mt-24 rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+          >
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              {PRINCIPLES_CORRECTIONS.title}
+            </h3>
+            <p className="mt-1">
+              {PRINCIPLES_CORRECTIONS.body}{" "}
+              <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
+                See the funding ledger
+              </Link>{" "}
+              for the inbound side of the same accountability.
+            </p>
+          </div>
         </AboutSection>
 
         <AboutSection

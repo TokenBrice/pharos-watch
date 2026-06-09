@@ -55,7 +55,7 @@ describe("AboutPage", () => {
         expect.objectContaining({ "@id": "https://pharos.watch/about/api/#webapi" }),
         expect.objectContaining({ "@id": "https://pharos.watch/about/api/#data-catalog" }),
         expect.objectContaining({ "@id": "https://pharos.watch/docs/data-pipeline/#tech-article" }),
-        expect.objectContaining({ "@id": "https://pharos.watch/about/principles/#principles" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/about/#principles" }),
         expect.objectContaining({ "@id": "https://pharos.watch/funding/#funding" }),
       ]),
     );
