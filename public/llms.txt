@@ -37,7 +37,6 @@
 
 ## Learn
 
-- [Learn](https://pharos.watch/learn/): Stablecoin mechanisms, depeg case studies, and version-pinned Pharos vocabulary.
 - [Stablecoin Glossary](https://pharos.watch/learn/glossary/): 16 citation-ready definitions for Pharos stablecoin analytics terminology.
 - [Glossary: PSI](https://pharos.watch/learn/glossary/#psi): Pharos Stability Index. A 30-minute ecosystem-wide condition score, 0–100, that subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term. The result maps into six condition bands from BEDROCK to MELTDOWN. PSI is conservative by design: one small depeg should not move the index, but simultaneous broad stress should. Always uppercase.
 - [Glossary: DEWS](https://pharos.watch/learn/glossary/#dews): Depeg Early Warning System. A forward-looking per-coin stress score, 0–100, recomputed every 30 minutes from eight weighted sub-signals: price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies. PSI condition and same-peg contagion can amplify the score before it lands in a band. Always uppercase, never spaced.

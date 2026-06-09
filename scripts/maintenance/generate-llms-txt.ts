@@ -121,11 +121,6 @@ const glossaryHighlights = ["psi", "dews", "pegscore", "safety-score", "liquidit
 
 const learnLinks = [
   [
-    "Learn",
-    absolute("/learn/"),
-    "Stablecoin mechanisms, depeg case studies, and version-pinned Pharos vocabulary.",
-  ],
-  [
     "Stablecoin Glossary",
     absolute("/learn/glossary/"),
     `${GLOSSARY_ENTRIES.length} citation-ready definitions for Pharos stablecoin analytics terminology.`,

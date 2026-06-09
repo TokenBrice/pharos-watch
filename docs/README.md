@@ -83,7 +83,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [api-page.md](./api-page.md) - `/api/` self-serve API access page plus `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
-- [learn-page.md](./learn-page.md) - `/learn/`, `/learn/case-studies/`, `/learn/case-studies/[slug]/`, and `/learn/glossary/` route contracts
+- [learn-page.md](./learn-page.md) - `/learn/case-studies/`, `/learn/case-studies/[slug]/`, and `/learn/glossary/` route contracts
 - [learn-mechanisms-page.md](./learn-mechanisms-page.md) - `/learn/mechanisms/` hub and `/learn/mechanisms/[archetype]/` explainer contract, content schema, and coverage invariant
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
@@ -140,7 +140,6 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/feed/methodology.xml/`                        | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
-| `/learn/`                                       | [learn-page.md](./learn-page.md)                                                                                                                      |
 | `/learn/case-studies/`                          | [learn-page.md](./learn-page.md)                                                                                                                      |
 | `/learn/case-studies/[slug]/`                   | [learn-page.md](./learn-page.md), [depeg-detection.md](./depeg-detection.md)                                                                          |
 | `/learn/glossary/`                              | [learn-page.md](./learn-page.md), [methodology-page.md](./methodology-page.md)                                                                        |

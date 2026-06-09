@@ -72,7 +72,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/learn/glossary/page.tsx` - route /learn/glossary; default:GlossaryPage, metadata
 - `src/app/learn/mechanisms/[archetype]/page.tsx` - route /learn/mechanisms/[archetype]; default:ArchetypeExplainerPage, generateMetadata, generateStaticParams
 - `src/app/learn/mechanisms/page.tsx` - route /learn/mechanisms; default:MechanismExplainersHub, metadata
-- `src/app/learn/page.tsx` - route /learn; default:LearnHub, metadata
 - `src/app/liquidity/client.tsx` - LiquidityClient
 - `src/app/liquidity/error.tsx`
 - `src/app/liquidity/loading.tsx` - LiquidityLoadingState, default:Loading

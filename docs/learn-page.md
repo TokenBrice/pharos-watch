@@ -2,18 +2,16 @@
 
 Contract for the broader learning-center surfaces:
 
-- `/learn/` - hub linking into mechanisms, case studies, and glossary
 - `/learn/case-studies/` - long-form depeg/failure retrospective index
 - `/learn/case-studies/[slug]/` - static case-study article pages
 - `/learn/glossary/` - alphabetized, methodology-version-pinned Pharos vocabulary
 
-Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that now sit beside them under `/learn/*`.
+Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that sit beside them under `/learn/*`. There is no `/learn/` overview route; the sidebar Learn section links directly to the thematic pages.
 
 ---
 
 ## Route Shape
 
-- **Learn hub:** `src/app/learn/page.tsx`
 - **Case-study hub:** `src/app/learn/case-studies/page.tsx`
 - **Case-study detail route:** `src/app/learn/case-studies/[slug]/page.tsx`
 - **Case-study shell/body:** `src/app/learn/case-studies/case-study-page-shell.tsx`, `src/app/learn/case-studies/case-study-body.tsx`
@@ -22,21 +20,7 @@ Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mec
 - **Glossary route:** `src/app/learn/glossary/page.tsx`
 - **Glossary content/schema:** `src/app/learn/glossary/content.ts`
 
-The Learn hub is a static `FeaturePageShell` route. It derives its section counts from `MECHANISM_ARCHETYPE_VALUES`, `CASE_STUDY_LIST.length`, and `GLOSSARY_ENTRIES.length`, so the visible counts move with the code registries.
-
 The case-study detail route is static-exported through `generateStaticParams()` from `CASE_STUDY_ORDER`. Unknown slugs return `notFound()`, while `generateMetadata()` returns non-indexing metadata for invalid slugs.
-
----
-
-## Learn Hub
-
-`/learn/` renders three linked section cards:
-
-- **Mechanisms** -> `/learn/mechanisms/`, count from `MECHANISM_ARCHETYPE_VALUES.length`
-- **Case Studies** -> `/learn/case-studies/`, count from `CASE_STUDY_LIST.length`
-- **Glossary** -> `/learn/glossary/`, count from `GLOSSARY_ENTRIES.length`
-
-The related-reference list links to `/methodology/`, `/depeg/`, `/cemetery/`, and `/timeline/`. Metadata uses `buildPageMetadata()` with canonical `/learn/` and `public/og-editorial-learn.png`.
 
 ---
 
@@ -80,11 +64,11 @@ Glossary entries live in `src/app/learn/glossary/content.ts`. Each entry owns:
 
 ## Sitemap + Inbound Surfaces
 
-`src/app/sitemap.ts` includes `/learn/`, `/learn/glossary/`, `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug.
+`src/app/sitemap.ts` includes `/learn/glossary/`, `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug.
 
 Primary inbound surfaces:
 
-- Sidebar learn group in `src/lib/nav-config.ts`
+- Sidebar Learn group in `src/lib/nav-config.ts`, with direct links to Mechanisms, Case Studies, and Glossary
 - Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`

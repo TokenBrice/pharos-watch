@@ -5,7 +5,7 @@ Contract for the educational explainer surfaces:
 - `/learn/mechanisms/` — hub listing all six archetypes
 - `/learn/mechanisms/[archetype]/` — per-archetype deep explainer
 
-The broader `/learn/`, `/learn/case-studies/`, and `/learn/glossary/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of that learning center, not the only `/learn/*` route family.
+The broader `/learn/case-studies/` and `/learn/glossary/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
 
 Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`fiat-cash`, `tbill`, `cdp`, `synthetic-delta-neutral`, `algorithmic`, `rwa-credit-fund`) each get a dedicated educational page that walks through the design, its failure modes, and which Pharos signals are most informative for that archetype.
 
@@ -98,7 +98,7 @@ The guard runs in `validate:prebuild` and so blocks deploy even on non-Pages-imp
 
 ## Inbound Surfaces
 
-- **Sidebar:** `src/lib/nav-config.ts` LEARN group → `Learn Overview`, `Mechanisms`, `Case Studies`, and `Glossary`
+- **Sidebar:** `src/lib/nav-config.ts` LEARN group → `Mechanisms`, `Case Studies`, and `Glossary`
 - **Coin detail (`src/components/key-info-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, gated on `meta.mechanismArchetype`.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`key-info-card` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn the mechanisms" callout near the top.

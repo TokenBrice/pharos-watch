@@ -85,7 +85,6 @@ describe("nav-config", () => {
     const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
     expect(learnGroup?.label).toBe("LEARN");
     expect(learnGroup?.items.map((item) => item.href)).toEqual([
-      "/learn/",
       "/learn/mechanisms/",
       "/learn/case-studies/",
       "/learn/glossary/",
@@ -115,7 +114,7 @@ describe("nav-config", () => {
     expect(corePageNav.primaryItems.some((item) => item.href === "/depeg/")).toBe(true);
     expect(corePageNav.primaryItems.some((item) => item.href === "/alt-pegs/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(true);
-    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/")).toBe(true);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/mechanisms/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/screener/")).toBe(true);
 
