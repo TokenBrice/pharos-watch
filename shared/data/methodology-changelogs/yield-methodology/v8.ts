@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.23",
+    title: "Wave 1 Source-Roster Expansion",
+    date: "2026-06-09",
+    effectiveAt: 1780963200,
+    summary:
+      "Yield Intelligence promotes selected curated wrappers to deterministic ERC-4626 coverage, adds rate-derived coverage for FUSD/SAFO/SPKCC, adds Aave v4 to lending auto-discovery, and removes an unreachable Matrixdock STBT intentional gap.",
+    impact: [
+      "`susdc-spark`, `susdt-spark`, `syrupusdc-maple`, `syrupusdt-maple`, `yvusdc-yearn`, `gtusdc-gauntlet`, `sgho-aave`, `wsrusd-reservoir`, `stcusd-cap`, `savusd-avant`, and `yousd-yield-optimizer` now have deterministic ERC-4626 exchange-rate coverage where the configured chain reader is available",
+      "Curated DeFiLlama rows for those wrappers remain eligible as fallback or retained alternate sources; the update improves source resilience without changing wrapper ownership semantics",
+      "`fusd-finchain`, `safo-spiko-usd`, and `spkcc-spiko` gain rate-derived coverage for fund or rebase mechanics that price-derived APY cannot model cleanly",
+      "`aave-v4` joins the curated lending auto-discovery allowlist",
+      "The phantom `stbt-matrixdock` intentional-gap entry is pruned because STBT is not a tracked stablecoin and could not surface in the yield adapter manifest",
+      "VBILL is intentionally excluded from this rate-derived batch; its metadata points to an on-chain NAVLink-style NAV feed, so it belongs to a future NAV-oracle source lane",
+      "PYS scoring math, source-risk penalties, history semantics, and publication guards are unchanged; the bump records source-roster and coverage-accounting changes",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.22",
     title: "First-Party GBP/JPY/AUD Benchmarks",
     date: "2026-06-07",

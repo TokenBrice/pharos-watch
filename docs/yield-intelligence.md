@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.22`
+- **Current methodology version:** `v8.23`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.23 is the Wave 1 source-roster expansion. It promotes selected curated wrappers to deterministic ERC-4626 exchange-rate coverage where the configured chain reader is available, with curated DeFiLlama rows retained as fallback/alternate sources; adds rate-derived coverage for FUSD, SAFO, and SPKCC; adds `aave-v4` to lending auto-discovery; and prunes the unreachable `stbt-matrixdock` intentional-gap entry. It deliberately does not add VBILL rate-derived coverage; VBILL remains a future NAV-oracle candidate. PYS scoring math, source-risk calibration, and publication guards are unchanged.
 
 Yield v8.22 uses first-party central-bank data for GBP/JPY/AUD benchmarks in the `fetchTbillRate` path, replacing the stale or proxy-driven FRED mirrors for these lanes. This keeps benchmark freshness metadata aligned with direct exchange-data availability while leaving yield scoring and source-arbitration semantics unchanged.
 
@@ -115,7 +117,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 11 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 22 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
@@ -130,6 +132,17 @@ Currently configured for 11 generic vaults (all use selector `0x07a2d13a` — `c
 | `susn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
 | `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
 | `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
+| `susdc-spark` | spUSDC | `0x28b3...a43d` | Ethereum |
+| `susdt-spark` | spUSDT | `0xe2e7...c372` | Ethereum |
+| `syrupusdc-maple` | syrupUSDC | `0x80ac...cc0b` | Ethereum |
+| `syrupusdt-maple` | syrupUSDT | `0x356b...ba7d` | Ethereum |
+| `yvusdc-yearn` | yvUSDC | `0xbe53...6204` | Ethereum |
+| `gtusdc-gauntlet` | gtUSDC | `0xdd0f...90d` | Ethereum |
+| `sgho-aave` | sGHO | `0xe175...ca1d` | Ethereum |
+| `wsrusd-reservoir` | wsrUSD | `0xd3fd...3094` | Ethereum |
+| `stcusd-cap` | stcUSD | `0x8888...8888` | Ethereum |
+| `savusd-avant` | savUSD | `0x06d4...219e` | Avalanche |
+| `yousd-yield-optimizer` | yoUSD | `0x0000...8a65` | Base |
 
 `scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `reusd-re-protocol` is also quarantined from the generic reader for now because its current `convertToAssets(1e18)` probe does not return a usable value, so it continues to rely on non-deterministic source paths until a protocol-specific deterministic adapter is added.
 
@@ -315,8 +328,12 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | EURSAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, EUR-denominated |
 | GBPSAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, GBP-denominated |
 | EURSPKCC | 0 | Spiko cash-and-carry strategy proxy (EUR risk-free leg) |
+| FUSD | 0 | FinChain tokenized T-bill/MMF reserve-yield proxy, USD-denominated |
+| SAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, USD-denominated |
+| SPKCC | 0 | Spiko cash-and-carry strategy proxy, USD risk-free leg |
 
 Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
+VBILL is intentionally not rate-derived in v8.23; its coin metadata documents an on-chain NAVLink-style NAV feed, so it belongs to a future NAV-oracle source lane rather than this benchmark-proxy roster.
 
 Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
 
@@ -328,7 +345,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 
 | Tier   | Protocols                                                                |
 | ------ | ------------------------------------------------------------------------ |
-| Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
+| Tier 1 | aave-v3, aave-v4, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
 | Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper, felix-cdp, sovryn-dex |
@@ -789,8 +806,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.22",
-    "currentVersion": "8.22",
+    "version": "8.23",
+    "currentVersion": "8.23",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

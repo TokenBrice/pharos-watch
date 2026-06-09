@@ -1,6 +1,18 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.22`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.23`.
+
+---
+
+## v8.23 - Wave 1 Source-Roster Expansion (June 9, 2026)
+
+- Selected curated wrappers now have deterministic ERC-4626 exchange-rate coverage through `ON_CHAIN_RATE_CONFIGS`: `susdc-spark`, `susdt-spark`, `syrupusdc-maple`, `syrupusdt-maple`, `yvusdc-yearn`, `gtusdc-gauntlet`, `sgho-aave`, `wsrusd-reservoir`, `stcusd-cap`, `savusd-avant`, and `yousd-yield-optimizer`
+- Curated DeFiLlama rows for those wrappers remain eligible as fallback or retained alternate sources; the change promotes source resilience and determinism rather than changing wrapper ownership
+- `fusd-finchain`, `safo-spiko-usd`, and `spkcc-spiko` gain rate-derived coverage for fixed-NAV or NAV-accreting fund mechanics that price-derived APY does not model cleanly
+- `aave-v4` joins the curated lending auto-discovery allowlist
+- The unreachable `stbt-matrixdock` intentional-gap entry is pruned because STBT is not tracked and could never surface in the yield adapter manifest
+- VBILL is intentionally excluded from this rate-derived batch because its metadata points to an on-chain NAVLink-style NAV feed; a future NAV-oracle source lane should handle it instead
+- PYS scoring math, source-risk penalties, history semantics, and publication guards are unchanged; v8.23 is a source-roster and coverage-accounting update
 
 ---
 
