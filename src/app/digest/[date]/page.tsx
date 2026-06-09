@@ -84,9 +84,8 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
   const formatted = formatDate(digest.date);
   const extendedParagraphs = splitDigestParagraphs(digest.extended);
   const isWeekly = digest.digestType === "weekly";
-  const editionKicker = digest.editionNumber
-    ? (isWeekly ? `Weekly Recap #${digest.editionNumber}` : `Daily Digest #${digest.editionNumber}`)
-    : (isWeekly ? "Weekly Recap" : undefined);
+  const editionLabel = isWeekly ? "Weekly Recap" : "Daily Digest";
+  const editionKicker = digest.editionNumber ? `${editionLabel} #${digest.editionNumber}` : editionLabel;
 
   // Find prev/next digests
   const idx = allDigests.findIndex((d) => d.date === digest.date);
@@ -128,11 +127,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           }),
         }}
       />
-      <EditorialMasthead
-        issueNumber={digest.editionNumber ?? (isWeekly ? "Weekly Recap" : "Daily Digest")}
-        date={formatted}
-        methodologyVersion={SAFETY_SCORE_VERSION_LABEL}
-      />
+      <EditorialMasthead date={formatted} />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -147,13 +142,8 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             <li aria-current="page" className="text-foreground">{formatted}</li>
           </ol>
         </nav>
-        {editionKicker && (
-          <p className="pharos-kicker">
-            {editionKicker}
-          </p>
-        )}
+        <p className="pharos-kicker">{editionKicker}</p>
         <h1 className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}>{digest.title}</h1>
-        <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
       <article className="space-y-6">
