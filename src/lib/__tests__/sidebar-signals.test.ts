@@ -30,7 +30,7 @@ describe("sidebar-signals", () => {
     expect(getDepegNavSignal({ summary: { activeDepegCount: 0 } } as PegSummaryResponse)).toBeNull();
   });
 
-  it("uses the displayed PSI score and severity tone", () => {
+  it("keeps the PSI sidebar signal hidden", () => {
     const response = {
       current: {
         score: 82.4,
@@ -45,12 +45,7 @@ describe("sidebar-signals", () => {
       methodology: { version: "1.0", versionLabel: "v1.0", currentVersion: "1.0", currentVersionLabel: "v1.0", changelogPath: "/methodology/stability-index-changelog/", asOf: 1_777_000_000, isCurrent: true },
     } as StabilityIndexResponse;
 
-    expect(getStabilityIndexNavSignal(response)).toEqual({
-      kind: "accent",
-      title: "PSI 77.2 (TREMOR)",
-      tone: "warning",
-      accentClass: "bg-yellow-500/15",
-    });
+    expect(getStabilityIndexNavSignal(response)).toBeNull();
   });
 
   it("shows a 24h blacklist-event signal only when the new stat is non-zero", () => {
