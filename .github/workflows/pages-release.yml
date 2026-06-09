@@ -81,11 +81,35 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           tooling-cache: "true"
-          install-playwright-chromium: "true"
-      - name: Fetch digests from the target API environment
-        run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
-      - name: Fetch depeg events from the target API environment
-        run: npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
+      - name: Install Chromium and fetch deploy data concurrently
+        run: |
+          set +e
+
+          # The API fetches need only Node deps (already installed), not a browser, so
+          # run them in the background while Chromium (used by the a11y check) installs
+          # in the foreground. This overlaps the network fetch with the browser install.
+          npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json > /tmp/sync-digests.log 2>&1 &
+          digests_pid=$!
+          npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json > /tmp/sync-depeg-events.log 2>&1 &
+          depeg_pid=$!
+
+          npx --no-install playwright install --with-deps chromium
+          chromium_status=$?
+
+          wait "$digests_pid"
+          digests_status=$?
+          wait "$depeg_pid"
+          depeg_status=$?
+
+          echo "----- sync-digests -----"
+          cat /tmp/sync-digests.log
+          echo "----- sync-depeg-events -----"
+          cat /tmp/sync-depeg-events.log
+
+          if [ "$chromium_status" -ne 0 ] || [ "$digests_status" -ne 0 ] || [ "$depeg_status" -ne 0 ]; then
+            echo "concurrent setup failed: chromium=${chromium_status} digests=${digests_status} depeg=${depeg_status}"
+            exit 1
+          fi
       - name: Generate public dataset mirrors from the target API environment
         run: npm run generate:public-datasets
       - run: npm run build

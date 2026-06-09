@@ -494,8 +494,7 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
     expect(consolidatedPagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
-    expect(consolidatedPagesReleaseJob).toContain("Fetch digests from the target API environment");
-    expect(consolidatedPagesReleaseJob).toContain("Fetch depeg events from the target API environment");
+    expect(consolidatedPagesReleaseJob).toContain("Install Chromium and fetch deploy data concurrently");
     expect(consolidatedPagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
