@@ -18,7 +18,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
       <span
         role="img"
         aria-label={`${name} logo`}
-        className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 text-xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
+        className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-muted text-xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
         style={{ width: size, height: size }}
       >
         {name.charAt(0).toUpperCase()}
@@ -28,7 +28,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
 
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
+      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-muted shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
       style={{ width: size, height: size }}
     >
       <Image

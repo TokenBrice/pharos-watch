@@ -9,8 +9,8 @@ describe("PHAROS_ORG_NODE", () => {
       "@type": "Organization",
       "@id": "https://pharos.watch#organization",
       foundingDate: "2026-01-29",
-      ethicsPolicy: "https://pharos.watch/about/principles/",
-      correctionsPolicy: "https://pharos.watch/about/principles/#principles-corrections-title",
+      ethicsPolicy: "https://pharos.watch/about/#principles",
+      correctionsPolicy: "https://pharos.watch/about/#corrections-policy",
       funding: {
         "@type": "Grant",
         "@id": "https://pharos.watch/funding/#community-support",

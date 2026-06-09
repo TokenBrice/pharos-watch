@@ -125,16 +125,6 @@ const METHODOLOGY_CHANGELOGS: readonly RouteRow[] = [
 
 const ABOUT_ROUTES: readonly RouteRow[] = [
   {
-    href: "/about/principles/",
-    label: "Principles",
-    description: "Operating principles for coverage and methodology",
-  },
-  {
-    href: "/about/editorial/",
-    label: "Editorial policy",
-    description: "How Pharos separates data, automation, and judgment",
-  },
-  {
     href: "/about/api/",
     label: "API access",
     description: "Endpoint reference and key requests",
@@ -143,11 +133,6 @@ const ABOUT_ROUTES: readonly RouteRow[] = [
     href: "/about/bluechip/",
     label: "Bluechip",
     description: "Bluechip tier definition and criteria",
-  },
-  {
-    href: "/about/style/",
-    label: "Style",
-    description: "Design language and editorial voice",
   },
   {
     href: "/learn/glossary/",

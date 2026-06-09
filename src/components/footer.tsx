@@ -22,7 +22,6 @@ const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; externa
   { href: "/funding/", label: "Funding" },
   { href: "/api/", label: "API" },
   { href: "/about/", label: "About" },
-  { href: "/about/principles/", label: "Principles" },
   { href: "/learn/glossary/", label: "Glossary" },
   { href: "/sitemap-tree/", label: "All pages" },
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },

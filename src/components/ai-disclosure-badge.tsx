@@ -19,7 +19,7 @@ export function AiDisclosureBadge(props: AiDisclosureFields) {
         {disclosure}
       </Badge>
       <Link
-        href="/about/editorial/#editorial-ai-policy"
+        href="/about/#editorial-ai-policy"
         className="pharos-focus-ring rounded-sm text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
       >
         Policy →

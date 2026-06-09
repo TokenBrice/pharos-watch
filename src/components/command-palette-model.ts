@@ -1,11 +1,9 @@
 import {
   BookOpen,
   Coins,
-  FileText,
   KeyRound,
   Landmark,
   LockKeyhole,
-  Newspaper,
   Scale,
   ScrollText,
   ShieldCheck,
@@ -111,18 +109,6 @@ export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
     label: "API Reference",
     icon: KeyRound,
     description: "Endpoint reference, authentication model, and public API access",
-  },
-  {
-    href: "/about/editorial/",
-    label: "Editorial Policy",
-    icon: Newspaper,
-    description: "How Pharos separates data, automated summaries, and editorial judgment",
-  },
-  {
-    href: "/about/principles/",
-    label: "Principles",
-    icon: FileText,
-    description: "Operating principles for stablecoin risk coverage and public methodology",
   },
   {
     href: "/methodology/pricing-pipeline-changelog/",

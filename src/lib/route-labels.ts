@@ -23,10 +23,7 @@ const NAV_ROUTE_LABELS: Record<string, string> = Object.fromEntries(
  * Hidden/static subroutes and legacy aliases that are not part of NAV_ITEMS.
  */
 const ROUTE_LABEL_OVERRIDES: Record<string, string> = {
-  "/about/style": "Style Guide",
-  "/about/principles": "Principles",
   "/about/bluechip": "Bluechip",
-  "/about/editorial": "Editorial",
   "/about/api": "API",
   "/learn": "Learn",
   "/learn/glossary": "Glossary",

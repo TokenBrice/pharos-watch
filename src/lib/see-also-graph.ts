@@ -342,47 +342,6 @@ export const SEE_ALSO_GRAPH: Record<string, ReadonlyArray<SeeAlsoLink>> = {
     },
   ],
 
-  // ── About ─────────────────────────────────────────────────────────────
-  "/about/principles/": [
-    {
-      href: "/about/editorial/",
-      label: "Editorial policy",
-      description: "How AI-authored content is reviewed and labeled.",
-    },
-    {
-      href: "/methodology/",
-      label: "Methodology",
-      description: "The scoring functions the principles guide.",
-    },
-    {
-      href: "/funding/",
-      label: "Funding ledger",
-      description: "Inbound side of the same accountability.",
-    },
-    {
-      href: "/about/bluechip/",
-      label: "Bluechip designation",
-      description: "A principle codified into the rubric.",
-    },
-  ],
-  "/about/editorial/": [
-    {
-      href: "/about/principles/",
-      label: "Pharos principles",
-      description: "The axioms behind the policy.",
-    },
-    {
-      href: "/digest/",
-      label: "Daily digest archive",
-      description: "Editorial output, dated and reviewed.",
-    },
-    {
-      href: "/methodology/",
-      label: "Methodology",
-      description: "The computed half of every editorial claim.",
-    },
-  ],
-
   // ── API & coverage ────────────────────────────────────────────────────
   "/api/": [
     {

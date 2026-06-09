@@ -291,24 +291,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
-      url: `${SITE_URL}/about/editorial/`,
-      lastModified: lastEdited("/about/editorial/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/about/principles/`,
-      lastModified: lastEdited("/about/principles/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${SITE_URL}/about/style/`,
-      lastModified: lastEdited("/about/style/"),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
       url: `${SITE_URL}/about/bluechip/`,
       lastModified: lastEdited("/about/bluechip/"),
       changeFrequency: "monthly",

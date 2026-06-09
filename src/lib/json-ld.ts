@@ -63,8 +63,8 @@ export const PHAROS_ORG_NODE = {
       availableLanguage: "en",
     },
   ],
-  ethicsPolicy: `${SITE_URL}/about/principles/`,
-  correctionsPolicy: `${SITE_URL}/about/principles/#principles-corrections-title`,
+  ethicsPolicy: `${SITE_URL}/about/#principles`,
+  correctionsPolicy: `${SITE_URL}/about/#corrections-policy`,
   funding: {
     "@type": "Grant",
     "@id": `${SITE_URL}/funding/#community-support`,
@@ -84,8 +84,8 @@ export function buildPharosOrganizationNode(siteUrl: string = SITE_URL) {
     "@id": `${siteUrl}#organization`,
     url: siteUrl,
     logo: `${siteUrl}/pharos-icon.png`,
-    ethicsPolicy: `${siteUrl}/about/principles/`,
-    correctionsPolicy: `${siteUrl}/about/principles/#principles-corrections-title`,
+    ethicsPolicy: `${siteUrl}/about/#principles`,
+    correctionsPolicy: `${siteUrl}/about/#corrections-policy`,
     funding: {
       ...PHAROS_ORG_NODE.funding,
       "@id": `${siteUrl}/funding/#community-support`,

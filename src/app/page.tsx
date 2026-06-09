@@ -4,6 +4,7 @@ import { HomeAltClient } from "@/components/home-alt-client";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeAltUpcomingHorizon } from "@/components/home-alt-upcoming-horizon";
+import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
@@ -96,6 +97,7 @@ export default function HomePage() {
       <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />
       <HomeAltUpcomingHorizon />
+      <HomeAltUpcomingHorizonConstellation />
     </div>
   );
 }

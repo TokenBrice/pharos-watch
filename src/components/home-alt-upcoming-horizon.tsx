@@ -47,10 +47,11 @@ function driftTextClass(drift: DriftStatus): string {
 }
 
 // Node diameter scales with the phase's coin count so the rail's silhouette
-// reads as the live distribution at a glance.
+// reads as the live distribution at a glance. A wide dynamic range keeps the
+// busiest and quietest phases visibly distinct rather than near-identical.
 function nodeSize(count: number, maxCount: number): number {
-  if (count === 0) return 24;
-  return 28 + Math.round((count / maxCount) * 20);
+  if (count === 0) return 26;
+  return 32 + Math.round((count / maxCount) * 26);
 }
 
 export function HomeAltUpcomingHorizon(): React.JSX.Element | null {
@@ -108,19 +109,20 @@ export function HomeAltUpcomingHorizon(): React.JSX.Element | null {
       </div>
 
       {/* ── Approach rail ──────────────────────────────────────── */}
-      <div className="px-4 py-5 sm:px-6">
-        <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="pharos-rail-ground px-4 py-6 sm:px-6">
+        <div className="mb-5 flex items-center justify-between gap-2">
           <span className="pharos-kicker">Approach to launch</span>
           <span className="hidden font-mono text-[10px] uppercase leading-none tracking-[0.14em] [color:color-mix(in_oklab,var(--brand-accent)_64%,var(--muted-foreground))] sm:inline">
-            Toward live market →
+            Toward live market
           </span>
         </div>
 
         <div className="relative grid grid-cols-5">
-          {/* The lane: a hairline brightening toward the frost-lit threshold. */}
+          {/* The beam: a hairline dimming far from launch and brightening into
+              the frost-lit live-market threshold at the right. */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-[10%] right-[10%] top-[26px] h-px -translate-y-1/2 bg-gradient-to-r from-border to-frost-blue/55"
+            className="pointer-events-none absolute left-[10%] right-[10%] top-[30px] h-px -translate-y-1/2 bg-gradient-to-r from-border to-frost-blue/60 dark:to-frost-blue/90 dark:shadow-[0_0_10px_0_color-mix(in_oklab,var(--frost-blue)_30%,transparent)]"
           />
           {PHASE_ORDER.map((phase, i) => {
             const count = counts[i];
@@ -128,14 +130,14 @@ export function HomeAltUpcomingHorizon(): React.JSX.Element | null {
             const isThreshold = phase === "launching-soon" && count > 0;
             return (
               <div key={phase} className="relative flex flex-col items-center gap-2">
-                <div className="flex h-[52px] items-center">
+                <div className="flex h-[60px] items-center">
                   <span
                     style={{ width: size, height: size }}
                     className={`relative z-10 inline-flex items-center justify-center rounded-full border font-mono text-[13px] font-bold tabular-nums ${PHASE_BADGE[phase]} ${
                       count === 0 ? "opacity-45" : ""
                     } ${
                       isThreshold
-                        ? "shadow-[0_0_0_5px_color-mix(in_oklab,var(--frost-blue)_12%,transparent)]"
+                        ? "shadow-[0_0_0_4px_color-mix(in_oklab,var(--frost-blue)_14%,transparent),0_0_18px_-2px_color-mix(in_oklab,var(--frost-blue)_32%,transparent)] dark:shadow-[0_0_0_5px_color-mix(in_oklab,var(--frost-blue)_22%,transparent),0_0_24px_-2px_color-mix(in_oklab,var(--frost-blue)_55%,transparent)]"
                         : ""
                     }`}
                   >
@@ -167,6 +169,7 @@ export function HomeAltUpcomingHorizon(): React.JSX.Element | null {
             const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
             const flagged = drift === "overdue" || drift === "pushed-multiple";
             const expected = coin.expectedLaunchDate;
+            const yearOnly = expected ? /^\d{4}$/.test(expected) : false;
             return (
               <Link
                 key={coin.id}
@@ -177,34 +180,43 @@ export function HomeAltUpcomingHorizon(): React.JSX.Element | null {
                 }${expected ? `, expected ${formatFuzzyDate(expected)}` : ""}${
                   flagged ? ` — ${DRIFT_STATUS_LABEL[drift]}` : ""
                 }`}
-                className="group pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/50"
+                className={`pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors ${
+                  flagged
+                    ? "bg-red-500/[0.06] hover:bg-red-500/10 dark:bg-red-500/[0.09]"
+                    : "hover:bg-muted/50"
+                }`}
               >
                 <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={30} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-foreground group-hover:text-foreground/80">
+                  <p className="truncate text-xs font-semibold text-foreground">
                     {coin.symbol}
                   </p>
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    {phase ? (
+                  {phase ? (
+                    <div className="mt-0.5 flex items-center gap-1.5">
                       <span
                         aria-hidden="true"
                         className={`h-1.5 w-1.5 shrink-0 rounded-full ${PHASE_DOT[phase]}`}
                       />
-                    ) : null}
-                    {flagged ? (
-                      <span className={`truncate font-mono text-[10px] font-medium ${driftTextClass(drift)}`}>
-                        {DRIFT_STATUS_LABEL[drift]}
+                      <span className="truncate text-[10px] font-medium text-muted-foreground">
+                        {LAUNCH_PHASE_LABELS[phase]}
                       </span>
-                    ) : (
-                      <span className="truncate font-mono text-[10px] text-muted-foreground">
-                        {expected
-                          ? formatFuzzyDate(expected)
-                          : phase
-                            ? LAUNCH_PHASE_LABELS[phase]
-                            : "—"}
-                      </span>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
+                  <p
+                    className={`mt-0.5 truncate font-mono text-[10px] ${
+                      flagged
+                        ? `font-medium ${driftTextClass(drift)}`
+                        : yearOnly
+                          ? "text-muted-foreground/55"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {flagged
+                      ? DRIFT_STATUS_LABEL[drift]
+                      : expected
+                        ? formatFuzzyDate(expected)
+                        : "Date TBD"}
+                  </p>
                 </div>
               </Link>
             );
