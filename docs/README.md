@@ -110,9 +110,6 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/about/bluechip/`                              | [about-page.md](./about-page.md), [bluechip-ratings.md](./bluechip-ratings.md), [report-cards.md](./report-cards.md)                                 |
-| `/about/editorial/`                             | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
-| `/about/principles/`                            | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
-| `/about/style/`                                 | [about-page.md](./about-page.md), [design-language.md](./design-language.md)                                                                          |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex wrapper / Pages redirect alias for `/freezewatch/`                                    |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |

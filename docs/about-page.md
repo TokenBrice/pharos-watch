@@ -24,24 +24,25 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 - `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with reference cards derived from the `NAV_GROUPS` entry keyed `"info"` (`NAV_GROUPS.find((g) => g.key === "info")`) excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/api/`, and `/changelog/`. Learn surfaces such as `/learn/mechanisms/` live in the separate Learn group.
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
-- public trust subroutes live under `/about/`: `/about/principles/` states the editorial/product principles and `/about/editorial/` states the AI editorial policy.
+- the public trust material lives inline on `/about/`: `#principles` states the editorial/product principles, `#editorial-ai-policy` states the AI-content policy, and `#corrections-policy` states the corrections path.
 
 ## Section Contract
 
 The page is organized into these sections, in order:
 
 1. `Why Pharos?`
-2. `Who Is Building Pharos?`
-3. `Live Walkthrough`
-4. `What Pharos Tracks`
-5. `What Pharos Computes`
-6. `Companion Experiences`
-7. `Classification`
-8. `Data Pipeline`
-9. `Methodology`
-10. `About Pharos FAQ`
-11. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-12. `Get in Touch`
+2. `Principles, AI Policy, and Corrections`
+3. `Who Is Building Pharos?`
+4. `Live Walkthrough`
+5. `What Pharos Tracks`
+6. `What Pharos Computes`
+7. `Companion Experiences`
+8. `Classification`
+9. `Data Pipeline`
+10. `Methodology`
+11. `About Pharos FAQ`
+12. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
+13. `Get in Touch`
 
 ## Design And Interaction Rules
 
@@ -64,7 +65,7 @@ The page is organized into these sections, in order:
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
 - `Funding`, `Methodology`, broadcast, Telegram, GitHub, and profile links are surfaced as explicit CTAs rather than buried inline links
-- The opening `Why Pharos?` section links to `/about/principles/`; the Principles route links onward to `/about/editorial/` for the full AI disclosure policy.
+- Standalone `/about/principles/`, `/about/editorial/`, and `/about/style/` routes were retired; link to `/about/#principles`, `/about/#editorial-ai-policy`, or `/about/#corrections-policy` when a trust-policy anchor is needed.
 
 ## Content Notes
 

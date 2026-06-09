@@ -9,13 +9,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/about/api/error.tsx`
 - `src/app/about/api/page.tsx` - route /about/api; default:AboutApiPage, metadata
 - `src/app/about/bluechip/page.tsx` - route /about/bluechip; default:AboutBluechipPage, metadata
-- `src/app/about/editorial/error.tsx`
-- `src/app/about/editorial/page.tsx` - route /about/editorial; default:AboutEditorialPage, metadata
 - `src/app/about/error.tsx`
 - `src/app/about/page.tsx` - route /about; default:AboutPage, metadata
-- `src/app/about/principles/error.tsx`
-- `src/app/about/principles/page.tsx` - route /about/principles; default:AboutPrinciplesPage, metadata
-- `src/app/about/style/page.tsx` - route /about/style; default:AboutStylePage, metadata
 - `src/app/admin-api/client.tsx` - default:AdminApiClient
 - `src/app/admin-api/page.tsx` - route /admin-api; default:AdminApiPage, metadata
 - `src/app/admin/client.tsx` - default:StatusClient
@@ -291,7 +286,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 369 more files omitted; use `rg --files src/components` for the full list.
+- ... 371 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
