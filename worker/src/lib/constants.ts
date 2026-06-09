@@ -79,6 +79,8 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = CACHE_AVAILABI
 export const RISK_FREE_RATE_FALLBACK = 3.75;
 /** FRED 3-month Treasury yield series (DGS3MO), used by fetch-tbill-rate cron. */
 export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO";
+/** FRED Effective Federal Funds Rate series (DFF), used for EFFR-linked yield products. */
+export const FRED_EFFR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF";
 /** Official ECB data API endpoint for 3-month compounded €STR. */
 export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";
@@ -117,7 +119,7 @@ export const MIN_SAFETY_SCORE_FOR_YIELD = 50;
 export const MIN_LENDING_POOL_APY = 0.1;
 /** Minimum TVL (USD) for auto-discovered lending pools to be eligible. */
 export const MIN_LENDING_POOL_TVL_USD = 100_000;
-/** Lower TVL floor for smaller ecosystems (Solana, Sui, Aptos, Cardano, Stacks). */
+/** Lower TVL floor for explicitly configured smaller or pre-mainnet ecosystems. */
 export const MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM = 25_000;
 /** Minimum lending-opportunity venue size relative to the tracked stablecoin's current supply. */
 export const MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY = 0.001;

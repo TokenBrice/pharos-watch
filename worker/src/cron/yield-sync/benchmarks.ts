@@ -16,6 +16,7 @@ export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
 
 export interface ParsedYieldBenchmarkRegistry {
   USD: ParsedYieldBenchmarkMeta;
+  USD_EFFR?: ParsedYieldBenchmarkMeta | null;
   EUR: ParsedYieldBenchmarkMeta | null;
   CHF: ParsedYieldBenchmarkMeta | null;
   GBP: ParsedYieldBenchmarkMeta | null;
@@ -33,6 +34,11 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     currency: "USD",
     isProxy: false,
   },
+  USD_EFFR: {
+    label: "USD effective federal funds rate",
+    currency: "USD",
+    isProxy: false,
+  },
   EUR: {
     label: "EUR 3M compounded €STR",
     currency: "EUR",
@@ -44,10 +50,10 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   GBP: {
-    // Bank of England IADB IUDSOIA SONIA daily rate; used as a proxy for full 3M compounding.
-    label: "GBP SONIA (overnight, proxy)",
+    // Bank of England IADB IUDZOS2 SONIA Compounded Index, annualized over a trailing 3M window.
+    label: "GBP 3M compounded SONIA",
     currency: "GBP",
-    isProxy: true,
+    isProxy: false,
   },
   JPY: {
     // Bank of Japan STRDCLUCON uncollateralized overnight call rate (TONA-equivalent proxy).
@@ -195,6 +201,7 @@ export function toYieldBenchmarkRegistry(
 ): YieldBenchmarkRegistry {
   return {
     USD: parsed.USD,
+    USD_EFFR: parsed.USD_EFFR ?? null,
     EUR: parsed.EUR,
     CHF: parsed.CHF,
     GBP: parsed.GBP,

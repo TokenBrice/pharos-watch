@@ -525,6 +525,26 @@ export interface YieldSourceRiskCoverageSummary {
   fields: Record<YieldSourceRiskCoverageField, YieldSourceRiskFieldCoverage>;
 }
 
+export interface YieldComparisonAnchorFreshnessExample {
+  stablecoinId: string;
+  symbol: string;
+  sourceKey: string;
+  dataSource: string;
+  anchorAgeSeconds: number;
+  comparisonAnchorObservedAt: number;
+}
+
+export interface YieldComparisonAnchorFreshnessSummary {
+  status: YieldHealthFieldStatus;
+  anchoredRowCount: number | null;
+  staleAnchorCount: number | null;
+  oldestAnchorAgeSeconds: number | null;
+  oldestAnchorStablecoinId: string | null;
+  oldestAnchorSourceKey: string | null;
+  staleAnchorExamples: YieldComparisonAnchorFreshnessExample[];
+  staleAnchorExamplesTruncated: boolean;
+}
+
 export type YieldCoverageAuditQueueAction = "accept" | "dismiss" | "intentional-gap" | "watch";
 
 export type YieldCoverageAuditQueueItemKind =
@@ -534,7 +554,8 @@ export type YieldCoverageAuditQueueItemKind =
   | "missing-protocol"
   | "native-exact-pool"
   | "source-family-adapter"
-  | "lending-allowlist";
+  | "lending-allowlist"
+  | "quarantine-ready-to-restore";
 
 export interface YieldCoverageAuditQueueItem {
   id: string;
@@ -617,6 +638,7 @@ export interface YieldHealthSummary {
     queuePersistence: "deferred";
   };
   sourceRiskCoverage: YieldSourceRiskCoverageSummary;
+  comparisonAnchorFreshness: YieldComparisonAnchorFreshnessSummary;
   latestCronStatus: string | null;
   latestCronStartedAt: number | null;
 }

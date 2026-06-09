@@ -111,6 +111,7 @@ const TONE_STYLES: Record<FilterTabTone, { active: string; inactive: string }> =
 const YIELD_TYPE_TONE: Record<string, FilterTabTone> = {
   "nav-appreciation": "emerald",
   "lending-opportunity": "sky",
+  "fixed-yield": "brand",
   "lending-vault": "orange",
   "governance-set": "orange",
   rebase: "purple",

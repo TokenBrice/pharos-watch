@@ -11,7 +11,7 @@ function buildMonthlyYieldAuditSlotGroups(runtime: ScheduledRuntimeContext): Sch
         {
           job: "yield-coverage-audit",
           errorMessage: "[cron] yield-coverage-audit failed in monthly slot:",
-          run: (signal) => runYieldCoverageAudit(runtime.db, signal),
+          run: (signal) => runYieldCoverageAudit(runtime.db, signal, runtime.chainRpcs),
         },
       ],
     },

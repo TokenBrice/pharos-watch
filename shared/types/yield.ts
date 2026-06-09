@@ -23,6 +23,7 @@ export interface YieldAdapterLifecycleReason {
 
 export const YIELD_BENCHMARK_KEY_VALUES = [
   "USD",
+  "USD_EFFR",
   "EUR",
   "CHF",
   "GBP",
@@ -223,6 +224,7 @@ const YieldBenchmarkMetaSchema = z.object({
 
 const YieldBenchmarkRegistrySchema = z.object({
   USD: YieldBenchmarkMetaSchema,
+  USD_EFFR: YieldBenchmarkMetaSchema.nullable().optional(),
   EUR: YieldBenchmarkMetaSchema.nullable().optional(),
   CHF: YieldBenchmarkMetaSchema.nullable().optional(),
   GBP: YieldBenchmarkMetaSchema.nullable().optional(),

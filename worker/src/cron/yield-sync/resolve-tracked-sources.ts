@@ -99,6 +99,7 @@ export async function resolveTrackedYieldSources(params: {
 }): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
+  const envelopeRejections: YieldResolutionResult["envelopeRejections"] = [];
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const onChainRateConfigById = buildConfigByStablecoinId(ON_CHAIN_RATE_CONFIGS);
   const rateDerivedConfigById = buildConfigByStablecoinId(RATE_DERIVED_CONFIGS);
@@ -135,6 +136,7 @@ export async function resolveTrackedYieldSources(params: {
       if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
         const actualDays = (params.startSec - prevRow.recordedAt) / DAY_SECONDS;
         const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
+        const sourceKey = buildOnChainSourceKey(id);
         if (isDeterministicApyWithinSanityBounds(apy)) {
           const nativePoolId = YIELD_POOL_MAP[id] ?? null;
           resolved.push({
@@ -148,12 +150,23 @@ export async function resolveTrackedYieldSources(params: {
               sourceTvlUsd: null,
               dataSource: "onchain",
               exchangeRate: rate,
-              sourceKey: buildOnChainSourceKey(id),
+              sourceKey,
               sourceObservedAt: params.startSec,
               comparisonAnchorObservedAt: prevRow.recordedAt,
             },
           });
           hasAnySource = true;
+        } else {
+          envelopeRejections.push({
+            stablecoinId: id,
+            symbol,
+            sourceKey,
+            computedApy: Number(apy.toFixed(6)),
+            exchangeRate: rate,
+            previousExchangeRate: prevRow.exchangeRate,
+            anchorObservedAt: prevRow.recordedAt,
+            actualDays: Number(actualDays.toFixed(4)),
+          });
         }
       } else {
         resolved.push({
@@ -339,5 +352,5 @@ export async function resolveTrackedYieldSources(params: {
     });
   }
 
-  return { resolved, tier1PrevRates };
+  return { resolved, tier1PrevRates, envelopeRejections };
 }

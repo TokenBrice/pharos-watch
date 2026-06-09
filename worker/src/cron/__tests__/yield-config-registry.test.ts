@@ -14,7 +14,11 @@ import {
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
 } from "../yield-config";
-import { INTENTIONAL_GAP_REASONS } from "../yield-config-rate-sources";
+import {
+  INTENTIONAL_GAP_REASONS,
+  QUARANTINED_DETERMINISTIC_PROBE_CONFIGS,
+} from "../yield-config-rate-sources";
+import { YIELD_ADAPTER_LIFECYCLE } from "../yield-config-registry";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));
@@ -233,6 +237,32 @@ describe("yield config registry", () => {
     expect(quarantined).toEqual(["reusd-re-protocol", "scrvusd-curve"]);
   });
 
+  it("keeps quarantined deterministic probe configs inactive until manually restored", () => {
+    const probeIds = QUARANTINED_DETERMINISTIC_PROBE_CONFIGS.map((config) => config.stablecoinId);
+
+    expect(probeIds).toEqual(["reusd-re-protocol"]);
+    expect(onChainIds.has("reusd-re-protocol")).toBe(false);
+    expect(QUARANTINED_DETERMINISTIC_PROBE_CONFIGS[0]).toMatchObject({
+      stablecoinId: "reusd-re-protocol",
+      chain: "ethereum",
+      contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+      selector: "0x07a2d13a",
+      decimals: 18,
+    });
+    expect(BigInt(QUARANTINED_DETERMINISTIC_PROBE_CONFIGS[0].inputAmount)).toBe(ONE_E18_INPUT_AMOUNT);
+  });
+
+  it("tracks the July quarantine review date in typed lifecycle metadata", () => {
+    expect(YIELD_ADAPTER_LIFECYCLE["scrvusd-curve"]).toMatchObject({
+      lifecycle: "quarantined",
+      reason: expect.objectContaining({ nextReviewAt: "2026-07-09" }),
+    });
+    expect(YIELD_ADAPTER_LIFECYCLE["reusd-re-protocol"]).toMatchObject({
+      lifecycle: "quarantined",
+      reason: expect.objectContaining({ nextReviewAt: "2026-07-09" }),
+    });
+  });
+
   it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {
     for (const stablecoinId of [
       "usde-ethena",
@@ -292,6 +322,22 @@ describe("yield config registry", () => {
     });
   });
 
+  it("allows Wave 2 category-gated thin-chain and app-chain lenders", () => {
+    const wave2Protocols = {
+      "aries-markets": "Aries Markets",
+      "blend-pools-v2": "Blend",
+      current: "Current",
+      curvance: "Curvance",
+      "scallop-lend": "Scallop",
+      tydro: "Tydro",
+    };
+
+    for (const [protocol, label] of Object.entries(wave2Protocols)) {
+      expect(LENDING_PROTOCOL_ALLOWLIST.has(protocol), protocol).toBe(true);
+      expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBe(label);
+    }
+  });
+
   it("includes Aave v4 in lending discovery allowlist labels", () => {
     expect(LENDING_PROTOCOL_ALLOWLIST.has("aave-v4")).toBe(true);
     expect(LENDING_PROTOCOL_LABELS["aave-v4"]).toBe("Aave v4");
@@ -333,6 +379,23 @@ describe("yield config registry", () => {
         ],
       });
     }
+  });
+
+  it("wires USDGO to an EFFR-linked rate-derived source", () => {
+    const coin = trackedCoinsById.get("usdgo-osl");
+    const config = RATE_DERIVED_CONFIGS.find((entry) => entry.stablecoinId === "usdgo-osl");
+
+    expect(coin?.yieldConfig).toMatchObject({
+      yieldSource: "USDGO EFFR-linked reserve yield",
+      yieldType: "governance-set",
+    });
+    expect(config).toMatchObject({
+      stablecoinId: "usdgo-osl",
+      spreadBps: 38,
+      benchmarkCurrency: "USD_EFFR",
+    });
+    expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
+    expect(INTENTIONAL_GAP_REASONS["usdgo-osl"]).toBeUndefined();
   });
 
   it("wires v8.16 coverage additions to runtime source keys", () => {

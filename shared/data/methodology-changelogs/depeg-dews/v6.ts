@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.07",
+    title: "Medium venue-risk yield anomaly branch",
+    date: "2026-06-09",
+    effectiveAt: 1780966800,
+    summary:
+      "DEWS now treats reviewed medium-risk yield venues as a bounded structured Yield Anomaly input while preserving the stronger high-risk venue branch.",
+    impact: [
+      "Structured Yield Intelligence evidence with `sourceRisk.venueRiskTier = \"medium\"` now adds +10 to the Yield Anomaly sub-signal",
+      "Medium venue-risk rows emit the `structured-medium-risk-venue` warning",
+      "The existing high-risk venue branch remains +25 with `structured-high-risk-venue`",
+      "The final Yield Anomaly sub-signal still caps at 100 after adding warning-string, source-risk, and rank-attribution evidence",
+      "Missing, malformed, unknown, low, or otherwise neutral venue-risk evidence remains a no-op and does not create an available zero-stress yield signal",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.06",
     title: "Confirmation peg-reference parity and directional duplicate repair",
     date: "2026-06-06",

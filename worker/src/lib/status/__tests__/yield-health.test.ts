@@ -6,7 +6,7 @@ import type { CronStatus } from "@shared/types/status";
 
 const NOW = 1_777_000_000;
 
-function cron(status = "ok", ageSec = 120): CronStatus {
+function cron(status = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
   return {
     expectedIntervalSec: CRON_INTERVALS["sync-yield-data"],
     healthy: true,
@@ -15,6 +15,7 @@ function cron(status = "ok", ageSec = 120): CronStatus {
       startedAt: NOW - ageSec,
       durationMs: 1000,
       status,
+      ...(metadata ? { metadata } : {}),
     },
   };
 }
@@ -114,6 +115,107 @@ describe("loadYieldHealthSummary", () => {
     });
     expect(summary.sourceRiskCoverage.fields.sourceRiskScore.nullRate).toBe(1);
     expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.coverageRatio).toBe(0);
+  });
+
+  it("surfaces comparison-anchor freshness without affecting top-level yield health", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            updatedAt: NOW - 300,
+            rankings: [{
+              id: "usde-ethena",
+              sourceRisk: {
+                sourceRiskScore: 0,
+                sourceRiskPenalty: 1,
+                sourceDepthRatio: 0.12,
+                rewardShare: 0,
+                sourceAgeSeconds: 120,
+                observationCount30d: 10,
+                venueRiskTier: "low",
+              },
+            }],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 1,
+                coveredCount: 1,
+                trackedCount: 1,
+                reason: null,
+              },
+              benchmark: {
+                fetchedAt: NOW - 3600,
+                ageSeconds: 3600,
+                source: "tbill-cache",
+                isFallback: false,
+                fallbackMode: null,
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: JSON.stringify({
+            manifestMissingCount: 0,
+            yieldBearingMissingFromRankingsCount: 0,
+            unmatchedHighTvlPoolCount: 0,
+            missingProtocolCount: 0,
+            nativeExactPoolRecommendationCount: 0,
+            sourceFamilyAdapterRecommendationCount: 0,
+            lendingAllowlistRecommendationCount: 0,
+          }),
+        },
+      ]),
+      NOW,
+      {
+        "sync-yield-data": cron("ok", 120, {
+          sourceCoverage: {
+            comparisonAnchorFreshness: {
+              anchoredRowCount: 2,
+              staleAnchorCount: 1,
+              oldestAnchorAgeSeconds: 15 * 86400,
+              oldestAnchorStablecoinId: "usde-ethena",
+              oldestAnchorSourceKey: "onchain:usde-ethena",
+              staleAnchorExamples: [{
+                stablecoinId: "usde-ethena",
+                symbol: "USDe",
+                sourceKey: "onchain:usde-ethena",
+                dataSource: "onchain",
+                anchorAgeSeconds: 15 * 86400,
+                comparisonAnchorObservedAt: NOW - 15 * 86400,
+              }],
+              staleAnchorExamplesTruncated: false,
+            },
+          },
+        }),
+      },
+    );
+
+    expect(summary.status).toBe("healthy");
+    expect(summary.comparisonAnchorFreshness).toEqual({
+      status: "degraded",
+      anchoredRowCount: 2,
+      staleAnchorCount: 1,
+      oldestAnchorAgeSeconds: 15 * 86400,
+      oldestAnchorStablecoinId: "usde-ethena",
+      oldestAnchorSourceKey: "onchain:usde-ethena",
+      staleAnchorExamples: [{
+        stablecoinId: "usde-ethena",
+        symbol: "USDe",
+        sourceKey: "onchain:usde-ethena",
+        dataSource: "onchain",
+        anchorAgeSeconds: 15 * 86400,
+        comparisonAnchorObservedAt: NOW - 15 * 86400,
+      }],
+      staleAnchorExamplesTruncated: false,
+    });
   });
 
   it("reports source-risk field coverage and null rates across best and alternate rows", async () => {

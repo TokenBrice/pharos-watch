@@ -2,16 +2,16 @@
 
 Triggered by `/api/status` field:
 - `yieldHealth.statusImpact="public-critical"` when `yield-rankings` is missing or stale
-- `yieldHealth.status="degraded"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, or low source-risk evidence coverage
+- `yieldHealth.status="degraded"` for admin-watch yield diagnostics such as sparse safety coverage, stale supplemental cache, benchmark fallback, old coverage audit, low source-risk evidence coverage, or stale comparison anchors
 
 ## Symptom
 
-The admin Pipeline lane shows stale or degraded Yield Health. Public impact is limited to stale or missing `yield-rankings`; source-family sparsity, supplemental staleness, benchmark fallback, source-risk evidence gaps, and old coverage-audit data are operator-watch signals unless a later rollout explicitly promotes them.
+The admin Pipeline lane shows stale or degraded Yield Health. Public impact is limited to stale or missing `yield-rankings`; source-family sparsity, supplemental staleness, benchmark fallback, source-risk evidence gaps, comparison-anchor freshness, and old coverage-audit data are operator-watch signals unless a later rollout explicitly promotes them.
 
 ## Impact
 
 - `public-critical`: stale or missing `yield-rankings` can make `/yield/`, stablecoin yield panels, and `GET /api/yield-rankings` stale or unavailable.
-- `admin-watch`: sparse safety coverage, stale supplemental coverage, benchmark fallback, low source-risk evidence coverage, and old coverage-audit data reduce operator confidence but do not by themselves change public status.
+- `admin-watch`: sparse safety coverage, stale supplemental coverage, benchmark fallback, low source-risk evidence coverage, stale comparison anchors, and old coverage-audit data reduce operator confidence but do not by themselves change public status.
 - Yield Health is read-only. It does not change scoring, source arbitration, publication eligibility, or methodology.
 
 ## First checks
@@ -22,7 +22,8 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 4. **Supplemental cache:** inspect `yieldHealth.supplemental`; `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and `families` identify which optional source families are stale or absent. A fresh family row with `sourceCount: 0` is valid evidence that the family ran and found no candidates; a missing family row means the family did not publish its health marker. Age above 6h means optional source families may be sparse.
 5. **Benchmark:** inspect `yieldHealth.benchmark`; fallback or age above 48h means retained benchmark data is driving yield context.
 6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage`; core fields below 75% coverage are admin-watch gaps. `venueRiskTier="unknown"` counts as missing evidence, not high risk.
-7. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue.
+7. **Comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness`; any `staleAnchorCount > 0` is an admin-watch signal. `oldestAnchorAgeSeconds`, `oldestAnchorStablecoinId`, `oldestAnchorSourceKey`, and bounded `staleAnchorExamples` identify the affected derived-source rows.
+8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue. Candidate kind `quarantine-ready-to-restore` means a monthly quarantine re-probe succeeded and still requires manual source restoration.
 
 Access-gated surfaces:
 
@@ -39,6 +40,7 @@ Access-gated surfaces:
 | Benchmark fallback | `sync-yield-data` benchmark provenance | Fallback active, missing benchmark, or age above 48h | Age above 24d | No | Retained or old benchmark data degrades Yield Health | [benchmark fallback](./yield-benchmark-fallback-stale.md) |
 | Coverage audit age | `yield-coverage-audit` -> `cache['yield-coverage-audit']` | Age above 45d or missing audit | Age above 540d | No | Late monthly review or unavailable queue stays watch-only | This runbook |
 | Source-risk coverage | `sync-yield-data` published `sourceRisk.*` rows and retained alternates | Any core field below 75% coverage: `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, or `sourceRiskScore` | No separate stale tier; zero coverage is degraded when ranking rows exist | No | Missing neutral-fallback evidence degrades Yield Health | This runbook |
+| Comparison-anchor freshness | `sync-yield-data` metadata `sourceCoverage.comparisonAnchorFreshness` | Any `staleAnchorCount > 0` | No separate stale tier | No | Stale comparison anchors degrade Yield Health as an operator-watch signal only | This runbook |
 
 Read-only JSON checks:
 
@@ -46,7 +48,7 @@ Read-only JSON checks:
 curl -fsS https://ops-api.pharos.watch/api/status \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
   -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-  | jq '.yieldHealth | {status, statusImpact, sourceRiskCoverage, coverageAudit}'
+  | jq '.yieldHealth | {status, statusImpact, sourceRiskCoverage, comparisonAnchorFreshness, coverageAudit}'
 ```
 
 ```bash
@@ -109,7 +111,8 @@ LIMIT 10;
 - **Stale supplemental cache:** inspect `sync-yield-supplemental`. Because supplemental sources are optional, do not block the public yield page solely on this signal.
 - **Benchmark fallback:** inspect `risk_free_rates` cache and the latest `sync-yield-data` metadata. A retained fallback is acceptable briefly; treat retained data older than 48h as needing operator follow-up.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.
-- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. This is a triage convention only; `queuePersistence="deferred"` means there is no persistent dismissal state.
+- **Stale comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness.staleAnchorExamples` and the latest `sync-yield-data` metadata. This identifies rows whose derived APY is comparing against an old anchor; do not change arbitration or manually rewrite history rows solely to clear this watch signal.
+- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. Candidate kind `quarantine-ready-to-restore` identifies a successful quarantine re-probe for manual restoration review; it is not automatic source restoration. This is a triage convention only; `queuePersistence="deferred"` means there is no persistent dismissal state.
 - **Old coverage audit:** inspect `yield-coverage-audit` cron history. It is monthly and watch-tier, so a late audit is a review backlog, not a public outage.
 
 ## Abort Conditions
@@ -117,7 +120,7 @@ LIMIT 10;
 - Do not manually edit `yield-rankings`, `yield_data`, `yield_history`, `yield_publication_generations`, or `yield_source_decisions` to make the health card green.
 - Do not guess or manually backfill source-risk tiers. `venueRiskTier="unknown"` is intentionally treated as missing evidence.
 - Do not clear a `sync-yield-data` or `sync-yield-supplemental` lease while `/api/status` shows a fresh active in-flight progress row.
-- Do not treat supplemental staleness, safety sparsity, source-risk coverage gaps, or coverage-audit age as public outages unless a later release explicitly changes the status-impact rule.
+- Do not treat supplemental staleness, safety sparsity, source-risk coverage gaps, comparison-anchor freshness, or coverage-audit age as public outages unless a later release explicitly changes the status-impact rule.
 - Stop if `cache['yield-history-cleanup:writer-pause']` is armed; use the writer-pause runbook before expecting hourly yield publication to advance.
 
 ## Validation
@@ -128,6 +131,7 @@ LIMIT 10;
 - If the latest generation failed, `yield_publication_generations.failure_reason` explains the failure while the previous public cache remains valid.
 - Supplemental, benchmark, and coverage-audit fields move back to `healthy` or an understood `degraded` state after their owning cron/cache recovers.
 - Source-risk coverage shows the expected ratios for `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, and `sourceRiskScore`.
+- Comparison-anchor freshness shows the expected anchored row count, stale anchor count, oldest stale anchor age/source, and bounded stale examples from the latest sync metadata.
 
 ## Rollback Notes
 

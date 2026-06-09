@@ -119,6 +119,12 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           rugged?: boolean | null;
           deprecated?: boolean | null;
         }[];
+        try {
+          await setCache(db, CIRCUIT_SOURCE.DL_PROTOCOLS, JSON.stringify(protocols));
+        } catch {
+          // Non-critical: the same payload is still consumed in this run, and the next
+          // successful DEX cron refreshes the source-management snapshot.
+        }
         for (const p of protocols) {
           if (p.category !== "Dexs") continue;
           if (p.deadFrom || p.rugged || p.deprecated) continue;
@@ -451,4 +457,3 @@ export function buildChainAddresses(chainMap: Record<string, string>): Map<strin
   }
   return result;
 }
-

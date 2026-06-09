@@ -27,6 +27,7 @@ const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "native-exact-pool",
   "source-family-adapter",
   "lending-allowlist",
+  "quarantine-ready-to-restore",
 ] satisfies YieldCoverageAuditQueueItemKind[];
 const SOURCE_RISK_COVERAGE_FIELDS = [
   "sourceRiskScore",
@@ -115,6 +116,52 @@ function getStringArray(value: unknown): string[] | null {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
     : null;
+}
+
+function readComparisonAnchorExamples(value: unknown): YieldHealthSummary["comparisonAnchorFreshness"]["staleAnchorExamples"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const row = getObject(entry);
+    const stablecoinId = getString(row?.stablecoinId);
+    const symbol = getString(row?.symbol);
+    const sourceKey = getString(row?.sourceKey);
+    const dataSource = getString(row?.dataSource);
+    const anchorAgeSeconds = getNumber(row?.anchorAgeSeconds);
+    const comparisonAnchorObservedAt = getNumber(row?.comparisonAnchorObservedAt);
+    return stablecoinId && symbol && sourceKey && dataSource && anchorAgeSeconds != null && comparisonAnchorObservedAt != null
+      ? [{
+          stablecoinId,
+          symbol,
+          sourceKey,
+          dataSource,
+          anchorAgeSeconds,
+          comparisonAnchorObservedAt,
+        }]
+      : [];
+  });
+}
+
+function buildComparisonAnchorFreshnessSummary(
+  crons: Record<string, CronStatus>,
+): YieldHealthSummary["comparisonAnchorFreshness"] {
+  const sourceCoverage = getObject(crons["sync-yield-data"]?.lastRun?.metadata?.sourceCoverage);
+  const summary = getObject(sourceCoverage?.comparisonAnchorFreshness);
+  const staleAnchorCount = getNumber(summary?.staleAnchorCount);
+
+  return {
+    status: staleAnchorCount == null
+      ? "unknown"
+      : staleAnchorCount > 0
+        ? "degraded"
+        : "healthy",
+    anchoredRowCount: getNumber(summary?.anchoredRowCount),
+    staleAnchorCount,
+    oldestAnchorAgeSeconds: getNumber(summary?.oldestAnchorAgeSeconds),
+    oldestAnchorStablecoinId: getString(summary?.oldestAnchorStablecoinId),
+    oldestAnchorSourceKey: getString(summary?.oldestAnchorSourceKey),
+    staleAnchorExamples: readComparisonAnchorExamples(summary?.staleAnchorExamples),
+    staleAnchorExamplesTruncated: getBoolean(summary?.staleAnchorExamplesTruncated) ?? false,
+  };
 }
 
 function getQueueAction(value: unknown): YieldCoverageAuditQueueAction {
@@ -590,6 +637,7 @@ export async function loadYieldHealthSummary(
     lendingAllowlistRecommendationCount,
   ]);
   const coverageAuditQueue = buildCoverageAuditQueue(coverageAuditPayload);
+  const comparisonAnchorFreshness = buildComparisonAnchorFreshnessSummary(crons);
 
   const status = worstStatus([
     rankingStatus,
@@ -644,6 +692,7 @@ export async function loadYieldHealthSummary(
       ...coverageAuditQueue,
     },
     sourceRiskCoverage,
+    comparisonAnchorFreshness,
     latestCronStatus: crons["sync-yield-data"]?.lastRun?.status ?? null,
     latestCronStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
   };

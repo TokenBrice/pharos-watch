@@ -27,46 +27,55 @@ function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYie
   } as EvaluatedYieldSource;
 }
 
-const V8_13_REVIEWED_TIERS = {
+const WAVE_2_REVIEWED_TIERS = {
   "aave-v3": "low",
   "compound-v3": "low",
   sparklend: "low",
+  "spark-savings": "low",
+  maple: "medium",
+  yearn: "low",
+  "yearn-finance": "low",
+  morpho: "medium",
+  "morpho-v1": "medium",
   "morpho-blue": "medium",
+  pendle: "low",
+  beefy: "medium",
 } as const;
 
 describe("yield source-risk registry", () => {
-  it("provides reviewed candidate entries with explicit evidence for non-unknown tiers", () => {
+  it("provides reviewed candidate entries with explicit evidence for every tracked tier", () => {
     expect(YIELD_RISK_CONFIG_REVIEW_CADENCE).toBe("monthly-yield-coverage-audit");
 
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       const config = YIELD_RISK_CONFIG[protocol];
+      const expectedTier = WAVE_2_REVIEWED_TIERS[protocol];
       expect(config.reviewCadence, protocol).toBe(YIELD_RISK_CONFIG_REVIEW_CADENCE);
-      if (Object.prototype.hasOwnProperty.call(V8_13_REVIEWED_TIERS, protocol)) {
-        const expectedTier = V8_13_REVIEWED_TIERS[protocol as keyof typeof V8_13_REVIEWED_TIERS];
-        expect(config.venueRiskTier, protocol).toBe(expectedTier);
-        expect(config.evidence.length, protocol).toBeGreaterThan(0);
-        expect(config.rationale.length, protocol).toBeGreaterThan(0);
-      } else {
-        expect(config.venueRiskTier, protocol).toBe("unknown");
-        expect(config.rationale, protocol).toContain("unknown remains neutral");
-        expect(config.evidence, protocol).toEqual([]);
-      }
+      expect(config.venueRiskTier, protocol).toBe(expectedTier);
+      expect(config.venueRiskTier, protocol).not.toBe("unknown");
+      expect(config.evidence.length, protocol).toBeGreaterThan(0);
+      expect(config.rationale.length, protocol).toBeGreaterThan(0);
     }
   });
 
-  it("derives matching PYS penalties for reviewed and pending tiers", () => {
+  it("derives matching PYS penalties for reviewed tiers", () => {
     const reviewedAave = resolveReviewedYieldRiskConfig("aave-v3");
     const reviewedMorphoBlue = resolveReviewedYieldRiskConfig("morpho-blue");
-    const pendingPendle = resolveReviewedYieldRiskConfig("pendle");
+    const reviewedPendle = resolveReviewedYieldRiskConfig("pendle");
+    const reviewedMaple = resolveReviewedYieldRiskConfig("maple");
+    const reviewedBeefy = resolveReviewedYieldRiskConfig("beefy");
     const unknownVenue = resolveReviewedYieldRiskConfig("unreviewed-protocol");
 
     expect(reviewedAave?.venueRiskTier).toBe("low");
     expect(reviewedMorphoBlue?.venueRiskTier).toBe("medium");
-    expect(pendingPendle?.venueRiskTier).toBe("unknown");
+    expect(reviewedPendle?.venueRiskTier).toBe("low");
+    expect(reviewedMaple?.venueRiskTier).toBe("medium");
+    expect(reviewedBeefy?.venueRiskTier).toBe("medium");
     expect(unknownVenue).toBeNull();
     expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedAave?.venueRiskTier })).toBe(1);
     expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedMorphoBlue?.venueRiskTier })).toBeCloseTo(1.15, 5);
-    expect(derivePysSourceRiskPenalty({ venueRiskTier: pendingPendle?.venueRiskTier })).toBe(1);
+    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedPendle?.venueRiskTier })).toBe(1);
+    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedMaple?.venueRiskTier })).toBeCloseTo(1.15, 5);
+    expect(derivePysSourceRiskPenalty({ venueRiskTier: reviewedBeefy?.venueRiskTier })).toBeCloseTo(1.15, 5);
     expect(derivePysSourceRiskPenalty({ venueRiskTier: unknownVenue?.venueRiskTier })).toBe(1);
   });
 
@@ -80,6 +89,44 @@ describe("yield source-risk registry", () => {
     expect(sourceRisk).toMatchObject({
       sourceRiskPenalty: 1,
       venueProtocol: "aave-v3",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+    });
+  });
+
+  it("treats fixed-yield Pendle rows as lending-market opportunities with reviewed venue risk", () => {
+    const sourceRisk = buildYieldSourceRisk({
+      source: makeSource({
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+        dataSource: "protocol-api",
+        yieldType: "fixed-yield",
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+
+    expect(sourceRisk).toMatchObject({
+      deploymentPlace: "lending-market",
+      venueProtocol: "pendle",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+    });
+  });
+
+  it("classifies fixed-yield Pendle PT rows as external lending-market exposure", () => {
+    const sourceRisk = buildYieldSourceRisk({
+      source: makeSource({
+        sourceKey: "protocol-api:pendle:ethereum:0xpt",
+        dataSource: "protocol-api",
+        yieldType: "fixed-yield",
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: false,
+    });
+
+    expect(sourceRisk).toMatchObject({
+      deploymentPlace: "lending-market",
+      venueProtocol: "pendle",
       venueChain: "ethereum",
       venueRiskTier: "low",
     });

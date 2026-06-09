@@ -135,6 +135,22 @@ describe("buildYieldViewModel", () => {
     });
   });
 
+  it("groups fixed-yield PT rows with external opportunity rows", () => {
+    const model = buildYieldViewModel([
+      makeYieldRanking({ id: "native", symbol: "NATIVE", yieldType: "lending-vault" }),
+      makeYieldRanking({ id: "lend", symbol: "LEND", yieldType: "lending-opportunity" }),
+      makeYieldRanking({ id: "fixed", symbol: "FIXED", yieldType: "fixed-yield" }),
+      makeYieldRanking({ id: "tranche", symbol: "TRANCHE", yieldType: "structured-tranche" }),
+    ], { opportunity: "lending-opportunity" });
+
+    expect(model.visibleRows.map((row) => row.id).sort()).toEqual(["fixed", "lend", "tranche"]);
+    expect(model.options.opportunity).toEqual([
+      { value: "all", label: "All opportunities", count: 4 },
+      { value: "holder-yield", label: "Holder yield", count: 1 },
+      { value: "lending-opportunity", label: "Opportunity rows", count: 3 },
+    ]);
+  });
+
   it("keeps expanded benchmark registry values valid when matching rows exist", () => {
     const model = buildYieldViewModel(
       [

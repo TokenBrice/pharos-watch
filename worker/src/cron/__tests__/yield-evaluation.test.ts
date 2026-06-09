@@ -230,6 +230,39 @@ describe("evaluateYieldSources", () => {
     expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
   });
 
+  it("keeps fixed-yield PT rows as alternatives when a holder-yield source exists", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "rate-derived",
+            dataSource: "rate-derived",
+            currentApy: 4,
+            yieldType: "governance-set",
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:pendle:ethereum:0xpt",
+            dataSource: "protocol-api",
+            currentApy: 8,
+            yieldSource: "Pendle fixed yield: Fixture PT-A",
+            yieldType: "fixed-yield",
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived");
+    expect(result.evaluatedSources.find(
+      (source) => source.sourceKey === "protocol-api:pendle:ethereum:0xpt",
+    )?.yieldType).toBe("fixed-yield");
+  });
+
   it("derives source-risk penalties from measured fields before same-tier arbitration", () => {
     const startSec = 1776729600;
     const result = evaluateYieldSources(baseEvaluationInput({
@@ -364,6 +397,42 @@ describe("evaluateYieldSources", () => {
     }));
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:higher");
+  });
+
+  it("prefers a non-fixed-yield holder row over a fixed-yield market for the same coin", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:pendle:ethereum:0xpool",
+            yieldSource: "Pendle fixed yield: A",
+            yieldType: "fixed-yield",
+            currentApy: 12,
+            dataSource: "protocol-api",
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:holder",
+            yieldSource: "Holder row",
+            yieldType: "lending-vault",
+            currentApy: 5,
+            dataSource: "protocol-api",
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:holder");
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:pendle:ethereum:0xpool"))
+      .toMatchObject({
+        yieldType: "fixed-yield",
+        currentApy: 12,
+      });
   });
 
   it("derives depth, observation count, and 30d switch count from existing cache and history", () => {

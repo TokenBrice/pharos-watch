@@ -1,6 +1,63 @@
 import type { YieldBenchmarkMeta, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { shouldDegradeForRiskFreeRate } from "./evaluation";
+import type { EvaluatedYieldSource } from "./evaluation-types";
+import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
+import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
+
+const YIELD_METADATA_EXAMPLE_LIMIT = 25;
+
+export interface YieldComparisonAnchorFreshnessMeta {
+  anchoredRowCount: number;
+  staleAnchorCount: number;
+  oldestAnchorAgeSeconds: number | null;
+  oldestAnchorStablecoinId: string | null;
+  oldestAnchorSourceKey: string | null;
+  staleAnchorExamples: Array<{
+    stablecoinId: string;
+    symbol: string;
+    sourceKey: string;
+    dataSource: string;
+    anchorAgeSeconds: number;
+    comparisonAnchorObservedAt: number;
+  }>;
+  staleAnchorExamplesTruncated: boolean;
+}
+
+export function buildComparisonAnchorFreshnessMeta(input: {
+  evaluatedSources: readonly EvaluatedYieldSource[];
+  startSec: number;
+}): YieldComparisonAnchorFreshnessMeta {
+  const anchorRows = input.evaluatedSources
+    .flatMap((source) => {
+      if (source.comparisonAnchorObservedAt == null) return [];
+      const anchorAgeSeconds = Math.max(0, input.startSec - source.comparisonAnchorObservedAt);
+      return [{
+        stablecoinId: source.id,
+        symbol: source.symbol,
+        sourceKey: source.sourceKey,
+        dataSource: source.dataSource,
+        anchorAgeSeconds,
+        comparisonAnchorObservedAt: source.comparisonAnchorObservedAt,
+      }];
+    })
+    .sort((a, b) => b.anchorAgeSeconds - a.anchorAgeSeconds);
+
+  const staleAnchorRows = anchorRows.filter(
+    (row) => row.anchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  );
+  const oldest = anchorRows[0] ?? null;
+
+  return {
+    anchoredRowCount: anchorRows.length,
+    staleAnchorCount: staleAnchorRows.length,
+    oldestAnchorAgeSeconds: oldest?.anchorAgeSeconds ?? null,
+    oldestAnchorStablecoinId: oldest?.stablecoinId ?? null,
+    oldestAnchorSourceKey: oldest?.sourceKey ?? null,
+    staleAnchorExamples: staleAnchorRows.slice(0, YIELD_METADATA_EXAMPLE_LIMIT),
+    staleAnchorExamplesTruncated: staleAnchorRows.length > YIELD_METADATA_EXAMPLE_LIMIT,
+  };
+}
 
 export function buildYieldSafetySnapshotMeta(input: {
   kind: "ok" | "degraded";
@@ -72,6 +129,7 @@ export function buildYieldSyncMetadata(input: {
   supplementalMeta: YieldSupplementalCacheMeta;
   onChainRatesResolved: number;
   onChainRatesConfigured: number;
+  onChainEnvelopeRejections: readonly YieldEnvelopeRejection[];
   onChainAttempted: number;
   onChainAllDeterministicFailed: boolean;
   onChainExplorerAttempted: number;
@@ -90,7 +148,9 @@ export function buildYieldSyncMetadata(input: {
   validationFailures: number;
   riskFreeRate: number;
   cacheWriteSkipped: boolean;
+  comparisonAnchorFreshness: YieldComparisonAnchorFreshnessMeta;
 }): string {
+  const onChainEnvelopeRejections = input.onChainEnvelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
   return JSON.stringify({
     rowsRead: input.rowsRead,
     rowsWritten: input.rowsWritten,
@@ -119,6 +179,9 @@ export function buildYieldSyncMetadata(input: {
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
       onChainRatesResolved: input.onChainRatesResolved,
       onChainRatesConfigured: input.onChainRatesConfigured,
+      onChainEnvelopeRejectionCount: input.onChainEnvelopeRejections.length,
+      onChainEnvelopeRejections,
+      onChainEnvelopeRejectionsTruncated: input.onChainEnvelopeRejections.length > YIELD_METADATA_EXAMPLE_LIMIT,
       onChainAttempted: input.onChainAttempted,
       onChainAllDeterministicFailed: input.onChainAllDeterministicFailed,
       onChainExplorerAttempted: input.onChainExplorerAttempted,
@@ -133,6 +196,7 @@ export function buildYieldSyncMetadata(input: {
       onChainCooldownRemainingSec: input.onChainCooldownRemainingSec,
       onChainConsecutiveAllFailRuns: input.onChainConsecutiveAllFailRuns,
       onChainConsecutiveMaskedAllFailRuns: input.onChainConsecutiveMaskedAllFailRuns,
+      comparisonAnchorFreshness: input.comparisonAnchorFreshness,
     },
     fallbackMode: input.fallbackMode,
     validationFailures: input.validationFailures,

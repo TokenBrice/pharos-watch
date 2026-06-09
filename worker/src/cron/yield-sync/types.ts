@@ -54,7 +54,19 @@ export interface SafetyScoreSnapshot {
   grade: string;
 }
 
+export interface YieldEnvelopeRejection {
+  stablecoinId: string;
+  symbol: string;
+  sourceKey: string;
+  computedApy: number;
+  exchangeRate: number;
+  previousExchangeRate: number;
+  anchorObservedAt: number;
+  actualDays: number;
+}
+
 export interface YieldResolutionResult {
   resolved: ResolvedYieldEntry[];
   tier1PrevRates: Map<string, number | null>;
+  envelopeRejections: YieldEnvelopeRejection[];
 }

@@ -23021,7 +23021,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },

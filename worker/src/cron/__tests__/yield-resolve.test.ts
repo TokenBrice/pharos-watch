@@ -1421,15 +1421,66 @@ describe("on-chain rate bootstrapping seed", () => {
       if (key === "risk_free_rate") {
         return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
       }
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-susde-fallback",
+              chain: "Ethereum",
+              project: "ethena",
+              symbol: "sUSDe",
+              tvlUsd: 3_000_000_000,
+              apy: 5.5,
+              apyBase: 5.5,
+              apyReward: null,
+              apyMean30d: 5.4,
+              stablecoin: false,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
       return null;
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
-    await syncYieldData(db);
+    const result = await syncYieldData(db);
 
     const stmts = getWriteStatements();
     expect(findYieldDataRow(stmts, "usde-ethena", "onchain:usde-ethena")).toBeUndefined();
+    expect(findYieldDataRow(stmts, "usde-ethena", "pool-susde-fallback")).toBeDefined();
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        onChainEnvelopeRejectionCount?: number;
+        onChainEnvelopeRejections?: Array<{
+          stablecoinId: string;
+          symbol: string;
+          sourceKey: string;
+          computedApy: number;
+          exchangeRate: number;
+          previousExchangeRate: number;
+          anchorObservedAt: number;
+          actualDays: number;
+        }>;
+        onChainEnvelopeRejectionsTruncated?: boolean;
+      };
+    };
+    expect(metadata.sourceCoverage?.onChainEnvelopeRejectionCount).toBe(1);
+    expect(metadata.sourceCoverage?.onChainEnvelopeRejectionsTruncated).toBe(false);
+    expect(metadata.sourceCoverage?.onChainEnvelopeRejections?.[0]).toMatchObject({
+      stablecoinId: "usde-ethena",
+      symbol: "USDe",
+      sourceKey: "onchain:usde-ethena",
+      exchangeRate: 1.2,
+      previousExchangeRate: 1,
+      anchorObservedAt: nowSec - 7 * 86400,
+      actualDays: 7,
+    });
+    expect(metadata.sourceCoverage?.onChainEnvelopeRejections?.[0]?.computedApy).toBeGreaterThan(300);
 
     configs.length = 0;
   });
@@ -1694,6 +1745,31 @@ describe("appendOptionalYieldCandidate", () => {
         stablecoinId: "usde-ethena",
         yield: {
           ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
+          sourceTvlUsd: 1,
+        },
+      }),
+      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
+      stablecoinSupplyById: new Map([[
+        "usde-ethena",
+        2_000_000,
+      ]]),
+    });
+
+    expect(status).toBe("size-gated" as YieldCandidateAppendStatus);
+    expect(resolved).toHaveLength(0);
+  });
+
+  it("returns size-gated when fixed-yield TVL fails the external opportunity threshold", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+    const status = appendOptionalYieldCandidate({
+      resolved,
+      entry: makeEntry({
+        stablecoinId: "usde-ethena",
+        yield: {
+          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
+          sourceKey: "protocol-api:pendle:ethereum:0xpool",
+          yieldSource: "Pendle fixed yield: USDe",
+          yieldType: "fixed-yield",
           sourceTvlUsd: 1,
         },
       }),

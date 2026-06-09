@@ -48,6 +48,7 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
 
 
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { recordOutcome } from "../../lib/circuit-breaker";
 
@@ -113,5 +114,37 @@ describe("fetchDataSources — malformed JSON resilience", () => {
     expect(result!.pools).toHaveLength(1001);
     // Circuit breaker should record DL protocols failure
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
+  });
+
+  it("caches raw DL protocols for yield source-management audits after a successful fetch", async () => {
+    const pools = Array.from({ length: 1001 }, (_, i) => ({
+      pool: `pool-${i}`, chain: "Ethereum", project: `proj-${i}`, symbol: "USDC",
+      tvlUsd: 1000, apy: 1, apyBase: 1, apyReward: 0, stablecoin: true, exposure: "single",
+    }));
+    const protocols = [
+      { slug: "aave-v3", category: "Lending", tvl: 1_000_000_000 },
+      { slug: "curve-dex", category: "Dexs", tvl: 500_000_000 },
+    ];
+    const goodYieldsResponse = {
+      ok: true,
+      json: async () => ({ data: pools }),
+      body: { cancel: async () => {} },
+      bodyUsed: false,
+    } as unknown as Response;
+    const goodProtocolsResponse = {
+      ok: true,
+      json: async () => protocols,
+      body: { cancel: async () => {} },
+      bodyUsed: false,
+    } as unknown as Response;
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(goodYieldsResponse)
+      .mockResolvedValueOnce(goodProtocolsResponse);
+
+    const db = mockD1();
+    const result = await fetchDataSources(null, db);
+
+    expect(result).not.toBeNull();
+    expect(setCache).toHaveBeenCalledWith(db, "defillama-protocols", JSON.stringify(protocols));
   });
 });

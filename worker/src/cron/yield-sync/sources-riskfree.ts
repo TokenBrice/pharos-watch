@@ -78,6 +78,7 @@ export async function loadRiskFreeRateRegistry(
     if (parsedUsd) {
       return {
         USD: parsedUsd,
+        USD_EFFR: null,
         EUR: null,
         CHF: null,
         GBP: null,
@@ -95,6 +96,7 @@ export async function loadRiskFreeRateRegistry(
     USD: buildHardcodedUsdBenchmark(
       registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
     ),
+    USD_EFFR: null,
     EUR: null,
     CHF: null,
     GBP: null,

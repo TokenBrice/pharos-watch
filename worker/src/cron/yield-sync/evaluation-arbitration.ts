@@ -79,6 +79,10 @@ export function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSour
   const bHasPositiveApy = b.currentApy > 0;
   if (aHasPositiveApy !== bHasPositiveApy) return aHasPositiveApy ? -1 : 1;
 
+  const aFixedYield = a.yieldType === "fixed-yield";
+  const bFixedYield = b.yieldType === "fixed-yield";
+  if (aFixedYield !== bFixedYield) return aFixedYield ? 1 : -1;
+
   const confidenceDiff = getConfidencePriority(b.confidenceTier) - getConfidencePriority(a.confidenceTier);
   if (confidenceDiff !== 0) return confidenceDiff;
 

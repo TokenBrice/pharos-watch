@@ -31,6 +31,8 @@ describe("fetchPendleMarketSources", () => {
       currentApy: expect.closeTo(5.2, 0),
       dataSource: "protocol-api",
       sourceKey: expect.stringContaining("protocol-api:pendle:"),
+      yieldSource: "Pendle fixed yield: Global Dollar USDG",
+      yieldType: "fixed-yield",
     }));
   });
 

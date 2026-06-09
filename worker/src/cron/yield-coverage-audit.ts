@@ -10,6 +10,8 @@
 import type { CronResult } from "../lib/cron-logger";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
+import { CIRCUIT_SOURCE } from "../lib/constants";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
   AUTO_LENDING_POOL_MAP,
@@ -23,6 +25,10 @@ import {
   YIELD_ADAPTER_LIFECYCLE,
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
+import {
+  probeQuarantinedDeterministicAdapters,
+  type QuarantineRestoreCandidate,
+} from "./yield-coverage-audit-quarantine";
 import type {
   YieldCoverageAuditQueueAction,
   YieldCoverageAuditQueueItem,
@@ -42,6 +48,90 @@ const OPERATOR_QUEUE_ACTIONS = [
   "watch",
 ] as const satisfies readonly YieldCoverageAuditQueueAction[];
 const LIFECYCLE_BUCKET_LIMIT = 100;
+const HIGH_CONFIDENCE_PROTOCOL_CATEGORIES = new Set([
+  "cdp",
+  "lending",
+  "rwa lending",
+  "uncollateralized lending",
+]);
+
+export interface ProtocolCategoryAuditMeta {
+  cacheKey: typeof CIRCUIT_SOURCE.DL_PROTOCOLS;
+  status: "ok" | "missing" | "malformed";
+  protocolCount: number;
+  categorizedProtocolCount: number;
+  highConfidenceCategoryCount: number;
+}
+
+function normalizeProtocolProjectKey(project: string): string {
+  return project.trim().toLowerCase();
+}
+
+function normalizeProtocolCategory(category: string | null | undefined): string | null {
+  const normalized = category?.trim();
+  return normalized ? normalized : null;
+}
+
+function protocolRowsFromCachePayload(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload == null || typeof payload !== "object") return [];
+  const envelope = payload as { data?: unknown; protocols?: unknown };
+  if (Array.isArray(envelope.protocols)) return envelope.protocols;
+  return Array.isArray(envelope.data) ? envelope.data : [];
+}
+
+export function isHighConfidenceProtocolCategory(category: string | null | undefined): boolean {
+  const normalized = normalizeProtocolCategory(category)?.toLowerCase();
+  return normalized != null && HIGH_CONFIDENCE_PROTOCOL_CATEGORIES.has(normalized);
+}
+
+export function buildProtocolCategoryLookupFromCachePayload(payload: unknown): Map<string, string> {
+  const categories = new Map<string, string>();
+  for (const row of protocolRowsFromCachePayload(payload)) {
+    if (row == null || typeof row !== "object") continue;
+    const protocol = row as { category?: unknown; slug?: unknown };
+    if (typeof protocol.slug !== "string" || typeof protocol.category !== "string") continue;
+    const category = normalizeProtocolCategory(protocol.category);
+    if (!category) continue;
+    categories.set(normalizeProtocolProjectKey(protocol.slug), category);
+  }
+  return categories;
+}
+
+async function loadProtocolCategoryLookup(db: D1Database): Promise<{
+  categoriesByProject: Map<string, string>;
+  meta: ProtocolCategoryAuditMeta;
+}> {
+  const cached = await getCache(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
+  const parsed = readCachedJson<unknown>("yield-coverage-audit", CIRCUIT_SOURCE.DL_PROTOCOLS, cached);
+
+  if (parsed.status !== "ok") {
+    return {
+      categoriesByProject: new Map(),
+      meta: {
+        cacheKey: CIRCUIT_SOURCE.DL_PROTOCOLS,
+        status: parsed.status,
+        protocolCount: 0,
+        categorizedProtocolCount: 0,
+        highConfidenceCategoryCount: 0,
+      },
+    };
+  }
+
+  const protocolRows = protocolRowsFromCachePayload(parsed.data);
+  const categoriesByProject = buildProtocolCategoryLookupFromCachePayload(parsed.data);
+  return {
+    categoriesByProject,
+    meta: {
+      cacheKey: CIRCUIT_SOURCE.DL_PROTOCOLS,
+      status: "ok",
+      protocolCount: protocolRows.length,
+      categorizedProtocolCount: categoriesByProject.size,
+      highConfidenceCategoryCount: [...categoriesByProject.values()]
+        .filter(isHighConfidenceProtocolCategory).length,
+    },
+  };
+}
 
 export interface LifecycleAdapterBucketItem {
   stablecoinId: string;
@@ -138,6 +228,7 @@ export interface CoverageAuditOperatorQueue {
 export interface CoverageGapPool {
   pool: string;
   project: string;
+  protocolCategory: string | null;
   symbol: string;
   chain: string;
   tvlUsd: number;
@@ -146,6 +237,7 @@ export interface CoverageGapPool {
 
 export interface ProtocolRecommendation {
   project: string;
+  protocolCategory: string | null;
   poolCount: number;
   totalTvlUsd: number;
   recommendedTier: "high-confidence" | "review-needed";
@@ -182,10 +274,11 @@ const SOURCE_FAMILY_ADAPTER_PROJECTS = new Set([
   "yearn-finance",
 ]);
 
-function buildCoverageGapPool(pool: DlPool): CoverageGapPool {
+function buildCoverageGapPool(pool: DlPool, protocolCategory: string | null): CoverageGapPool {
   return {
     pool: pool.pool,
     project: pool.project,
+    protocolCategory,
     symbol: pool.symbol,
     chain: pool.chain,
     tvlUsd: pool.tvlUsd,
@@ -204,13 +297,23 @@ function buildProtocolRecommendations(pools: CoverageGapPool[]): ProtocolRecomme
 
   return [...byProject.entries()]
     .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
-    .map(([project, v]) => ({
-      project,
-      poolCount: v.pools.length,
-      totalTvlUsd: v.tvl,
-      recommendedTier: (v.tvl >= 10_000_000 && v.pools.length >= 3 ? "high-confidence" : "review-needed") as "high-confidence" | "review-needed",
-      examplePools: v.pools.slice(0, 3).map((p) => p.pool),
-    }))
+    .map(([project, v]) => {
+      const protocolCategory = v.pools.find((pool) => pool.protocolCategory != null)?.protocolCategory ?? null;
+      const recommendedTier: ProtocolRecommendation["recommendedTier"] =
+        v.tvl >= 10_000_000 &&
+        v.pools.length >= 3 &&
+        isHighConfidenceProtocolCategory(protocolCategory)
+          ? "high-confidence"
+          : "review-needed";
+      return {
+        project,
+        protocolCategory,
+        poolCount: v.pools.length,
+        totalTvlUsd: v.tvl,
+        recommendedTier,
+        examplePools: v.pools.slice(0, 3).map((p) => p.pool),
+      };
+    })
     .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
     .slice(0, 20);
 }
@@ -279,10 +382,12 @@ export function buildCoverageAuditOperatorQueue({
   gaps,
   manifestMissingIds,
   yieldBearingMissingFromRankings,
+  quarantineReadyToRestore = [],
 }: {
   gaps: CoverageGaps;
   manifestMissingIds: string[];
   yieldBearingMissingFromRankings: string[];
+  quarantineReadyToRestore?: QuarantineRestoreCandidate[];
 }): CoverageAuditOperatorQueue {
   const headlineGaps: YieldCoverageAuditQueueItem[] = [
     ...manifestMissingIds.map((stablecoinId) => ({
@@ -326,6 +431,14 @@ export function buildCoverageAuditOperatorQueue({
     ...gaps.lendingAllowlistRecommendations.map((recommendation) =>
       buildProtocolQueueItem("lending-allowlist", recommendation),
     ),
+    ...quarantineReadyToRestore.map((candidate) => ({
+      id: queueId("quarantine-ready-to-restore", candidate.stablecoinId),
+      kind: "quarantine-ready-to-restore" as const,
+      title: candidate.stablecoinId,
+      detail: `${candidate.chain} ${candidate.sourceKey} probe returned ${candidate.exchangeRate}`,
+      actionHint: "accept" as const,
+      stablecoinIds: [candidate.stablecoinId],
+    })),
   ];
 
   return {
@@ -347,6 +460,7 @@ export function identifyCoverageGaps(
   dlPools: DlPool[],
   coveredPools: Set<string>,
   supportedProtocols: Set<string> = LENDING_PROTOCOL_ALLOWLIST,
+  protocolCategoriesByProject: Map<string, string> = new Map(),
 ): CoverageGaps {
   const unmatchedHighTvlPools: CoverageGapPool[] = [];
   const missingProtocols: CoverageGapPool[] = [];
@@ -357,7 +471,8 @@ export function identifyCoverageGaps(
     // Skip pools already covered
     if (coveredPools.has(pool.pool)) continue;
 
-    const poolEntry = buildCoverageGapPool(pool);
+    const protocolCategory = protocolCategoriesByProject.get(normalizeProtocolProjectKey(pool.project)) ?? null;
+    const poolEntry = buildCoverageGapPool(pool, protocolCategory);
     if (pool.exposure === "single" && pool.stablecoin) {
       uncoveredStablecoinPools.push(poolEntry);
     }
@@ -422,9 +537,11 @@ export function identifyCoverageGaps(
 export async function runYieldCoverageAudit(
   db: D1Database,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   // Load DL stablecoin pools (uses cache written by dex-liquidity sync)
   const { pools: dlPools, meta: poolMeta } = await loadDlStablecoinPools(db, signal);
+  const protocolCategoryLookup = await loadProtocolCategoryLookup(db);
 
   if (dlPools.length === 0) {
     return {
@@ -445,7 +562,12 @@ export async function runYieldCoverageAudit(
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
     ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
-  const gaps = identifyCoverageGaps(dlPools, coveredPools, LENDING_PROTOCOL_ALLOWLIST);
+  const gaps = identifyCoverageGaps(
+    dlPools,
+    coveredPools,
+    LENDING_PROTOCOL_ALLOWLIST,
+    protocolCategoryLookup.categoriesByProject,
+  );
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => !manifestById.has(coin.id))
@@ -496,15 +618,20 @@ export async function runYieldCoverageAudit(
       return manifestEntry?.status !== "intentional-gap" && !publishedYieldIds.has(coin.id);
     })
     .map((coin) => coin.id);
+  const lifecycleBuckets = summarizeAdapterLifecycle(
+    ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
+  );
+  const quarantineProbe = await probeQuarantinedDeterministicAdapters({
+    quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
+    chainRpcs,
+    signal,
+  });
   const operatorQueue = buildCoverageAuditOperatorQueue({
     gaps,
     manifestMissingIds,
     yieldBearingMissingFromRankings,
+    quarantineReadyToRestore: quarantineProbe.readyToRestore,
   });
-
-  const lifecycleBuckets = summarizeAdapterLifecycle(
-    ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
-  );
 
   const reportedAt = Math.floor(Date.now() / 1000);
   const report = {
@@ -536,7 +663,10 @@ export async function runYieldCoverageAudit(
     operatorQueue,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
+    quarantineReadyToRestore: quarantineProbe.readyToRestore,
+    quarantineProbeSummary: quarantineProbe.summary,
     intentionalGaps: lifecycleBuckets.intentionalGaps,
+    protocolCategoryMeta: protocolCategoryLookup.meta,
     manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
       stablecoinId: entry.stablecoinId,
       status: entry.status,
@@ -554,6 +684,7 @@ export async function runYieldCoverageAudit(
     gaps.nativeExactPoolRecommendations.length +
     gaps.sourceFamilyAdapterRecommendations.length +
     gaps.lendingAllowlistRecommendations.length +
+    quarantineProbe.readyToRestore.length +
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
 
@@ -575,6 +706,10 @@ export async function runYieldCoverageAudit(
       lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
       exactPoolOverrideCount: explicitPoolOverrides.length,
       exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
+      protocolCategoryStatus: protocolCategoryLookup.meta.status,
+      protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
+      quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
+      quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,
     }),
   };
 }

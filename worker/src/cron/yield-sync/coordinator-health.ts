@@ -14,7 +14,7 @@ export function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[])
   const lendingApyByCoin = new Map<string, number>();
 
   for (const source of evaluatedSources) {
-    if (source.yieldType === "lending-opportunity") {
+    if (source.yieldType === "lending-opportunity" || source.yieldType === "fixed-yield") {
       lendingApyByCoin.set(source.id, source.currentApy);
     } else {
       nativeApyByCoin.set(source.id, source.currentApy);

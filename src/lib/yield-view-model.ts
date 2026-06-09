@@ -416,7 +416,9 @@ function getBenchmarkKey(row: YieldRanking): YieldBenchmarkKey {
 }
 
 function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all"> {
-  return row.yieldType === "lending-opportunity" || row.yieldType === "structured-tranche"
+  return row.yieldType === "lending-opportunity" ||
+    row.yieldType === "fixed-yield" ||
+    row.yieldType === "structured-tranche"
     ? "lending-opportunity"
     : "holder-yield";
 }

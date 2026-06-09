@@ -30,6 +30,7 @@ function venueMatchesPreference(
       return (
         candidate.yieldType === "lending-vault" ||
         candidate.yieldType === "lending-opportunity" ||
+        candidate.yieldType === "fixed-yield" ||
         candidate.yieldType === "structured-tranche" ||
         candidate.deploymentPlace === "lending"
       );

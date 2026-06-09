@@ -502,6 +502,7 @@ export const YIELD_TYPE_VALUES = [
   "nav-appreciation",
   "governance-set",
   "lending-opportunity",
+  "fixed-yield",
   "structured-tranche",
 ] as const;
 

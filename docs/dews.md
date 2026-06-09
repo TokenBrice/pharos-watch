@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v6.06`
+- **Current methodology version:** `v6.07`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -146,11 +146,12 @@ Structured Yield Intelligence source-risk and rank-attribution evidence adds the
 | `sourceRisk.sourceAgeSeconds > 6h` | 15 |
 | `sourceRisk.sourceSwitchCount30d > 0` | 20 |
 | `sourceRisk.sourceRiskPenalty >= 1.5` | 20 |
+| `sourceRisk.venueRiskTier = "medium"` | 10 |
 | `sourceRisk.venueRiskTier = "high"` | 25 |
 | `rankChangeAttribution.primaryDriver = "source-switch"` | 20 |
 | `rankChangeAttribution.primaryDriver = "source-risk"` | 20 |
 
-Structured evidence is additive with warning-string evidence and the final Yield Anomaly sub-signal still caps at 100. Neutral structured rows do not become available zero-stress signals; missing, malformed, or neutral source-risk evidence remains a no-op so legacy warning-only behavior is preserved.
+Structured evidence is additive with warning-string evidence and the final Yield Anomaly sub-signal still caps at 100. Medium reviewed venue risk adds the bounded `structured-medium-risk-venue` warning, while high reviewed venue risk keeps the stronger `structured-high-risk-venue` warning. Neutral structured rows do not become available zero-stress signals; missing, malformed, or neutral source-risk evidence remains a no-op so legacy warning-only behavior is preserved.
 
 ---
 
@@ -212,13 +213,13 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```text
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.0" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.07" },
     ...
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "6.02", "versionLabel": "...", "currentVersion": "6.02", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.07", "versionLabel": "...", "currentVersion": "6.07", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -230,13 +231,13 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
 
 ```text
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.0" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "6.07" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "6.0" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "6.07" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "6.02", "versionLabel": "...", "currentVersion": "6.02", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.07", "versionLabel": "...", "currentVersion": "6.07", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

@@ -1,11 +1,55 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../lib/evm-rpc", () => ({
+  fetchEvmUint256AtBlock: vi.fn(),
+}));
+
+import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import {
+  buildProtocolCategoryLookupFromCachePayload,
   buildCoverageAuditOperatorQueue,
   identifyCoverageGaps,
+  isHighConfidenceProtocolCategory,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
+import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
+
+const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
+
+afterEach(() => {
+  mockFetchEvmUint256AtBlock.mockReset();
+});
+
+describe("buildProtocolCategoryLookupFromCachePayload", () => {
+  it("parses raw cached DeFiLlama protocol payloads by normalized slug", () => {
+    const lookup = buildProtocolCategoryLookupFromCachePayload({
+      protocols: [
+        { slug: "Aave-V3", category: " Lending " },
+        { slug: "curve-dex", category: "Dexs" },
+        { slug: "missing-category" },
+        { slug: "blank-category", category: " " },
+        { category: "CDP" },
+      ],
+    });
+
+    expect(lookup).toEqual(new Map([
+      ["aave-v3", "Lending"],
+      ["curve-dex", "Dexs"],
+    ]));
+  });
+
+  it("accepts the allowed lending categories for high-confidence recommendations", () => {
+    expect(isHighConfidenceProtocolCategory("Lending")).toBe(true);
+    expect(isHighConfidenceProtocolCategory("CDP")).toBe(true);
+    expect(isHighConfidenceProtocolCategory("RWA Lending")).toBe(true);
+    expect(isHighConfidenceProtocolCategory("Uncollateralized Lending")).toBe(true);
+    expect(isHighConfidenceProtocolCategory("Yield Aggregator")).toBe(false);
+    expect(isHighConfidenceProtocolCategory(null)).toBe(false);
+  });
+});
 
 describe("identifyCoverageGaps", () => {
   it("identifies high-TVL stablecoin pools not matched", () => {
@@ -70,12 +114,74 @@ describe("identifyCoverageGaps", () => {
       { pool: "p2", chain: "Ethereum", project: "rising-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
       { pool: "p3", chain: "Arbitrum", project: "rising-protocol", symbol: "USDC", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
-    const gaps = identifyCoverageGaps(dlPools, new Set());
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([["rising-protocol", "Lending"]]),
+    );
     expect(gaps.protocolRecommendations).toContainEqual(
       expect.objectContaining({
         project: "rising-protocol",
+        protocolCategory: "Lending",
         totalTvlUsd: 11_000_000,
         recommendedTier: "high-confidence",
+      }),
+    );
+  });
+
+  it("carries provided protocol category metadata on recommendations", () => {
+    const dlPools: DlPool[] = [
+      { pool: "p1", chain: "Ethereum", project: "category-lender", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p2", chain: "Ethereum", project: "category-lender", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p3", chain: "Arbitrum", project: "category-lender", symbol: "DAI", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([["category-lender", "Lending"]]),
+    );
+
+    expect(gaps.protocolRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "category-lender",
+        protocolCategory: "Lending",
+        recommendedTier: "high-confidence",
+      }),
+    );
+  });
+
+  it("requires an allowed lending category before assigning high-confidence", () => {
+    const dlPools: DlPool[] = [
+      { pool: "p1", chain: "Ethereum", project: "aggregator-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p2", chain: "Ethereum", project: "aggregator-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p3", chain: "Arbitrum", project: "aggregator-protocol", symbol: "DAI", tvlUsd: 4_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p4", chain: "Ethereum", project: "missing-category-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p5", chain: "Ethereum", project: "missing-category-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p6", chain: "Arbitrum", project: "missing-category-protocol", symbol: "DAI", tvlUsd: 4_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([["aggregator-protocol", "Yield Aggregator"]]),
+    );
+
+    expect(gaps.protocolRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "aggregator-protocol",
+        protocolCategory: "Yield Aggregator",
+        recommendedTier: "review-needed",
+      }),
+    );
+    expect(gaps.protocolRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "missing-category-protocol",
+        protocolCategory: null,
+        recommendedTier: "review-needed",
       }),
     );
   });
@@ -175,6 +281,141 @@ describe("identifyCoverageGaps", () => {
         expect.objectContaining({ kind: "lending-allowlist", project: "new-lender" }),
       ]),
     );
+  });
+
+  it("queues quarantine-ready-to-restore candidates as manual accept actions", () => {
+    const queue = buildCoverageAuditOperatorQueue({
+      gaps: {
+        unmatchedHighTvlPools: [],
+        missingProtocols: [],
+        protocolRecommendations: [],
+        nativeExactPoolRecommendations: [],
+        sourceFamilyAdapterRecommendations: [],
+        lendingAllowlistRecommendations: [],
+      },
+      manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [],
+      quarantineReadyToRestore: [{
+        stablecoinId: "reusd-re-protocol",
+        code: "convert-to-assets-empty",
+        since: "2026-03-15",
+        nextReviewAt: "2026-07-09",
+        sourceKey: "onchain:reusd-re-protocol",
+        chain: "ethereum",
+        contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+        exchangeRate: 1.5,
+      }],
+    });
+
+    expect(queue.recommendationCandidates).toContainEqual(
+      expect.objectContaining({
+        id: "quarantine-ready-to-restore:reusd-re-protocol",
+        kind: "quarantine-ready-to-restore",
+        title: "reusd-re-protocol",
+        detail: "ethereum onchain:reusd-re-protocol probe returned 1.5",
+        actionHint: "accept",
+        stablecoinIds: ["reusd-re-protocol"],
+      }),
+    );
+  });
+});
+
+describe("probeQuarantinedDeterministicAdapters", () => {
+  const quarantinedAdapters = [
+    {
+      stablecoinId: "reusd-re-protocol",
+      code: "convert-to-assets-empty",
+      since: "2026-03-15",
+      nextReviewAt: "2026-07-09",
+    },
+    {
+      stablecoinId: "scrvusd-curve",
+      code: "wrapper-not-yet-supported",
+      since: "2026-04-11",
+      nextReviewAt: "2026-07-09",
+    },
+  ];
+  const chainRpcs = new Map<string, ChainRpcConfig>([
+    ["ethereum", {
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example",
+      explorerUrl: "https://etherscan.io",
+    }],
+  ]);
+
+  it("skips configured probes when chain RPCs are unavailable", async () => {
+    const result = await probeQuarantinedDeterministicAdapters({ quarantinedAdapters });
+
+    expect(result.readyToRestore).toEqual([]);
+    expect(result.summary).toEqual({
+      configuredProbeCount: 1,
+      attemptedCount: 0,
+      readyToRestoreCount: 0,
+      skippedCount: 1,
+      failureCounts: {},
+      skippedReason: "chain-rpcs-unavailable",
+    });
+    expect(mockFetchEvmUint256AtBlock).not.toHaveBeenCalled();
+  });
+
+  it("returns ready-to-restore candidates for nonzero probe rates inside the envelope", async () => {
+    mockFetchEvmUint256AtBlock.mockResolvedValue(1_500_000_000_000_000_000n);
+
+    const result = await probeQuarantinedDeterministicAdapters({
+      quarantinedAdapters,
+      chainRpcs,
+    });
+
+    expect(result.readyToRestore).toEqual([{
+      stablecoinId: "reusd-re-protocol",
+      code: "convert-to-assets-empty",
+      since: "2026-03-15",
+      nextReviewAt: "2026-07-09",
+      sourceKey: "onchain:reusd-re-protocol",
+      chain: "ethereum",
+      contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+      exchangeRate: 1.5,
+    }]);
+    expect(result.summary).toEqual({
+      configuredProbeCount: 1,
+      attemptedCount: 1,
+      readyToRestoreCount: 1,
+      skippedCount: 0,
+      failureCounts: {},
+    });
+    expect(mockFetchEvmUint256AtBlock).toHaveBeenCalledTimes(1);
+    expect(mockFetchEvmUint256AtBlock).toHaveBeenCalledWith(
+      undefined,
+      "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.objectContaining({
+        extraRpcUrls: ["https://rpc.example"],
+        timeoutMs: 6_000,
+      }),
+    );
+  });
+
+  it("rejects zero and above-envelope quarantine probe rates", async () => {
+    for (const rawRate of [0n, 4_000_000_000_000_000_000n]) {
+      mockFetchEvmUint256AtBlock.mockResolvedValueOnce(rawRate);
+
+      const result = await probeQuarantinedDeterministicAdapters({
+        quarantinedAdapters,
+        chainRpcs,
+      });
+
+      expect(result.readyToRestore).toEqual([]);
+      expect(result.summary).toEqual({
+        configuredProbeCount: 1,
+        attemptedCount: 1,
+        readyToRestoreCount: 0,
+        skippedCount: 0,
+        failureCounts: { "out-of-envelope": 1 },
+      });
+    }
   });
 });
 

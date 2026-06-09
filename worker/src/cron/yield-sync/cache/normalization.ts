@@ -127,6 +127,7 @@ interface RiskFreeRatesCachePayload {
   version: 1;
   benchmarks: {
     USD: RiskFreeRateCachePayload;
+    USD_EFFR?: RiskFreeRateCachePayload | null;
     EUR: RiskFreeRateCachePayload | null;
     CHF: RiskFreeRateCachePayload | null;
     GBP: RiskFreeRateCachePayload | null;
@@ -300,6 +301,7 @@ export function parseRiskFreeRatesCache(
 
     return {
       USD: usd,
+      USD_EFFR: parseOptional("USD_EFFR"),
       EUR: parseOptional("EUR"),
       CHF: parseOptional("CHF"),
       GBP: parseOptional("GBP"),

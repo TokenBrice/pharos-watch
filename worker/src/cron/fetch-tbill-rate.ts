@@ -5,6 +5,7 @@ import {
   CIRCUIT_SOURCE,
   USER_AGENT,
   ECB_ESTR_3M_CSV_URL,
+  FRED_EFFR_CSV_URL,
   FRED_TBILL_CSV_URL,
   TREASURY_YIELD_XML_URL,
   SIX_BROWSER_USER_AGENT,
@@ -45,6 +46,9 @@ import type { Env } from "../lib/env";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
+const BOE_SONIA_COMPOUNDED_INDEX_SERIES_CODE = "IUDZOS2";
+const BOE_COMPOUNDED_SONIA_WINDOW_DAYS = 90;
+const BOE_COMPOUNDED_SONIA_LOOKBACK_DAYS = 140;
 
 function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -54,6 +58,7 @@ type MetadataBenchmarkKey = Exclude<YieldBenchmarkKey, "SGD">;
 
 const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
   USD: "usd",
+  USD_EFFR: "usdEffr",
   EUR: "eur",
   CHF: "chf",
   GBP: "gbp",
@@ -109,7 +114,7 @@ function parseFredLatest(csv: string): { recordDate: string; rate: number } | nu
 }
 
 function parseEnglishDate(dateRaw: string): string | null {
-  const match = dateRaw.trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  const match = dateRaw.trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{2}|\d{4})$/);
   if (!match) return null;
   const month = {
     Jan: "01",
@@ -126,7 +131,8 @@ function parseEnglishDate(dateRaw: string): string | null {
     Dec: "12",
   }[match[2]];
   if (!month) return null;
-  return `${match[3]}-${month}-${match[1].padStart(2, "0")}`;
+  const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+  return `${year}-${month}-${match[1].padStart(2, "0")}`;
 }
 
 export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: number } | null {
@@ -141,6 +147,43 @@ export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: numbe
     return { recordDate, rate };
   }
   return null;
+}
+
+function parseIsoDateMs(recordDate: string): number {
+  const parsed = Date.parse(`${recordDate}T00:00:00Z`);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+export function parseBoeSoniaCompoundedIndexCsv(csv: string): { recordDate: string; rate: number } | null {
+  const observations = csv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .flatMap((line) => {
+      const [dateRaw, indexRaw] = line.split(",");
+      const recordDate = dateRaw ? parseEnglishDate(dateRaw) : null;
+      const indexValue = parseRate(indexRaw);
+      const timestampMs = recordDate ? parseIsoDateMs(recordDate) : Number.NaN;
+      return recordDate && Number.isFinite(timestampMs) && Number.isFinite(indexValue) && indexValue > 0
+        ? [{ recordDate, indexValue, timestampMs }]
+        : [];
+    })
+    .sort((a, b) => a.timestampMs - b.timestampMs);
+
+  const latest = observations[observations.length - 1];
+  if (!latest) return null;
+
+  const targetStartMs = latest.timestampMs - BOE_COMPOUNDED_SONIA_WINDOW_DAYS * 86_400_000;
+  const start = [...observations].reverse().find((entry) => entry.timestampMs <= targetStartMs);
+  if (!start || start.indexValue <= 0) return null;
+
+  const dayCount = (latest.timestampMs - start.timestampMs) / 86_400_000;
+  if (!Number.isFinite(dayCount) || dayCount < 80) return null;
+
+  const rate = ((latest.indexValue / start.indexValue - 1) * 365 / dayCount) * 100;
+  if (!isValidBenchmarkRate(rate)) return null;
+
+  return { recordDate: latest.recordDate, rate };
 }
 
 function parseCompactDate(dateRaw: number | string | null | undefined): string | null {
@@ -325,6 +368,7 @@ async function writeStructuredBenchmarks(
     serializeRiskFreeRatesCache(
       buildRiskFreeRatesCachePayload({
         USD: toCacheEntry(benchmarks.USD)!,
+        USD_EFFR: toCacheEntry(benchmarks.USD_EFFR ?? null),
         EUR: toCacheEntry(benchmarks.EUR),
         CHF: toCacheEntry(benchmarks.CHF),
         GBP: toCacheEntry(benchmarks.GBP),
@@ -481,16 +525,24 @@ function formatBoeRequestDate(date: Date): string {
   return `${String(date.getUTCDate()).padStart(2, "0")}/${months[date.getUTCMonth()]}/${date.getUTCFullYear()}`;
 }
 
-function buildBoeSoniaCsvUrl(now = new Date()): string {
+function buildBoeIadbCsvUrl(seriesCode: string, now = new Date(), lookbackDays = 21): string {
   const url = new URL(BOE_SONIA_CSV_BASE_URL);
   url.searchParams.set("csv.x", "yes");
-  url.searchParams.set("Datefrom", formatBoeRequestDate(addDays(now, -21)));
+  url.searchParams.set("Datefrom", formatBoeRequestDate(addDays(now, -lookbackDays)));
   url.searchParams.set("Dateto", formatBoeRequestDate(now));
-  url.searchParams.set("SeriesCodes", "IUDSOIA");
+  url.searchParams.set("SeriesCodes", seriesCode);
   url.searchParams.set("UsingCodes", "Y");
   url.searchParams.set("VPD", "Y");
   url.searchParams.set("VFD", "N");
   return url.toString();
+}
+
+function buildBoeSoniaCompoundedIndexCsvUrl(now = new Date()): string {
+  return buildBoeIadbCsvUrl(
+    BOE_SONIA_COMPOUNDED_INDEX_SERIES_CODE,
+    now,
+    BOE_COMPOUNDED_SONIA_LOOKBACK_DAYS,
+  );
 }
 
 function buildBojCallRateJsonUrl(now = new Date()): string {
@@ -507,12 +559,12 @@ function buildBojCallRateJsonUrl(now = new Date()): string {
   return url.toString();
 }
 
-async function tryBoeSoniaCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+async function tryBoeSoniaCompoundedIndex(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
-    url: buildBoeSoniaCsvUrl(),
+    url: buildBoeSoniaCompoundedIndexCsvUrl(),
     headers: { "User-Agent": USER_AGENT },
-    parse: parseBoeSoniaCsv,
-    warnLabel: "BoE SONIA CSV",
+    parse: parseBoeSoniaCompoundedIndexCsv,
+    warnLabel: "BoE SONIA Compounded Index CSV",
     signal,
   });
 }
@@ -759,15 +811,21 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
   },
   GBP: {
     key: "GBP",
-    fetch: ({ signal }) => tryBoeSoniaCsv(signal),
-    source: "boe-sonia",
-    fallbackMode: "gbp-sonia-failed",
+    fetch: ({ signal }) => tryBoeSoniaCompoundedIndex(signal),
+    source: "boe-sonia-compounded-index",
+    fallbackMode: "gbp-sonia-compounded-index-failed",
   },
   JPY: {
     key: "JPY",
     fetch: ({ signal }) => tryBojCallRate(signal),
     source: "boj-call-rate",
     fallbackMode: "jpy-call-rate-failed",
+  },
+  USD_EFFR: {
+    key: "USD_EFFR",
+    fetch: ({ signal }) => tryFredCsv(FRED_EFFR_CSV_URL, signal),
+    source: "fred-dff",
+    fallbackMode: "fred-dff-failed",
   },
   AUD: {
     key: "AUD",
@@ -790,6 +848,7 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
 } as const;
 
 const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
+  "USD_EFFR",
   "EUR",
   "CHF",
   "GBP",
@@ -801,6 +860,7 @@ const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
 ] as const;
 
 const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
+  "USD_EFFR",
   "EUR",
   "CHF",
   "GBP",
@@ -827,7 +887,7 @@ async function resolveBenchmarkProvider(params: {
       fetchedAt,
       source: provider.source,
     })
-    : buildRetainedBenchmark(previous[provider.key], provider.fallbackMode);
+    : buildRetainedBenchmark(previous[provider.key] ?? null, provider.fallbackMode);
 
   return {
     key: provider.key,
@@ -914,6 +974,7 @@ export async function fetchTbillRate(
     const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
     const benchmarks: ParsedYieldBenchmarkRegistry = {
       USD: usdBenchmark,
+      USD_EFFR: buildRetainedBenchmark(previous.USD_EFFR ?? null, "circuit-open"),
       EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
       CHF: buildRetainedBenchmark(previous.CHF, "circuit-open"),
       GBP: buildRetainedBenchmark(previous.GBP, "circuit-open"),
@@ -976,6 +1037,7 @@ export async function fetchTbillRate(
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
   const benchmarks: ParsedYieldBenchmarkRegistry = {
     USD: usdMeta,
+    USD_EFFR: resolvedByKey.USD_EFFR.meta,
     EUR: resolvedByKey.EUR.meta,
     CHF: resolvedByKey.CHF.meta,
     GBP: resolvedByKey.GBP.meta,

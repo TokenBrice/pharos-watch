@@ -236,6 +236,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy" },
   { stablecoinId: "safo-spiko-usd", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (USD)" },
   { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
+  { stablecoinId: "usdgo-osl", spreadBps: 38, label: "EFFR-linked reserve-yield proxy (net of 0.38% fee)", benchmarkCurrency: "USD_EFFR" },
 ];
 
 /**
@@ -251,14 +252,28 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
   "scrvusd-curve": {
     code: "wrapper-not-yet-supported",
     since: "2026-04-11",
+    nextReviewAt: "2026-07-09",
     note: "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
   },
   "reusd-re-protocol": {
     code: "convert-to-assets-empty",
     since: "2026-03-15",
+    nextReviewAt: "2026-07-09",
     note: "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
   },
 };
+
+export const QUARANTINED_DETERMINISTIC_PROBE_CONFIGS: OnChainRateConfig[] = [
+  {
+    stablecoinId: "reusd-re-protocol",
+    chain: "ethereum",
+    contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+];
 
 /**
  * Legacy free-form rationale map kept for backward compatibility with
@@ -299,7 +314,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",
-    note: "Binance account yield product with no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed off-chain Binance account yield product; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "bd-basedollar": {
     code: "no-public-yield-source",
@@ -314,7 +330,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",
-    note: "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed issuer-distributed gold leasing yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "gynusd-gyndore": {
     code: "pre-launch",
@@ -324,32 +341,38 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "home-homecoin": {
     code: "issuer-distributed-yield",
     since: "2026-05-22",
-    note: "home-loan payment yield is issuer-distributed; no reliable runtime APY source is wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed issuer-distributed home-loan payment yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "gusd-gate": {
     code: "off-chain-account-product",
     since: "2026-04-14",
-    note: "Gate account-product yield has no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Gate account-product yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000031-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000033-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000089-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000101-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pusd-polaris": {
     code: "no-public-yield-source",
@@ -359,17 +382,13 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "stkgho-umbrella-aave": {
     code: "external-emissions-only",
     since: "2026-04-14",
-    note: "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
+    nextReviewAt: "2026-07-09",
+    note: "reviewed Umbrella external emissions over a 1:1 GHO staking receipt; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "trusd-tori": {
     code: "pre-launch",
     since: "2026-04-14",
     note: "pre-launch asset with no reliable runtime yield source yet",
-  },
-  "usdgo-osl": {
-    code: "issuer-distributed-yield",
-    since: "2026-05-18",
-    note: "EFFR-linked issuer yield has no reliable runtime APY source wired yet",
   },
 };
 

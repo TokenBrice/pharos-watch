@@ -200,6 +200,7 @@ describe("DEWS signal family curves", () => {
     ["structured-stale-source", { yieldSourceRisk: { sourceAgeSeconds: 7 * 60 * 60 } }, 15],
     ["structured-source-switch", { yieldSourceRisk: { sourceSwitchCount30d: 1 } }, 20],
     ["structured-source-risk-penalty", { yieldSourceRisk: { sourceRiskPenalty: 1.5 } }, 20],
+    ["structured-medium-risk-venue", { yieldSourceRisk: { venueRiskTier: "medium" } }, 10],
     ["structured-high-risk-venue", { yieldSourceRisk: { venueRiskTier: "high" } }, 25],
     ["structured-rank-source-switch", { yieldRankChangeAttribution: { primaryDriver: "source-switch" } }, 20],
     ["structured-rank-source-risk", { yieldRankChangeAttribution: { primaryDriver: "source-risk" } }, 20],

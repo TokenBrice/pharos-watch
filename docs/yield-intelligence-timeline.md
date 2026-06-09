@@ -1,6 +1,63 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.23`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.28`.
+
+---
+
+## v8.28 - GBP SONIA Compounded Index Benchmark (June 9, 2026)
+
+- GBP benchmark refresh now uses the Bank of England IADB SONIA Compounded Index `IUDZOS2` instead of the overnight SONIA proxy
+- The daily benchmark cron annualizes the trailing 90-day index change to produce `GBP 3M compounded SONIA`
+- Benchmark metadata records source `boe-sonia-compounded-index`
+- GBP feed failures use fallback mode `gbp-sonia-compounded-index-failed` and retain the existing retained-last-market behavior when available
+- PYS formula, source arbitration, source-risk calibration, publication guards, and non-GBP benchmark paths are unchanged
+
+---
+
+## v8.27 - Fixed-Yield Pendle PT Opportunities (June 9, 2026)
+
+- `fixed-yield` joins the YieldType taxonomy for fixed-maturity principal-token opportunities
+- Pendle supplemental PT market rows now emit `fixed-yield` protocol-API candidates with source keys shaped as `protocol-api:pendle:<chain>:<marketAddress>`
+- Pendle rows keep underlying stablecoin matching through the PT market's underlying asset symbol/address instead of creating synthetic stablecoin entries
+- `fixed-yield` rows are treated as external opportunity alternatives alongside `lending-opportunity`, so they can appear next to native holder-yield rows without displacing those rows through variant projection or parent inheritance
+- PYS formula, benchmark selection, source-risk calibration, history semantics, and publication guards are unchanged
+
+---
+
+## v8.26 - Wave 2 Category-Gated Lending Allowlist (June 9, 2026)
+
+- The curated lending allowlist now includes `aries-markets`, `blend-pools-v2`, `current`, `curvance`, `scallop-lend`, and `tydro`
+- These protocols were verified on 2026-06-09 as DeFiLlama category Lending with live single-asset stablecoin pools on Aptos, Stellar, Sui, Monad, and Ink
+- Speculative non-lending categories remain excluded by the protocol category gate before they can become high-confidence allowlist recommendations
+- The existing APY floor, chain-specific TVL floors, supply-relative `0.1%` gate, reserved-pool exclusion, and source-risk penalty semantics continue to apply
+- PYS formula, benchmark selection, history semantics, and publication guards are unchanged; v8.26 is a source-roster expansion only
+
+---
+
+## v8.25 - USDGO EFFR Rate-Derived Source (June 9, 2026)
+
+- `usdgo-osl` is yield-bearing again and leaves the intentional-gap manifest because it now has a reliable rate-derived runtime APY path
+- The benchmark registry adds optional `USD_EFFR`, sourced from FRED DFF (`fred-dff`) as the Effective Federal Funds Rate feed
+- USDGO computes rate-derived APY as `max(0, USD_EFFR - 38 bps)`, matching OSL public material that references approximately 3.24% net yield versus May 2026 EFFR after fees
+- The default USD benchmark remains `USD` / FRED `DGS3MO`; `USD_EFFR` is a product-specific benchmark key for EFFR-linked products rather than a replacement global USD hurdle
+- PYS formula, source-risk penalties, publication guards, and benchmark retained-last-market semantics are unchanged
+
+---
+
+## v8.24 - Source Management, Venue Risk, and Sync Telemetry (June 9, 2026)
+
+- The DEX-liquidity job caches DeFiLlama `/protocols` metadata under `defillama-protocols`, and the monthly yield coverage audit reuses that cache for protocol-category annotations
+- Coverage-audit protocol recommendations carry DeFiLlama category metadata when available; `high-confidence` lending-allowlist recommendations require a category of Lending, CDP, RWA Lending, or Uncollateralized Lending instead of relying on TVL and pool count alone
+- Auto-discovered lending opportunities move from a binary small-ecosystem TVL gate to `CHAIN_LENDING_TVL_FLOOR_USD`: `$100K` remains the default floor, while Aptos, Berachain, Cardano, Ink, Monad, Plasma, Solana, Stacks, Stellar, and Sui use `$25K`; the supply-relative `0.1%` gate still applies
+- The reviewed venue-risk backlog assigns sourced tiers across the tracked venue registry: `spark-savings`, `yearn`, `yearn-finance`, and `pendle` move to `low`; `maple`, `morpho`, `morpho-v1`, `morpho-blue`, and `beefy` move to `medium`; unknown or unreviewed venues remain neutral
+- Monthly coverage audits now re-probe explicit generic `convertToAssets` quarantines with configured monthly `chainRpcs` when available; `reusd-re-protocol` has an inactive audit probe config and remains outside hourly `ON_CHAIN_RATE_CONFIGS`
+- Successful nonzero quarantine probe rates inside the `<=300%` exchange-rate envelope produce `quarantineReadyToRestore`, `quarantineProbeSummary`, and an operator queue candidate kind `quarantine-ready-to-restore`; restoration remains manual
+- `scrvusd-curve` stays quarantined from the generic reader because it already uses the dedicated current-rate reader; `scrvusd-curve` and `reusd-re-protocol` both carry `nextReviewAt: 2026-07-09`
+- Tier 1 deterministic APYs above the 300% sanity envelope are recorded in sync metadata as `sourceCoverage.onChainEnvelopeRejectionCount` plus bounded rejection examples; fallback resolution remains unchanged
+- Comparison-anchor freshness is recorded in sync metadata as `sourceCoverage.comparisonAnchorFreshness`, including anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples, and truncation state
+- Admin `/api/status` exposes the comparison-anchor freshness summary at `yieldHealth.comparisonAnchorFreshness`; the summary is observability-only and does not change source arbitration, scoring, or publication eligibility
+- PYS keeps the existing source-risk penalty semantics: `low` is a no-op and `medium` contributes the existing +0.15 source-risk penalty; PYS formula, history semantics, and publication guards are otherwise unchanged
+- DEWS v6.07 Yield Anomaly adds a bounded medium-venue branch (`structured-medium-risk-venue`, +10) while the existing high-risk venue branch remains +25
 
 ---
 
@@ -18,7 +75,7 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 
 ## v8.22 - First-Party GBP/JPY/AUD Benchmarks (June 7, 2026)
 
-- GBP benchmark refresh now reads Bank of England IADB `IUDSOIA` directly instead of the FRED mirror
+- GBP benchmark refresh now reads Bank of England IADB `IUDSOIA` directly instead of the FRED mirror; this overnight proxy is superseded by the SONIA Compounded Index in v8.28
 - JPY benchmark refresh now reads Bank of Japan Time-Series Data Search `STRDCLUCON`, replacing the stale FRED mirror that ended at December 2023
 - AUD benchmark refresh now reads the Reserve Bank of Australia F1 money-market CSV cash-rate target instead of the FRED 3-month interbank mirror
 - Retained-last-market fallback semantics and PYS scoring math are unchanged; the update is a benchmark source-roster and freshness reliability change

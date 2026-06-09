@@ -36,19 +36,6 @@ export interface YieldRiskConfigEntry {
   reviewCadence: typeof YIELD_RISK_CONFIG_REVIEW_CADENCE;
 }
 
-const NEUTRAL_PENDING_REVIEW_RATIONALE =
-  "Tracked as a reviewed yield venue candidate, but no approved methodology evidence assigns a non-unknown tier yet; unknown remains neutral.";
-
-function neutralPendingReviewConfig(): YieldRiskConfigEntry {
-  return {
-    venueRiskTier: "unknown",
-    rationale: NEUTRAL_PENDING_REVIEW_RATIONALE,
-    evidence: [],
-    reviewedAt: "2026-05-13",
-    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
-  };
-}
-
 export const YIELD_RISK_CONFIG = {
   // Battle-tested money market since Aave V1 (2020) / V3 (2022); multi-billion-USD TVL
   // across 10+ chains; multiple independent audits and formal verification; mature
@@ -98,12 +85,78 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-05-15",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
-  "spark-savings": neutralPendingReviewConfig(),
-  maple: neutralPendingReviewConfig(),
-  yearn: neutralPendingReviewConfig(),
-  "yearn-finance": neutralPendingReviewConfig(),
-  morpho: neutralPendingReviewConfig(),
-  "morpho-v1": neutralPendingReviewConfig(),
+  "spark-savings": {
+    venueRiskTier: "low",
+    rationale:
+      "Spark Savings wrappers route yield through the Sky/Spark savings stack rather than an external credit venue; the reviewed surface inherits Sky governance, issuer-level rate setting, and Spark operational controls.",
+    evidence: [
+      "Sky / Maker governance controls the savings-rate policy and Spark Savings wrapper parameters",
+      "Spark Savings yield is issuer/governance-set rather than borrower-market or strategy-vault yield",
+      "SparkLend and Sky integrations share the mature Spark/Maker operational stack",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  maple: {
+    venueRiskTier: "medium",
+    rationale:
+      "Maple is an institutional credit venue whose lender pools depend on delegate underwriting, borrower performance, and loan recovery mechanics; that credit-underwriting surface is materially broader than low-risk money-market venues.",
+    evidence: [
+      "Maple pools expose lenders to borrower and pool-delegate credit underwriting risk",
+      "The protocol has a post-2022 recovery and redesign history after credit-market defaults",
+      "Stablecoin yield can vary by pool mandate, borrower concentration, and withdrawal queue conditions",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  yearn: {
+    venueRiskTier: "low",
+    rationale:
+      "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established.",
+    evidence: [
+      "Yearn vaults have operated across multiple market cycles since 2020",
+      "Yearn strategy and vault code has repeated independent audit coverage",
+      "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "yearn-finance": {
+    venueRiskTier: "low",
+    rationale:
+      "Yearn Finance maps to the same mature strategy-vault family as Yearn; stablecoin vault risk is reviewed as low after accounting for its production history, audit cadence, and vault-level accounting.",
+    evidence: [
+      "Yearn Finance is the DeFiLlama project slug for the Yearn vault family",
+      "Yearn vaults have operated across multiple market cycles since 2020",
+      "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  morpho: {
+    venueRiskTier: "medium",
+    rationale:
+      "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive.",
+    evidence: [
+      "Morpho Blue is the canonical reviewed medium-risk Morpho lending primitive",
+      "Morpho vault and market exposure depends on market-creator parameters and allocator controls",
+      "Immutable or semi-immutable market design can limit emergency remediation paths",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "morpho-v1": {
+    venueRiskTier: "medium",
+    rationale:
+      "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets.",
+    evidence: [
+      "Morpho v1 and Morpho Blue share the same venue family for Pharos source-risk attribution",
+      "Morpho exposure depends on market-level and allocator-level controls",
+      "Morpho Blue is already reviewed as medium because the venue is younger than Aave/Compound and has limited remediation paths",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
   // Morpho Blue is the modern immutable lending primitive (January 2024). Audited
   // family but younger TVL cohort vs Aave/Compound. Medium venue risk reflects the
   // shorter live track record and the immutable design limiting remediation paths.
@@ -121,19 +174,44 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-05-15",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
-  pendle: neutralPendingReviewConfig(),
-  beefy: neutralPendingReviewConfig(),
+  pendle: {
+    venueRiskTier: "low",
+    rationale:
+      "Pendle is a mature yield-tokenization venue with isolated markets and a long audit trail; reviewed stablecoin principal/yield markets are low venue risk when market and maturity data remain observable.",
+    evidence: [
+      "Pendle has operated yield-tokenization markets across multiple market cycles",
+      "Pendle markets isolate principal/yield-token exposure by asset and maturity",
+      "Pendle deployments have repeated independent audit coverage",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  beefy: {
+    venueRiskTier: "medium",
+    rationale:
+      "Beefy is a multi-chain strategy-vault aggregator; reviewed yield rows inherit additional strategy, chain, bridge, and integration risk beyond canonical lending venues.",
+    evidence: [
+      "Beefy vaults aggregate external strategies rather than originating a single canonical money market",
+      "Multi-chain vault deployment increases bridge, chain, and integration exposure",
+      "Strategy-specific vault accounting and harvest mechanics can vary materially by source",
+    ],
+    reviewedAt: "2026-06-09",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
 } satisfies Record<YieldRiskConfigProtocol, YieldRiskConfigEntry>;
 
 const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol> = {
   aave: "aave-v3",
   compound: "compound-v3",
   spark: "sparklend",
+  "spark-savings": "spark-savings",
   sparklend: "sparklend",
   "spark-lend": "sparklend",
+  maple: "maple",
   yearn: "yearn",
   "yearn-finance": "yearn-finance",
   morpho: "morpho",
+  "morpho-v1": "morpho-v1",
   "morpho-blue": "morpho-blue",
   pendle: "pendle",
   beefy: "beefy",
@@ -169,6 +247,7 @@ function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlac
   if (source.dataSource === "price-derived") return "price-derived";
   if (source.yieldType === "lp-receipt") return "lp-or-dex";
   if (source.yieldType === "structured-tranche") return "structured-tranche";
+  if (source.yieldType === "fixed-yield") return "lending-market";
   if (source.yieldType === "lending-opportunity") return "lending-market";
   if (source.yieldType === "lending-vault") return "strategy-vault";
   if (source.yieldType === "nav-appreciation" || source.yieldType === "rebase") return "native-wrapper";

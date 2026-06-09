@@ -26,7 +26,18 @@ import type {
 } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
 
-const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
+export const CHAIN_LENDING_TVL_FLOOR_USD: Record<string, number> = {
+  aptos: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  berachain: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  cardano: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  ink: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  monad: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  plasma: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  solana: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  stacks: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  stellar: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+  sui: MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
+};
 
 function getActiveStablecoinMeta(stablecoinId: string) {
   return ACTIVE_STABLECOINS.find((meta) => meta.id === stablecoinId);
@@ -47,10 +58,10 @@ function normalizeYieldPoolChain(chain: string | null | undefined): string | nul
   return resolveChainId(chain) ?? chain.toLowerCase();
 }
 
-function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | undefined): number {
+export function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | undefined): number {
   const normalizedChain = normalizeYieldPoolChain(chain);
-  return normalizedChain && SMALL_ECOSYSTEM_CHAINS.has(normalizedChain)
-    ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
+  return normalizedChain && CHAIN_LENDING_TVL_FLOOR_USD[normalizedChain] != null
+    ? CHAIN_LENDING_TVL_FLOOR_USD[normalizedChain]
     : MIN_LENDING_POOL_TVL_USD;
 }
 
@@ -60,7 +71,7 @@ function shouldApplyStablecoinSupplySizeGate(stablecoinId: string): boolean {
   return meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER";
 }
 
-function getRequiredLendingOpportunityTvlUsd(params: {
+export function getRequiredLendingOpportunityTvlUsd(params: {
   stablecoinId: string;
   poolChain?: string | null;
   baseMinTvlUsd?: number;
@@ -121,6 +132,10 @@ function matchesExplicitYieldPool(
 
 export type YieldCandidateAppendStatus = "appended" | "duplicate" | "size-gated" | "missing-meta";
 
+function isExternalYieldOpportunityType(yieldType: YieldType | undefined): boolean {
+  return yieldType === "lending-opportunity" || yieldType === "fixed-yield";
+}
+
 interface AppendOptionalYieldCandidateInput {
   resolved: ResolvedYieldEntry[];
   entry: ResolvedYieldCandidate;
@@ -135,7 +150,7 @@ export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidate
   }
 
   if (
-    entry.yield.yieldType === "lending-opportunity" &&
+    isExternalYieldOpportunityType(entry.yield.yieldType) &&
     !passesLendingOpportunitySizeGate({
       stablecoinId: meta.id,
       poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
@@ -175,7 +190,7 @@ function appendResolvedYieldCandidates(
 
   for (const entry of entries) {
     if (
-      entry.yield.yieldType === "lending-opportunity" &&
+      isExternalYieldOpportunityType(entry.yield.yieldType) &&
       isBlockedYieldOpportunitySource({ yieldSource: entry.yield.yieldSource })
     ) {
       blockedDrops += 1;
@@ -301,7 +316,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
     if (!parentMeta) continue;
 
     const effectiveYieldType = getEffectiveYieldType(entry, childMeta.yieldConfig?.yieldType);
-    if (effectiveYieldType === "lending-opportunity") continue;
+    if (isExternalYieldOpportunityType(effectiveYieldType)) continue;
 
     const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
     if (

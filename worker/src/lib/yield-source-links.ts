@@ -90,6 +90,13 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Mystic Finance": "https://www.mysticfinance.xyz/",
   Bitway: "https://bitway.com/",
   Frankencoin: "https://frankencoin.com",
+  // Wave 2 — category-gated thin-chain/app-chain lenders
+  "Aries Markets": "https://ariesmarkets.xyz/",
+  Blend: "https://www.blend.capital/",
+  Current: "https://www.current.finance/",
+  Curvance: "https://app.curvance.com/",
+  Scallop: "https://app.scallop.io/",
+  Tydro: "https://tydro.com/",
   // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
   "Hydration Omnipool": "https://hydration.net/",
 };

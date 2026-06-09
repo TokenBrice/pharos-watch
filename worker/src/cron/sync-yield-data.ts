@@ -20,6 +20,7 @@ import {
 } from "./yield-sync/evaluation";
 import { buildYieldHistoryEvaluationInputs } from "./yield-sync/coordinator-history";
 import {
+  buildComparisonAnchorFreshnessMeta,
   buildYieldDegradationReasons,
   buildYieldSafetySnapshotMeta,
   buildYieldSyncMetadata,
@@ -122,7 +123,7 @@ export async function syncYieldData(
     );
   }
 
-  const { resolved, tier1PrevRates } = await resolveYieldSources({
+  const { resolved, tier1PrevRates, envelopeRejections } = await resolveYieldSources({
     db,
     startSec,
     sevenDaysAgoSec,
@@ -309,6 +310,7 @@ export async function syncYieldData(
       supplementalMeta,
       onChainRatesResolved: onChainRates.size,
       onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
+      onChainEnvelopeRejections: envelopeRejections,
       onChainAttempted: onChainAttemptedCount,
       onChainAllDeterministicFailed: allDeterministicFailed,
       onChainExplorerAttempted: onChainExplorerAttemptedCount,
@@ -327,6 +329,10 @@ export async function syncYieldData(
       validationFailures: publicationResult.validationFailures,
       riskFreeRate,
       cacheWriteSkipped: publicationResult.cacheWriteSkipped,
+      comparisonAnchorFreshness: buildComparisonAnchorFreshnessMeta({
+        evaluatedSources,
+        startSec,
+      }),
     }),
   };
 }

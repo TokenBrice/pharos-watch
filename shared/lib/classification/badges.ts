@@ -159,6 +159,7 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "nav-appreciation": "NAV",
   "governance-set": "Gov. Set",
   "lending-opportunity": "Lending Opp.",
+  "fixed-yield": "Fixed Yield",
   "structured-tranche": "Tranche",
 };
 
@@ -179,6 +180,7 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
     hex: "#f97316",
   },
   "lending-opportunity": { badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20", hex: "#0ea5e9" },
+  "fixed-yield": { badge: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20", hex: "#6366f1" },
   "structured-tranche": { badge: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20", hex: "#e11d48" },
 };
 

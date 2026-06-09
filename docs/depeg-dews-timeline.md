@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.06` (2026-02-18 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.07` (2026-02-18 -> 2026-06-09).
+
+---
+
+## v6.07 — Medium venue-risk yield anomaly branch (Jun 9, 2026)
+
+- DEWS Yield Anomaly now adds `+10` when populated structured yield evidence carries `sourceRisk.venueRiskTier = "medium"`
+- Medium venue rows emit the `structured-medium-risk-venue` warning inside the existing Yield Anomaly sub-signal
+- The existing high-risk venue branch remains `+25` with `structured-high-risk-venue`, and the Yield Anomaly sub-signal still caps at 100 after adding warning-string, source-risk, and rank-attribution evidence
+- Missing, malformed, unknown, low, or otherwise neutral venue-risk evidence remains a no-op and does not create an available zero-stress yield signal
 
 ---
 

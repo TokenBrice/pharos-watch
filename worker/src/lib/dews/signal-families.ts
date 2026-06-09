@@ -451,6 +451,9 @@ function computeStructuredYieldSignal(
   if (sourceRisk?.venueRiskTier === "high") {
     value += 25;
     warnings.push("structured-high-risk-venue");
+  } else if (sourceRisk?.venueRiskTier === "medium") {
+    value += 10;
+    warnings.push("structured-medium-risk-venue");
   }
   if (attribution?.primaryDriver === "source-switch") {
     value += 20;

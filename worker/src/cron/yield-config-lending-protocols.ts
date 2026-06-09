@@ -74,6 +74,13 @@ const LENDING_PROTOCOLS = {
   "mystic-finance-lending": { label: "Mystic Finance" },
   "bitway": { label: "Bitway" },
   "frankencoin": { label: "Frankencoin" },
+  // Wave 2 — category-gated thin-chain/app-chain lenders (verified 2026-06-09)
+  "aries-markets": { label: "Aries Markets" },
+  "blend-pools-v2": { label: "Blend" },
+  "current": { label: "Current" },
+  "curvance": { label: "Curvance" },
+  "scallop-lend": { label: "Scallop" },
+  "tydro": { label: "Tydro" },
 } as const;
 
 export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS));
