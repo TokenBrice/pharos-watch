@@ -771,8 +771,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
-    "currentVersion": "3.993",
-    "currentVersionLabel": "v3.993",
+    "currentVersion": "3.997",
+    "currentVersionLabel": "v3.997",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": false
@@ -939,10 +939,10 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   },
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.993",
-    "versionLabel": "v3.993",
-    "currentVersion": "3.993",
-    "currentVersionLabel": "v3.993",
+    "version": "3.997",
+    "versionLabel": "v3.997",
+    "currentVersion": "3.997",
+    "currentVersionLabel": "v3.997",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": true
@@ -982,10 +982,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "totalExact": true,
   "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLDQwODBdfQ",
   "methodology": {
-    "version": "6.0",
-    "versionLabel": "v6.0",
-    "currentVersion": "6.0",
-    "currentVersionLabel": "v6.0",
+    "version": "6.07",
+    "versionLabel": "v6.07",
+    "currentVersion": "6.07",
+    "currentVersionLabel": "v6.07",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1189,10 +1189,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.0",
-    "versionLabel": "v6.0",
-    "currentVersion": "6.0",
-    "currentVersionLabel": "v6.0",
+    "version": "6.07",
+    "versionLabel": "v6.07",
+    "currentVersion": "6.07",
+    "currentVersionLabel": "v6.07",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1954,7 +1954,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "safetyAlertSourceState": "ok",
     "safetyAlertSourceAgeSeconds": 120,
     "safetyAlertsSuppressed": false,
-    "safetyAlertSourceGeneration": "safety-7.12-alert-source-v1"
+    "safetyAlertSourceGeneration": "safety-7.291-alert-source-v1"
   }
 }
 ```
@@ -2284,7 +2284,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.13",
+    "version": "7.291",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -2649,8 +2649,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.20",
-    "currentVersion": "8.20",
+    "version": "8.29",
+    "currentVersion": "8.29",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2715,7 +2715,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `sourceRisk.accessRestricted`     | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                           | Whether the source marks jurisdictional or other access restrictions                                                                                    |
 | `rankChangeAttribution`           | ranking rows                | `object \| null \| undefined`                                                                                                                                                             | Optional previous-rank/PYS delta attribution with primary driver and contribution hints                                                                 |
 
-Current `v8.20` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. Generic on-chain exchange-rate and price-derived APY observations above the deterministic 300% sanity envelope are rejected before publication; protocol-specific adapters and benchmark rate-derived rows retain their family-specific rules. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Current `v8.29` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. Generic on-chain exchange-rate and price-derived APY observations above the deterministic 300% sanity envelope are rejected before publication; protocol-specific adapters and benchmark rate-derived rows retain their family-specific rules. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
@@ -3117,17 +3117,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.0"
+      "methodologyVersion": "6.07"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.0",
-    "versionLabel": "v6.0",
-    "currentVersion": "6.0",
-    "currentVersionLabel": "v6.0",
+    "version": "6.07",
+    "versionLabel": "v6.07",
+    "currentVersion": "6.07",
+    "currentVersionLabel": "v6.07",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3148,7 +3148,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.0"
+    "methodologyVersion": "6.07"
   },
   "history": [
     {
@@ -3160,15 +3160,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
-      "methodologyVersion": "6.0"
+      "methodologyVersion": "6.07"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.0",
-    "versionLabel": "v6.0",
-    "currentVersion": "6.0",
-    "currentVersionLabel": "v6.0",
+    "version": "6.07",
+    "versionLabel": "v6.07",
+    "currentVersion": "6.07",
+    "currentVersionLabel": "v6.07",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

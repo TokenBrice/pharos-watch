@@ -94,7 +94,7 @@ Default sort is `totalUsd desc`.
 
 ## Chain Health Score
 
-Current live methodology version is `1.2`.
+Current live methodology version is `1.3`.
 
 `shared/lib/chain-health.ts` computes the composite as:
 
