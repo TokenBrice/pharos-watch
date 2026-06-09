@@ -96,6 +96,7 @@ import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import {
   loadSupplementalSourceFamilies,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "../yield-sync/supplemental-source-families";
 
 async function flushMicrotasks() {
@@ -187,6 +188,50 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.resolvedTargetCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(3);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
+  });
+
+  it("publishes fresh empty cache rows for successful zero-candidate families", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue([
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 4.1,
+          apyBase: 4.1,
+          apyReward: null,
+          sourcePool: "vault-a",
+          sourceTvlUsd: 1_500_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-a",
+          yieldSource: "Beefy: vault-a",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ]);
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+      expect(
+        vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === `yield:supplemental-sources:v1:${family}`),
+      ).toBe(true);
+    }
+
+    const morphoCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) =>
+      call[1] === "yield:supplemental-sources:v1:morpho"
+    );
+    const morphoPayload = JSON.parse(String(morphoCall?.[2])) as { sourceCount: number; data: unknown[] };
+    expect(morphoPayload.sourceCount).toBe(0);
+    expect(morphoPayload.data).toEqual([]);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty">;
+    };
+    expect(metadata.familyCacheResults?.morpho).toBe("published");
   });
 
   it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {
@@ -535,5 +580,11 @@ describe("syncYieldSupplemental", () => {
     };
     expect(payload.sourceCount).toBe(1);
     expect(payload.data[0]?.yield.sourceKey).toBe("protocol-api:beefy:ethereum:vault-a");
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:morpho"),
+    ).toBe(false);
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:beefy"),
+    ).toBe(true);
   });
 });

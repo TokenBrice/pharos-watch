@@ -108,8 +108,8 @@ export async function syncYieldSupplemental(
     >;
 
   for (const family of familyResults) {
+    if (family.status !== "ok") continue;
     const { candidates: dedupedFamilyCandidates } = dedupeCandidates(family.candidates);
-    if (dedupedFamilyCandidates.length === 0) continue;
     const familyCacheResult = await setCacheIfNewer(
       db,
       getYieldSupplementalFamilyCacheKey(family.key),

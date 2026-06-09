@@ -14,7 +14,6 @@ import {
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
 } from "./sources";
-import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
@@ -42,6 +41,7 @@ export interface SupplementalSourceFamilyResult {
   key: SupplementalSourceFamilyKey;
   candidates: ResolvedYieldCandidate[];
   sourceFamilyCount: number;
+  status: "ok" | "failed";
   telemetry?: OptionalRpcFamilyTelemetry;
 }
 
@@ -142,6 +142,23 @@ function getSupplementalCandidateSourceKey(candidate: ResolvedYieldCandidate): s
   return typeof maybeYield?.sourceKey === "string" && maybeYield.sourceKey.trim()
     ? maybeYield.sourceKey.trim()
     : "(missing-source-key)";
+}
+
+async function runOptionalSupplementalFamily<T>(
+  label: string,
+  signal: AbortSignal | undefined,
+  fn: () => Promise<T>,
+  fallback: T,
+): Promise<{ value: T; status: SupplementalSourceFamilyResult["status"] }> {
+  try {
+    return { value: await fn(), status: "ok" };
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    console.warn(`[yield] ${label} failed:`, error);
+    return { value: fallback, status: "failed" };
+  }
 }
 
 function isStructurallyValidSupplementalCandidate(candidate: ResolvedYieldCandidate): boolean {
@@ -257,55 +274,55 @@ function buildAaveRowsFromLegacyRates(
 async function runMorphoFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const candidates = await runOptionalSourceFamily(
+  const { value: candidates, status } = await runOptionalSupplementalFamily(
     "Morpho supplemental family",
     context.signal,
     () => fetchMorphoVaultSources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "morpho", candidates, sourceFamilyCount: candidates.length };
+  return { key: "morpho", candidates, sourceFamilyCount: candidates.length, status };
 }
 
 async function runPendleFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const candidates = await runOptionalSourceFamily(
+  const { value: candidates, status } = await runOptionalSupplementalFamily(
     "Pendle supplemental family",
     context.signal,
     () => fetchPendleMarketSources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "pendle", candidates, sourceFamilyCount: candidates.length };
+  return { key: "pendle", candidates, sourceFamilyCount: candidates.length, status };
 }
 
 async function runYearnKongFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const candidates = await runOptionalSourceFamily(
+  const { value: candidates, status } = await runOptionalSupplementalFamily(
     "Yearn Kong supplemental family",
     context.signal,
     () => fetchYearnKongSources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "yearnKong", candidates, sourceFamilyCount: candidates.length };
+  return { key: "yearnKong", candidates, sourceFamilyCount: candidates.length, status };
 }
 
 async function runBeefyFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const candidates = await runOptionalSourceFamily(
+  const { value: candidates, status } = await runOptionalSupplementalFamily(
     "Beefy supplemental family",
     context.signal,
     () => fetchBeefySources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "beefy", candidates, sourceFamilyCount: candidates.length };
+  return { key: "beefy", candidates, sourceFamilyCount: candidates.length, status };
 }
 
 async function runCompoundFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { results, telemetry } = await runOptionalSourceFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Compound V3 supplemental family",
     context.signal,
     () => fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], context.signal, context.chainRpcs),
@@ -314,6 +331,7 @@ async function runCompoundFamily(
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     },
   );
+  const { results, telemetry } = value;
 
   const candidates: ResolvedYieldCandidate[] = [];
   for (const result of results) {
@@ -334,6 +352,7 @@ async function runCompoundFamily(
     key: "compoundV3",
     candidates,
     sourceFamilyCount: results.length,
+    status,
     telemetry,
   };
 }
@@ -347,11 +366,12 @@ async function runAaveFamily(
       key: "aaveV3",
       candidates: [],
       sourceFamilyCount: 0,
+      status: "ok",
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     };
   }
 
-  const { rates, results, telemetry } = await runOptionalSourceFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Aave V3 supplemental family",
     context.signal,
     () => fetchAaveV3SupplyRates(targets, context.signal, context.chainRpcs),
@@ -361,6 +381,7 @@ async function runAaveFamily(
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     },
   );
+  const { rates, results, telemetry } = value;
 
   const candidates: ResolvedYieldCandidate[] = [];
   const aaveRows = results.length > 0 ? results : buildAaveRowsFromLegacyRates(rates);
@@ -392,6 +413,7 @@ async function runAaveFamily(
     key: "aaveV3",
     candidates,
     sourceFamilyCount: aaveRows.length,
+    status,
     telemetry,
   };
 }
@@ -399,13 +421,13 @@ async function runAaveFamily(
 async function runRoycoDawnFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const candidates = await runOptionalSourceFamily(
+  const { value: candidates, status } = await runOptionalSupplementalFamily(
     "Royco Dawn supplemental family",
     context.signal,
     () => fetchRoycoDawnSources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "roycoDawn", candidates, sourceFamilyCount: candidates.length };
+  return { key: "roycoDawn", candidates, sourceFamilyCount: candidates.length, status };
 }
 
 const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
