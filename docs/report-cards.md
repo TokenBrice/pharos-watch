@@ -387,7 +387,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Implementation notes:
 
-- Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
+- Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed with identical logic in both endpoints. The quarter-hourly `publish-report-card-cache` pass is the only writer of the producer-published `peg-analytics` D1 cache row; `/api/peg-summary` accepts it for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale row.
 - Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
 - The compact `report_card_cache` score map includes `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`) so lightweight consumers such as Chain Health can degrade freshness when cached scores were computed from stale report-card inputs.
 - `snapshot-safety-grade-history` still writes the compact report-card cache during degraded-input runs, but suppresses `safety_grade_history` seed and grade-transition inserts when `liquidityStale`, `redemptionStale`, or the corresponding `inputFreshness.*.stale` flags are active.

@@ -902,6 +902,8 @@ CREATE TABLE IF NOT EXISTS cache (
 | `bluechip-ratings`         | `syncBluechip`           | Ratings map keyed by canonical Pharos ID                                               |
 | `report-cards:snapshot`    | `publishReportCardCache` | Private generation/methodology-pinned cache envelope carrying the full report-card API payload for `/api/report-cards` and yield hydration reads |
 | `report_card_cache`        | `publishReportCardCache` | Compact Safety Score map for lightweight consumers                                     |
+| `peg-analytics`            | `publishReportCardCache` | Producer-published peg-analytics snapshot (`pegData` + daily depeg counters); `/api/peg-summary` accepts it for up to 30 min (2x producer cadence) and falls back to direct compute on miss/stale |
+| `detail-write-failure:<id>` | stablecoin detail API   | Marker written when a `detail:<id>` cache write fails or is oversized; the staleness watchdog alerts on markers fresher than 24h and prunes them after 7-day retention |
 | `yield-rankings`           | `syncYieldData`          | Pre-computed yield rankings + PYS scores                                               |
 | `risk_free_rate`           | `fetchTbillRate`         | Current T-bill rate for PYS computation                                                |
 

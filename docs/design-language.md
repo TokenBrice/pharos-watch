@@ -331,7 +331,7 @@ Computed metrics now use a shared contextual-methodology pattern instead of rely
 Current pattern:
 
 - compact help trigger attached directly to the metric label
-- desktop behavior: rich tooltip with short definition + methodology links
+- desktop behavior: click-to-open popover with short definition + methodology links (a popover, not a tooltip, so keyboard focus can reach the links)
 - mobile behavior: bottom sheet with the same content
 - score-card footers may add `View methodology` and `Version history` actions when the surface is interpretation-heavy
 

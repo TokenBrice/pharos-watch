@@ -117,7 +117,7 @@ Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins(
 
 Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked from the parent `sync-stablecoins.ts` orchestrator). Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
-The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps for both `/api/peg-summary` and `/api/report-cards`.
+The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The snapshot is computed at producer cadence: the quarter-hourly report-card publish pass (`publish-report-card-cache`) is the only writer of the `peg-analytics` D1 cache row built from it. `/api/peg-summary` accepts that row for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale/invalid row, while `/api/report-cards` consumes the same publish pass through its `report-cards:snapshot` envelope.
 
 ## Stage 1 -- Detection
 

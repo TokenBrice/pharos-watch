@@ -986,10 +986,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "totalExact": true,
   "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLDQwODBdfQ",
   "methodology": {
-    "version": "6.07",
-    "versionLabel": "v6.07",
-    "currentVersion": "6.07",
-    "currentVersionLabel": "v6.07",
+    "version": "6.08",
+    "versionLabel": "v6.08",
+    "currentVersion": "6.08",
+    "currentVersionLabel": "v6.08",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1193,10 +1193,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.07",
-    "versionLabel": "v6.07",
-    "currentVersion": "6.07",
-    "currentVersionLabel": "v6.07",
+    "version": "6.08",
+    "versionLabel": "v6.08",
+    "currentVersion": "6.08",
+    "currentVersionLabel": "v6.08",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1214,8 +1214,9 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `pegType`                   | `string`                                                   | DefiLlama peg type                                                                                                                                                                                                                                                                                                                                                  |
 | `pegCurrency`               | `string`                                                   | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                                                                                                                                                                                                                                      |
 | `governance`                | `string`                                                   | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                                                                                                                                                                                                                                       |
-| `currentDeviationBps`       | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, or when price / peg-reference inputs are missing.                                                                                                                                                        |
+| `currentDeviationBps`       | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, when price / peg-reference inputs are missing, or when `pegReferenceUnavailable` is set.                                                                                                                 |
 | `depegEventCoverageLimited` | `boolean`                                                  | Present when the coin's current supply is below the live depeg-event floor (`$1M`). Use this to distinguish "below coverage floor" from generic missing-price cases when `currentDeviationBps` is `null`.                                                                                                                                                           |
+| `pegReferenceUnavailable`   | `boolean \| undefined`                                     | Present (`true`) since v6.08 when the coin's peg reference lacks authority — a thin non-USD peer-median group with no live FX fallback — so `currentDeviationBps` is withheld as `null` instead of showing a self-referential deviation.                                                                                                                            |
 | `priceSource`               | `string`                                                   | Primary price source label used for current deviation (`defillama-list`, `coingecko`, composite agreement labels such as `binance+coingecko+kraken`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.). High-confidence consensus can expose the agreeing cluster label even when the published price is the cluster median. |
 | `priceConfidence`           | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input                                                                                                                                                                                                                                                                                                                 |
 | `priceUpdatedAt`            | `number \| null`                                           | Compatibility timestamp for the primary price; now mirrors the effective observation time rather than the cache-write time                                                                                                                                                                                                                                          |
@@ -3122,17 +3123,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.07"
+      "methodologyVersion": "6.08"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.07",
-    "versionLabel": "v6.07",
-    "currentVersion": "6.07",
-    "currentVersionLabel": "v6.07",
+    "version": "6.08",
+    "versionLabel": "v6.08",
+    "currentVersion": "6.08",
+    "currentVersionLabel": "v6.08",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3153,7 +3154,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.07"
+    "methodologyVersion": "6.08"
   },
   "history": [
     {
@@ -3165,15 +3166,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
-      "methodologyVersion": "6.07"
+      "methodologyVersion": "6.08"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.07",
-    "versionLabel": "v6.07",
-    "currentVersion": "6.07",
-    "currentVersionLabel": "v6.07",
+    "version": "6.08",
+    "versionLabel": "v6.08",
+    "currentVersion": "6.08",
+    "currentVersionLabel": "v6.08",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

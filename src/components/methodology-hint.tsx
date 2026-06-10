@@ -16,7 +16,7 @@ interface MethodologyHintProps {
   contentClassName?: string;
   children?: ReactNode;
   /**
-   * When true, pass `children` directly to Sheet/Tooltip triggers via `asChild`
+   * When true, pass `children` directly to Sheet/Popover triggers via `asChild`
    * without wrapping them in the dotted-underline default trigger. Use this
    * for non-text triggers such as score badges where adding an extra `<button>`
    * around an already-styled element would cause visual conflicts or nested
@@ -122,7 +122,7 @@ export function MethodologyHint({
   const item = METHODOLOGY_CONTEXT[topic];
   const hasInlineTrigger = children !== undefined;
 
-  // For `asChild`, children are passed verbatim to Sheet/Tooltip triggers via
+  // For `asChild`, children are passed verbatim to Sheet/Popover triggers via
   // Radix Slot — caller must supply a single ReactElement.
   const renderTrigger = (): ReactNode => {
     if (!hasInlineTrigger) {
