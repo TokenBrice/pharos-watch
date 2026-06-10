@@ -151,4 +151,20 @@ describe("KeyInfoCard contract interactions", () => {
     expect(link.getAttribute("href")).toBe("/compliance?regime=mica");
     expect(screen.getByText("Historical MiCA: Authorized")).toBeTruthy();
   });
+
+  it("renders the Launched proof line only for valid launch dates", () => {
+    render(
+      <KeyInfoCard
+        meta={{ ...meta, launchDate: "2018-09-26" } as StablecoinMeta}
+        resolvedMechanismArchetype={null}
+      />,
+    );
+    expect(screen.getByText("Launched")).toBeTruthy();
+    expect(screen.getByText("September 26, 2018")).toBeTruthy();
+    cleanup();
+
+    // Absent or malformed dates omit the line (passport omit-when-absent rule).
+    render(<KeyInfoCard meta={{ ...meta, launchDate: "2018-13-45" } as StablecoinMeta} resolvedMechanismArchetype={null} />);
+    expect(screen.queryByText("Launched")).toBeNull();
+  });
 });

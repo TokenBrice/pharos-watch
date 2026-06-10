@@ -533,14 +533,21 @@ export default function StablecoinDetailClient({
               <SafetyScoreHistorySection stablecoinId={viewModel.id} />
             </LazySection>
             {!viewModel.isNavToken ? (
-              <LazySection minHeight={360}>
-                <DepegHistory
-                  stablecoinId={viewModel.id}
-                  earliestTrackingDate={viewModel.earliestTrackingDate}
-                  hasPriceData={viewModel.coinData.price != null}
-                  depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
-                />
-              </LazySection>
+              /* The hero passport "Record" field jumps here; the anchor wraps
+                 the lazy gate so it exists before the section mounts. */
+              <section
+                id="depeg-history"
+                className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+              >
+                <LazySection minHeight={360}>
+                  <DepegHistory
+                    stablecoinId={viewModel.id}
+                    earliestTrackingDate={viewModel.earliestTrackingDate}
+                    hasPriceData={viewModel.coinData.price != null}
+                    depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+                  />
+                </LazySection>
+              </section>
             ) : null}
             {viewModel.hasFlows ? <FlowHistorySection stablecoinId={viewModel.id} /> : null}
             {viewModel.hasBlacklist ? (

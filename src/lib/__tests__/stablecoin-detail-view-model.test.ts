@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildMintAuthorityDetailViewModel,
@@ -867,7 +868,11 @@ describe("stablecoin detail hero view-model builder", () => {
         label: "Distressed",
       },
       resolvedMechanismArchetype: "fiat-cash",
-      mintAuthority: { status: "reviewed", mintPathLabel: "Issuer direct mint" } as never,
+      mintAuthority: {
+        status: "reviewed",
+        mintPathLabel: "Issuer direct mint",
+        mintPathShortLabel: "Issuer direct",
+      } as never,
       redemptionBackstop: { accessModel: "issuer-api" } as never,
     });
 
@@ -905,14 +910,26 @@ describe("stablecoin detail hero view-model builder", () => {
       href: "#contracts",
     });
     expect(hero.passportItems.find((item) => item.key === "jurisdiction")?.href).toBe("#jurisdiction");
+    // Passport-short projections carry the value; the aria keeps the full label.
     expect(hero.passportItems.find((item) => item.key === "redeemability")).toMatchObject({
-      value: "Issuer / institutional",
+      value: "Institutional",
       href: "#redemption",
+      ariaLabel: "Redeemability: Issuer / institutional — jump to Redemption Backstop",
     });
     expect(hero.passportItems.find((item) => item.key === "minting")).toMatchObject({
-      value: "Issuer direct mint",
+      value: "Issuer direct",
       href: "#mint-authority",
+      ariaLabel: "Minting: Issuer direct mint — jump to Mint Authority",
     });
+    // USDC carries MiCA + GENIUS regulatory visas in the registry data.
+    expect(hero.passportItems.find((item) => item.key === "mica")).toMatchObject({
+      value: "Authorized",
+      href: "#jurisdiction",
+      valueClass: "text-green-700 dark:text-green-400",
+    });
+    expect(hero.passportItems.find((item) => item.key === "genius")?.href).toBe("/compliance/?regime=genius");
+    // Coverage-limited peg summary -> no Record field (can't honestly claim one).
+    expect(hero.passportItems.some((item) => item.key === "record")).toBe(false);
   });
 
   it("derives unavailable peg score and upstream freeze states", () => {
@@ -961,7 +978,11 @@ describe("stablecoin detail hero view-model builder", () => {
         label: "Uncategorized",
       },
       resolvedMechanismArchetype: null,
-      mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed" } as never,
+      mintAuthority: {
+        status: "reviewed",
+        mintPathLabel: "User-collateralized, governed",
+        mintPathShortLabel: "Governed CDP",
+      } as never,
       redemptionBackstop: null,
     });
 
@@ -1084,17 +1105,21 @@ describe("stablecoin detail hero view-model builder", () => {
       reportCard: null,
       verdict: { archetype: "uncategorized", label: "Uncategorized" },
       resolvedMechanismArchetype: "tbill",
-      mintAuthority: { status: "reviewed", mintPathLabel: "Permissioned minter" } as never,
+      mintAuthority: {
+        status: "reviewed",
+        mintPathLabel: "Permissioned minter",
+        mintPathShortLabel: "Permissioned",
+      } as never,
       redemptionBackstop: { accessModel: "permissionless-onchain" } as never,
     });
 
     const byKey = new Map(hero.passportItems.map((item) => [item.key, item]));
     expect(byKey.get("mechanism")).toMatchObject({ value: "Tokenized Treasury", href: "#mechanism" });
     expect(byKey.get("redeemability")).toMatchObject({
-      value: "Permissionless onchain",
+      value: "Permissionless",
       href: "#redemption",
     });
-    expect(byKey.get("minting")).toMatchObject({ value: "Permissioned minter", href: "#mint-authority" });
+    expect(byKey.get("minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
     expect(byKey.get("attestor")).toMatchObject({ value: "Big-4 attestor", href: "#attestation" });
     expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#jurisdiction" });
     expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts" });
@@ -1132,12 +1157,217 @@ describe("stablecoin detail hero view-model builder", () => {
       reportCard: null,
       verdict: { archetype: "uncategorized", label: "Uncategorized" },
       resolvedMechanismArchetype: "cdp",
-      mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed" } as never,
+      mintAuthority: {
+        status: "reviewed",
+        mintPathLabel: "User-collateralized, governed",
+        mintPathShortLabel: "Governed CDP",
+      } as never,
       redemptionBackstop: null,
     });
 
     const decentralizedByKey = new Map(decentralizedHero.passportItems.map((item) => [item.key, item]));
     expect(decentralizedByKey.has("attestor")).toBe(false);
     expect(decentralizedByKey.get("jurisdiction")?.href).toBe("#info");
+  });
+
+  type HeroBuilderParams = Parameters<typeof buildStablecoinDetailHeroViewModel>[0];
+
+  // Shared scaffold for the Issued / MiCA / GENIUS / Record passport cases:
+  // a plain centralized mock coin with every conditional dataset absent unless
+  // a case opts in.
+  function buildPassportHero({
+    coin = {},
+    pegRecord = null,
+    isNavToken = false,
+    mintAuthority = { status: "not-reviewed" } as HeroBuilderParams["mintAuthority"],
+    redemptionBackstop = null,
+  }: {
+    coin?: Record<string, unknown>;
+    pegRecord?: { eventCount?: number; depegEventCoverageLimited?: boolean } | null;
+    isNavToken?: boolean;
+    mintAuthority?: HeroBuilderParams["mintAuthority"];
+    redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
+  } = {}) {
+    const basePegScoreResult = {
+      id: "mock-passport",
+      symbol: "MPP",
+      pegScore: 95,
+      pegPct: 99.95,
+      eventCount: 0,
+      trackingSpanDays: 365,
+      activeDepeg: false,
+    };
+    return buildStablecoinDetailHeroViewModel({
+      coin: {
+        id: "mock-passport",
+        symbol: "MPP",
+        name: "Mock Passport",
+        jurisdiction: { country: "United States" },
+        contracts: [{ chain: "ethereum", address: "0x1" }],
+        flags: { backing: "rwa-backed", governance: "centralized", pegCurrency: "USD" },
+        ...coin,
+      } as never,
+      coinData: {
+        id: "mock-passport",
+        name: "Mock Passport",
+        symbol: "MPP",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: ["ethereum"],
+      } as never,
+      isNavToken,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: pegRecord ? ({ ...basePegScoreResult, ...pegRecord } as never) : null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+      verdict: { archetype: "uncategorized", label: "Uncategorized" },
+      resolvedMechanismArchetype: null,
+      mintAuthority,
+      redemptionBackstop,
+    });
+  }
+
+  it("adds the Issued field only for loose-valid launch dates", () => {
+    expect(
+      buildPassportHero({ coin: { launchDate: "2018-09-26" } }).passportItems.find((item) => item.key === "issued"),
+    ).toMatchObject({
+      category: "Issued",
+      value: "2018",
+      href: "#info",
+      ariaLabel: "Issued: launched September 26, 2018 — jump to Key Information",
+    });
+
+    // Absent or malformed dates omit the field instead of faking it — the
+    // launchDate population sweep fills the dataset coin-by-coin.
+    expect(buildPassportHero().passportItems.some((item) => item.key === "issued")).toBe(false);
+    for (const malformed of ["2018", "2018-9-26", "2018-13-45", "September 26, 2018"]) {
+      expect(
+        buildPassportHero({ coin: { launchDate: malformed } }).passportItems.some((item) => item.key === "issued"),
+      ).toBe(false);
+    }
+  });
+
+  it("builds the MiCA visa field with historical framing for frozen assets", () => {
+    expect(
+      buildPassportHero({ coin: { mica: { status: "pending" } } }).passportItems.find((item) => item.key === "mica"),
+    ).toMatchObject({
+      category: "MiCA",
+      value: "Pending",
+      href: "#jurisdiction",
+      valueClass: "text-amber-700 dark:text-amber-400",
+      ariaLabel: "MiCA status: Pending — jump to jurisdiction details",
+    });
+
+    const frozenMica = buildPassportHero({
+      coin: { status: "frozen", mica: { status: "authorized" } },
+    }).passportItems.find((item) => item.key === "mica");
+    expect(frozenMica?.ariaLabel).toBe("Historical MiCA status: Authorized — jump to jurisdiction details");
+
+    expect(buildPassportHero().passportItems.some((item) => item.key === "mica")).toBe(false);
+  });
+
+  it("builds the GENIUS pathway field and omits noise statuses", () => {
+    expect(
+      buildPassportHero({
+        coin: { genius: { authorizationStatus: "official-application-pending" } },
+      }).passportItems.find((item) => item.key === "genius"),
+    ).toMatchObject({
+      category: "GENIUS",
+      value: "Filing Pending",
+      href: "/compliance/?regime=genius",
+      ariaLabel: `GENIUS Act pathway: Filing Pending (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
+    });
+
+    // not-applicable / unknown statuses are noise words, not passport facts.
+    for (const excluded of ["not-applicable", "unknown"]) {
+      expect(
+        buildPassportHero({ coin: { genius: { authorizationStatus: excluded } } }).passportItems.some(
+          (item) => item.key === "genius",
+        ),
+      ).toBe(false);
+    }
+    expect(buildPassportHero().passportItems.some((item) => item.key === "genius")).toBe(false);
+  });
+
+  it("builds the peg Record field with honest omissions", () => {
+    expect(buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find((item) => item.key === "record")).toMatchObject({
+      category: "Record",
+      value: "Clean",
+      href: "#depeg-history",
+      valueClass: "text-emerald-700 dark:text-emerald-400",
+      ariaLabel: "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
+    });
+
+    expect(buildPassportHero({ pegRecord: { eventCount: 1 } }).passportItems.find((item) => item.key === "record")).toMatchObject({
+      value: "1 depeg",
+      ariaLabel: "Peg record: 1 depeg event over the last 4 years of tracking — jump to Depeg History",
+    });
+    // History, not an alarm: a non-zero count keeps the default foreground tone.
+    const several = buildPassportHero({ pegRecord: { eventCount: 3 } }).passportItems.find(
+      (item) => item.key === "record",
+    );
+    expect(several).toMatchObject({
+      value: "3 depegs",
+      ariaLabel: "Peg record: 3 depeg events over the last 4 years of tracking — jump to Depeg History",
+    });
+    expect(several?.valueClass).toBeUndefined();
+
+    // Limited coverage, NAV tokens, and missing peg summaries omit the field.
+    expect(
+      buildPassportHero({ pegRecord: { eventCount: 2, depegEventCoverageLimited: true } }).passportItems.some(
+        (item) => item.key === "record",
+      ),
+    ).toBe(false);
+    expect(
+      buildPassportHero({ pegRecord: { eventCount: 0 }, isNavToken: true }).passportItems.some(
+        (item) => item.key === "record",
+      ),
+    ).toBe(false);
+    expect(buildPassportHero().passportItems.some((item) => item.key === "record")).toBe(false);
+  });
+
+  it("orders the max-field passport set per the document contract", () => {
+    const hero = buildPassportHero({
+      coin: {
+        collateral: "Cash and T-Bills",
+        pegMechanism: "Issuer redemption at par",
+        proofOfReserves: { type: "attestation", url: "https://example.com", attestorTier: "big4" },
+        launchDate: "2018-09-26",
+        mica: { status: "authorized" },
+        genius: { authorizationStatus: "issuer-announced-intent" },
+      },
+      pegRecord: { eventCount: 0 },
+      mintAuthority: {
+        status: "reviewed",
+        mintPathLabel: "Issuer direct mint",
+        mintPathShortLabel: "Issuer direct",
+      } as HeroBuilderParams["mintAuthority"],
+      redemptionBackstop: { accessModel: "issuer-api" } as HeroBuilderParams["redemptionBackstop"],
+    });
+
+    expect(hero.passportItems.map((item) => item.key)).toEqual([
+      "mechanism",
+      "attestor",
+      "jurisdiction",
+      "issued",
+      "mica",
+      "genius",
+      "redeemability",
+      "minting",
+      "freeze",
+      "record",
+      "chains",
+    ]);
   });
 });

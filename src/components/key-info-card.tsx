@@ -29,6 +29,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";
+import { formatLaunchDate } from "@/lib/stablecoin-detail-passport";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -97,6 +98,9 @@ export function KeyInfoCard({
   const hasContracts = contracts.length > 0;
   const micaStatus = meta.mica ? MICA_STATUS_BADGE_STYLES[meta.mica.status] : null;
   const micaBadgePrefix = meta.status === "frozen" ? "Historical MiCA" : "MiCA";
+  // Proof line for the hero passport's "Issued" field; omitted (never faked)
+  // while the launchDate population sweep is still filling the dataset.
+  const launchDateDisplay = formatLaunchDate(meta.launchDate);
   const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
   const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
@@ -413,6 +417,14 @@ export function KeyInfoCard({
                 <p className="text-sm text-muted-foreground">Not disclosed</p>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Launch date — proof line for the hero passport's "Issued" field */}
+        {launchDateDisplay && (
+          <div className="border-t border-border/40 pt-3 sm:pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Launched</p>
+            <p className="text-sm font-medium">{launchDateDisplay}</p>
           </div>
         )}
 

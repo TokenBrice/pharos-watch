@@ -14,6 +14,8 @@ import type { MicaAuthorizationType, MicaStatus, MicaTokenType } from "../types/
 interface MicaBadgeStyle {
   label: string;
   cls: string;
+  /** Text-only projection of the pill hue for flat surfaces (hero passport entries) that carry no pill background. */
+  textCls?: string;
 }
 
 /** Detail-page / table pill styles per MiCA authorization status. */
@@ -21,22 +23,27 @@ export const MICA_STATUS_BADGE_STYLES: Record<MicaStatus, MicaBadgeStyle> = {
   authorized: {
     label: "Authorized",
     cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    textCls: "text-green-700 dark:text-green-400",
   },
   pending: {
     label: "Pending",
     cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    textCls: "text-amber-700 dark:text-amber-400",
   },
   transitional: {
     label: "Transitional",
     cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    textCls: "text-amber-700 dark:text-amber-400",
   },
   "non-compliant": {
     label: "Non-Compliant",
     cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    textCls: "text-red-700 dark:text-red-400",
   },
   "out-of-scope": {
     label: "Out of Scope",
     cls: "bg-muted/40 text-muted-foreground border-border/60",
+    textCls: "text-muted-foreground",
   },
 };
 

@@ -425,6 +425,18 @@ export const REDEMPTION_ACCESS_LABELS: Record<RedemptionAccessModel, string> = {
   manual: "Manual / discretionary",
 };
 
+/**
+ * Hero passport-strip projection of the access labels — authored-short for
+ * the strip's one-line width budget. Every other surface (RedemptionBackstopCard
+ * and friends) keeps the full `REDEMPTION_ACCESS_LABELS` vocabulary.
+ */
+export const REDEMPTION_ACCESS_PASSPORT_LABELS: Record<RedemptionAccessModel, string> = {
+  "permissionless-onchain": "Permissionless",
+  "whitelisted-onchain": "Whitelisted",
+  "issuer-api": "Institutional",
+  manual: "Manual",
+};
+
 export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, string> = {
   atomic: "Atomic",
   immediate: "Immediate",

@@ -193,6 +193,8 @@ export interface MintAuthorityDetailViewModel {
   status: MintAuthorityDetailStatus;
   reviewLabel: string;
   mintPathLabel: string;
+  /** Passport-short projection of the mint path (hero strip width budget). */
+  mintPathShortLabel: string;
   authorityPostureLabel: string;
   authorityPostureTone: MintAuthorityPostureTone;
   confidenceLabel: string;
@@ -219,6 +221,7 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   status: "not-reviewed",
   reviewLabel: "Not reviewed by Pharos",
   mintPathLabel: "Unknown",
+  mintPathShortLabel: "Unknown",
   authorityPostureLabel: "Unknown",
   authorityPostureTone: "neutral",
   confidenceLabel: "Not reviewed",
@@ -241,6 +244,23 @@ const MINT_PATH_LABELS: Record<string, string> = {
   "bridge-or-oft-synthetic": "Bridge or OFT synthetic",
   "m0-permissioned-minter": "M0 permissioned minter",
   "wrapped-or-variant-inherited": "Wrapped or inherited",
+  unknown: "Unknown",
+};
+
+// Hero passport-strip projection of MINT_PATH_LABELS — authored-short for the
+// strip's one-line width budget. The MintAuthoritySection card and the
+// passport aria-label keep the full labels.
+const MINT_PATH_PASSPORT_LABELS: Record<string, string> = {
+  "immutable-user-collateralized": "Immutable CDP",
+  "user-collateralized-governed": "Governed CDP",
+  "issuer-direct-mint": "Issuer direct",
+  "permissioned-minter": "Permissioned",
+  "offchain-attested-minter": "Attested minter",
+  "facilitator-bucket-mint": "Facilitator",
+  "amo-or-custodian-hybrid": "AMO hybrid",
+  "bridge-or-oft-synthetic": "Bridge synthetic",
+  "m0-permissioned-minter": "M0 minter",
+  "wrapped-or-variant-inherited": "Wrapped / inherited",
   unknown: "Unknown",
 };
 
@@ -477,6 +497,7 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     status: "reviewed",
     reviewLabel: "Reviewed by Pharos",
     mintPathLabel: labelFromMap(candidate.mintPath, MINT_PATH_LABELS),
+    mintPathShortLabel: labelFromMap(candidate.mintPath, MINT_PATH_PASSPORT_LABELS),
     authorityPostureLabel: labelFromMap(candidate.authorityPosture, AUTHORITY_POSTURE_LABELS),
     authorityPostureTone: postureToneFrom(candidate.authorityPosture),
     confidenceLabel: labelFromMap(candidate.confidence, CONFIDENCE_LABELS),
@@ -847,7 +868,16 @@ export function buildStablecoinDetailHeroViewModel({
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
-  const passport = { coin, chainCount, blacklistStatus, resolvedMechanismArchetype, mintAuthority, redemptionBackstop };
+  const passport = {
+    coin,
+    chainCount,
+    blacklistStatus,
+    resolvedMechanismArchetype,
+    mintAuthority,
+    redemptionBackstop,
+    pegScoreResult,
+    isNavToken,
+  };
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;

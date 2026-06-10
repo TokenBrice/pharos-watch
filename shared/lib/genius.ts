@@ -40,6 +40,39 @@ export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES: Record<GeniusAuthorizatio
   },
 };
 
+/**
+ * Authored-short authorization-status labels for dense surfaces (hero
+ * passport strip). The regime is still in its rulemaking phase
+ * (`GENIUS_REGIME_STATE` in `shared/lib/compliance-regime-state.ts`), so
+ * every label describes a *pathway* status — never a present-day federal
+ * license.
+ */
+export const GENIUS_STATUS_SHORT_LABELS: Record<GeniusAuthorizationStatus, string> = {
+  "ppsi-approved": "PPSI Approved",
+  "state-qualified": "State Qualified",
+  "official-application-pending": "Filing Pending",
+  "issuer-announced-intent": "Issuer Intent",
+  "no-public-authorization-found": "None Found",
+  "not-applicable": "Not Applicable",
+  unknown: "Unknown",
+};
+
+/**
+ * Text-only tones for flat surfaces that carry no pill background. Approved
+ * pathways read emerald, in-flight pathways keep the default foreground
+ * (`undefined`), and absent/inapplicable statuses are muted. Tailwind classes
+ * are static strings per the repo gotcha.
+ */
+export const GENIUS_STATUS_TEXT_CLS: Record<GeniusAuthorizationStatus, string | undefined> = {
+  "ppsi-approved": "text-emerald-700 dark:text-emerald-400",
+  "state-qualified": "text-emerald-700 dark:text-emerald-400",
+  "official-application-pending": undefined,
+  "issuer-announced-intent": undefined,
+  "no-public-authorization-found": "text-muted-foreground",
+  "not-applicable": "text-muted-foreground",
+  unknown: "text-muted-foreground",
+};
+
 export const GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS: Record<GeniusAuthorizationStatus, string> = {
   "ppsi-approved": "Official source identifies a domestic permitted payment stablecoin issuer approval for this token or issuer pathway.",
   "state-qualified": "Official source identifies a state-qualified payment stablecoin issuer pathway.",
