@@ -12,7 +12,7 @@ export const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> 
   SGD: [0.2, 5],
   TRY: [0.005, 0.5],
   AUD: [0.2, 5],
-  RUB: [0.005, 50],
+  RUB: [0.005, 0.5],
   ZAR: [0.01, 0.5],
   CAD: [0.3, 2],
   CNY: [0.01, 0.5],
