@@ -1,0 +1,30 @@
+/**
+ * Single lazy bundle for the coin-detail page's deferred sections (Mythos
+ * P1-5). Each section used to be its own `dynamic()` entry, so Turbopack
+ * emitted a separate chunk per section with duplicated shared code (recharts
+ * is ~358 KB raw / 105 KB gz per copy). Routing every section loader through
+ * this one module collapses the per-section copies into one chunk for the
+ * whole detail family (total recharts-attributed bytes: 4.10 MB -> 3.33 MB).
+ *
+ * Known limit: Turbopack still duplicates lazy shared modules across ROUTE
+ * families (one recharts copy each for /yield, /stability-index, detail
+ * pages, ...) and exposes no cross-route chunk-sharing knob. Cross-family
+ * dedup needs upstream Turbopack support; revisit when Next exposes one.
+ *
+ * Keep chart-bearing detail sections OUT of static imports in client.tsx and
+ * IN this bundle; the per-route eager-JS budget guards the eager side.
+ */
+export { McapChart } from "@/components/mcap-chart";
+export { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
+export { DEWSDetail } from "@/components/dews-detail";
+export { ReportCardDetail } from "@/components/report-card";
+export { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
+export { DepegHistory } from "@/components/depeg-history";
+export { FlowsSection, FlowHistorySection } from "@/components/stablecoin-detail/flows-section";
+export { BlacklistSection, BlacklistHistorySection } from "@/components/stablecoin-detail/blacklist-section";
+export { KeyInfoCard } from "@/components/key-info-card";
+export { default as YieldDetailSection } from "@/components/yield-detail-section";
+export { DexLiquidityCard } from "@/components/dex-liquidity-card";
+export { DistributionSection } from "@/components/stablecoin-detail/distribution-section";
+export { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
+export { StablecoinDepegResolverCard } from "@/components/stablecoin-detail/depeg-resolver-card";

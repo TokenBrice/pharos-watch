@@ -48,80 +48,80 @@ function DetailSectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
 }
 
-const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => mod.McapChart), {
+const McapChart = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.McapChart), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
 // Keep chart-bearing sections dynamic: a static import here re-attaches the
 // whole recharts chunk to the eager first load of all 400+ coin pages.
 const MarketDataSection = dynamic(
-  () => import("@/components/stablecoin-detail/market-data-section").then((mod) => mod.MarketDataSection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.MarketDataSection),
   {
     loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
   },
 );
 
-const DEWSDetail = dynamic(() => import("@/components/dews-detail").then((mod) => mod.DEWSDetail), {
+const DEWSDetail = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DEWSDetail), {
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
-const ReportCardDetail = dynamic(() => import("@/components/report-card").then((mod) => mod.ReportCardDetail), {
+const ReportCardDetail = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReportCardDetail), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
 const ReservePanel = dynamic(
-  () => import("@/components/stablecoin-detail/reserve-panel").then((mod) => mod.ReservePanel),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReservePanel),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
-const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
+const DepegHistory = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
 
 const FlowsSection = dynamic(
-  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.FlowsSection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
 const FlowHistorySection = dynamic(
-  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowHistorySection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.FlowHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
 const BlacklistSection = dynamic(
-  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.BlacklistSection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
 const BlacklistHistorySection = dynamic(
-  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistHistorySection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.BlacklistHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
 );
 
-const KeyInfoCard = dynamic(() => import("@/components/key-info-card").then((mod) => mod.KeyInfoCard), {
+const KeyInfoCard = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.KeyInfoCard), {
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
-const YieldDetailSection = dynamic(() => import("@/components/yield-detail-section"), {
+const YieldDetailSection = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldDetailSection), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const DexLiquidityCard = dynamic(() => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard), {
+const DexLiquidityCard = dynamic(() => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DexLiquidityCard), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
 
 const DistributionSection = dynamic(
-  () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DistributionSection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
@@ -129,14 +129,14 @@ const DistributionSection = dynamic(
 
 const SafetyScoreHistorySection = dynamic(
   () =>
-    import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
+    import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.SafetyScoreHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[220px] w-full rounded-xl" />,
   },
 );
 
 const StablecoinDepegResolverCard = dynamic(
-  () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.StablecoinDepegResolverCard),
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.StablecoinDepegResolverCard),
   {
     loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
   },

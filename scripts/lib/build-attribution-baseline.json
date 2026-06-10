@@ -3,22 +3,22 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 4830853,
-      "chunkCount": 156
+      "totalBytes": 4469448,
+      "chunkCount": 142
     },
     {
       "key": "recharts-component",
-      "totalBytes": 4299804,
-      "chunkCount": 12
+      "totalBytes": 2863496,
+      "chunkCount": 8
     },
     {
       "key": "methodology-version",
-      "totalBytes": 1386908,
-      "chunkCount": 14
+      "totalBytes": 1930405,
+      "chunkCount": 27
     },
     {
       "key": "error-boundary",
-      "totalBytes": 977576,
+      "totalBytes": 1029881,
       "chunkCount": 18
     },
     {
@@ -28,13 +28,8 @@
     },
     {
       "key": "next-framework",
-      "totalBytes": 442643,
+      "totalBytes": 443047,
       "chunkCount": 4
-    },
-    {
-      "key": "recharts",
-      "totalBytes": 296372,
-      "chunkCount": 11
     },
     {
       "key": "zod",
@@ -43,8 +38,13 @@
     },
     {
       "key": "stablecoin-registry-zod",
-      "totalBytes": 225684,
+      "totalBytes": 170426,
       "chunkCount": 3
+    },
+    {
+      "key": "recharts",
+      "totalBytes": 167628,
+      "chunkCount": 4
     },
     {
       "key": "recharts-component+stablecoin-registry-zod",
@@ -53,7 +53,7 @@
     },
     {
       "key": "error-boundary+stablecoin-registry-zod",
-      "totalBytes": 71228,
+      "totalBytes": 72547,
       "chunkCount": 1
     },
     {
