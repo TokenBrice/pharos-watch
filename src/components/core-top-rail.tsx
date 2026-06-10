@@ -45,7 +45,7 @@ export function CoreTopRail() {
         aria-label="Core pages"
         className="pharos-rail-ground sticky top-[3px] z-[55] w-full border-b border-border/70 shadow-[0_1px_0_oklch(1_0_0_/0.04)] lg:relative lg:top-auto lg:z-50 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]"
       >
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div className="pharos-scrollbar-none overflow-x-auto overscroll-x-contain">
           <div className="mx-auto flex w-max min-w-full items-center justify-center [justify-content:safe_center] gap-1 px-2 py-2 sm:px-3 sm:py-1.5">
             {CORE_NAV_ITEMS.map((item, index) => {
               const isActive = normalizeNavPath(item.href) === normalizedPath;

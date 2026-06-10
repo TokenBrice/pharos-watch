@@ -35,6 +35,10 @@ export function TableViewport({
         ref={ref}
         data-slot="table-viewport"
         className={cn(
+          // Containing block for absolutely-positioned descendants (e.g.
+          // `sr-only` header labels): without it they escape the scroller's
+          // overflow clip at their static position and widen the document.
+          "relative",
           scrollShadow && "scroll-shadow",
           horizontal && "overflow-x-auto",
           vertical && "overflow-y-auto",

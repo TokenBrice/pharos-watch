@@ -1132,6 +1132,16 @@
     background-attachment: local, local, scroll, scroll;
   }
 
+  /* Scrollable strips that rely on edge-fade gradients for their overflow
+     affordance (core top rail). Keeps scroll behavior, hides the native bar. */
+  .pharos-scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .pharos-scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   @keyframes pharos-pulse {
     0%,
     100% {
