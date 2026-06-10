@@ -371,8 +371,6 @@ describe("getRedemptionBackstopConfig", () => {
     const reviewedIssuerIds = [
       "cash-phantom",
       "mnee-mnee",
-      "usdp-paxos",
-      "gusd-gemini",
       "xusd-straitsx",
       "xsgd-straitsx",
       "usdq-quantoz",
@@ -388,6 +386,18 @@ describe("getRedemptionBackstopConfig", () => {
         reviewedAt: "2026-03-23",
       });
       expect(config?.docs?.length).toBeGreaterThan(0);
+    }
+
+    const documentedHotBufferIssuerIds = ["pyusd-paypal", "usdp-paxos", "usdg-paxos", "gusd-gemini"] as const;
+
+    for (const id of documentedHotBufferIssuerIds) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config).toMatchObject({
+        routeFamily: "offchain-issuer",
+        capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound", basis: "hot-buffer" },
+        reviewedAt: "2026-06-10",
+      });
+      expect(config?.docs?.length).toBeGreaterThanOrEqual(2);
     }
 
     expect(getRedemptionBackstopConfig("euri-banking-circle")).toMatchObject({

@@ -13,11 +13,24 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "pyusd-paypal": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound", basis: "hot-buffer" },
+    reviewedAt: "2026-06-10",
     costModel: fixedFee(
       0,
       "Paxos states it does not charge a PYUSD redemption fee; bank or network fees may still apply",
     ),
-    docs: [sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"])],
+    docs: [
+      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
+      sourceRef(
+        "Paxos USD stablecoin terms",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        ["route", "access", "settlement", "fees"],
+      ),
+      sourceRef("Paxos PYUSD transparency", "https://www.paxos.com/pyusd-transparency", ["capacity"]),
+    ],
+    notes: [
+      "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and monthly attested reserves are held entirely in cash deposits, short-dated US Treasury bills, overnight reverse repos, and government money market funds; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
+    ],
   },
   "fdusd-first-digital": {
     ...issuerBase,
@@ -187,29 +200,59 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdp-paxos": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound", basis: "hot-buffer" },
+    reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Paxos states it does not charge a USDP redemption fee"),
-    docs: [sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"])],
+    docs: [
+      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"]),
+      sourceRef(
+        "Paxos USD stablecoin terms",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        ["route", "access", "settlement", "fees"],
+      ),
+      sourceRef("Paxos USDP transparency", "https://www.paxos.com/usdp-transparency", ["capacity"]),
+    ],
+    notes: [
+      "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and monthly attested NYDFS-eligible reserves are held entirely in cash deposits, short-dated US Treasury bills, overnight reverse repos, and government money market funds; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
+    ],
   },
   "gusd-gemini": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound", basis: "hot-buffer" },
+    reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Gemini describes GUSD conversion and redemption as fee-free"),
     docs: [
-      sourceRef("Gemini Dollar overview", "https://www.gemini.com/dollar", ["route", "capacity"]),
+      sourceRef("Gemini Dollar overview", "https://www.gemini.com/dollar", ["route", "capacity", "access", "settlement"]),
       sourceRef(
         "Gemini GUSD buy and sell guide",
         "https://support.gemini.com/hc/en-us/articles/360001352466-How-do-I-buy-or-sell-my-Gemini-dollar-GUSD",
         ["route", "fees"],
       ),
+      sourceRef("Gemini GUSD attestation reports", "https://www.gemini.com/legal/gusd-attestations", ["capacity"]),
+    ],
+    notes: [
+      "Gemini documents that customers can always redeem 1 GUSD for $1 on Gemini at any time via fee-free in-app conversion, and monthly BPM attestations cover reserves held entirely in FDIC-insured bank deposits, Treasury-only money market funds, and US Treasury obligations; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
     ],
   },
   "usdg-paxos": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound", basis: "hot-buffer" },
+    reviewedAt: "2026-06-10",
     costModel: fixedFee(0, "Paxos states it does not charge a USDG redemption fee"),
     docs: [
       sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
       sourceRef("Paxos USDG overview", "https://docs.paxos.com/stablecoin/usdg", ["route", "capacity"]),
+      sourceRef(
+        "Paxos USD stablecoin terms",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        ["route", "access", "settlement", "fees"],
+      ),
+      sourceRef("Paxos USDG transparency", "https://www.paxos.com/usdg-transparency", ["capacity"]),
+    ],
+    notes: [
+      "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and Paxos states USDG reserves are held 100% in US dollar deposits, US treasuries, and cash equivalents with monthly attestations; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
     ],
   },
   "usdx-hex-trust": {

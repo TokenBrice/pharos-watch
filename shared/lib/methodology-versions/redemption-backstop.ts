@@ -5,7 +5,7 @@ import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemp
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./base";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "4.07",
+  currentVersion: "4.11",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
     ...REDEMPTION_BACKSTOP_V4,

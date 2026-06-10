@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.11",
+    title: "Documented immediate buffers for top fiat issuers",
+    date: "2026-06-10",
+    effectiveAt: 1781118000,
+    summary:
+      "Top fiat issuers with documented routine same-day or next-day par redemption for verified customers and monthly-attested fully highly-liquid reserves move from eventual-only supply-full capacity to documented-bound immediate hot-buffer ratios under a uniform conservative haircut.",
+    impact: [
+      "An offchain issuer route qualifies only when both criteria hold: issuer terms document routine T+0/T+1 (or intraday) par redemption for verified customers, and the latest attestation or transparency disclosure quantifies a highly liquid reserve share (cash, overnight reverse repos, US Treasury bills of three months or less, or government money market funds)",
+      "Uniform haircut rule: the documented immediate ratio is the attested highly liquid share multiplied by 0.25 (a 75% haircut), rounded down to the nearest 0.05, reflecting banking-rail, wire-cutoff, and compliance-processing throughput rather than asset liquidity; issuer-specific stricter reserve-slice bounds (USDC's 7% cash slice, USDtb's 10% USDC buffer) keep precedence over the generic rule",
+      "PYUSD, USDP, USDG, and GUSD now use `supply-ratio` 0.25 with `documented-bound` confidence on a hot-buffer basis, with dual sources reviewed 2026-06-10: redemption terms (Paxos USD stablecoin terms and conditions; Gemini Dollar redemption commitments) plus the issuer attestation hubs (Paxos PYUSD/USDP/USDG transparency, Gemini GUSD attestations)",
+      "USDT stays eventual-only because Tether's terms commit to no routine settlement timeframe and retain broad discretionary delay and suspension rights; RLUSD and FDUSD stay eventual-only because their public terms document par redemption but no routine T+0/T+1 settlement window; USD1 stays eventual-only because no public issuer redemption terms with a documented settlement window exist",
+      "Offchain-issuer route-family caps (65) and severe-depeg unscoreability for non-live documented-bound routes are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.07",
     title: "Conservative confidence defaults and final-state depeg gating",
     date: "2026-06-10",
