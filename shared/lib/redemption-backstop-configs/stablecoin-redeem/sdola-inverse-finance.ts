@@ -1,14 +1,9 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull("2026-05-24"),
+  capacityModel: { kind: "reserve-sync-metadata" },
   totalScoreCap: 70,
   costModel: undisclosedReviewedFee(
     "sDOLA docs describe deposits and redemptions through the ERC-4626 wrapper at the vault exchange rate; public materials reviewed do not publish a separate withdrawal fee",
@@ -30,5 +25,6 @@ export const SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopC
   notes: [
     "Modeled route is the permissionless sDOLA wrapper exit into DOLA, not the downstream DOLA-to-USDS PSM path.",
     "Config-level cap reflects that unwrapping to DOLA does not by itself guarantee a full stablecoin exit; DOLA's own PSM capacity remains separately bounded.",
+    "Fresh ERC-4626 reserve telemetry reads the vault's idle DOLA balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

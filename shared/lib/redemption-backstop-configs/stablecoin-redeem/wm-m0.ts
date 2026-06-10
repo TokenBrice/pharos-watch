@@ -1,13 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const WM_M0_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const WM_M0_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull("2026-04-16"),
   totalScoreCap: 70,
   costModel: fixedFee(0, "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token"),
@@ -19,4 +13,4 @@ export const WM_M0_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue",
     "Config-level cap reflects that the wM->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail (institution-only M0 mint/burn) still gates actual par exit",
   ],
-};
+});

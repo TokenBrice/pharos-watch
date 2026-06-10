@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  sourceRef,
-  type RedemptionBackstopConfig,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_STABLECOIN_BATCH_AT } from "./shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_BATCH_AT } from "./shared";
 
-export const XDAI_GNOSIS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const XDAI_GNOSIS_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
   costModel: undisclosedReviewedFee(
     "Gnosis bridge docs describe xDAI/DAI bridge exits; public docs reviewed do not publish a separate fixed xDAI redemption fee",
@@ -23,4 +16,4 @@ export const XDAI_GNOSIS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Modeled as a bridge-backed stablecoin redemption route into DAI rather than an independent fiat issuer rail",
   ],
-};
+});

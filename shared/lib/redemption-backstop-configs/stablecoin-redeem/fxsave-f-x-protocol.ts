@@ -1,13 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_FXSAVE_LIVE_REDEMPTION_AT } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_FXSAVE_LIVE_REDEMPTION_AT } from "./shared";
 
-export const FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: documentedVariableFee("fxSAVE can exit through fxSP/router routes into fxUSD, USDC, or both depending on available liquidity"),
@@ -19,4 +13,4 @@ export const FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopCon
   notes: [
     "Fresh ERC-4626 reserve telemetry reads the fxSAVE vault's idle fxSP balance as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of falling back to the prior heuristic strategy-buffer estimate.",
   ],
-};
+});

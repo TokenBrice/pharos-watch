@@ -1,8 +1,7 @@
-import { documentedVariableFee, sourceRef, type RedemptionBackstopConfig, stablecoinRedeemBase } from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const USD0_USUAL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USD0_USUAL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   outputAssetType: "mixed-collateral",
   costModel: documentedVariableFee(
@@ -20,4 +19,4 @@ export const USD0_USUAL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
       ["route", "fees"],
     ),
   ],
-};
+});

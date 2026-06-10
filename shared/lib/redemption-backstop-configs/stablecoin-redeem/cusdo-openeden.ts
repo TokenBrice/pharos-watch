@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_WRAPPER_REDEMPTION_AT } from "./shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_WRAPPER_REDEMPTION_AT } from "./shared";
 
-export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
@@ -22,4 +15,4 @@ export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig =
     "The wrapper leg is immediate; downstream primary-market USDO redemption remains governed by OpenEden's own issuer flow",
     "Fresh ERC-4626 reserve telemetry reads the wrapper's idle USDO balance as current direct unwrap capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

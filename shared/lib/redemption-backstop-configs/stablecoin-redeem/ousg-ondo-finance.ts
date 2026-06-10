@@ -1,8 +1,7 @@
-import { documentedVariableFee, sourceRef, type RedemptionBackstopConfig, stablecoinRedeemBase } from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   accessModel: "whitelisted-onchain",
   executionModel: "rules-based-nav",
@@ -17,4 +16,4 @@ export const OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfi
     ]),
   ],
   notes: ["Token transfers restricted to KYC-verified whitelisted addresses on-chain"],
-};
+});

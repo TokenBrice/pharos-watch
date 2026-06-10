@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
-export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   settlementModel: "queued",
@@ -32,4 +25,4 @@ export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Final AID redemption into supported stablecoins remains whitelisted for primary-market users, while regular users generally exit AID through app or DEX liquidity.",
     "Fresh ERC-4626 reserve telemetry reads the vault's idle AID balance as the current redeemable bound while the monthly FIFO cycle still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

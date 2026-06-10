@@ -1,13 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const USDAI_USD_AI_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDAI_USD_AI_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   reviewedAt: "2026-04-03",
   costModel: documentedVariableFee(
@@ -18,4 +12,4 @@ export const USDAI_USD_AI_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     sourceRef("USD.AI app buy flow", "https://app.usd.ai/buy", ["route"]),
   ],
   notes: ["Current route models the base USDai burn-and-withdraw path into PYUSD; the asynchronous queue applies to sUSDai unstaking, not direct USDai redemption"],
-};
+});

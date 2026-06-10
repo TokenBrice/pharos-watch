@@ -1,13 +1,7 @@
-import {
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   costModel: undisclosedReviewedFee(),
   docs: [
@@ -17,4 +11,4 @@ export const MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfi
   notes: [
     "Tracked metadata describes direct 1:1 USDC redemption with msUSD held fully against USDC reserves, while yield generation sits in the separate msY staking layer",
   ],
-};
+});

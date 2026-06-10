@@ -1,12 +1,7 @@
-import {
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const USDF_ASTHERUS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDF_ASTHERUS_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
   settlementModel: "days",
   executionModel: "rules-based-nav",
@@ -26,4 +21,4 @@ export const USDF_ASTHERUS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = 
     "Tracked metadata describes 1:1 USDT mint and redeem semantics for USDF",
     "The reviewed 50% bound matches the tracked USDT custody share rather than assuming the strategy-deployed delta-neutral book is instantly withdrawable",
   ],
-};
+});

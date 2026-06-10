@@ -1,13 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const USDZ_ANZEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDZ_ANZEN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull("2026-04-16"),
   accessModel: "whitelisted-onchain",
   costModel: undisclosedReviewedFee(
@@ -20,4 +14,4 @@ export const USDZ_ANZEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Primary mint and redeem rail is reserved for whitelisted Qualified Market Makers; retail holders exit via DEX liquidity while arbitrage by QMMs maintains the peg against SPCT collateral",
   ],
-};
+});

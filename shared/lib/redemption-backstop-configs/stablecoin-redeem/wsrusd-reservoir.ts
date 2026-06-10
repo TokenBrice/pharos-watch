@@ -1,12 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const WSRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const WSRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   executionModel: "rules-based-nav",
   capacityModel: {
     kind: "reserve-sync-metadata",
@@ -29,4 +24,4 @@ export const WSRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig
     "Fresh live reserve telemetry uses the current USDC position as the immediate redeemable lower bound",
     "When the timestamp-less Reservoir balance-sheet feed cannot meet scoring-grade freshness requirements, the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
   ],
-};
+});

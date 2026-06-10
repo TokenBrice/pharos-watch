@@ -1,12 +1,7 @@
-import {
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(),
@@ -19,4 +14,4 @@ export const SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "sfrxUSD is an ERC-4626-like savings wrapper over frxUSD and exits immediately back into the underlying at the current exchange rate",
     "Fresh ERC-4626 reserve telemetry reads the vault's idle frxUSD balance as current direct wrapper capacity; the wrapper does not add a separate queue or access gate beyond the base frxUSD system.",
   ],
-};
+});

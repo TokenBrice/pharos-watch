@@ -1,13 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const USDA_AVALON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDA_AVALON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   settlementModel: "days",
   executionModel: "rules-based-nav",
@@ -27,4 +21,4 @@ export const USDA_AVALON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     ),
   ],
   notes: ["The modeled redemption rail is the documented USDa-to-USDT conversion vault on Ethereum mainnet rather than offchain BTC collateral withdrawals"],
-};
+});

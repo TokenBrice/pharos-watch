@@ -1,8 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
-import { REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
-export const USN_NOON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USN_NOON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
   capacityModel: { kind: "supply-ratio", ratio: 0.15 },
   costModel: undisclosedReviewedFee(
@@ -25,4 +24,4 @@ export const USN_NOON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Direct mint and redemption are reserved for approved primary-market users; current model does not treat Noon strategy collateral as a separately measured instant stablecoin buffer",
     "Because USN relies on delta-neutral exchange strategies rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
   ],
-};
+});

@@ -1,13 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const APXUSD_APYX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const APXUSD_APYX_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   accessModel: "whitelisted-onchain",
   costModel: documentedVariableFee(
@@ -31,4 +25,4 @@ export const APXUSD_APYX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     ),
   ],
   notes: ["Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market"],
-};
+});

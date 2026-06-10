@@ -1,13 +1,7 @@
-import {
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const OUSD_ORIGIN_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const OUSD_ORIGIN_PROTOCOL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   capacityModel: { kind: "reserve-sync-metadata" },
   costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),
@@ -32,4 +26,4 @@ export const OUSD_ORIGIN_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopCo
     "Origin docs still describe pro-rata basket redemption semantics; current OUSD collateral is USDC only",
     "Fresh Origin vault telemetry reads the vault's idle stablecoin balances as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

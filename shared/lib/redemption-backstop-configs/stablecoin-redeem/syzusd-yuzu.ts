@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_YIELD_EXPANSION_AT } from "./shared";
+import { documentedBoundSupplyFull, documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
-export const SYZUSD_YUZU_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SYZUSD_YUZU_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
@@ -21,4 +14,4 @@ export const SYZUSD_YUZU_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Fresh ERC-4626 reserve telemetry reads the wrapper's idle yzUSD balance as current direct unwrap capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

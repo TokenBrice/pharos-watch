@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
-export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
@@ -24,4 +17,4 @@ export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig 
     "Config-level cap reflects that the wrapper exit alone does not return holders to USDC, and downstream msUSD redemption can be capped or delayed during strategy unwinds.",
     "Fresh ERC-4626 reserve telemetry reads the vault's idle msUSD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

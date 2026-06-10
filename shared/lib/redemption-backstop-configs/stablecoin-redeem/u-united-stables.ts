@@ -1,8 +1,7 @@
-import { documentedVariableFee, sourceRef, type RedemptionBackstopConfig, stablecoinRedeemBase } from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const U_UNITED_STABLES_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const U_UNITED_STABLES_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   accessModel: "whitelisted-onchain",
   costModel: documentedVariableFee(
@@ -12,4 +11,4 @@ export const U_UNITED_STABLES_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig
     sourceRef("United Stables", "https://www.u.tech/", ["capacity"]),
     sourceRef("United Stables terms", "https://www.u.tech/terms/", ["route", "fees", "access"]),
   ],
-};
+});

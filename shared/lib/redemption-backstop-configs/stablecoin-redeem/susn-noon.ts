@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_YIELD_EXPANSION_AT } from "./shared";
+import { documentedBoundSupplyFull, documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
-export const SUSN_NOON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SUSN_NOON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   accessModel: "whitelisted-onchain",
@@ -22,4 +15,4 @@ export const SUSN_NOON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Fresh ERC-4626 reserve telemetry reads the vault's idle USN balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

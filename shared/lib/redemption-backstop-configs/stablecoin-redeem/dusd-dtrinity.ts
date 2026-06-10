@@ -1,12 +1,7 @@
-import {
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const DUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const DUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   executionModel: "deterministic-basket",
   outputAssetType: "stable-basket",
   capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
@@ -18,4 +13,4 @@ export const DUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = 
   notes: [
     "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor",
   ],
-};
+});

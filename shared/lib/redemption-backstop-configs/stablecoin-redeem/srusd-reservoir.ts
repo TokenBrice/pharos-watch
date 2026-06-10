@@ -1,12 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const SRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: {
     kind: "reserve-sync-metadata",
     fallbackRatio: 0.0025,
@@ -28,4 +23,4 @@ export const SRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig 
   notes: [
     "Fresh reserve telemetry uses Reservoir's balance-sheet feed; when it is unavailable, the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
   ],
-};
+});

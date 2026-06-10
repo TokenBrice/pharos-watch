@@ -1,13 +1,7 @@
-import {
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const AID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const AID_GAIB_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   accessModel: "whitelisted-onchain",
   costModel: fixedFee(
@@ -29,4 +23,4 @@ export const AID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Regular users typically exit AID through the GAIB app or DEX liquidity, while the modeled primary redemption rail is the whitelisted direct burn-and-withdraw contract path",
   ],
-};
+});

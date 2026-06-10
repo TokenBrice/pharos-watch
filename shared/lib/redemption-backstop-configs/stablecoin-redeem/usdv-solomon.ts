@@ -1,13 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_FOLLOWUP_REMEDIATION_AT } from "./shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_FOLLOWUP_REMEDIATION_AT } from "./shared";
 
-export const USDV_SOLOMON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDV_SOLOMON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
   capacityModel: { kind: "supply-ratio", ratio: 0.005, confidence: "documented-bound", basis: "hot-buffer" },
   costModel: documentedVariableFee(
@@ -30,4 +24,4 @@ export const USDV_SOLOMON_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Modeled as the whitelisted USDv to USDC redemption path via Solomon protocol reserves, not as full strategy-collateral redeemability.",
     "The documented 0.5% reserve buffer is the immediate capacity bound; strategy assets and derivatives backing remain outside immediate redemption capacity.",
   ],
-};
+});

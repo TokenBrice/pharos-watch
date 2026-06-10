@@ -1,12 +1,7 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
   settlementModel: "immediate",
   capacityModel: {
@@ -38,4 +33,4 @@ export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Fresh live reserve metadata scores against Ethena's current Liquid Cash bucket, while the 0.5% fallback ratio reflects the smaller hot-contract stable buffer documented for on-demand redemptions",
   ],
-};
+});

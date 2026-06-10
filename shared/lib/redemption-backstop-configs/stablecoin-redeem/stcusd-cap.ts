@@ -1,7 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const STCUSD_CAP_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const STCUSD_CAP_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(
@@ -22,4 +22,4 @@ export const STCUSD_CAP_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Fresh ERC-4626 reserve telemetry reads the vault's idle cUSD balance as current direct wrapper capacity; final cUSD par exit inherits Cap's proportional reserve-basket redemption route.",
   ],
-};
+});

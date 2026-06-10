@@ -1,12 +1,7 @@
-import {
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(),
@@ -19,4 +14,4 @@ export const SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = 
     "scrvUSD is Curve's savings wrapper over crvUSD and exits into the underlying at the live vault exchange rate",
     "Fresh ERC-4626 reserve telemetry reads the vault's idle crvUSD balance as current direct wrapper capacity; actual par-exit quality then depends on the underlying crvUSD redemption and peg-defense surface.",
   ],
-};
+});

@@ -1,4 +1,10 @@
-import { documentedBoundSupplyFull } from "../shared";
+import { documentedBoundSupplyFull, stablecoinRedeemBase, type RedemptionBackstopConfig } from "../shared";
+
+/** Scaffold for the one-coin modules in this directory: applies the shared
+ *  `stablecoinRedeemBase` defaults so each module only states its overrides. */
+export function defineStablecoinRedeemConfig(overrides: Partial<RedemptionBackstopConfig>): RedemptionBackstopConfig {
+  return { ...stablecoinRedeemBase, ...overrides };
+}
 
 export const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 export const REVIEWED_REMEDIATION_AT = "2026-03-30";

@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  sourceRef,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_STABLECOIN_BATCH_AT } from "./shared";
+import { documentedBoundSupplyFull, sourceRef, undisclosedReviewedFee } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_BATCH_AT } from "./shared";
 
-export const USX_DFORCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USX_DFORCE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
   outputAssetType: "stable-basket",
   costModel: undisclosedReviewedFee(
@@ -22,4 +15,4 @@ export const USX_DFORCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     ]),
     sourceRef("dForce USX LSR", "https://docs.usx.finance/minting-and-redeeming/lsr", ["route", "capacity", "fees"]),
   ],
-};
+});

@@ -1,8 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const USX_SOLSTICE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USX_SOLSTICE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   accessModel: "whitelisted-onchain",
   costModel: undisclosedReviewedFee(
@@ -12,4 +11,4 @@ export const USX_SOLSTICE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "Retail users access USX primarily through DEX liquidity or the Solstice platform, while the primary mint/redeem rail is institution-only",
   ],
-};
+});

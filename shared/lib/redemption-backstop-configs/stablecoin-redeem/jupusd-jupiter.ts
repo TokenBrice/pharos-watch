@@ -1,7 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig } from "./shared";
 
-export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
   capacityModel: {
     kind: "reserve-sync-metadata",
@@ -25,4 +25,4 @@ export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig =
   notes: [
     "Current model keeps the reviewed 10% USDC liquidity buffer disclosed in public materials as the immediate bound rather than assuming the full reserve stack is always user-accessible through the primary mint/redeem rail",
   ],
-};
+});

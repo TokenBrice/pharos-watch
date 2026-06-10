@@ -1,13 +1,7 @@
-import {
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_ZCHF_BRIDGE_AT } from "./shared";
+import { fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_ZCHF_BRIDGE_AT } from "./shared";
 
-export const ZCHF_FRANKENCOIN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const ZCHF_FRANKENCOIN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0085 },
   costModel: fixedFee(
     0,
@@ -36,4 +30,4 @@ export const ZCHF_FRANKENCOIN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig
     "Frankencoin's price API does not yet publish CHFAU, so reserve telemetry values CHFAU at the existing VCHF CHF-price proxy",
     "Fallback retains a conservative 0.85% bridge-buffer ratio derived from the reviewed CHFAU bridge inventory relative to ZCHF supply on May 25, 2026",
   ],
-};
+});

@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  undisclosedReviewedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_FOLLOWUP_REMEDIATION_AT } from "./shared";
+import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_FOLLOWUP_REMEDIATION_AT } from "./shared";
 
-export const USDB_BLAST_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const USDB_BLAST_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
   settlementModel: "days",
   outputAssetType: "stable-single",
@@ -23,4 +16,4 @@ export const USDB_BLAST_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Models the canonical Blast bridge exit from USDB to Ethereum DAI, not secondary-market USDB liquidity on Blast.",
     "Existing live reserve telemetry tracks the Blast USDB yield manager, but this static route only claims documented eventual bridge redeemability.",
   ],
-};
+});

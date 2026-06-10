@@ -1,8 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
-import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
-export const GTUSDC_GAUNTLET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const GTUSDC_GAUNTLET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(
@@ -26,4 +25,4 @@ export const GTUSDC_GAUNTLET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig 
   notes: [
     "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; the prior reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
   ],
-};
+});

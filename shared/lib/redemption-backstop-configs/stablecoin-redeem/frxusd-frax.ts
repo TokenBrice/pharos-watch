@@ -1,8 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
-import { reviewedDirectRedemptionSupplyFull } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, reviewedDirectRedemptionSupplyFull } from "./shared";
 
-export const FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...reviewedDirectRedemptionSupplyFull,
   capacityModel: { kind: "reserve-sync-metadata" },
   costModel: undisclosedReviewedFee(
@@ -23,4 +22,4 @@ export const FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
     "If the Frax balance-sheet snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
   ],
-};
+});

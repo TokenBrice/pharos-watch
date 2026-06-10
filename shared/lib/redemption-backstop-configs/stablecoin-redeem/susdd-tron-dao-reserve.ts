@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  fixedFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_YIELD_EXPANSION_AT } from "./shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
-export const SUSDD_TRON_DAO_RESERVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const SUSDD_TRON_DAO_RESERVE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
@@ -21,4 +14,4 @@ export const SUSDD_TRON_DAO_RESERVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstop
     "sUSDD exits to USDD at the savings-vault exchange rate; downstream USDD par exit remains governed by the parent USDD route",
     "Fresh ERC-4626 reserve telemetry reads the vault's idle USDD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
-};
+});

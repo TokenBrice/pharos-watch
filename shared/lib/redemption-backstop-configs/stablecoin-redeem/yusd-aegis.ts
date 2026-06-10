@@ -1,8 +1,7 @@
-import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
-import { REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
+import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
-export const YUSD_AEGIS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const YUSD_AEGIS_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
   capacityModel: { kind: "supply-ratio", ratio: 0.15 },
   costModel: undisclosedReviewedFee(
@@ -18,4 +17,4 @@ export const YUSD_AEGIS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
     "Direct mint and redemption are reserved for approved primary-market users, while most secondary users access YUSD via DEX liquidity or supported venues",
     "Because YUSD relies on a delta-neutral BTC hedge rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
   ],
-};
+});

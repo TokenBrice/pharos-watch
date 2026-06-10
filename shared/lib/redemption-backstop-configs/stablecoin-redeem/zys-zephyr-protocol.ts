@@ -1,14 +1,7 @@
-import {
-  documentedBoundSupplyFull,
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
-import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
+import { documentedBoundSupplyFull, documentedVariableFee, sourceRef } from "../shared";
+import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
-export const ZYS_ZEPHYR_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
-  ...stablecoinRedeemBase,
+export const ZYS_ZEPHYR_PROTOCOL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   executionModel: "rules-based-nav",
   outputAssetType: "nav",
@@ -24,4 +17,4 @@ export const ZYS_ZEPHYR_PROTOCOL_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopCon
     "ZYS is a Zephyr yield-share asset rather than a flat $1 token; the route is modeled as protocol conversion / redemption of the yield share's ZSD reserve value.",
     "Final dollar exit inherits the underlying ZSD protocol collateral redemption route.",
   ],
-};
+});
