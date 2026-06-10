@@ -23,6 +23,12 @@
 /tape/ /timeline/ 301
 /tape /timeline/ 301
 
+# Learn hub page was removed (9641e751f); mechanisms is the surviving index.
+# No wildcard here — /learn/mechanisms/* and /learn/case-studies/* are live
+# routes and redirects take precedence over static assets on Pages.
+/learn/ /learn/mechanisms/ 301
+/learn /learn/mechanisms/ 301
+
 # RSS feeds moved to explicit .xml paths; preserve legacy extensionless
 # subscribers.
 /feed/digest/ /feed/digest.xml 301
