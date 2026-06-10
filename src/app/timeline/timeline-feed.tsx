@@ -128,6 +128,9 @@ export function TimelineFeed({
           </div>
         ) : (
           <div className="space-y-4">
+            <p className="text-right font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              All times UTC
+            </p>
             <div id="tape-feed" className="space-y-4">
               {bufferEvent ? (
                 <div className="border-y border-border/60 bg-amber-500/5">

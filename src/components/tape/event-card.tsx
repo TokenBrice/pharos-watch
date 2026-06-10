@@ -83,8 +83,10 @@ function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
   }
 }
 
+// UTC to match the feed's UTC day grouping — local times made rows near
+// midnight sort under a wrong-looking day header.
 function formatHhMm(tsMs: number): string {
-  return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 }
 
 function humanizeEventType(type: string): string {

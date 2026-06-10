@@ -45,7 +45,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
 3. **Geist Mono is the dominant typeface** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
 4. **Severity is communicated by text color**, not by card border or background fill. The `severityToAccent` `border-l-[3px]` rail is intentionally dropped from `EventCard`.
-5. **Time prefix on every row** — desktop/tablet rows show `HH:MM` in mono `tabular-nums`; mobile rows show compact relative tokens (`5s`, `3m`, `2h`, `4d`) while the absolute time remains in the `<time>` metadata and hover title.
+5. **Time prefix on every row** — desktop/tablet rows show `HH:MM` in mono `tabular-nums`, rendered in UTC to match the UTC day grouping (a single `All times UTC` label sits atop the feed); mobile rows show compact relative tokens (`5s`, `3m`, `2h`, `4d`) while the absolute time remains in the `<time>` metadata and hover title.
 6. **Structured row layout** — `time | logo | ticker | event.type slug | severity | count | chain | spacer | age`. The event title is redundant with these fields for coin events and is replaced by the structured form; the event summary becomes the second line.
 7. **Day separator** — full-width mono rule with the date inline (`─── TODAY · MAY 15, 2026 ─────────────`), not a thin underline header.
 8. **Currently-open band** — mono uppercase eyebrow (`⚠ CURRENTLY OPEN · N INCIDENTS`) over hairline-divided rows; no rounded shell.
