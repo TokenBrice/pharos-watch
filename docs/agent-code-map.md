@@ -517,7 +517,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/blacklist-summary.ts` - handleBlacklistSummary, materializeBlacklistSummarySnapshot
 - `worker/src/api/blacklist.ts` - handleBlacklist
 - `worker/src/api/cache-handlers.ts` - handleBluechipRatings, handleStablecoinCharts, handleStablecoins, handleUsdsStatus, handleYieldRankings
-- `worker/src/api/chains.ts` - handleChains
+- `worker/src/api/chains.ts` - handleChains, isActiveChainAggregateAsset
 - `worker/src/api/daily-digest.ts` - handleDailyDigest
 - `worker/src/api/depeg-events.ts` - handleDepegEvents
 - `worker/src/api/depeg-resolver-review.ts` - handleDepegResolverReview
