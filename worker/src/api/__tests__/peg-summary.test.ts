@@ -606,3 +606,30 @@ describe("handlePegSummary", () => {
     const usdt = body.coins.find((coin) => coin.id === "usdt-tether");
     expect(usdt?.pegScore).toBe(99);
   });
+
+  it("falls back to direct compute when the peg-analytics cache read throws", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+      },
+      {
+        match: "cache",
+        matchBinds: ["peg-analytics"],
+        rows: [],
+        throwError: new Error("D1 DB is overloaded"),
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { coins: Array<{ id: string }> };
+    expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
+  });
