@@ -283,7 +283,7 @@ export default function AboutPage() {
             )}
           >
             Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
-            at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}tracked tokens and the chains
+            at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains
             and reserves beneath them so that desks, treasuries, and researchers can read the peg the way
             navigators read weather.
           </p>

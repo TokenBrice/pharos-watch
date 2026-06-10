@@ -160,7 +160,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
             {(data.coverageRatio * 100).toFixed(0)}%
           </span>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-            {data.totalCoins} coins tracked
+            {data.totalCoins} active coins
           </span>
         </div>
       </div>
