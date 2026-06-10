@@ -32,6 +32,19 @@ describe("depeg event indexing policy", () => {
     ]);
   });
 
+  it("keeps pinned events indexable when they fall outside the recency window", () => {
+    const events = Array.from({ length: INDEXABLE_DEPEG_EVENT_LIMIT + 3 }, (_, index) => ({
+      slug: `event-${String(index).padStart(2, "0")}`,
+      startedAt: 1_700_000_000 + index,
+    }));
+    events.unshift({ slug: "usdc-2023-03-11", startedAt: 1_678_492_800 });
+
+    const selected = selectIndexableDepegEvents(events);
+
+    expect(selected).toHaveLength(INDEXABLE_DEPEG_EVENT_LIMIT + 1);
+    expect(selected.map((event) => event.slug)).toContain("usdc-2023-03-11");
+  });
+
   it("breaks same-second ties by slug", () => {
     const selected = selectIndexableDepegEvents([
       { slug: "z-last", startedAt: 1 },

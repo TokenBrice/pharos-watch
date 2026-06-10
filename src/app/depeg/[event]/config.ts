@@ -20,9 +20,17 @@ export const MIN_DEPEG_PAGE_DEVIATION_BPS = 500;
  * crawl targets. The full event table remains available through the API and
  * live tracker; the static export keeps a bounded editorial subset so the
  * Cloudflare Pages direct-upload file count stays below its hard cap.
+ *
+ * The limit bounds the recency slice only; pinned slugs are additive.
  */
 export const INDEXABLE_DEPEG_EVENT_LIMIT = 12;
 
+/**
+ * Durable indexability ledger. Pinned events are unioned into both the static
+ * page set and the indexable set, so they can never churn to noindex as newer
+ * qualifying events arrive (~daily in production — a grow-only set would be
+ * unbounded, so durability is an explicit editorial decision: pin the slug).
+ */
 export const PINNED_DEPEG_EVENT_SLUGS = ["usdc-2023-03-11"] as const;
 
 interface DepegEventIndexCandidate {
@@ -54,17 +62,10 @@ function sortNewestDeterministic<T extends DepegEventIndexCandidate>(events: rea
 export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
   events: readonly T[],
 ): readonly T[] {
-  return sortNewestDeterministic(events).slice(0, INDEXABLE_DEPEG_EVENT_LIMIT);
-}
-
-export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
-  events: readonly T[],
-): readonly T[] {
-  const eligible = events.filter(hasDedicatedDepegEventPage);
-  const bySlug = new Map(eligible.map((event) => [event.slug, event] as const));
+  const bySlug = new Map(events.map((event) => [event.slug, event] as const));
   const selected = new Map<string, T>();
 
-  for (const event of selectIndexableDepegEvents(eligible)) {
+  for (const event of sortNewestDeterministic(events).slice(0, INDEXABLE_DEPEG_EVENT_LIMIT)) {
     selected.set(event.slug, event);
   }
   for (const slug of PINNED_DEPEG_EVENT_SLUGS) {
@@ -73,4 +74,15 @@ export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandid
   }
 
   return sortNewestDeterministic([...selected.values()]);
+}
+
+/**
+ * Static pages and indexable pages are deliberately the same set: every
+ * generated event page is linked from the archive, listed in the sitemap,
+ * and served `index,follow` — no page ships noindexed.
+ */
+export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
+  events: readonly T[],
+): readonly T[] {
+  return selectIndexableDepegEvents(events.filter(hasDedicatedDepegEventPage));
 }
