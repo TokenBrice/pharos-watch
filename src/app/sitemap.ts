@@ -73,10 +73,26 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
+  // Live-data routes bake fresh data at deploy time, but stamping build-time
+  // `now` on every deploy claims constant content change. Use the freshest
+  // data-snapshot timestamp the build actually baked in (latest digest
+  // publication or depeg event — moves daily), floored by the route's own
+  // git-derived edit date.
+  const latestDataSnapshotMs = Math.max(
+    0,
+    ...digests.map((d) => d.generatedAt * 1000),
+    ...depegEventEntries.map((e) => (e.endedAt ?? e.startedAt) * 1000),
+  );
+  const liveDataLastModified = (path: string): Date => {
+    const editedMs = LAST_EDITED[path] ? new Date(LAST_EDITED[path]).getTime() : 0;
+    const ms = Math.max(editedMs, latestDataSnapshotMs);
+    return ms > 0 ? new Date(ms) : now;
+  };
+
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/"),
       changeFrequency: "hourly",
       priority: 1.0,
     },
@@ -100,13 +116,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/freezewatch/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/freezewatch/"),
       changeFrequency: "daily",
       priority: 0.85,
     },
     {
       url: `${SITE_URL}/depeg/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/depeg/"),
       changeFrequency: "daily",
       priority: 0.8,
     },
@@ -124,7 +140,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/liquidity/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/liquidity/"),
       changeFrequency: "daily",
       priority: 0.8,
     },
@@ -136,31 +152,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/digest/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/digest/"),
       changeFrequency: "daily",
       priority: 0.6,
     },
     {
       url: `${SITE_URL}/safety-scores/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/safety-scores/"),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/stability-index/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/stability-index/"),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/dependency-map/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/dependency-map/"),
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
       url: `${SITE_URL}/yield/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/yield/"),
       changeFrequency: "daily",
       priority: 0.7,
     },
@@ -178,7 +194,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/status/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/status/"),
       changeFrequency: "daily",
       priority: 0.4,
     },
@@ -190,7 +206,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/timeline/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/timeline/"),
       changeFrequency: "hourly",
       priority: 0.75,
     },
@@ -274,7 +290,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/changelog/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/changelog/"),
       changeFrequency: "weekly",
       priority: 0.5,
     },
@@ -357,13 +373,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const chainPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/chains/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/chains/"),
       changeFrequency: "daily",
       priority: 0.8,
     },
     ...getActiveChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
-      lastModified: now,
+      lastModified: liveDataLastModified(`/chains/${chainId}/`),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),
@@ -371,7 +387,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
     url: `${SITE_URL}/stablecoins/${PEG_SLUGS[peg]}/`,
-    lastModified: now,
+    lastModified: liveDataLastModified(`/stablecoins/${PEG_SLUGS[peg]}/`),
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));
@@ -437,7 +453,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const docsIndex: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/docs/`,
-      lastModified: now,
+      lastModified: liveDataLastModified("/docs/"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
