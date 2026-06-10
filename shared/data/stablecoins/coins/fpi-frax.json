@@ -145,5 +145,6 @@
       }
     }
   },
-  "collateralQuality": "alt-lst-bridged-or-mixed"
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "launchDate": "2022-03-29"
 }
