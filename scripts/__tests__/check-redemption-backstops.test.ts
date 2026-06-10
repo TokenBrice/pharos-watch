@@ -52,7 +52,7 @@ describe("check-redemption-backstops CLI", () => {
       findings: Array<{ severity: string }>;
       auditRows: unknown[];
     };
-    expect(report.summary.configuredCount).toBe(309);
+    expect(report.summary.configuredCount).toBe(310);
     expect(report.auditRows).toHaveLength(309);
     expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
   });
@@ -67,7 +67,7 @@ describe("check-redemption-backstops CLI", () => {
     });
 
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(309);
+    expect(report.summary.configuredCount).toBe(310);
     expect(report.auditRows).toHaveLength(309);
     expect(report.auditRows[0]).toMatchObject({
       stablecoinId: expect.any(String),
@@ -123,7 +123,7 @@ describe("check-redemption-backstops CLI", () => {
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
       summary: { configuredCount: number };
     };
-    expect(report.summary.configuredCount).toBe(309);
+    expect(report.summary.configuredCount).toBe(310);
   });
 
   it("rejects unknown CLI arguments", () => {
