@@ -108,7 +108,9 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
         ],
       },
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
+    requireVisibleFaq: true,
   },
   {
     label: "pre-launch stablecoin detail",

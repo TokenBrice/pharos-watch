@@ -518,6 +518,32 @@ describe("check-seo-static", () => {
     expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
   });
 
+  it("fails sitemap URLs that conflict with _headers noindex rules", async () => {
+    const root = await makeOutDir();
+    await writeFile(path.join(root, "_headers"), `${BASELINE_HEADERS}\n/compare/\n  X-Robots-Tag: noindex, follow\n`);
+    await writeBaselinePages(root, ["/compare/"]);
+    await writePage(root, "/compare/", { h1: "Compare" });
+    await writePage(root, "/stablecoin/usdt-tether/yield/", {
+      h1: "Tether Yield",
+      robots: ["noindex, follow"],
+    });
+    await writeSitemap(root, ["/", "/stability-index/", "/compare/", "/stablecoin/usdt-tether/yield/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "sitemap.xml URL https://pharos.watch/compare/ conflicts with _headers noindex rule /compare/; drop one of the two signals",
+        "sitemap.xml URL https://pharos.watch/stablecoin/usdt-tether/yield/ conflicts with _headers noindex rule /stablecoin/*/yield/; drop one of the two signals",
+      ]),
+    );
+    expect(
+      result.errors.some(
+        (error) => error.startsWith("sitemap.xml URL https://pharos.watch/stability-index/") && error.includes("conflicts"),
+      ),
+    ).toBe(false);
+  });
+
   it("fails slashless internal anchor hrefs that map to static routes", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", { h1: "Home", links: ["/stability-index", "https://pharos.watch/about#sources"] });
