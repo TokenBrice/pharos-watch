@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import {
   restoreMissingTrackedAssets,
@@ -15,9 +16,17 @@ function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">)
   } as PeggedAsset;
 }
 
+/** Full active-tracked intake minus the ids under test, so droppedIds assertions stay exact. */
+function fullActiveIntake(omitIds: string[] = []): PeggedAsset[] {
+  const omitted = new Set(omitIds);
+  return ACTIVE_STABLECOINS.filter((meta) => !omitted.has(meta.id)).map((meta) =>
+    asset({ id: meta.id, symbol: meta.symbol, circulating: { peggedUSD: 1 } }),
+  );
+}
+
 describe("restoreMissingTrackedAssets", () => {
   it("restores a tracked coin the intake list omitted", () => {
-    const current = [asset({ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 1 } })];
+    const current = fullActiveIntake(["usdc-circle"]);
     const previous = new Map([
       [
         "usdc-circle",
@@ -48,7 +57,7 @@ describe("restoreMissingTrackedAssets", () => {
       circulating: { peggedUSD: 70_000_000_000 },
       supplyObservedAt: NOW_SEC - 900,
     });
-    const result = restoreMissingTrackedAssets([row], new Map([["usdc-circle", row]]), NOW_SEC);
+    const result = restoreMissingTrackedAssets(fullActiveIntake(), new Map([["usdc-circle", row]]), NOW_SEC);
 
     expect(result.restoredIds).toEqual([]);
     expect(result.droppedIds).toEqual([]);
@@ -68,7 +77,7 @@ describe("restoreMissingTrackedAssets", () => {
       ],
     ]);
 
-    const result = restoreMissingTrackedAssets([], previous, NOW_SEC);
+    const result = restoreMissingTrackedAssets(fullActiveIntake(), previous, NOW_SEC);
 
     expect(result.restoredIds).toEqual([]);
     expect(result.droppedIds).toEqual([]);
@@ -88,7 +97,7 @@ describe("restoreMissingTrackedAssets", () => {
       ],
     ]);
 
-    const result = restoreMissingTrackedAssets([], previous, NOW_SEC);
+    const result = restoreMissingTrackedAssets(fullActiveIntake(["usdc-circle"]), previous, NOW_SEC);
 
     expect(result.restoredIds).toEqual([]);
     expect(result.droppedIds).toEqual(["usdc-circle"]);
@@ -100,7 +109,15 @@ describe("restoreMissingTrackedAssets", () => {
       ["usdc-circle", asset({ id: "usdc-circle", symbol: "USDC", circulating: {} })],
     ]);
 
-    const result = restoreMissingTrackedAssets([], previous, NOW_SEC);
+    const result = restoreMissingTrackedAssets(fullActiveIntake(["usdc-circle"]), previous, NOW_SEC);
+
+    expect(result.restoredIds).toEqual([]);
+    expect(result.droppedIds).toEqual(["usdc-circle"]);
+    expect(result.assets).toEqual([]);
+  });
+
+  it("keeps reporting a coin absent from both the intake and the previous payload as dropped", () => {
+    const result = restoreMissingTrackedAssets(fullActiveIntake(["usdc-circle"]), new Map(), NOW_SEC);
 
     expect(result.restoredIds).toEqual([]);
     expect(result.droppedIds).toEqual(["usdc-circle"]);

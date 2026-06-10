@@ -394,8 +394,10 @@ export interface TrackedCoverageRestoreResult {
  * list omits an active tracked coin that was published last cycle, re-publish
  * the previous row (marked supplyRestored, same 7-day ceiling as supplemental
  * carry-forward) instead of silently dropping the coin for a cycle. Past the
- * ceiling — or with no usable previous supply — the coin stays out and is
- * reported as dropped.
+ * ceiling — or with no previous row or usable previous supply — the coin stays
+ * out and is reported as dropped. droppedIds is derived from the active
+ * tracked universe (not the previous payload), so an already-dropped coin
+ * keeps reporting every cycle instead of going silent after one run.
  */
 export function restoreMissingTrackedAssets(
   currentAssets: PeggedAsset[],
@@ -407,10 +409,10 @@ export function restoreMissingTrackedAssets(
   const restoredIds: string[] = [];
   const droppedIds: string[] = [];
 
-  for (const [id, previous] of previousAssetsById) {
+  for (const id of ACTIVE_TRACKED_IDS) {
     if (presentIds.has(id)) continue;
-    if (!ACTIVE_TRACKED_IDS.has(id)) continue;
-    if (sumPegBuckets(previous.circulating) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
+    const previous = previousAssetsById.get(id);
+    if (!previous || sumPegBuckets(previous.circulating) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
       droppedIds.push(id);
       continue;
     }
