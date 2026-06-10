@@ -8,6 +8,7 @@ import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
+import type { FaqItem } from "@/lib/faq";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -166,6 +167,47 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
 
 function buildAlertCommand(coin: StablecoinMeta): string {
   return `/subscribe dews,depeg,safety ${coin.id}`;
+}
+
+/**
+ * Data-derived Q&A for AI-search citation on the coin long tail. Every answer
+ * is assembled verbatim from checked-in StablecoinMeta fields — no live data,
+ * no editorial claims beyond the static profile.
+ */
+export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+
+  const identityAnswer = [
+    coin.oneLiner
+      ? normalizeWhitespace(stripTermMarkup(coin.oneLiner))
+      : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
+    coin.pegMechanism
+      ? `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+      : `Its peg target is ${pegLabel}.`,
+  ].join(" ");
+
+  const backingAnswer = [
+    `Pharos classifies ${coin.symbol} backing as ${backingLabel}.`,
+    coin.collateral ? `Collateral, per the static profile: ${summarizeText(coin.collateral, 240)}` : null,
+    `Reserve evidence: ${describeReserveEvidence(coin)}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const freezeAnswer = [
+    `Based on tracked contract metadata and blacklist coverage, ${describeFreezeControl(coin)}.`,
+    coin.status === "frozen"
+      ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
+      : `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`,
+  ].join(" ");
+
+  return [
+    { question: `What is ${coin.name} (${coin.symbol})?`, answer: identityAnswer },
+    { question: `What backs ${coin.symbol}?`, answer: backingAnswer },
+    { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
+  ];
 }
 
 function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {

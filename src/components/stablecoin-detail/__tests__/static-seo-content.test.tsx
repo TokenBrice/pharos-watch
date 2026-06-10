@@ -13,7 +13,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const { StablecoinDetailSeoContent } = await import("../static-seo-content");
+const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
+const { FaqSection } = await import("@/components/faq-section");
 
 const coin: StablecoinMeta = {
   id: "test-dollar",
@@ -136,5 +137,29 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText(/Test Dollar is a frozen Pharos archive, not a current safety endorsement/)).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Telegram alerts" })).toBeNull();
     expect(screen.getByText(/Frozen archives keep historical context/)).toBeTruthy();
+  });
+
+  it("derives the 3-question FAQ from static profile fields and renders FAQPage JSON-LD", () => {
+    const items = buildStablecoinFaqItems(coin);
+
+    expect(items.map((item) => item.question)).toEqual([
+      "What is Test Dollar (TSTD)?",
+      "What backs TSTD?",
+      "Can TSTD be frozen or blacklisted?",
+    ]);
+    expect(items[0].answer).toContain("Primary market mint and redeem arbitrage");
+    expect(items[1].answer).toContain("Real-World Asset Backed");
+    expect(items[1].answer).toContain("Cash, Treasury bills, and overnight repos");
+    expect(items[1].answer).toContain("Example Auditor");
+    expect(items[2].answer).toContain("freeze");
+
+    // Same composition the detail page mounts in both render states.
+    const { container } = render(<FaqSection items={items} title="TSTD quick answers" includeJsonLd />);
+    expect(screen.getByText("TSTD quick answers")).toBeTruthy();
+    expect(screen.getByText("What backs TSTD?")).toBeTruthy();
+    const jsonLdScripts = [...container.querySelectorAll('script[type="application/ld+json"]')];
+    const faqJsonLd = jsonLdScripts.find((script) => script.textContent?.includes('"FAQPage"'));
+    expect(faqJsonLd).toBeTruthy();
+    expect(faqJsonLd!.textContent).toContain("Can TSTD be frozen or blacklisted?");
   });
 });

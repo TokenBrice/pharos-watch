@@ -18,7 +18,8 @@ import { logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
-import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
+import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
+import { FaqSection } from "@/components/faq-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-view-model";
 
@@ -182,6 +183,11 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   });
   const clientCoin = buildStablecoinDetailClientCoin(coin);
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
+  // Server-rendered in both the crawl-state fallback and the hydrated dossier
+  // so the FAQPage JSON-LD content stays visible in every render state.
+  const faqContent = (
+    <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd />
+  );
 
   return (
     <>
@@ -190,7 +196,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           <DetailPageShellFallback
             coin={staticCoin}
             logoSrc={logosById[coin.id]}
-            staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
+            staticProfileContent={
+              <>
+                <StablecoinDetailSeoContent coin={coin} summary={summary} />
+                {faqContent}
+              </>
+            }
             staticComparisonLinks={staticComparisonPages.map((page) => ({
               href: page.href,
               shortTitle: page.shortTitle,
@@ -224,6 +235,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               logos={logosById}
             />
           }
+          faqContent={faqContent}
         />
       </Suspense>
       <BreadcrumbJsonLd

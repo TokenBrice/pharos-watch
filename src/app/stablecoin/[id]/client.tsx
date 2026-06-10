@@ -207,6 +207,7 @@ interface StablecoinDetailClientProps {
   collateralUsageEntries?: readonly CollateralUsageEntry[];
   staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
+  faqContent?: ReactNode;
 }
 
 export default function StablecoinDetailClient({
@@ -218,6 +219,7 @@ export default function StablecoinDetailClient({
   collateralUsageEntries = [],
   staticProfileContent = null,
   exploreNextContent = null,
+  faqContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState<string>("overview");
@@ -551,6 +553,8 @@ export default function StablecoinDetailClient({
               {exploreNextContent}
             </div>
           ) : null}
+
+          {faqContent}
         </div>
         {/* /min-w-0 content column */}
 
