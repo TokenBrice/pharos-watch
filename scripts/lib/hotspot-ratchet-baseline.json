@@ -420,7 +420,7 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 399,
+    "fileLines": 409,
     "maxFunctionLines": 118,
     "branchCount": 22,
     "disposition": "queued-p4",
