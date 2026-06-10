@@ -136,7 +136,15 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     sortKey: "name",
     className: "w-[168px] max-w-[168px] xl:w-[150px] xl:max-w-[150px]",
   },
-  { id: "price", label: "Price", sortKey: "price", className: "text-right" },
+  {
+    id: "price",
+    label: "Price",
+    sortKey: "price",
+    // Pinned to content width below xl: fixed-layout leftover sharing otherwise
+    // inflates the column past the 390px first viewport and clips the fourth
+    // peg-price decimal at rest.
+    className: "w-[88px] text-right xl:w-auto",
+  },
   {
     id: "peg",
     label: "Peg",
