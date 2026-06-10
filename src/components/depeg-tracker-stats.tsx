@@ -38,7 +38,11 @@ function ActiveStatusPill({ active }: { active: boolean }) {
   );
 }
 
-/** Overlapping logo cluster of the coins currently in an active depeg — fills the hero space. */
+/** Overlapping logo cluster of the coins currently in an active depeg — fills the hero space.
+ * Capped: past 5 the overlap collapses into an unreadable pile, so the rest
+ * becomes a "+N" chip (full list stays in the aria-label and chip title). */
+const MAX_STACK_LOGOS = 5;
+
 function DepegLogoStack({
   coins,
   logos,
@@ -47,14 +51,16 @@ function DepegLogoStack({
   logos?: Record<string, string>;
 }) {
   if (coins.length === 0) return null;
+  const visible = coins.slice(0, MAX_STACK_LOGOS);
+  const overflow = coins.slice(MAX_STACK_LOGOS);
   return (
     <div
       className="hidden min-w-0 items-center justify-end sm:flex"
       role="img"
       aria-label={`Currently off peg: ${coins.map((c) => c.symbol).join(", ")}`}
     >
-      <div className="flex flex-wrap justify-end -space-x-4">
-        {coins.map((coin) => (
+      <div className="flex justify-end -space-x-4">
+        {visible.map((coin) => (
           <span
             key={coin.id}
             title={coin.symbol}
@@ -63,6 +69,14 @@ function DepegLogoStack({
             <StablecoinLogo src={logos?.[coin.id]} name={coin.symbol} size={36} />
           </span>
         ))}
+        {overflow.length > 0 && (
+          <span
+            title={overflow.map((c) => c.symbol).join(", ")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/70 font-mono text-[11px] font-semibold tabular-nums text-muted-foreground ring-2 ring-card"
+          >
+            +{overflow.length}
+          </span>
+        )}
       </div>
     </div>
   );
