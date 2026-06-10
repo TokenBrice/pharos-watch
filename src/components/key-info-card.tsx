@@ -55,6 +55,7 @@ export function KeyInfoCard({
 }) {
   const [openChain, setOpenChain] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
+  const [showAllContractsDesktop, setShowAllContractsDesktop] = useState(false);
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
   const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const contracts = meta.contracts ?? [];
@@ -98,6 +99,12 @@ export function KeyInfoCard({
   const mobileContractsPreview = contracts.slice(0, 6);
   const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
   const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
+  // Desktop shows labeled rows (chain name + address + actions), not an
+  // icon-only wall — recognition fails past the top-10 chain logos. Preview 9
+  // keeps the card compact for coins with dozens of deployments.
+  const desktopContractsPreview = contracts.slice(0, 9);
+  const visibleDesktopContracts = showAllContractsDesktop ? contracts : desktopContractsPreview;
+  const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
   const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
   const quickCopyContract = openContract ?? contracts[0] ?? null;
@@ -408,7 +415,6 @@ export function KeyInfoCard({
                 copied={copiedChain === quickCopyContract.chain}
                 label={openContract ? "Selected contract" : "Primary contract"}
                 onCopy={copyContractAddress}
-                variant="quick"
               />
             ) : null}
             <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
@@ -422,16 +428,30 @@ export function KeyInfoCard({
                 />
               ))}
             </div>
-            <div className="hidden flex-wrap gap-2 sm:flex">
-              {contracts.map((c) => (
-                <ContractChainButton
-                  key={`${c.chain}-${c.address}`}
-                  chainKey={c.chain}
-                  address={c.address}
-                  isOpen={openChain === c.chain}
-                  onToggle={() => setOpenChain(openChain === c.chain ? null : c.chain)}
-                />
-              ))}
+            <div className="hidden sm:block">
+              <div
+                className={`grid grid-cols-1 gap-1.5 md:grid-cols-2 2xl:grid-cols-3 ${
+                  showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""
+                }`}
+              >
+                {visibleDesktopContracts.map((c) => (
+                  <ContractLabeledRow
+                    key={`${c.chain}-${c.address}`}
+                    contract={c}
+                    copied={copiedChain === c.chain}
+                    onCopy={copyContractAddress}
+                  />
+                ))}
+              </div>
+              {hiddenDesktopContractCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllContractsDesktop((current) => !current)}
+                  className="pharos-focus-ring mt-2 inline-flex min-h-9 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showAllContractsDesktop ? "Show less" : `Show all ${contracts.length} chains`}
+                </button>
+              )}
             </div>
             {hiddenMobileContractCount > 0 ? (
               <button
@@ -451,14 +471,6 @@ export function KeyInfoCard({
                 {showAllContractsMobile ? "Show less" : `Show all ${contracts.length} chains`}
               </button>
             ) : null}
-            {openContract ? (
-              <ContractDetailRow
-                contract={openContract}
-                copied={copiedChain === openContract.chain}
-                onCopy={copyContractAddress}
-                variant="selected"
-              />
-            ) : null}
           </div>
         )}
       </CardContent>
@@ -471,13 +483,11 @@ function ContractDetailRow({
   copied,
   label,
   onCopy,
-  variant,
 }: {
   contract: ContractDeployment;
   copied: boolean;
   label?: string;
   onCopy: (chain: string, address: string) => void;
-  variant: "quick" | "selected";
 }) {
   const chain = CHAIN_META[contract.chain];
   const chainName = chain?.name ?? contract.chain;
@@ -486,96 +496,124 @@ function ContractDetailRow({
     entityType: "contract",
     value: contract.address,
   });
-  const copyButton = (
-    <button
-      type="button"
-      onClick={() => onCopy(contract.chain, contract.address)}
-      className={
-        variant === "quick"
-          ? "pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-          : "pharos-focus-ring relative inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-      }
-      title="Copy address"
-      aria-label={variant === "quick" ? `Copy ${chainName} contract address` : "Copy address"}
-    >
-      <span
-        className={
-          variant === "quick"
-            ? "relative inline-flex h-4 w-4 items-center justify-center"
-            : "relative inline-flex h-3.5 w-3.5 items-center justify-center"
-        }
-      >
-        <Copy
-          className={
-            variant === "quick"
-              ? `pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`
-              : `pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`
-          }
-          aria-hidden="true"
+
+  return (
+    <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0 flex-1">
+          {label ? (
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          ) : null}
+          <Link
+            href={`/chains/${contract.chain}/`}
+            className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
+          >
+            <span className="truncate">{chainName}</span>
+          </Link>
+          <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onCopy(contract.chain, contract.address)}
+          className="pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+          title="Copy address"
+          aria-label={`Copy ${chainName} contract address`}
+        >
+          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+            <Copy className={`pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
+            <Check
+              className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
+              aria-hidden="true"
+            />
+            {copied ? <span key={contract.chain} className="pharos-copy-ring" aria-hidden="true" /> : null}
+          </span>
+        </button>
+      </div>
+      {explorerUrl ? (
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+        >
+          View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+/* Desktop contract row: chain identity stays readable (logo + name) and the
+ * two verification actions (copy, explorer) sit inline — recognition over
+ * recall for the long tail of chains the bare icon wall hid. */
+function ContractLabeledRow({
+  contract,
+  copied,
+  onCopy,
+}: {
+  contract: ContractDeployment;
+  copied: boolean;
+  onCopy: (chain: string, address: string) => void;
+}) {
+  const chain = CHAIN_META[contract.chain];
+  const chainName = chain?.name ?? contract.chain;
+  const explorerUrl = buildExplorerUrl({
+    chainKey: contract.chain,
+    entityType: "contract",
+    value: contract.address,
+  });
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-background/40 py-1 pl-2.5 pr-1">
+      {chain?.logoPath ? (
+        <Image
+          src={chain.logoPath}
+          alt=""
+          width={18}
+          height={18}
+          className={`h-[18px] w-[18px] shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
         />
+      ) : (
+        <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+          {chainName.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <Link
+        href={`/chains/${contract.chain}/`}
+        className="pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium hover:underline"
+      >
+        <span className="block max-w-[9rem] truncate">{chainName}</span>
+      </Link>
+      <span className="ml-auto truncate font-mono text-xs text-muted-foreground" title={contract.address}>
+        {formatAddress(contract.address)}
+      </span>
+      <button
+        type="button"
+        onClick={() => onCopy(contract.chain, contract.address)}
+        className="pharos-focus-ring relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+        title="Copy address"
+        aria-label={`Copy ${chainName} contract address`}
+      >
+        <Copy className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`} aria-hidden="true" />
         <Check
-          className={
-            variant === "quick"
-              ? `pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`
-              : `pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`
-          }
+          className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
           aria-hidden="true"
         />
         {copied ? <span key={contract.chain} className="pharos-copy-ring" aria-hidden="true" /> : null}
-      </span>
-    </button>
-  );
-  const explorerLink = explorerUrl ? (
-    <a
-      href={explorerUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={
-        variant === "quick"
-          ? "pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
-          : "pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
-      }
-    >
-      View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-      <ExternalLink className="h-3 w-3" />
-    </a>
-  ) : null;
-
-  if (variant === "quick") {
-    return (
-      <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="min-w-0 flex-1">
-            {label ? (
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-            ) : null}
-            <Link
-              href={`/chains/${contract.chain}/`}
-              className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
-            >
-              <span className="truncate">{chainName}</span>
-            </Link>
-            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</p>
-          </div>
-          {copyButton}
-        </div>
-        {explorerLink}
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 space-y-1.5 rounded-lg border border-border/40 bg-background/60 px-3 py-2">
-      <div className="text-sm font-medium">
-        <Link href={`/chains/${contract.chain}/`} className="pharos-focus-ring rounded-sm hover:underline">
-          {chainName}
-        </Link>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</span>
-        {copyButton}
-      </div>
-      {explorerLink}
+      </button>
+      {explorerUrl ? (
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+          title={`View on ${chainName} explorer`}
+          aria-label={`View ${chainName} contract on explorer`}
+        >
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      ) : null}
     </div>
   );
 }

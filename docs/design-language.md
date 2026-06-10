@@ -138,7 +138,7 @@ Active detail pages keep one server-rendered semantic `h1` for crawlers and assi
 - Client HeroCard desktop `h2`: `text-3xl font-black tracking-tighter`
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
 - Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
-- The `Contract Addresses` block shows a one-row, six-item preview on mobile with a `Show all` toggle; `sm+` continues to show the full icon grid
+- The `Contract Deployments` block shows a one-row, six-item icon preview on mobile with a `Show all` toggle; `sm+` renders labeled rows (chain logo + name link + truncated address + copy + explorer) in a 1/2/3-column grid with a nine-row preview and its own `Show all` toggle — the bare icon wall was retired in the June 2026 mythos pass (recognition fails past the top-10 chain logos)
 - `LongformScrollspyNav` renders as a sticky horizontal pill banner below `lg`; on `lg+`, the same section model moves into a sticky right-side rail with `variant="rail"`
 - A single `Explore Next` hub at the end of the page, replacing the older stack of repeated research/compare/related link grids with one consolidated crawlable route cluster
 

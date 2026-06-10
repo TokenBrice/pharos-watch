@@ -71,7 +71,8 @@ describe("KeyInfoCard contract interactions", () => {
       "https://basescan.org/address/0x3333333333333333333333333333333333333333",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy Base contract address" }));
+    // Two matches: the mobile quick row and the desktop labeled row.
+    fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
 
     expect(writeText).toHaveBeenCalledWith("0x3333333333333333333333333333333333333333");
     expect(window.gtag).toHaveBeenCalledWith("event", "contract_copied", {
@@ -89,7 +90,7 @@ describe("KeyInfoCard contract interactions", () => {
     });
 
     const { unmount } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
-    fireEvent.click(screen.getByRole("button", { name: "Copy Ethereum contract address" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
 
     unmount();
 
@@ -114,6 +115,22 @@ describe("KeyInfoCard contract interactions", () => {
     expect(within(mobileGrid as HTMLElement).queryByRole("button", { name: /BSC contract/i })).toBeNull();
     expect(screen.queryByText("Selected contract")).toBeNull();
     expect(screen.getByText("Primary contract")).toBeTruthy();
+  });
+
+  it("renders desktop labeled contract rows with address, copy, and explorer actions", () => {
+    render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+
+    // Each deployment gets a labeled row: chain link + truncated address +
+    // copy button + explorer link.
+    expect(screen.getAllByRole("link", { name: "Arbitrum" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("0x2222...2222")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy Arbitrum contract address" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "View Arbitrum contract on explorer" }).getAttribute("href"),
+    ).toBe("https://arbiscan.io/address/0x2222222222222222222222222222222222222222");
+    // 7 contracts fit the 9-row desktop preview: only the mobile Show-all
+    // (6-item preview) renders, not a second desktop toggle.
+    expect(screen.getAllByRole("button", { name: "Show all 7 chains" }).length).toBe(1);
   });
 
   it("links MiCA badges to the tracker and marks frozen statuses as historical", () => {
