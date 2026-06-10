@@ -131,8 +131,9 @@ async function alertNewQuarantinedEvents(
     });
     for (const entry of newEvents) alertedIds.add(entry.eventId);
     await setCache(db, QUARANTINE_ALERTED_CACHE_KEY, JSON.stringify([...alertedIds]));
-  } catch (err) {
-    console.warn("[compute-depeg-resolver] Failed to alert on quarantined event(s):", err);
+  } catch {
+    // Best-effort: alerting must never fail the run; a broken marker read
+    // just means the next run re-attempts the alert.
   }
 }
 
