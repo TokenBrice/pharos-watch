@@ -27,7 +27,7 @@ describe("SiteHeader", () => {
   it("renders the compact surveillance tagline on tablet+desktop", () => {
     mockStable();
     const html = renderToStaticMarkup(
-      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+      <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
     expect(html).toContain(
       "Every tracked stablecoin: backing, freeze risk, liquidity, and peg stress.",
@@ -37,7 +37,7 @@ describe("SiteHeader", () => {
   it("does NOT render the old utilitarian tagline", () => {
     mockStable();
     const html = renderToStaticMarkup(
-      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+      <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
     expect(html).not.toContain(
       "Peg stress, liquidity, safety, and dependency signals for every tracked stablecoin.",
@@ -47,7 +47,7 @@ describe("SiteHeader", () => {
   it("exposes the tagline from md upward (not lg-only)", () => {
     mockStable();
     const html = renderToStaticMarkup(
-      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+      <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
     expect(html).toMatch(/class="pharos-card-shell[^"]*md:flex-row/);
     expect(html).toMatch(/class="hidden[^"]*md:block/);
@@ -58,7 +58,7 @@ describe("SiteHeader", () => {
   it("keeps a single raw h1 across responsive header layouts", () => {
     mockStable();
     const html = renderToStaticMarkup(
-      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+      <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
     expect(html.match(/<h1\b/g)).toHaveLength(1);
   });
@@ -66,10 +66,12 @@ describe("SiteHeader", () => {
   it("keeps stat pills and softens the unit labels to muted-foreground/70", () => {
     mockStable();
     const html = renderToStaticMarkup(
-      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+      <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
+    expect(html).toContain("200");
+    expect(html).toContain("tracked");
     expect(html).toContain("180");
-    expect(html).toContain("coins");
+    expect(html).toContain("active");
     expect(html).toContain("text-muted-foreground/70");
   });
 });

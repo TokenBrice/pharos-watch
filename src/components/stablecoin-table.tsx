@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import type { QueryKey } from "@tanstack/react-query";
@@ -508,7 +509,14 @@ export function StablecoinTable({
       footerSlot={displayed.length > 0 ? (
         <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
           <span className="text-sm text-muted-foreground">
-            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString()}</span> stablecoins
+            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString("en-US")}</span> active
+            stablecoins — pre-launch and frozen excluded,{" "}
+            <Link
+              href="/screener/"
+              className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
+            >
+              see Screener
+            </Link>
           </span>
           <span className="pharos-meta">
             Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.

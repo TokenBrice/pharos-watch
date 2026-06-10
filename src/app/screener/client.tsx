@@ -298,9 +298,11 @@ export function ScreenerClient() {
   const matchingRows = scoreFilterDataLoading ? totalRows : filteredRows.length;
   const active = hasActiveFilters(filters);
   const activeFilterCount = countActiveScreenerFilters(filters);
+  // One coin-count story: the screener universe is the full tracked registry
+  // (pre-launch and frozen included), unlike the active-only dashboard table.
   const matchSummary = active
-    ? `${matchingRows.toLocaleString()}/${totalRows.toLocaleString()} stablecoins matching`
-    : `${totalRows.toLocaleString()} matching stablecoins`;
+    ? `${matchingRows.toLocaleString("en-US")}/${totalRows.toLocaleString("en-US")} tracked stablecoins matching`
+    : `All ${totalRows.toLocaleString("en-US")} tracked stablecoins — pre-launch and frozen included`;
 
   // Surfaces a banner if the underlying queries error out; mirrors other
   // multi-source surfaces.

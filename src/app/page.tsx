@@ -91,7 +91,12 @@ export default function HomePage() {
         }}
       />
       <div className="space-y-4 sm:space-y-5">
-        <SiteHeader total={total} pegCount={ACTIVE_PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
+        <SiteHeader
+          tracked={TRACKED_STABLECOIN_COUNT}
+          total={total}
+          pegCount={ACTIVE_PEG_CURRENCY_COUNT}
+          chainCount={Object.keys(CHAIN_META).length}
+        />
       </div>
       <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />

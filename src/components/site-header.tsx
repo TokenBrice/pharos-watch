@@ -2,6 +2,9 @@ import { formatCompactCount } from "@shared/lib/format";
 import { PharosLogo } from "@/components/pharos-logo";
 
 interface SiteHeaderProps {
+  /** Full tracked registry, including pre-launch and frozen coins. */
+  tracked: number;
+  /** Active (live-listed) subset of the tracked registry. */
   total: number;
   pegCount: number;
   chainCount: number;
@@ -29,9 +32,12 @@ function MetricPills({ metrics }: { metrics: MetricPill[] }) {
   );
 }
 
-export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
+export function SiteHeader({ tracked, total, pegCount, chainCount }: SiteHeaderProps) {
+  // One coin-count story: "tracked" is the full registry (pre-launch and
+  // frozen included), "active" the live-listed subset shown on the dashboard.
   const headlineMetrics = [
-    { value: formatCompactCount(total), label: "coins" },
+    { value: formatCompactCount(tracked), label: "tracked" },
+    { value: formatCompactCount(total), label: "active" },
     { value: formatCompactCount(pegCount), label: "pegs" },
     { value: formatCompactCount(chainCount), label: "chains" },
   ];
