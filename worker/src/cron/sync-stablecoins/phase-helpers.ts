@@ -1,5 +1,6 @@
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
 import type { PeggedAsset } from "./enrich-prices";
@@ -178,10 +179,10 @@ export async function fillMissingSupplyHistory(
   const date30d = utcMidnight(30);
 
   throwIfAborted(signal);
-  const historyRows = await db
+  const historyRows = await runWithOverloadRetry(() => db
     .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE snapshot_date IN (?, ?, ?)")
     .bind(date1d, date7d, date30d)
-    .all<SupplyHistoryRow>();
+    .all<SupplyHistoryRow>());
 
   if ((historyRows.results ?? []).length === 0) {
     return 0;

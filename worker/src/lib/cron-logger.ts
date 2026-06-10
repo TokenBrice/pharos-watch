@@ -195,7 +195,7 @@ export interface CronResult {
   itemCount?: number;
   metadata?: string;
   status?: "ok" | "degraded" | "error" | "skipped_locked";
-  /** Human-readable failure summary persisted to cron_runs.error when status is "error". */
+  /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
   error?: string;
 }
 

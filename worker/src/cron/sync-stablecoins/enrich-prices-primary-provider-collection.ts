@@ -3,6 +3,7 @@ import type { PriceObservedAtMode } from "@shared/types/core";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { shouldAttemptFetch, recordOutcome, recordOutcomeDecision, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { throwIfAborted } from "../../lib/abort";
@@ -182,7 +183,7 @@ async function loadReserveNavPriceQuotes(params: {
   if (eligibleIds.size === 0) return new Map();
 
   try {
-    const rows = await params.db
+    const rows = await runWithOverloadRetry(() => params.db
       .prepare(
         `SELECT c.stablecoin_id, c.fetched_at, c.source, c.metadata, s.last_success_at
            FROM reserve_composition c
@@ -191,7 +192,7 @@ async function loadReserveNavPriceQuotes(params: {
           WHERE c.source IN ('chainlink-nav', 'superstate-liquidity')
             AND s.last_success_at = c.fetched_at`,
       )
-      .all<ReserveNavRow>();
+      .all<ReserveNavRow>());
 
     const assetById = new Map(params.candidates.map((asset) => [asset.id, asset]));
     const quotes = new Map<string, NavTelemetryQuote>();
