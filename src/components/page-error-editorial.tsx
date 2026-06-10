@@ -1,6 +1,5 @@
 "use client";
 
-import { digestDisplay } from "@/lib/fonts/digest";
 import { PageErrorBackLink, usePageErrorRetry } from "@/components/page-error-primitives";
 
 interface PageErrorEditorialProps {
@@ -18,6 +17,10 @@ interface PageErrorEditorialProps {
  * Editorial shell for the root error boundary. Wraps the existing reset/reload
  * logic in the lighthouse register (CM5 IDEA-9). Smart status-aware recovery
  * is W7's responsibility — this layer only ships the voice.
+ *
+ * Serif here is Georgia (`font-serif`, the AiSummary precedent), not
+ * Newsreader: error.tsx sits in every route's preload graph, and importing
+ * `digestDisplay` from it preloaded the digest font CSS app-wide.
  */
 export function PageErrorEditorial({ kicker, title, body, error, reset }: PageErrorEditorialProps) {
   const { handleRetry, retryLabel, shouldHardReload } = usePageErrorRetry({ error, reset });
@@ -32,14 +35,10 @@ export function PageErrorEditorial({ kicker, title, body, error, reset }: PageEr
       <PageErrorBackLink />
       <div className="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 text-center">
         <BeamSvg />
-        <p
-          className={`${digestDisplay.className} text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80`}
-        >
+        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80">
           {kicker}
         </p>
-        <h2
-          className={`${digestDisplay.className} text-3xl font-semibold leading-tight tracking-tight text-foreground/95 sm:text-4xl`}
-        >
+        <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-foreground/95 sm:text-4xl">
           {title}
         </h2>
         <p className="max-w-xl font-mono text-sm italic leading-relaxed text-muted-foreground">{body}</p>
