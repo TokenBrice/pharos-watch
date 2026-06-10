@@ -258,7 +258,7 @@ describe("buildCommandPlan", () => {
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
-      SMOKE_MOBILE_UI_WAIT_MS: "1500",
+      SMOKE_MOBILE_UI_WAIT_MS: "5000",
     });
   });
 
@@ -280,7 +280,7 @@ describe("buildCommandPlan", () => {
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
-      SMOKE_MOBILE_UI_WAIT_MS: "1500",
+      SMOKE_MOBILE_UI_WAIT_MS: "5000",
     });
   });
 
