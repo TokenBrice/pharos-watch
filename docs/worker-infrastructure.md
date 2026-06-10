@@ -256,7 +256,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
 | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Realtime | `public, s-maxage=60, max-age=10`      | health, stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                         |
+| Realtime | `public, s-maxage=60, max-age=10`      | health, events                                                                                                                     |
+| Producer-backed | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains |
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |

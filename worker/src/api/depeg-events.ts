@@ -334,7 +334,7 @@ export const handleDepegEvents = withErrorHandler(
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
         fallbackTimestamp: (events) => (events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000)),
       },
-      cacheControl: CACHE_PROFILES.realtime,
+      cacheControl: CACHE_PROFILES.producerBacked,
       buildExtraBody: async (_events, _total, latestEventTs) => {
         const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
         return {

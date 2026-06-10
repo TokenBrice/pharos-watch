@@ -10,6 +10,7 @@ import {
 describe("API cache profiles", () => {
   it("keeps documented cache profiles stable", () => {
     expect(API_CACHE_PROFILES.realtime).toBe("public, s-maxage=60, max-age=10");
+    expect(API_CACHE_PROFILES.producerBacked).toBe("public, s-maxage=300, max-age=60, stale-while-revalidate=300");
     expect(API_CACHE_PROFILES.standard).toBe("public, s-maxage=300, max-age=60");
     expect(API_CACHE_PROFILES.custom).toBe("public, s-maxage=300, max-age=300");
     expect(API_CACHE_PROFILES.perCoin).toBe("public, s-maxage=300, max-age=10");
@@ -21,6 +22,7 @@ describe("API cache profiles", () => {
   it("lists the documented profile keys in API reference order", () => {
     expect(API_CACHE_PROFILE_DOCUMENTED_KEYS).toEqual([
       "realtime",
+      "producerBacked",
       "standard",
       "custom",
       "perCoin",
@@ -40,6 +42,7 @@ describe("API cache profiles", () => {
     const docs = readFileSync(join(process.cwd(), "docs/api-reference.md"), "utf8");
     const documentedProfileNames: Record<(typeof API_CACHE_PROFILE_DOCUMENTED_KEYS)[number], string> = {
       realtime: "realtime",
+      producerBacked: "producer-backed",
       standard: "standard",
       custom: "custom",
       perCoin: "per-coin",

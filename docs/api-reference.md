@@ -140,7 +140,8 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 
 | Profile            | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| realtime           | `public, s-maxage=60, max-age=10`      | health, stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                  |
+| realtime           | `public, s-maxage=60, max-age=10`      | health, events                                                                                                                                                                                                                                                                                                                                              |
+| producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains (cron-published payloads with 15-30 min producers)                                                                                                                                                          |
 | standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                    |
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
@@ -165,6 +166,7 @@ Recommended minimum polling cadence for external integrations:
 | Cache profile | Minimum poll interval | Notes                                                           |
 | ------------- | --------------------- | --------------------------------------------------------------- |
 | realtime      | 60 seconds            | Polling faster usually re-fetches the same edge-cached payload  |
+| producer-backed | 300 seconds         | Backing crons publish every 15-30 min; faster polls hit the edge cache |
 | standard      | 300 seconds           | Preferred baseline for most dashboards                          |
 | per-coin      | 300 seconds           | `GET /api/stablecoin/:id` is history-heavy; avoid short loops   |
 | slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
@@ -361,7 +363,7 @@ As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`s
 
 Full stablecoin list with current supply, price, chain breakdown, and FX rates. Data is refreshed by cron every 15 minutes; the cache entry has a 10-minute max-age.
 
-**Cache:** realtime — `X-Data-Age` and `Warning` headers included.
+**Cache:** producer-backed — `X-Data-Age` and `Warning` headers included.
 
 The canonical `stablecoins` cache is written only after `StablecoinListResponseSchema` validation. Worker consumers that require the published public contract can opt into the same schema on cache read and return `503` for schema-invalid cached objects. Compatibility readers that only need critical fields may still salvage valid entries from older or partially malformed payloads, but they surface that state as degraded with a filtered-entry count instead of treating the filtered payload as fully healthy.
 
@@ -479,7 +481,7 @@ Browser surfaces on `pharos.watch` and `ops.pharos.watch` should reach this rout
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 
-**Cache:** realtime — `X-Data-Age` and `Warning` headers included.
+**Cache:** producer-backed — `X-Data-Age` and `Warning` headers included.
 
 **Error responses:** `503` when the shared `stablecoins` cache is missing or structurally corrupt; `404` when the requested coin ID is absent from an otherwise valid cache snapshot.
 
@@ -562,7 +564,7 @@ Unlike most numeric-query handlers, this endpoint defaults missing or malformed 
 
 Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads) — no dedicated chain table is required for the live leaderboard. The response body also carries `_meta`, so the frontend can distinguish fresh, degraded, and missing-dependency states without inferring freshness from fetch timing alone.
 
-**Cache:** realtime — `public, s-maxage=60, max-age=10`
+**Cache:** producer-backed — `public, s-maxage=300, max-age=60, stale-while-revalidate=300`
 
 **Freshness threshold:** 1800 seconds. Returns `503` when the stablecoins cache is unavailable or structurally corrupt. When dependent snapshots lag, the endpoint stays readable but the body `_meta.status` degrades and the frontend surfaces stale-data warnings.
 
@@ -743,7 +745,7 @@ Aggregate historical supply chart data across the live homepage market-cap unive
 
 Freeze, blacklist, block/unblock, account-pause, and token-destruction events for symbols in the shared `BLACKLIST_STABLECOINS` set. EURC mirror-zero rows are preserved with suppression metadata and excluded from public aggregates. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
-**Cache:** realtime
+**Cache:** producer-backed
 
 **Freshness note:** `X-Data-Age` / `Warning` track the latest successful 6-hourly `sync-blacklist` writer timestamp. Public freshness stays `fresh` through that 6-hour budget and only degrades once the scheduled blacklist sync is actually late.
 
@@ -828,7 +830,7 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
 
 The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums last-known successful `blacklist_current_balances.balance_usd` snapshots per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
 
-**Cache:** realtime
+**Cache:** producer-backed
 
 **Freshness note:** Shares the same 6-hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
 
@@ -958,7 +960,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
 
 Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs). Events are detected every 15 minutes by the cron.
 
-**Cache:** realtime
+**Cache:** producer-backed
 
 **Query parameters**
 
@@ -1180,7 +1182,7 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR reviews frozen publ
 
 Composite peg scores and aggregate statistics for tracked stablecoins. Scores are computed over a 4-year window from live depeg events, DEX prices, and current prices. The `coins` array can still include NAV / other non-peg rows with `currentDeviationBps = null`, while the summary counters only cover rows with a live peg-status deviation.
 
-**Cache:** realtime
+**Cache:** producer-backed
 
 **Response**
 
@@ -3022,7 +3024,7 @@ Returns per-chain breakdown and hourly timeseries for a single coin. Returns `40
 
 Paginated list of individual mint/burn events for a specific stablecoin. Events are sourced from on-chain logs via Alchemy JSON-RPC.
 
-**Cache:** realtime
+**Cache:** producer-backed
 
 **Required query parameter**
 

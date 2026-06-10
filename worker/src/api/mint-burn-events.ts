@@ -152,7 +152,7 @@ export const handleMintBurnEvents = withErrorHandler(
             ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
             : Math.floor(Date.now() / 1000),
       },
-      cacheControl: CACHE_PROFILES.realtime,
+      cacheControl: CACHE_PROFILES.producerBacked,
     });
   },
 );

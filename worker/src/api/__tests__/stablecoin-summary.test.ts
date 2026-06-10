@@ -90,7 +90,7 @@ describe("handleStablecoinSummary", () => {
       };
 
       expect(res.status).toBe(200);
-      expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
+      expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60, stale-while-revalidate=300");
       expect(res.headers.get("X-Data-Age")).toBe("42");
       expect(body.id).toBe("usdt-tether");
       expect(body.symbol).toBe("USDT");

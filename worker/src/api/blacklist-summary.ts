@@ -742,7 +742,7 @@ export async function materializeBlacklistSummarySnapshot(
 
 function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
   return addFreshnessHeaders(
-    { "Cache-Control": CACHE_PROFILES.realtime },
+    { "Cache-Control": CACHE_PROFILES.producerBacked },
     freshnessTs,
     API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
   );

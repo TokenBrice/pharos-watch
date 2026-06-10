@@ -19,7 +19,7 @@ export { handleYieldRankings } from "./yield-rankings-cache";
 export const handleStablecoins = createCacheHandler(
   "stablecoins",
   "stablecoins",
-  CACHE_PROFILES.realtime,
+  CACHE_PROFILES.producerBacked,
   API_FRESHNESS_MAX_AGE_SEC.stablecoins,
   {
     schema: StablecoinListResponseSchema,

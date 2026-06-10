@@ -306,6 +306,6 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       asOf: stablecoinsCache.updatedAt,
     }),
   }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.realtime,
+    "Cache-Control": CACHE_PROFILES.producerBacked,
   }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
 });

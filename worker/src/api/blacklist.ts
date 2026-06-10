@@ -129,7 +129,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
           ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
           : Math.floor(Date.now() / 1000),
     },
-    cacheControl: CACHE_PROFILES.realtime,
+    cacheControl: CACHE_PROFILES.producerBacked,
     buildExtraBody: (events, _total, latestTs) => {
       const latestEvent = events.reduce<BlacklistEvent | null>(
         (latest, event) => (latest == null || event.timestamp > latest.timestamp ? event : latest),

@@ -124,7 +124,7 @@ function buildChainsFreshnessMeta(
 
   return {
     headers: {
-      "Cache-Control": status === "fresh" ? CACHE_PROFILES.realtime : "no-store",
+      "Cache-Control": status === "fresh" ? CACHE_PROFILES.producerBacked : "no-store",
       "X-Data-Age": String(ageSeconds),
       ...(warning ? { Warning: warning } : {}),
     },
