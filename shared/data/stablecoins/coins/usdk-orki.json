@@ -185,10 +185,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Orki USDK docs", "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk" },
-        { "label": "BOLD arrives on Swellchain", "url": "https://orkifinance.substack.com/p/bold-arrives-on-swellchain" }
+        {
+          "label": "Orki USDK docs",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+        },
+        {
+          "label": "BOLD arrives on Swellchain",
+          "url": "https://orkifinance.substack.com/p/bold-arrives-on-swellchain"
+        }
       ],
-      "unresolvedQuestions": ["Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x0000baa0b1678229863c0a941c1056b83a1955f5."]
+      "unresolvedQuestions": [
+        "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x0000baa0b1678229863c0a941c1056b83a1955f5."
+      ]
     }
-  }
+  },
+  "launchDate": "1970-01-01"
 }
