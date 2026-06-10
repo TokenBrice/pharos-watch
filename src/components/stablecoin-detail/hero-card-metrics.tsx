@@ -302,14 +302,9 @@ export function HeroPriceCard({
   mobile = false,
 }: HeroPriceCardProps) {
   const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable;
-  const price = mobile
-    ? formatNativePrice(
-        coinData.price != null ? Math.floor(coinData.price * 1000) / 1000 : coinData.price,
-        coin.flags.pegCurrency ?? "USD",
-        pegRef,
-        3,
-      )
-    : formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
+  // Full 4-decimal precision on every tier: at 3 decimals a stablecoin price
+  // reads as a ~10bps deviation that the peg line right below contradicts.
+  const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
 
   return (
     <div
