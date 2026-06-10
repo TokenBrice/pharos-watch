@@ -131,6 +131,12 @@ export type StablecoinClientMeta = Pick<
   blacklistStatus?: BlacklistClientStatus;
   genius?: GeniusClientProfile;
   mintAuthoritySummary?: MintAuthorityCoverageSummary;
+  /**
+   * Adapter key derived from the server-only `liveReservesConfig`. Cross-coin
+   * client surfaces (`/coverage`) resolve the reserve display badge from this
+   * key without shipping the full live reserve config (~128 KB) to the client.
+   */
+  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
 };
 
 /** Canonical ordered list of source fields copied into the client projection. */

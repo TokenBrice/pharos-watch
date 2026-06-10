@@ -38,6 +38,7 @@ const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
+const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const GENIUS_FIELD = "genius";
 const GENIUS_CLIENT_FIELDS = [
   "applicability",
@@ -127,7 +128,16 @@ export function projectCoin(coin, clientFields) {
   if (mintAuthoritySummary) {
     slim[MINT_AUTHORITY_SUMMARY_FIELD] = mintAuthoritySummary;
   }
+  const liveReserveAdapter = projectLiveReserveAdapter(coin);
+  if (liveReserveAdapter !== undefined) {
+    slim[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
+  }
   return slim;
+}
+
+export function projectLiveReserveAdapter(coin) {
+  const adapter = coin?.liveReservesConfig?.adapter;
+  return typeof adapter === "string" && adapter.length > 0 ? adapter : undefined;
 }
 
 export function projectBlacklistStatus(coin) {

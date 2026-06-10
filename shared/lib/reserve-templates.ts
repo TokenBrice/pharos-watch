@@ -85,7 +85,7 @@ const TEMPLATES: Record<string, ReserveSlice[]> = {
 
 // ── Template key resolution ─────────────────────────────────────────────
 
-function templateKey(coin: StablecoinMeta): string | null {
+function templateKey(coin: ReserveTemplateCoinMeta): string | null {
   const { backing, pegCurrency, governance } = coin.flags;
 
   // Commodity pegs get their own template regardless of other flags
@@ -109,12 +109,15 @@ function templateKey(coin: StablecoinMeta): string | null {
 
 // ── Public API ──────────────────────────────────────────────────────────
 
+/** Minimal coin shape needed for reserve resolution; satisfied by both the fat and client registries. */
+export type ReserveTemplateCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality">;
+
 /**
  * Returns reserve composition for a coin.
  * Uses manually curated data if available, otherwise falls back to a
  * category-based template derived from the coin's classification flags.
  */
-export function getReserves(coin: StablecoinMeta): ReserveResult | null {
+export function getReserves(coin: ReserveTemplateCoinMeta): ReserveResult | null {
   // Prefer manually curated data
   if (coin.reserves && coin.reserves.length > 0) {
     return { reserves: coin.reserves, estimated: false, mode: "curated-fallback" };

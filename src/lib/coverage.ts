@@ -52,8 +52,23 @@ export { resolveYieldCoverage } from "@/lib/coverage/yield";
 
 export { COVERAGE_FEATURES };
 
+/**
+ * Minimal coin shape consumed by `buildCoverageRow` and the per-feature
+ * resolvers. Both the fat registry meta and the slim client-registry meta
+ * satisfy this without casting; resolvers that need a field not listed here
+ * must add it (and ensure the client registry actually carries it).
+ */
+export type CoverageCoinMeta = Pick<
+  StablecoinMeta,
+  "id" | "name" | "symbol" | "flags" | "reserves" | "collateralQuality"
+> & {
+  liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
+  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  mintAuthoritySummary?: MintAuthorityCoverageSummary | null;
+};
+
 interface BuildCoverageRowInput {
-  coin: StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary | null };
+  coin: CoverageCoinMeta;
   marketCapUsd: number;
   hasPegCoverage: boolean;
   consensusSources?: string[];

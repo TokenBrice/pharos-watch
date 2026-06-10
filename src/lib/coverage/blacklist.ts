@@ -14,7 +14,7 @@ import {
 
 const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
 
-function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: BlacklistStatus | null = null): boolean {
+function hasBlacklistTrackerCoverage(coin: Pick<StablecoinMeta, "symbol">, blacklistStatus: BlacklistStatus | null = null): boolean {
   if (blacklistStatus !== null && blacklistStatus !== true) {
     return false;
   }
@@ -22,7 +22,7 @@ function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: Blac
 }
 
 function resolveBlacklist(
-  coin: StablecoinMeta,
+  coin: Pick<StablecoinMeta, "symbol">,
   blacklistStatus: BlacklistStatus | null = null,
 ): CoverageStatus {
   if (blacklistStatus === null) {

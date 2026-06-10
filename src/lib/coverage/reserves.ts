@@ -15,16 +15,27 @@ import {
   type CoverageLegendItem,
 } from "./shared";
 
+/**
+ * Minimal coin shape for reserve coverage resolution. Server callers carry the
+ * full `liveReservesConfig`; client-registry callers carry only the derived
+ * `liveReserveAdapter` key (the full config is not shipped to the client).
+ */
+type ReserveCoverageCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality"> & {
+  liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
+  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+};
+
 function resolveReserve(
-  coin: StablecoinMeta,
+  coin: ReserveCoverageCoinMeta,
   liveReserveFresh: boolean | null = true,
   dataAvailable = true,
 ): CoverageStatus {
   if (!dataAvailable) {
     return createDataUnavailableStatus("Reserve view");
   }
-  if (coin.liveReservesConfig) {
-    const badgeKind = getReserveDisplayBadgeKindForAdapter(coin.liveReservesConfig.adapter);
+  const liveReserveAdapter = coin.liveReserveAdapter ?? coin.liveReservesConfig?.adapter;
+  if (liveReserveAdapter) {
+    const badgeKind = getReserveDisplayBadgeKindForAdapter(liveReserveAdapter);
     if (badgeKind === "live") {
       if (liveReserveFresh === null) {
         return createStatus(

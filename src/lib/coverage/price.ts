@@ -15,7 +15,7 @@ import {
 } from "./shared";
 
 function resolvePrice(
-  coin: StablecoinMeta,
+  coin: Pick<StablecoinMeta, "flags">,
   hasPegCoverage: boolean,
   consensusSources?: string[],
   priceConfidence?: string,

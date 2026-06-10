@@ -14,6 +14,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "a7a5",
+    "launchDate": "2025-03-19",
     "yieldConfig": {
       "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
       "yieldType": "governance-set"
@@ -35,7 +36,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "aa-falconx-mev-capital",
@@ -54,6 +56,7 @@
     "archetypeOverride": true,
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-06-18",
     "yieldConfig": {
       "yieldSource": "Pareto FalconX Credit Vault",
       "yieldType": "lending-vault"
@@ -98,6 +101,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
     "protocolSlug": "centrifuge",
+    "launchDate": "2025-12-15",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
@@ -143,6 +147,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apollo-diversified-credit-securitize-fund",
+    "launchDate": "2025-01-29",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
@@ -175,7 +180,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "aeur-anchored-coins",
@@ -192,6 +198,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "anchored-coins-eur",
+    "launchDate": "2023-07-19",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -235,7 +242,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "aid-gaib",
@@ -252,6 +260,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gaib-aid",
+    "launchDate": "2025-10-29",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -309,7 +318,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "alusd-alchemix",
@@ -326,6 +336,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "alchemix-usd",
+    "launchDate": "2021-02-27",
     "reserves": [
       {
         "name": "DAI (in Yearn/Aave yield strategies)",
@@ -377,6 +388,7 @@
       "navToken": false
     },
     "geckoId": "apxusd",
+    "launchDate": "2026-02-18",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -437,7 +449,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "apyusd-apyx",
@@ -455,6 +468,7 @@
     "geckoId": "apyusd",
     "variantOf": "apxusd-apyx",
     "variantKind": "strategy-vault",
+    "launchDate": "2026-02-20",
     "yieldConfig": {
       "yieldSource": "Apyx apyUSD vault",
       "yieldType": "nav-appreciation"
@@ -483,7 +497,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "arc-anq",
@@ -531,6 +546,7 @@
     "geckoId": "astherus-staked-usdf",
     "variantOf": "usdf-astherus",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-11-21",
     "yieldConfig": {
       "yieldSource": "Aster Earn asUSDF",
       "yieldType": "nav-appreciation"
@@ -576,6 +592,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "novatti-australian-digital-dollar",
+    "launchDate": "2023-09-07",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -625,7 +642,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "audf-forte",
@@ -642,6 +660,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "forte-aud",
+    "launchDate": "2024-01-09",
     "reserves": [
       {
         "name": "AUD reserves and cash-equivalent reserve assets",
@@ -680,6 +699,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "macropod",
+    "launchDate": "2025-06-13",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -699,7 +719,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "audm-mento",
@@ -716,6 +737,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-australian-dollar",
+    "launchDate": "2025-03-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -738,7 +760,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "audx-aussie-dollar-token",
@@ -755,6 +778,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "aussie-dollar-token",
+    "launchDate": "2024-08-26",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -774,7 +798,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "ausd-agora",
@@ -791,6 +816,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "agora-dollar",
+    "launchDate": "2024-07-07",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
@@ -854,7 +880,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "ausdt-tether-alloy",
@@ -871,6 +898,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "alloy-tether",
+    "launchDate": "2024-03-11",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "non-payment-token",
@@ -917,7 +945,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "avusd-avant",
@@ -934,6 +963,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "avant-usd",
+    "launchDate": "2024-11-15",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -984,7 +1014,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "axcnh-anchorx",
@@ -1001,6 +1032,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "axcnh",
+    "launchDate": "2025-09-16",
     "reserves": [
       {
         "name": "CNH cash reserves at regulated financial institutions",
@@ -1018,7 +1050,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "aznd-mu-digital",
@@ -1035,6 +1068,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "mu-digital-aznd",
+    "launchDate": "2026-01-22",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -1087,7 +1121,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "bc3m-backed",
@@ -1104,6 +1139,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "backed-govies-0-6-months-euro",
+    "launchDate": "2023-06-15",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
@@ -1127,7 +1163,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "bd-basedollar",
@@ -1186,6 +1223,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "franklin-templeton-benji",
+    "launchDate": "2023-10-03",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "excluded-security",
@@ -1238,7 +1276,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "bfusd-binance",
@@ -1295,6 +1334,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "backed-ib01-treasury-bond-0-1yr",
+    "launchDate": "2023-03-02",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "excluded-security",
@@ -1341,7 +1381,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-por"
   },
   {
     "id": "bnusd-balanced",
@@ -1358,6 +1399,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "balanced-dollars",
+    "launchDate": "2024-04-04",
     "reserves": [
       {
         "name": "sICX (staked ICX) collateral on ICON",
@@ -1403,6 +1445,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "liquity-bold-2",
+    "launchDate": "2025-05-14",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -1434,7 +1477,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "brd-volpon",
@@ -1579,6 +1623,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brl1",
+    "launchDate": "2025-02-17",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -1598,7 +1643,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "brla-brla-digital",
@@ -1615,6 +1661,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brla-digital-brla",
+    "launchDate": "2023-04-18",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -1651,6 +1698,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-real-creal",
+    "launchDate": "2021-11-30",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -1673,7 +1721,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "brlv-crown",
@@ -1690,6 +1739,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "crown-brlv",
+    "launchDate": "2025-07-03",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -1719,7 +1769,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "brz-transfero",
@@ -1754,7 +1805,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "btcusd-btcfi",
@@ -1771,6 +1823,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "bitcoin-usd-btcfi",
+    "launchDate": "2024-07-22",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -1796,7 +1849,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "btcfi"
   },
   {
     "id": "buck-buck-assets",
@@ -1814,6 +1868,7 @@
     "geckoId": "buck-2",
     "status": "frozen",
     "frozenAt": "2026-04-30",
+    "launchDate": "2026-01-05",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Strategy Inc. STRC dividends (BTC-backed preferred equity)",
@@ -1931,6 +1986,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
+    "launchDate": "2024-03-01",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -1978,7 +2034,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "busd0-usual",
@@ -1997,6 +2054,7 @@
     "geckoId": "usd0-liquid-bond",
     "variantOf": "usd0-usual",
     "variantKind": "bond-maturity",
+    "launchDate": "2024-06-05",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "defiLlamaPoolId": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
@@ -2026,7 +2084,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "cadc-cad-coin",
@@ -2043,6 +2102,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "cad-coin",
+    "launchDate": "2021-01-14",
     "reserves": [
       {
         "name": "CAD & short-term securities in segregated trust",
@@ -2060,7 +2120,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "cadd-cad-digital",
@@ -2111,7 +2172,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "cadm-mento",
@@ -2128,6 +2190,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-canadian-dollar",
+    "launchDate": "2025-03-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -2150,7 +2213,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "cash-phantom",
@@ -2244,7 +2308,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "cdp-enosys",
@@ -2284,7 +2349,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "cdxusd-cod3x",
@@ -2302,6 +2368,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "cod3x-usd",
     "protocolSlug": "cod3x",
+    "launchDate": "2024-10-14",
     "reserves": [
       {
         "name": "Facilitator-managed crypto and stablecoin collateral",
@@ -2327,7 +2394,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "cetes-etherfuse",
@@ -2344,6 +2412,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "cetes",
+    "launchDate": "2025-05-28",
     "yieldConfig": {
       "yieldSource": "Mexican government CETES bonds",
       "yieldType": "nav-appreciation"
@@ -2366,7 +2435,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "ceur-celo",
@@ -2382,6 +2452,7 @@
       "navToken": false
     },
     "geckoId": "celo-euro",
+    "launchDate": "2021-03-15",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -2454,7 +2525,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "cgo-comtech",
@@ -2505,6 +2577,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "cygnus-finance-global-usd",
+    "launchDate": "2024-02-20",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -2582,7 +2655,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "chfau-allunity",
@@ -2599,6 +2673,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "allunity-chf",
+    "launchDate": "2026-01-26",
     "canBeBlacklisted": true,
     "mica": {
       "status": "authorized",
@@ -2646,7 +2721,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "chfm-mento",
@@ -2663,6 +2739,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "cchf",
+    "launchDate": "2025-03-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -2685,7 +2762,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "cjpy-yamato",
@@ -2702,6 +2780,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "convertible-jpy-token",
+    "launchDate": "2023-07-27",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v1"
@@ -2727,7 +2806,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "yamato"
   },
   {
     "id": "cngn-compliant-naira",
@@ -2744,6 +2824,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "compliant-naira",
+    "launchDate": "2024-12-16",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -2768,7 +2849,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "copm-mento",
@@ -2785,6 +2867,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "ccop",
+    "launchDate": "2024-10-11",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -2807,7 +2890,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "crvusd-curve",
@@ -2824,6 +2908,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "crvusd",
+    "launchDate": "2023-05-14",
     "reserves": [
       {
         "name": "WBTC / cbBTC",
@@ -2862,7 +2947,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "crvusd"
   },
   {
     "id": "ctusd-citrea",
@@ -2879,6 +2965,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "citrea-usd",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
@@ -2944,7 +3031,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "cusd-cap",
@@ -2960,6 +3048,7 @@
       "navToken": false
     },
     "geckoId": "cap-usd",
+    "launchDate": "2025-07-08",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -3036,7 +3125,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "cap-vault"
   },
   {
     "id": "cusd-celo",
@@ -3052,6 +3142,7 @@
       "navToken": false
     },
     "geckoId": "celo-dollar",
+    "launchDate": "2020-04-22",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -3125,7 +3216,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "cusdo-openeden",
@@ -3144,6 +3236,7 @@
     "geckoId": "compounding-open-dollar",
     "variantOf": "usdo-openeden",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-10-03",
     "yieldConfig": {
       "yieldSource": "OpenEden cUSDO wrapper",
       "yieldType": "nav-appreciation"
@@ -3172,7 +3265,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "dai-makerdao",
@@ -3189,6 +3283,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dai",
+    "launchDate": "2019-11-13",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -3266,7 +3361,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "sky-makercore"
   },
   {
     "id": "deuro-deuro",
@@ -3283,6 +3379,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "decentralized-euro",
+    "launchDate": "2025-03-20",
     "mica": {
       "status": "non-compliant",
       "references": [
@@ -3322,7 +3419,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "collateral-positions-api"
   },
   {
     "id": "dgld-gold-token-sa",
@@ -3338,6 +3436,7 @@
       "navToken": false
     },
     "geckoId": "gold-token-sa-dgld-tokenized-gold",
+    "launchDate": "2022-11-03",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -3356,7 +3455,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "djed-coti",
@@ -3413,6 +3513,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "sovryn-dollar",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -3443,7 +3544,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "doc-money-on-chain",
@@ -3460,6 +3562,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dollar-on-chain",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -3499,6 +3602,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dola-usd",
+    "launchDate": "2021-02-23",
     "reserves": [
       {
         "name": "sUSDe collateral",
@@ -3540,7 +3644,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "dola-inverse"
   },
   {
     "id": "dusd-alto",
@@ -3557,6 +3662,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "alto-dusd",
+    "launchDate": "2025-12-10",
     "reserves": [
       {
         "name": "WETH / wstETH / rETH / mETH (ETH and ETH LSTs, mint markets)",
@@ -3625,6 +3731,7 @@
       "navToken": false
     },
     "geckoId": "dtrinity-usd",
+    "launchDate": "2024-07-04",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -3770,6 +3877,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "standx-dusd",
+    "launchDate": "2025-03-14",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -3820,6 +3928,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "ebusd-stablecoin",
+    "launchDate": "2025-06-05",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -3869,7 +3978,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "emxn-telcoin",
@@ -3886,6 +3996,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "telcoin-mxn",
+    "launchDate": "2024-03-25",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -4032,6 +4143,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "usual-eur",
+    "launchDate": "2025-10-03",
     "canBeBlacklisted": true,
     "mica": {
       "status": "non-compliant",
@@ -4095,6 +4207,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "allunity-eur",
+    "launchDate": "2025-07-03",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4137,7 +4250,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "eurc-circle",
@@ -4154,6 +4268,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "euro-coin",
+    "launchDate": "2022-05-19",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4205,7 +4320,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "circle-transparency"
   },
   {
     "id": "eurcv-societe-generale-forge",
@@ -4222,6 +4338,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "societe-generale-forge-eurcv",
+    "launchDate": "2023-10-25",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4264,7 +4381,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "sgforge-coinvertible"
   },
   {
     "id": "eure-monerium",
@@ -4281,6 +4399,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "monerium-eur-money-2",
+    "launchDate": "2024-08-18",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4324,7 +4443,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "euri-banking-circle",
@@ -4341,6 +4461,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "eurite",
+    "launchDate": "2024-07-02",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4404,7 +4525,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "euro3-3a-dao",
@@ -4420,6 +4542,7 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
+    "launchDate": "2023-11-01",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -4478,6 +4601,7 @@
     "mechanismArchetype": "fiat-cash",
     "status": "frozen",
     "frozenAt": "2026-05-15",
+    "launchDate": "2023-01-18",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4538,6 +4662,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "schuman-europ",
+    "launchDate": "2024-06-22",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4581,7 +4706,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "eurot-token-teknoloji",
@@ -4598,6 +4724,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "token-teknoloji-a-s-euro",
+    "launchDate": "2023-08-28",
     "mica": {
       "status": "out-of-scope",
       "references": [
@@ -4645,6 +4772,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "quantoz-eurq",
+    "launchDate": "2024-11-13",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4692,7 +4820,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "quantoz-transparency"
   },
   {
     "id": "eurr-stablr",
@@ -4709,6 +4838,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stablr-euro",
+    "launchDate": "2024-12-17",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -4759,7 +4889,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "eurs-stasis",
@@ -4776,6 +4907,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stasis-eurs",
+    "launchDate": "2018-06-22",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -4813,7 +4945,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "eursafo-spiko",
@@ -4829,6 +4962,7 @@
       "navToken": true
     },
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
+    "launchDate": "2026-02-26",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
@@ -4873,6 +5007,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
+    "launchDate": "2025-07-16",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Cash and Carry EUR NAV",
@@ -4922,6 +5057,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
+    "launchDate": "2023-02-23",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -4979,7 +5115,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "eusd-telcoin",
@@ -4997,6 +5134,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "eusd-2",
     "protocolSlug": "telcoin-bank",
+    "launchDate": "2025-12-17",
     "canBeBlacklisted": "possible",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -5047,7 +5185,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "eutbl-spiko",
@@ -5064,6 +5203,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "eutbl",
+    "launchDate": "2024-04-19",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
@@ -5096,7 +5236,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "fdusd-first-digital",
@@ -5113,6 +5254,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "first-digital-usd",
+    "launchDate": "2023-04-28",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -5176,7 +5318,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "fdusd-transparency"
   },
   {
     "id": "feusd-felix",
@@ -5224,7 +5367,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "fidd-fidelity",
@@ -5241,6 +5385,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "fidelity-digital-dollar",
+    "launchDate": "2023-04-06",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -5299,7 +5444,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "fiusd-fiserv",
@@ -5430,6 +5576,7 @@
     },
     "mechanismArchetype": "algorithmic",
     "geckoId": "frax-price-index",
+    "launchDate": "2022-03-29",
     "yieldConfig": {
       "yieldSource": "FPI CPI redemption price",
       "yieldType": "nav-appreciation"
@@ -5458,7 +5605,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "frax-fpi-collateral"
   },
   {
     "id": "frax-frax",
@@ -5474,6 +5622,7 @@
       "navToken": false
     },
     "geckoId": "frax",
+    "launchDate": "2020-12-16",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -5542,7 +5691,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "frax-balance-sheet"
   },
   {
     "id": "frxusd-frax",
@@ -5559,6 +5709,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "frax-usd",
+    "launchDate": "2025-01-02",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -5652,7 +5803,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "frax-balance-sheet"
   },
   {
     "id": "ftusd-flying-tulip",
@@ -5669,6 +5821,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "flying-tulip-usd",
+    "launchDate": "2026-02-20",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -5715,6 +5868,7 @@
       "navToken": false
     },
     "mechanismArchetype": "tbill",
+    "launchDate": "2026-01-26",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -5861,6 +6015,7 @@
     "geckoId": "fx-usd-saving",
     "variantOf": "fxusd-f-x-protocol",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-03-17",
     "yieldConfig": {
       "yieldSource": "f(x) USD Saving",
       "yieldType": "nav-appreciation"
@@ -5889,7 +6044,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "fxusd-f-x-protocol",
@@ -5906,6 +6062,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "f-x-protocol-fxusd",
+    "launchDate": "2024-02-23",
     "yieldConfig": {
       "yieldSource": "f(x) Protocol Stability Pool",
       "yieldType": "lending-vault"
@@ -5937,7 +6094,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "fx"
   },
   {
     "id": "gbpe-monerium",
@@ -5954,6 +6112,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "monerium-gbp-emoney",
+    "launchDate": "2019-11-11",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -5993,7 +6152,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "gbpm-mento",
@@ -6010,6 +6170,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-british-pound",
+    "launchDate": "2025-03-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -6032,7 +6193,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "gbpsafo-spiko",
@@ -6049,6 +6211,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
+    "launchDate": "2026-02-26",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
@@ -6120,6 +6283,7 @@
       "navToken": false
     },
     "geckoId": "goldfish-gold",
+    "launchDate": "2025-10-06",
     "commodityOunces": 0.001,
     "reserves": [
       {
@@ -6138,7 +6302,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "gho-aave",
@@ -6155,6 +6320,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "gho",
+    "launchDate": "2023-07-15",
     "reserves": [
       {
         "name": "GhoDirectFacilitator GSMs Mainnet",
@@ -6231,7 +6397,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "gho"
   },
   {
     "id": "ghsm-mento",
@@ -6248,6 +6415,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "cghs",
+    "launchDate": "2025-01-30",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -6275,7 +6443,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "gldt-gold-dao",
@@ -6291,6 +6460,7 @@
       "navToken": false
     },
     "geckoId": "gold-token",
+    "launchDate": "2025-07-09",
     "commodityOunces": 0.000321507467,
     "reserves": [
       {
@@ -6330,6 +6500,7 @@
       "navToken": false
     },
     "geckoId": "streamex-gldy",
+    "launchDate": "2025-11-03",
     "commodityOunces": 1,
     "yieldConfig": {
       "yieldSource": "Streamex gold leasing yield",
@@ -6353,7 +6524,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-por"
   },
   {
     "id": "gramg-token-teknoloji",
@@ -6369,6 +6541,7 @@
       "navToken": false
     },
     "geckoId": "gram-gold",
+    "launchDate": "2023-08-28",
     "commodityOunces": 0.0321507466,
     "reserves": [
       {
@@ -6392,7 +6565,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "grams-token-teknoloji",
@@ -6408,6 +6582,7 @@
       "navToken": false
     },
     "geckoId": "gram-silver",
+    "launchDate": "2023-08-28",
     "commodityOunces": 0.0321507466,
     "reserves": [
       {
@@ -6431,7 +6606,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "gtusdc-gauntlet",
@@ -6449,6 +6625,7 @@
     "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-03-05",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
@@ -6478,7 +6655,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "gtusdcp-gauntlet",
@@ -6496,6 +6674,7 @@
     "geckoId": "gauntlet-usdc-prime",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-06-03",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime MetaMorpho vault",
@@ -6525,7 +6704,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "gusd-gate",
@@ -6542,6 +6722,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gusd",
+    "launchDate": "2025-08-28",
     "genius": {
       "applicability": "non-payment-token",
       "authorizationStatus": "not-applicable",
@@ -6609,7 +6790,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "gusd-gemini",
@@ -6626,6 +6808,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gemini-dollar",
+    "launchDate": "2018-09-09",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -6691,7 +6874,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "gyen-gyen",
@@ -6708,6 +6892,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gyen",
+    "launchDate": "2019-12-11",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -6766,7 +6951,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "gynusd-gyndore",
@@ -7114,6 +7300,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+    "launchDate": "2024-12-19",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Hamilton Lane SCOPE NAV",
@@ -7275,6 +7462,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "protocolSlug": "homecoin",
+    "launchDate": "2021-07-28",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "HomeCoin home-loan payment distributions",
@@ -7301,7 +7489,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "honey-berachain",
@@ -7381,7 +7570,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "hyusd-hylo",
@@ -7425,7 +7615,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "iauon-ondo",
@@ -7441,6 +7632,7 @@
       "navToken": true
     },
     "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
+    "launchDate": "2025-07-24",
     "reserves": [
       {
         "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
@@ -7476,6 +7668,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "rupiah-token",
+    "launchDate": "2019-04-10",
     "reserves": [
       {
         "name": "IDR bank deposits",
@@ -7493,7 +7686,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "idrx-idrx",
@@ -7510,6 +7704,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "idrx",
+    "launchDate": "2023-05-23",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -7551,6 +7746,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-alpha-vault-lp",
     "protocolSlug": "nest-credit",
+    "launchDate": "2025-05-19",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest Alpha Vault NAV",
@@ -7588,7 +7784,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "nest-vault-positions"
   },
   {
     "id": "isc-international-stable-currency",
@@ -7747,6 +7944,7 @@
       "navToken": false
     },
     "geckoId": "infinifi-usd",
+    "launchDate": "2025-05-22",
     "yieldConfig": {
       "yieldSource": "infiniFi savings (siUSD)",
       "yieldType": "lending-vault"
@@ -7831,7 +8029,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "infinifi"
   },
   {
     "id": "iusd-initia",
@@ -7886,6 +8085,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
     "protocolSlug": "centrifuge",
+    "launchDate": "2025-04-18",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Janus Henderson Anemoy AAA CLO Fund NAV",
@@ -7918,7 +8118,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -7936,6 +8137,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jpyc",
     "protocolSlug": "jpyc",
+    "launchDate": "2021-01-26",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -7955,7 +8157,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "jpyc-jpyc",
@@ -7972,6 +8175,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jpycoin",
+    "launchDate": "2025-06-03",
     "reserves": [
       {
         "name": "JPY deposits & Japanese government bonds",
@@ -8001,7 +8205,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "jpym-mento",
@@ -8018,6 +8223,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-japanese-yen",
+    "launchDate": "2025-04-17",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -8040,7 +8246,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "jpysc-sbi-startale",
@@ -8114,6 +8321,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "dephaser-jpy",
+    "launchDate": "2024-10-16",
     "reserves": [
       {
         "name": "Locked USDT on Optimism and USDC on Base",
@@ -8151,6 +8359,7 @@
     "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-treasury-fund",
     "protocolSlug": "centrifuge",
+    "launchDate": "2024-08-05",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
@@ -8183,7 +8392,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "jupusd-jupiter",
@@ -8259,7 +8469,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "jupusd"
   },
   {
     "id": "jusd-juicedollar",
@@ -8276,6 +8487,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "juice-dollar",
+    "launchDate": "1970-01-01",
     "reserves": [
       {
         "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
@@ -8322,6 +8534,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "jusd",
     "protocolSlug": "jusd",
+    "launchDate": "2023-09-15",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -8340,7 +8553,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "kag-kinesis",
@@ -8356,6 +8570,7 @@
       "navToken": false
     },
     "geckoId": "kinesis-silver",
+    "launchDate": "2025-09-11",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -8374,7 +8589,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-por"
   },
   {
     "id": "kau-kinesis",
@@ -8390,6 +8606,7 @@
       "navToken": false
     },
     "geckoId": "kinesis-gold",
+    "launchDate": "2025-09-11",
     "commodityOunces": 0.03215072258749015,
     "reserves": [
       {
@@ -8408,7 +8625,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-por"
   },
   {
     "id": "kesm-mento",
@@ -8425,6 +8643,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-kenyan-shilling",
+    "launchDate": "2024-05-07",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -8448,7 +8667,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "kgst-kyrgyz-som",
@@ -8465,6 +8685,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "kyrgyz-som-stablecoin",
+    "launchDate": "2025-05-30",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -8484,7 +8705,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "klarnausd-klarna",
@@ -8592,6 +8814,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
+    "launchDate": "2026-01-05",
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
@@ -8676,6 +8899,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "krwo",
+    "launchDate": "2025-01-20",
     "reserves": [
       {
         "name": "Open Voucher KRW vouchers / OV tokens",
@@ -8716,6 +8940,7 @@
       "korea",
       "rwa"
     ],
+    "launchDate": "2025-09-18",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -8771,6 +8996,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "helio-protocol-hay",
+    "launchDate": "2022-08-10",
     "reserves": [
       {
         "name": "BNB (native)",
@@ -8833,7 +9059,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "lista"
   },
   {
     "id": "luausd-lumi-finance",
@@ -8873,7 +9100,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "lusd-liquity",
@@ -8890,6 +9118,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "liquity-usd",
+    "launchDate": "2021-04-05",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -8914,7 +9143,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v1"
   },
   {
     "id": "lvusd-leverup",
@@ -8975,6 +9205,7 @@
       "navToken": false
     },
     "mechanismArchetype": "tbill",
+    "launchDate": "2024-05-07",
     "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
@@ -9035,7 +9266,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "mai-qidao",
@@ -9053,6 +9285,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "mimatic",
     "protocolSlug": "qidao",
+    "launchDate": "2021-05-02",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -9075,7 +9308,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "mapollo-midas",
@@ -9091,6 +9325,7 @@
       "navToken": true
     },
     "geckoId": "midas-mapollo",
+    "launchDate": "2025-07-15",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mAPOLLO / Apollo Crypto NAV",
@@ -9118,7 +9353,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "meusd-mezo",
@@ -9135,6 +9371,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "mezo-usd",
+    "launchDate": "2025-05-12",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -9164,7 +9401,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "mf-one-midas",
@@ -9181,6 +9419,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mf-one",
+    "launchDate": "2025-05-08",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mF-ONE / Fasanara F-ONE NAV",
@@ -9204,7 +9443,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "mglobal-midas-fasanara",
@@ -9221,6 +9461,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-fasanara-global",
+    "launchDate": "2026-04-03",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas Fasanara Global NAV",
@@ -9260,6 +9501,7 @@
       "navToken": true
     },
     "geckoId": "midas-mhyper",
+    "launchDate": "2025-07-15",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mHYPER / Hyperithm NAV",
@@ -9283,7 +9525,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "mim-abracadabra",
@@ -9300,6 +9543,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "magic-internet-money",
+    "launchDate": "2021-05-25",
     "reserves": [
       {
         "name": "yvDAI cauldron collateral",
@@ -9334,7 +9578,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "abracadabra"
   },
   {
     "id": "mmev-midas",
@@ -9350,6 +9595,7 @@
       "navToken": true
     },
     "geckoId": "midas-mmev",
+    "launchDate": "2025-02-04",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mMEV strategy NAV",
@@ -9373,7 +9619,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "mmxn-moneta-digital",
@@ -9389,6 +9636,7 @@
       "navToken": false
     },
     "mechanismArchetype": "fiat-cash",
+    "launchDate": "2021-06-15",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -9408,7 +9656,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "mnee-mnee",
@@ -9425,6 +9674,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mnee-usd-stablecoin",
+    "launchDate": "2024-03-21",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -9487,7 +9737,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "money-defi-money",
@@ -9505,6 +9756,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "defi-money",
     "protocolSlug": "defi.money",
+    "launchDate": "2024-06-25",
     "reserves": [
       {
         "name": "Approved crypto loan collateral",
@@ -9526,7 +9778,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "moveusd-cfx",
@@ -9600,6 +9853,7 @@
       "navToken": true
     },
     "geckoId": "midas-mre7yield",
+    "launchDate": "2025-02-06",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Midas mRe7YIELD strategy",
@@ -9623,7 +9877,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "msusd-main-street",
@@ -9640,6 +9895,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
+    "launchDate": "2025-06-08",
     "reserves": [
       {
         "name": "USDC backing for unstaked msUSD",
@@ -9667,7 +9923,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "msusd-metronome",
@@ -9684,6 +9941,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "metronome-synth-usd",
+    "launchDate": "2022-12-15",
     "reserves": [
       {
         "name": "USDC",
@@ -9747,6 +10005,7 @@
     "geckoId": "main-street-yield",
     "variantOf": "msusd-main-street",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-12-04",
     "yieldConfig": {
       "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
       "yieldSource": "Main Street savings (msY)",
@@ -9780,7 +10039,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "mtbill-midas",
@@ -9797,6 +10057,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "midas-mtbill",
+    "launchDate": "2023-12-01",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -9851,7 +10112,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "musd-metamask",
@@ -9868,6 +10130,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "metamask-usd",
+    "launchDate": "2025-08-12",
     "infrastructures": [
       "m0"
     ],
@@ -9929,7 +10192,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "mxnb-juno",
@@ -9946,6 +10210,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mxnb",
+    "launchDate": "2024-01-26",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -9982,6 +10247,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "real-mxn",
+    "launchDate": "2024-05-22",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -10049,6 +10315,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "blox-myrc",
+    "launchDate": "2023-08-31",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -10086,6 +10353,7 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "nest-basis-vault",
     "protocolSlug": "nest-credit",
+    "launchDate": "2025-04-01",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest Basis Vault NAV (basis-trade strategy)",
@@ -10119,7 +10387,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "nest-vault-positions"
   },
   {
     "id": "nect-beraborrow",
@@ -10181,7 +10450,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "nopal-nest",
@@ -10199,6 +10469,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-blackopal-liquidstone-ii-vault",
     "protocolSlug": "nest-credit",
+    "launchDate": "2025-10-30",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest BlackOpal LiquidStone II Vault NAV",
@@ -10237,7 +10508,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "nest-vault-positions"
   },
   {
     "id": "ntbill-nest",
@@ -10255,6 +10527,7 @@
     "mechanismArchetype": "tbill",
     "geckoId": "nest-treasury-vault",
     "protocolSlug": "nest-credit",
+    "launchDate": "2024-12-18",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest Treasury Vault NAV",
@@ -10294,7 +10567,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "nest-vault-positions"
   },
   {
     "id": "nusd-neutrl",
@@ -10311,6 +10585,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "nusd-2",
+    "launchDate": "2025-10-03",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Neutrl savings (sNUSD)",
@@ -10348,7 +10623,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "nusd-nexus",
@@ -10363,6 +10639,7 @@
       "rwa": false,
       "navToken": false
     },
+    "launchDate": "2021-08-16",
     "reserves": [
       {
         "name": "DAI liquidity",
@@ -10415,6 +10692,7 @@
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-wisdomtree-vault",
     "protocolSlug": "nest-credit",
+    "launchDate": "2025-10-27",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
@@ -10448,7 +10726,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "nest-vault-positions"
   },
   {
     "id": "nxusd-nereus",
@@ -10466,6 +10745,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "nxusd",
     "protocolSlug": "nereus-finance",
+    "launchDate": "2022-04-07",
     "reserves": [
       {
         "name": "Nereus overcollateralized crypto positions including DAI collateral",
@@ -10488,7 +10768,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "okrw-hashed",
@@ -10555,7 +10836,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "ousd-origin-protocol",
@@ -10571,6 +10853,7 @@
       "navToken": false
     },
     "geckoId": "origin-dollar",
+    "launchDate": "2020-09-18",
     "yieldConfig": {
       "yieldSource": "Origin lending + DeFi strategies",
       "yieldType": "rebase"
@@ -10606,7 +10889,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "origin-vault-balances"
   },
   {
     "id": "ousg-ondo-finance",
@@ -10623,6 +10907,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "ousg",
+    "launchDate": "2022-12-21",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -10684,7 +10969,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "pathusd-bridge",
@@ -10769,6 +11055,7 @@
     },
     "geckoId": "pax-gold",
     "protocolSlug": "paxos-gold",
+    "launchDate": "2019-08-26",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -10791,7 +11078,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "pc0000031-tradable",
@@ -10952,6 +11240,7 @@
     },
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
+    "launchDate": "2025-10-22",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -10970,7 +11259,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "pgold-polaris",
@@ -11044,6 +11334,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "puso",
+    "launchDate": "2024-05-17",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -11067,7 +11358,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "pht-pht",
@@ -11084,6 +11376,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "pht-stablecoin",
+    "launchDate": "2025-02-13",
     "reserves": [
       {
         "name": "apcxUSDT custodial wrapper collateral",
@@ -11108,7 +11401,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "pmusd-precious-metals",
@@ -11125,6 +11419,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "precious-metals-usd",
+    "launchDate": "2025-12-09",
     "reserves": [
       {
         "name": "On-chain TokenBlender (TB) backed by ION.au / in-situ gold claims",
@@ -11158,6 +11453,7 @@
       "navToken": false
     },
     "geckoId": "plume-usd",
+    "launchDate": "2024-12-10",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -11208,7 +11504,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "pusd-polaris",
@@ -11275,6 +11572,7 @@
     },
     "geckoId": "polymarket-usd",
     "protocolSlug": "polymarket",
+    "launchDate": "2026-03-31",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -11296,7 +11594,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "pyusd-paypal",
@@ -11313,6 +11612,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "paypal-usd",
+    "launchDate": "2022-11-08",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -11389,7 +11689,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "qcad-stablecorp",
@@ -11406,6 +11707,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stablecorp-qcad",
+    "launchDate": "2026-01-20",
     "reserves": [
       {
         "name": "CAD fiat reserves",
@@ -11424,7 +11726,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "reur-royal-euro",
@@ -11441,6 +11744,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "royal-euro",
+    "launchDate": "2026-02-11",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -11460,7 +11764,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "reusd-re-protocol",
@@ -11477,6 +11782,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "re-protocol-reusd",
+    "launchDate": "2025-01-21",
     "genius": {
       "applicability": "non-payment-token",
       "authorizationStatus": "not-applicable",
@@ -11545,7 +11851,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "re-metrics"
   },
   {
     "id": "reusd-resupply",
@@ -11562,6 +11869,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "resupply-usd",
+    "launchDate": "2025-03-13",
     "reserves": [
       {
         "name": "Curve Lend vault shares (crvUSD lending positions)",
@@ -11587,7 +11895,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "resupply-pairs"
   },
   {
     "id": "rgbp-revolut",
@@ -11668,6 +11977,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "ripple-usd",
+    "launchDate": "2024-08-09",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
@@ -11728,7 +12038,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "ripple-transparency"
   },
   {
     "id": "roughrider-bnd",
@@ -11813,6 +12124,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "reservoir-rusd",
+    "launchDate": "2024-08-19",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -11909,7 +12221,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "reservoir"
   },
   {
     "id": "rusd-revolut",
@@ -11984,6 +12297,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "royal-dollar",
     "protocolSlug": "rcoins",
+    "launchDate": "2026-02-11",
     "canBeBlacklisted": "possible",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -12033,7 +12347,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "rwausdi-multipli",
@@ -12049,6 +12364,7 @@
       "navToken": false
     },
     "mechanismArchetype": "rwa-credit-fund",
+    "launchDate": "2025-11-23",
     "reserves": [
       {
         "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
@@ -12083,7 +12399,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "safo-spiko-usd",
@@ -12099,6 +12416,7 @@
       "navToken": true
     },
     "geckoId": "safo",
+    "launchDate": "2026-02-26",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
@@ -12142,6 +12460,7 @@
     "geckoId": "gaib-said",
     "variantOf": "aid-gaib",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-10-31",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "defiLlamaPoolId": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
@@ -12168,7 +12487,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "satusd-river",
@@ -12185,6 +12505,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "satoshi-stablecoin",
+    "launchDate": "2025-02-21",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -12225,7 +12546,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "river-protocol-info"
   },
   {
     "id": "savusd-avant",
@@ -12245,6 +12567,7 @@
     "geckoId": "avant-staked-usd",
     "variantOf": "avusd-avant",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-11-15",
     "yieldConfig": {
       "yieldSource": "Avant savings (savUSD)",
       "yieldType": "nav-appreciation"
@@ -12273,7 +12596,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "sbc-brale",
@@ -12290,6 +12614,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stable-coin-2",
+    "launchDate": "2022-08-02",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -12336,7 +12661,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "sbold-k3-capital",
@@ -12355,6 +12681,7 @@
     "geckoId": "sbold-by-k3-capital",
     "variantOf": "bold-liquity",
     "variantKind": "risk-absorption",
+    "launchDate": "2025-06-05",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -12387,7 +12714,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "scrvusd-curve",
@@ -12406,6 +12734,7 @@
     "geckoId": "savings-crvusd",
     "variantOf": "crvusd-curve",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-10-31",
     "yieldConfig": {
       "yieldSource": "Curve savings (scrvUSD)",
       "yieldType": "nav-appreciation"
@@ -12430,7 +12759,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "scusd-rings",
@@ -12446,6 +12776,7 @@
       "navToken": false
     },
     "geckoId": "rings-scusd",
+    "launchDate": "2024-12-09",
     "reserves": [
       {
         "name": "Accepted stablecoin collateral",
@@ -12492,6 +12823,7 @@
     "geckoId": "savings-dai",
     "variantOf": "dai-makerdao",
     "variantKind": "savings-passthrough",
+    "launchDate": "2023-01-17",
     "yieldConfig": {
       "yieldSource": "Dai Savings Rate (sDAI)",
       "yieldType": "nav-appreciation"
@@ -12516,7 +12848,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "sdola-inverse-finance",
@@ -12535,6 +12868,7 @@
     "geckoId": "sdola",
     "variantOf": "dola-inverse-finance",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-01-31",
     "yieldConfig": {
       "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
       "yieldSource": "Inverse Finance sDOLA vault",
@@ -12578,6 +12912,7 @@
     "geckoId": "dtrinity-staked-dusd",
     "variantOf": "dusd-dtrinity",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-07-30",
     "yieldConfig": {
       "yieldSource": "dTRINITY dStake (sdUSD)",
       "yieldType": "lending-vault"
@@ -12625,6 +12960,7 @@
     "geckoId": "staked-frax-usd",
     "variantOf": "frxusd-frax",
     "variantKind": "savings-passthrough",
+    "launchDate": "2025-01-02",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Frax staking (sfrxUSD)",
@@ -12654,7 +12990,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "sgho-aave",
@@ -12673,6 +13010,7 @@
     "geckoId": "aave-stkgho",
     "variantOf": "gho-aave",
     "variantKind": "savings-passthrough",
+    "launchDate": "2026-05-05",
     "yieldConfig": {
       "yieldSource": "Aave Savings GHO",
       "yieldType": "governance-set"
@@ -12697,7 +13035,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "sgho-wrapper"
   },
   {
     "id": "silk-shade-protocol",
@@ -12767,6 +13106,7 @@
       "navToken": true
     },
     "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
+    "launchDate": "2025-07-24",
     "reserves": [
       {
         "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
@@ -12905,6 +13245,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund",
+    "launchDate": "2025-07-16",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko Cash and Carry USD NAV",
@@ -12955,6 +13296,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "soulpeg-usd",
     "protocolSlug": "soulpeg",
+    "launchDate": "2025-07-30",
     "reserves": [
       {
         "name": "USDC routed through Venus lending markets (via soul-bound sUSDC)",
@@ -12978,7 +13320,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "srusd-reservoir",
@@ -12996,6 +13339,7 @@
     "geckoId": "reservoir-srusd",
     "variantOf": "rusd-reservoir",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-08-19",
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault",
       "yieldType": "nav-appreciation"
@@ -13024,7 +13368,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "reservoir"
   },
   {
     "id": "srusde-strata",
@@ -13043,6 +13388,7 @@
     "geckoId": "strata-senior-usde",
     "variantOf": "usde-ethena",
     "variantKind": "risk-absorption",
+    "launchDate": "2025-10-02",
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
@@ -13067,7 +13413,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "stac-securitize",
@@ -13084,6 +13431,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "securitize-tokenized-aaa-clo-fund",
+    "launchDate": "2025-10-29",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",
@@ -13129,6 +13477,7 @@
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-07-08",
     "yieldConfig": {
       "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
       "yieldSource": "Cap savings (stcUSD)",
@@ -13154,7 +13503,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "steakusdc-steakhouse",
@@ -13172,6 +13522,7 @@
     "geckoId": "steakhouse-usdc",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-10-27",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Steakhouse Morpho USDC vault",
@@ -13197,7 +13548,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "steakusdt-steakhouse",
@@ -13215,6 +13567,7 @@
     "geckoId": "steakhouse-usdt",
     "variantOf": "usdt-tether",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-11-29",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Steakhouse Morpho USDT vault",
@@ -13241,7 +13594,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "stkgho-umbrella-aave",
@@ -13258,6 +13612,7 @@
     },
     "variantOf": "gho-aave",
     "variantKind": "risk-absorption",
+    "launchDate": "2025-06-05",
     "yieldConfig": {
       "yieldSource": "Aave Umbrella stkGHO rewards",
       "yieldType": "governance-set"
@@ -13282,7 +13637,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "stusd-stoneyield",
@@ -13300,6 +13656,7 @@
     "geckoId": "stoneyield-usd",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-12-05",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "StoneYield protocol",
@@ -13346,6 +13703,7 @@
     },
     "variantOf": "usds-sky",
     "variantKind": "risk-absorption",
+    "launchDate": "2025-08-25",
     "yieldConfig": {
       "yieldSource": "Sky stUSDS Rate",
       "yieldType": "lending-vault"
@@ -13370,7 +13728,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "suiusde-sui",
@@ -13429,6 +13788,7 @@
     },
     "geckoId": "staked-usd-coin",
     "protocolSlug": "hedgecore",
+    "launchDate": "2025-10-11",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "HedgeCore Venus strategy yield",
@@ -13459,7 +13819,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "susd-solayer",
@@ -13534,7 +13895,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "susd-synthetix",
@@ -13551,6 +13913,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "nusd",
+    "launchDate": "2019-09-26",
     "reserves": [
       {
         "name": "SNX (via legacy V2 420 pool, 200% C-ratio)",
@@ -13609,6 +13972,7 @@
     "geckoId": "staked-usd1",
     "variantOf": "usd1-world-liberty-financial",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-07-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Lorenzo USD1+ staking",
@@ -13638,7 +14002,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "susdai-usd-ai",
@@ -13658,6 +14023,7 @@
     "geckoId": "susdai",
     "variantOf": "usdai-usd-ai",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-05-23",
     "yieldConfig": {
       "yieldSource": "USD.AI savings (sUSDai)",
       "yieldType": "nav-appreciation"
@@ -13690,7 +14056,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "usdai-proof-of-reserves"
   },
   {
     "id": "susdc-spark",
@@ -13707,6 +14074,7 @@
     },
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
+    "launchDate": "2025-10-01",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spark Savings USDC",
@@ -13736,7 +14104,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "susdd-tron-dao-reserve",
@@ -13754,6 +14123,7 @@
     "geckoId": "savings-usdd",
     "variantOf": "usdd-tron-dao-reserve",
     "variantKind": "savings-passthrough",
+    "launchDate": "2025-09-02",
     "yieldConfig": {
       "yieldSource": "USDD savings (sUSDD)",
       "yieldType": "nav-appreciation"
@@ -13782,7 +14152,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "susde-ethena",
@@ -13801,6 +14172,7 @@
     "geckoId": "ethena-staked-usde",
     "variantOf": "usde-ethena",
     "variantKind": "savings-passthrough",
+    "launchDate": "2023-11-14",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Ethena staking (sUSDe)",
@@ -13830,7 +14202,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "susds-sky",
@@ -13849,6 +14222,7 @@
     "geckoId": "susds",
     "variantOf": "usds-sky",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-09-04",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "Sky Savings Rate (sUSDS)",
@@ -13878,7 +14252,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "susdt-spark",
@@ -13895,6 +14270,7 @@
     },
     "variantOf": "usdt-tether",
     "variantKind": "savings-passthrough",
+    "launchDate": "2025-10-01",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spark Savings USDT",
@@ -13924,7 +14300,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "susn-noon",
@@ -13944,6 +14321,7 @@
     "geckoId": "staked-usn",
     "variantOf": "usn-noon",
     "variantKind": "savings-passthrough",
+    "launchDate": "2024-11-06",
     "yieldConfig": {
       "yieldSource": "Noon staking (sUSN)",
       "yieldType": "nav-appreciation"
@@ -13972,7 +14350,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "syrupusdc-maple",
@@ -13990,6 +14369,7 @@
     "geckoId": "syrupusdc",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-05-21",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Maple Finance lending",
@@ -14023,7 +14403,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "syrupusdt-maple",
@@ -14041,6 +14422,7 @@
     "geckoId": "syrupusdt",
     "variantOf": "usdt-tether",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-08-01",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Maple Finance lending",
@@ -14070,7 +14452,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "syusd-aegis",
@@ -14089,6 +14472,7 @@
     "geckoId": "staked-yusd",
     "variantOf": "yusd-aegis",
     "variantKind": "savings-passthrough",
+    "launchDate": "2025-06-03",
     "yieldConfig": {
       "yieldSource": "Aegis staking (sYUSD)",
       "yieldType": "nav-appreciation"
@@ -14117,7 +14501,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "syzusd-yuzu",
@@ -14163,7 +14548,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "tbill-openeden",
@@ -14180,6 +14566,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-tbill",
+    "launchDate": "2023-10-18",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -14225,7 +14612,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "tgbp-tokenised",
@@ -14242,6 +14630,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tokenised-gbp",
+    "launchDate": "2025-08-01",
     "reserves": [
       {
         "name": "GBP reserves and short-term UK government paper",
@@ -14259,7 +14648,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "tgld-tenbin",
@@ -14277,6 +14667,7 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "tenbin-gold",
     "status": "pre-launch",
+    "launchDate": "2026-02-10",
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
@@ -14368,6 +14759,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "theo-short-duration-us-treasury-fund",
+    "launchDate": "2025-07-22",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
@@ -14391,7 +14783,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "trusd-tori",
@@ -14468,6 +14861,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "bilira",
+    "launchDate": "2019-07-19",
     "reserves": [
       {
         "name": "TRY cash reserves",
@@ -14485,7 +14879,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "tusd-trueusd",
@@ -14502,6 +14897,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "true-usd",
+    "launchDate": "2018-12-31",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -14555,7 +14951,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-por"
   },
   {
     "id": "u-united-stables",
@@ -14572,6 +14969,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "united-stables",
+    "launchDate": "2025-12-17",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -14612,7 +15010,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "uktbl-spiko",
@@ -14629,6 +15028,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-uk-t-bills-money-market-fund",
+    "launchDate": "2025-07-16",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko UK T-Bills MMF NAV",
@@ -14678,6 +15078,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usa",
+    "launchDate": "2025-12-12",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -14737,7 +15138,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "usbd-bima",
@@ -14754,6 +15156,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usbd",
+    "launchDate": "2025-03-21",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -14783,7 +15186,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "usd-nubank",
@@ -14835,6 +15239,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "usual-usd",
+    "launchDate": "2024-05-23",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -14932,7 +15337,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "usd1-world-liberty-financial",
@@ -14949,6 +15355,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usd1-wlfi",
+    "launchDate": "2025-01-28",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
@@ -15020,7 +15427,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "usd1-bundle-oracle"
   },
   {
     "id": "usd3-reserve-protocol",
@@ -15037,6 +15445,7 @@
     },
     "geckoId": "web-3-dollar",
     "protocolSlug": "reserve-protocol",
+    "launchDate": "2024-04-03",
     "yieldConfig": {
       "yieldSource": "Reserve Protocol collateral yield",
       "yieldType": "nav-appreciation"
@@ -15088,7 +15497,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "reserve-protocol-dtf"
   },
   {
     "id": "usda-alpha-partner",
@@ -15105,6 +15515,7 @@
     },
     "geckoId": "usda-3",
     "protocolSlug": "alpha-partners",
+    "launchDate": "2025-08-07",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -15123,7 +15534,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usda-anzens",
@@ -15206,6 +15618,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usda-2",
+    "launchDate": "2024-11-03",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -15261,6 +15674,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "asymmetry-usdaf-2",
+    "launchDate": "2025-07-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -15315,7 +15729,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "asymmetry"
   },
   {
     "id": "usdai-usd-ai",
@@ -15332,6 +15747,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdai",
+    "launchDate": "2025-05-23",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -15385,7 +15801,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdat-saturn",
@@ -15402,6 +15819,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "saturn-dollar",
+    "launchDate": "2026-03-10",
     "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
@@ -15457,7 +15875,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "usdb-blast",
@@ -15474,6 +15893,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdb",
+    "launchDate": "2026-06-10",
     "yieldConfig": {
       "yieldSource": "Blast native yield",
       "yieldType": "governance-set"
@@ -15501,7 +15921,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "blast-usdb-yield-manager"
   },
   {
     "id": "usdb-bridge",
@@ -15620,6 +16041,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usd-coin",
+    "launchDate": "2018-08-03",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -15700,7 +16122,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "circle-transparency"
   },
   {
     "id": "usdcv-societe-generale-forge",
@@ -15717,6 +16140,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usd-coinvertible",
+    "launchDate": "2025-06-10",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -15779,7 +16203,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "sgforge-coinvertible"
   },
   {
     "id": "usdcx-movement",
@@ -15837,6 +16262,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usdd",
+    "launchDate": "2025-09-02",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -15911,7 +16337,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "usdd-data-platform"
   },
   {
     "id": "usde-ethena",
@@ -15928,6 +16355,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-usde",
+    "launchDate": "2023-11-14",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -15987,7 +16415,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "ethena"
   },
   {
     "id": "usdf-astherus",
@@ -16004,6 +16433,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "astherus-usdf",
+    "launchDate": "2024-11-14",
     "reserves": [
       {
         "name": "USDT (held in Ceffu custody)",
@@ -16055,6 +16485,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "falcon-finance",
+    "launchDate": "2025-02-10",
     "genius": {
       "applicability": "non-payment-token",
       "authorizationStatus": "not-applicable",
@@ -16121,7 +16552,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "falcon"
   },
   {
     "id": "usdf-flipcash",
@@ -16209,6 +16641,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "global-dollar",
+    "launchDate": "2024-10-07",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -16285,7 +16718,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdglo-glo",
@@ -16302,6 +16736,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "glo-dollar",
+    "launchDate": "2022-11-01",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -16350,7 +16785,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdgo-osl",
@@ -16425,7 +16861,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "usdgo-transparency"
   },
   {
     "id": "usdh-hermetica",
@@ -16587,7 +17024,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "usdh-native-markets"
   },
   {
     "id": "usdk-kast",
@@ -16667,7 +17105,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "usdk-orki",
@@ -16683,6 +17122,7 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -16720,7 +17160,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "usdkg-gold-dollar",
@@ -16736,6 +17177,7 @@
       "navToken": false
     },
     "geckoId": "usdkg",
+    "launchDate": "2025-03-12",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -16804,6 +17246,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "megausd",
+    "launchDate": "2025-12-08",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -16869,7 +17312,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdm-moneta",
@@ -17043,7 +17487,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "usdn-smardex",
@@ -17060,6 +17505,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "smardex-usdn",
+    "launchDate": "2024-12-19",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "SMARDEX USDN rebasing vault",
@@ -17083,7 +17529,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "usdnr-nerona",
@@ -17099,6 +17546,7 @@
       "navToken": false
     },
     "mechanismArchetype": "tbill",
+    "launchDate": "2026-01-12",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "m0"
@@ -17132,7 +17580,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "usdo-openeden",
@@ -17149,6 +17598,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-open-dollar",
+    "launchDate": "2024-09-26",
     "genius": {
       "applicability": "non-payment-token",
       "authorizationStatus": "no-public-authorization-found",
@@ -17228,7 +17678,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "openeden-usdo"
   },
   {
     "id": "usdon-ondo",
@@ -17245,6 +17696,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "ondo-u-s-dollar-token",
+    "launchDate": "2025-07-15",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "unclear",
@@ -17294,7 +17746,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdp-parallel",
@@ -17311,6 +17764,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "parallel-usdp",
+    "launchDate": "2025-06-05",
     "reserves": [
       {
         "name": "frxUSD (Ethereum branch)",
@@ -17394,6 +17848,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "paxos-standard",
+    "launchDate": "2018-09-08",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -17479,7 +17934,8 @@
           "directMintAbility": "unknown"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdpt-western-union",
@@ -17628,6 +18084,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "quantoz-usdq",
+    "launchDate": "2024-11-13",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -17703,7 +18160,8 @@
           "directMintAbility": "unknown"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "quantoz-transparency"
   },
   {
     "id": "usdq-quill",
@@ -17720,6 +18178,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "quill-usdq",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -17761,7 +18220,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "liquity-v2-branches"
   },
   {
     "id": "usdr-ring",
@@ -17779,6 +18239,7 @@
     "mechanismArchetype": "algorithmic",
     "geckoId": "ring-usd",
     "protocolSlug": "ring-protocol",
+    "launchDate": "2025-09-12",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -17801,7 +18262,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdr-stablr",
@@ -17818,6 +18280,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "stablr-usd",
+    "launchDate": "2024-12-06",
     "mica": {
       "status": "authorized",
       "tokenType": "EMT",
@@ -17892,7 +18355,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "usdrif-rif",
@@ -17909,6 +18373,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "rif-us-dollar",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -17949,6 +18414,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "usds",
+    "launchDate": "2024-09-02",
     "canBeBlacklisted": "possible",
     "genius": {
       "applicability": "unclear",
@@ -18023,7 +18489,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "sky-makercore"
   },
   {
     "id": "usdsc-startale",
@@ -18040,6 +18507,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "startale-usd",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
@@ -18099,7 +18567,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "usdsui-sui",
@@ -18180,6 +18649,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tether",
+    "launchDate": "2017-11-28",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -18263,7 +18733,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdtb-ethena",
@@ -18280,6 +18751,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "usdtb",
+    "launchDate": "2024-11-28",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
@@ -18335,7 +18807,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdu-unitas",
@@ -18352,6 +18825,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "usdu",
+    "launchDate": "2025-11-22",
     "yieldConfig": {
       "yieldSource": "Unitas savings (sUSDu)",
       "yieldType": "governance-set"
@@ -18384,7 +18858,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "usdu-usdu-finance",
@@ -18399,6 +18874,7 @@
       "rwa": false,
       "navToken": false
     },
+    "launchDate": "2025-07-04",
     "reserves": [
       {
         "name": "TermMax fixed-rate lending vault shares",
@@ -18472,7 +18948,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usdx-hex-trust",
@@ -18489,6 +18966,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "hex-trust-usdx",
+    "launchDate": "2024-10-28",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -18542,7 +19020,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "usdx-kava",
@@ -18654,6 +19133,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "ondo-us-dollar-yield",
+    "launchDate": "2023-07-11",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -18702,7 +19182,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "usdz-anzen",
@@ -18719,6 +19200,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anzen-usdz",
+    "launchDate": "2024-05-16",
     "genius": {
       "applicability": "unclear",
       "authorizationStatus": "no-public-authorization-found",
@@ -18778,7 +19260,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "anzen-usdz"
   },
   {
     "id": "usg-tangent",
@@ -18795,6 +19278,7 @@
     },
     "mechanismArchetype": "cdp",
     "status": "active",
+    "launchDate": "2026-02-12",
     "announcedDate": "2026-03",
     "launchPhase": "beta",
     "milestones": [
@@ -18871,6 +19355,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "noon-usn",
+    "launchDate": "2024-10-03",
     "canBeBlacklisted": "possible",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -18946,7 +19431,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "usnd-nerite",
@@ -18965,6 +19451,7 @@
     "geckoId": "us-nerite-dollar",
     "status": "frozen",
     "frozenAt": "2026-05-10",
+    "launchDate": "2025-07-11",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -19023,6 +19510,7 @@
     },
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "pareto-usp",
+    "launchDate": "2025-05-13",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -19061,7 +19549,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usp-pikudao",
@@ -19077,6 +19566,7 @@
       "navToken": true
     },
     "geckoId": "usp-yield-optimized-stablecoin",
+    "launchDate": "2025-08-22",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "PikuDAO lending vault",
@@ -19140,6 +19630,7 @@
     "geckoId": "resolv-usr",
     "status": "frozen",
     "frozenAt": "2026-04-27",
+    "launchDate": "2024-06-02",
     "canBeBlacklisted": true,
     "reserves": [
       {
@@ -19202,6 +19693,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "us-sonic-dollar",
+    "launchDate": "2026-03-03",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -19265,7 +19757,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "frax-balance-sheet"
   },
   {
     "id": "ustb-superstate",
@@ -19282,6 +19775,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
+    "launchDate": "2023-12-06",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -19339,7 +19833,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "superstate-liquidity"
   },
   {
     "id": "ustbl-spiko",
@@ -19356,6 +19851,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-us-t-bills-money-market-fund",
+    "launchDate": "2024-04-19",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
@@ -19388,7 +19884,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "usx-dforce",
@@ -19405,6 +19902,7 @@
     },
     "mechanismArchetype": "cdp",
     "protocolSlug": "dforce-lending",
+    "launchDate": "2021-05-17",
     "reserves": [
       {
         "name": "dForce stablecoin and crypto collateral pool",
@@ -19426,7 +19924,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "usx-solstice",
@@ -19473,7 +19972,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "solstice-attestation"
   },
   {
     "id": "usyc-hashnote",
@@ -19490,6 +19990,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "hashnote-usyc",
+    "launchDate": "2023-05-31",
     "genius": {
       "applicability": "excluded-security",
       "authorizationStatus": "not-applicable",
@@ -19533,7 +20034,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "uty-xsy",
@@ -19550,6 +20052,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "unity-2",
+    "launchDate": "2025-02-28",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -19585,7 +20088,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "uusd-anything-labs",
@@ -19603,6 +20107,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd",
+    "launchDate": "2026-02-03",
     "reserves": [
       {
         "name": "Protocol-managed stablecoin and crypto collateral",
@@ -19624,7 +20129,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "uusd-youves",
@@ -19696,6 +20202,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "vaneck-treasury-fund",
+    "launchDate": "2025-05-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
@@ -19728,7 +20235,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "vchf-vnx",
@@ -19745,6 +20253,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-swiss-franc",
+    "launchDate": "2022-12-02",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -19786,7 +20295,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "vcred-vcred",
@@ -19804,6 +20314,7 @@
     "mechanismArchetype": "cdp",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
+    "launchDate": "1970-01-01",
     "canBeBlacklisted": false,
     "reserves": [
       {
@@ -19823,7 +20334,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "veur-vnx",
@@ -19840,6 +20352,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-euro",
+    "launchDate": "2022-11-18",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -19879,7 +20392,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "vgbp-vnx",
@@ -19896,6 +20410,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-british-pound",
+    "launchDate": "2025-06-02",
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
@@ -19935,7 +20450,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "vndc-jade-labs",
@@ -19952,6 +20468,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vndc",
+    "launchDate": "2019-08-30",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -19971,7 +20488,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "vnxau-vnx",
@@ -19988,6 +20506,7 @@
     },
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
+    "launchDate": "2021-12-15",
     "commodityOunces": 0.0321507466,
     "mica": {
       "status": "non-compliant",
@@ -20026,7 +20545,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "vusd-virtue",
@@ -20083,6 +20603,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "argentine-peso",
+    "launchDate": "2025-07-02",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20114,7 +20635,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "wbrl-ripio",
@@ -20131,6 +20653,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brazilian-real",
+    "launchDate": "2025-07-11",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20179,6 +20702,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "chilean-peso",
+    "launchDate": "2025-11-27",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20227,6 +20751,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "colombian-peso",
+    "launchDate": "2025-09-22",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20318,6 +20843,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "weusd",
+    "launchDate": "2025-06-26",
     "reserves": [
       {
         "name": "USDC reserves",
@@ -20359,6 +20885,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "wrapped-itry",
+    "launchDate": "2026-03-12",
     "yieldConfig": {
       "yieldSource": "Brix iTRY staking",
       "yieldType": "nav-appreciation"
@@ -20385,7 +20912,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "wm-m0",
@@ -20402,6 +20930,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wrappedm-by-m0",
+    "launchDate": "2024-08-14",
     "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
@@ -20434,7 +20963,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "wmxn-ripio",
@@ -20451,6 +20981,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mexican-peso",
+    "launchDate": "2025-07-11",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20499,6 +21030,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "peruvian-sol",
+    "launchDate": "2025-11-27",
     "canBeBlacklisted": "possible",
     "reserves": [
       {
@@ -20546,6 +21078,7 @@
       "navToken": true
     },
     "geckoId": "wrapped-savings-rusd",
+    "launchDate": "2025-04-15",
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
       "yieldType": "nav-appreciation"
@@ -20598,7 +21131,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "reservoir"
   },
   {
     "id": "wtgxx-wisdomtree",
@@ -20615,6 +21149,7 @@
     },
     "mechanismArchetype": "tbill",
     "geckoId": "wisdomtree-treasury-money-market-digital-fund",
+    "launchDate": "2024-09-14",
     "canBeBlacklisted": true,
     "genius": {
       "applicability": "excluded-security",
@@ -20678,7 +21213,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "wusd-worldwide",
@@ -20695,6 +21231,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "worldwide-usd",
+    "launchDate": "2024-12-13",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -20766,7 +21303,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "xagm-matrixdock",
@@ -20782,6 +21320,7 @@
       "navToken": false
     },
     "geckoId": "matrixdock-silver",
+    "launchDate": "2026-03-09",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -20805,7 +21344,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "xai-silo-finance",
@@ -20821,6 +21361,7 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
+    "launchDate": "2022-10-19",
     "reserves": [
       {
         "name": "USDC Silo credit-line collateral",
@@ -20845,7 +21386,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "xaum-matrixdock",
@@ -20861,6 +21403,7 @@
       "navToken": false
     },
     "geckoId": "matrixdock-gold",
+    "launchDate": "2024-08-28",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -20887,7 +21430,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "xaut-tether",
@@ -20904,6 +21448,7 @@
     },
     "geckoId": "tether-gold",
     "protocolSlug": "tether-gold",
+    "launchDate": "2021-10-31",
     "commodityOunces": 1,
     "reserves": [
       {
@@ -20926,7 +21471,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "xdai-gnosis",
@@ -21068,6 +21614,7 @@
       "navToken": false
     },
     "geckoId": "kinka",
+    "launchDate": "2023-12-19",
     "canBeBlacklisted": true,
     "commodityOunces": 1,
     "reserves": [
@@ -21092,7 +21639,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "xo-exodus",
@@ -21175,7 +21723,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "m0"
   },
   {
     "id": "xofm-mento",
@@ -21191,6 +21740,7 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
+    "launchDate": "2023-08-17",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -21235,6 +21785,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "xsgd",
+    "launchDate": "2020-03-25",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -21297,7 +21848,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "xtusd-xt",
@@ -21353,6 +21905,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "xusd-babelfish",
+    "launchDate": "1970-01-01",
     "reserves": [
       {
         "name": "Sovryn Dollar DLLR",
@@ -21407,7 +21960,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "evm-branch-balances"
   },
   {
     "id": "xusd-straitsx",
@@ -21424,6 +21978,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "straitsx-xusd",
+    "launchDate": "2024-02-01",
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -21487,7 +22042,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "ybold-yearn",
@@ -21505,6 +22061,7 @@
     "mechanismArchetype": "cdp",
     "variantOf": "bold-liquity",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-05-26",
     "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
@@ -21533,7 +22090,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "ylds-figure",
@@ -21613,7 +22171,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "yousd-yield-optimizer",
@@ -21630,6 +22189,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "yield-optimizer-usd",
+    "launchDate": "2025-04-17",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Yield Optimizer strategies",
@@ -21704,7 +22264,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "yusd-aegis",
@@ -21721,6 +22282,7 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "aegis-yusd",
+    "launchDate": "2025-01-23",
     "yieldConfig": {
       "yieldSource": "Aegis delta-neutral strategy",
       "yieldType": "lending-vault"
@@ -21752,7 +22314,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "yusd-yieldfi",
@@ -21772,6 +22335,7 @@
     "geckoId": "yieldfi-ytoken",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2025-04-28",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
       "yieldSource": "YieldFi yUSD strategies",
@@ -21797,7 +22361,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "yvusdc-yearn",
@@ -21815,6 +22380,7 @@
     "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "launchDate": "2024-03-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Yearn v3 USDC vault",
@@ -21840,7 +22406,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "yzusd-yuzu",
@@ -21900,7 +22467,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "accountable"
   },
   {
     "id": "zarm-mento",
@@ -21917,6 +22485,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "celo-south-african-rand",
+    "launchDate": "2025-03-22",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -21944,7 +22513,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "mento"
   },
   {
     "id": "zarp-zarp",
@@ -21961,6 +22531,7 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "zarp-stablecoin",
+    "launchDate": "2023-03-31",
     "reserves": [
       {
         "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)",
@@ -21979,7 +22550,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "single-asset"
   },
   {
     "id": "zchf-frankencoin",
@@ -21996,6 +22568,22 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "frankencoin",
+    "launchDate": "2023-10-28",
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "references": [
+        {
+          "label": "Frankencoin compliance summary",
+          "url": "https://frankencoin.com/compliance/#compliance-summary"
+        },
+        {
+          "label": "Frankencoin docs",
+          "url": "https://docs.frankencoin.com/"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Frankencoin Savings",
       "yieldType": "lending-vault"
@@ -22050,7 +22638,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "collateral-positions-api"
   },
   {
     "id": "zeusd-zoth",
@@ -22067,6 +22656,7 @@
     },
     "mechanismArchetype": "cdp",
     "geckoId": "zeusd",
+    "launchDate": "2024-12-12",
     "reserves": [
       {
         "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
@@ -22100,7 +22690,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "zkusd-goal3",
@@ -22170,7 +22761,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "zephyr-scanner"
   },
   {
     "id": "zys-zephyr-protocol",
