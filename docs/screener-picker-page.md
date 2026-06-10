@@ -75,11 +75,11 @@ Browser-local state is intentionally split by lifetime. There is no long-lived l
 | --- | --- | --- |
 | `pharos.selector.callout.v1` | `localStorage` JSON | Callout dismissal state. Survives reloads; clears on site-data clear. |
 | `pharos.selector.sessionResult.v1` | `sessionStorage` JSON | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear. |
-| `s:{sid}` | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. 5-year TTL. |
+| `s:{sid}` | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. Written with a 90-day unread TTL; the first successful read extends it to the full 5-year retention TTL (KV metadata `extended: true` marks already-extended rows). |
 
 Storage layer is best-effort; quota errors are silently dropped. Session recovery, when present, must be visibly labeled as a restored session result and must not create localStorage output history.
 
-**Snapshot share URL:** `/screener/picker/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp, debug, and freshness suffixes) share the same sid. The frozen artifact contains the form answers and output; the sid is the lookup key. The share UI must disclose before or during link creation that answers and shortlist output are stored for 5 years and that anyone with the link can view the snapshot.
+**Snapshot share URL:** `/screener/picker/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp, debug, and freshness suffixes) share the same sid. The frozen artifact contains the form answers and output; the sid is the lookup key. The share UI must disclose before or during link creation that answers and shortlist output are stored for up to 5 years and that anyone with the link can view the snapshot. Snapshots that are never opened expire after 90 days; the first read extends retention to the full 5 years.
 
 **Snapshot-miss behavior:** when a sid-only share URL hits a KV miss, the client shows a not-found error instead of silently generating a different live result. If a legacy or hand-authored URL also carries complete wizard state, the client can fall back to live engine output for those inputs with a one-line "Original snapshot no longer cached" banner.
 
@@ -107,6 +107,8 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 **Canonicalization:** the strip rule covers `timestamp`, `debug`, `perInputStaleness`, plus any field whose name matches the suffixes `ageSeconds`, `capturedAt`, `stalenessMs`, `updatedAt`, `fetchedAt`. `coverageWarnings.newListingCount` is **not** stripped; the implemented engine derives it from content-level recent-listing flags, so it contributes to the sid. Cross-client sid consistency depends on this denylist; engine and integration agreed on the same strip-list in plan §0. POST strips `debug` before storage even if a debug build sends it.
 
 **Size guard:** 100 KB defensive ceiling. Realistic snapshots are ~10–30 KB; bloat past 100 KB is a bug, not a feature.
+
+**Write abuse controls:** the origin gate is spoofable and zone WAF rate limits only cover `api.pharos.watch/api/*`, so `POST` carries its own throttle: a per-isolate hashed-IP sliding window (10 writes/minute, SHA-256-hashed `CF-Connecting-IP` kept in volatile memory only) returning `429` + `Retry-After`. Combined with the 90-day unread TTL, this bounds the KV cost/quota blast radius of unauthenticated write spam. A zone-level rate-limit rule for `/selector-snapshot` remains a recommended ops follow-up for distributed abuse.
 
 **Failure modes** (full table in `agents/impl-plan-drafts/03-integration.md` §1.5): malformed JSON / wrong shape → `400`; oversized → `413`; origin mismatch → `404`; KV outage → `503` on POST or `503` on GET-read; corrupt KV value → `502`; missing KV binding → `500`.
 

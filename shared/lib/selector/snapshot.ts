@@ -25,6 +25,10 @@ import {
 export const SELECTOR_SNAPSHOT_SID_PATTERN = /^[0-9a-f]{32}$/;
 export const SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES = 100 * 1024;
 export const SELECTOR_SNAPSHOT_TTL_SECONDS = 60 * 60 * 24 * 365 * 5;
+// Unauthenticated POSTs get a bounded unread TTL; the first successful read
+// extends the snapshot to the full retention TTL. Caps the storage blast
+// radius of write spam without weakening retention for links actually shared.
+export const SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS = 60 * 60 * 24 * 90;
 
 const MAX_JSON_DEPTH = 12;
 

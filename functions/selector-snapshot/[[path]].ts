@@ -2,6 +2,7 @@ import type { KVNamespace } from "@cloudflare/workers-types";
 import {
   SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
   SELECTOR_SNAPSHOT_TTL_SECONDS,
+  SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
   computeSelectorSnapshotSid,
   isSelectorSnapshotSid,
   validateSelectorSnapshot,
@@ -28,6 +29,46 @@ const STANDARD_RESPONSE_HEADERS = {
   "X-Robots-Tag": "noindex, nofollow",
 } as const;
 const SNAPSHOT_BODY_ENCODER = new TextEncoder();
+
+/**
+ * Per-isolate hashed-IP sliding-window limiter for unauthenticated POSTs.
+ * The origin gate is spoofable and the zone WAF rate limits only cover
+ * `api.pharos.watch/api/*`, so this path needs its own write throttle.
+ * Isolate-local state is best-effort (resets on isolate recycle, not shared
+ * across colos) but bounds the realistic single-source write-spam case.
+ * Legitimate use is 1-2 snapshot creations per session.
+ */
+const POST_RATE_LIMIT_WINDOW_MS = 60_000;
+const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
+const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
+const postTimestampsByIpHash = new Map<string, number[]>();
+
+async function hashClientIp(ip: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", SNAPSHOT_BODY_ENCODER.encode(ip));
+  return Array.from(new Uint8Array(digest).slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function isPostRateLimited(request: Request): Promise<boolean> {
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (!ip) return false;
+
+  const key = await hashClientIp(ip);
+  const now = Date.now();
+  const cutoff = now - POST_RATE_LIMIT_WINDOW_MS;
+  const recent = (postTimestampsByIpHash.get(key) ?? []).filter((ts) => ts > cutoff);
+  if (recent.length >= POST_RATE_LIMIT_MAX_PER_WINDOW) {
+    postTimestampsByIpHash.set(key, recent);
+    return true;
+  }
+
+  recent.push(now);
+  if (!postTimestampsByIpHash.has(key) && postTimestampsByIpHash.size >= POST_RATE_LIMIT_MAX_TRACKED_IPS) {
+    const oldest = postTimestampsByIpHash.keys().next().value;
+    if (oldest !== undefined) postTimestampsByIpHash.delete(oldest);
+  }
+  postTimestampsByIpHash.set(key, recent);
+  return false;
+}
 
 interface SelectorSnapshotEnv {
   SELECTOR_SNAPSHOTS?: KVNamespace;
@@ -98,6 +139,10 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(500, "Selector snapshot store is not configured");
   }
 
+  if (await isPostRateLimited(request)) {
+    return jsonError(429, "Too many snapshot writes; retry later", { "Retry-After": "60" });
+  }
+
   const raw = await readSnapshotBody(request);
   if (raw instanceof Response) return raw;
 
@@ -129,8 +174,10 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
   }
 
   try {
+    // Unread snapshots expire on the short TTL; the first successful read
+    // extends them to the full retention TTL (see handleGet).
     await env.SELECTOR_SNAPSHOTS.put(kvKey, JSON.stringify(validation.snapshot), {
-      expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
+      expirationTtl: SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
     });
   } catch (error) {
     console.warn("[selector-snapshot] KV write failure", error);
@@ -149,9 +196,13 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
     return jsonError(500, "Selector snapshot store is not configured");
   }
 
+  const kvKey = `s:${sid}`;
   let stored: string | null;
+  let retentionExtended = false;
   try {
-    stored = await env.SELECTOR_SNAPSHOTS.get(`s:${sid}`, "text");
+    const result = await env.SELECTOR_SNAPSHOTS.getWithMetadata<{ extended?: boolean }>(kvKey, "text");
+    stored = result.value;
+    retentionExtended = result.metadata?.extended === true;
   } catch (error) {
     console.warn("[selector-snapshot] KV read failure", error);
     return jsonError(503, "Snapshot store temporarily unavailable");
@@ -188,6 +239,22 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   } catch (error) {
     console.warn("[selector-snapshot] stored payload decode failure", error);
     return jsonError(502, "Snapshot value is malformed");
+  }
+
+  if (!retentionExtended) {
+    // First successful read: extend the unread TTL to the full retention TTL.
+    // Stored bytes are re-put verbatim so the sid integrity check still holds.
+    const extension = env.SELECTOR_SNAPSHOTS.put(kvKey, stored, {
+      expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
+      metadata: { extended: true },
+    }).catch((error) => {
+      console.warn("[selector-snapshot] retention extension failure", error);
+    });
+    if (context.waitUntil) {
+      context.waitUntil(extension);
+    } else {
+      await extension;
+    }
   }
 
   return new Response(responseBody, {

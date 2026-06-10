@@ -1,40 +1,63 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { KVNamespace, KVNamespaceGetOptions } from "@cloudflare/workers-types";
 import {
+  SELECTOR_SNAPSHOT_TTL_SECONDS,
+  SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
+} from "../../shared/lib/selector/snapshot";
+import {
   buildSelectorSnapshotOutput,
   buildSnapshotRecommendation,
 } from "../../shared/lib/selector/__tests__/snapshot-fixture";
 import { onRequest } from "../selector-snapshot/[[path]].ts";
 
+interface RecordedPutCall {
+  key: string;
+  options?: { expirationTtl?: number; metadata?: unknown };
+}
+
 interface TestKVNamespace extends KVNamespace {
   __getStore(): Map<string, string>;
+  __getPutCalls(): RecordedPutCall[];
   __setReadHandler(handler: ((key: string) => string | null | Promise<string | null>) | null): void;
   __setWriteHandler(handler: ((key: string, value: string) => void | Promise<void>) | null): void;
 }
 
 function makeKV(): TestKVNamespace {
   const store = new Map<string, string>();
+  const metaStore = new Map<string, unknown>();
+  const putCalls: RecordedPutCall[] = [];
   let readHandler: ((key: string) => string | null | Promise<string | null>) | null = null;
   let writeHandler: ((key: string, value: string) => void | Promise<void>) | null = null;
 
+  const readValue = async (key: string): Promise<string | null> => {
+    if (readHandler) {
+      return readHandler(key);
+    }
+    return store.has(key) ? (store.get(key) ?? null) : null;
+  };
+
   const ns: Partial<TestKVNamespace> = {
     get: (async (key: string, _options?: KVNamespaceGetOptions<"text">) => {
-      if (readHandler) {
-        return readHandler(key);
-      }
-      return store.has(key) ? (store.get(key) ?? null) : null;
+      return readValue(key);
     }) as KVNamespace["get"],
-    put: (async (key: string, value: string) => {
+    getWithMetadata: (async (key: string, _options?: KVNamespaceGetOptions<"text">) => {
+      return { value: await readValue(key), metadata: metaStore.get(key) ?? null, cacheStatus: null };
+    }) as KVNamespace["getWithMetadata"],
+    put: (async (key: string, value: string, options?: RecordedPutCall["options"]) => {
       if (writeHandler) {
         await writeHandler(key, value);
       }
       store.set(key, value);
+      metaStore.set(key, options?.metadata ?? null);
+      putCalls.push({ key, options });
     }) as KVNamespace["put"],
     delete: (async (key: string) => {
       store.delete(key);
+      metaStore.delete(key);
     }) as KVNamespace["delete"],
     list: (async () => ({ keys: [], list_complete: true, cacheStatus: null })) as KVNamespace["list"],
     __getStore: () => store,
+    __getPutCalls: () => putCalls,
     __setReadHandler: (handler) => { readHandler = handler; },
     __setWriteHandler: (handler) => { writeHandler = handler; },
   };
@@ -360,6 +383,86 @@ describe("selector-snapshot Pages Function", () => {
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
       expect(body.debug).toBeUndefined();
+    });
+  });
+
+  describe("retention", () => {
+    it("writes with the unread TTL and extends to full retention on first read only", async () => {
+      const env = makeEnv();
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const post = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput()),
+        env,
+        params: {},
+      });
+      const { sid } = (await post.json()) as { sid: string };
+
+      expect(kv.__getPutCalls()).toHaveLength(1);
+      expect(kv.__getPutCalls()[0]).toMatchObject({
+        key: `s:${sid}`,
+        options: { expirationTtl: SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS },
+      });
+
+      const getOnce = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+      expect(getOnce.status).toBe(200);
+      expect(kv.__getPutCalls()).toHaveLength(2);
+      expect(kv.__getPutCalls()[1]).toMatchObject({
+        key: `s:${sid}`,
+        options: { expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS, metadata: { extended: true } },
+      });
+
+      const getTwice = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+      expect(getTwice.status).toBe(200);
+      expect(kv.__getPutCalls()).toHaveLength(2);
+    });
+  });
+
+  describe("POST rate limiting", () => {
+    it("returns 429 after exceeding the per-IP write budget", async () => {
+      const env = makeEnv();
+      const output = buildSelectorSnapshotOutput();
+      const limitedHeaders = {
+        ...POST_HEADERS,
+        "CF-Connecting-IP": "203.0.113.77",
+      };
+
+      let lastStatus = 0;
+      for (let i = 0; i < 10; i++) {
+        const response = await onRequest({
+          request: postRequest(output, limitedHeaders),
+          env,
+          params: {},
+        });
+        lastStatus = response.status;
+      }
+      expect(lastStatus).toBe(200);
+
+      const throttled = await onRequest({
+        request: postRequest(output, limitedHeaders),
+        env,
+        params: {},
+      });
+      expect(throttled.status).toBe(429);
+      expect(throttled.headers.get("Retry-After")).toBe("60");
+
+      const otherIp = await onRequest({
+        request: postRequest(output, { ...POST_HEADERS, "CF-Connecting-IP": "203.0.113.78" }),
+        env,
+        params: {},
+      });
+      expect(otherIp.status).toBe(200);
     });
   });
 
