@@ -504,6 +504,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
   },
   {
+    job: "prune-detail-cache",
+    label: "Detail cache orphan/stale prune",
+    group: "daily",
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only scan + DELETE of detail:* cache rows
+  },
+  {
     job: "telegram-inactive-cleanup",
     label: "Telegram inactive subscriber cleanup",
     group: "daily",

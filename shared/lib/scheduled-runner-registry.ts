@@ -75,6 +75,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [[
       "prune-status-probe-runs",
       "prune-cron-history",
+      "prune-detail-cache",
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
       "mint-burn-growth-watchdog",
