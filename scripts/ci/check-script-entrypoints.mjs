@@ -15,18 +15,24 @@ const ALLOWED_SCRIPT_PREFIXES = [
 ];
 const SCRIPT_COMMANDS = ["node", "tsx"];
 const SCRIPT_PATH_TERMINATORS = new Set([" ", "\t", "\r", "\n", "`", "'", '"', ")"]);
+// Reverse mode: every runnable script in these directories must be referenced
+// somewhere (package.json, CI workflows, docs, or another script).
+const REVERSE_ENTRYPOINT_DIRS = ["scripts/maintenance", "scripts/ci", "scripts/build-data"];
+const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
+const REVERSE_REFERENCE_ROOTS = ["scripts", "docs", "package.json", ".github"];
+const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
 
 function extension(path) {
   const index = path.lastIndexOf(".");
   return index >= 0 ? path.slice(index) : "";
 }
 
-function collectFiles(path, acc) {
+function collectFiles(path, acc, extensions = SOURCE_EXTENSIONS) {
   const abs = resolve(ROOT, path);
   if (!existsSync(abs)) return;
   const stats = statSync(abs);
   if (stats.isFile()) {
-    if (SOURCE_EXTENSIONS.has(extension(abs))) acc.push(abs);
+    if (extensions.has(extension(abs))) acc.push(abs);
     return;
   }
   if (!stats.isDirectory()) return;
@@ -35,11 +41,15 @@ function collectFiles(path, acc) {
     if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
     const full = join(abs, entry.name);
     if (entry.isDirectory()) {
-      collectFiles(full, acc);
-    } else if (entry.isFile() && SOURCE_EXTENSIONS.has(extension(entry.name))) {
+      collectFiles(full, acc, extensions);
+    } else if (entry.isFile() && extensions.has(extension(entry.name))) {
       acc.push(full);
     }
   }
+}
+
+function isTestPath(path) {
+  return path.includes("__tests__") || /\.test\.[a-z]+$/.test(path);
 }
 
 function normalizeScriptPath(rawPath) {
@@ -101,6 +111,33 @@ for (const file of files) {
         errors.push(`${relFile}:${lineIndex + 1}: stale script entrypoint \`${scriptPath}\``);
       }
     }
+  }
+}
+
+// Reverse check: flag runnable scripts that nothing references (dead scripts).
+const reverseCandidates = [];
+for (const dir of REVERSE_ENTRYPOINT_DIRS) {
+  collectFiles(dir, reverseCandidates, REVERSE_ENTRYPOINT_EXTENSIONS);
+}
+const referenceFiles = [];
+for (const root of REVERSE_REFERENCE_ROOTS) {
+  collectFiles(root, referenceFiles, REVERSE_REFERENCE_EXTENSIONS);
+}
+const referenceContents = referenceFiles
+  .filter((file) => !isTestPath(relative(ROOT, file).replaceAll("\\", "/")))
+  .map((file) => ({ file, content: readFileSync(file, "utf8") }));
+
+for (const candidate of reverseCandidates) {
+  const relPath = relative(ROOT, candidate).replaceAll("\\", "/");
+  if (isTestPath(relPath)) continue;
+  const bare = relPath.replace(/\.(mjs|js|ts)$/, "");
+  const referenced = referenceContents.some(
+    ({ file, content }) => file !== candidate && (content.includes(relPath) || content.includes(bare)),
+  );
+  if (!referenced) {
+    errors.push(
+      `${relPath}: unreferenced script — wire it into package.json/CI, document it in docs/scripts.md, or delete it`,
+    );
   }
 }
 
