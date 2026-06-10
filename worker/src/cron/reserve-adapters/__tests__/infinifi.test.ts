@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { adaptInfiniFi, fetchInfiniFiReserves, type InfiniFiProtocolData } from "../infinifi";
+import {
+  adaptInfiniFi,
+  fetchInfiniFiReserves,
+  resolveInfiniFiFreshness,
+  type InfiniFiProtocolData,
+  type InfiniFiRateHistoryResponse,
+} from "../infinifi";
+
+const RATE_HISTORY_CACHE_KEY =
+  "json-get:https://example.com/api/protocol/rate-history/siUSD?daysAgo=7:6000:null";
+
+const EMPTY_RATE_HISTORY: InfiniFiRateHistoryResponse = { code: "OK", data: { dataPoints: [] } };
 
 const SAMPLE_RESPONSE: InfiniFiProtocolData = {
   code: "OK",
@@ -42,8 +53,9 @@ const SAMPLE_RESPONSE: InfiniFiProtocolData = {
 };
 
 describe("adaptInfiniFi", () => {
-  it("declares the timestamp-less stats API as unverified-only freshness", () => {
+  it("allows verified freshness (rate-history probe) with unverified fallback", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
+      "verified",
       "unverified",
     ]);
   });
@@ -281,8 +293,9 @@ describe("adaptInfiniFi", () => {
       },
       new AbortController().signal,
       {
-        requestCache: new Map([
+        requestCache: new Map<string, Promise<unknown>>([
           [`json-get:${url}:12000:null`, Promise.resolve(response)],
+          [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
         ]),
       } as never,
     );
@@ -337,8 +350,9 @@ describe("adaptInfiniFi", () => {
       },
       new AbortController().signal,
       {
-        requestCache: new Map([
+        requestCache: new Map<string, Promise<unknown>>([
           [`json-get:${url}:12000:null`, Promise.resolve(response)],
+          [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
         ]),
       } as never,
     );
@@ -356,6 +370,114 @@ describe("adaptInfiniFi", () => {
         queueDepthUsd: 12,
         sourceUrls: [url],
       },
+    });
+  });
+
+  it("verifies freshness from the siUSD rate-history probe when it matches the live staked rate", async () => {
+    const url = "https://example.com/infinifi";
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        stats: {
+          asset: { totalTVLAssetNormalized: 100 },
+          staked: { exchangeRateNormalized: 1.0727142465309754 },
+        },
+      },
+    };
+    const rateHistory: InfiniFiRateHistoryResponse = {
+      code: "OK",
+      data: {
+        dataPoints: [
+          { time: 1_781_107_200_000, value: 1.0726 },
+          { time: 1_781_114_400_000, value: 1.0727 },
+        ],
+      },
+    };
+
+    const result = await fetchInfiniFiReserves(
+      { id: "infinifi" } as never,
+      {
+        adapter: "infinifi",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [`json-get:${url}:12000:null`, Promise.resolve(response)],
+          [RATE_HISTORY_CACHE_KEY, Promise.resolve(rateHistory)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_781_114_400,
+      redemption: {
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: 1_781_114_400,
+      },
+    });
+  });
+});
+
+describe("resolveInfiniFiFreshness", () => {
+  const payloadWithRate = (exchangeRateNormalized?: number): InfiniFiProtocolData => ({
+    code: "OK",
+    data: {
+      stats: {
+        asset: { totalTVLAssetNormalized: 100 },
+        ...(exchangeRateNormalized != null ? { staked: { exchangeRateNormalized } } : {}),
+      },
+      farms: [],
+    },
+  });
+
+  it("returns verified with the latest valid point when the rate matches within tolerance", () => {
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.0727142465309754), {
+      code: "OK",
+      data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
+    })).toEqual({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_781_114_400,
+    });
+  });
+
+  it("stays unverified when the probe is missing, empty, or non-OK", () => {
+    const expectedReason = "InfiniFi protocol stats payload does not expose a trustworthy source timestamp";
+    for (const rateHistory of [null, { code: "ERROR" }, { code: "OK", data: { dataPoints: [] } }] as const) {
+      expect(resolveInfiniFiFreshness(payloadWithRate(1.07), rateHistory as InfiniFiRateHistoryResponse | null))
+        .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: expectedReason } });
+    }
+  });
+
+  it("stays unverified when the probe diverges from the live staked rate or the rate is absent", () => {
+    const diverged = "InfiniFi siUSD rate-history freshness probe diverged from the live staked exchange rate";
+    const rateHistory: InfiniFiRateHistoryResponse = {
+      code: "OK",
+      data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.08 }] },
+    };
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.0727), rateHistory))
+      .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: diverged } });
+    expect(resolveInfiniFiFreshness(payloadWithRate(undefined), rateHistory))
+      .toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: diverged } });
+  });
+
+  it("ignores trailing malformed points and verifies from the last well-formed one", () => {
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.0727), {
+      code: "OK",
+      data: {
+        dataPoints: [
+          { time: 1_781_107_200_000, value: 1.0727 },
+          { time: Number.NaN, value: 1.0727 },
+          { value: 1.0727 },
+        ],
+      },
+    })).toEqual({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_781_107_200,
     });
   });
 });

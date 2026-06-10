@@ -4,10 +4,13 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
+  catchAndWarn,
   fetchJsonWithRetry,
   normalizeSlices,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
 
@@ -29,11 +32,21 @@ export interface InfiniFiProtocolData {
         totalIlliquidAssetNormalized?: number;
         pendingRedemptionsAssetNormalized?: number;
       };
+      staked?: {
+        exchangeRateNormalized?: number;
+      };
     };
     receipt?: {
       totalSupplyNormalized?: number;
     };
     farms: InfiniFiFarm[];
+  };
+}
+
+export interface InfiniFiRateHistoryResponse {
+  code: string;
+  data?: {
+    dataPoints?: Array<{ time?: number; value?: number }>;
   };
 }
 
@@ -74,6 +87,61 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
+
+// The protocol /data payload exposes no timestamp of its own. The transparency
+// dashboard's siUSD rate-history series is written by the same backend
+// snapshotter on a 2-hour cadence; its latest point timestamps that snapshot,
+// and matching its value against the live staked exchange rate ties the
+// timestamp to the reserve state we are reporting. History values are rounded
+// to 4 decimals, so the tolerance covers rounding plus sub-cadence yield drift.
+export const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
+const RATE_CROSS_CHECK_TOLERANCE = 5e-4;
+const RATE_HISTORY_PROBE_TIMEOUT_MS = 6_000;
+
+export function resolveInfiniFiFreshness(
+  payload: InfiniFiProtocolData,
+  rateHistory: InfiniFiRateHistoryResponse | null,
+):
+  | { sourceTimestamp: number; freshnessMode: "verified" }
+  | { freshnessMode: "unverified"; details: { freshnessSource: string; freshnessReason: string } } {
+  const points = rateHistory?.code === "OK" ? rateHistory.data?.dataPoints ?? [] : [];
+  let latest: { time: number; value: number } | null = null;
+  for (const point of points) {
+    if (
+      typeof point.time === "number" && Number.isFinite(point.time)
+      && typeof point.value === "number" && Number.isFinite(point.value)
+    ) {
+      latest = { time: point.time, value: point.value };
+    }
+  }
+  if (latest == null) {
+    return unverifiedFreshnessMetadata(
+      "protocol-stats-api",
+      "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
+    );
+  }
+
+  const liveRate = payload.data.stats.staked?.exchangeRateNormalized;
+  if (
+    typeof liveRate !== "number"
+    || !Number.isFinite(liveRate)
+    || Math.abs(liveRate - latest.value) > RATE_CROSS_CHECK_TOLERANCE
+  ) {
+    return unverifiedFreshnessMetadata(
+      "protocol-stats-api",
+      "InfiniFi siUSD rate-history freshness probe diverged from the live staked exchange rate",
+    );
+  }
+
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(latest.time);
+  if (sourceTimestamp == null) {
+    return unverifiedFreshnessMetadata(
+      "protocol-stats-api",
+      "InfiniFi siUSD rate-history latest point carried an unreadable timestamp",
+    );
+  }
+  return verifiedFreshnessMetadata(sourceTimestamp);
+}
 
 export interface AdaptInfiniFiResult {
   slices: ReserveSlice[];
@@ -190,6 +258,23 @@ export async function fetchInfiniFiReserves(
     }));
   }
 
+  // The freshness probe is optional context: bound it to a hard 6s overall
+  // budget (including retries) so a slow probe can never push the attempt past
+  // the orchestrator's 20s wall and cost us an otherwise-good snapshot.
+  const rateHistoryUrl = new URL(INFINIFI_RATE_HISTORY_PATH, url).toString();
+  const rateHistory = await catchAndWarn(
+    fetchJsonWithRetry<InfiniFiRateHistoryResponse>(
+      rateHistoryUrl,
+      AbortSignal.any([signal, AbortSignal.timeout(RATE_HISTORY_PROBE_TIMEOUT_MS)]),
+      RATE_HISTORY_PROBE_TIMEOUT_MS,
+      ctx,
+    ),
+    "freshness-probe-failed",
+    "InfiniFi siUSD rate-history freshness probe",
+    warnings,
+  );
+  const freshness = resolveInfiniFiFreshness(payload, rateHistory);
+
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
   const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
 
@@ -203,10 +288,7 @@ export async function fetchInfiniFiReserves(
       unknownExposurePct: adapted.unknownExposurePct,
       sourceTotalGapPct: adapted.sourceTotalGapPct,
       ...(adapted.excludedProtocolFarms.length > 0 ? { excludedProtocolFarms: adapted.excludedProtocolFarms } : {}),
-      ...unverifiedFreshnessMetadata(
-        "protocol-stats-api",
-        "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
-      ),
+      ...freshness,
       totalReserveUsd,
       immediateRedeemableUsd: adapted.immediateRedeemableUsd,
       illiquidReserveUsd,
@@ -222,7 +304,9 @@ export async function fetchInfiniFiReserves(
           ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
           : {}),
         capacityKind: "live-queue",
-        freshnessKind: "unverified",
+        ...(freshness.freshnessMode === "verified"
+          ? { freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: freshness.sourceTimestamp }
+          : { freshnessKind: "unverified" as const }),
         routeStatus: "unknown",
         routeStatusSource: "protocol-api",
         ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null

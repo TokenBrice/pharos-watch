@@ -130,7 +130,7 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api.satoshiprotocol.org/protocol-info"
+        "url": "https://api-airdrop.river.inc/protocol-info"
       }
     }
   },
