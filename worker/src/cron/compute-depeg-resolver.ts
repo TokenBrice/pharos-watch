@@ -136,12 +136,18 @@ export async function computeDepegResolver(
   const nowSec = options.runAt;
 
   const policyUniverseRows = await loadPolicyUniverseEvents(db);
-  const activeRows = await loadActiveConfirmedEvents(db);
-  const incidentRows = policyUniverseRows.length > 0 ? policyUniverseRows : activeRows;
-  const incidentsByEventId = await ensureCanonicalIncidentsForEvents(storeContracts, db, incidentRows, {
-    ddrRunId: options.ddrRunId,
-    runAt: options.runAt,
-  });
+  const loadedActiveRows = await loadActiveConfirmedEvents(db);
+  const incidentRows = policyUniverseRows.length > 0 ? policyUniverseRows : loadedActiveRows;
+  const { byEventId: incidentsByEventId, quarantined: quarantinedEvents } =
+    await ensureCanonicalIncidentsForEvents(storeContracts, db, incidentRows, {
+      ddrRunId: options.ddrRunId,
+      runAt: options.runAt,
+    });
+  // Repair-required events are excluded from the run entirely so the rest of
+  // the universe keeps resolving and publishing; each still needs its explicit
+  // repair migration and is surfaced via degraded status + metadata below.
+  const quarantinedEventIds = new Set(quarantinedEvents.map((entry) => entry.eventId));
+  const activeRows = loadedActiveRows.filter((row) => !quarantinedEventIds.has(row.id));
 
   let rows: DdrRow[] = [];
   let lineage: DdrLineage = emptyDdrLineage(nowSec);
@@ -304,9 +310,11 @@ export async function computeDepegResolver(
 
   return {
     itemCount: rows.length,
+    ...(quarantinedEvents.length > 0 ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
       ddrRunId: options.ddrRunId,
       activeEvents: rows.length,
+      repairRequiredEvents: quarantinedEvents,
       assessmentWriteCount,
       reviewRows,
       ddrrDegraded: reviewError != null,

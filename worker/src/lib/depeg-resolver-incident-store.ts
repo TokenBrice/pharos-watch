@@ -93,6 +93,25 @@ export interface EnsureCanonicalIncidentsOptions {
   policyEffectiveAt?: number;
   policyDelaySec?: number;
   createdBy?: string;
+  /**
+   * Called when an event needs an explicit repair migration (ambiguous
+   * overlap with a canonical incident, or an unlinked event whose key maps to
+   * an existing incident). When provided, the event is quarantined — skipped
+   * for this run — instead of failing the whole run; the repair requirement
+   * itself is unchanged. Without the callback the historical throw remains.
+   */
+  onRepairRequired?: (eventId: number, reason: string) => void;
+}
+
+/** Raised when an event cannot be linked without an explicit repair migration. */
+export class DdrIncidentRepairRequiredError extends Error {
+  readonly eventId: number;
+
+  constructor(eventId: number, message: string) {
+    super(message);
+    this.name = "DdrIncidentRepairRequiredError";
+    this.eventId = eventId;
+  }
 }
 
 export interface DdrCanonicalIncident {
@@ -526,7 +545,8 @@ async function assertNoAmbiguousNearbyIncident(
     )
     .first<{ incident_key: string }>();
   if (row) {
-    throw new Error(
+    throw new DdrIncidentRepairRequiredError(
+      event.eventId,
       `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
     );
   }
@@ -650,7 +670,8 @@ async function linkSealedNearbyIncidentTail(
   policyDelaySec: number,
 ): Promise<DdrCanonicalIncident> {
   if (!canAutoRepairSealedTail(event, row)) {
-    throw new Error(
+    throw new DdrIncidentRepairRequiredError(
+      event.eventId,
       `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
     );
   }
@@ -774,14 +795,30 @@ export async function ensureCanonicalIncidents(
     const incidentKey = await incidentKeyForEvent(event, sourceFingerprint);
     const existingKeyRows = await loadCanonicalIncidents(db, { incidentKeys: [incidentKey] });
     if (existingKeyRows.length > 0) {
-      throw new Error(`Unlinked depeg event ${event.eventId} maps to existing incident ${incidentKey}`);
+      const keyConflict = new DdrIncidentRepairRequiredError(
+        event.eventId,
+        `Unlinked depeg event ${event.eventId} maps to existing incident ${incidentKey}`,
+      );
+      if (options.onRepairRequired) {
+        options.onRepairRequired(event.eventId, keyConflict.message);
+        continue;
+      }
+      throw keyConflict;
     }
-    const nearby = await linkUnsealedNearbyIncident(db, event, options, policyDelaySec);
-    if (nearby) {
-      ensured.set(event.eventId, nearby);
-      continue;
+    try {
+      const nearby = await linkUnsealedNearbyIncident(db, event, options, policyDelaySec);
+      if (nearby) {
+        ensured.set(event.eventId, nearby);
+        continue;
+      }
+      await assertNoAmbiguousNearbyIncident(db, event, policyDelaySec);
+    } catch (error) {
+      if (error instanceof DdrIncidentRepairRequiredError && options.onRepairRequired) {
+        options.onRepairRequired(event.eventId, error.message);
+        continue;
+      }
+      throw error;
     }
-    await assertNoAmbiguousNearbyIncident(db, event, policyDelaySec);
 
     const policyMembership = policyMembershipForEvent(event, incidentKey, options);
     await insertNewIncident(db, event, incidentKey, sourceFingerprint, policyMembership, options);

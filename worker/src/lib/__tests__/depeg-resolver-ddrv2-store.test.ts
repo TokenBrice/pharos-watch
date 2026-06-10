@@ -505,6 +505,55 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("quarantines repair-required events via onRepairRequired instead of failing the run", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { incident } = await sealPredictionFixture(db);
+      const quarantined: Array<{ eventId: number; reason: string }> = [];
+      const incidents = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            // Conflicted: overlaps the sealed incident without a link.
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            peakDeviationBps: -350,
+            source: "backfill",
+          },
+          {
+            // Clean: far from the sealed incident; must still be processed.
+            eventId: 3,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 900000,
+            peakDeviationBps: -200,
+            source: "live",
+          },
+        ],
+        {
+          nowSec: 901000,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90000,
+          createdBy: "vitest",
+          onRepairRequired: (eventId, reason) => {
+            quarantined.push({ eventId, reason });
+          },
+        },
+      );
+
+      expect(quarantined).toHaveLength(1);
+      expect(quarantined[0].eventId).toBe(2);
+      expect(quarantined[0].reason).toContain(incident.incidentKey);
+      expect(incidents.map((entry) => entry.eventId)).toEqual([3]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("seals exactly one public prediction and makes the assessment immutable", async () => {
     const db = makeSqliteD1();
     try {

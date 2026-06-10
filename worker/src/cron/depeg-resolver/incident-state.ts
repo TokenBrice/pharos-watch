@@ -101,16 +101,36 @@ export function applyConfirmationTimes(
   }
 }
 
+export interface QuarantinedIncidentEvent {
+  eventId: number;
+  reason: string;
+}
+
+export interface EnsureCanonicalIncidentsResult {
+  byEventId: Map<number, DdrCanonicalIncident>;
+  /**
+   * Events needing an explicit repair migration. They are excluded from this
+   * run (no canonical incident, no fallback pseudo-incident) so one
+   * conflicted event no longer freezes DDR publication for every other
+   * incident; the repair requirement itself is unchanged.
+   */
+  quarantined: QuarantinedIncidentEvent[];
+}
+
 export async function ensureCanonicalIncidentsForEvents(
   stores: DdrV2StoreContracts | null | undefined,
   db: D1Database,
   events: DdrEventDbRow[],
   options: Required<Pick<ComputeDepegResolverV2Options, "ddrRunId" | "runAt">>,
-): Promise<Map<number, DdrCanonicalIncident>> {
+): Promise<EnsureCanonicalIncidentsResult> {
   if (!stores || events.length === 0) {
-    return new Map(events.map((event) => [event.id, fallbackIncidentForEvent(event)]));
+    return {
+      byEventId: new Map(events.map((event) => [event.id, fallbackIncidentForEvent(event)])),
+      quarantined: [],
+    };
   }
 
+  const quarantined: QuarantinedIncidentEvent[] = [];
   const incidents = await stores.ensureCanonicalIncidents(
     db,
     events.map(toCanonicalIncidentInput),
@@ -120,6 +140,9 @@ export async function ensureCanonicalIncidentsForEvents(
       predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
       policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
       policyEffectiveAt: DDR_V2_EFFECTIVE_AT,
+      onRepairRequired: (eventId, reason) => {
+        quarantined.push({ eventId, reason });
+      },
     },
   );
   const byEventId = new Map<number, DdrCanonicalIncident>();
@@ -127,10 +150,12 @@ export async function ensureCanonicalIncidentsForEvents(
     byEventId.set(incident.eventId, incident);
     byEventId.set(incident.currentEventId, incident);
   }
+  const quarantinedIds = new Set(quarantined.map((entry) => entry.eventId));
   for (const event of events) {
+    if (quarantinedIds.has(event.id)) continue;
     if (!byEventId.has(event.id)) byEventId.set(event.id, fallbackIncidentForEvent(event));
   }
-  return byEventId;
+  return { byEventId, quarantined };
 }
 
 export async function recordSystemHealthDeferrals(input: {

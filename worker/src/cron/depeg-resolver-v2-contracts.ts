@@ -184,6 +184,7 @@ export interface DdrV2StoreContracts {
       predictionPolicyVersion: string;
       policyDelaySec: number;
       policyEffectiveAt: number;
+      onRepairRequired?: (eventId: number, reason: string) => void;
     },
   ): Promise<DdrCanonicalIncident[]>;
   loadCanonicalIncidents?(

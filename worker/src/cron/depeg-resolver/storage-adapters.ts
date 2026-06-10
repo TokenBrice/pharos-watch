@@ -283,6 +283,7 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
         policyDelaySec: options.policyDelaySec,
         policyEffectiveAt: options.policyEffectiveAt,
         createdBy: "ddr-worker",
+        onRepairRequired: options.onRepairRequired,
       },
     );
     return incidents.map(mapStoreIncident);
