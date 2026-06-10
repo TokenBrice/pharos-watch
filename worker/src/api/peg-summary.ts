@@ -164,6 +164,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     pegCurrency: string;
       governance: string;
       currentDeviationBps: number | null;
+      pegReferenceUnavailable?: boolean;
       depegEventCoverageLimited?: boolean;
       pegScore: number | null;
       priceSource?: string;
@@ -247,6 +248,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
+      pegReferenceUnavailable: pegData.pegReferenceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       pegScore: pegData.pegScore,
       priceSource: asset?.priceSource,

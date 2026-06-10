@@ -249,6 +249,13 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className={deviationColorClass(absDev)}>
                       {coin.currentDeviationBps > 0 ? "+" : ""}{coin.currentDeviationBps} bps
                     </span>
+                  ) : coin.pegReferenceUnavailable ? (
+                    <span
+                      className="text-muted-foreground"
+                      title="Peg reference unavailable: the FX reference is offline and this coin's peer group is too thin to verify deviation."
+                    >
+                      ref n/a
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

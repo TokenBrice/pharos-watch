@@ -5,8 +5,11 @@ import { handlePegSummary } from "../peg-summary";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
-function makePegSummaryDb(assets: ReturnType<typeof makeAsset>[] = []) {
-  const cacheValue = JSON.stringify({ peggedAssets: assets });
+function makePegSummaryDb(
+  assets: ReturnType<typeof makeAsset>[] = [],
+  fxFallbackRates?: Record<string, number>,
+) {
+  const cacheValue = JSON.stringify({ peggedAssets: assets, ...(fxFallbackRates ? { fxFallbackRates } : {}) });
   return mockD1([
     {
       match: "cache",
@@ -443,7 +446,10 @@ describe("handlePegSummary", () => {
       priceConfidence: "single-source",
       priceUpdatedAt: nowSec,
     });
-    const db = makePegSummaryDb([asset]);
+    // v6.08: a lone non-USD coin needs a live FX fallback for an
+    // authoritative reference; without one, deviation is withheld and the
+    // coin cannot count as at peg off its own self-referential median.
+    const db = makePegSummaryDb([asset], { peggedEUR: 1.07 });
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
       summary: {
@@ -452,6 +458,30 @@ describe("handlePegSummary", () => {
       };
     };
     expect(body.summary.coinsAtPeg).toBeGreaterThanOrEqual(1);
+  });
+
+  it("withholds deviation for a thin non-USD peer group without an FX fallback", async () => {
+    const asset = makeAsset({
+      id: "eurc-circle",
+      symbol: "EUROC",
+      name: "Euro Coin",
+      geckoId: "euro-coin",
+      pegType: "peggedEUR",
+      price: 1.065,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      priceUpdatedAt: nowSec,
+    });
+    const db = makePegSummaryDb([asset]);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; currentDeviationBps: number | null; pegReferenceUnavailable?: boolean }>;
+      summary: { coinsAtPeg: number };
+    };
+    const coin = body.coins.find((entry) => entry.id === "eurc-circle");
+    expect(coin?.currentDeviationBps).toBeNull();
+    expect(coin?.pegReferenceUnavailable).toBe(true);
+    expect(body.summary.coinsAtPeg).toBe(0);
   });
 
   it("counts depeg events that started today and yesterday", async () => {

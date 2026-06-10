@@ -284,6 +284,7 @@ interface HeroPriceCardProps {
   pegRef: number;
   gaugeDeviationBps: number;
   deviationBps: number;
+  pegReferenceUnavailable: boolean;
   isNavToken: boolean;
   limitedDepegCoverageNote: string | null;
   mobile?: boolean;
@@ -295,11 +296,12 @@ export function HeroPriceCard({
   pegRef,
   gaugeDeviationBps,
   deviationBps,
+  pegReferenceUnavailable,
   isNavToken,
   limitedDepegCoverageNote,
   mobile = false,
 }: HeroPriceCardProps) {
-  const showGauge = coinData.price != null && pegRef > 0;
+  const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable;
   const price = mobile
     ? formatNativePrice(
         coinData.price != null ? Math.floor(coinData.price * 1000) / 1000 : coinData.price,
@@ -334,12 +336,14 @@ export function HeroPriceCard({
           </p>
           <p
             className={`font-mono ${mobile ? "mt-1 text-xs" : "mt-0.5 text-xs"} ${
-              isNavToken
-                ? "text-green-700 dark:text-green-400"
-                : deviationColorClass(Math.abs(deviationBps))
+              pegReferenceUnavailable
+                ? "text-muted-foreground"
+                : isNavToken
+                  ? "text-green-700 dark:text-green-400"
+                  : deviationColorClass(Math.abs(deviationBps))
             }`}
           >
-            {formatPegDeviation(coinData.price, pegRef)}
+            {pegReferenceUnavailable ? "Peg reference unavailable" : formatPegDeviation(coinData.price, pegRef)}
           </p>
           {limitedDepegCoverageNote ? (
             <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">

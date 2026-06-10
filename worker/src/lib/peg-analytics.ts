@@ -6,6 +6,7 @@ import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
+import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { deriveDepegSignal } from "./depeg-signals";
 import { getFirstSeenDates } from "./db";
@@ -83,7 +84,11 @@ export async function derivePegAnalyticsSnapshot(
   }
 
   const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
-  const { rates: pegRates } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
+  const {
+    rates: pegRates,
+    sources: pegRateSources = {},
+    counts: pegRateCounts = {},
+  } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
   const trackingFallbackStart = nowSec - 4 * 365.25 * DAY_SECONDS;
 
@@ -100,13 +105,29 @@ export async function derivePegAnalyticsSnapshot(
       supply < DEPEG_EVENT_MIN_SUPPLY_USD;
 
     let currentDeviationBps: number | null = null;
+    let pegReferenceUnavailable = false;
     if (asset && hasUsableCurrentPrice(asset)) {
       if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
-        const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
-        currentDeviationBps =
-          pegRef != null && Number.isFinite(pegRef) && pegRef > 0
-            ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
-            : null;
+        // Same authority gate as the depeg detection engine: a thin non-USD
+        // peer median without a live FX fallback is self-referential (a lone
+        // coin always reads ~0; a 2-coin group mirrors half of any real move
+        // onto the healthy peer), so deviation is withheld instead of shown.
+        if (
+          !isAuthoritativeDepegPegReference({
+            pegType: asset.pegType,
+            pegCurrency: meta.flags.pegCurrency,
+            pegRateSource: pegRateSources[asset.pegType] ?? null,
+            pegRateContributorCount: pegRateCounts[asset.pegType] ?? null,
+          })
+        ) {
+          pegReferenceUnavailable = true;
+        } else {
+          const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
+          currentDeviationBps =
+            pegRef != null && Number.isFinite(pegRef) && pegRef > 0
+              ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
+              : null;
+        }
       }
     }
 
@@ -122,6 +143,7 @@ export async function derivePegAnalyticsSnapshot(
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps,
+      ...(pegReferenceUnavailable ? { pegReferenceUnavailable } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,

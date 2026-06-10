@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.08",
+    title: "Display surfaces share the peg-reference authority gate",
+    date: "2026-06-10",
+    effectiveAt: 1781049600,
+    summary:
+      "Displayed peg deviation now uses the same peg-reference authority gate as the depeg detection engine: thin non-USD peer groups without a live FX fallback show 'reference unavailable' instead of a self-referential ~0 deviation.",
+    impact: [
+      "A lone non-USD coin's peer-median reference equals its own price (deviation always ~0) and a 2-coin group mirrors half of any real move onto the healthy peer; detection has always failed closed on these, but peg-summary, the depeg tracker, and the coin-detail hero kept publishing the masked number",
+      "When the gate fails, currentDeviationBps is withheld (null) and the new pegReferenceUnavailable flag drives an explicit 'reference unavailable' readout in the tracker table and detail hero",
+      "USD, commodity, VAR/OTHER pegs and groups with a live FX fallback or at least 3 peer contributors are unaffected",
+      "Depeg detection, PegScore, and event history are unchanged — this aligns the displayed numbers with the detection engine's existing trust policy",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.07",
     title: "Medium venue-risk yield anomaly branch",
     date: "2026-06-09",

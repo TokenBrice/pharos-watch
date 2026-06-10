@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v6.07`
+- **Current methodology version:** `v6.08`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 

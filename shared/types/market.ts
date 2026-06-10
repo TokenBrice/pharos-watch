@@ -399,6 +399,12 @@ export const PegSummaryCoinSchema = z.object({
   pegCurrency: z.string(),
   governance: z.string(),
   currentDeviationBps: z.number().nullable(),
+  /**
+   * True when the coin's peg reference is not authoritative (thin non-USD
+   * peer group with no live FX fallback) — deviation is withheld rather than
+   * shown as a self-referential ~0. Mirrors the detection engine's gate.
+   */
+  pegReferenceUnavailable: z.boolean().optional(),
   depegEventCoverageLimited: z.boolean().optional(),
   pegScore: z.number().nullable(),
   priceSource: z.string().optional(),

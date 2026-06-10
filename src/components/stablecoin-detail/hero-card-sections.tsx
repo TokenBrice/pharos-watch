@@ -81,6 +81,7 @@ interface HeroSectionBaseProps {
   pegRef: number;
   gaugeDeviationBps: number;
   deviationBps: number;
+  pegReferenceUnavailable: boolean;
   isNavToken: boolean;
   limitedDepegCoverageNote: string | null;
   mcap: number;
@@ -110,6 +111,7 @@ export function HeroCardMobileSection({
   pegRef,
   gaugeDeviationBps,
   deviationBps,
+  pegReferenceUnavailable,
   isNavToken,
   limitedDepegCoverageNote,
   mcap,
@@ -161,6 +163,7 @@ export function HeroCardMobileSection({
           pegRef={pegRef}
           gaugeDeviationBps={gaugeDeviationBps}
           deviationBps={deviationBps}
+          pegReferenceUnavailable={pegReferenceUnavailable}
           isNavToken={isNavToken}
           limitedDepegCoverageNote={limitedDepegCoverageNote}
           mobile
@@ -212,6 +215,7 @@ export function HeroCardDesktopSection({
   pegRef,
   gaugeDeviationBps,
   deviationBps,
+  pegReferenceUnavailable,
   isNavToken,
   limitedDepegCoverageNote,
   mcap,
@@ -255,6 +259,7 @@ export function HeroCardDesktopSection({
               pegRef={pegRef}
               gaugeDeviationBps={gaugeDeviationBps}
               deviationBps={deviationBps}
+              pegReferenceUnavailable={pegReferenceUnavailable}
               isNavToken={isNavToken}
               limitedDepegCoverageNote={limitedDepegCoverageNote}
             />

@@ -149,6 +149,7 @@ export type PegPriceSnapshot = {
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
+  pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;
   consensusSources: string[];
   agreeSources: string[];
@@ -560,11 +561,16 @@ function buildPegPriceSnapshot(
   });
   const deviationBps = deriveDeviationBps(coinData.price, pegContext.pegReference);
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
+  // Worker-side gate (depeg-dews v6.08): thin non-USD peer groups without a
+  // live FX fallback produce a self-referential reference, so deviation is
+  // withheld and the hero shows "reference unavailable" instead.
+  const pegReferenceUnavailable = !isNavToken && pegScoreResult?.pegReferenceUnavailable === true;
 
   return {
     pegRef: pegContext.pegReference,
     deviationBps,
     gaugeDeviationBps: deriveGaugeDeviationBps(deviationBps, isNavToken),
+    pegReferenceUnavailable,
     pegScoreResult,
     consensusSources: pegScoreResult?.consensusSources ?? [],
     agreeSources: pegScoreResult?.agreeSources ?? [],
@@ -664,6 +670,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
+  pegReferenceUnavailable: boolean;
   isNavToken: boolean;
   pegScoreResult: PegSummaryCoin | null;
   consensusSources: string[];
@@ -725,6 +732,7 @@ export interface HeroCardViewModel {
     pegRef: number;
     deviationBps: number;
     gaugeDeviationBps: number;
+    pegReferenceUnavailable: boolean;
     isNavToken: boolean;
     limitedDepegCoverageNote: string | null;
   };
@@ -782,6 +790,7 @@ export interface BuildHeroCardViewModelParams {
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
+  pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
@@ -817,6 +826,7 @@ export function buildStablecoinDetailHeroViewModel({
   pegRef,
   deviationBps,
   gaugeDeviationBps,
+  pegReferenceUnavailable,
   pegScoreResult,
   liquidityData,
   yieldRanking,
@@ -965,6 +975,7 @@ export function buildStablecoinDetailHeroViewModel({
       pegRef,
       deviationBps,
       gaugeDeviationBps,
+      pegReferenceUnavailable,
       isNavToken,
       limitedDepegCoverageNote,
     },
@@ -1074,6 +1085,7 @@ export function buildStablecoinDetailViewModel({
     pegRef: pegPrice.pegRef,
     deviationBps: pegPrice.deviationBps,
     gaugeDeviationBps: pegPrice.gaugeDeviationBps,
+    pegReferenceUnavailable: pegPrice.pegReferenceUnavailable,
     isNavToken,
     pegScoreResult: pegPrice.pegScoreResult,
     consensusSources: pegPrice.consensusSources,

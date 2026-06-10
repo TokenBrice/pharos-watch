@@ -1,8 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.07` (2026-02-18 -> 2026-06-09).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.08` (2026-02-18 -> 2026-06-10).
 
 ---
+
+## v6.08 — Display surfaces share the peg-reference authority gate (Jun 10, 2026)
+
+Displayed peg deviation now uses the same peg-reference authority gate as the depeg detection engine (`isAuthoritativeDepegPegReference`, moved to `shared/lib/peg-reference-trust.ts`).
+
+- A lone non-USD coin's peer-median reference equals its own price (deviation always ~0) and a 2-coin group mirrors half of any real move onto the healthy peer. Detection has always failed closed on these; peg-summary, the depeg tracker table, and the coin-detail hero kept publishing the masked number.
+- When the gate fails, `currentDeviationBps` is withheld (`null`) and the new optional `pegReferenceUnavailable` flag on `PegSummaryCoin` drives an explicit "reference unavailable" readout in the tracker table and detail hero.
+- USD, commodity, and VAR/OTHER pegs, plus groups with a live FX fallback or ≥3 peer contributors, are unaffected. Detection, PegScore, and event history are unchanged.
 
 ## v6.07 — Medium venue-risk yield anomaly branch (Jun 9, 2026)
 

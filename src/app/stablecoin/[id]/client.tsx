@@ -282,6 +282,7 @@ export default function StablecoinDetailClient({
     pegRef: viewModel.pegRef,
     deviationBps: viewModel.deviationBps,
     gaugeDeviationBps: viewModel.gaugeDeviationBps,
+    pegReferenceUnavailable: viewModel.pegReferenceUnavailable,
     pegScoreResult: viewModel.pegScoreResult,
     liquidityData: viewModel.liquidityData,
     yieldRanking: viewModel.yieldRanking,

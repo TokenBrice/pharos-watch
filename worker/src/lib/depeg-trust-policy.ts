@@ -1,4 +1,3 @@
-import type { PegRateSource } from "@shared/lib/peg-rates";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
@@ -32,12 +31,11 @@ interface PrimaryPriceTrustInput {
   agreeSources?: string[] | null;
 }
 
-interface PegReferenceTrustInput {
-  pegCurrency?: string | null;
-  pegType?: string | null;
-  pegRateSource?: PegRateSource | null;
-  pegRateContributorCount?: number | null;
-}
+// Moved to shared so display surfaces (frontend hero, peg-analytics) share
+// the detection engine's peg-reference gate; re-exported below for existing
+// worker call sites.
+export { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
+export type { PegReferenceTrustInput } from "@shared/lib/peg-reference-trust";
 
 export type OffchainDepegConfirmerKey = "coingecko-confirm" | "defillama-confirm";
 
@@ -159,25 +157,6 @@ export function hasFreshMultiSourcePrimaryAgreement(
   return getPrimaryTrustSources(input).length >= 2;
 }
 
-export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput): boolean {
-  if (!input.pegType || input.pegType === "peggedUSD") {
-    return true;
-  }
-
-  const pegCurrency = input.pegCurrency ?? null;
-  if (
-    pegCurrency == null ||
-    pegCurrency === "USD" ||
-    pegCurrency === "VAR" ||
-    pegCurrency === "OTHER" ||
-    pegCurrency === "GOLD" ||
-    pegCurrency === "SILVER"
-  ) {
-    return true;
-  }
-
-  return input.pegRateSource === "fallback" || (input.pegRateContributorCount ?? 0) >= 3;
-}
 
 export function classifyPrimaryDepegTrust(
   input: PrimaryPriceTrustInput,
