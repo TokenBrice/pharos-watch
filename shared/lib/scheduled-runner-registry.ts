@@ -77,6 +77,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "prune-cron-history",
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
+      "mint-burn-growth-watchdog",
     ]],
   },
   daily0800Utc: {

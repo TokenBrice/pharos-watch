@@ -520,6 +520,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "isolated",
     maxConnections: 0, // DB-only retention DELETEs and target reconciliation
   },
+  {
+    job: "mint-burn-growth-watchdog",
+    label: "Mint/burn growth budget watchdog",
+    group: "daily",
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 1, // DB row-count read plus optional webhook alert
+  },
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => {
