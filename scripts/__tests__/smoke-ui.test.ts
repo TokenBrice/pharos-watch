@@ -6,9 +6,11 @@ import {
   getAnalyticsPayloadUrls,
   getOverflowRoutes,
   getOverflowWorkerCount,
+  getUnexpectedGaCspViolations,
   getUnexpectedGaAnalyticsFailures,
   hasGaConfigInit,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
+  isAnalyticsCspViolation,
   isExpectedGaCollectAbort,
   isExpectedGaCollectUrl,
   isExpectedGaPageViewCollectUrl,
@@ -189,6 +191,73 @@ describe("getUnexpectedGaAnalyticsFailures", () => {
         { tolerateExpectedCollectAbort: true },
       ),
     ).toEqual([{ errorText: "net::ERR_ABORTED", url: abortedUrl }]);
+  });
+});
+
+describe("isAnalyticsCspViolation", () => {
+  it("ignores unrelated first-party eval probes", () => {
+    expect(
+      isAnalyticsCspViolation(
+        {
+          blockedURI: "eval",
+          effectiveDirective: "script-src",
+          sourceFile: "http://127.0.0.1:4173/_next/static/chunks/036srswv-1d~3.js",
+          violatedDirective: "script-src",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+
+  it("detects blocked GA and GTM resources", () => {
+    expect(
+      isAnalyticsCspViolation(
+        {
+          blockedURI: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+          effectiveDirective: "script-src",
+          sourceFile: "http://127.0.0.1:4173/",
+          violatedDirective: "script-src",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+    expect(
+      isAnalyticsCspViolation(
+        {
+          blockedURI: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+          effectiveDirective: "connect-src",
+          sourceFile: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+          violatedDirective: "connect-src",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("getUnexpectedGaCspViolations", () => {
+  it("keeps only analytics CSP violations", () => {
+    const analyticsViolation = {
+      blockedURI: "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+      effectiveDirective: "connect-src",
+      sourceFile: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+      violatedDirective: "connect-src",
+    };
+
+    expect(
+      getUnexpectedGaCspViolations(
+        [
+          {
+            blockedURI: "eval",
+            effectiveDirective: "script-src",
+            sourceFile: "http://127.0.0.1:4173/_next/static/chunks/036srswv-1d~3.js",
+            violatedDirective: "script-src",
+          },
+          analyticsViolation,
+        ],
+        "G-6TS0KG8H04",
+      ),
+    ).toEqual([analyticsViolation]);
   });
 });
 

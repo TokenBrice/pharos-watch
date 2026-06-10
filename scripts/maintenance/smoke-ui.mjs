@@ -671,6 +671,21 @@ export function getUnexpectedGaAnalyticsFailures(
   );
 }
 
+export function isAnalyticsCspViolation(violation, expectedGaId) {
+  if (!expectedGaId || !violation) {
+    return false;
+  }
+
+  const values = [violation.blockedURI, violation.sourceFile, violation.violatedDirective, violation.effectiveDirective]
+    .filter((value) => typeof value === "string")
+    .join(" ");
+  return /googletagmanager\.com|google-analytics\.com|analytics\.google\.com|google\.com\/g\/collect/.test(values);
+}
+
+export function getUnexpectedGaCspViolations(violations, expectedGaId) {
+  return violations.filter((violation) => isAnalyticsCspViolation(violation, expectedGaId));
+}
+
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -883,9 +898,10 @@ export async function run() {
         unexpectedFailures.length === 0,
         `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(unexpectedFailures)}`,
       );
+      const unexpectedCspViolations = getUnexpectedGaCspViolations(network.violations, expectedGaId);
       assert(
-        network.violations.length === 0,
-        `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(network.violations)}`,
+        unexpectedCspViolations.length === 0,
+        `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(unexpectedCspViolations)}`,
       );
       const expectedCollectAbortCount = network.failures.filter((failure) =>
         isExpectedGaCollectAbort(failure, expectedGaId)
