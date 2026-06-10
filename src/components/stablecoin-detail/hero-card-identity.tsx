@@ -428,8 +428,10 @@ export function HeroDesktopIdentity({
   const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
   return (
-    <div className="flex items-start gap-3">
-      <StablecoinLogo src={logoSrc} name={coin.name} size={64} />
+    <div className="flex items-center gap-4">
+      <div className="shrink-0">
+        <StablecoinLogo src={logoSrc} name={coin.name} size={76} />
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-3">
           <h2
