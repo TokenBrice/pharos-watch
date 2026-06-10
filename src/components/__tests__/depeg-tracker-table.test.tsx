@@ -82,6 +82,28 @@ describe("DepegTrackerTable", () => {
     expect(screen.getAllByText(/stale/i).length).toBeGreaterThan(0);
   });
 
+  it("renders the explicit ref n/a affordance when the peg reference is unavailable", () => {
+    const rows: DepegTrackerRow[] = [
+      {
+        coin: makeCoin({
+          id: "refna",
+          symbol: "REFNA",
+          currentDeviationBps: null,
+          pegReferenceUnavailable: true,
+          dexPriceCheck: null,
+        }),
+        dews: null,
+      },
+    ];
+
+    render(<DepegTrackerTable rows={rows} logos={undefined} onRowClick={vi.fn()} />);
+
+    const cell = screen.getByText("ref n/a");
+    expect(cell.getAttribute("title")).toBe(
+      "Peg reference unavailable: the FX reference is offline and this coin's peer group is too thin to verify deviation.",
+    );
+  });
+
   it("uses filter empty-state copy", () => {
     render(<DepegTrackerTable rows={[]} logos={undefined} onRowClick={vi.fn()} />);
 

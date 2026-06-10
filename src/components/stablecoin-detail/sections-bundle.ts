@@ -6,10 +6,10 @@
  * this one module collapses the per-section copies into one chunk for the
  * whole detail family (total recharts-attributed bytes: 4.10 MB -> 3.33 MB).
  *
- * Known limit: Turbopack still duplicates lazy shared modules across ROUTE
- * families (one recharts copy each for /yield, /stability-index, detail
- * pages, ...) and exposes no cross-route chunk-sharing knob. Cross-family
- * dedup needs upstream Turbopack support; revisit when Next exposes one.
+ * Remaining duplication: route families with differing import graphs still
+ * get their own recharts copy (/yield, /stability-index, ...). Turbopack
+ * converges chunks when graphs match (this bundle's lazy recharts chunk is
+ * also /alt-pegs' eager one); dedup by sharing one chart-kit module boundary.
  *
  * Keep chart-bearing detail sections OUT of static imports in client.tsx and
  * IN this bundle; the per-route eager-JS budget guards the eager side.

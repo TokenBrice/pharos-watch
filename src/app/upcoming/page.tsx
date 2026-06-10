@@ -10,7 +10,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
-import aiSummaries from "../../../data/ai-summaries.json";
+import aiSummaries from "@data/ai-summaries.json";
 
 // Server-side teaser selection: only the dozen pre-launch texts reach the
 // client instead of the full ai-summaries corpus.
