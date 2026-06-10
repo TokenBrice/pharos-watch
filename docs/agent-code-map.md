@@ -246,7 +246,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
-- ... 132 more files omitted; use `rg --files src/lib` for the full list.
+- ... 133 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -290,7 +290,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 372 more files omitted; use `rg --files src/components` for the full list.
+- ... 373 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -382,43 +382,43 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/canonical-order.json` - 401 entries
 - `shared/data/stablecoins/coins.client.generated.json` - 401 entries
 - `shared/data/stablecoins/coins.generated.json` - 401 entries
-- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 22 keys
-- `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 25 keys
-- `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 26 keys
-- `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 26 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 23 keys
-- `shared/data/stablecoins/coins/aid-gaib.json` - 24 keys
-- `shared/data/stablecoins/coins/alusd-alchemix.json` - 18 keys
-- `shared/data/stablecoins/coins/apxusd-apyx.json` - 23 keys
-- `shared/data/stablecoins/coins/apyusd-apyx.json` - 26 keys
+- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 23 keys
+- `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
+- `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 27 keys
+- `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 27 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 24 keys
+- `shared/data/stablecoins/coins/aid-gaib.json` - 25 keys
+- `shared/data/stablecoins/coins/alusd-alchemix.json` - 19 keys
+- `shared/data/stablecoins/coins/apxusd-apyx.json` - 24 keys
+- `shared/data/stablecoins/coins/apyusd-apyx.json` - 27 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
-- `shared/data/stablecoins/coins/asusdf-astherus.json` - 24 keys
-- `shared/data/stablecoins/coins/audd-novatti.json` - 23 keys
-- `shared/data/stablecoins/coins/audf-forte.json` - 19 keys
-- `shared/data/stablecoins/coins/audm-macropod.json` - 26 keys
-- `shared/data/stablecoins/coins/audm-mento.json` - 25 keys
-- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 24 keys
-- `shared/data/stablecoins/coins/ausd-agora.json` - 23 keys
-- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 25 keys
-- `shared/data/stablecoins/coins/avusd-avant.json` - 21 keys
-- `shared/data/stablecoins/coins/axcnh-anchorx.json` - 19 keys
-- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 24 keys
-- `shared/data/stablecoins/coins/bc3m-backed.json` - 26 keys
+- `shared/data/stablecoins/coins/asusdf-astherus.json` - 25 keys
+- `shared/data/stablecoins/coins/audd-novatti.json` - 24 keys
+- `shared/data/stablecoins/coins/audf-forte.json` - 20 keys
+- `shared/data/stablecoins/coins/audm-macropod.json` - 27 keys
+- `shared/data/stablecoins/coins/audm-mento.json` - 26 keys
+- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 25 keys
+- `shared/data/stablecoins/coins/ausd-agora.json` - 24 keys
+- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 26 keys
+- `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
+- `shared/data/stablecoins/coins/axcnh-anchorx.json` - 20 keys
+- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 25 keys
+- `shared/data/stablecoins/coins/bc3m-backed.json` - 27 keys
 - `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
-- `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 27 keys
+- `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 28 keys
 - `shared/data/stablecoins/coins/bfusd-binance.json` - 24 keys
-- `shared/data/stablecoins/coins/bib01-backed.json` - 27 keys
-- `shared/data/stablecoins/coins/bnusd-balanced.json` - 22 keys
-- `shared/data/stablecoins/coins/bold-liquity.json` - 24 keys
+- `shared/data/stablecoins/coins/bib01-backed.json` - 28 keys
+- `shared/data/stablecoins/coins/bnusd-balanced.json` - 23 keys
+- `shared/data/stablecoins/coins/bold-liquity.json` - 25 keys
 - `shared/data/stablecoins/coins/brd-volpon.json` - 21 keys
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
-- `shared/data/stablecoins/coins/brl1-brl1.json` - 24 keys
-- `shared/data/stablecoins/coins/brla-brla-digital.json` - 24 keys
-- `shared/data/stablecoins/coins/brlm-mento.json` - 25 keys
-- `shared/data/stablecoins/coins/brlv-crown.json` - 24 keys
+- `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
+- `shared/data/stablecoins/coins/brla-brla-digital.json` - 25 keys
+- `shared/data/stablecoins/coins/brlm-mento.json` - 26 keys
+- `shared/data/stablecoins/coins/brlv-crown.json` - 25 keys
 - `shared/data/stablecoins/coins/brz-transfero.json` - 22 keys
-- `shared/data/stablecoins/coins/btcusd-btcfi.json` - 20 keys
+- `shared/data/stablecoins/coins/btcusd-btcfi.json` - 21 keys
 - ... 371 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing

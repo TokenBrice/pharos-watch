@@ -142,6 +142,16 @@ Hero tertiary metric chips below the identity block are live signals only: on `<
 
 Values are authored-short and never CSS-truncated; on `<lg` the row is a snap-scroll carousel with a right-edge fade, on `lg+` it wraps. Hash entries intercept the click and re-align with the same retry cadence as `LongformScrollspyNav` (160/480/960/1800 ms) because deep targets sit below lazy sections whose height settles after the jump starts; targets carry `scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6` for sticky-chrome clearance. The strip absorbed the former identity-zone `MechanismChip` and `FreezablePill` and the tertiary `Chains` pill, so each fact has exactly one hero home; the strip hides entirely if fewer than three facts resolve.
 
+### Hero machine-readable zone (MRZ)
+
+`HeroPassportMrz` (`hero-passport-mrz.tsx`) is the passport's TD3-style footer: the hero card's final row, below the strip behind its own hairline `border-t`. Two 44-character OCR-style mono lines (charset `A–Z 0–9 <`) re-encode the dossier facts — every character traces to a view-model field, nothing is ornamental. The whole zone is one button that copies a human-readable research citation (`COPY SUMMARY` ⇄ `COPIED` micro-label, no layout shift); the glyph lines are `aria-hidden` decorative duplicates and the button's `aria-label` carries the meaning.
+
+Encoding (pure `buildHeroPassportMrz` in `src/lib/stablecoin-detail-mrz.ts`, wired in `buildStablecoinDetailHeroViewModel`, rendered only when the strip renders — ≥3 facts):
+
+- **Line 1 (identity):** `PW<` (Pharos Watch dossier) + ISO-3166 alpha-3 jurisdiction (`COUNTRY_MRZ_CODES`, bounded to dataset countries, `XXX` fallback — a drift-guard test fails on any new unmapped country) + `<` + transliterated coin name, `<`-filled to 44.
+- **Line 2 (vitals):** fixed slots — symbol(7) · peg code(3, `GOLD→XAU`/`SILVER→XAG`) · safety grade(2, `+`→`P`/`-`→`M`) · safety score(3) · peg score(3) · liquidity(3) · DEWS(3) · chains(3, cap 999) · freeze flag(1, `Y/P/U/N`) · mechanism code(5, `MECHANISM_MRZ_CODES`) · launch date(6, `YYMMDD`) — then a real ICAO 9303 7-3-1 check digit over those 39 chars, `<`-filled to 44. Missing data fills its slot with `<`.
+- **copyText:** `{SYMBOL} ({Name}, launched {YYYY}) — Pharos Safety {grade} ({score}/100) · Peg {n} · Liquidity {n} · DEWS {n}/100 ({band}) · {mechanism} · {country} jurisdiction · Freeze: {state} · {n} chains — {canonical URL}`, clauses omitted when their data is missing.
+
 ### Classification taxonomy pills
 
 Below the identity block, the classification line uses `buildGovernanceTaxonomyUrl(coin.flags.governance)`, `buildBackingTaxonomyUrl(coin.flags.backing)`, and `buildPegLandingUrl(coin.flags.pegCurrency)` (which resolves to `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` or null). Default flags render as inline sentence links; non-default flags (decentralized governance, algorithmic backing, non-USD peg) render as separate focus-ringed taxonomy pills. No handwritten slugs.
