@@ -93,7 +93,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
         mobileScrollHint={false}
         viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0"
         viewportProps={{ compactBottomPadding: false }}
-        tableClassName="min-w-[450px] table-fixed"
+        tableClassName="min-w-[360px] sm:min-w-[450px] table-fixed"
         pagination={{
           page: effectivePage,
           totalPages,

@@ -136,7 +136,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
         testId="stablecoin-blacklist-events-table"
         columns={COLUMNS}
         containerClassName="rounded-xl border overflow-hidden"
-        tableClassName="min-w-[520px]"
+        tableClassName="min-w-[360px] sm:min-w-[520px]"
       >
         {data.events.map((evt) => {
           const badge = eventBadge(evt.eventType);

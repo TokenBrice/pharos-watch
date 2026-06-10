@@ -118,7 +118,7 @@ export function YieldCompareDrawer({ open, onOpenChange, rows, logos }: YieldCom
           chrome="bare"
           density="compact"
           className="px-4 pb-2"
-          tableClassName="min-w-[480px] border-collapse text-sm"
+          tableClassName="min-w-[360px] sm:min-w-[480px] border-collapse text-sm"
           tableProps={{ "aria-label": "Yield source comparison" }}
           viewportProps={{ mobileScrollHint: false, compactBottomPadding: false }}
         >
