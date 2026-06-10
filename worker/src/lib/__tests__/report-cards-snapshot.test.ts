@@ -16,6 +16,16 @@ const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() => vi.fn());
 
 const derivePegAnalyticsSnapshotMock = vi.hoisted(() => vi.fn());
 
+const writePegAnalyticsCacheMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../peg-analytics-cache", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../peg-analytics-cache")>();
+  return {
+    ...original,
+    writePegAnalyticsCache: writePegAnalyticsCacheMock,
+  };
+});
+
 vi.mock("../redemption-backstops-store", async (importOriginal) => {
   const original = await importOriginal<typeof import("../redemption-backstops-store")>();
   return {
@@ -216,6 +226,8 @@ describe("buildReportCardsSnapshot", () => {
     });
     loadFreshIndependentLiveReserveMapMock.mockReset();
     loadFreshIndependentLiveReserveMapMock.mockResolvedValue(new Map());
+    writePegAnalyticsCacheMock.mockReset();
+    writePegAnalyticsCacheMock.mockResolvedValue(undefined);
     derivePegAnalyticsSnapshotMock.mockReset();
     derivePegAnalyticsSnapshotMock.mockResolvedValue({
       pegDataById: new Map(),
@@ -1034,6 +1046,40 @@ describe("buildReportCardsSnapshot", () => {
 
     const response = await handleReportCards(db);
     expect(response.status).toBe(200);
+  });
+
+  it("publishes the peg-analytics cache only when the producer requests it", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+
+    await buildReportCardsSnapshot(db);
+    expect(writePegAnalyticsCacheMock).not.toHaveBeenCalled();
+
+    const todayStartSec = Math.floor(nowSec / 86_400) * 86_400;
+    const pegSummary = makePegSummary({});
+    derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
+      pegDataById: new Map([["usdt-tether", pegSummary]]),
+      eventsByCoin: new Map(),
+      allEvents: [
+        { startedAt: Math.max(todayStartSec, nowSec - 60) },
+        { startedAt: todayStartSec - 60 },
+      ],
+      nowSec,
+      methodology: {
+        version: "test",
+        activeDepegThresholdBps: 1000,
+        activeDepegMinDurationMinutes: 60,
+        trackingWindowYears: 4,
+      },
+      updatedAt: nowSec,
+    });
+
+    await buildReportCardsSnapshot(db, { publishPegAnalytics: true });
+    expect(writePegAnalyticsCacheMock).toHaveBeenCalledWith(db, {
+      computedAtSec: nowSec,
+      depegEventsToday: 1,
+      depegEventsYesterday: 1,
+      pegData: [pegSummary],
+    });
   });
 
   it("ignores malformed bluechip cache payloads instead of failing the snapshot", async () => {

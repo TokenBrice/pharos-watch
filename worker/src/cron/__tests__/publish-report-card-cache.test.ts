@@ -76,6 +76,12 @@ describe("publishReportCardCache", () => {
     const result = await publishReportCardCache({} as D1Database);
 
     expect(result.itemCount).toBe(1);
+    // The producer is the only caller allowed to publish the peg-analytics
+    // aggregate cache; read paths build the snapshot without the side effect.
+    expect(mockBuildReportCardsSnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      { publishPegAnalytics: true },
+    );
     expect(mockWriteReportCardCache).toHaveBeenCalledWith(
       expect.anything(),
       expect.arrayContaining([expect.objectContaining({ id: "usdc-circle" })]),

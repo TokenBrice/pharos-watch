@@ -17,7 +17,7 @@ export async function publishReportCardCache(
     throw signal.reason ?? new Error("publish-report-card-cache aborted");
   }
 
-  const snapshot = await buildReportCardsSnapshot(db);
+  const snapshot = await buildReportCardsSnapshot(db, { publishPegAnalytics: true });
 
   if (signal?.aborted) {
     throw signal.reason ?? new Error("publish-report-card-cache aborted");

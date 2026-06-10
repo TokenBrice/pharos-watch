@@ -55,7 +55,19 @@ export interface ReportCardsSnapshot {
   liveToFallbackCoins?: string[];
 }
 
-export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
+export interface BuildReportCardsSnapshotOptions {
+  /**
+   * Publish the peg-analytics aggregate cache as a side effect. Only the
+   * quarter-hourly report-card publish cron should set this; the builder is
+   * also invoked from several read paths that must not perform D1 writes.
+   */
+  publishPegAnalytics?: boolean;
+}
+
+export async function buildReportCardsSnapshot(
+  db: D1Database,
+  { publishPegAnalytics = false }: BuildReportCardsSnapshotOptions = {},
+): Promise<ReportCardsSnapshot> {
   const {
     stablecoinsCached,
     bluechipCached,
@@ -87,26 +99,28 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   // Publish the request-hot aggregate at producer cadence: peg-summary and the
   // per-coin OG renderer previously re-scanned ~21K depeg_events rows per edge
   // miss to rebuild this exact snapshot.
-  const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
-  const yesterdayStartSec = todayStartSec - DAY_SECONDS;
-  let depegEventsToday = 0;
-  let depegEventsYesterday = 0;
-  for (const event of pegAnalytics.allEvents ?? []) {
-    if (event.startedAt >= todayStartSec) depegEventsToday += 1;
-    else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
-  }
-  try {
-    await writePegAnalyticsCache(db, {
-      computedAtSec: pegAnalytics.nowSec,
-      depegEventsToday,
-      depegEventsYesterday,
-      pegData: [...pegAnalytics.pegDataById.values()],
-    });
-  } catch (error) {
-    console.warn(
-      "[report-cards-snapshot] peg-analytics cache publish failed (read paths fall back to direct compute):",
-      error instanceof Error ? error.message : String(error),
-    );
+  if (publishPegAnalytics) {
+    const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+    const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+    let depegEventsToday = 0;
+    let depegEventsYesterday = 0;
+    for (const event of pegAnalytics.allEvents ?? []) {
+      if (event.startedAt >= todayStartSec) depegEventsToday += 1;
+      else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+    }
+    try {
+      await writePegAnalyticsCache(db, {
+        computedAtSec: pegAnalytics.nowSec,
+        depegEventsToday,
+        depegEventsYesterday,
+        pegData: [...pegAnalytics.pegDataById.values()],
+      });
+    } catch (error) {
+      console.warn(
+        "[report-cards-snapshot] peg-analytics cache publish failed (read paths fall back to direct compute):",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   const nonNavPegDataById = new Map(
