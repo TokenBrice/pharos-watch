@@ -353,7 +353,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification/common.ts`
 - `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT, getBackingLabelShort
 - `shared/lib/classification/index.ts`
-- `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel, getMechanismArchetypeOneLiner
+- `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, MECHANISM_ARCHETYPE_SHORT_LABELS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel
 - `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, PegCurrencyFilterTag
 - `shared/lib/classification/resolve-mechanism-archetype.ts` - resolveMechanismArchetype
 - `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, NOTICE_TONE_COLORS, RATIO_QUALITY_COLORS
