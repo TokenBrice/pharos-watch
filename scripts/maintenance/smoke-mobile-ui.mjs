@@ -593,7 +593,20 @@ async function runRouteCheck(page, options) {
   };
   page.on("console", onConsole);
   try {
-    let summary = await captureRoute(page, options);
+    let summary;
+    try {
+      summary = await captureRoute(page, options);
+    } catch (navigationError) {
+      // Name the route and absorb one transient navigation failure (slow CI
+      // runner, proxy hiccup); a real hang fails both attempts with context
+      // instead of crashing the whole smoke anonymously.
+      console.log(
+        `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after navigation error: ${
+          navigationError instanceof Error ? navigationError.message.split("\n")[0] : String(navigationError)
+        }`,
+      );
+      summary = await captureRoute(page, options);
+    }
     let failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
     {
       const tableOutcome = getTableScanOutcome(summary.tableScan);
