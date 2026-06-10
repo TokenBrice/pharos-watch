@@ -19,6 +19,7 @@ Match the Pharos daily digest voice — sardonic, analytical, opinionated but fa
 - **Opinionated but balanced**: State tensions honestly. "Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement"
 - **No shilling, no FUD**: Don't promote or trash — expose the interesting contradictions and trade-offs
 - **Assume an informed reader**: Skip "stablecoins are digital dollars" explanations. The reader is on a stablecoin analytics dashboard
+- **Typographic dashes**: Use a real em dash (—), never a double hyphen (`--`) — the text renders in a serif editorial paragraph where `--` reads as a typo
 
 ### Structure per Summary
 

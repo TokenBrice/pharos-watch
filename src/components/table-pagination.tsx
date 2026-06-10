@@ -31,9 +31,11 @@ export function TablePagination({
   showControls = true,
   supplementaryText,
 }: TablePaginationProps) {
-  const formattedRangeStart = rangeStart.toLocaleString();
-  const formattedRangeEnd = rangeEnd.toLocaleString();
-  const formattedTotal = total.toLocaleString();
+  // Pin the locale: the surrounding copy is English, and host-locale grouping
+  // can render totals like "454, 168", which reads as two numbers.
+  const formattedRangeStart = rangeStart.toLocaleString("en-US");
+  const formattedRangeEnd = rangeEnd.toLocaleString("en-US");
+  const formattedTotal = total.toLocaleString("en-US");
 
   return (
     <div

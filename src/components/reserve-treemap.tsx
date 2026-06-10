@@ -33,6 +33,32 @@ const RESERVE_BADGE_CLASSNAMES: Record<ReserveDisplayBadgeView["kind"], string> 
     "bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-500/20",
 };
 
+/* Break a cell label on word boundaries instead of mid-word ("Deposits at
+ * Sy…"). Lines hold whole words up to maxChars; running out of lines appends
+ * an ellipsis after the last whole word. Only a single word longer than the
+ * cell still gets a hard cut. */
+function wrapTreemapLabel(name: string, maxChars: number, maxLines: number): string[] {
+  const words = name.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars || current === "") {
+      current = candidate;
+      continue;
+    }
+    if (lines.length === maxLines - 1) {
+      return [...lines, `${current}…`];
+    }
+    lines.push(current);
+    current = word;
+  }
+  lines.push(current);
+  return lines.map((line) =>
+    line.length > maxChars ? `${line.slice(0, Math.max(2, maxChars - 1)).trimEnd()}…` : line,
+  );
+}
+
 function TreemapCell({
   x,
   y,
@@ -59,6 +85,12 @@ function TreemapCell({
   const showLabel = width > 50 && height > 30;
   const showPct = showLabel && width > 40 && height > 40;
 
+  const maxChars = Math.max(3, Math.floor(width / 7));
+  const lines = showLabel ? wrapTreemapLabel(name, maxChars, height > 56 ? 2 : 1) : [];
+  const rowHeight = 13;
+  const totalRows = lines.length + (showPct ? 1 : 0);
+  const topY = y + height / 2 - ((totalRows - 1) * rowHeight) / 2;
+
   return (
     <g>
       <rect
@@ -74,21 +106,23 @@ function TreemapCell({
       />
       {showLabel && (
         <text
-          x={x + width / 2}
-          y={y + height / 2 - (showPct ? 6 : 0)}
           textAnchor="middle"
           dominantBaseline="central"
           fill="currentColor"
           fontSize={Math.min(12, width / 8)}
           fontWeight={600}
         >
-          {name.length > width / 7 ? `${name.slice(0, Math.floor(width / 7))}…` : name}
+          {lines.map((line, i) => (
+            <tspan key={i} x={x + width / 2} y={topY + i * rowHeight}>
+              {line}
+            </tspan>
+          ))}
         </text>
       )}
       {showLabel && showPct && (
         <text
           x={x + width / 2}
-          y={y + height / 2 + 10}
+          y={topY + lines.length * rowHeight}
           textAnchor="middle"
           dominantBaseline="central"
           fill="currentColor"
