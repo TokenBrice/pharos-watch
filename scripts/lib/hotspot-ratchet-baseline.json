@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 175,
-    "maxFunctionLines": 153,
+    "fileLines": 176,
+    "maxFunctionLines": 154,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -96,8 +96,8 @@
     "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 230,
-    "maxFunctionLines": 215,
+    "fileLines": 218,
+    "maxFunctionLines": 140,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -132,8 +132,8 @@
     "notes": "Liquidity copy is isolated now. A follow-up split should extract long table-heavy detail blocks if the section grows again."
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "fileLines": 311,
-    "maxFunctionLines": 299,
+    "fileLines": 287,
+    "maxFunctionLines": 257,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -192,8 +192,8 @@
     "notes": "The changelog shell now composes by major version. Keep v6 additions in this module or split again if another large tranche lands."
   },
   "src/app/methodology/scoring-changelog/content-v5.tsx": {
-    "fileLines": 295,
-    "maxFunctionLines": 292,
+    "fileLines": 238,
+    "maxFunctionLines": 234,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -204,8 +204,8 @@
     "notes": "v5 remains large after the first split. Extract reference-heavy cards again if more v5 corrective history is added."
   },
   "src/app/methodology/scoring-changelog/content-legacy.tsx": {
-    "fileLines": 348,
-    "maxFunctionLines": 345,
+    "fileLines": 295,
+    "maxFunctionLines": 291,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -216,8 +216,8 @@
     "notes": "Legacy safety-score history is now isolated from current changes. Keep new work out of this file unless an explicit historical correction is needed."
   },
   "src/app/methodology/scoring-changelog/content-summary.tsx": {
-    "fileLines": 149,
-    "maxFunctionLines": 145,
+    "fileLines": 131,
+    "maxFunctionLines": 125,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -384,9 +384,9 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 357,
+    "fileLines": 358,
     "maxFunctionLines": 290,
-    "branchCount": 20,
+    "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,

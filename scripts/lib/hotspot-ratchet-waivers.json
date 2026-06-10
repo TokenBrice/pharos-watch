@@ -1,83 +1,11 @@
 {
-  "src/components/command-palette.tsx": {
+  "src/app/about/page.tsx": {
     "disposition": "queued-p4",
-    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
+    "notes": "Homepage About route was consolidated and now includes the legacy editorial/style/principles content paths and copy updates in a single shell. Keep this explicitly waived until the next About-route decomposition wave.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/stablecoin-table.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Table-shell refactor removed DOM cursor painting and moved skeleton rendering onto shared table primitives, but the home stablecoin table still owns column visibility, virtualization, density, cursor actions, sorting, and row rendering orchestration. Keep explicitly waived for this release; split orchestration from table rendering in a focused table-shell cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-07",
-    "reviewAfter": "2026-09-07",
-    "nextAction": "Extract column/sort/cursor orchestration from the table render shell after the shared table primitives stabilize."
-  },
-  "worker/src/api/audit-depeg-history.ts": {
-    "disposition": "queued-p4",
-    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/tape/event-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/app/yield/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/status/cron-metadata-summary.ts": {
-    "disposition": "deferred",
-    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Reassess after the owning surface stabilizes."
-  },
-  "worker/src/cron/weekly-recap.ts": {
-    "disposition": "queued-p4",
-    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "worker/src/api/telegram-webhook.ts": {
-    "disposition": "queued-p4",
-    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/app/pharoswatchbot/page.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "worker/src/cron/compute-depeg-resolver-review.ts": {
-    "disposition": "queued-p4",
-    "notes": "DDRv2 terminal-evidence completion added registry, cemetery, and tape lifecycle timestamp derivation to the review snapshot builder. Keep waived for the first v2 rollout; split terminal-evidence extraction and coverage-row assembly once the reviewer contract has production mileage.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-27",
-    "reviewAfter": "2026-08-27",
-    "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
+    "createdAt": "2026-06-09",
+    "reviewAfter": "2026-09-09",
+    "nextAction": "Split About page concerns (hero, horizon, metadata, and section composition) after this refactor is stabilized."
   },
   "src/app/compare/client.tsx": {
     "disposition": "queued-p4",
@@ -87,17 +15,57 @@
     "reviewAfter": "2026-08-26",
     "nextAction": "Split query-state orchestration, row projection, and comparison sections into focused helpers in the next compare-page cleanup pass."
   },
-  "src/app/about/page.tsx": {
+  "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Homepage About route was consolidated and now includes the legacy editorial/style/principles content paths and copy updates in a single shell. Keep this explicitly waived until the next About-route decomposition wave.",
+    "notes": "Mini App shell colocates session/bridge state, optimistic mutation flow, and all four tab panels in one client component; it entered the top-N when yield-history-chart was refactored below it and the 2026-06-10 tab keyboard-navigation a11y fix added handlers. Defer decomposition to a focused Mini App pass.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-06-09",
-    "reviewAfter": "2026-09-09",
-    "nextAction": "Split About page concerns (hero, horizon, metadata, and section composition) after this refactor is stabilized."
+    "createdAt": "2026-06-10",
+    "reviewAfter": "2026-09-10",
+    "nextAction": "Split tab panel bodies out of the shell component before adding more views."
   },
-  "src/lib/yield-view-model.ts": {
+  "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
-    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
+    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/app/screener/picker/selector-state.ts": {
+    "disposition": "queued-p4",
+    "notes": "Selector picker state concentrates URL parsing, persistence, filtering, and reducer-style state transitions. It surfaced after the selector engine split and should be decomposed separately from shared selector scoring.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
+  },
+  "src/app/sitemap.ts": {
+    "disposition": "deferred",
+    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Reassess after the owning surface stabilizes."
+  },
+  "src/app/stablecoin/[id]/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
+  },
+  "src/app/yield/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/components/command-palette.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
@@ -111,13 +79,45 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/app/sitemap.ts": {
+  "src/components/stablecoin-table.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Table-shell refactor removed DOM cursor painting and moved skeleton rendering onto shared table primitives, but the home stablecoin table still owns column visibility, virtualization, density, cursor actions, sorting, and row rendering orchestration. Keep explicitly waived for this release; split orchestration from table rendering in a focused table-shell cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-07",
+    "reviewAfter": "2026-09-07",
+    "nextAction": "Extract column/sort/cursor orchestration from the table render shell after the shared table primitives stabilize."
+  },
+  "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
-    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern.",
+    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Reassess after the owning surface stabilizes."
+  },
+  "src/components/tape/event-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/lib/yield-view-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "worker/src/api/audit-depeg-history.ts": {
+    "disposition": "queued-p4",
+    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/api/backfill-supply-history.ts": {
     "disposition": "queued-p4",
@@ -127,13 +127,29 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/lib/depeg-resolver-incident-store.ts": {
+  "worker/src/api/telegram-webhook.ts": {
     "disposition": "queued-p4",
-    "notes": "DDRv2 incident store centralizes canonical incident upserts, lock-state projection, D1 row mapping, and compatibility reads. It surfaced after the compute cron split because store ownership is now clearer; split row mappers from mutation methods in a focused DDR store pass.",
+    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "worker/src/cron/blacklist/amount-recovery.ts": {
+    "disposition": "queued-p4",
+    "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
-    "nextAction": "Extract canonical incident row mapping and lock-state mutation helpers behind the existing store API."
+    "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
+  },
+  "worker/src/cron/compute-depeg-resolver-review.ts": {
+    "disposition": "queued-p4",
+    "notes": "DDRv2 terminal-evidence completion added registry, cemetery, and tape lifecycle timestamp derivation to the review snapshot builder. Keep waived for the first v2 rollout; split terminal-evidence extraction and coverage-row assembly once the reviewer contract has production mileage.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-27",
+    "reviewAfter": "2026-08-27",
+    "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
   },
   "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
@@ -151,21 +167,21 @@
     "reviewAfter": "2026-09-06",
     "nextAction": "Split realtime overlay/source-metadata application and rate-state validation into narrower helpers behind the existing FxSyncRunState API."
   },
-  "worker/src/cron/blacklist/amount-recovery.ts": {
+  "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
-    "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",
+    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/components/yield-history-chart.tsx": {
+  "worker/src/lib/depeg-resolver-incident-store.ts": {
     "disposition": "queued-p4",
-    "notes": "Yield history chart owns data shaping, tooltip logic, range handling, and SVG/Recharts rendering in one component. It surfaced during the wider chart primitive cleanup; split series shaping and tooltip rendering in a focused yield chart pass.",
+    "notes": "DDRv2 incident store centralizes canonical incident upserts, lock-state projection, D1 row mapping, and compatibility reads. It surfaced after the compute cron split because store ownership is now clearer; split row mappers from mutation methods in a focused DDR store pass.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
-    "nextAction": "Extract chart data projection and tooltip content before adding more yield chart states."
+    "nextAction": "Extract canonical incident row mapping and lock-state mutation helpers behind the existing store API."
   },
   "worker/src/lib/depeg-resolver-publication-store.ts": {
     "disposition": "queued-p4",
@@ -182,21 +198,5 @@
     "createdAt": "2026-06-06",
     "reviewAfter": "2026-09-06",
     "nextAction": "Split adapter row parsing and projection helpers behind the existing live metadata API."
-  },
-  "src/app/stablecoin/[id]/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
-  },
-  "src/app/screener/picker/selector-state.ts": {
-    "disposition": "queued-p4",
-    "notes": "Selector picker state concentrates URL parsing, persistence, filtering, and reducer-style state transitions. It surfaced after the selector engine split and should be decomposed separately from shared selector scoring.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
   }
 }

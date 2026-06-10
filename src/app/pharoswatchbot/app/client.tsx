@@ -30,6 +30,17 @@ type ViewKey = "home" | "watchlist" | "presets" | "settings";
 
 const ORDERED_VIEWS: ViewKey[] = ["home", "watchlist", "presets", "settings"];
 
+// Roving tabindex needs the arrow-key half of the ARIA tabs contract,
+// otherwise inactive tabs are unreachable by keyboard.
+function nextTabViewForKey(view: ViewKey, key: string): ViewKey | null {
+  const currentIndex = ORDERED_VIEWS.indexOf(view);
+  if (key === "ArrowRight") return ORDERED_VIEWS[(currentIndex + 1) % ORDERED_VIEWS.length];
+  if (key === "ArrowLeft") return ORDERED_VIEWS[(currentIndex - 1 + ORDERED_VIEWS.length) % ORDERED_VIEWS.length];
+  if (key === "Home") return ORDERED_VIEWS[0];
+  if (key === "End") return ORDERED_VIEWS[ORDERED_VIEWS.length - 1];
+  return null;
+}
+
 function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null; insight: CoinInsightTarget | null } {
   const payload = parseMiniAppPayload(startParam);
   if (!payload) return { view: "home", coinId: null, insight: null };
@@ -278,18 +289,10 @@ export function PharosWatchBotMiniAppClient() {
     webApp?.HapticFeedback?.selectionChanged?.();
   };
 
-  // Roving tabindex needs the arrow-key half of the ARIA tabs contract,
-  // otherwise inactive tabs are unreachable by keyboard.
   const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    const currentIndex = ORDERED_VIEWS.indexOf(view);
-    let nextIndex: number;
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % ORDERED_VIEWS.length;
-    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + ORDERED_VIEWS.length) % ORDERED_VIEWS.length;
-    else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End") nextIndex = ORDERED_VIEWS.length - 1;
-    else return;
+    const nextKey = nextTabViewForKey(view, event.key);
+    if (!nextKey) return;
     event.preventDefault();
-    const nextKey = ORDERED_VIEWS[nextIndex];
     activateView(nextKey);
     document.getElementById(`pharos-mini-app-tab-${nextKey}`)?.focus();
   };
