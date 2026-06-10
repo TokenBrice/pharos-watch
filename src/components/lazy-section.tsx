@@ -10,6 +10,9 @@ interface LazySectionProps {
   className?: string;
   /** Optional IntersectionObserver rootMargin override. */
   rootMargin?: string;
+  /** Optional content shown in the reserved space while gated, so the reserve
+   * reads as a loading surface instead of a blank void. */
+  placeholder?: ReactNode;
   children: ReactNode;
 }
 
@@ -20,7 +23,7 @@ interface LazySectionProps {
  * element approaches the viewport (or immediately when `IntersectionObserver`
  * is unavailable).
  */
-export function LazySection({ minHeight, className, rootMargin, children }: LazySectionProps) {
+export function LazySection({ minHeight, className, rootMargin, placeholder, children }: LazySectionProps) {
   const { ref, near } = useNearViewport<HTMLDivElement>(rootMargin);
   return (
     <div
@@ -28,7 +31,7 @@ export function LazySection({ minHeight, className, rootMargin, children }: Lazy
       className={near ? undefined : className}
       style={!near && minHeight != null ? { minHeight } : undefined}
     >
-      {near ? children : null}
+      {near ? children : placeholder ?? null}
     </div>
   );
 }

@@ -8,6 +8,16 @@ import { useHomepageDiscoverySuggestions } from "@/hooks/use-homepage-discovery"
 import { HomepageDiscoveryModule } from "@/components/homepage-discovery-module";
 import { LazySection } from "@/components/lazy-section";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  TableBody,
+  TableCaption,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeletonRows,
+  type TableSkeletonColumn,
+} from "@/components/table";
 
 function MiniCardGridFallback() {
   return (
@@ -65,16 +75,71 @@ const DailyDigest = dynamic(
   },
 );
 
+/* Approximates the loaded table's column rhythm (rank · coin · 6 numeric/badge
+ * columns) so the reserved space reads as the table arriving, not a void. */
+const RANKINGS_SKELETON_COLUMNS: readonly TableSkeletonColumn[] = [
+  { id: "rank", cellClassName: "w-10", skeletonClassName: "h-4 w-5" },
+  { id: "name", skeletonClassName: "h-4 w-36" },
+  { id: "price", cellClassName: "text-right", skeletonClassName: "ml-auto h-4 w-14" },
+  { id: "peg", cellClassName: "text-right hidden sm:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
+  { id: "mcap", cellClassName: "text-right", skeletonClassName: "ml-auto h-4 w-16" },
+  { id: "change24h", cellClassName: "text-right hidden md:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
+  { id: "change7d", cellClassName: "text-right hidden lg:table-cell", skeletonClassName: "ml-auto h-4 w-12" },
+  { id: "grade", cellClassName: "text-center hidden md:table-cell", skeletonClassName: "mx-auto h-4 w-7" },
+];
+
+const RANKINGS_SKELETON_HEADERS = ["#", "Coin", "Price", "Peg", "Market Cap", "24h", "7d", "Grade"] as const;
+const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
+  Peg: "hidden sm:table-cell",
+  "24h": "hidden md:table-cell",
+  "7d": "hidden lg:table-cell",
+  Grade: "hidden md:table-cell",
+};
+
+function RankingsSectionFallback() {
+  return (
+    <div className="space-y-4">
+      {/* Peg browse strip placeholder */}
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-24 rounded-full" />
+        ))}
+      </div>
+      <TableFrame
+        tableId="stablecoin-overview-loading"
+        topSlot={
+          <div className="pharos-table-toolbar flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+            <Skeleton className="h-8 w-40" />
+          </div>
+        }
+      >
+        <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
+        <TableHeader className="bg-muted">
+          <TableRow rowIntent="static">
+            {RANKINGS_SKELETON_HEADERS.map((label) => (
+              <TableHead key={label} scope="col" className={RANKINGS_HEADER_VISIBILITY[label]}>
+                {label}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={10} />
+        </TableBody>
+      </TableFrame>
+    </div>
+  );
+}
+
 const HomeAltRankingsSection = dynamic(
   () => import("@/components/home-alt-rankings-section").then((mod) => mod.HomeAltRankingsSection),
   {
     ssr: false,
-    loading: () => (
-      <div className="space-y-4">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-[480px] w-full" />
-      </div>
-    ),
+    loading: RankingsSectionFallback,
   },
 );
 
@@ -102,15 +167,21 @@ function BelowFold({
   forced,
   minHeight,
   rootMargin,
+  placeholder,
   children,
 }: {
   forced: boolean;
   minHeight: number;
   rootMargin?: string;
+  placeholder?: React.ReactNode;
   children: React.ReactNode;
 }) {
   if (forced) return <>{children}</>;
-  return <LazySection minHeight={minHeight} rootMargin={rootMargin}>{children}</LazySection>;
+  return (
+    <LazySection minHeight={minHeight} rootMargin={rootMargin} placeholder={placeholder}>
+      {children}
+    </LazySection>
+  );
 }
 
 export function HomeAltClient() {
@@ -149,6 +220,7 @@ export function HomeAltClient() {
           forced={hashTargetForcesMount}
           minHeight={620}
           rootMargin="0px 0px -65% 0px"
+          placeholder={<RankingsSectionFallback />}
         >
           <HomeAltRankingsSection titleId="home-alt-rankings-title" />
         </BelowFold>
