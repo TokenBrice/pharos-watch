@@ -22,6 +22,7 @@ const IGNORES = [
   "**/__mocks__/**",
   "**/test-helpers/**",
   "**/*.test.ts",
+  "**/*.test.tsx",
   "**/*.spec.ts",
   "**/*.generated.ts",
 ];
@@ -34,7 +35,7 @@ export default tseslint.config(
     linterOptions: { reportUnusedDisableDirectives: "off" },
   },
   {
-    files: ["worker/src/**/*.ts"],
+    files: ["worker/src/**/*.ts", "worker/src/**/*.tsx"],
     ignores: IGNORES,
     languageOptions: {
       parser: tseslint.parser,
