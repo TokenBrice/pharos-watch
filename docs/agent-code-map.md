@@ -550,7 +550,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
-- `worker/src/cron/cron-duration-watchdog.ts` - DURATION_ALERT_AVG_RATIO, DURATION_ALERT_CAP_HITS, runCronDurationWatchdog
+- `worker/src/cron/cron-duration-watchdog.ts` - runCronDurationWatchdog
 - `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, DetailWriteFailureObservation, evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog
 - `worker/src/cron/daily-digest.ts` - classifyRegime, generateDailyDigest
 - `worker/src/cron/daily-digest/collectors-history.ts` - collectCrossDayTrends, collectHistoricalContext, collectPsiContributors, collectTotalMcapAth
