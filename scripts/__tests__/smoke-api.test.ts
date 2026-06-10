@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertOgImageResult,
   assertPathCoverage,
   CANARY_CONTRACT_SMOKE_PATHS,
   ENDPOINT_ASSERTIONS,
+  OG_SMOKE_PATHS,
   resolveContractSmokePaths,
   STRICT_CONTRACT_SMOKE_PATHS,
 } from "../maintenance/smoke-api.mjs";
@@ -228,5 +230,53 @@ describe("smoke-api path scopes", () => {
     expect(() => assertPathCoverage(full, ENDPOINT_ASSERTIONS)).not.toThrow();
     expect(() => assertPathCoverage(canary, ENDPOINT_ASSERTIONS)).toThrow("Smoke assertion drift detected");
     expect(() => assertPathCoverage(canary, ENDPOINT_ASSERTIONS, { allowExtraAssertions: true })).not.toThrow();
+  });
+});
+
+describe("smoke-api og image assertion", () => {
+  it("declares the per-coin and aggregate og probes", () => {
+    expect(OG_SMOKE_PATHS).toContain("/api/og/stablecoin/usdt-tether");
+    expect(OG_SMOKE_PATHS).toContain("/api/og/depeg");
+  });
+
+  it("accepts a healthy png result", () => {
+    expect(
+      assertOgImageResult("/api/og/depeg", {
+        status: 200,
+        contentType: "image/png",
+        renderErrorClass: null,
+        bytes: 84_211,
+      }),
+    ).toBe("82kb png");
+  });
+
+  it("rejects a 503 and surfaces the render error class", () => {
+    expect(() =>
+      assertOgImageResult("/api/og/stablecoin/usdt-tether", {
+        status: 503,
+        contentType: "text/plain",
+        renderErrorClass: "Error",
+        bytes: 26,
+      }),
+    ).toThrow("returned 503 (x-render-error-class: Error)");
+  });
+
+  it("rejects a non-png content type and tiny payloads", () => {
+    expect(() =>
+      assertOgImageResult("/api/og/depeg", {
+        status: 200,
+        contentType: "text/html",
+        renderErrorClass: null,
+        bytes: 84_211,
+      }),
+    ).toThrow('content-type "text/html"');
+    expect(() =>
+      assertOgImageResult("/api/og/depeg", {
+        status: 200,
+        contentType: "image/png",
+        renderErrorClass: null,
+        bytes: 312,
+      }),
+    ).toThrow("suspiciously small image (312b)");
   });
 });

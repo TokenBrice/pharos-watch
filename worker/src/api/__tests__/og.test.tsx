@@ -1,8 +1,16 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+// Plain `satori` entry (Node build) — deliberately NOT the aliased
+// `satori/standalone` stub, so the smoke tests below exercise the real
+// layout engine.
+import satori from "satori";
 import { deriveStablecoinOgCardData } from "../og";
-import { StablecoinCard } from "../../lib/og-templates/stablecoin-card";
+import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
 import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
+import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
+import { DepegCard } from "../../lib/og-templates/depeg-card";
 
 describe("stablecoin OG card data", () => {
   it("marks unavailable 24h volume as null", () => {
@@ -148,5 +156,155 @@ describe("stability index OG card", () => {
 
     expect(markup).toContain("left:85%");
     expect(markup).toContain("color:#ef4444");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Satori render smoke tests
+//
+// renderToStaticMarkup never catches satori-level failures: satori walks the
+// element tree itself and throws on inputs React tolerates (e.g. `undefined`
+// style values — its expand loop feeds them to css-to-react-native's
+// `.trim()`). Exactly that broke /api/og/stablecoin/* in production for every
+// coin (MetricRow's optional marginBottom). Each card template must render
+// through the real engine.
+// ---------------------------------------------------------------------------
+
+describe("og cards render through satori", () => {
+  const font = (file: string) =>
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture reads repo-local font assets
+    readFileSync(fileURLToPath(new URL(`../../../assets/fonts/${file}`, import.meta.url).href));
+  const fonts = [
+    { name: "Geist Sans", data: font("Geist-Regular.ttf"), weight: 400 as const, style: "normal" as const },
+    { name: "Geist Sans", data: font("Geist-Bold.ttf"), weight: 700 as const, style: "normal" as const },
+    { name: "Geist Mono", data: font("GeistMono-Regular.ttf"), weight: 400 as const, style: "normal" as const },
+  ];
+
+  const renderSvg = (element: React.ReactNode) =>
+    satori(element, { width: 1200, height: 628, fonts });
+
+  const calmCoin: StablecoinCardData = {
+    name: "Tether",
+    symbol: "USDT",
+    grade: "B+",
+    pegPrice: 1.0003,
+    dewsBand: "CALM",
+    liquidityScore: 92,
+    mcap: 120_000_000_000,
+    vol24h: null,
+    flow7d: 250_000_000,
+    sparklineData: [1.0001, 1.0002, 0.9999, 1.0, 1.0001, 1.0003, 1.0002],
+    hasActiveDepeg: false,
+    pegScore: 97.2,
+    backing: "rwa-backed",
+    governance: "centralized",
+    redemptionScore: null,
+    change24h: 0.01,
+    variantLabel: null,
+    variantParentSymbol: null,
+    isFrozen: false,
+    lastUpdated: "2026-06-10 07:30 UTC",
+  };
+
+  it("renders the stablecoin card (calm baseline)", async () => {
+    const svg = await renderSvg(<StablecoinCard data={calmCoin} />);
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the stablecoin card with depeg, frozen, and variant branches", async () => {
+    const svg = await renderSvg(
+      <StablecoinCard
+        data={{
+          ...calmCoin,
+          hasActiveDepeg: true,
+          dewsBand: "DANGER",
+          isFrozen: true,
+          variantLabel: "Savings",
+          variantParentSymbol: "USDT",
+          grade: "NR",
+          change24h: null,
+          flow7d: -5_000_000,
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the safety-scores card", async () => {
+    const svg = await renderSvg(
+      <SafetyScoresCard
+        data={{
+          gradeDistribution: { "A+": 2, A: 10, "A-": 12, "B+": 30, B: 40, "B-": 25, "C+": 12, C: 8, "C-": 4, D: 3, F: 1 },
+          pulseGrade: "B+",
+          pulseScore: 78.4,
+          coverageRatio: 0.93,
+          totalCoins: 401,
+          topPerformers: [
+            { symbol: "USDC", grade: "A+", score: 95 },
+            { symbol: "PYUSD", grade: "A", score: 92 },
+            { symbol: "GUSD", grade: "A", score: 91 },
+          ],
+          bottomPerformers: [
+            { symbol: "XUSD", grade: "F", score: 12 },
+            { symbol: "YUSD", grade: "D", score: 28 },
+            { symbol: "ZUSD", grade: "C-", score: 41 },
+          ],
+          trend: -0.4,
+          lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the depeg card", async () => {
+    const svg = await renderSvg(
+      <DepegCard
+        data={{
+          activeDepegCount: 3,
+          psiScore: 88.2,
+          psiBand: "BEDROCK",
+          coinsAtPeg: 380,
+          totalCoins: 401,
+          dewsDistribution: { danger: 2, alert: 5, warning: 12, normal: 382 },
+          activeDepegs: [
+            { symbol: "XAUM", name: "Matrixdock Gold", deviationBps: -312 },
+            { symbol: "EURS", name: "STASIS EURO", deviationBps: 145 },
+          ],
+          recoveredToday: 1,
+          newToday: 2,
+          lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the stability-index card", async () => {
+    const svg = await renderSvg(
+      <StabilityIndexCard
+        data={{
+          psiScore: 92,
+          psiBand: "BEDROCK",
+          delta24h: 1.3,
+          sparklineData: [90, 92, 94],
+          bands: [
+            { name: "BEDROCK", active: true },
+            { name: "STEADY", active: false },
+            { name: "TREMOR", active: false },
+            { name: "FRACTURE", active: false },
+            { name: "CRISIS", active: false },
+            { name: "MELTDOWN", active: false },
+          ],
+          avg7d: 91.2,
+          allTimeHigh: 97.5,
+          allTimeLow: 11.4,
+          flightToQuality: true,
+          flightIntensity: 62,
+          lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
   });
 });

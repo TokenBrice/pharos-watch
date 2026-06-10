@@ -71,7 +71,9 @@ interface Metric {
 function MetricRow({
   metrics,
   valueFontSize,
-  marginBottom,
+  // satori 0.26 throws on `undefined` style values (no skip in its expand
+  // loop), so the optional prop must resolve to a concrete number.
+  marginBottom = 0,
 }: {
   metrics: readonly Metric[];
   valueFontSize: number;
@@ -164,7 +166,9 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
         {data.isFrozen ? (
           <div
             style={{
-              display: "inline-flex",
+              // satori rejects "inline-flex"; alignSelf already keeps the
+              // badge from stretching.
+              display: "flex",
               alignItems: "center",
               alignSelf: "flex-start",
               marginBottom: 18,

@@ -41,6 +41,12 @@ export const CANARY_CONTRACT_SMOKE_PATHS = [
   "/api/stress-signals",
 ];
 
+// OG image endpoints are public PNG routes outside the JSON contract set.
+// The per-coin route once 503ed for every coin in production for weeks with
+// nothing watching it (satori threw on the card template), so the smoke
+// probes one coin card plus one aggregate card on every run.
+export const OG_SMOKE_PATHS = ["/api/og/stablecoin/usdt-tether", "/api/og/depeg"];
+
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_RETRY_DELAY_MS = 1_500;
@@ -180,6 +186,62 @@ async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, 
   }
 
   throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
+}
+
+async function fetchPng(baseUrl, endpointPath, timeoutMs) {
+  // Cache-buster query: OG responses are edge-cacheable, and a stale cached
+  // PNG must not mask a render path broken by the deploy under test.
+  const url = `${baseUrl}${endpointPath}?smoke=${Date.now()}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  const buffer = await res.arrayBuffer();
+  return {
+    url,
+    status: res.status,
+    contentType: res.headers.get("content-type") ?? "",
+    renderErrorClass: res.headers.get("x-render-error-class"),
+    bytes: buffer.byteLength,
+  };
+}
+
+async function fetchPngWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+  const totalAttempts = retryCount + 1;
+  let lastError = null;
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    try {
+      const result = await fetchPng(baseUrl, endpointPath, timeoutMs);
+      if (attempt < totalAttempts && isRetryableStatus(result.status)) {
+        console.log(
+          `[smoke-api] WARN ${endpointPath} returned ${result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
+        );
+        await sleep(retryDelayMs);
+        continue;
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < totalAttempts && isRetryableError(error)) {
+        console.log(
+          `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(error)}); retrying in ${retryDelayMs}ms`,
+        );
+        await sleep(retryDelayMs);
+        continue;
+      }
+      throw new Error(`${endpointPath} request failed: ${formatError(error)}`);
+    }
+  }
+
+  throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
+}
+
+export function assertOgImageResult(endpointPath, result) {
+  const errorHint = result.renderErrorClass ? ` (x-render-error-class: ${result.renderErrorClass})` : "";
+  assert(result.status === 200, `${endpointPath} returned ${result.status}${errorHint}`);
+  assert(
+    result.contentType.includes("image/png"),
+    `${endpointPath} returned content-type "${result.contentType}"; expected image/png`,
+  );
+  assert(result.bytes > 10_000, `${endpointPath} returned a suspiciously small image (${result.bytes}b)`);
+  return `${Math.round(result.bytes / 1024)}kb png`;
 }
 
 function isFiniteNumber(value) {
@@ -773,6 +835,14 @@ async function run() {
     "/api/health missing valid status",
   );
   console.log(`[smoke-api] OK /api/health (${health.body.status})`);
+
+  // OG probes run before the API-key gate: the routes are public, so both
+  // authenticated and unauthenticated smoke runs cover them.
+  for (const ogPath of OG_SMOKE_PATHS) {
+    const ogResult = await fetchPngWithRetry(baseUrl, ogPath, timeoutMs, retryCount, retryDelayMs);
+    const ogDetails = assertOgImageResult(ogPath, ogResult);
+    console.log(`[smoke-api] OK ${ogPath} (${ogDetails})`);
+  }
 
   const smokeApiKey = (process.env.SMOKE_API_KEY ?? "").trim();
   if (!smokeApiKey) {
