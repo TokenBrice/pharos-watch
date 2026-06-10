@@ -29,7 +29,9 @@ import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
+  restoreMissingTrackedAssets,
   type CronResult,
+  type TrackedCoverageRestoreResult,
 } from "./shared";
 
 interface StablecoinsIntakeMainResult {
@@ -42,6 +44,7 @@ interface StablecoinsIntakeMainResult {
   previousAssetsById: Map<string, PeggedAsset>;
   cgData: CoinGeckoMcapData;
   supplyGapReconciliation: SupplyGapReconciliationResult;
+  trackedCoverage: TrackedCoverageRestoreResult;
 }
 
 interface StablecoinsIntakeFallbackResult {
@@ -325,6 +328,27 @@ export async function loadStablecoinsIntake(
     console.log(`[sync-stablecoins] Injected ${injected} frozen-snapshot row(s)`);
   }
 
+  // Restore-or-degrade on tracked-id coverage: a DefiLlama list omission must
+  // not silently drop a tracked coin from the published payload for a cycle.
+  const trackedCoverage = restoreMissingTrackedAssets(
+    llamaData.peggedAssets,
+    previousAssetsById,
+    input.syncStartSec,
+  );
+  if (trackedCoverage.assets.length > 0) {
+    llamaData.peggedAssets = [...llamaData.peggedAssets, ...trackedCoverage.assets];
+    console.warn(
+      "[sync-stablecoins] Intake omitted tracked coin(s); restored last-known-good row(s): " +
+      trackedCoverage.restoredIds.join(", "),
+    );
+  }
+  if (trackedCoverage.droppedIds.length > 0) {
+    console.error(
+      "[sync-stablecoins] Tracked coin(s) missing from intake with no restorable row " +
+      "(publishing without them): " + trackedCoverage.droppedIds.join(", "),
+    );
+  }
+
   applyTrackedAssetOverrides(llamaData.peggedAssets);
 
   const supplyGapReconciliation = await reconcileTrackedSupplyGaps(
@@ -351,5 +375,6 @@ export async function loadStablecoinsIntake(
     previousAssetsById,
     cgData,
     supplyGapReconciliation,
+    trackedCoverage,
   };
 }

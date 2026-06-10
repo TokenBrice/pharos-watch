@@ -1,5 +1,5 @@
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
-import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
+import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CacheValidationResult } from "./cache-publication";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
@@ -153,6 +153,7 @@ export function buildStablecoinsSyncResult(input: {
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   supplyGapReconciliation?: SupplyGapReconciliationResult | null;
+  trackedCoverage?: TrackedCoverageRestoreResult | null;
   gtProbe: { updatedCount: number; stats: GtProbeStats };
   depegErrorCount: number;
   depegErrors: string[];
@@ -209,6 +210,12 @@ export function buildStablecoinsSyncResult(input: {
       totalReconciled: input.supplyGapReconciliation.totalReconciled,
       byReason: input.supplyGapReconciliation.byReason,
       assets: input.supplyGapReconciliation.assets,
+    };
+  }
+  if (input.trackedCoverage && (input.trackedCoverage.restoredIds.length > 0 || input.trackedCoverage.droppedIds.length > 0)) {
+    metadata.trackedCoverage = {
+      restoredIds: input.trackedCoverage.restoredIds,
+      droppedIds: input.trackedCoverage.droppedIds,
     };
   }
   if (input.depegErrorCount > 0) {

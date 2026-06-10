@@ -31,6 +31,7 @@ import {
   loadFreshFxRates,
   loadReplayPriceCacheForTrustedContinuity,
   type CronResult,
+  type TrackedCoverageRestoreResult,
 } from "./shared";
 import {
   isAbortResult,
@@ -70,6 +71,7 @@ export type StablecoinsIntakeStageResult =
       previousAssetsById: Map<string, PeggedAsset>;
       cgData: CoinGeckoMcapData;
       supplyGapReconciliation: SupplyGapReconciliationResult;
+      trackedCoverage: TrackedCoverageRestoreResult;
     };
 
 export async function runStablecoinsIntakeStage(
@@ -133,6 +135,7 @@ export async function runStablecoinsIntakeStage(
     fxFallbackRates,
     validationReferences,
     supplyGapReconciliation: intake.supplyGapReconciliation,
+    trackedCoverage: intake.trackedCoverage,
   };
 }
 

@@ -381,6 +381,46 @@ export function mergeSupplementalLastKnownGood(
   };
 }
 
+const ACTIVE_TRACKED_IDS = new Set(ACTIVE_STABLECOINS.map((meta) => meta.id));
+
+export interface TrackedCoverageRestoreResult {
+  assets: PeggedAsset[];
+  restoredIds: string[];
+  droppedIds: string[];
+}
+
+/**
+ * Restore-or-degrade for tracked-id coverage regressions: when the DefiLlama
+ * list omits an active tracked coin that was published last cycle, re-publish
+ * the previous row (marked supplyRestored, same 7-day ceiling as supplemental
+ * carry-forward) instead of silently dropping the coin for a cycle. Past the
+ * ceiling — or with no usable previous supply — the coin stays out and is
+ * reported as dropped.
+ */
+export function restoreMissingTrackedAssets(
+  currentAssets: PeggedAsset[],
+  previousAssetsById: Map<string, PeggedAsset>,
+  nowSec: number = Math.floor(Date.now() / 1000),
+): TrackedCoverageRestoreResult {
+  const presentIds = new Set(currentAssets.map((asset) => String(asset.id)));
+  const restoredAssets: PeggedAsset[] = [];
+  const restoredIds: string[] = [];
+  const droppedIds: string[] = [];
+
+  for (const [id, previous] of previousAssetsById) {
+    if (presentIds.has(id)) continue;
+    if (!ACTIVE_TRACKED_IDS.has(id)) continue;
+    if (sumPegBuckets(previous.circulating) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
+      droppedIds.push(id);
+      continue;
+    }
+    restoredAssets.push(markRestoredSupply(previous));
+    restoredIds.push(id);
+  }
+
+  return { assets: restoredAssets, restoredIds, droppedIds };
+}
+
 export async function loadFreshFxRates(
   db: D1Database,
   logPrefix = "[sync-stablecoins]",
