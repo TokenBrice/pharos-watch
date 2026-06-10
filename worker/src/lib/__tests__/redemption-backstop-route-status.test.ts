@@ -95,6 +95,55 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.capsApplied).toEqual([]);
   });
 
+  it("impairs live-open evidence during severe market impairment when the route is not strong live-direct", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: {
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        routeStatusReason: "Active severe depeg",
+        routeStatusReviewedAt: "2026-05-12",
+        activeDepegBps: 3000,
+        activeDepegStartedAt: 1_777_000_000,
+        activeDepegDirection: "below",
+      },
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
+  });
+
+  it("lets the strong live-direct exception survive on static evidence alone when the resolved flag is set", () => {
+    // The exception flag is computed by the entry builder from the FINAL
+    // resolved capacity state; the merge honors it regardless of which
+    // evidence channel carried the open status.
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      severeMarketImplied: {
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        routeStatusReason: "Active severe depeg",
+        routeStatusReviewedAt: "2026-05-12",
+        activeDepegBps: 3000,
+        activeDepegStartedAt: 1_777_000_000,
+        activeDepegDirection: "below",
+      },
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("open");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.capsApplied).toEqual([]);
+  });
+
   it("does not exempt strong live-direct routes from output dependency impairment", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,

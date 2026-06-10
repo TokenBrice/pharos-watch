@@ -4,7 +4,7 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { StablecoinMeta } from "@shared/types";
 
-interface ActiveDepegAvailabilityRow {
+export interface ActiveDepegAvailabilityRow {
   stablecoin_id: string;
   peak_deviation_bps: number;
   direction?: "above" | "below" | string | null;
@@ -59,7 +59,7 @@ function addDependencyWeight(
 function resolveOutputDependencyWeights(
   meta: StablecoinMeta,
   config: RedemptionBackstopConfig,
-): Map<string, number> {
+): { weights: Map<string, number>; reserveDerived: boolean } {
   const weights = new Map<string, number>();
 
   if (meta.variantOf) {
@@ -69,8 +69,8 @@ function resolveOutputDependencyWeights(
     addDependencyWeight(weights, meta.pegReferenceId, 1, meta.id);
   }
 
-  if (weights.size > 0) return weights;
-  if (config.routeFamily === "offchain-issuer") return weights;
+  if (weights.size > 0) return { weights, reserveDerived: false };
+  if (config.routeFamily === "offchain-issuer") return { weights, reserveDerived: false };
 
   for (const reserve of meta.reserves ?? []) {
     addDependencyWeight(weights, reserve.coinId, reserve.pct / 100, meta.id);
@@ -80,7 +80,48 @@ function resolveOutputDependencyWeights(
     addDependencyWeight(weights, dependency.id, dependency.weight, meta.id);
   }
 
-  return weights;
+  return { weights, reserveDerived: true };
+}
+
+export interface OutputDependencyImpairmentEvaluation {
+  impairedRow: ActiveDepegAvailabilityRow;
+  impairedDependencyId: string;
+  outputImpairedShare: number;
+  /** True when the configured output dependency weights sum above 1.0 (over-leveraged composition). */
+  overLeveragedComposition: boolean;
+}
+
+export function evaluateOutputDependencyImpairment(
+  weights: ReadonlyMap<string, number>,
+  directRowsById: ReadonlyMap<string, ActiveDepegAvailabilityRow>,
+): OutputDependencyImpairmentEvaluation | null {
+  let impairedRow: ActiveDepegAvailabilityRow | null = null;
+  let impairedDependencyId: string | null = null;
+  let impairedShare = 0;
+  let totalWeight = 0;
+
+  for (const [dependencyId, weight] of weights) {
+    totalWeight += weight;
+    const dependencyRow = directRowsById.get(dependencyId);
+    if (!dependencyRow) continue;
+    impairedShare += weight;
+    if (
+      impairedRow == null ||
+      Math.abs(dependencyRow.peak_deviation_bps) > Math.abs(impairedRow.peak_deviation_bps)
+    ) {
+      impairedRow = dependencyRow;
+      impairedDependencyId = dependencyId;
+    }
+  }
+
+  if (!impairedRow || !impairedDependencyId) return null;
+
+  return {
+    impairedRow,
+    impairedDependencyId,
+    outputImpairedShare: Math.min(1, Math.max(0, impairedShare)),
+    overLeveragedComposition: totalWeight > 1 + 1e-9,
+  };
 }
 
 export async function loadSevereActiveDepegAvailabilityMap(
@@ -121,38 +162,27 @@ export async function loadSevereActiveDepegAvailabilityMap(
     const config = getRedemptionBackstopConfig(meta.id);
     if (!config) continue;
 
-    let impairedRow: ActiveDepegAvailabilityRow | null = null;
-    let impairedDependencyId: string | null = null;
-    let impairedShare = 0;
-    const outputDependencyWeights = resolveOutputDependencyWeights(meta, config);
+    const { weights: outputDependencyWeights, reserveDerived } = resolveOutputDependencyWeights(meta, config);
+    const evaluation = evaluateOutputDependencyImpairment(outputDependencyWeights, directRowsById);
+    if (!evaluation) continue;
 
-    for (const [dependencyId, weight] of outputDependencyWeights) {
-      const dependencyRow = directRowsById.get(dependencyId);
-      if (!dependencyRow) continue;
-      impairedShare += weight;
-      if (
-        impairedRow == null ||
-        Math.abs(dependencyRow.peak_deviation_bps) > Math.abs(impairedRow.peak_deviation_bps)
-      ) {
-        impairedRow = dependencyRow;
-        impairedDependencyId = dependencyId;
-      }
-    }
-
-    if (!impairedRow || !impairedDependencyId) continue;
-
+    const { impairedRow, impairedDependencyId, outputImpairedShare } = evaluation;
     const activeDepegBps = Math.abs(impairedRow.peak_deviation_bps);
     const dependencySymbol = getTrackedSymbol(impairedDependencyId);
     const isParentImpairment = meta.variantOf === impairedDependencyId || meta.pegReferenceId === impairedDependencyId;
-    const outputImpairedShare = Math.min(1, Math.max(0, impairedShare));
     const outputImpairedSharePct = Math.round(outputImpairedShare * 100);
+    const overLeveragedMarker =
+      reserveDerived && evaluation.overLeveragedComposition
+        ? " Modeled output dependency weights sum above 100% of supply (over-leveraged composition); the impaired output share is clamped at 100%."
+        : "";
     result.set(meta.id, {
       routeStatus: "degraded",
       routeStatusSource: "market-implied",
       routeStatusReason:
-        isParentImpairment
+        (isParentImpairment
           ? `Output asset impairment: parent ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(impairedRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`
-          : `Output asset impairment: ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(impairedRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`,
+          : `Output asset impairment: ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(impairedRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`) +
+        overLeveragedMarker,
       routeStatusReviewedAt,
       activeDepegBps,
       activeDepegStartedAt: impairedRow.started_at,

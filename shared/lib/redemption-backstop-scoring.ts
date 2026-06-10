@@ -35,6 +35,16 @@ const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = {
   low: 0.35,
 } as const satisfies Record<RedemptionModelConfidence, number>;
 
+/**
+ * `missingCapacityBehavior: "unbounded"` is intentional and load-bearing:
+ * eventual-only routes (null scoring capacity) rely on it for the DEX-gated
+ * documented offchain-issuer primary-market bonus, and bounded
+ * (`immediate-bounded`) worker rows can never reach the blend with a non-null
+ * redemption score and unknown capacity because every capacity resolver either
+ * sets `scoringCapacityUsd` or fails the row to `missing-capacity` /
+ * `missing-cache` before scoring. Do not gate unknown capacity here without
+ * threading `capacitySemantics` through both blend callers.
+ */
 const REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR = {
   formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
   missingCapacityBehavior: "unbounded",
@@ -406,7 +416,10 @@ function resolveEffectiveExitCapacityFactor(options: {
 }
 
 function resolveEffectiveExitConfidenceFactor(modelConfidence: RedemptionModelConfidence | undefined): number {
-  return modelConfidence ? REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS[modelConfidence] : 1;
+  // Fail conservative: a v4 blend without model confidence gets the "low"
+  // factor instead of full redemption weight. All current runtime callers pass
+  // a derived rollup, so this only guards untyped or future call sites.
+  return REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS[modelConfidence ?? "low"];
 }
 
 export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {

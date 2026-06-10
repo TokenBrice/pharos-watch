@@ -1238,6 +1238,77 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
   });
 
+  it("evaluates the severe-depeg exemption against the final downgraded capacity state", async () => {
+    // Same direct-telemetry adapter and severe depeg as the strong live-direct
+    // exemption test above, but the live snapshot is stale, so capacity
+    // resolution downgrades the route to the configured heuristic fallback.
+    // The exemption must be asserted against that FINAL state and not the
+    // optimistic live-direct configuration, so the route is impaired.
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "zchf-frankencoin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      50_000_000,
+      33,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "zchf-frankencoin",
+          fetchedAt: now - 7_200,
+          source: "test",
+          metadata: {
+            immediateRedeemableUsd: 5_000_000,
+            immediateRedeemableRatio: 0.1,
+            sourceTimestamp: now - 7_200,
+            redemption: {
+              capacityUsd: 5_000_000,
+              capacityRatioOfSupply: 0.1,
+              capacityKind: "live-direct",
+              freshnessKind: "same-run-onchain",
+              sourceTimestamp: now - 7_200,
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+        routeAvailability: {
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          routeStatusReason:
+            "Active severe depeg of 3000 bps started 2026-04-14; static redemption route requires current live-open evidence before it can score.",
+          routeStatusReviewedAt: "2026-04-14",
+          activeDepegBps: 3000,
+          activeDepegStartedAt: now,
+          activeDepegDirection: "below",
+        },
+      },
+    );
+
+    // Capacity resolution downgraded the live-direct route to the fallback
+    expect(entry.provider).toBe("reserve-sync-fallback");
+    expect(entry.sourceMode).toBe("estimated");
+    expect(entry.capacityConfidence).toBe("heuristic");
+    // ...so the strong live-direct severe-depeg exemption does not apply
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.score).toBeNull();
+    expect(entry.effectiveExitScore).toBeNull();
+    expect(entry.routeStatus).toBe("degraded");
+    expect(entry.routeStatusSource).toBe("market-implied");
+    expect(entry.modelConfidence).toBe("low");
+    expect(entry.capsApplied).toContain("market-implied-depeg-impairment");
+  });
+
   it("derives modelConfidence correctly for resolved entries", async () => {
     // Dynamic capacity + fixed fee → high
     const highEntry = await buildRedemptionBackstopEntry(

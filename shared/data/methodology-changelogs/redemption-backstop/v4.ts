@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.07",
+    title: "Conservative confidence defaults and final-state depeg gating",
+    date: "2026-06-10",
+    effectiveAt: 1781049600,
+    summary:
+      "Conservative confidence defaults in the effective-exit blend, live-proxy unknown-route-status rolls up low confidence, and the severe-depeg exemption is re-evaluated against the final resolved capacity state.",
+    impact: [
+      "A v4 effective-exit blend invoked without model confidence now applies the low (0.35) confidence factor instead of full redemption weight",
+      "Live-proxy capacity with unknown route status always rolls up low model confidence; only live-direct telemetry or source-reviewed documented bounds keep unknown route status above low",
+      "The strong live-direct severe-depeg exemption is asserted against the final resolved capacity state, so live routes downgraded to fallback or heuristic capacity are impaired during severe active depegs",
+      "Output-asset impairment rows now flag over-leveraged dependency compositions whose reserve-derived weights sum above 100% of supply while keeping the impaired share clamped at 100%",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.06",
     title: "fxSAVE uses live ERC-4626 capacity",
     date: "2026-05-27",

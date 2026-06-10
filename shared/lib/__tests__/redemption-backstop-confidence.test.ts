@@ -291,6 +291,31 @@ describe("deriveModelConfidence", () => {
     );
   });
 
+  it("rolls up the unknown-route-status capacity-confidence matrix conservatively", () => {
+    // Only live-direct telemetry or a source-reviewed documented bound may keep
+    // unknown route status above low; live-proxy and heuristic always roll up low.
+    const matrix = [
+      { capacityConfidence: "live-direct", expected: "high" },
+      { capacityConfidence: "live-proxy", expected: "low" },
+      { capacityConfidence: "documented-bound", expected: "medium" },
+      { capacityConfidence: "heuristic", expected: "low" },
+    ] as const;
+
+    for (const { capacityConfidence, expected } of matrix) {
+      const result = deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence,
+        feeConfidence: "fixed",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+        holderEligibility: "any-holder",
+        sourceMode: "dynamic",
+        freshnessKind: "same-run-onchain",
+      });
+      expect(result.modelConfidence, `capacityConfidence=${capacityConfidence}`).toBe(expected);
+    }
+  });
+
   it("returns low for unknown route status with dynamic capacity", () => {
     expect(
       deriveModelConfidenceWithDetails({

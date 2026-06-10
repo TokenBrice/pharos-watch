@@ -118,6 +118,33 @@ describe("computeEffectiveExitScore", () => {
     expect(computeModeledExitSizeUsd(Number.POSITIVE_INFINITY)).toBeNull();
   });
 
+  it("defaults missing model confidence to the low factor when v4 options are present", () => {
+    // Full capacity, no modelConfidence → redemption discounted by the low factor: 90 * 0.35 → 31
+    expect(
+      computeEffectiveExitScore(null, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: 25_000_000,
+      }),
+    ).toBe(31);
+    // Identical to passing explicit low confidence
+    expect(
+      computeEffectiveExitScore(null, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: 25_000_000,
+        modelConfidence: "low",
+      }),
+    ).toBe(31);
+    // Best-path: discounted redemption (31) loses to DEX (40), no bonus without independent correlation
+    expect(
+      computeEffectiveExitScore(40, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: 25_000_000,
+      }),
+    ).toBe(40);
+    // Legacy two-arg call (no v4 options) keeps full passthrough — the blend is not applied at all
+    expect(computeEffectiveExitScore(null, 90)).toBe(90);
+  });
+
   it("treats invalid executable capacity as unbounded and clamps negative executable capacity to zero", () => {
     expect(
       computeEffectiveExitScore(null, 90, {

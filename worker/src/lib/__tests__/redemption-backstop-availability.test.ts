@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { loadSevereActiveDepegAvailabilityMap } from "../redemption-backstop-availability";
+import {
+  evaluateOutputDependencyImpairment,
+  loadSevereActiveDepegAvailabilityMap,
+  type ActiveDepegAvailabilityRow,
+} from "../redemption-backstop-availability";
 
 const REVIEW_DATE = "2026-04-22";
 
@@ -149,6 +153,61 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
+  it("accumulates impaired shares across multiple basket dependencies without an over-leverage marker", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            peak_deviation_bps: -3000,
+            direction: "below",
+            started_at: 3_000_000,
+          },
+          {
+            stablecoin_id: "usdt-tether",
+            peak_deviation_bps: -2600,
+            direction: "below",
+            started_at: 3_100_000,
+          },
+        ],
+      },
+    ]);
+
+    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+    const honey = result.get("honey-berachain");
+    expect(honey?.routeStatus).toBe("degraded");
+    // worst impaired dependency wins attribution
+    expect(honey?.outputImpairedDependencyId).toBe("usdc-circle");
+    expect(honey?.activeDepegBps).toBe(3000);
+    // usdc (0.40) + usdt (0.25) shares accumulate
+    expect(honey?.outputImpairedShare).toBeCloseTo(0.65, 6);
+    // composition weights sum to exactly 1.0, so no over-leverage marker is emitted
+    expect(honey?.routeStatusReason).not.toContain("over-leveraged");
+  });
+
+  it("ignores severe depegs of coins that are no configured route's output dependency", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            stablecoin_id: "not-a-tracked-dependency",
+            peak_deviation_bps: -4000,
+            direction: "below",
+            started_at: 1_000_000,
+          },
+        ],
+      },
+    ]);
+
+    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
+
+    // The direct row itself is preserved, but nothing inherits it
+    expect(result.get("not-a-tracked-dependency")?.routeStatus).toBe("degraded");
+    expect(result.size).toBe(1);
+  });
+
   it("reports weighted output impairment for basket dependencies", async () => {
     const db = mockD1([
       {
@@ -171,5 +230,64 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(honey?.outputImpairedShare).toBeGreaterThan(0);
     expect(honey?.outputImpairedShare).toBeLessThan(1);
     expect(honey?.routeStatusReason).toContain("modeled route output is impaired");
+  });
+});
+
+describe("evaluateOutputDependencyImpairment", () => {
+  const row = (stablecoinId: string, peakDeviationBps: number, startedAt: number): ActiveDepegAvailabilityRow => ({
+    stablecoin_id: stablecoinId,
+    peak_deviation_bps: peakDeviationBps,
+    direction: "below",
+    started_at: startedAt,
+  });
+
+  it("clamps over-leveraged compositions to a 100% impaired share and flags them", () => {
+    // Reserve-derived weights summing to 1.30 — both dependencies impaired
+    const weights = new Map([
+      ["dep-a", 0.7],
+      ["dep-b", 0.6],
+    ]);
+    const directRowsById = new Map([
+      ["dep-a", row("dep-a", -2800, 1_000_000)],
+      ["dep-b", row("dep-b", -3600, 2_000_000)],
+    ]);
+
+    const evaluation = evaluateOutputDependencyImpairment(weights, directRowsById);
+
+    expect(evaluation).not.toBeNull();
+    expect(evaluation?.outputImpairedShare).toBe(1);
+    expect(evaluation?.overLeveragedComposition).toBe(true);
+    // worst deviation wins attribution
+    expect(evaluation?.impairedDependencyId).toBe("dep-b");
+    expect(evaluation?.impairedRow.peak_deviation_bps).toBe(-3600);
+  });
+
+  it("does not flag compositions whose weights sum to at most 1.0", () => {
+    const weights = new Map([
+      ["dep-a", 0.6],
+      ["dep-b", 0.4],
+    ]);
+    const directRowsById = new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]);
+
+    const evaluation = evaluateOutputDependencyImpairment(weights, directRowsById);
+
+    expect(evaluation?.outputImpairedShare).toBeCloseTo(0.6, 6);
+    expect(evaluation?.overLeveragedComposition).toBe(false);
+  });
+
+  it("ignores dependency coins with no active severe depeg row", () => {
+    const weights = new Map([
+      ["dep-a", 0.5],
+      ["dep-missing", 0.5],
+    ]);
+
+    expect(evaluateOutputDependencyImpairment(weights, new Map())).toBeNull();
+
+    const partial = evaluateOutputDependencyImpairment(
+      weights,
+      new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]),
+    );
+    expect(partial?.outputImpairedShare).toBeCloseTo(0.5, 6);
+    expect(partial?.impairedDependencyId).toBe("dep-a");
   });
 });
