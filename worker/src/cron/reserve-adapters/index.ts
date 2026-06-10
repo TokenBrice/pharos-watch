@@ -60,7 +60,7 @@ import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
-const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
+const ADAPTER_FNS = {
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
@@ -118,8 +118,11 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "usdd-data-platform": fetchUsddDataPlatformReserves,
   yamato: fetchYamatoReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
-};
+} satisfies Record<LiveReserveAdapterKey, AdapterFn>;
 
+// Cast (not satisfies) below: Object.fromEntries widens keys to string, so the
+// adapter-key map type must be re-asserted; key coverage is enforced by the
+// ADAPTER_FNS `satisfies` check and the registry test.
 const ADAPTERS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS).map(([key, definition]) => [
     key,
