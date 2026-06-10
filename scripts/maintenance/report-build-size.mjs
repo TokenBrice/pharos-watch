@@ -40,8 +40,10 @@ const DEFAULT_BUDGETS = {
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
   largestTxtBytes: 1_300_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
-  // page now carries richer SEO JSON-LD, so keep a small ratchet above 220 KB.
-  representativeDetailHtmlBytes: 230_000,
+  // page now carries richer SEO JSON-LD plus the inline critical-CSS block
+  // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
+  // ceiling sits above the ~253 KB optimized payload.
+  representativeDetailHtmlBytes: 270_000,
   representativeDetailPageTxtBytes: 90_000,
 };
 

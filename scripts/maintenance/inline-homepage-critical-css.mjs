@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Beasties from "beasties";
@@ -14,7 +14,18 @@ if (!existsSync(homepagePath)) {
   process.exit(1);
 }
 
-const before = readFileSync(homepagePath, "utf8");
+// Coin detail pages are the SEO landing surface (~400 pages sharing one
+// template); without this pass each of them render-blocks on the full global
+// stylesheet (~64 KB gz). Pages are processed individually (shared optimizer,
+// ~60ms/page) so per-coin markup variations stay correct.
+const stablecoinDir = path.join(outDir, "stablecoin");
+const detailPagePaths = existsSync(stablecoinDir)
+  ? readdirSync(stablecoinDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(stablecoinDir, entry.name, "index.html"))
+      .filter((file) => existsSync(file))
+  : [];
+
 const optimizer = new Beasties({
   path: outDir,
   publicPath: "/",
@@ -27,53 +38,84 @@ const optimizer = new Beasties({
 });
 
 const asyncCssLoaderPath = "/critical-css-loader.js";
-
-let after = await optimizer.process(before);
 const asyncStylesheetPattern =
   /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/chunks\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
 
-let hasAsyncStylesheet = false;
-after = after.replace(asyncStylesheetPattern, (tag) => {
-  hasAsyncStylesheet = true;
-  const withoutInlineHandler = tag.replace(/\s+onload=["']this\.media\s*=\s*["']all["']["']/i, "");
+async function optimizePage(filePath, label) {
+  const before = readFileSync(filePath, "utf8");
 
-  if (/\sdata-pharos-critical-css=/.test(withoutInlineHandler)) {
-    return withoutInlineHandler;
+  // Re-running Beasties on an already-optimized page re-attaches onload
+  // handlers and duplicates the style block; treat processed pages as done.
+  if (before.includes('data-pharos-critical-css="async"')) {
+    const bytes = Buffer.byteLength(before);
+    return { beforeBytes: bytes, afterBytes: bytes, skipped: true };
   }
 
-  return withoutInlineHandler.replace(/\s*\/?>$/, ' data-pharos-critical-css="async">');
-});
+  let after = await optimizer.process(before);
 
-if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
-  after = after.replace("</head>", `<script src="${asyncCssLoaderPath}" defer></script></head>`);
+  let hasAsyncStylesheet = false;
+  after = after.replace(asyncStylesheetPattern, (tag) => {
+    hasAsyncStylesheet = true;
+    const withoutInlineHandler = tag.replace(/\s+onload=["']this\.media\s*=\s*["']all["']["']/i, "");
+
+    if (/\sdata-pharos-critical-css=/.test(withoutInlineHandler)) {
+      return withoutInlineHandler;
+    }
+
+    return withoutInlineHandler.replace(/\s*\/?>$/, ' data-pharos-critical-css="async">');
+  });
+
+  if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
+    after = after.replace("</head>", `<script src="${asyncCssLoaderPath}" defer></script></head>`);
+  }
+
+  const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
+
+  if (!/<style\b[^>]*>/.test(after)) {
+    throw new Error(`${label}: Beasties did not inline a critical style block.`);
+  }
+
+  if (/<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/chunks\/[^"']+\.css)(?![^>]*\bmedia=["']print["'])[^>]*>/i.test(withoutNoscript)) {
+    throw new Error(`${label}: still has a render-blocking Next CSS link outside <noscript>.`);
+  }
+
+  if (/<[a-z][^>]*\son[a-z]+\s*=/i.test(withoutNoscript)) {
+    throw new Error(`${label}: contains an inline event handler outside <noscript>.`);
+  }
+
+  if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
+    throw new Error(`${label}: has async critical CSS without the CSP-safe loader script.`);
+  }
+
+  if (after !== before) {
+    writeFileSync(filePath, after);
+  }
+
+  return { beforeBytes: Buffer.byteLength(before), afterBytes: Buffer.byteLength(after) };
 }
 
-const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
+const startedAt = Date.now();
 
-if (!/<style\b[^>]*>/.test(after)) {
-  console.error("[critical-css] Beasties did not inline a critical style block.");
+try {
+  const homepage = await optimizePage(homepagePath, "out/index.html");
+  console.log(
+    `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
+  );
+
+  let detailBefore = 0;
+  let detailAfter = 0;
+  for (const filePath of detailPagePaths) {
+    const result = await optimizePage(filePath, path.relative(root, filePath));
+    detailBefore += result.beforeBytes;
+    detailAfter += result.afterBytes;
+  }
+  if (detailPagePaths.length > 0) {
+    console.log(
+      `[critical-css] Optimized ${detailPagePaths.length} coin detail pages ` +
+      `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
+    );
+  }
+} catch (error) {
+  console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
-
-if (/<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/chunks\/[^"']+\.css)(?![^>]*\bmedia=["']print["'])[^>]*>/i.test(withoutNoscript)) {
-  console.error("[critical-css] Homepage still has a render-blocking Next CSS link outside <noscript>.");
-  process.exit(1);
-}
-
-if (/<[a-z][^>]*\son[a-z]+\s*=/i.test(withoutNoscript)) {
-  console.error("[critical-css] Homepage contains an inline event handler outside <noscript>.");
-  process.exit(1);
-}
-
-if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
-  console.error("[critical-css] Homepage has async critical CSS without the CSP-safe loader script.");
-  process.exit(1);
-}
-
-if (after !== before) {
-  writeFileSync(homepagePath, after);
-}
-
-console.log(
-  `[critical-css] Optimized out/index.html (${Buffer.byteLength(before)} -> ${Buffer.byteLength(after)} bytes).`,
-);
