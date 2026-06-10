@@ -362,7 +362,7 @@ function buildSmokeRunCode(config) {
         };
       };
 
-      const timeoutAt = Date.now() + Math.min(waitTimeoutMs, 10000);
+      const timeoutAt = Date.now() + waitTimeoutMs;
       while (Date.now() < timeoutAt) {
         const summary = summarize();
         if (summary.gtagType === "function" && summary.hasExpectedConfig && summary.hasPageView) {
