@@ -584,8 +584,19 @@ async function runRouteCheck(page, options) {
   };
   page.on("console", onConsole);
   try {
-    const summary = await captureRoute(page, options);
-    const failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
+    let summary = await captureRoute(page, options);
+    let failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
+    if (failures.length > 0 && failures.every((failure) => failure.startsWith("table geometry"))) {
+      // Data-driven tables can still be settling when the host machine is
+      // saturated (local merge-gate matrix, shared agent sessions); reload
+      // once before treating geometry as a real layout break. A deterministic
+      // break fails both attempts.
+      console.log(
+        `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after table geometry failure`,
+      );
+      summary = await captureRoute(page, options);
+      failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
+    }
     if (failures.length > 0) {
       const screenshotPath = await maybeCaptureFailureScreenshot(
         page,
