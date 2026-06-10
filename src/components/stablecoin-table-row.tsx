@@ -160,7 +160,7 @@ function StablecoinVirtualRowBase({
       }}
     >
       {showPinnedControl && (
-        <TableCell className="text-center">
+        <TableCell key="pin" className="text-center">
           {onTogglePinned && (
             <button
               type="button"
@@ -186,12 +186,12 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("rank") && (
-        <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
+        <TableCell key="rank" className="text-right text-muted-foreground text-xs font-mono tabular-nums">
           {rank}
         </TableCell>
       )}
       {isVisible("name") && (
-        <TableCell>
+        <TableCell key="name">
           <div className="flex items-center">
             <Link
               href={buildStablecoinUrl(coin.id)}
@@ -256,7 +256,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("price") && (
-        <TableCell className="text-right font-mono tabular-nums">
+        <TableCell key="price" className="text-right font-mono tabular-nums">
           <span className={confidenceClass(coin.priceConfidence)}>
             {(() => {
               const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
@@ -266,7 +266,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("peg") && (
-        <TableCell className="text-right font-mono tabular-nums">
+        <TableCell key="peg" className="text-right font-mono tabular-nums">
           {meta?.flags.navToken ? (
             <span
               className="text-muted-foreground"
@@ -298,10 +298,10 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("mcap") && (
-        <TableCell className="text-right font-mono tabular-nums">{formatCurrency(circulating)}</TableCell>
+        <TableCell key="mcap" className="text-right font-mono tabular-nums">{formatCurrency(circulating)}</TableCell>
       )}
       {isVisible("change24h") && (
-        <TableCell className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="change24h" className="text-right font-mono tabular-nums text-sm">
           <span className={change24h >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
             {prevDay > 0 ? (
               <>
@@ -314,11 +314,13 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("change7d") && (
-        <TableCell className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="change7d" className="text-right font-mono tabular-nums text-sm">
           <span className={change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
             {prevWeek > 0 ? (
               <>
-                <span className="hidden xl:inline">
+                {/* 2xl gate: below ~1536px the fixed-layout columns are too
+                    narrow for sparkline + delta; the svg painted over Grade. */}
+                <span className="hidden 2xl:inline">
                   <MiniSparkline values={supplySparklineValues} />
                 </span>
                 {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
@@ -330,7 +332,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("grade") && (
-        <TableCell className="px-3 py-2 text-center">
+        <TableCell key="grade" className="px-3 py-2 text-center">
           {reportCard && (
             <Badge
               variant="outline"
@@ -349,7 +351,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("stability") && (
-        <TableCell className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="stability" className="text-right font-mono tabular-nums text-sm">
           {(() => {
             if (meta?.flags.navToken) {
               return <span className="text-muted-foreground">—</span>;
@@ -362,7 +364,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("liquidity") && (
-        <TableCell className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="liquidity" className="text-right font-mono tabular-nums text-sm">
           {(() => {
             if (liquidityScore === null || liquidityScore === 0) {
               return <span className="text-muted-foreground">—</span>;
@@ -372,7 +374,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("blacklistable") && (
-        <TableCell className="text-center font-mono tabular-nums text-sm">
+        <TableCell key="blacklistable" className="text-center font-mono tabular-nums text-sm">
           {blacklistStatus === true ? (
             <span className="text-red-700 dark:text-red-400">Yes</span>
           ) : blacklistStatus === false ? (
@@ -387,7 +389,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("mintAuthority") && (
-        <TableCell className="text-center">
+        <TableCell key="mintAuthority" className="text-center">
           <Badge
             variant="outline"
             className={`text-xs ${mintAuthorityStatus.badgeClassName}`}
@@ -398,7 +400,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("backing") && (
-        <TableCell className="text-center">
+        <TableCell key="backing" className="text-center">
           {meta && (
             <Badge variant="outline" className={`text-xs ${BACKING_COLORS[meta.flags.backing] ?? ""}`}>
               {BACKING_LABELS_SHORT[meta.flags.backing]}
@@ -407,7 +409,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("type") && (
-        <TableCell className="text-center">
+        <TableCell key="type" className="text-center">
           {meta && (
             <Badge variant="outline" className={`text-xs ${GOVERNANCE_COLORS[meta.flags.governance] ?? ""}`}>
               {GOVERNANCE_LABELS_SHORT[meta.flags.governance]}
@@ -416,7 +418,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("flags") && (
-        <TableCell className="">
+        <TableCell key="flags" className="">
           <div className="flex flex-wrap gap-1 justify-center">
             {meta?.flags.pegCurrency !== "USD" && (
               <Badge variant="secondary" className="text-xs">
