@@ -126,7 +126,7 @@ describe("validate-ci parity", () => {
     );
     expect(extractRunSteps(pagesBuildJob)).toEqual(PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: null })));
     expect(extractRunSteps(testNoncriticalJob)).toEqual([
-      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/4", condition: null },
+      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/2", condition: null },
     ]);
     expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
     expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
@@ -385,16 +385,14 @@ describe("validate-ci parity", () => {
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const validateJob = extractJobBlock(workflow, "validate");
 
-    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(4);
+    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(2);
     expect(buildNoncriticalTestShardCommands()).toEqual([
-      "npm run test:noncritical -- --shard=1/4",
-      "npm run test:noncritical -- --shard=2/4",
-      "npm run test:noncritical -- --shard=3/4",
-      "npm run test:noncritical -- --shard=4/4",
+      "npm run test:noncritical -- --shard=1/2",
+      "npm run test:noncritical -- --shard=2/2",
     ]);
-    expect(testNoncriticalJob).toContain("shard: [1, 2, 3, 4]");
+    expect(testNoncriticalJob).toContain("shard: [1, 2]");
     expect(testNoncriticalJob).toContain("fail-fast: false");
-    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/4");
+    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/2");
     expect(validateJob).toContain("- test-noncritical");
     expect(validateJob).toContain("node <<'NODE'");
     expect(validateJob).toContain("test-noncritical");

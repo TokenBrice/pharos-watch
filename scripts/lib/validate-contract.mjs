@@ -66,7 +66,9 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run check:build-attribution",
 ];
 
-export const NONCRITICAL_TEST_SHARD_COUNT = 4;
+// 2 shards: per-shard runner fixed cost (~45s checkout/setup) outweighed the
+// ~77s of vitest per shard at 4; see Mythos audit P3-63 before raising again.
+export const NONCRITICAL_TEST_SHARD_COUNT = 2;
 
 export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_SHARD_COUNT) {
   return Array.from({ length: shardCount }, (_value, index) => {
