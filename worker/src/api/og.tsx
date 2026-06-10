@@ -598,33 +598,38 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 
   const aggregated = aggregateChains({ peggedAssets: activePeggedAssets, safetyScores, pegRates });
   const chain = aggregated.chains.find((entry) => entry.id === chainId);
-  if (!chain) {
-    return new Response("No tracked supply on this chain", {
-      status: 404,
-      headers: { "Content-Type": "text/plain" },
-    });
-  }
 
-  const topStablecoins = (chain.topStablecoins && chain.topStablecoins.length > 0
-    ? chain.topStablecoins
-    : [{ ...chain.dominantStablecoin, supplyUsd: chain.dominantStablecoin.share * chain.totalUsd }]
-  ).slice(0, 4);
-
-  const data: ChainCardData = {
-    name: chain.name,
-    totalUsd: chain.totalUsd,
-    change7dPct: chain.change7dPct,
-    stablecoinCount: chain.stablecoinCount,
-    dominanceShare: chain.dominanceShare,
-    healthScore: chain.healthScore,
-    healthBand: chain.healthBand,
-    topStablecoins: topStablecoins.map((coin) => ({
-      symbol: coin.symbol,
-      share: coin.share,
-      supplyUsd: coin.supplyUsd,
-    })),
-    lastUpdated: nowUtcLabel(),
-  };
+  // Every CHAIN_META chain page bakes this og:image URL, but aggregateChains()
+  // skips chains whose tracked supply is currently zero. Render a degraded
+  // "no tracked supply" card instead of 404 so baked share images never break
+  // when a chain's supply transiently drops out of the aggregate.
+  const data: ChainCardData = chain
+    ? {
+        name: chain.name,
+        totalUsd: chain.totalUsd,
+        change7dPct: chain.change7dPct,
+        stablecoinCount: chain.stablecoinCount,
+        dominanceShare: chain.dominanceShare,
+        healthScore: chain.healthScore,
+        healthBand: chain.healthBand,
+        topStablecoins: (chain.topStablecoins ?? []).slice(0, 4).map((coin) => ({
+          symbol: coin.symbol,
+          share: coin.share,
+          supplyUsd: coin.supplyUsd,
+        })),
+        lastUpdated: nowUtcLabel(),
+      }
+    : {
+        name: CHAIN_META[chainId].name,
+        totalUsd: 0,
+        change7dPct: 0,
+        stablecoinCount: 0,
+        dominanceShare: 0,
+        healthScore: null,
+        healthBand: null,
+        topStablecoins: [],
+        lastUpdated: nowUtcLabel(),
+      };
 
   const png = await renderPng(<ChainCard data={data} />);
   return new Response(png, { headers: CACHE_HEADERS });

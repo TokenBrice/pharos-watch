@@ -21,7 +21,7 @@ vi.mock("satori/standalone", () => ({
 import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
 import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
 import { DepegCard } from "../../lib/og-templates/depeg-card";
-import { ChainCard } from "../../lib/og-templates/chain-card";
+import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
 
 describe("stablecoin OG card data", () => {
   it("marks unavailable 24h volume as null", () => {
@@ -237,6 +237,50 @@ describe("stability index OG card", () => {
   });
 });
 
+describe("chain OG route", () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  function makeChainOgDb(assets: ReturnType<typeof makeAsset>[]) {
+    const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
+    return mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+      },
+    ]);
+  }
+
+  it("renders a degraded card when a known chain has no tracked supply", async () => {
+    // Asset with no chain attribution → aggregateChains() emits no chains, so
+    // "ethereum" (a CHAIN_META id whose page bakes this og:image URL) is
+    // absent from the aggregate and must still resolve to a 200 PNG.
+    const db = makeChainOgDb([makeAsset({ chainCirculating: {}, chains: [] })]);
+    const satoriMock = vi.mocked(satoriStandalone);
+    satoriMock.mockClear();
+
+    const res = await handleOg(db, "/api/og/chain/ethereum");
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("Content-Type")).toBe("image/png");
+
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{ data: ChainCardData }>;
+    expect(element.type).toBe(ChainCard);
+    expect(element.props.data).toMatchObject({
+      name: "Ethereum",
+      totalUsd: 0,
+      stablecoinCount: 0,
+      healthScore: null,
+      healthBand: null,
+      topStablecoins: [],
+    });
+    expect(renderToStaticMarkup(element)).toContain("No tracked stablecoin supply");
+  });
+
+  it("returns 404 for an id outside CHAIN_META", async () => {
+    const res = await handleOg(mockD1([]), "/api/og/chain/not-a-chain");
+    expect(res?.status).toBe(404);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Satori render smoke tests
 //
@@ -375,6 +419,24 @@ describe("og cards render through satori", () => {
             { symbol: "DAI", share: 0.04, supplyUsd: 5_000_000_000 },
           ],
           lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the chain card with zero tracked supply (degraded profile)", async () => {
+    const svg = await renderSvg(
+      <ChainCard
+        data={{
+          name: "Ethereum",
+          totalUsd: 0,
+          change7dPct: 0,
+          stablecoinCount: 0,
+          dominanceShare: 0,
+          healthScore: null,
+          healthBand: null,
+          topStablecoins: [],
         }}
       />,
     );

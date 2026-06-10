@@ -95,6 +95,11 @@ export function ChainCard({ data }: { data: ChainCardData }) {
       {/* Top stablecoins with share bars */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <MetricLabel fontSize={13}>TOP STABLECOINS ON CHAIN</MetricLabel>
+        {data.topStablecoins.length === 0 && (
+          <span style={{ fontFamily: "Geist Mono", fontSize: 18, color: TEXT_SECONDARY }}>
+            No tracked stablecoin supply
+          </span>
+        )}
         {data.topStablecoins.map((coin) => (
           <div
             key={coin.symbol}
