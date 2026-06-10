@@ -263,7 +263,11 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
       ...(env.SMOKE_MOBILE_UI_VIEWPORTS ? {} : { SMOKE_MOBILE_UI_VIEWPORTS: LOCAL_MOBILE_CANARY_VIEWPORTS }),
       ...(env.SMOKE_MOBILE_UI_SKIP_DESKTOP ? {} : { SMOKE_MOBILE_UI_SKIP_DESKTOP: "1" }),
       ...(env.SMOKE_MOBILE_UI_WORKERS ? {} : { SMOKE_MOBILE_UI_WORKERS: "3" }),
-      ...(env.SMOKE_MOBILE_UI_WAIT_MS ? {} : { SMOKE_MOBILE_UI_WAIT_MS: "1500" }),
+      // Local gate runs share the machine with the parallel validate matrix
+      // (and often other agent sessions); 1500 ms after-load settle flaked on
+      // data-driven tables (/flows 0/5 columns) purely under CPU contention.
+      // CI deploy lanes set their own env on idle runners and are unaffected.
+      ...(env.SMOKE_MOBILE_UI_WAIT_MS ? {} : { SMOKE_MOBILE_UI_WAIT_MS: "5000" }),
     };
   }
 
