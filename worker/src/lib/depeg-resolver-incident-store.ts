@@ -104,7 +104,7 @@ export interface EnsureCanonicalIncidentsOptions {
 }
 
 /** Raised when an event cannot be linked without an explicit repair migration. */
-export class DdrIncidentRepairRequiredError extends Error {
+class DdrIncidentRepairRequiredError extends Error {
   readonly eventId: number;
 
   constructor(eventId: number, message: string) {

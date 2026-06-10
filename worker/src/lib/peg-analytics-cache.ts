@@ -1,10 +1,10 @@
 import { getCache, setCache } from "./db-cache";
 import type { PegSummaryCoin } from "@shared/types/market";
 
-export const PEG_ANALYTICS_CACHE_KEY = "peg-analytics";
+const PEG_ANALYTICS_CACHE_KEY = "peg-analytics";
 
 // Published by the quarter-hourly report-cards pass; 2x producer cadence.
-export const PEG_ANALYTICS_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+const PEG_ANALYTICS_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
 export interface PegAnalyticsCachePayload {
   computedAtSec: number;
