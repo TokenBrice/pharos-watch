@@ -16,13 +16,18 @@ if (!existsSync(homepagePath)) {
 
 // Coin detail pages are the SEO landing surface (~400 pages sharing one
 // template); without this pass each of them render-blocks on the full global
-// stylesheet (~64 KB gz). Pages are processed individually (shared optimizer,
-// ~60ms/page) so per-coin markup variations stay correct.
+// stylesheet (~64 KB gz). Each coin's /yield subpage ships the same
+// render-blocking link, so it gets the same treatment. Pages are processed
+// individually (shared optimizer, ~60ms/page) so per-coin markup variations
+// stay correct.
 const stablecoinDir = path.join(outDir, "stablecoin");
 const detailPagePaths = existsSync(stablecoinDir)
   ? readdirSync(stablecoinDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .map((entry) => path.join(stablecoinDir, entry.name, "index.html"))
+      .flatMap((entry) => [
+        path.join(stablecoinDir, entry.name, "index.html"),
+        path.join(stablecoinDir, entry.name, "yield", "index.html"),
+      ])
       .filter((file) => existsSync(file))
   : [];
 
@@ -111,7 +116,7 @@ try {
   }
   if (detailPagePaths.length > 0) {
     console.log(
-      `[critical-css] Optimized ${detailPagePaths.length} coin detail pages ` +
+      `[critical-css] Optimized ${detailPagePaths.length} coin detail + yield pages ` +
       `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
     );
   }

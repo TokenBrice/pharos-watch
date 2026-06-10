@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
@@ -9,9 +10,7 @@ import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { PysBreakdown } from "@/components/pys-breakdown";
-import { YieldChangeAttributionCard } from "@/components/yield-detail-section";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
@@ -25,6 +24,24 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { formatChartDate, formatPercent } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
+
+// Keep chart-bearing pieces dynamic: a static import here re-attaches the
+// whole recharts chunk to the eager first load of all 400+ coin yield pages.
+// Loaders route through the detail sections-bundle so this page shares the
+// detail family's lazy chunk instead of emitting its own recharts copy.
+const YieldHistoryChart = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldHistoryChart),
+  {
+    loading: () => <Skeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
+
+const YieldChangeAttributionCard = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldChangeAttributionCard),
+  {
+    loading: () => <Skeleton className="h-[120px] w-full rounded-xl" />,
+  },
+);
 
 interface YieldAnalysisClientProps {
   id: string;
