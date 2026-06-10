@@ -1,5 +1,7 @@
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
+import { writePegAnalyticsCache } from "./peg-analytics-cache";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   summarizeCollateralDriftFromLiveReserveMap,
   type CollateralDriftEntry,
@@ -73,12 +75,43 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     "report-cards-snapshot",
   );
 
+  // Nav-inclusive so the published peg-analytics cache can serve peg-summary
+  // (which needs nav tokens); the cards path filters nav entries back out.
   const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
     peggedAssets,
     fxFallbackRates,
     methodologyAsOf: stablecoinsCached.updatedAt,
-    includeNavTokens: false,
+    includeNavTokens: true,
   });
+
+  // Publish the request-hot aggregate at producer cadence: peg-summary and the
+  // per-coin OG renderer previously re-scanned ~21K depeg_events rows per edge
+  // miss to rebuild this exact snapshot.
+  const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+  const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+  let depegEventsToday = 0;
+  let depegEventsYesterday = 0;
+  for (const event of pegAnalytics.allEvents ?? []) {
+    if (event.startedAt >= todayStartSec) depegEventsToday += 1;
+    else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+  }
+  try {
+    await writePegAnalyticsCache(db, {
+      computedAtSec: pegAnalytics.nowSec,
+      depegEventsToday,
+      depegEventsYesterday,
+      pegData: [...pegAnalytics.pegDataById.values()],
+    });
+  } catch (error) {
+    console.warn(
+      "[report-cards-snapshot] peg-analytics cache publish failed (read paths fall back to direct compute):",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  const nonNavPegDataById = new Map(
+    [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
+  );
 
   const resolvedBlacklistStatuses = resolveBlacklistStatuses(
     ACTIVE_STABLECOINS,
@@ -98,7 +131,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   }
 
   const liveReportCards = buildLiveReportCards({
-    pegDataById: pegAnalytics.pegDataById,
+    pegDataById: nonNavPegDataById,
     activeDepegPeakBpsById,
     dexLiqMap: dexLiquiditySnapshot.map,
     redemptionBackstopMap,

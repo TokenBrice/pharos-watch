@@ -20,6 +20,7 @@ import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@share
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { scoreToGrade } from "@shared/lib/report-cards";
 
@@ -245,16 +246,26 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
-  const methodologyAsOf =
-    typeof stablecoinsPayload.updatedAt === "number"
-      ? stablecoinsPayload.updatedAt
-      : Math.floor(Date.now() / 1000);
-  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
-    peggedAssets,
-    fxFallbackRates,
-    methodologyAsOf,
-    includeNavTokens: false,
-  });
+  // Cache-first: only pegScore is needed here, and the direct compute
+  // re-scans ~21K depeg_events rows per render. The cache is published every
+  // 15 minutes by the report-cards pass.
+  let pegScore: number | null = null;
+  const pegAnalyticsCache = await loadPegAnalyticsCache(db).catch(() => null);
+  if (pegAnalyticsCache && pegAnalyticsCache.kind === "ok") {
+    pegScore = pegAnalyticsCache.pegDataById.get(id)?.pegScore ?? null;
+  } else {
+    const methodologyAsOf =
+      typeof stablecoinsPayload.updatedAt === "number"
+        ? stablecoinsPayload.updatedAt
+        : Math.floor(Date.now() / 1000);
+    const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets,
+      fxFallbackRates,
+      methodologyAsOf,
+      includeNavTokens: false,
+    });
+    pegScore = pegAnalytics.pegDataById.get(id)?.pegScore ?? null;
+  }
   const meta = TRACKED_META_BY_ID.get(id);
   const liq = dexLiqMap[id];
   const variantLabel = meta?.variantKind === "savings-passthrough"
@@ -284,7 +295,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     sparklineRows: sparklineRows.results ?? [],
     hasActiveDepeg: activeDepegRow !== null,
     flow7d: flowRow?.net_flow,
-    pegScore: pegAnalytics.pegDataById.get(id)?.pegScore ?? null,
+    pegScore,
     backing: meta?.flags.backing ?? "rwa-backed",
     governance: meta?.flags.governance ?? "centralized",
     redemptionScore: null, // Not available in current cache schema

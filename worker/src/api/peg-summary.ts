@@ -2,7 +2,7 @@ import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types/market";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   withErrorHandler,
@@ -14,6 +14,7 @@ import {
 import { CACHE_PROFILES, getDepegThresholdBps } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
@@ -96,7 +97,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
 
   // 2. Load DEX prices + shared peg analytics snapshot
   // Narrower column set than dex-liquidity endpoint. Catch pattern mirrors depeg-helpers.ts loadDexPriceRows() (M-3).
-  const [dexPriceResult, pegAnalytics] = await Promise.all([
+  const [dexPriceResult, pegAnalyticsCache] = await Promise.all([
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices").all<{
       stablecoin_id: string;
       dex_price_usd: number;
@@ -111,16 +112,38 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       );
       return { results: [] as never[] };
     }),
-    derivePegAnalyticsSnapshot(db, {
+    // Producer-published by the quarter-hourly report-cards pass; the direct
+    // compute below re-scans ~21K depeg_events rows, so it is fallback-only.
+    loadPegAnalyticsCache(db).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
+  ]);
+
+  let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
+  let depegEventsToday: number;
+  let depegEventsYesterday: number;
+  const now = Math.floor(Date.now() / 1000);
+
+  if (pegAnalyticsCache.kind === "ok") {
+    pegDataById = pegAnalyticsCache.pegDataById;
+    depegEventsToday = pegAnalyticsCache.payload.depegEventsToday;
+    depegEventsYesterday = pegAnalyticsCache.payload.depegEventsYesterday;
+  } else {
+    const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
       peggedAssets,
       fxFallbackRates,
       methodologyAsOf: stablecoinsCache.updatedAt,
       includeNavTokens: true,
-    }),
-  ]);
-  const allEvents = pegAnalytics.allEvents;
-  const pegDataById = pegAnalytics.pegDataById;
-  const now = pegAnalytics.nowSec;
+    });
+    pegDataById = pegAnalytics.pegDataById;
+    // Count depeg events started today vs yesterday (UTC day boundaries)
+    const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+    const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+    depegEventsToday = 0;
+    depegEventsYesterday = 0;
+    for (const event of pegAnalytics.allEvents) {
+      if (event.startedAt >= todayStartSec) depegEventsToday += 1;
+      else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+    }
+  }
 
   // Build DEX price lookup (empty if migration 0011 not yet applied)
   const dexPrices = new Map(
@@ -260,16 +283,6 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
         worstCurrent = { id: meta.id, symbol: meta.symbol, bps: currentBps };
       }
     }
-  }
-
-  // Count depeg events started today vs yesterday (UTC day boundaries)
-  const todayStart = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
-  const yesterdayStart = todayStart - DAY_SECONDS;
-  let depegEventsToday = 0;
-  let depegEventsYesterday = 0;
-  for (const e of allEvents) {
-    if (e.startedAt >= todayStart) depegEventsToday++;
-    else if (e.startedAt >= yesterdayStart) depegEventsYesterday++;
   }
 
   // Median deviation
