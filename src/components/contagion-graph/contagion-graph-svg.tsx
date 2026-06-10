@@ -40,6 +40,7 @@ interface ContagionGraphSvgProps {
   nodeScale?: number;
   suppressHubLabels?: boolean;
   showTickerLabels?: boolean;
+  fillHeight?: boolean;
   activeHoveredId: string | null;
   activeHoveredEdge: number | null;
   focusedId: string | null;
@@ -434,6 +435,7 @@ export function ContagionGraphSvg({
   nodeScale = 1,
   suppressHubLabels = false,
   showTickerLabels = false,
+  fillHeight = false,
   activeHoveredId,
   activeHoveredEdge,
   focusedId,
@@ -466,7 +468,7 @@ export function ContagionGraphSvg({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="w-full"
+      className={fillHeight ? "w-full lg:h-full" : "w-full"}
       style={{ cursor: dragId ? "grabbing" : "default" }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

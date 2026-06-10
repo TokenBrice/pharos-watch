@@ -35,7 +35,11 @@ export function ContagionGraphStage({
     : 1;
   return (
     <div
-      className="relative w-full overflow-hidden rounded-sm border"
+      className={
+        detailNodePresentation
+          ? "relative w-full overflow-hidden rounded-sm border lg:h-full"
+          : "relative w-full overflow-hidden rounded-sm border"
+      }
       style={{
         backgroundColor: "var(--graph-canvas-bg)",
         borderColor: "var(--graph-grid-line)",
@@ -61,6 +65,7 @@ export function ContagionGraphStage({
         nodeScale={detailNodeScale}
         suppressHubLabels={Boolean(detailNodePresentation)}
         showTickerLabels={showTickerLabels}
+        fillHeight={Boolean(detailNodePresentation)}
         activeHoveredId={graph.activeHoveredId}
         activeHoveredEdge={graph.activeHoveredEdge}
         focusedId={graph.focusedId}
