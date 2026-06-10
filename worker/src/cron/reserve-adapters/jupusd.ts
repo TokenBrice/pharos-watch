@@ -8,11 +8,10 @@ import {
   catchAndWarn,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 const ADAPTER_KEY = "jupusd";
@@ -58,6 +57,45 @@ const HOLDING_META: Record<string, Pick<JupUsdHoldingValue, "risk" | "coinId" | 
   USDC: { risk: "low", coinId: "usdc-circle", depType: "collateral" },
   USDtb: { risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
 };
+
+interface JupUsdFetchBudget {
+  perAttemptTimeoutMs: number;
+  totalTimeoutMs: number;
+}
+
+// Per-fetch budgets keep all three internal fetches inside the orchestrator's
+// 20s per-attempt wall so a slow endpoint surfaces a labeled per-fetch error
+// instead of a bare "adapter-timeout". The snapshots history feed is the slow
+// one (~450KB payload) and only contributes the freshness timestamp, so it is
+// bounded and degrades to unverified freshness when it cannot answer in time.
+const JUPUSD_DATA_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 8_000, totalTimeoutMs: 16_000 };
+const JUPUSD_ORACLE_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 4_000, totalTimeoutMs: 8_000 };
+const JUPUSD_SNAPSHOTS_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 10_000, totalTimeoutMs: 16_000 };
+
+async function fetchJupUsdJson<T>(
+  label: string,
+  url: string,
+  signal: AbortSignal,
+  budget: JupUsdFetchBudget,
+  ctx?: AdapterContext,
+): Promise<T> {
+  const deadline = AbortSignal.timeout(budget.totalTimeoutMs);
+  try {
+    return await fetchJsonWithRetry<T>(
+      url,
+      AbortSignal.any([signal, deadline]),
+      budget.perAttemptTimeoutMs,
+      ctx,
+    );
+  } catch (error) {
+    if (signal.aborted) throw error;
+    if (deadline.aborted) {
+      throw new Error(`jupusd ${label} fetch timed out after ${budget.totalTimeoutMs}ms: ${url}`);
+    }
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`jupusd ${label} fetch failed: ${detail}`);
+  }
+}
 
 function parseAmount(amount: string | undefined, decimals: number | undefined): number {
   if (typeof amount !== "string" || !/^\d+$/.test(amount)) return 0;
@@ -162,12 +200,11 @@ export function adaptJupUsdData(
           "https://api.jupusd.money/openapi.json",
         ],
       }),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "jupusd-transparency-api",
-            "JupUSD data payload does not expose a source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "jupusd-transparency-api",
+        "JupUSD data payload does not expose a source timestamp",
+      ),
     },
   };
 }
@@ -185,21 +222,24 @@ export async function fetchJupUsdReserves(
   const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
   const params = readParams(config);
   const extraWarnings: LiveReserveWarning[] = [];
-  const [payload, snapshots, oracle] = await Promise.all([
-    fetchJsonWithRetry<JupUsdDataPayload>(input.url, signal, 12_000, ctx),
-    params.snapshotsUrl
+  // Fast fetches first: under the 2-op adapter I/O limiter the third fetch
+  // queues behind the first two, so the sub-second oracle probe must not wait
+  // behind the slow snapshots history feed.
+  const [payload, oracle, snapshots] = await Promise.all([
+    fetchJupUsdJson<JupUsdDataPayload>("transparency data", input.url, signal, JUPUSD_DATA_BUDGET, ctx),
+    params.oracleUrl
       ? catchAndWarn(
-          fetchJsonWithRetry<JupUsdSnapshotPayload>(params.snapshotsUrl, signal, 12_000, ctx),
-          "jupusd-snapshots-unavailable",
-          `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
+          fetchJupUsdJson<JupUsdOraclePayload>("oracle", params.oracleUrl, signal, JUPUSD_ORACLE_BUDGET, ctx),
+          "jupusd-oracle-unavailable",
+          `JupUSD oracle feed failed: ${params.oracleUrl}`,
           extraWarnings,
         )
       : Promise.resolve(null),
-    params.oracleUrl
+    params.snapshotsUrl
       ? catchAndWarn(
-          fetchJsonWithRetry<JupUsdOraclePayload>(params.oracleUrl, signal, 12_000, ctx),
-          "jupusd-oracle-unavailable",
-          `JupUSD oracle feed failed: ${params.oracleUrl}`,
+          fetchJupUsdJson<JupUsdSnapshotPayload>("snapshots", params.snapshotsUrl, signal, JUPUSD_SNAPSHOTS_BUDGET, ctx),
+          "jupusd-snapshots-unavailable",
+          `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
           extraWarnings,
         )
       : Promise.resolve(null),

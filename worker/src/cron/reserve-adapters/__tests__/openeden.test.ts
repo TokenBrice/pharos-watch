@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { adaptOpenEdenUsdo } from "../openeden";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { StablecoinMeta } from "@shared/types/core";
+import { adaptOpenEdenUsdo, fetchOpenEdenUsdoReserves } from "../openeden";
+import { buildBrowserHeaders } from "../request";
 
 describe("adaptOpenEdenUsdo", () => {
   it("maps reserve composition fields into reserve slices", () => {
@@ -138,5 +141,80 @@ describe("adaptOpenEdenUsdo", () => {
     expect(() => adaptOpenEdenUsdo({ ...base, ratio: Number.NaN })).toThrow(/ratio is non-numeric/);
     expect(() => adaptOpenEdenUsdo({ ...base, ratio: 0 })).toThrow(/ratio is non-numeric/);
     expect(() => adaptOpenEdenUsdo({ ...base, ratio: -1 })).toThrow(/ratio is non-numeric/);
+  });
+});
+
+describe("fetchOpenEdenUsdoReserves", () => {
+  const coin = { id: "usdo-openeden" } as StablecoinMeta;
+  const url = "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last";
+  // Mirrors the adapter's browser-style headers and 8s per-attempt timeout,
+  // both of which are embedded in the shared JSON request cache key.
+  const cacheKey = `json-get:${url}:8000:${JSON.stringify(
+    buildBrowserHeaders("https://openeden.com", "https://openeden.com/usdo/transparency"),
+  )}`;
+  const payload = {
+    date: "2026-03-25T08:00:17.600Z",
+    usdoAmount: 100,
+    totalTbillAmountInUsd: 70,
+    usdcAmount: 15,
+    buidlAmount: 5,
+    vbillAmount: 10,
+    usycAmountInUsd: 0,
+    benjiAmount: 0,
+    reserveAssetsInUsd: 100,
+    ratio: 1,
+  };
+
+  function makeConfig(): LiveReservesConfig {
+    return {
+      adapter: "openeden-usdo",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "http-json", url } },
+    };
+  }
+
+  it("fetches the reserve composition with browser-style headers and adapts it", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(cacheKey, Promise.resolve(payload));
+
+    const result = await fetchOpenEdenUsdoReserves(
+      coin,
+      makeConfig(),
+      new AbortController().signal,
+      { requestCache: cache } as never,
+    );
+
+    expect(result.metadata?.reserveRatio).toBe(1);
+    expect(result.slices.length).toBeGreaterThan(0);
+  });
+
+  it("labels fetch failures with the adapter and fetch identity", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(cacheKey, Promise.reject(new Error(`Fetch failed for ${url}`)));
+
+    await expect(fetchOpenEdenUsdoReserves(
+      coin,
+      makeConfig(),
+      new AbortController().signal,
+      { requestCache: cache } as never,
+    )).rejects.toThrow(
+      `openeden-usdo reserve composition fetch failed: Fetch failed for ${url}`,
+    );
+  });
+
+  it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {
+    const abortError = new Error("adapter-timeout");
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(cacheKey, Promise.reject(abortError));
+    const controller = new AbortController();
+    controller.abort(abortError);
+
+    await expect(fetchOpenEdenUsdoReserves(
+      coin,
+      makeConfig(),
+      controller.signal,
+      { requestCache: cache } as never,
+    )).rejects.toBe(abortError);
   });
 });

@@ -152,17 +152,17 @@ describe("fetchJupUsdReserves", () => {
     };
   }
 
+  // Cache keys embed each fetch's per-attempt timeout: data 8s, oracle 4s,
+  // snapshots 10s (see the per-fetch budgets in jupusd.ts).
+  const dataKey = `json-get:${baseUrl}:8000:null`;
+  const snapshotsKey = `json-get:${snapshotsUrl}:10000:null`;
+  const oracleKey = `json-get:${oracleUrl}:4000:null`;
+
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
     const cache = new Map<string, Promise<unknown>>();
-    cache.set(`json-get:${baseUrl}:12000:null`, Promise.resolve(dataPayload));
-    cache.set(
-      `json-get:${snapshotsUrl}:12000:null`,
-      Promise.reject(new Error("snapshots http 503")),
-    );
-    cache.set(
-      `json-get:${oracleUrl}:12000:null`,
-      Promise.resolve({ ripcord: false }),
-    );
+    cache.set(dataKey, Promise.resolve(dataPayload));
+    cache.set(snapshotsKey, Promise.reject(new Error("snapshots http 503")));
+    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -172,21 +172,19 @@ describe("fetchJupUsdReserves", () => {
     );
 
     expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "jupusd-snapshots-unavailable", effect: "info" }),
+      expect.objectContaining({
+        code: "jupusd-snapshots-unavailable",
+        effect: "info",
+        message: expect.stringContaining("jupusd snapshots fetch failed: snapshots http 503"),
+      }),
     ]));
   });
 
   it("emits jupusd-oracle-unavailable info warning when oracle feed fails", async () => {
     const cache = new Map<string, Promise<unknown>>();
-    cache.set(`json-get:${baseUrl}:12000:null`, Promise.resolve(dataPayload));
-    cache.set(
-      `json-get:${snapshotsUrl}:12000:null`,
-      Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }),
-    );
-    cache.set(
-      `json-get:${oracleUrl}:12000:null`,
-      Promise.reject(new Error("oracle http 502")),
-    );
+    cache.set(dataKey, Promise.resolve(dataPayload));
+    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
+    cache.set(oracleKey, Promise.reject(new Error("oracle http 502")));
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -196,21 +194,19 @@ describe("fetchJupUsdReserves", () => {
     );
 
     expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "jupusd-oracle-unavailable", effect: "info" }),
+      expect.objectContaining({
+        code: "jupusd-oracle-unavailable",
+        effect: "info",
+        message: expect.stringContaining("jupusd oracle fetch failed: oracle http 502"),
+      }),
     ]));
   });
 
   it("emits no warnings when both snapshots and oracle succeed", async () => {
     const cache = new Map<string, Promise<unknown>>();
-    cache.set(`json-get:${baseUrl}:12000:null`, Promise.resolve(dataPayload));
-    cache.set(
-      `json-get:${snapshotsUrl}:12000:null`,
-      Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }),
-    );
-    cache.set(
-      `json-get:${oracleUrl}:12000:null`,
-      Promise.resolve({ ripcord: false }),
-    );
+    cache.set(dataKey, Promise.resolve(dataPayload));
+    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
+    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
 
     const result = await fetchJupUsdReserves(
       coin,
@@ -220,5 +216,38 @@ describe("fetchJupUsdReserves", () => {
     );
 
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("labels core transparency data fetch failures with the failing fetch", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(dataKey, Promise.reject(new Error("Fetch failed for https://api.jupusd.money/api/data")));
+    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
+    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+
+    await expect(fetchJupUsdReserves(
+      coin,
+      makeConfig(),
+      new AbortController().signal,
+      { requestCache: cache } as never,
+    )).rejects.toThrow(
+      "jupusd transparency data fetch failed: Fetch failed for https://api.jupusd.money/api/data",
+    );
+  });
+
+  it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {
+    const abortError = new Error("adapter-timeout");
+    const cache = new Map<string, Promise<unknown>>();
+    cache.set(dataKey, Promise.reject(abortError));
+    cache.set(snapshotsKey, Promise.resolve({ snapshots: [{ timestamp: 1776000000 }] }));
+    cache.set(oracleKey, Promise.resolve({ ripcord: false }));
+    const controller = new AbortController();
+    controller.abort(abortError);
+
+    await expect(fetchJupUsdReserves(
+      coin,
+      makeConfig(),
+      controller.signal,
+      { requestCache: cache } as never,
+    )).rejects.toBe(abortError);
   });
 });

@@ -4,11 +4,10 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
 
@@ -130,12 +129,11 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   return {
     slices,
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-          "issuer-api",
-          "OpenEden reserve composition payload does not include a trustworthy source timestamp",
-        )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "issuer-api",
+        "OpenEden reserve composition payload does not include a trustworthy source timestamp",
+      ),
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
       reserveRatio: normalizedRatio,
       supplyUsd: payload.usdoAmount,
@@ -164,6 +162,12 @@ export function adaptOpenEdenUsdo(
   return adaptOpenEdenReserveComposition(payload);
 }
 
+// The fetch budget keeps all retry attempts inside the orchestrator's 20s
+// per-attempt wall, so a slow or unreachable gateway surfaces a labeled fetch
+// error in attempt history instead of a bare "adapter-timeout".
+const OPENEDEN_PER_ATTEMPT_TIMEOUT_MS = 8_000;
+const OPENEDEN_TOTAL_TIMEOUT_MS = 16_000;
+
 export async function fetchOpenEdenUsdoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -171,12 +175,25 @@ export async function fetchOpenEdenUsdoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "openeden-usdo");
-  const payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
-    primaryInput.url,
-    signal,
-    12_000,
-    ctx,
-    { headers: OPENEDEN_BROWSER_HEADERS },
-  );
+  const deadline = AbortSignal.timeout(OPENEDEN_TOTAL_TIMEOUT_MS);
+  let payload: OpenEdenReserveCompositionResponse;
+  try {
+    payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+      primaryInput.url,
+      AbortSignal.any([signal, deadline]),
+      OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
+      ctx,
+      { headers: OPENEDEN_BROWSER_HEADERS },
+    );
+  } catch (error) {
+    if (signal.aborted) throw error;
+    if (deadline.aborted) {
+      throw new Error(
+        `openeden-usdo reserve composition fetch timed out after ${OPENEDEN_TOTAL_TIMEOUT_MS}ms: ${primaryInput.url}`,
+      );
+    }
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`openeden-usdo reserve composition fetch failed: ${detail}`);
+  }
   return adaptOpenEdenReserveComposition(payload);
 }
