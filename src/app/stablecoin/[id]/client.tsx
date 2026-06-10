@@ -8,7 +8,6 @@ import { Activity, ArrowLeft, Compass, Droplets, History as HistoryIcon, Network
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { BackToSource } from "@/components/back-to-source";
-import { ReportCardDetail } from "@/components/report-card";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -22,7 +21,6 @@ import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loa
 import { AiSummary } from "@/components/ai-summary";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
-import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
@@ -30,7 +28,6 @@ import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { CoinNotices } from "@/components/coin-notice";
-import { DEWSDetail } from "@/components/dews-detail";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
@@ -42,7 +39,6 @@ import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { BlacklistStablecoin } from "@shared/types";
-import { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 
 const FeedbackModal = dynamic(() => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal), {
   ssr: false,
@@ -55,6 +51,30 @@ function DetailSectionSkeleton({ className }: { className: string }) {
 const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => mod.McapChart), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
+
+// Keep chart-bearing sections dynamic: a static import here re-attaches the
+// whole recharts chunk to the eager first load of all 400+ coin pages.
+const MarketDataSection = dynamic(
+  () => import("@/components/stablecoin-detail/market-data-section").then((mod) => mod.MarketDataSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
+
+const DEWSDetail = dynamic(() => import("@/components/dews-detail").then((mod) => mod.DEWSDetail), {
+  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const ReportCardDetail = dynamic(() => import("@/components/report-card").then((mod) => mod.ReportCardDetail), {
+  loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+});
+
+const ReservePanel = dynamic(
+  () => import("@/components/stablecoin-detail/reserve-panel").then((mod) => mod.ReservePanel),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
 const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
