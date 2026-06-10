@@ -9,6 +9,7 @@ import {
   getTableScanOutcome,
   getTouchScanOutcome,
   isAllowedSmallTouchTarget,
+  isMeasurableTableRow,
   parseArgs,
   parseRouteList,
   parseViewportList,
@@ -146,6 +147,48 @@ describe("console and table scan outcomes", () => {
     });
 
     expect(failures).toEqual([]);
+  });
+});
+
+describe("isMeasurableTableRow", () => {
+  const skeletonRow = {
+    querySelector: (selector: string) => (selector === '[data-slot="skeleton"]' ? {} : null),
+  };
+  const dataRow = { querySelector: () => null };
+
+  it("treats skeleton placeholder rows as unmeasurable", () => {
+    expect(isMeasurableTableRow(skeletonRow)).toBe(false);
+  });
+
+  it("treats real data rows as measurable", () => {
+    expect(isMeasurableTableRow(dataRow)).toBe(true);
+  });
+
+  it("skips geometry for skeleton-only tables and enforces it once real rows render", () => {
+    const baseSummary = {
+      status: 200,
+      textLength: 100,
+      hasFrameworkOverlay: false,
+      overflowDelta: 0,
+      touchScan: { violations: [] },
+    };
+
+    // Skeleton-only or empty tbodies are unmeasurable: the scan skips them.
+    expect(
+      assertRouteSummary({ ...baseSummary, tableScan: { checked: 0, issues: [] } }, { strictTouchTargets: true }),
+    ).toEqual([]);
+
+    // With at least one real row the scan runs, and geometry failures block
+    // the route — there is no upstream-failure-notice waiver anymore.
+    expect(
+      assertRouteSummary({
+        ...baseSummary,
+        tableScan: {
+          checked: 1,
+          issues: [{ kind: "too-few-visible-columns", detail: "0/5 header columns visible" }],
+        },
+      }, { strictTouchTargets: true }).join("\n"),
+    ).toContain("table geometry failures=1");
   });
 });
 

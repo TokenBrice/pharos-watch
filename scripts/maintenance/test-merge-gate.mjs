@@ -23,15 +23,7 @@ import {
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
   "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/";
-// /flows is excluded from the LOCAL mobile lane only: its table renders
-// skeleton rows with collapsed fixed-layout columns whenever the gate's own
-// request burst trips production WAF throttling through the static-export
-// proxy, which reads as a geometry failure. It passes every isolated run and
-// stays fully covered by the deploy-lane mobile smoke in pages-release.yml,
-// which runs on CI egress with its own hardcoded route list.
-const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES.split(",")
-  .filter((route) => route !== "/flows/")
-  .join(",");
+const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
 const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);

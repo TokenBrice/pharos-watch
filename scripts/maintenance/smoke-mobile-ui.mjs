@@ -153,6 +153,12 @@ export function isAllowedSmallTouchTarget(target) {
   return false;
 }
 
+export function isMeasurableTableRow(row) {
+  // Skeleton rows are real <tr> elements rendered during loading states; they
+  // say nothing about real column geometry.
+  return !row.querySelector('[data-slot="skeleton"]');
+}
+
 export function getTouchScanOutcome(scan, { strictTouchTargets = false } = {}) {
   const hardFloor = scan.violations.filter((entry) => entry.severity === "hard-floor");
   const targetWarnings = scan.violations.filter((entry) => entry.severity === "target");
@@ -233,8 +239,10 @@ async function waitForSettledPage(page, waitMs) {
 
 function buildRouteCaptureScript() {
   const allowlistFn = isAllowedSmallTouchTarget.toString();
+  const measurableRowFn = isMeasurableTableRow.toString();
   return `async ({ scanTableGeometry, scanTouchTargets, touchHardFloorPx, touchTargetPx }) => {
     const isAllowedSmallTouchTarget = ${allowlistFn};
+    const isMeasurableTableRow = ${measurableRowFn};
     const text = document.body?.innerText ?? "";
     const doc = document.documentElement;
     const body = document.body;
@@ -367,6 +375,18 @@ function buildRouteCaptureScript() {
     if (scanTableGeometry) {
       for (const table of document.querySelectorAll("table")) {
         if (!isElementVisible(table)) continue;
+        // Screen-reader chart data tables live inside an sr-only wrapper: the
+        // 1px clipped wrapper hides them visually, but the inner <table> keeps
+        // its natural layout rects, so it has no visual geometry to check.
+        if (table.closest(".sr-only")) continue;
+        const measurableRows = Array.from(table.querySelectorAll("tbody tr"))
+          .filter(isElementVisible)
+          .filter(isMeasurableTableRow);
+        // Column geometry is only meaningful once real data rows exist: an
+        // empty or skeleton-only tbody (data still loading, or upstream/proxy
+        // failure leaving the shell rendered) collapses fixed-layout columns
+        // to zero width, so the table is unmeasurable rather than broken.
+        if (measurableRows.length === 0) continue;
         tableScan.checked += 1;
         const tableRect = table.getBoundingClientRect();
         const tableViewport = getHorizontalViewport(table);
@@ -376,11 +396,7 @@ function buildRouteCaptureScript() {
           .filter(({ rect }) => rect.width > 1 && intersects(rect, tableViewport))
           .sort((a, b) => a.rect.left - b.rect.left);
 
-        const visibleBodyRowCount = Array.from(table.querySelectorAll("tbody tr")).filter(isElementVisible).length;
-        // Column geometry is only meaningful once data rows exist: an empty
-        // tbody (data still loading, or upstream/proxy failure leaving the
-        // shell rendered) collapses fixed-layout columns to zero width.
-        if (visibleBodyRowCount > 0 && headerCells.length >= 3 && visibleHeaderCells.length < 3) {
+        if (headerCells.length >= 3 && visibleHeaderCells.length < 3) {
           tableScan.issues.push({
             kind: "too-few-visible-columns",
             selector: shortSelector(table),
@@ -410,8 +426,7 @@ function buildRouteCaptureScript() {
           });
         }
 
-        const visibleRows = Array.from(table.querySelectorAll("tbody tr")).filter(isElementVisible).slice(0, 3);
-        for (const row of visibleRows) {
+        for (const row of measurableRows.slice(0, 3)) {
           const visibleCells = Array.from(row.children)
             .filter(isElementVisible)
             .map((cell) => ({ cell, rect: cell.getBoundingClientRect() }))
@@ -485,7 +500,6 @@ function buildRouteCaptureScript() {
       innerWidth,
       overflowDelta: scrollWidth - innerWidth,
       scrollWidth,
-      hasUpstreamFailureNotice: text.includes("Failed to load") || text.includes("Refresh failed"),
       textLength: text.replace(/\\s+/g, " ").trim().length,
       textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 160),
       title: document.title,
@@ -543,11 +557,7 @@ export function assertRouteSummary(summary, { strictTouchTargets }) {
     failures.push(`horizontal overflow ${summary.scrollWidth}px > ${summary.innerWidth}px`);
   }
   const tableOutcome = getTableScanOutcome(summary.tableScan);
-  // Data-driven tables render degenerate geometry when the page is in its
-  // API-failure state (upstream/proxy unavailable or throttled). The check
-  // exists to catch CSS breakage, not upstream outages — the runner prints a
-  // WARN for these instead.
-  if (tableOutcome.failCount > 0 && !summary.hasUpstreamFailureNotice) {
+  if (tableOutcome.failCount > 0) {
     failures.push(
       `table geometry failures=${tableOutcome.failCount} (${tableOutcome.issues
         .slice(0, 3)
@@ -607,26 +617,7 @@ async function runRouteCheck(page, options) {
       );
       summary = await captureRoute(page, options);
     }
-    let failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
-    {
-      const tableOutcome = getTableScanOutcome(summary.tableScan);
-      if (tableOutcome.failCount > 0 && summary.hasUpstreamFailureNotice) {
-        console.log(
-          `[mobile-ui-smoke] WARN ${options.route} @ ${formatViewport(viewport)}: table geometry skipped — page is in upstream-data-failure state`,
-        );
-      }
-    }
-    if (failures.length > 0 && failures.every((failure) => failure.startsWith("table geometry"))) {
-      // Data-driven tables can still be settling when the host machine is
-      // saturated (local merge-gate matrix, shared agent sessions); reload
-      // once before treating geometry as a real layout break. A deterministic
-      // break fails both attempts.
-      console.log(
-        `[mobile-ui-smoke] RETRY ${options.route} @ ${formatViewport(viewport)} after table geometry failure`,
-      );
-      summary = await captureRoute(page, options);
-      failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
-    }
+    const failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
     if (failures.length > 0) {
       const screenshotPath = await maybeCaptureFailureScreenshot(
         page,

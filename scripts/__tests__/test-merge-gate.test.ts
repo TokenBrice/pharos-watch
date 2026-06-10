@@ -254,7 +254,7 @@ describe("buildCommandPlan", () => {
       SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
-      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/liquidity/,/yield/,/depeg/",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -276,7 +276,7 @@ describe("buildCommandPlan", () => {
       SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
-      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/liquidity/,/yield/,/depeg/",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -359,6 +359,19 @@ describe("buildCommandPlan", () => {
         ["npm run typecheck:worker"],
       ],
     ]);
+  });
+
+  it("routes plan items outside the known command groups into the parallel post-validate batch", () => {
+    const plan = [
+      ...buildCommandPlan(["shared/lib/classification.ts"]),
+      { cmd: "npm run check:future-guardrail", reasons: ["test"] },
+    ];
+    const batches = buildExecutionBatches(plan).map((batch) =>
+      batch.map((unit) => unit.commands.map((item) => item.cmd)),
+    );
+
+    expect(batches).toHaveLength(2);
+    expect(batches[1]).toContainEqual(["npm run check:future-guardrail"]);
   });
 
   it("aborts sibling parallel groups after the first post-validate failure", async () => {
