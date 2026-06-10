@@ -149,5 +149,6 @@
   "yieldConfig": {
     "yieldSource": "PikuDAO lending vault",
     "yieldType": "lending-vault"
-  }
+  },
+  "launchDate": "2025-08-22"
 }

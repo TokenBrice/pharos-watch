@@ -100,7 +100,9 @@
         }
       ],
       "sourceFreeRationale": "CDP mechanism and DAO/proxy governance confirmed from MoC docs and prior Pharos blacklistability review; on-chain Governor/ProxyAdmin owner and changer authority not independently read this pass.",
-      "unresolvedQuestions": ["Resolve the on-chain MoC Governor/ProxyAdmin owner and upgrade-authorization threshold on Rootstock."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain MoC Governor/ProxyAdmin owner and upgrade-authorization threshold on Rootstock."
+      ]
     }
   },
   "chainTier": "mature-alt-l1",
@@ -111,5 +113,6 @@
       "pct": 100,
       "risk": "medium"
     }
-  ]
+  ],
+  "launchDate": "1970-01-01"
 }

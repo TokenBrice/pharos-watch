@@ -243,5 +243,6 @@
         "Resolve the on-chain admin/owner of 0x000000000eccff26b795f73fb0a70d48da657fef and who can modify the approved-collateral set (Sonic Labs multisig vs Frax governance) before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2026-03-03"
 }

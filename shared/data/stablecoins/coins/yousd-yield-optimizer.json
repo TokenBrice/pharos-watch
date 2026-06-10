@@ -202,7 +202,10 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "YO Protocol docs", "url": "https://docs.yo.xyz" },
+        {
+          "label": "YO Protocol docs",
+          "url": "https://docs.yo.xyz"
+        },
         {
           "label": "yoUSD vault",
           "url": "https://app.yo.xyz/vault/base/0x0000000f2eB9f69274678c76222B35eEc7588a65"
@@ -212,5 +215,6 @@
         "Resolve the current yoGateway and strategy-allocation admin paths beyond the vault authority contract."
       ]
     }
-  }
+  },
+  "launchDate": "2025-04-17"
 }

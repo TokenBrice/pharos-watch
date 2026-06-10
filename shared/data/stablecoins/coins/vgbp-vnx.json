@@ -171,5 +171,6 @@
         "Confirm whether the VNX owner/minter EOA is controlled by a multisig, MPC, or other policy layer."
       ]
     }
-  }
+  },
+  "launchDate": "2025-06-02"
 }

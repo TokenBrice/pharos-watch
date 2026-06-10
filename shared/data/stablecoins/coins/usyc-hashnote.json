@@ -174,5 +174,6 @@
   "yieldConfig": {
     "yieldSource": "Hashnote T-bill fund",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2023-05-31"
 }

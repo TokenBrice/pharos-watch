@@ -151,5 +151,6 @@
         "Resolve which exact EOA/multisig holds the contract owner and admin-map privileges across the Polygon and BSC deployments."
       ]
     }
-  }
+  },
+  "launchDate": "2019-08-30"
 }

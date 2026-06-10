@@ -118,11 +118,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Brix iTRY", "url": "https://brix.money/itry" },
-        { "label": "Brix", "url": "https://brix.money/" }
+        {
+          "label": "Brix iTRY",
+          "url": "https://brix.money/itry"
+        },
+        {
+          "label": "Brix",
+          "url": "https://brix.money/"
+        }
       ],
       "sourceFreeRationale": "Institutional-permissioned mint and NAV-accrual wrapper taken from Brix materials and coverage; the on-chain iTRY/wiTRY minter/owner admin and OFT adapter admin were not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain iTRY minter/owner and the wiTRY staking-wrapper and LayerZero OFT adapter admins across Ethereum and MegaETH."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain iTRY minter/owner and the wiTRY staking-wrapper and LayerZero OFT adapter admins across Ethereum and MegaETH."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-03-12"
 }

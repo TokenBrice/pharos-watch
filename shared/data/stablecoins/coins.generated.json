@@ -4177,7 +4177,8 @@
     "yieldConfig": {
       "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2023-10-03"
   },
   {
     "id": "bfusd-binance",
@@ -4511,7 +4512,8 @@
     "yieldConfig": {
       "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-03-02"
   },
   {
     "id": "bnusd-balanced",
@@ -4662,7 +4664,8 @@
         "title": "v2 migration to Sonic in progress",
         "message": "Balanced is migrating to a v2 architecture that re-anchors bnUSD issuance on Sonic. The cross-chain deployments tracked here are the v1 (ICON-Hub) bnUSD that DefiLlama indexes under id 204; the v2 bnUSD on Sonic is a separate contract not yet tracked. Expect supply distribution and the canonical issuance chain to shift over time."
       }
-    ]
+    ],
+    "launchDate": "2024-04-04"
   },
   {
     "id": "bold-liquity",
@@ -4871,7 +4874,8 @@
           "selector": "0xc52861f2"
         }
       }
-    }
+    },
+    "launchDate": "2025-05-14"
   },
   {
     "id": "brd-volpon",
@@ -5259,7 +5263,8 @@
         "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
         "risk": "medium"
       }
-    }
+    },
+    "launchDate": "2025-02-17"
   },
   {
     "id": "brla-brla-digital",
@@ -5380,7 +5385,8 @@
         "pct": 100,
         "risk": "low"
       }
-    ]
+    ],
+    "launchDate": "2023-04-18"
   },
   {
     "id": "brlm-mento",
@@ -5525,7 +5531,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2021-11-30"
   },
   {
     "id": "brlv-crown",
@@ -5682,7 +5689,8 @@
       "params": {
         "rpcUrl": "https://mainnet.base.org"
       }
-    }
+    },
+    "launchDate": "2025-07-03"
   },
   {
     "id": "brz-transfero",
@@ -5971,7 +5979,8 @@
       "params": {
         "handlersUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
       }
-    }
+    },
+    "launchDate": "2024-07-22"
   },
   {
     "id": "buck-buck-assets",
@@ -6495,7 +6504,8 @@
     "yieldConfig": {
       "yieldSource": "BlackRock T-bill fund",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2024-03-01"
   },
   {
     "id": "busd0-usual",
@@ -6656,7 +6666,8 @@
       "defiLlamaPoolId": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
       "yieldSource": "Usual bUSD0 daily USUAL coupons",
       "yieldType": "fee-sharing"
-    }
+    },
+    "launchDate": "2024-06-05"
   },
   {
     "id": "cadc-cad-coin",
@@ -6797,7 +6808,8 @@
         "label": "CAD bank deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2021-01-14"
   },
   {
     "id": "cadd-cad-digital",
@@ -7147,7 +7159,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2025-03-22"
   },
   {
     "id": "cash-phantom",
@@ -7712,7 +7725,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-10-14"
   },
   {
     "id": "cetes-etherfuse",
@@ -7861,7 +7875,8 @@
     "yieldConfig": {
       "yieldSource": "Mexican government CETES bonds",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-05-28"
   },
   {
     "id": "ceur-celo",
@@ -8060,7 +8075,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2021-03-15"
   },
   {
     "id": "cgo-comtech",
@@ -8391,7 +8407,8 @@
     "yieldConfig": {
       "yieldSource": "cgUSD daily T-bill rebase",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2024-02-20"
   },
   {
     "id": "chfau-allunity",
@@ -8586,7 +8603,8 @@
         "title": "Active coverage pending",
         "message": "CHFAU launched on 2026-02-26 as a MiCAR-compliant, BaFin-licensed Swiss franc stablecoin, but CoinGecko does not yet publish usable live price data, so active price coverage remains pending."
       }
-    ]
+    ],
+    "launchDate": "2026-01-26"
   },
   {
     "id": "chfm-mento",
@@ -8744,7 +8762,8 @@
       "params": {
         "cdpStablecoin": "CHFm"
       }
-    }
+    },
+    "launchDate": "2025-03-22"
   },
   {
     "id": "cjpy-yamato",
@@ -8893,7 +8912,8 @@
           "risk": "very-low"
         }
       }
-    }
+    },
+    "launchDate": "2023-07-27"
   },
   {
     "id": "cngn-compliant-naira",
@@ -9055,7 +9075,8 @@
         "label": "Nigerian naira bank deposits",
         "risk": "medium"
       }
-    }
+    },
+    "launchDate": "2024-12-16"
   },
   {
     "id": "copm-mento",
@@ -9207,7 +9228,8 @@
         "title": "Peg grouped as Other",
         "message": "COP is not yet a first-class Pharos peg-currency enum, so COPm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
       }
-    ]
+    ],
+    "launchDate": "2024-10-11"
   },
   {
     "id": "crvusd-curve",
@@ -9456,7 +9478,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2023-05-14"
   },
   {
     "id": "ctusd-citrea",
@@ -9968,7 +9991,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2025-07-08"
   },
   {
     "id": "cusd-celo",
@@ -10232,7 +10256,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2020-04-22"
   },
   {
     "id": "cusdo-openeden",
@@ -10391,7 +10416,8 @@
     "yieldConfig": {
       "yieldSource": "OpenEden cUSDO wrapper",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-10-03"
   },
   {
     "id": "dai-makerdao",
@@ -10680,7 +10706,8 @@
           "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
-    }
+    },
+    "launchDate": "2019-11-13"
   },
   {
     "id": "deuro-deuro",
@@ -10845,7 +10872,8 @@
         "pricesUrl": "https://api.deuro.com/prices/mapping",
         "otherThresholdPct": 2
       }
-    }
+    },
+    "launchDate": "2025-03-20"
   },
   {
     "id": "dgld-gold-token-sa",
@@ -10970,7 +10998,8 @@
         "label": "Allocated LBMA gold bars (PAMP SA vaults)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2022-11-03"
   },
   {
     "id": "djed-coti",
@@ -11546,7 +11575,8 @@
           "url": "https://www.inverse.finance/api/f2/fixed-markets"
         }
       }
-    }
+    },
+    "launchDate": "2021-02-23"
   },
   {
     "id": "dusd-alto",
@@ -11708,7 +11738,8 @@
         "coinId": "usdc-circle",
         "depType": "mechanism"
       }
-    ]
+    ],
+    "launchDate": "2025-12-10"
   },
   {
     "id": "dusd-dtrinity",
@@ -11938,7 +11969,8 @@
         "risk": "medium",
         "coinId": "susds-sky"
       }
-    ]
+    ],
+    "launchDate": "2024-07-04"
   },
   {
     "id": "dusd-fluid",
@@ -12192,7 +12224,8 @@
         "pct": 5,
         "risk": "medium"
       }
-    ]
+    ],
+    "launchDate": "2025-03-14"
   },
   {
     "id": "ebusd-ebisu",
@@ -12405,7 +12438,8 @@
           "selector": "0xc52861f2"
         }
       }
-    }
+    },
+    "launchDate": "2025-06-05"
   },
   {
     "id": "emxn-telcoin",
@@ -12571,7 +12605,8 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "launchDate": "2024-03-25"
   },
   {
     "id": "eur-qivalis",
@@ -12849,7 +12884,8 @@
         "coinId": "eutbl-spiko",
         "depType": "collateral"
       }
-    ]
+    ],
+    "launchDate": "2025-10-03"
   },
   {
     "id": "eurau-allunity",
@@ -13052,7 +13088,8 @@
         "label": "Euro bank deposits (CRR institutions)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-07-03"
   },
   {
     "id": "eurc-circle",
@@ -13262,7 +13299,8 @@
       "params": {
         "coinType": "eurc"
       }
-    }
+    },
+    "launchDate": "2022-05-19"
   },
   {
     "id": "eurcv-societe-generale-forge",
@@ -13439,7 +13477,8 @@
       "params": {
         "coinType": "eur"
       }
-    }
+    },
+    "launchDate": "2023-10-25"
   },
   {
     "id": "eure-monerium",
@@ -13653,7 +13692,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-08-18"
   },
   {
     "id": "euri-banking-circle",
@@ -13856,7 +13896,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-07-02"
   },
   {
     "id": "euro3-3a-dao",
@@ -13988,7 +14029,8 @@
         "title": "Live collateral mix not modeled",
         "message": "3A documents the approved vault collateral set and redemption mechanics, but no Pharos-supported live adapter or stable public mainnet collateral-composition feed was found during this addition."
       }
-    ]
+    ],
+    "launchDate": "2023-11-01"
   },
   {
     "id": "euroe-membrane",
@@ -14366,7 +14408,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-06-22"
   },
   {
     "id": "eurot-token-teknoloji",
@@ -14502,7 +14545,8 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "launchDate": "2023-08-28"
   },
   {
     "id": "eurq-quantoz",
@@ -14698,7 +14742,8 @@
       "params": {
         "token": "EURQ"
       }
-    }
+    },
+    "launchDate": "2024-11-13"
   },
   {
     "id": "eurr-stablr",
@@ -14885,7 +14930,8 @@
         "label": "Fiat euro reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-12-17"
   },
   {
     "id": "eurs-stasis",
@@ -15037,7 +15083,8 @@
         "label": "Euro fiat reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2018-06-22"
   },
   {
     "id": "eursafo-spiko",
@@ -15217,7 +15264,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-02-26"
   },
   {
     "id": "eurspkcc-spiko",
@@ -15404,7 +15452,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko Cash and Carry EUR NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-16"
   },
   {
     "id": "eusd-electronic-usd",
@@ -15658,7 +15707,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2023-02-23"
   },
   {
     "id": "eusd-telcoin",
@@ -15862,7 +15912,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2025-12-17"
   },
   {
     "id": "eutbl-spiko",
@@ -16071,7 +16122,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko EU T-Bills MMF (Eurozone Treasury bill NAV)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-04-19"
   },
   {
     "id": "fdusd-first-digital",
@@ -16309,7 +16361,8 @@
           "url": "https://www.firstdigitallabs.com/transparency"
         }
       }
-    }
+    },
+    "launchDate": "2023-04-28"
   },
   {
     "id": "feusd-felix",
@@ -16722,7 +16775,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2023-04-06"
   },
   {
     "id": "fiusd-fiserv",
@@ -17046,7 +17100,8 @@
     "yieldConfig": {
       "yieldSource": "FPI CPI redemption price",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2022-03-29"
   },
   {
     "id": "frax-frax",
@@ -17318,7 +17373,8 @@
           "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
         }
       }
-    }
+    },
+    "launchDate": "2020-12-16"
   },
   {
     "id": "frxusd-frax",
@@ -17779,7 +17835,8 @@
           "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         }
       }
-    }
+    },
+    "launchDate": "2025-01-02"
   },
   {
     "id": "ftusd-flying-tulip",
@@ -17954,7 +18011,8 @@
         "risk": "low",
         "coinId": "usdt-tether"
       }
-    ]
+    ],
+    "launchDate": "2026-02-20"
   },
   {
     "id": "fusd-finchain",
@@ -18187,7 +18245,8 @@
     "yieldConfig": {
       "yieldSource": "FinChain FUSD daily reserve-yield rebase",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2026-01-26"
   },
   {
     "id": "fusd-freedom-dollar",
@@ -18511,7 +18570,8 @@
     "yieldConfig": {
       "yieldSource": "f(x) USD Saving",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-03-17"
   },
   {
     "id": "fxusd-f-x-protocol",
@@ -18647,7 +18707,8 @@
     "yieldConfig": {
       "yieldSource": "f(x) Protocol Stability Pool",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2024-02-23"
   },
   {
     "id": "gbpe-monerium",
@@ -18848,7 +18909,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2019-11-11"
   },
   {
     "id": "gbpm-mento",
@@ -19011,7 +19073,8 @@
       "params": {
         "cdpStablecoin": "GBPm"
       }
-    }
+    },
+    "launchDate": "2025-03-22"
   },
   {
     "id": "gbpsafo-spiko",
@@ -19188,7 +19251,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-02-26"
   },
   {
     "id": "gelt-tether",
@@ -19371,7 +19435,8 @@
         "label": "Issuer-managed gold backing",
         "risk": "high"
       }
-    }
+    },
+    "launchDate": "2025-10-06"
   },
   {
     "id": "gho-aave",
@@ -19694,7 +19759,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2023-07-15"
   },
   {
     "id": "ghsm-mento",
@@ -19849,7 +19915,8 @@
         "title": "Peg grouped as Other",
         "message": "GHS is not yet a first-class Pharos peg-currency enum, so GHSm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
       }
-    ]
+    ],
+    "launchDate": "2025-01-30"
   },
   {
     "id": "gldt-gold-dao",
@@ -19975,7 +20042,8 @@
         "pct": 100,
         "risk": "low"
       }
-    ]
+    ],
+    "launchDate": "2025-07-09"
   },
   {
     "id": "gldy-streamex",
@@ -20101,7 +20169,8 @@
     "yieldConfig": {
       "yieldSource": "Streamex gold leasing yield",
       "yieldType": "fee-sharing"
-    }
+    },
+    "launchDate": "2025-11-03"
   },
   {
     "id": "gramg-token-teknoloji",
@@ -20245,7 +20314,8 @@
         "label": "Physical gold reserves",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2023-08-28"
   },
   {
     "id": "grams-token-teknoloji",
@@ -20394,7 +20464,8 @@
         "label": "Physical silver reserves",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2023-08-28"
   },
   {
     "id": "gtusdc-gauntlet",
@@ -20549,7 +20620,8 @@
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2024-03-05"
   },
   {
     "id": "gtusdcp-gauntlet",
@@ -20717,7 +20789,8 @@
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime MetaMorpho vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2024-06-03"
   },
   {
     "id": "gusd-gate",
@@ -20936,7 +21009,8 @@
     "yieldConfig": {
       "yieldSource": "Gate USD redemption yield",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2025-08-28"
   },
   {
     "id": "gusd-gemini",
@@ -21165,7 +21239,8 @@
         "label": "U.S. Treasury bills & cash deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2018-09-09"
   },
   {
     "id": "gyen-gyen",
@@ -21414,7 +21489,8 @@
         "title": "2021 depeg and 2026 class-action settlement",
         "message": "GYEN suffered multiple de-pegging events shortly after its 2021 launch (notably hitting >1.5x its peg in May 2021), causing material holder losses on Coinbase. A class action filed in 2022 (Donovan v. Coinbase / GMO Trust) led to a $6.75M proposed settlement; motion for final approval was filed on April 17, 2026 with a final-approval hearing set for May 27, 2026. Settlement class covers GYEN purchasers in New York or California between Dec 29, 2020 and Oct 10, 2025. Methodology-relevant historical record of peg failure for an otherwise NYDFS-supervised issuer."
       }
-    ]
+    ],
+    "launchDate": "2019-12-11"
   },
   {
     "id": "gynusd-gyndore",
@@ -22350,7 +22426,8 @@
     "yieldConfig": {
       "yieldSource": "Hamilton Lane SCOPE NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-12-19"
   },
   {
     "id": "hlusd-hela",
@@ -22756,7 +22833,8 @@
     "yieldConfig": {
       "yieldSource": "HomeCoin home-loan payment distributions",
       "yieldType": "fee-sharing"
-    }
+    },
+    "launchDate": "2021-07-28"
   },
   {
     "id": "honey-berachain",
@@ -23265,7 +23343,8 @@
         "title": "Tokenized ETF exposure",
         "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
       }
-    ]
+    ],
+    "launchDate": "2025-07-24"
   },
   {
     "id": "idrt-rupiah-token",
@@ -23396,7 +23475,8 @@
         "label": "IDR bank deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2019-04-10"
   },
   {
     "id": "idrx-idrx",
@@ -23562,7 +23642,8 @@
         "pct": 100,
         "risk": "low"
       }
-    ]
+    ],
+    "launchDate": "2023-05-23"
   },
   {
     "id": "inalpha-nest",
@@ -23719,7 +23800,8 @@
     "yieldConfig": {
       "yieldSource": "Nest Alpha Vault NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-05-19"
   },
   {
     "id": "isc-international-stable-currency",
@@ -24282,7 +24364,8 @@
     "yieldConfig": {
       "yieldSource": "infiniFi savings (siUSD)",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-05-22"
   },
   {
     "id": "iusd-initia",
@@ -24585,7 +24668,8 @@
     "yieldConfig": {
       "yieldSource": "Janus Henderson Anemoy AAA CLO Fund NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-04-18"
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -24730,7 +24814,8 @@
         "title": "Legacy token series",
         "message": "JPYC v1 is tracked separately from the current JPYC funds-transfer-token deployment."
       }
-    ]
+    ],
+    "launchDate": "2021-01-26"
   },
   {
     "id": "jpyc-jpyc",
@@ -24952,7 +25037,8 @@
         "label": "JPY reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-06-03"
   },
   {
     "id": "jpym-mento",
@@ -25109,7 +25195,8 @@
       "params": {
         "cdpStablecoin": "JPYm"
       }
-    }
+    },
+    "launchDate": "2025-04-17"
   },
   {
     "id": "jpysc-sbi-startale",
@@ -25323,7 +25410,8 @@
         "risk": "low",
         "blacklistable": true
       }
-    ]
+    ],
+    "launchDate": "2024-10-16"
   },
   {
     "id": "jtrsy-anemoy",
@@ -25516,7 +25604,8 @@
     "yieldConfig": {
       "yieldSource": "Janus Henderson Anemoy Treasury Fund (T-bill NAV accretion)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-08-05"
   },
   {
     "id": "jupusd-jupiter",
@@ -25988,7 +26077,8 @@
         "title": "Redemption backstop not modeled",
         "message": "JUSD metadata is tracked from public materials, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
       }
-    ]
+    ],
+    "launchDate": "2023-09-15"
   },
   {
     "id": "kag-kinesis",
@@ -26114,7 +26204,8 @@
         "assetRisk": "very-low",
         "reserveUnit": "XAG"
       }
-    }
+    },
+    "launchDate": "2025-09-11"
   },
   {
     "id": "kau-kinesis",
@@ -26240,7 +26331,8 @@
         "assetRisk": "very-low",
         "reserveUnit": "XAU"
       }
-    }
+    },
+    "launchDate": "2025-09-11"
   },
   {
     "id": "kesm-mento",
@@ -26393,7 +26485,8 @@
         "title": "Peg grouped as Other",
         "message": "KES is not yet a first-class Pharos peg-currency enum, so KESm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
       }
-    ]
+    ],
+    "launchDate": "2024-05-07"
   },
   {
     "id": "kgst-kyrgyz-som",
@@ -26507,7 +26600,8 @@
         "label": "Kyrgyz som fiat reserves and cash equivalents",
         "risk": "medium"
       }
-    }
+    },
+    "launchDate": "2025-05-30"
   },
   {
     "id": "klarnausd-klarna",
@@ -26944,7 +27038,8 @@
         "risk": "high",
         "blacklistable": true
       }
-    ]
+    ],
+    "launchDate": "2025-01-20"
   },
   {
     "id": "krwq-iq",
@@ -27134,7 +27229,8 @@
     "tags": [
       "korea",
       "rwa"
-    ]
+    ],
+    "launchDate": "2025-09-18"
   },
   {
     "id": "lisusd-lista",
@@ -27362,7 +27458,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2022-08-10"
   },
   {
     "id": "luausd-lumi-finance",
@@ -27669,7 +27766,8 @@
           "selector": "0xc52861f2"
         }
       }
-    }
+    },
+    "launchDate": "2021-04-05"
   },
   {
     "id": "lvusd-leverup",
@@ -28103,7 +28201,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "2024-05-07"
   },
   {
     "id": "mai-qidao",
@@ -28310,7 +28409,8 @@
         "title": "Soft depeg below $0.99",
         "message": "MAI has been trading around $0.987 across all 15 supported chains; CDP redemption pressure is not currently restoring parity."
       }
-    ]
+    ],
+    "launchDate": "2021-05-02"
   },
   {
     "id": "mapollo-midas",
@@ -28475,7 +28575,8 @@
     "yieldConfig": {
       "yieldSource": "Midas mAPOLLO / Apollo Crypto NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-15"
   },
   {
     "id": "meusd-mezo",
@@ -28689,7 +28790,8 @@
           ]
         }
       }
-    }
+    },
+    "launchDate": "2025-05-12"
   },
   {
     "id": "mf-one-midas",
@@ -28841,7 +28943,8 @@
     "yieldConfig": {
       "yieldSource": "Midas mF-ONE / Fasanara F-ONE NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-05-08"
   },
   {
     "id": "mglobal-midas-fasanara",
@@ -28976,7 +29079,8 @@
     "yieldConfig": {
       "yieldSource": "Midas Fasanara Global NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-04-03"
   },
   {
     "id": "mhyper-midas",
@@ -29142,7 +29246,8 @@
     "yieldConfig": {
       "yieldSource": "Midas mHYPER / Hyperithm NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-15"
   },
   {
     "id": "mim-abracadabra",
@@ -29403,7 +29508,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2021-05-25"
   },
   {
     "id": "mmev-midas",
@@ -29568,7 +29674,8 @@
     "yieldConfig": {
       "yieldSource": "Midas mMEV strategy NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-02-04"
   },
   {
     "id": "mmxn-moneta-digital",
@@ -29718,7 +29825,8 @@
         "title": "Curated reserves are self-reported",
         "message": "The curated-validated live-reserves adapter currently points at the issuer website root because no third-party attestation page has been verified for MMXN. Until an independent auditor or proof-of-reserves feed is published, the reserve composition reflects Moneta Digital's own disclosure only."
       }
-    ]
+    ],
+    "launchDate": "2021-06-15"
   },
   {
     "id": "mnee-mnee",
@@ -29939,7 +30047,8 @@
         "label": "U.S. Treasury bills & USD cash",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-03-21"
   },
   {
     "id": "money-defi-money",
@@ -30071,7 +30180,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-06-25"
   },
   {
     "id": "moveusd-cfx",
@@ -30399,7 +30509,8 @@
     "yieldConfig": {
       "yieldSource": "Midas mRe7YIELD strategy",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-02-06"
   },
   {
     "id": "msusd-main-street",
@@ -30539,7 +30650,8 @@
         "risk": "low",
         "coinId": "usdc-circle"
       }
-    }
+    },
+    "launchDate": "2025-06-08"
   },
   {
     "id": "msusd-metronome",
@@ -30681,7 +30793,8 @@
         "risk": "high",
         "coinId": "frax-frax"
       }
-    ]
+    ],
+    "launchDate": "2022-12-15"
   },
   {
     "id": "msy-main-street",
@@ -30876,7 +30989,8 @@
       "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
       "yieldSource": "Main Street savings (msY)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-12-04"
   },
   {
     "id": "mtbill-midas",
@@ -31077,7 +31191,8 @@
     "yieldConfig": {
       "yieldSource": "Midas T-bill fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-12-01"
   },
   {
     "id": "musd-metamask",
@@ -31330,7 +31445,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "2025-08-12"
   },
   {
     "id": "mxnb-juno",
@@ -31469,7 +31585,8 @@
         "pct": 100,
         "risk": "low"
       }
-    ]
+    ],
+    "launchDate": "2024-01-26"
   },
   {
     "id": "mxne-real-mxn",
@@ -31644,7 +31761,8 @@
         "risk": "low",
         "coinId": "cetes-etherfuse"
       }
-    ]
+    ],
+    "launchDate": "2024-05-22"
   },
   {
     "id": "myrc-blox",
@@ -31795,7 +31913,8 @@
         "title": "Small float, single-jurisdiction",
         "message": "Total circulating supply is approximately MYR 5.3M (~USD 1.3M) and reserves are concentrated in a single Malaysian bank (Maybank) under a single Malaysian trustee."
       }
-    ]
+    ],
+    "launchDate": "2023-08-31"
   },
   {
     "id": "nbasis-nest",
@@ -31957,7 +32076,8 @@
     "yieldConfig": {
       "yieldSource": "Nest Basis Vault NAV (basis-trade strategy)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-04-01"
   },
   {
     "id": "nect-beraborrow",
@@ -32422,7 +32542,8 @@
     "yieldConfig": {
       "yieldSource": "Nest BlackOpal LiquidStone II Vault NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-30"
   },
   {
     "id": "ntbill-nest",
@@ -32590,7 +32711,8 @@
     "yieldConfig": {
       "yieldSource": "Nest Treasury Vault NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-12-18"
   },
   {
     "id": "nusd-neutrl",
@@ -32785,7 +32907,8 @@
     "yieldConfig": {
       "yieldSource": "Neutrl savings (sNUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-03"
   },
   {
     "id": "nusd-nexus",
@@ -32911,7 +33034,8 @@
         "title": "Legacy bridge-liquidity asset",
         "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. The canonical Ethereum contract is included for symbol disambiguation; legacy per-chain bridge deployments are not exhaustively modeled."
       }
-    ]
+    ],
+    "launchDate": "2021-08-16"
   },
   {
     "id": "nwisdom-nest",
@@ -33073,7 +33197,8 @@
     "yieldConfig": {
       "yieldSource": "Nest Wisdom Vault NAV (WisdomTree-backed strategy)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-27"
   },
   {
     "id": "nxusd-nereus",
@@ -33211,7 +33336,8 @@
         "title": "Sustained soft depeg",
         "message": "NXUSD has shown a sustained soft-depeg pattern, with extended periods between $0.95 and $1.01 on CoinGecko/DefiLlama feeds. Treat collateral classification as advisory rather than live redemption assurance."
       }
-    ]
+    ],
+    "launchDate": "2022-04-07"
   },
   {
     "id": "okrw-hashed",
@@ -33562,7 +33688,8 @@
     "yieldConfig": {
       "yieldSource": "Origin lending + DeFi strategies",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2020-09-18"
   },
   {
     "id": "ousg-ondo-finance",
@@ -33802,7 +33929,8 @@
     "yieldConfig": {
       "yieldSource": "Ondo Finance T-bill fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2022-12-21"
   },
   {
     "id": "pathusd-bridge",
@@ -34158,7 +34286,8 @@
         "label": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2019-08-26"
   },
   {
     "id": "pc0000031-tradable",
@@ -34738,7 +34867,8 @@
         "label": "Physical gold bars (LBMA 99.99%)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-10-22"
   },
   {
     "id": "pgold-polaris",
@@ -35000,7 +35130,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2024-05-17"
   },
   {
     "id": "pht-pht",
@@ -35164,7 +35295,8 @@
         "coinId": "usdt-tether",
         "depType": "collateral"
       }
-    }
+    },
+    "launchDate": "2025-02-13"
   },
   {
     "id": "pmusd-precious-metals",
@@ -35266,7 +35398,8 @@
         "pct": 100,
         "risk": "high"
       }
-    ]
+    ],
+    "launchDate": "2025-12-09"
   },
   {
     "id": "pusd-plume",
@@ -35453,7 +35586,8 @@
         "risk": "medium",
         "coinId": "usdc-circle"
       }
-    }
+    },
+    "launchDate": "2024-12-10"
   },
   {
     "id": "pusd-polaris",
@@ -35683,7 +35817,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2026-03-31"
   },
   {
     "id": "pyusd-paypal",
@@ -35946,7 +36081,8 @@
         "label": "USD deposits, U.S. Treasuries & reverse repos",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2022-11-08"
   },
   {
     "id": "qcad-stablecorp",
@@ -36089,7 +36225,8 @@
         },
         "reserveSourceLabel": "Stablecorp balances API"
       }
-    }
+    },
+    "launchDate": "2026-01-20"
   },
   {
     "id": "reur-royal-euro",
@@ -36215,7 +36352,8 @@
         "label": "Euro cash reserves at top-tier international banks",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2026-02-11"
   },
   {
     "id": "reusd-re-protocol",
@@ -36470,7 +36608,8 @@
     "yieldConfig": {
       "yieldSource": "Re Protocol vault",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2025-01-21"
   },
   {
     "id": "reusd-resupply",
@@ -36655,7 +36794,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2025-03-13"
   },
   {
     "id": "rgbp-revolut",
@@ -36964,7 +37104,8 @@
           "url": "https://ripple.com/solutions/stablecoin/transparency/"
         }
       }
-    }
+    },
+    "launchDate": "2024-08-09"
   },
   {
     "id": "roughrider-bnd",
@@ -37422,7 +37563,8 @@
           "url": "https://app.reservoir.xyz/api/reserves/raw"
         }
       }
-    }
+    },
+    "launchDate": "2024-08-19"
   },
   {
     "id": "rusd-revolut",
@@ -37713,7 +37855,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2026-02-11"
   },
   {
     "id": "rwausdi-multipli",
@@ -37858,7 +38001,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2025-11-23"
   },
   {
     "id": "safo-spiko-usd",
@@ -38016,7 +38160,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-02-26"
   },
   {
     "id": "said-gaib",
@@ -38177,7 +38322,8 @@
       "defiLlamaPoolId": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
       "yieldSource": "GAIB savings (sAID)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-31"
   },
   {
     "id": "satusd-river",
@@ -38358,7 +38504,8 @@
           "url": "https://api.satoshiprotocol.org/protocol-info"
         }
       }
-    }
+    },
+    "launchDate": "2025-02-21"
   },
   {
     "id": "savusd-avant",
@@ -38534,7 +38681,8 @@
     "yieldConfig": {
       "yieldSource": "Avant savings (savUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-11-15"
   },
   {
     "id": "sbc-brale",
@@ -38767,7 +38915,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2022-08-02"
   },
   {
     "id": "sbold-k3-capital",
@@ -38949,7 +39098,8 @@
     "yieldConfig": {
       "yieldSource": "K3 sBOLD Stability Pool vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-06-05"
   },
   {
     "id": "scrvusd-curve",
@@ -39086,7 +39236,8 @@
     "yieldConfig": {
       "yieldSource": "Curve savings (scrvUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-10-31"
   },
   {
     "id": "scusd-rings",
@@ -39363,7 +39514,8 @@
     "yieldConfig": {
       "yieldSource": "Dai Savings Rate (sDAI)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-01-17"
   },
   {
     "id": "sdola-inverse-finance",
@@ -39502,7 +39654,8 @@
       "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
       "yieldSource": "Inverse Finance sDOLA vault",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-01-31"
   },
   {
     "id": "sdusd-dtrinity",
@@ -39627,7 +39780,8 @@
     "yieldConfig": {
       "yieldSource": "dTRINITY dStake (sdUSD)",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-07-30"
   },
   {
     "id": "sfrxusd-frax",
@@ -39833,7 +39987,8 @@
     "yieldConfig": {
       "yieldSource": "Frax staking (sfrxUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-01-02"
   },
   {
     "id": "sgho-aave",
@@ -39977,7 +40132,8 @@
     "yieldConfig": {
       "yieldSource": "Aave Savings GHO",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2026-05-05"
   },
   {
     "id": "silk-shade-protocol",
@@ -40269,7 +40425,8 @@
         "title": "Tokenized ETF exposure",
         "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
       }
-    ]
+    ],
+    "launchDate": "2025-07-24"
   },
   {
     "id": "sofid-sofi",
@@ -40674,7 +40831,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko Cash and Carry USD NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-16"
   },
   {
     "id": "spusd-soulpeg",
@@ -40802,7 +40960,8 @@
         "title": "Redemption backstop not modeled",
         "message": "SoulPeg materials describe protocol controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
       }
-    ]
+    ],
+    "launchDate": "2025-07-30"
   },
   {
     "id": "srusd-reservoir",
@@ -40965,7 +41124,8 @@
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-08-19"
   },
   {
     "id": "srusde-strata",
@@ -41106,7 +41266,8 @@
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-02"
   },
   {
     "id": "stac-securitize",
@@ -41256,7 +41417,8 @@
     "yieldConfig": {
       "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-29"
   },
   {
     "id": "stcusd-cap",
@@ -41394,7 +41556,8 @@
       "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
       "yieldSource": "Cap savings (stcUSD)",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-07-08"
   },
   {
     "id": "steakusdc-steakhouse",
@@ -41538,7 +41701,8 @@
     "yieldConfig": {
       "yieldSource": "Steakhouse Morpho USDC vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-10-27"
   },
   {
     "id": "steakusdt-steakhouse",
@@ -41682,7 +41846,8 @@
     "yieldConfig": {
       "yieldSource": "Steakhouse Morpho USDT vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-11-29"
   },
   {
     "id": "stkgho-umbrella-aave",
@@ -41818,7 +41983,8 @@
     "yieldConfig": {
       "yieldSource": "Aave Umbrella stkGHO rewards",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2025-06-05"
   },
   {
     "id": "stusd-stoneyield",
@@ -41942,7 +42108,8 @@
     "yieldConfig": {
       "yieldSource": "StoneYield protocol",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-12-05"
   },
   {
     "id": "stusds-sky",
@@ -42082,7 +42249,8 @@
     "yieldConfig": {
       "yieldSource": "Sky stUSDS Rate",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-08-25"
   },
   {
     "id": "suiusde-sui",
@@ -42328,7 +42496,8 @@
     "yieldConfig": {
       "yieldSource": "HedgeCore Venus strategy yield",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-10-11"
   },
   {
     "id": "susd-solayer",
@@ -42673,7 +42842,8 @@
         "title": "Prolonged depeg",
         "message": "sUSD has traded materially below its $1 target since the SIP-420 C-ratio reduction. Use live runtime data for the current price; peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
       }
-    ]
+    ],
+    "launchDate": "2019-09-26"
   },
   {
     "id": "susd1plus-lorenzo",
@@ -42838,7 +43008,8 @@
     "yieldConfig": {
       "yieldSource": "Lorenzo USD1+ staking",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-12"
   },
   {
     "id": "susdai-usd-ai",
@@ -42990,7 +43161,8 @@
     "yieldConfig": {
       "yieldSource": "USD.AI savings (sUSDai)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-05-23"
   },
   {
     "id": "susdc-spark",
@@ -43156,7 +43328,8 @@
     "yieldConfig": {
       "yieldSource": "Spark Savings USDC",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-01"
   },
   {
     "id": "susdd-tron-dao-reserve",
@@ -43321,7 +43494,8 @@
     "yieldConfig": {
       "yieldSource": "USDD savings (sUSDD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-09-02"
   },
   {
     "id": "susde-ethena",
@@ -43619,7 +43793,8 @@
     "yieldConfig": {
       "yieldSource": "Ethena staking (sUSDe)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-11-14"
   },
   {
     "id": "susds-sky",
@@ -43807,7 +43982,8 @@
     "yieldConfig": {
       "yieldSource": "Sky Savings Rate (sUSDS)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-09-04"
   },
   {
     "id": "susdt-spark",
@@ -43970,7 +44146,8 @@
     "yieldConfig": {
       "yieldSource": "Spark Savings USDT",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-10-01"
   },
   {
     "id": "susn-noon",
@@ -44155,7 +44332,8 @@
     "yieldConfig": {
       "yieldSource": "Noon staking (sUSN)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-11-06"
   },
   {
     "id": "syrupusdc-maple",
@@ -44339,7 +44517,8 @@
     "yieldConfig": {
       "yieldSource": "Maple Finance lending",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-05-21"
   },
   {
     "id": "syrupusdt-maple",
@@ -44506,7 +44685,8 @@
     "yieldConfig": {
       "yieldSource": "Maple Finance lending",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-08-01"
   },
   {
     "id": "syusd-aegis",
@@ -44687,7 +44867,8 @@
     "yieldConfig": {
       "yieldSource": "Aegis staking (sYUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-06-03"
   },
   {
     "id": "syzusd-yuzu",
@@ -45058,7 +45239,8 @@
     "yieldConfig": {
       "yieldSource": "OpenEden T-bill vault",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-10-18"
   },
   {
     "id": "tgbp-tokenised",
@@ -45217,7 +45399,8 @@
         "label": "GBP bank deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-08-01"
   },
   {
     "id": "tgld-tenbin",
@@ -45566,7 +45749,8 @@
     "yieldConfig": {
       "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-22"
   },
   {
     "id": "trusd-tori",
@@ -45841,7 +46025,8 @@
         "label": "TRY cash reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2019-07-19"
   },
   {
     "id": "tusd-trueusd",
@@ -46111,7 +46296,8 @@
         "assetLabel": "USD reserves (Moore Hong Kong attested)",
         "assetRisk": "very-high"
       }
-    }
+    },
+    "launchDate": "2018-12-31"
   },
   {
     "id": "u-united-stables",
@@ -46294,7 +46480,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2025-12-17"
   },
   {
     "id": "uktbl-spiko",
@@ -46486,7 +46673,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko UK T-Bills MMF NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-07-16"
   },
   {
     "id": "usat-tether",
@@ -46713,7 +46901,8 @@
         "label": "U.S. Treasury bills & cash deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-12-12"
   },
   {
     "id": "usbd-bima",
@@ -46921,7 +47110,8 @@
     "yieldConfig": {
       "yieldSource": "BIMA savings (sUSBD)",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-03-21"
   },
   {
     "id": "usd-nubank",
@@ -47307,7 +47497,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2024-05-23"
   },
   {
     "id": "usd1-world-liberty-financial",
@@ -47588,7 +47779,8 @@
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
-    }
+    },
+    "launchDate": "2025-01-28"
   },
   {
     "id": "usd3-reserve-protocol",
@@ -47789,7 +47981,8 @@
     "yieldConfig": {
       "yieldSource": "Reserve Protocol collateral yield",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-04-03"
   },
   {
     "id": "usda-alpha-partner",
@@ -47907,7 +48100,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2025-08-07"
   },
   {
     "id": "usda-anzens",
@@ -48262,7 +48456,8 @@
         "pct": 15,
         "risk": "high"
       }
-    ]
+    ],
+    "launchDate": "2024-11-03"
   },
   {
     "id": "usdaf-asymmetry",
@@ -48409,7 +48604,8 @@
           "url": "https://app.asymmetry.finance/api/stats"
         }
       }
-    }
+    },
+    "launchDate": "2025-07-22"
   },
   {
     "id": "usdai-usd-ai",
@@ -48621,7 +48817,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2025-05-23"
   },
   {
     "id": "usdat-saturn",
@@ -48855,7 +49052,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "2026-03-10"
   },
   {
     "id": "usdb-blast",
@@ -49640,7 +49838,8 @@
       "params": {
         "coinType": "usdc"
       }
-    }
+    },
+    "launchDate": "2018-08-03"
   },
   {
     "id": "usdcv-societe-generale-forge",
@@ -49840,7 +50039,8 @@
       "params": {
         "coinType": "usd"
       }
-    }
+    },
+    "launchDate": "2025-06-10"
   },
   {
     "id": "usdcx-movement",
@@ -50203,7 +50403,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2025-09-02"
   },
   {
     "id": "usde-ethena",
@@ -50594,7 +50795,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2023-11-14"
   },
   {
     "id": "usdf-astherus",
@@ -50713,7 +50915,8 @@
         "pct": 25,
         "risk": "high"
       }
-    ]
+    ],
+    "launchDate": "2024-11-14"
   },
   {
     "id": "usdf-falcon",
@@ -50945,7 +51148,8 @@
           "url": "https://api.falcon.finance/api/v1/transparency"
         }
       }
-    }
+    },
+    "launchDate": "2025-02-10"
   },
   {
     "id": "usdf-flipcash",
@@ -51334,7 +51538,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-10-07"
   },
   {
     "id": "usdglo-glo",
@@ -51570,7 +51775,8 @@
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
-    }
+    },
+    "launchDate": "2022-11-01"
   },
   {
     "id": "usdgo-osl",
@@ -52877,7 +53083,8 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "launchDate": "2025-03-12"
   },
   {
     "id": "usdm-mega",
@@ -53064,7 +53271,8 @@
       "params": {
         "rpcUrl": "https://mainnet.megaeth.com/rpc"
       }
-    }
+    },
+    "launchDate": "2025-12-08"
   },
   {
     "id": "usdm-moneta",
@@ -53606,7 +53814,8 @@
     "yieldConfig": {
       "yieldSource": "SMARDEX USDN rebasing vault",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2024-12-19"
   },
   {
     "id": "usdnr-nerona",
@@ -53792,7 +54001,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "2026-01-12"
   },
   {
     "id": "usdo-openeden",
@@ -54058,7 +54268,8 @@
     "yieldConfig": {
       "yieldSource": "OpenEden USDO daily rebase",
       "yieldType": "rebase"
-    }
+    },
+    "launchDate": "2024-09-26"
   },
   {
     "id": "usdon-ondo",
@@ -54280,7 +54491,8 @@
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
-    }
+    },
+    "launchDate": "2025-07-15"
   },
   {
     "id": "usdp-parallel",
@@ -54548,7 +54760,8 @@
         "title": "Not the cemetery PAR or Paxos USDP",
         "message": "Parallel USDp (llamaId 291, Parallel V3) is distinct from the abandoned Mimo Labs PAR (Euro CDP, llamaId 56) and from Paxos USDP / PAX Dollar. The Parallelizer is a licensed fork of Angle Protocol's Transmuter; Mimo Labs and Cooper Labs hold commercial use rights to the codebase."
       }
-    ]
+    ],
+    "launchDate": "2025-06-05"
   },
   {
     "id": "usdp-paxos",
@@ -54806,7 +55019,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2018-09-08"
   },
   {
     "id": "usdpt-western-union",
@@ -55280,7 +55494,8 @@
       "params": {
         "token": "USDQ"
       }
-    }
+    },
+    "launchDate": "2024-11-13"
   },
   {
     "id": "usdq-quill",
@@ -55645,7 +55860,8 @@
         "title": "Redemption backstop not modeled",
         "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
       }
-    ]
+    ],
+    "launchDate": "2025-09-12"
   },
   {
     "id": "usdr-stablr",
@@ -55871,7 +56087,8 @@
         "label": "Cash & short-term government bonds",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-12-06"
   },
   {
     "id": "usdrif-rif",
@@ -56263,7 +56480,8 @@
           "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
-    }
+    },
+    "launchDate": "2024-09-02"
   },
   {
     "id": "usdsc-startale",
@@ -57299,7 +57517,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-11-28"
   },
   {
     "id": "usdu-unitas",
@@ -57446,7 +57665,8 @@
     "yieldConfig": {
       "yieldSource": "Unitas savings (sUSDu)",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2025-11-22"
   },
   {
     "id": "usdu-usdu-finance",
@@ -57570,7 +57790,8 @@
         "title": "Conflicting issuer disclosures",
         "message": "USDU Finance's own surfaces disagree: the transparency page headline reports ~40.69% CR while a separate JSON endpoint reports ~97% CR and the gitbook says 'fully backed'. Pharos surfaces the public-page headline as the conservative reference; treat collateralization figures as advisory until USDU publishes a single canonical methodology."
       }
-    ]
+    ],
+    "launchDate": "2025-07-04"
   },
   {
     "id": "usdv-solomon",
@@ -57941,7 +58162,8 @@
         "label": "U.S. Treasury bills & cash",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-10-28"
   },
   {
     "id": "usdx-kava",
@@ -58419,7 +58641,8 @@
     "yieldConfig": {
       "yieldSource": "Ondo T-bill fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-07-11"
   },
   {
     "id": "usdz-anzen",
@@ -58636,7 +58859,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-05-16"
   },
   {
     "id": "usg-tangent",
@@ -59127,7 +59351,8 @@
           "CLOs (JAAA)": "collateral"
         }
       }
-    }
+    },
+    "launchDate": "2024-10-03"
   },
   {
     "id": "usnd-nerite",
@@ -59454,7 +59679,8 @@
         "title": "Soft depeg",
         "message": "USP has shown secondary-market soft-depeg episodes, including daily lows near $0.916 in November 2025; investigate current redemption and DEX liquidity before relying on peg parity."
       }
-    ]
+    ],
+    "launchDate": "2025-05-13"
   },
   {
     "id": "usp-pikudao",
@@ -59607,7 +59833,8 @@
     "yieldConfig": {
       "yieldSource": "PikuDAO lending vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-08-22"
   },
   {
     "id": "usr-resolv",
@@ -60042,7 +60269,8 @@
           "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         }
       }
-    }
+    },
+    "launchDate": "2026-03-03"
   },
   {
     "id": "ustb-superstate",
@@ -60259,7 +60487,8 @@
     "yieldConfig": {
       "yieldSource": "Superstate T-bill fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-12-06"
   },
   {
     "id": "ustbl-spiko",
@@ -60467,7 +60696,8 @@
     "yieldConfig": {
       "yieldSource": "Spiko US T-Bills MMF (U.S. Treasury bill NAV)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-04-19"
   },
   {
     "id": "usx-dforce",
@@ -60641,7 +60871,8 @@
         "title": "Active depeg risk",
         "message": "USX is trading at approximately $0.41 (~59% discount to USD), reflecting legacy debt positions on the dForce/Unitus protocol. The configured reserve view is a collateral classification, not live redemption assurance."
       }
-    ]
+    ],
+    "launchDate": "2021-05-17"
   },
   {
     "id": "usx-solstice",
@@ -60980,7 +61211,8 @@
     "yieldConfig": {
       "yieldSource": "Hashnote T-bill fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-05-31"
   },
   {
     "id": "uty-xsy",
@@ -61164,7 +61396,8 @@
           "Bybit": "medium"
         }
       }
-    }
+    },
+    "launchDate": "2025-02-28"
   },
   {
     "id": "uusd-anything-labs",
@@ -61300,7 +61533,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2026-02-03"
   },
   {
     "id": "uusd-youves",
@@ -61610,7 +61844,8 @@
     "yieldConfig": {
       "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-05-12"
   },
   {
     "id": "vchf-vnx",
@@ -61835,7 +62070,8 @@
         "label": "CHF cash & equivalents",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2022-12-02"
   },
   {
     "id": "vcred-vcred",
@@ -62173,7 +62409,8 @@
         "label": "Euro cash & equivalents",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2022-11-18"
   },
   {
     "id": "vgbp-vnx",
@@ -62348,7 +62585,8 @@
         "label": "GBP cash & equivalents",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-06-02"
   },
   {
     "id": "vndc-jade-labs",
@@ -62503,7 +62741,8 @@
         "title": "Curated reserves are self-reported",
         "message": "The curated-validated live-reserves adapter points at the Jade Labs / VNDC issuer website because no third-party attestation page has been verified. Reserve composition reflects the issuer's own disclosure only until an independent auditor or proof-of-reserves feed is published."
       }
-    ]
+    ],
+    "launchDate": "2019-08-30"
   },
   {
     "id": "vnxau-vnx",
@@ -62700,7 +62939,8 @@
         "label": "Allocated physical gold bars",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2021-12-15"
   },
   {
     "id": "vusd-virtue",
@@ -63004,7 +63244,8 @@
         "label": "Argentine peso bank deposits and local-currency liquid instruments",
         "risk": "high"
       }
-    }
+    },
+    "launchDate": "2025-07-02"
   },
   {
     "id": "wbrl-ripio",
@@ -63181,7 +63422,8 @@
         "title": "No per-token attestation located",
         "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WBRL during this addition. Curated reserves remain conservative until source coverage improves."
       }
-    ]
+    ],
+    "launchDate": "2025-07-11"
   },
   {
     "id": "wclp-ripio",
@@ -63354,7 +63596,8 @@
         "title": "No per-token attestation located",
         "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCLP during this addition. Curated reserves remain conservative until source coverage improves."
       }
-    ]
+    ],
+    "launchDate": "2025-11-27"
   },
   {
     "id": "wcop-ripio",
@@ -63539,7 +63782,8 @@
         "title": "No per-token attestation located",
         "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCOP during this addition. Curated reserves remain conservative until source coverage improves."
       }
-    ]
+    ],
+    "launchDate": "2025-09-22"
   },
   {
     "id": "wemix-dollar-wemix",
@@ -63831,7 +64075,8 @@
         "title": "Active depeg",
         "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
       }
-    ]
+    ],
+    "launchDate": "2025-06-26"
   },
   {
     "id": "witry-brix",
@@ -63967,7 +64212,8 @@
     "yieldConfig": {
       "yieldSource": "Brix iTRY staking",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-03-12"
   },
   {
     "id": "wm-m0",
@@ -64178,7 +64424,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "2024-08-14"
   },
   {
     "id": "wmxn-ripio",
@@ -64359,7 +64606,8 @@
         "title": "No per-token attestation located",
         "message": "Ripio describes wFIAT local-currency backing and DefiLlama cites periodic attestations, but no reliable public per-token reserve attestation was found for WMXN during this addition. Curated reserves remain conservative until source coverage improves."
       }
-    ]
+    ],
+    "launchDate": "2025-07-11"
   },
   {
     "id": "wpen-ripio",
@@ -64536,7 +64784,8 @@
         "title": "No per-token attestation located",
         "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WPEN during this addition. Curated reserves remain conservative until source coverage improves."
       }
-    ]
+    ],
+    "launchDate": "2025-11-27"
   },
   {
     "id": "wsrusd-reservoir",
@@ -64784,7 +65033,8 @@
     "yieldConfig": {
       "yieldSource": "Reservoir savings vault (srUSD)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-04-15"
   },
   {
     "id": "wtgxx-wisdomtree",
@@ -65073,7 +65323,8 @@
     "yieldConfig": {
       "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-09-14"
   },
   {
     "id": "wusd-worldwide",
@@ -65334,7 +65585,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-12-13"
   },
   {
     "id": "xagm-matrixdock",
@@ -65493,7 +65745,8 @@
         "title": "Dynamic silver-per-token metric",
         "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
       }
-    ]
+    ],
+    "launchDate": "2026-03-09"
   },
   {
     "id": "xai-silo-finance",
@@ -65636,7 +65889,8 @@
       "params": {
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
-    }
+    },
+    "launchDate": "2022-10-19"
   },
   {
     "id": "xaum-matrixdock",
@@ -65828,7 +66082,8 @@
         "label": "Physical gold bars (LBMA 99.99%)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-08-28"
   },
   {
     "id": "xaut-tether",
@@ -66031,7 +66286,8 @@
         "label": "Physical gold bars (LBMA Good Delivery)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2021-10-31"
   },
   {
     "id": "xdai-gnosis",
@@ -66537,7 +66793,8 @@
         "label": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands)",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2023-12-19"
   },
   {
     "id": "xo-exodus",
@@ -66925,7 +67182,8 @@
         "title": "Live CDP reserve sync pending",
         "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
       }
-    ]
+    ],
+    "launchDate": "2023-08-17"
   },
   {
     "id": "xsgd-straitsx",
@@ -67226,7 +67484,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2020-03-25"
   },
   {
     "id": "xtusd-xt",
@@ -67822,7 +68081,8 @@
         "label": "Tier 1 bank deposits & short-term securities",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2024-02-01"
   },
   {
     "id": "ybold-yearn",
@@ -67978,7 +68238,8 @@
     "yieldConfig": {
       "yieldSource": "Yearn yBOLD Stability Pool vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-05-26"
   },
   {
     "id": "ylds-figure",
@@ -68383,7 +68644,8 @@
     "yieldConfig": {
       "yieldSource": "Yield Optimizer strategies",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-04-17"
   },
   {
     "id": "yusd-aegis",
@@ -68586,7 +68848,8 @@
     "yieldConfig": {
       "yieldSource": "Aegis delta-neutral strategy",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-01-23"
   },
   {
     "id": "yusd-yieldfi",
@@ -68787,7 +69050,8 @@
     "yieldConfig": {
       "yieldSource": "YieldFi yUSD strategies",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-04-28"
   },
   {
     "id": "yvusdc-yearn",
@@ -68927,7 +69191,8 @@
     "yieldConfig": {
       "yieldSource": "Yearn v3 USDC vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2024-03-12"
   },
   {
     "id": "yzusd-yuzu",
@@ -69361,7 +69626,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2025-03-22"
   },
   {
     "id": "zarp-zarp",
@@ -69523,7 +69789,8 @@
         "label": "ZAR fiat reserves",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2023-03-31"
   },
   {
     "id": "zchf-frankencoin",
@@ -69939,7 +70206,8 @@
         "title": "March 2025 exploit history",
         "message": "Zoth suffered March 2025 exploits affecting ZeUSD platform risk, including a collateral-accounting bug and a later admin-key compromise. Review current redemption and reserve evidence before assuming normal peg liquidity. https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
       }
-    ]
+    ],
+    "launchDate": "2024-12-12"
   },
   {
     "id": "zkusd-goal3",

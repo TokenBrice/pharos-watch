@@ -145,5 +145,6 @@
         "Confirm Plume and Movement WEUSD role holders and whether the admin EOA is controlled by a multisig, MPC, or other policy layer."
       ]
     }
-  }
+  },
+  "launchDate": "2025-06-26"
 }

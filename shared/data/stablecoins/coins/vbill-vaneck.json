@@ -182,5 +182,6 @@
       "title": "Securitize-administered NAV token",
       "message": "VBILL is institutional only via Securitize Markets and issues on Ethereum, Avalanche, BNB Chain, and Solana via Wormhole. Pharos tracks all four deployments."
     }
-  ]
+  ],
+  "launchDate": "2025-05-12"
 }

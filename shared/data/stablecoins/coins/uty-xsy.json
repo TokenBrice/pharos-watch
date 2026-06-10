@@ -162,8 +162,14 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "XSY docs", "url": "https://xsy-1.gitbook.io/xsy-main" },
-        { "label": "YieldPoint", "url": "https://yieldpoint.io/" },
+        {
+          "label": "XSY docs",
+          "url": "https://xsy-1.gitbook.io/xsy-main"
+        },
+        {
+          "label": "YieldPoint",
+          "url": "https://yieldpoint.io/"
+        },
         {
           "label": "UTY contract source",
           "url": "https://routescan.io/address/0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a/contract/43114/code"
@@ -174,5 +180,6 @@
         "Confirm the precise custodian split and any attestation quorum behind issuance."
       ]
     }
-  }
+  },
+  "launchDate": "2025-02-28"
 }

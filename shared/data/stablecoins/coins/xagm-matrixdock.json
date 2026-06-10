@@ -155,5 +155,6 @@
       "title": "Dynamic silver-per-token metric",
       "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
     }
-  ]
+  ],
+  "launchDate": "2026-03-09"
 }

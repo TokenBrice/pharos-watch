@@ -97,7 +97,9 @@
         "safe": {
           "version": "1.3.0",
           "threshold": 3,
-          "enabledModules": ["0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"],
+          "enabledModules": [
+            "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
+          ],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "source": "safe-api"
@@ -188,5 +190,6 @@
       "title": "Soft depeg",
       "message": "USP has shown secondary-market soft-depeg episodes, including daily lows near $0.916 in November 2025; investigate current redemption and DEX liquidity before relying on peg parity."
     }
-  ]
+  ],
+  "launchDate": "2025-05-13"
 }

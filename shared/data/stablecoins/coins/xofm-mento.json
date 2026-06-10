@@ -135,5 +135,8 @@
       "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
     }
   ],
-  "infrastructures": ["liquity-v2"]
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "launchDate": "2023-08-17"
 }

@@ -244,5 +244,6 @@
   "yieldConfig": {
     "yieldSource": "Reservoir savings vault (srUSD)",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2025-04-15"
 }

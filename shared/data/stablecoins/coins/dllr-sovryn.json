@@ -101,7 +101,9 @@
         }
       ],
       "sourceFreeRationale": "Aggregator mint model and MassetManager address confirmed from Sovryn/Mynt materials; on-chain BasketManager admin/owner and DAO execution path not independently read on-chain.",
-      "unresolvedQuestions": ["Confirm the on-chain Mynt BasketManager admin owner and Sovryn DAO authorization path for adding bAssets."]
+      "unresolvedQuestions": [
+        "Confirm the on-chain Mynt BasketManager admin owner and Sovryn DAO authorization path for adding bAssets."
+      ]
     }
   },
   "chainTier": "mature-alt-l1",
@@ -167,5 +169,6 @@
         }
       ]
     }
-  }
+  },
+  "launchDate": "1970-01-01"
 }

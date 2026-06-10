@@ -213,5 +213,6 @@
   "yieldConfig": {
     "yieldSource": "Superstate T-bill fund",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2023-12-06"
 }

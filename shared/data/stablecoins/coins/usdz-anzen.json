@@ -213,5 +213,6 @@
         "Resolve the on-chain mint/admin owner of the USDz token and SPCT contract and the set of authorized Qualified Market Maker minters."
       ]
     }
-  }
+  },
+  "launchDate": "2024-05-16"
 }

@@ -128,7 +128,10 @@
         }
       ],
       "sourceFreeRationale": "Owner-controlled upgradeable proxy confirmed from BscScan; the actual mint authorization path and collateral backing are undocumented, so the issuer-direct/owner-controlled classification is the best-supported reading rather than a fully opaque unknown.",
-      "unresolvedQuestions": ["Resolve whether a distinct off-chain reserve process backs issued UUSD supply."]
+      "unresolvedQuestions": [
+        "Resolve whether a distinct off-chain reserve process backs issued UUSD supply."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-02-03"
 }

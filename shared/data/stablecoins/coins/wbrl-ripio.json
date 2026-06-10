@@ -173,5 +173,6 @@
       "title": "No per-token attestation located",
       "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WBRL during this addition. Curated reserves remain conservative until source coverage improves."
     }
-  ]
+  ],
+  "launchDate": "2025-07-11"
 }
