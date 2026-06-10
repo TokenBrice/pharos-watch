@@ -51,6 +51,11 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
     }
   }
 
+  // Dense strips distribute like a real document data page — fields spread
+  // edge-to-edge across the available width. Sparse strips (<6 facts) keep the
+  // start-aligned gap so three fields don't float disconnected across the card.
+  const distributionClass = items.length >= 6 ? "lg:justify-between" : "";
+
   return (
     <div
       className="relative border-t border-border/30 px-4 py-2.5 sm:px-5"
@@ -61,7 +66,9 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden"
       />
-      <div className="scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto lg:flex-wrap lg:overflow-visible">
+      <div
+        className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto lg:flex-wrap lg:overflow-visible ${distributionClass}`}
+      >
         {items.map((item) => {
           const isHashJump = item.href.startsWith("#");
           return (

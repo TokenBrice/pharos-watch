@@ -41,16 +41,20 @@ export function HeroPassportMrz({ mrz }: { mrz: HeroPassportMrzViewModel }) {
       type="button"
       onClick={copySummary}
       aria-label={mrz.ariaLabel}
-      className="pharos-focus-ring group relative block w-full border-t border-border/30 px-4 py-2 text-left sm:px-5"
+      className="pharos-focus-ring group flex w-full flex-wrap items-baseline gap-y-0.5 border-t border-border/30 px-4 py-2 text-left sm:px-5"
     >
+      {/* Zero gap between the segments: where the width allows, they read as
+          one continuous 88-char machine line; narrower viewports wrap back to
+          the stacked TD3 pair at the segment boundary. */}
       <span aria-hidden="true" className={MRZ_LINE_CLASS}>
         {mrz.lines[0]}
       </span>
       <span aria-hidden="true" className={MRZ_LINE_CLASS}>
         {mrz.lines[1]}
       </span>
-      {/* Absolutely positioned: the COPY SUMMARY ⇄ COPIED swap shifts no layout. */}
-      <span className="absolute right-4 top-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-foreground sm:right-5">
+      {/* In-flow and right-aligned: the COPY SUMMARY ⇄ COPIED swap only moves
+          its own left edge, so the glyph lines never shift. */}
+      <span className="ml-auto shrink-0 pl-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-foreground">
         {copied ? "Copied" : "Copy summary"}
       </span>
     </button>
