@@ -296,7 +296,8 @@ describe("DepegResolverModule", () => {
       />,
     );
 
-    expect(screen.getByText("Prediction frozen")).toBeTruthy();
+    // The chip renders twice (mobile Sheet trigger + desktop Popover trigger).
+    expect(screen.getAllByText("Prediction frozen").length).toBeGreaterThan(0);
     expect(screen.getByText("anchored duration")).toBeTruthy();
     expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
     expect(screen.getByRole("img", { name: /lock deviation -250 bps/i })).toBeTruthy();

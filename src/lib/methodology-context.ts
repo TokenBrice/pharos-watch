@@ -21,6 +21,10 @@ import {
   REDEMPTION_BACKSTOP_VERSION_LABEL,
 } from "@shared/lib/redemption-backstop-version";
 import {
+  DDR_METHODOLOGY_CHANGELOG_PATH,
+  DDR_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/methodology-versions/depeg-resolver";
+import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
@@ -58,6 +62,7 @@ export type MethodologyContextKey =
   | "dews"
   | "dewsBand"
   | "depegBps"
+  | "ddrPredictionFrozen"
   | "liquidityScore"
   | "effectiveTvl"
   | "dexVolVsAvg"
@@ -269,6 +274,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  },
+  ddrPredictionFrozen: {
+    title: "Prediction Frozen",
+    summary:
+      "DDR publishes one immutable verdict per depeg incident, sealed at its public lock. Frozen means this is that sealed call — it is never revised while the event plays out.",
+    detail:
+      "Live facts (current price, elapsed time) keep updating below the forecast. Keeping the prediction itself fixed is what lets the Reviewer (DDRR) grade it honestly after resolution.",
+    methodologyPath: "/methodology/#depeg-resolver-methodology",
+    versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+    changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
   },
   liquidityScore: {
     title: "Liquidity Score",

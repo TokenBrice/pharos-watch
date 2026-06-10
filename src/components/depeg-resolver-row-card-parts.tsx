@@ -20,6 +20,7 @@ import {
   type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
+import { MethodologyHint } from "@/components/methodology-hint";
 import { StateOnlyCard } from "@/components/depeg-resolver-row-card-state";
 import { ForecastTimeline } from "@/components/depeg-resolver-row-card-timeline";
 
@@ -144,9 +145,16 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
             <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>{meta.label}</span>
             {frozen ? (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                Prediction frozen
-              </span>
+              /* The chip itself opens the contextual-methodology popover —
+                 "frozen" reads as "stale/broken" without an explainer. */
+              <MethodologyHint topic="ddrPredictionFrozen" asChild>
+                <button
+                  type="button"
+                  className="pharos-focus-ring rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 underline decoration-dotted decoration-emerald-700/50 underline-offset-2 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400 dark:decoration-emerald-400/50"
+                >
+                  Prediction frozen
+                </button>
+              </MethodologyHint>
             ) : null}
           </span>
           <span className="ml-auto shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
