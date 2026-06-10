@@ -203,7 +203,7 @@ Each row also carries:
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Report cards generally treat these as visible-only, except documented offchain issuer routes can add a DEX-gated primary-market exit bonus under Safety Score methodology v7.05+
-- `capacityBasis`:
+- `capacityBasis` (orthogonal to `capacityConfidence`: basis describes the model shape, confidence the evidence strength — consumers must read both; a `psm-balance-share` basis can be live-measured or a heuristic guess):
   - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
   - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
 - Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
