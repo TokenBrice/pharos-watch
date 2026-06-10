@@ -9731,7 +9731,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "cusd-cap",
@@ -11288,7 +11289,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "doc-money-on-chain",
@@ -11405,7 +11407,8 @@
         "pct": 100,
         "risk": "medium"
       }
-    ]
+    ],
+    "launchDate": "1970-01-01"
   },
   {
     "id": "dola-inverse-finance",
@@ -25946,7 +25949,8 @@
         "risk": "low",
         "blacklistable": true
       }
-    ]
+    ],
+    "launchDate": "1970-01-01"
   },
   {
     "id": "jusd-jusd-stable-token",
@@ -49188,7 +49192,8 @@
     "yieldConfig": {
       "yieldSource": "Blast native yield",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2026-06-10"
   },
   {
     "id": "usdb-bridge",
@@ -52896,7 +52901,8 @@
           "selector": "0xc52861f2"
         }
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "usdkg-gold-dollar",
@@ -55706,7 +55712,8 @@
           "selector": "0xc52861f2"
         }
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "usdr-ring",
@@ -56223,7 +56230,8 @@
         "pct": 100,
         "risk": "high"
       }
-    ]
+    ],
+    "launchDate": "1970-01-01"
   },
   {
     "id": "usds-sky",
@@ -56710,7 +56718,8 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "usdsui-sui",
@@ -62189,7 +62198,8 @@
       "params": {
         "rpcUrl": "https://rpc.hemi.network/rpc"
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "veur-vnx",
@@ -67816,7 +67826,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "1970-01-01"
   },
   {
     "id": "xusd-straitsx",
