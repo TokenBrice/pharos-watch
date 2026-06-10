@@ -353,10 +353,8 @@ describe("buildCommandPlan", () => {
           "npm run check:build-size",
           "npm run check:build-attribution",
         ],
-        ["npm run test:noncritical -- --shard=1/4"],
-        ["npm run test:noncritical -- --shard=2/4"],
-        ["npm run test:noncritical -- --shard=3/4"],
-        ["npm run test:noncritical -- --shard=4/4"],
+        ["npm run test:noncritical -- --shard=1/2"],
+        ["npm run test:noncritical -- --shard=2/2"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
@@ -403,10 +401,8 @@ describe("buildCommandPlan", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm run test:noncritical -- --shard=1/4",
-      "npm run test:noncritical -- --shard=2/4",
-      "npm run test:noncritical -- --shard=3/4",
-      "npm run test:noncritical -- --shard=4/4",
+      "npm run test:noncritical -- --shard=1/2",
+      "npm run test:noncritical -- --shard=2/2",
       "npm run coverage:critical",
       "npm run typecheck:worker",
     ]);
@@ -671,10 +667,8 @@ describe("opt-in smoke wiring", () => {
           "npm run check:build-size",
           "npm run check:build-attribution",
         ],
-        ["npm run test:noncritical -- --shard=1/4"],
-        ["npm run test:noncritical -- --shard=2/4"],
-        ["npm run test:noncritical -- --shard=3/4"],
-        ["npm run test:noncritical -- --shard=4/4"],
+        ["npm run test:noncritical -- --shard=1/2"],
+        ["npm run test:noncritical -- --shard=2/2"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
