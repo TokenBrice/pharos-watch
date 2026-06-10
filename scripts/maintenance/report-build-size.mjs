@@ -47,9 +47,11 @@ const DEFAULT_BUDGETS = {
   representativeDetailPageTxtBytes: 90_000,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
-  // #50). Current payload is ~771 KB gz per detail page; ratchet down after
-  // the registry split (#4) and chart-kit consolidation (#5) land.
-  representativeDetailEagerJsGzipBytes: 810_000,
+  // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)
+  // and the registry field-drop (P1-4 partial) landed: measured ~681 KB gz
+  // per detail page. Re-ratchet toward ~550 KB if the full slim-index
+  // registry split ships.
+  representativeDetailEagerJsGzipBytes: 700_000,
 };
 
 const BUDGET_ENV = {
