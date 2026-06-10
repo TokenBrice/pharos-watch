@@ -240,7 +240,12 @@ function SidebarGroup({
             </div>
           </div>
           {!isGroupExpanded && (
-            <div className="px-5 text-[11px] italic text-muted-foreground">{items.length} pages</div>
+            <div
+              className="truncate px-5 text-[11px] italic text-muted-foreground"
+              title={items.map((item) => item.label).join(" · ")}
+            >
+              {items.map((item) => item.label).join(" · ")}
+            </div>
           )}
         </>
       ) : (

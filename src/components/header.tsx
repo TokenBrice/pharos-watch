@@ -211,7 +211,12 @@ export function Header() {
                       </div>
                     </div>
                     {!groupExpanded && (
-                      <div className="px-3 py-2 text-xs italic text-muted-foreground/70">{group.items.length} pages</div>
+                      <div
+                        className="truncate px-3 py-2 text-xs italic text-muted-foreground/70"
+                        title={group.items.map((item) => item.label).join(" · ")}
+                      >
+                        {group.items.map((item) => item.label).join(" · ")}
+                      </div>
                     )}
                   </div>
                 );
