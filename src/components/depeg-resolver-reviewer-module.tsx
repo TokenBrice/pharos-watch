@@ -456,7 +456,7 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
               </>
             ) : (
               <>
-                <span className="font-mono text-2xl font-semibold tabular-nums text-muted-foreground/60">
+                <span className="font-mono text-2xl font-semibold tabular-nums text-muted-foreground/70">
                   —
                 </span>
                 <span className="text-xs text-muted-foreground">not yet scored</span>

@@ -384,7 +384,7 @@ export function YieldHistoryChart({
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
-          <span className="uppercase tracking-[0.12em] text-muted-foreground/60">Markers</span>
+          <span className="uppercase tracking-[0.12em] text-muted-foreground/70">Markers</span>
           <span className="inline-flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
             warning

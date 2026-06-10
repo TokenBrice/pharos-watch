@@ -220,6 +220,8 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Card micro-labels  | `text-xs uppercase tracking-wide`                                           |
 | Footer legal group | `flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground` |
 
+**Contrast floor:** informational text and meaningful icon affordances never drop below `text-muted-foreground/70` — lower alpha lands under the 3:1 contrast ratio on the light theme (WCAG 1.4.3/1.4.11). Alpha below `/70` is reserved for decorative `aria-hidden` separators (`·`, `/`, rules), disabled controls, loading skeletons, and chart internals that carry their own theme tuning.
+
 ### Numeric Language
 
 Numbers are consistently mono/tabular where precision matters:

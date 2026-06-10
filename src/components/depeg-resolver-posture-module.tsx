@@ -107,7 +107,7 @@ function ChipForecast({ item }: { item: PostureItem }) {
     case "pending":
       return <span className="font-mono text-[10px] text-muted-foreground/70">awaiting lock</span>;
     default:
-      return <span className="font-mono text-[10px] text-muted-foreground/60">not benchmarked</span>;
+      return <span className="font-mono text-[10px] text-muted-foreground/70">not benchmarked</span>;
   }
 }
 

@@ -333,7 +333,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                 {/* Footer: date + drift + milestones */}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
                   {coin.expectedLaunchDate && (
-                    <span className="font-mono text-[10px] text-muted-foreground/50">
+                    <span className="font-mono text-[10px] text-muted-foreground/70">
                       Expected {formatFuzzyDate(coin.expectedLaunchDate)}
                     </span>
                   )}
@@ -345,7 +345,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                     </span>
                   )}
                   {coin.milestones && coin.milestones.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground/50">
+                    <span className="text-[10px] text-muted-foreground/70">
                       {coin.milestones.length} milestone{coin.milestones.length !== 1 ? "s" : ""}
                     </span>
                   )}

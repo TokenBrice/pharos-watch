@@ -589,7 +589,7 @@ function DEWSLegend({
       ))}
       <span
         className={cn(
-          "text-xs text-muted-foreground/50 tabular-nums font-mono",
+          "text-xs text-muted-foreground/70 tabular-nums font-mono",
           compact ? "w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0" : "ml-auto",
         )}
       >

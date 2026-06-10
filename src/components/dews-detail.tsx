@@ -81,7 +81,7 @@ export function DEWSFiringList({ signals }: { signals: Record<string, DEWSFiring
 
   return (
     <div className="space-y-1">
-      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60">
+      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">
         Signals firing
       </h4>
       {firing.length === 0 ? (
@@ -255,7 +255,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           const rowGrid =
             "grid grid-cols-[minmax(0,8.5rem)_1fr_auto_auto] items-center gap-x-2 sm:grid-cols-[minmax(0,11rem)_1fr_auto_auto] sm:gap-x-3";
           const renderHeader = () => (
-            <div className={cn(rowGrid, "text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60")}>
+            <div className={cn(rowGrid, "text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70")}>
               <span className="col-span-2">Signal</span>
               <span className="text-right">Score</span>
               <span className="w-16 text-right sm:w-20">Value</span>

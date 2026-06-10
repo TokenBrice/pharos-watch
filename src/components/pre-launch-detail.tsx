@@ -184,7 +184,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
                   href={m.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground"
+                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-foreground"
                 >
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
                   Source
@@ -353,7 +353,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         ) : null;
         const dateTrail =
           hasDrift && coin.expectedLaunchDate ? (
-            <p className="mt-2 text-xs text-muted-foreground/60">
+            <p className="mt-2 text-xs text-muted-foreground/70">
               {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}
               {" → "}
               {formatFuzzyDate(coin.expectedLaunchDate)} (current)
@@ -406,7 +406,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           <p className="text-sm leading-relaxed text-muted-foreground">
             <TermText text={summary.text} />
           </p>
-          <p className="text-[11px] text-muted-foreground/60">
+          <p className="text-[11px] text-muted-foreground/70">
             Updated <time dateTime={summary.updatedAt}>{summaryDateline}</time>
           </p>
         </section>
@@ -463,7 +463,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                     {item.description && (
                       <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
                     )}
-                    <div className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] text-muted-foreground/60">
+                    <div className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] text-muted-foreground/70">
                       <ContentTypeIcon type={item.type} />
                       <span>{item.source ?? item.type}</span>
                     </div>
@@ -526,7 +526,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
               >
                 {getLinkIcon(link.label)}
                 <span>{link.label}</span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
+                <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
               </a>
             ))}
           </div>

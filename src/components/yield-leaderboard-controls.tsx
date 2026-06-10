@@ -191,7 +191,7 @@ function ViewLink({
       <span
         className={cn(
           "font-mono text-[10px] tabular-nums",
-          active ? "text-foreground/70" : "text-muted-foreground/60",
+          active ? "text-foreground/70" : "text-muted-foreground/70",
         )}
       >
         {count}

@@ -63,7 +63,7 @@ export function SectionBanner({
           </span>
           <span
             aria-hidden
-            className="text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+            className="text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
           >
             #
           </span>

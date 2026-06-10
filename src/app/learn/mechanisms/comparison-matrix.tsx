@@ -46,7 +46,7 @@ const DEPENDENCY_DOT: Record<string, string> = {
 function DependencyCell({ value }: { value: string }) {
   const dot = DEPENDENCY_DOT[value];
   if (!dot) {
-    return <span className="text-muted-foreground/60">{value}</span>;
+    return <span className="text-muted-foreground/70">{value}</span>;
   }
   return (
     <span className="inline-flex items-center gap-1.5">

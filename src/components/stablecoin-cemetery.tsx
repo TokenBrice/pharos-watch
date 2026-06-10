@@ -84,7 +84,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
 
         {/* Peak mcap */}
         {coin.peakMcap && (
-          <span className="hidden md:inline text-xs font-mono tabular-nums text-muted-foreground/60 shrink-0">
+          <span className="hidden md:inline text-xs font-mono tabular-nums text-muted-foreground/70 shrink-0">
             {formatCurrency(coin.peakMcap, 1)}
           </span>
         )}

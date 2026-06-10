@@ -48,7 +48,7 @@ function CompactLink({ href, label }: { href: string; label: string }) {
       <span className="min-w-0 truncate">{label}</span>
       <ArrowRight
         aria-hidden="true"
-        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
       />
     </Link>
   );
@@ -141,7 +141,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           </span>
           <ArrowRight
             aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+            className="h-4 w-4 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
           />
         </Link>
       ) : null}
@@ -196,7 +196,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                     </span>
                     <ArrowRight
                       aria-hidden="true"
-                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
                     />
                   </Link>
                 ))}

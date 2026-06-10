@@ -158,7 +158,7 @@ function MarketDataSectionBody({
                   Clear
                 </button>
               ) : (
-                <span className="text-[10px] text-muted-foreground/50">
+                <span className="text-[10px] text-muted-foreground/70">
                   Drag to focus a window
                 </span>
               )}

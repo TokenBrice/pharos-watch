@@ -213,7 +213,7 @@ export function ReferenceRatesStrip({
                       <TableCell
                         className={cn(
                           "px-3 py-2 text-right font-mono tabular-nums text-xs",
-                          isUsd || spreadBps === null ? "text-muted-foreground/60" : "text-muted-foreground",
+                          isUsd || spreadBps === null ? "text-muted-foreground/70" : "text-muted-foreground",
                         )}
                       >
                         {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}

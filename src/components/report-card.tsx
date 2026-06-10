@@ -229,7 +229,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                           />
                         </div>
                         <span className="w-8 text-right font-mono tabular-nums text-xs">{value.toFixed(0)}</span>
-                        <span className="w-8 text-right text-muted-foreground/60 text-xs">{w.displayWeight}</span>
+                        <span className="w-8 text-right text-muted-foreground/70 text-xs">{w.displayWeight}</span>
                       </div>
                     ) : null;
                   })}

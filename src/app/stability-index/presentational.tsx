@@ -549,7 +549,7 @@ export function PsiContributorsTableCard({
                         {row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}
                       </span>
                       {row.factor < 1 && (
-                        <span className="ml-1 text-xs text-muted-foreground/60">
+                        <span className="ml-1 text-xs text-muted-foreground/70">
                           ({Math.round(row.factor * 100)}%)
                         </span>
                       )}

@@ -78,7 +78,7 @@ function GlossaryJumpRail({
               ) : (
                 <span
                   aria-disabled="true"
-                  className="inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/30 bg-background/30 px-1.5 text-muted-foreground/50"
+                  className="inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border/30 bg-background/30 px-1.5 text-muted-foreground/70"
                 >
                   {letter}
                 </span>

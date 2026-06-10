@@ -144,7 +144,7 @@ function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStr
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
             All
           </span>
           <AltPegChipButton
@@ -157,7 +157,7 @@ function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStr
         </div>
         {groups.map((group) => (
           <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
               {group.label}
             </span>
             {group.items.map((item) => (

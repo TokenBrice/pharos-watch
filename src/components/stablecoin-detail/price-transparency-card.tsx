@@ -51,7 +51,7 @@ const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: st
   },
   "no-data": {
     wrap: "border-border/60",
-    label: "font-medium text-muted-foreground/60",
+    label: "font-medium text-muted-foreground/70",
     badge: "bg-muted/40 text-muted-foreground border-border/40",
     text: "No feed",
   },

@@ -165,7 +165,7 @@ export function ChangelogEntryCard({
                   <span className="text-sm font-semibold text-foreground/90">{item.label}</span>
                 )}
                 {tag && (
-                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground/60 shrink-0">
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground/70 shrink-0">
                     {tag}
                   </span>
                 )}

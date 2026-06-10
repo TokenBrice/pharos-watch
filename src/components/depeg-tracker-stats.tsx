@@ -101,7 +101,7 @@ function StripStat({
   return (
     <span className="text-xs text-muted-foreground">
       <span className="font-mono font-semibold tabular-nums text-foreground">{value}</span> {label}
-      {trail ? <span className="text-muted-foreground/60"> {trail}</span> : null}
+      {trail ? <span className="text-muted-foreground/70"> {trail}</span> : null}
     </span>
   );
 }

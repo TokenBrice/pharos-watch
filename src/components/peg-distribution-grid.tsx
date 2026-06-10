@@ -116,7 +116,7 @@ export function PegBrowseStrip({
                 .filter((chip): chip is PegBrowseChip => chip !== null);
           return (
             <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
                 {group.label}
               </span>
               {visibleItems.map((item) => {

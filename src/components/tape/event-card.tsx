@@ -548,7 +548,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
         {count > 1 ? (
           <span className="sr-only">{count} similar events grouped</span>
         ) : null}
-        <span className="max-w-full break-all lowercase text-muted-foreground/60 sm:shrink-0">{typeSlug}</span>
+        <span className="max-w-full break-all lowercase text-muted-foreground/70 sm:shrink-0">{typeSlug}</span>
         {event.chain ? (
           <span className="shrink-0 uppercase tracking-wide text-muted-foreground">[{event.chain}]</span>
         ) : null}

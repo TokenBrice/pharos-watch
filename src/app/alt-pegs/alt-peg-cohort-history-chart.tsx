@@ -315,7 +315,7 @@ export function AltPegCohortHistoryChart({
                   />
                   {pegKeyToLabel(key)}
                   {key === OTHER_KEY && otherLabels.length > 0 ? (
-                    <span className="text-muted-foreground/60">({otherLabels.join(", ")})</span>
+                    <span className="text-muted-foreground/70">({otherLabels.join(", ")})</span>
                   ) : null}
                 </span>
               ))}

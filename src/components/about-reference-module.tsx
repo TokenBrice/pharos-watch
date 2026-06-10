@@ -43,7 +43,7 @@ export function AboutReferenceModule() {
               <div className="flex items-start justify-between gap-3">
                 <Icon className={cn("h-[1.2rem] w-[1.2rem]", accent.icon)} aria-hidden="true" />
                 <ArrowRight
-                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1 group-hover:text-foreground"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1 group-hover:text-foreground"
                   aria-hidden="true"
                 />
               </div>
