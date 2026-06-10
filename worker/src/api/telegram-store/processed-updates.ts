@@ -227,3 +227,44 @@ export async function acquireTelegramCommandCooldown(
     : input.cooldownSec;
   return { allowed: false, retryAfterSec };
 }
+
+export interface TelegramChatCommandFloodResult {
+  allowed: boolean;
+  /** True exactly when this command crossed the limit, so callers reply once. */
+  firstExceeded: boolean;
+}
+
+/**
+ * Generous per-chat fixed-window command counter covering every command,
+ * including light ones with no per-command cooldown. Concurrent webhook
+ * deliveries may lose an increment; the cap is advisory, not a quota.
+ */
+export async function recordTelegramChatCommandFlood(
+  db: D1Database,
+  input: {
+    chatId: string;
+    nowSec: number;
+    windowSec: number;
+    limit: number;
+  },
+): Promise<TelegramChatCommandFloodResult> {
+  const key = `telegram:command-flood:${input.chatId}`;
+  const row = await db
+    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+    .bind(key)
+    .first<{ value: string; updated_at: number }>();
+  const windowStartedAt = Number(row?.updated_at);
+  const inWindow = Number.isFinite(windowStartedAt) && input.nowSec - windowStartedAt < input.windowSec;
+  const count = inWindow ? (Number.parseInt(row?.value ?? "0", 10) || 0) + 1 : 1;
+  await db
+    .prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`,
+    )
+    .bind(key, String(count), inWindow ? windowStartedAt : input.nowSec)
+    .run();
+  return { allowed: count <= input.limit, firstExceeded: count === input.limit + 1 };
+}

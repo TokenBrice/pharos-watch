@@ -44,7 +44,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, group-admin gate, and per-command cooldown. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the per-chat command-flood cap (20 commands / 60 s across all commands, fail-open, one notice at first exceed then silent drops), group-admin gate, and per-command cooldown. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)

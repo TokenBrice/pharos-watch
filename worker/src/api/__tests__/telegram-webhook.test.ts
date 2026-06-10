@@ -692,6 +692,89 @@ describe("handleTelegramWebhook", () => {
     warn.mockRestore();
   });
 
+  it("drops commands over the per-chat flood cap and replies once at first exceed", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    // 21st command inside the window: counter row already at the limit of 20.
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:123"],
+        rows: [{ key: "telegram:command-flood:123", value: "20", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("Too many commands at once");
+    const usageRow = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds[1] === "command" &&
+          entry.binds[3] === "/help",
+      );
+    expect(usageRow).toBeDefined();
+    expect(usageRow!.binds[4]).toBe("rate_limited");
+    expect(usageRow!.binds[6]).toBe("chat-flood");
+    nowSpy.mockRestore();
+  });
+
+  it("drops flooded commands silently after the first-exceed notice", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:123"],
+        rows: [{ key: "telegram:command-flood:123", value: "25", updated_at: 1_699_999_990 }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    nowSpy.mockRestore();
+  });
+
+  it("fails open when the chat flood counter store errors", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:command-flood:123"],
+        rows: [],
+        throwError: new Error("d1 flood boom"),
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    // /help still replied despite the flood-store failure.
+    expect(sentMessageBody().text.length).toBeGreaterThan(0);
+    warn.mockRestore();
+  });
+
   it("uses the /brief cooldown bucket for the deprecated /market alias", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     const db = mockD1([
@@ -1139,7 +1222,14 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     const history = db.getHistory();
     // No subscribe machinery ran — no preset cache lookup, no confirm-bulk row.
-    expect(history.some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(false);
+    // (The per-chat command-flood counter also reads the cache table; exclude it.)
+    expect(
+      history.some(
+        (entry) =>
+          entry.sql.includes("FROM cache WHERE key = ?") &&
+          !entry.binds.some((bind) => String(bind).startsWith("telegram:command-flood:")),
+      ),
+    ).toBe(false);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
     const body = sentMessageBody().text;
     // The long-form START_MESSAGE (not the short wizard intro) is returned for groups.

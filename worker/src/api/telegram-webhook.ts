@@ -28,6 +28,7 @@ import {
   markTelegramProcessedUpdateProcessed,
   migrateTelegramChatId,
   maybePruneTelegramProcessedUpdates,
+  recordTelegramChatCommandFlood,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
 } from "./telegram-webhook-store";
@@ -146,6 +147,12 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/why": 20,
   "/coverage": 20,
 };
+
+// Generous per-chat cap across all commands (including light ones with no
+// per-command cooldown) so a single chat cannot flood D1 reads and Telegram
+// replies. Well above any human typing rate.
+const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
+const CHAT_COMMAND_FLOOD_LIMIT = 20;
 
 const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
 
@@ -584,6 +591,34 @@ async function dispatchParsedTelegramCommand(args: {
     replyWithMarkup,
   } = args;
   const commandStartedAtMs = Date.now();
+
+  // Per-chat flood cap runs first so dropped commands skip admin gating
+  // (a Telegram API call) and handler work entirely. Fails open: a store
+  // error must not take every light command down with it.
+  try {
+    const flood = await recordTelegramChatCommandFlood(db, {
+      chatId,
+      nowSec: Math.floor(commandStartedAtMs / 1000),
+      windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
+      limit: CHAT_COMMAND_FLOOD_LIMIT,
+    });
+    if (!flood.allowed) {
+      if (flood.firstExceeded) {
+        await reply("Too many commands at once — please slow down for a minute.");
+      }
+      await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "rate_limited", "chat-flood");
+      return;
+    }
+  } catch (err) {
+    logTelegramEvent({
+      level: "warn",
+      message: "chat command flood check failed",
+      chatId,
+      action: "command-flood",
+      command: parsedCommand.command,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   if (
     isGroupChat(chatType) &&
