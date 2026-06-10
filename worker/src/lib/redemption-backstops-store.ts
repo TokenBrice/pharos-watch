@@ -8,6 +8,7 @@ import type {
   RedemptionSettlementModel,
   RedemptionExecutionModel,
   RedemptionOutputAssetType,
+  RedemptionSnapshotSource,
   RedemptionSourceMode,
 } from "@shared/types/redemption";
 import {
@@ -54,7 +55,7 @@ import {
 } from "@shared/lib/redemption-backstop-providers";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
-import { isMissingColumnError, isMissingTableError } from "./db";
+import { isMissingTableError } from "./db";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export {
@@ -96,6 +97,7 @@ export interface RedemptionBackstopLoadResult {
   latestUpdatedAt: number | null;
   runId?: string | null;
   methodologyVersion?: string | null;
+  snapshotSource?: RedemptionSnapshotSource;
 }
 
 interface RedemptionBackstopRunRow {
@@ -412,28 +414,6 @@ async function getRecentCompletedRedemptionBackstopRuns(
   }
 }
 
-async function hasAnyRedemptionBackstopRunManifest(db: D1Database): Promise<boolean> {
-  try {
-    const row = await db.prepare("SELECT run_id FROM redemption_backstop_runs LIMIT 1").first<{ run_id: string }>();
-    return row != null;
-  } catch (error) {
-    if (isMissingTableError(error)) return false;
-    throw error;
-  }
-}
-
-async function hasManifestedCurrentRedemptionBackstopRows(db: D1Database): Promise<boolean> {
-  try {
-    const row = await db
-      .prepare("SELECT stablecoin_id FROM redemption_backstop WHERE snapshot_run_id IS NOT NULL LIMIT 1")
-      .first<{ stablecoin_id: string }>();
-    return row != null;
-  } catch (error) {
-    if (isMissingTableError(error) || isMissingColumnError(error)) return false;
-    throw error;
-  }
-}
-
 async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
@@ -485,7 +465,7 @@ async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: stri
 async function queryCompletedRedemptionBackstopRunMap(
   db: D1Database,
   runId: string,
-): Promise<{ map: RedemptionBackstopMap; source: "run-rows" | "legacy-current" }> {
+): Promise<{ map: RedemptionBackstopMap; source: RedemptionSnapshotSource }> {
   try {
     const map = await queryRedemptionBackstopMapFromRunRows(db, runId);
     if (Object.keys(map).length > 0) {
@@ -504,79 +484,73 @@ async function queryCompletedRedemptionBackstopRunMap(
 }
 
 export async function loadLegacyRedemptionBackstopCurrentMap(db: D1Database): Promise<RedemptionBackstopMap> {
-  // Legacy/current-table reader retained for rollout bootstrap and focused
-  // compatibility tests. API/report-card paths should use
-  // loadRedemptionBackstopSnapshot() so completed run rows remain authoritative.
+  // Legacy/current-table reader retained for focused compatibility tests.
+  // API/report-card paths should use loadRedemptionBackstopSnapshot(), which
+  // serves completed run snapshots only and fails closed without one.
   return queryRedemptionBackstopMap(db);
 }
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
   try {
     const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
-    if (recentRuns.length > 0) {
-      const rejectionReasons: string[] = [];
+    if (recentRuns.length === 0) {
+      // The run-manifest rollout is complete: completed runs are the only
+      // authoritative snapshot source. Without one (fresh local DB before the
+      // first sync, or a manifest table with only running/failed runs) the
+      // reader fails closed instead of serving current-table rows, so partial
+      // manifested current rows are never treated as authoritative.
+      throw new RedemptionBackstopSnapshotUnavailableError("No completed redemption backstop run found");
+    }
 
-      for (const run of recentRuns) {
-        if (run.written_count !== run.expected_count) {
-          rejectionReasons.push(`${run.run_id}: incomplete (${run.written_count}/${run.expected_count})`);
-          continue;
-        }
-        if (run.expected_count > 0 && run.max_updated_at == null) {
-          rejectionReasons.push(`${run.run_id}: missing max_updated_at`);
-          continue;
-        }
+    const rejectionReasons: string[] = [];
 
-        let map: RedemptionBackstopMap;
-        let source: "run-rows" | "legacy-current" = "run-rows";
-        try {
-          const result = await queryCompletedRedemptionBackstopRunMap(db, run.run_id);
-          map = result.map;
-          source = result.source;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          rejectionReasons.push(`${run.run_id}: query failed (${message})`);
-          continue;
-        }
-
-        const rowCount = Object.keys(map).length;
-        if (source === "legacy-current") {
-          recordRuntimeFallbackUsage("redemption-backstop-legacy-current", {
-            runId: run.run_id,
-            rowCount,
-            expectedCount: run.written_count,
-          });
-        }
-        if (rowCount !== run.written_count) {
-          rejectionReasons.push(`${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`);
-          continue;
-        }
-
-        return {
-          map,
-          latestUpdatedAt: run.max_updated_at,
-          runId: run.run_id,
-          methodologyVersion: run.methodology_version,
-        };
+    for (const run of recentRuns) {
+      if (run.written_count !== run.expected_count) {
+        rejectionReasons.push(`${run.run_id}: incomplete (${run.written_count}/${run.expected_count})`);
+        continue;
+      }
+      if (run.expected_count > 0 && run.max_updated_at == null) {
+        rejectionReasons.push(`${run.run_id}: missing max_updated_at`);
+        continue;
       }
 
-      throw new RedemptionBackstopSnapshotUnavailableError(
-        `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
-      );
+      let map: RedemptionBackstopMap;
+      let source: RedemptionSnapshotSource = "run-rows";
+      try {
+        const result = await queryCompletedRedemptionBackstopRunMap(db, run.run_id);
+        map = result.map;
+        source = result.source;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        rejectionReasons.push(`${run.run_id}: query failed (${message})`);
+        continue;
+      }
+
+      const rowCount = Object.keys(map).length;
+      if (source === "legacy-current") {
+        recordRuntimeFallbackUsage("redemption-backstop-legacy-current", {
+          runId: run.run_id,
+          rowCount,
+          expectedCount: run.written_count,
+        });
+      }
+      if (rowCount !== run.written_count) {
+        rejectionReasons.push(`${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`);
+        continue;
+      }
+
+      return {
+        map,
+        latestUpdatedAt: run.max_updated_at,
+        runId: run.run_id,
+        methodologyVersion: run.methodology_version,
+        snapshotSource: source,
+      };
     }
 
-    if ((await hasAnyRedemptionBackstopRunManifest(db)) && (await hasManifestedCurrentRedemptionBackstopRows(db))) {
-      throw new RedemptionBackstopSnapshotUnavailableError(
-        "No completed redemption backstop run found for manifested current rows",
-      );
-    }
-
-    const [map, latest] = await Promise.all([
-      queryRedemptionBackstopMap(db),
-      db
-        .prepare("SELECT MAX(updated_at) AS updated_at FROM redemption_backstop")
-        .first<{ updated_at: number | null }>(),
-    ]);
-    return { map, latestUpdatedAt: latest?.updated_at ?? null };
+    throw new RedemptionBackstopSnapshotUnavailableError(
+      `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
+    );
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
       throw error;
@@ -625,5 +599,6 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
       routeFamilyCaps: { ...REDEMPTION_ROUTE_FAMILY_CAPS },
     },
     updatedAt,
+    ...(loaded.snapshotSource ? { snapshotSource: loaded.snapshotSource } : {}),
   };
 }

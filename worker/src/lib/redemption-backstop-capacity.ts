@@ -3,7 +3,6 @@ import {
   resolveCapacityBasis,
   resolveReserveSyncCapacityConfidence,
   type CapacityResolution,
-  type CapacityResolver,
   type CapacityResolverContext,
   type RedemptionBackstopBuildOptions,
 } from "./redemption-backstop-capacity/profile";
@@ -19,13 +18,6 @@ export {
   type RedemptionBackstopBuildOptions,
 };
 
-const RESOLVERS: { [K in RedemptionCapacityModel["kind"]]: CapacityResolver<Extract<RedemptionCapacityModel, { kind: K }>> } = {
-  "supply-full": resolveSupplyFullCapacity,
-  "supply-ratio": resolveSupplyRatioCapacity,
-  "fixed-usd": resolveFixedUsdCapacity,
-  "reserve-sync-metadata": resolveReserveSyncCapacity,
-};
-
 export async function resolveRedemptionCapacity(
   db: D1Database,
   stablecoinId: string,
@@ -35,6 +27,18 @@ export async function resolveRedemptionCapacity(
   options: RedemptionBackstopBuildOptions = {},
 ): Promise<CapacityResolution> {
   const context: CapacityResolverContext = { db, stablecoinId, supplyUsd, now, options };
-  const resolver = RESOLVERS[model.kind] as CapacityResolver;
-  return resolver(model, context);
+  // Exhaustive dispatch: adding a RedemptionCapacityModel kind without a
+  // resolver case fails typecheck via the `satisfies never` default.
+  switch (model.kind) {
+    case "supply-full":
+      return resolveSupplyFullCapacity(model, context);
+    case "supply-ratio":
+      return resolveSupplyRatioCapacity(model, context);
+    case "fixed-usd":
+      return resolveFixedUsdCapacity(model, context);
+    case "reserve-sync-metadata":
+      return resolveReserveSyncCapacity(model, context);
+    default:
+      return model satisfies never;
+  }
 }

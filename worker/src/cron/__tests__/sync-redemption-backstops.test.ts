@@ -303,6 +303,8 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.resolved).toBe(2);
     expect(metadata.unresolved).toBe(0);
+    expect(metadata.familyMissingCapacityBy).toBeUndefined();
+    expect(metadata.providerMissingCapacityBy).toBeUndefined();
     expect(metadata.dynamic).toBe(1);
     expect(metadata.estimated).toBe(1);
     expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-static-policy");
@@ -693,6 +695,8 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.resolved).toBe(1);
     expect(metadata.unresolved).toBe(1);
     expect(metadata.unresolvedMissingCapacity).toBe(1);
+    expect(metadata.familyMissingCapacityBy).toEqual({ "basket-redeem": 1 });
+    expect(metadata.providerMissingCapacityBy).toEqual({ "reserve-sync-metadata": 1 });
     expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.missingCapacityOkThreshold).toBe(1);
   });
@@ -783,6 +787,8 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.resolved).toBe(98);
     expect(metadata.unresolved).toBe(3);
     expect(metadata.unresolvedMissingCapacity).toBe(3);
+    expect(metadata.familyMissingCapacityBy).toEqual({ "basket-redeem": 3 });
+    expect(metadata.providerMissingCapacityBy).toEqual({ "reserve-sync-metadata": 3 });
     expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.missingCapacityOkThreshold).toBe(2);
   });

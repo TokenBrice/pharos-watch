@@ -53,12 +53,8 @@ function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
 
 const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
-const ANY_RUN_MANIFEST_SQL = "SELECT run_id FROM redemption_backstop_runs LIMIT 1";
-const ANY_MANIFESTED_CURRENT_ROW_SQL =
-  "SELECT stablecoin_id FROM redemption_backstop WHERE snapshot_run_id IS NOT NULL LIMIT 1";
-const CURRENT_MAX_UPDATED_AT_SQL = "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop";
-const CURRENT_ROWS_SQL =
-  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
+const CURRENT_ROWS_BY_RUN_ID_SQL =
+  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop WHERE snapshot_run_id = ?";
 const RUN_ROWS_BY_RUN_ID_SQL =
   "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
@@ -67,26 +63,13 @@ describe("handleRedemptionBackstops", () => {
     vi.useRealTimers();
   });
 
-  it("returns 503 when the current snapshot cannot be read", async () => {
+  it("returns 503 when the run manifest cannot be read", async () => {
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
         rows: [],
-      },
-      {
-        match: ANY_RUN_MANIFEST_SQL,
-        rows: [],
-      },
-      {
-        match: CURRENT_ROWS_SQL,
-        rows: [],
         throwError: new Error("db unavailable"),
-      },
-      {
-        match: CURRENT_MAX_UPDATED_AT_SQL,
-        rows: [],
-        first: { updated_at: 1_700_000_000 },
       },
     ]);
 
@@ -98,24 +81,14 @@ describe("handleRedemptionBackstops", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("returns 503 when no current snapshot exists", async () => {
+  it("returns 503 without reading current rows when no completed run exists", async () => {
+    // Covers both the fresh-database bootstrap and a failed first manifested
+    // run: there is no legacy current-table fallback, so the only query is the
+    // completed-run manifest read.
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
-        rows: [],
-      },
-      {
-        match: ANY_RUN_MANIFEST_SQL,
-        rows: [],
-      },
-      {
-        match: CURRENT_MAX_UPDATED_AT_SQL,
-        rows: [],
-        first: { updated_at: null },
-      },
-      {
-        match: CURRENT_ROWS_SQL,
         rows: [],
       },
     ]);
@@ -123,31 +96,33 @@ describe("handleRedemptionBackstops", () => {
     const response = await handleRedemptionBackstops(db);
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
-      error: "Data not yet available",
+      error: "Redemption backstop snapshot unavailable",
     });
     assertAllD1MatchesUsed(db);
   });
 
-  it("returns the current redemption backstop map and methodology", async () => {
+  it("returns the current redemption backstop map and methodology from the completed run", async () => {
     const updatedAt = 1_700_000_000;
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
-        rows: [],
+        rows: [
+          {
+            run_id: "run-current",
+            completed_at: updatedAt + 10,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: updatedAt,
+            max_updated_at: updatedAt,
+            methodology_version: "1.1",
+          },
+        ],
       },
       {
-        match: ANY_RUN_MANIFEST_SQL,
-        rows: [],
-      },
-      {
-        match: CURRENT_MAX_UPDATED_AT_SQL,
-        rows: [],
-        first: { updated_at: updatedAt },
-      },
-      {
-        match: CURRENT_ROWS_SQL,
-        rows: [makeRedemptionRow({ updated_at: updatedAt })],
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-current"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-current", updated_at: updatedAt })],
       },
     ]);
 
@@ -171,11 +146,13 @@ describe("handleRedemptionBackstops", () => {
       >;
       methodology: { version: string; routeFamilyCaps: Record<string, number> };
       updatedAt: number;
+      snapshotSource?: string;
     };
 
     expect(body.updatedAt).toBe(updatedAt);
     expect(body.methodology.version).toBe("1.1");
     expect(body.methodology.routeFamilyCaps).toEqual({ queueRedeem: 70, offchainIssuer: 65 });
+    expect(body.snapshotSource).toBe("run-rows");
     expect(body.coins["cusd-cap"]?.effectiveExitScore).toBe(56);
     expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
     expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");
@@ -184,29 +161,44 @@ describe("handleRedemptionBackstops", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("returns 503 instead of serving partial current rows from a failed first manifested run", async () => {
+  it("reports snapshotSource legacy-current when run rows are empty for the completed run", async () => {
+    const updatedAt = 1_700_000_000;
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-mirror",
+            completed_at: updatedAt + 10,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: updatedAt,
+            max_updated_at: updatedAt,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-mirror"],
         rows: [],
       },
       {
-        match: ANY_RUN_MANIFEST_SQL,
-        rows: [{ run_id: "run-failed" }],
-      },
-      {
-        match: ANY_MANIFESTED_CURRENT_ROW_SQL,
-        rows: [{ stablecoin_id: "cusd-cap" }],
+        match: CURRENT_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-mirror"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-mirror", updated_at: updatedAt })],
       },
     ]);
 
     const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(200);
 
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({
-      error: "Redemption backstop snapshot unavailable",
-    });
+    const rawBody = await response.json();
+    const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success ? parsed.data.snapshotSource : null).toBe("legacy-current");
+    expect(parsed.success ? parsed.data.coins["cusd-cap"]?.updatedAt : null).toBe(updatedAt);
     assertAllD1MatchesUsed(db);
   });
 

@@ -145,9 +145,6 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
 
 const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
-const ANY_RUN_MANIFEST_SQL = "SELECT run_id FROM redemption_backstop_runs LIMIT 1";
-const ANY_MANIFESTED_CURRENT_ROW_SQL =
-  "SELECT stablecoin_id FROM redemption_backstop WHERE snapshot_run_id IS NOT NULL LIMIT 1";
 const CURRENT_ROWS_SQL =
   "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
 const CURRENT_ROWS_BY_RUN_ID_SQL = `${CURRENT_ROWS_SQL} WHERE snapshot_run_id = ?`;
@@ -405,6 +402,44 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     expect(result.runId).toBe("run-new");
     expect(result.latestUpdatedAt).toBe(1_700_000_000);
     expect(result.methodologyVersion).toBe("1.1");
+    expect(result.snapshotSource).toBe("run-rows");
+    expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("serves legacy current rows scoped to the completed run when immutable run rows are empty", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-mirror",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-mirror"],
+        rows: [],
+      },
+      {
+        match: CURRENT_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-mirror"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-mirror" })],
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-mirror");
+    expect(result.snapshotSource).toBe("legacy-current");
     expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
     assertAllD1MatchesUsed(db);
   });
@@ -598,25 +633,20 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("does not serve partial manifested current rows when the first manifested run failed", async () => {
+  it("fails closed without reading current rows when no completed run exists", async () => {
+    // Covers both the fresh-database bootstrap (no manifests at all) and a
+    // failed first manifested run: partial manifested current rows are never
+    // treated as authoritative, so the only mocked query is the manifest read.
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
         rows: [],
       },
-      {
-        match: ANY_RUN_MANIFEST_SQL,
-        rows: [{ run_id: "run-failed" }],
-      },
-      {
-        match: ANY_MANIFESTED_CURRENT_ROW_SQL,
-        rows: [{ stablecoin_id: "eurc-circle" }],
-      },
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
-      "No completed redemption backstop run found for manifested current rows",
+      "No completed redemption backstop run found",
     );
     assertAllD1MatchesUsed(db);
   });
@@ -649,6 +679,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
 
     expect(result.methodology.version).toBe("4.04");
     expect(result.methodology.versionLabel).toBe("v4.04");
+    expect(result.snapshotSource).toBe("run-rows");
     expect(result.coins["eurc-circle"]?.methodologyVersion).toBe("4.03");
     assertAllD1MatchesUsed(db);
   });

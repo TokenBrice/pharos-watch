@@ -352,9 +352,14 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
 });
 export type RedemptionBackstopMethodology = z.infer<typeof RedemptionBackstopMethodologySchema>;
 
+export const RedemptionSnapshotSourceSchema = z.enum(["run-rows", "legacy-current"]);
+export type RedemptionSnapshotSource = z.infer<typeof RedemptionSnapshotSourceSchema>;
+
 export const RedemptionBackstopsResponseSchema = z.object({
   coins: RedemptionBackstopMapSchema,
   methodology: RedemptionBackstopMethodologySchema,
   updatedAt: NonNegativeNumberSchema,
+  /** Where the snapshot rows were read from; optional so old clients are unaffected. */
+  snapshotSource: RedemptionSnapshotSourceSchema.optional(),
 });
 export type RedemptionBackstopsResponse = z.infer<typeof RedemptionBackstopsResponseSchema>;

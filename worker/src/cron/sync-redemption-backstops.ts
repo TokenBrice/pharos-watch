@@ -238,6 +238,13 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const resolvedCount = snapshots.filter((entry) => entry.resolutionState === "resolved").length;
   const unresolvedCount = snapshots.length - resolvedCount;
   const missingCapacityCount = snapshots.filter((entry) => entry.resolutionState === "missing-capacity").length;
+  const familyMissingCapacityBy: Record<string, number> = {};
+  const providerMissingCapacityBy: Record<string, number> = {};
+  for (const entry of snapshots) {
+    if (entry.resolutionState !== "missing-capacity") continue;
+    familyMissingCapacityBy[entry.routeFamily] = (familyMissingCapacityBy[entry.routeFamily] ?? 0) + 1;
+    providerMissingCapacityBy[entry.provider] = (providerMissingCapacityBy[entry.provider] ?? 0) + 1;
+  }
   const availabilityDegradedIds = snapshots
     .filter((entry) => entry.resolutionState === "impaired")
     .map((entry) => entry.stablecoinId);
@@ -261,6 +268,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     resolved: resolvedCount,
     unresolved: unresolvedCount,
     unresolvedMissingCapacity: missingCapacityCount,
+    ...(missingCapacityCount > 0 ? { familyMissingCapacityBy, providerMissingCapacityBy } : {}),
     unresolvedCritical: criticalUnresolvedCount,
     availabilityDegraded: availabilityDegradedCount,
     severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
@@ -332,6 +340,9 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
 
   const hasZeroResolvedCapacityFailure = resolvedCount === 0 && missingCapacityCount > 0;
   const hasPostWriteDegradation = preloadWarnings.length > 0 || writeResult.warnings.length > 0 || pruneFailed;
+  // `impaired` rows are intentional market-evidence signals (e.g. severe
+  // active depegs), not sync failures: they are excluded from
+  // criticalUnresolvedCount above and never degrade run status on their own.
   const status: CronResult["status"] =
     resolvedCount === 0 && (hasBlockingUnresolved || hasZeroResolvedCapacityFailure)
       ? "error"
