@@ -29,6 +29,7 @@ import type { SidebarNavSignal } from "@/lib/sidebar-signals";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useNavPrefetch } from "@/hooks/use-nav-prefetch";
 import { useSidebar } from "@/components/sidebar-context";
+import { isSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_SIGNAL_TONE_CLASS: Record<SidebarNavSignal["tone"], string> = {
@@ -271,16 +272,25 @@ export function Sidebar() {
   const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
-  // Inputs/textareas are excluded. No modifier key is used intentionally
-  // to match VS Code-style sidebar toggle conventions.
+  // Editable targets are excluded. No modifier key is used intentionally
+  // to match VS Code-style sidebar toggle conventions; per WCAG 2.1.4 the
+  // shortcut can be turned off from the keyboard-shortcuts dialog (?).
   useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target instanceof HTMLInputElement) return true;
+      if (target instanceof HTMLTextAreaElement) return true;
+      if (target instanceof HTMLSelectElement) return true;
+      return target.isContentEditable;
+    }
     function handleKeyDown(e: KeyboardEvent) {
-      // Ignore when typing in inputs
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === "[" || e.key === "]") {
-        e.preventDefault();
-        togglePin();
-      }
+      if (e.key !== "[" && e.key !== "]") return;
+      // Leave browser/OS combos like Cmd+[ (history back) alone.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      if (isSidebarShortcutDisabled()) return;
+      e.preventDefault();
+      togglePin();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);

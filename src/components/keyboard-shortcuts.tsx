@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { isSidebarShortcutDisabled, setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 type KeyJoin = "+" | "then" | "or";
 
@@ -53,6 +55,13 @@ export function KeyboardShortcuts({
   onOpenChange: (open: boolean) => void;
 }) {
   const categories = [...new Set(SHORTCUTS.map((s) => s.category))];
+  // This dialog is the only writer of the flag, so a lazy read stays accurate.
+  const [sidebarShortcutEnabled, setSidebarShortcutEnabled] = useState(() => !isSidebarShortcutDisabled());
+
+  const toggleSidebarShortcut = (enabled: boolean) => {
+    setSidebarShortcutEnabled(enabled);
+    setSidebarShortcutDisabled(!enabled);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,6 +89,19 @@ export function KeyboardShortcuts({
             </div>
           ))}
         </div>
+        <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
+          <span>
+            Enable the single-key{" "}
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">[ / ]</kbd>{" "}
+            sidebar shortcut
+          </span>
+          <input
+            type="checkbox"
+            checked={sidebarShortcutEnabled}
+            onChange={(e) => toggleSidebarShortcut(e.target.checked)}
+            className="h-4 w-4 shrink-0 accent-primary"
+          />
+        </label>
         <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
           Press <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">Esc</kbd> to close
         </p>
