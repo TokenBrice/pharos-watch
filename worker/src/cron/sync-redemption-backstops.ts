@@ -9,14 +9,9 @@ import {
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { CronResult } from "../lib/cron-logger";
-import { batchExecute } from "../lib/db";
-import { runWithOverloadRetry } from "../lib/cron-lease";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves-store";
-import {
-  updateRedemptionBackstopRunMetadata,
-  upsertRedemptionBackstopSnapshots,
-} from "../lib/redemption-backstops-store";
+import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
 import {
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
@@ -106,25 +101,6 @@ function buildRegistryMetadata(
       effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
     }),
   };
-}
-
-async function pruneRemovedRedemptionBackstops(db: D1Database, configuredIds: readonly string[]): Promise<void> {
-  const configuredIdSet = new Set(configuredIds);
-  const existingRows = await runWithOverloadRetry(() =>
-    db.prepare("SELECT stablecoin_id FROM redemption_backstop").all<{ stablecoin_id: string }>(),
-  );
-  const staleIds = (existingRows.results ?? [])
-    .map((row) => row.stablecoin_id)
-    .filter((stablecoinId) => !configuredIdSet.has(stablecoinId));
-
-  if (staleIds.length === 0) return;
-
-  await batchExecute(
-    db,
-    staleIds.map((stablecoinId) =>
-      db.prepare("DELETE FROM redemption_backstop WHERE stablecoin_id = ?").bind(stablecoinId),
-    ),
-  );
 }
 
 export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal): Promise<CronResult> {
@@ -306,7 +282,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     attemptedCount: writeResult.attemptedCount,
     runRowsWrittenCount: writeResult.runRowsWrittenCount,
     historyWrittenCount: writeResult.historyWrittenCount,
-    currentMirroredCount: writeResult.currentMirroredCount,
     ...(writeResult.retentionCutoff != null ? { retentionCutoff: writeResult.retentionCutoff } : {}),
     ...(writeResult.retentionRunRowsDeletedCount != null
       ? { retentionRunRowsDeletedCount: writeResult.retentionRunRowsDeletedCount }
@@ -320,26 +295,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     ...(writeResult.warnings.length > 0 ? { writeWarnings: writeResult.warnings } : {}),
   });
 
-  let pruneFailed = false;
-  try {
-    await pruneRemovedRedemptionBackstops(db, configuredIds);
-  } catch (error) {
-    pruneFailed = true;
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn("[sync-redemption-backstops] Prune failed after snapshot write:", error);
-    Object.assign(runMetadata, {
-      pruneDegraded: true,
-      pruneWarning: message,
-    });
-    try {
-      await updateRedemptionBackstopRunMetadata(db, writeResult.runId, runMetadata);
-    } catch (metadataError) {
-      console.warn("[sync-redemption-backstops] Failed to persist prune warning metadata:", metadataError);
-    }
-  }
-
   const hasZeroResolvedCapacityFailure = resolvedCount === 0 && missingCapacityCount > 0;
-  const hasPostWriteDegradation = preloadWarnings.length > 0 || writeResult.warnings.length > 0 || pruneFailed;
+  const hasPostWriteDegradation = preloadWarnings.length > 0 || writeResult.warnings.length > 0;
   // `impaired` rows are intentional market-evidence signals (e.g. severe
   // active depegs), not sync failures: they are excluded from
   // criticalUnresolvedCount above and never degrade run status on their own.

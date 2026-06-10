@@ -58,10 +58,7 @@ import { decodeJsonString } from "./cache-json";
 import { isMissingTableError } from "./db";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
-export {
-  upsertRedemptionBackstopSnapshots,
-  updateRedemptionBackstopRunMetadata,
-} from "./redemption-backstops-store-write";
+export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
 interface RedemptionBackstopRow {
   stablecoin_id: string;
@@ -488,6 +485,50 @@ export async function loadLegacyRedemptionBackstopCurrentMap(db: D1Database): Pr
   // API/report-card paths should use loadRedemptionBackstopSnapshot(), which
   // serves completed run snapshots only and fails closed without one.
   return queryRedemptionBackstopMap(db);
+}
+
+export interface RedemptionBackstopLiveSignalRow {
+  stablecoin_id: string;
+  immediate_capacity_ratio: number | null;
+  route_family: string | null;
+  updated_at: number;
+}
+
+/**
+ * Narrow completed-run reader for live depeg-resolver context. Serves the same
+ * immutable run rows as loadRedemptionBackstopSnapshot() but only the live
+ * signal fields for the requested coins, so callers avoid decoding the full
+ * snapshot map. Throws RedemptionBackstopSnapshotUnavailableError when no
+ * valid completed run exists.
+ */
+export async function loadRedemptionBackstopLiveSignalRows(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+): Promise<RedemptionBackstopLiveSignalRow[]> {
+  if (stablecoinIds.length === 0) return [];
+
+  const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
+  const run = recentRuns.find(
+    (candidate) =>
+      candidate.written_count === candidate.expected_count &&
+      (candidate.expected_count === 0 || candidate.max_updated_at != null),
+  );
+  if (!run) {
+    throw new RedemptionBackstopSnapshotUnavailableError(
+      "No valid completed redemption backstop run found for live signals",
+    );
+  }
+
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
+         FROM redemption_backstop_run_rows
+        WHERE snapshot_run_id = ?
+          AND stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})`,
+    )
+    .bind(run.run_id, ...stablecoinIds)
+    .all<RedemptionBackstopLiveSignalRow>();
+  return rows.results ?? [];
 }
 
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {

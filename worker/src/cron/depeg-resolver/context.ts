@@ -12,6 +12,10 @@ import {
   type DexHistoryRow,
 } from "../../api/dex-liquidity-response";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
+import {
+  loadRedemptionBackstopLiveSignalRows,
+  RedemptionBackstopSnapshotUnavailableError,
+} from "../../lib/redemption-backstops-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
@@ -268,18 +272,19 @@ export async function loadDdrContext(
     liqTvlChange7dByCoin.set(row.stablecoin_id, ((currentTvl - baseline.total_tvl_usd) / baseline.total_tvl_usd) * 100);
   }
 
-  const redemptionResult = await queryRows("redemption_backstop", () => db
-    .prepare(
-      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)})`,
-    )
-    .bind(...activeCoinIds)
-    .all<{
-      stablecoin_id: string;
-      immediate_capacity_ratio: number | null;
-      route_family: string | null;
-      updated_at: number;
-    }>());
+  // Redemption fields come from the store's completed-run snapshot (immutable
+  // run rows); the legacy `redemption_backstop` current-table mirror is
+  // retired. A snapshot that has never completed behaves like the old empty
+  // table read: non-fatal, redemption live context stays null. Real read
+  // failures still degrade the run like any other resolver health input.
+  const redemptionResult = await queryRows("redemption_backstop", async () => {
+    try {
+      return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds) };
+    } catch (error) {
+      if (error instanceof RedemptionBackstopSnapshotUnavailableError) return { results: [] };
+      throw error;
+    }
+  });
   const redemptionByCoin = new Map(redemptionResult.rows.map((r) => [r.stablecoin_id, r]));
 
   const safetyResult = await queryRows("safety_grade_history", () => db

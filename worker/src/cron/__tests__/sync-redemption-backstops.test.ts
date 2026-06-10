@@ -8,7 +8,6 @@ const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
-const updateRedemptionBackstopRunMetadataMock = vi.fn();
 const loadReserveSnapshotMetadataMapMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
 
@@ -69,7 +68,6 @@ vi.mock("../../lib/redemption-backstop-sources", () => ({
 
 vi.mock("../../lib/redemption-backstops-store", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
-  updateRedemptionBackstopRunMetadata: updateRedemptionBackstopRunMetadataMock,
 }));
 
 vi.mock("../../lib/live-reserves-store", () => ({
@@ -188,11 +186,9 @@ describe("syncRedemptionBackstops", () => {
         attemptedCount: snapshots.length,
         runRowsWrittenCount: snapshots.length,
         historyWrittenCount: snapshots.length,
-        currentMirroredCount: snapshots.length,
         warnings: [],
       }),
     );
-    updateRedemptionBackstopRunMetadataMock.mockResolvedValue(undefined);
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
     );
@@ -296,9 +292,9 @@ describe("syncRedemptionBackstops", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(
-      true,
-    );
+    // The legacy current-table mirror is retired: the cron no longer reads or
+    // prunes the redemption_backstop table directly.
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM redemption_backstop"))).toBe(false);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.resolved).toBe(2);
@@ -311,7 +307,7 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.routeStatusProducerFetches).toBe(false);
     expect(metadata.snapshotRunId).toBe("redemption:test-run");
     expect(metadata.runRowsWrittenCount).toBe(2);
-    expect(metadata.currentMirroredCount).toBe(2);
+    expect(metadata.currentMirroredCount).toBeUndefined();
     expect(typeof metadata.registryHash).toBe("string");
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
   });
@@ -325,10 +321,9 @@ describe("syncRedemptionBackstops", () => {
       "snapshot write failed",
     );
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
-    expect(updateRedemptionBackstopRunMetadataMock).not.toHaveBeenCalled();
   });
 
-  it("aborts after snapshot write resolves without pruning or refreshing metadata", async () => {
+  it("aborts after the snapshot write resolves before reporting run metadata", async () => {
     const controller = new AbortController();
     upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce((_db: unknown, snapshots: unknown[]) => {
       controller.abort(new Error("abort during write"));
@@ -337,19 +332,14 @@ describe("syncRedemptionBackstops", () => {
         attemptedCount: snapshots.length,
         runRowsWrittenCount: snapshots.length,
         historyWrittenCount: snapshots.length,
-        currentMirroredCount: snapshots.length,
         warnings: [],
       });
     });
 
-    const db = mockD1([{ match: "SELECT stablecoin_id FROM redemption_backstop", rows: [] }]);
+    const db = mockD1();
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(db, controller.signal)).rejects.toThrow("abort during write");
-    expect(updateRedemptionBackstopRunMetadataMock).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(
-      false,
-    );
   });
 
   it("continues with degraded static rows when optional DEX preload fails", async () => {
@@ -793,88 +783,29 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.missingCapacityOkThreshold).toBe(2);
   });
 
-  it("prunes stale rows without issuing an oversized NOT IN clause", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    configuredIdsMock = Array.from({ length: 136 }, (_value, index) => `coin-${index + 1}`);
-
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "ok",
-      updatedAt: now,
-      payload: {
-        peggedAssets: configuredIdsMock.map((id) =>
-          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
-        ),
-      },
-    });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
-      map: {},
-      latestUpdatedAt: now,
-    });
-    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
-      Promise.resolve(makeResolvedSnapshot(asset.id, now)),
-    );
-
-    const db = mockD1([
-      { match: "SELECT stablecoin_id FROM redemption_backstop", rows: [{ stablecoin_id: "legacy-removed" }] },
-    ]);
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(db, new AbortController().signal);
-
-    expect(result.status).toBe("ok");
-    expect(result.itemCount).toBe(136);
-    expect(db.getHistory().some((entry) => entry.sql.includes("NOT IN"))).toBe(false);
-    expect(db.getHistory()).toContainEqual({
-      sql: "DELETE FROM redemption_backstop WHERE stablecoin_id = ?",
-      binds: ["legacy-removed"],
-    });
-  });
-
-  it("keeps a completed snapshot degraded when pruning stale rows fails", async () => {
+  it("forwards run retention telemetry from the snapshot write into cron metadata", async () => {
     upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce((_db: unknown, snapshots: unknown[]) =>
       Promise.resolve({
         runId: "redemption:test-run",
         attemptedCount: snapshots.length,
         runRowsWrittenCount: snapshots.length,
         historyWrittenCount: snapshots.length,
-        currentMirroredCount: snapshots.length,
         retentionCutoff: 1_700_000_000,
         retentionRunRowsDeletedCount: 4,
         retentionRunsDeletedCount: 2,
         warnings: [],
       }),
     );
-    const db = mockD1([
-      {
-        match: "SELECT stablecoin_id FROM redemption_backstop",
-        rows: [],
-        throwError: new Error("prune select failed"),
-      },
-    ]);
 
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
-    expect(result.status).toBe("degraded");
-    expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
-    expect(updateRedemptionBackstopRunMetadataMock).toHaveBeenCalledWith(
-      expect.anything(),
-      "redemption:test-run",
-      expect.objectContaining({
-        pruneDegraded: true,
-        pruneWarning: "prune select failed",
-        snapshotRunId: "redemption:test-run",
-        retentionCutoff: 1_700_000_000,
-        retentionRunRowsDeletedCount: 4,
-        retentionRunsDeletedCount: 2,
-        writeStatus: "completed",
-        writePhase: "retention",
-      }),
-    );
+    expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.pruneDegraded).toBe(true);
-    expect(metadata.pruneWarning).toBe("prune select failed");
+    expect(metadata.retentionCutoff).toBe(1_700_000_000);
     expect(metadata.retentionRunRowsDeletedCount).toBe(4);
     expect(metadata.retentionRunsDeletedCount).toBe(2);
+    expect(metadata.writeStatus).toBe("completed");
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {

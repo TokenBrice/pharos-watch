@@ -130,24 +130,6 @@ function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unkno
   ];
 }
 
-function buildCurrentUpsert(
-  db: D1Database,
-  record: RedemptionBackstopSnapshotRecord,
-  runId?: string | null,
-): D1PreparedStatement {
-  const columns = [...SNAPSHOT_ROW_COLUMNS, "snapshot_run_id"];
-  return db
-    .prepare(
-      `INSERT INTO redemption_backstop (
-${formatColumnList(columns)}
-       ) VALUES (${placeholderList(columns.length)})
-       ON CONFLICT(stablecoin_id) DO UPDATE SET
-${formatUpdateAssignments(SNAPSHOT_ROW_UPDATE_COLUMNS)},
-         snapshot_run_id = excluded.snapshot_run_id`,
-    )
-    .bind(...buildSnapshotRowValues(record), runId ?? null);
-}
-
 function buildRunRowUpsert(
   db: D1Database,
   record: RedemptionBackstopSnapshotRecord,
@@ -271,7 +253,7 @@ function buildRunCompleteUpdate(
     );
 }
 
-export async function updateRedemptionBackstopRunMetadata(
+async function updateRedemptionBackstopRunMetadata(
   db: D1Database,
   runId: string,
   metadata: Record<string, unknown>,
@@ -332,7 +314,6 @@ function buildWriteMetadata(
     expectedCount: number;
     runRowsWrittenCount: number;
     historyWrittenCount: number;
-    currentMirroredCount: number;
     retentionCutoff?: number | null;
     retentionRunRowsDeletedCount?: number;
     retentionRunsDeletedCount?: number;
@@ -349,7 +330,6 @@ function buildWriteMetadata(
     expectedCount: facts.expectedCount,
     runRowsWrittenCount: facts.runRowsWrittenCount,
     historyWrittenCount: facts.historyWrittenCount,
-    currentMirroredCount: facts.currentMirroredCount,
     failedWriteCount: Math.max(0, facts.attemptedCount - facts.runRowsWrittenCount),
     ...(facts.retentionCutoff != null ? { retentionCutoff: facts.retentionCutoff } : {}),
     ...(facts.retentionRunRowsDeletedCount != null
@@ -510,7 +490,6 @@ export async function upsertRedemptionBackstopSnapshots(
       attemptedCount: 0,
       runRowsWrittenCount: 0,
       historyWrittenCount: 0,
-      currentMirroredCount: 0,
       retentionCutoff: null,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
@@ -531,7 +510,6 @@ export async function upsertRedemptionBackstopSnapshots(
   let runStarted = false;
   let runRowsWrittenCount = 0;
   let historyWrittenCount = 0;
-  let currentMirroredCount = 0;
   let retentionRunRowsDeletedCount = 0;
   let retentionRunsDeletedCount = 0;
   let retentionCutoff: number | null = null;
@@ -550,7 +528,6 @@ export async function upsertRedemptionBackstopSnapshots(
           expectedCount,
           runRowsWrittenCount,
           historyWrittenCount,
-          currentMirroredCount,
           retentionRunRowsDeletedCount,
           retentionRunsDeletedCount,
           writeStatus: "running",
@@ -566,7 +543,7 @@ export async function upsertRedemptionBackstopSnapshots(
       runRowStatements.push(buildRunRowUpsert(db, record, runId));
     }
     // Run rows are the immutable snapshot source. They must be complete before
-    // the run can become readable or any legacy current rows are touched.
+    // the run can become readable.
     runRowsWrittenCount = await batchExecute(db, runRowStatements, 30);
 
     const rowCount = await countRunRows(db, runId);
@@ -596,7 +573,6 @@ export async function upsertRedemptionBackstopSnapshots(
           expectedCount,
           runRowsWrittenCount: rowCount.rowCount,
           historyWrittenCount,
-          currentMirroredCount,
           retentionRunRowsDeletedCount,
           retentionRunsDeletedCount,
           writeStatus: "completed",
@@ -608,37 +584,7 @@ export async function upsertRedemptionBackstopSnapshots(
       throw new Error(`Failed to mark redemption backstop run ${runId} completed`);
     }
 
-    writePhase = "current-mirror";
-    const currentStatements = records.map((record) => buildCurrentUpsert(db, record, runId));
     const warnings: string[] = [];
-    try {
-      currentMirroredCount = await batchExecute(db, currentStatements, 30);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      warnings.push(`Current mirror update failed after completed run rows were written: ${message}`);
-      try {
-        await updateRedemptionBackstopRunMetadata(
-          db,
-          runId,
-          buildWriteMetadata(options?.metadata, {
-            runId,
-            attemptedCount,
-            expectedCount,
-            runRowsWrittenCount: rowCount.rowCount,
-            historyWrittenCount,
-            currentMirroredCount,
-            retentionRunRowsDeletedCount,
-            retentionRunsDeletedCount,
-            warnings,
-            writeStatus: "completed-with-warnings",
-            writePhase,
-          }),
-        );
-      } catch {
-        // Keep the successful immutable snapshot available even if warning
-        // metadata cannot be refreshed.
-      }
-    }
     writePhase = "retention";
     try {
       const retention = await pruneRedemptionBackstopRunRetention(db, {
@@ -665,7 +611,6 @@ export async function upsertRedemptionBackstopSnapshots(
           expectedCount,
           runRowsWrittenCount: rowCount.rowCount,
           historyWrittenCount,
-          currentMirroredCount,
           retentionCutoff,
           retentionRunRowsDeletedCount,
           retentionRunsDeletedCount,
@@ -684,7 +629,6 @@ export async function upsertRedemptionBackstopSnapshots(
       attemptedCount,
       runRowsWrittenCount: rowCount.rowCount,
       historyWrittenCount,
-      currentMirroredCount,
       retentionCutoff,
       retentionRunRowsDeletedCount,
       retentionRunsDeletedCount,
@@ -705,7 +649,6 @@ export async function upsertRedemptionBackstopSnapshots(
               expectedCount,
               runRowsWrittenCount,
               historyWrittenCount,
-              currentMirroredCount,
               retentionRunRowsDeletedCount,
               retentionRunsDeletedCount,
               writeStatus: "failed",

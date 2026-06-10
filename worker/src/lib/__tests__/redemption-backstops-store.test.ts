@@ -9,6 +9,7 @@ import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
   loadLegacyRedemptionBackstopCurrentMap,
+  loadRedemptionBackstopLiveSignalRows,
   loadRedemptionBackstopSnapshot,
   normalizeRedemptionBackstopRunMetadata,
   RedemptionBackstopSnapshotUnavailableError,
@@ -830,7 +831,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     expect(normalizeRedemptionBackstopRunMetadata(null)).toEqual({});
   });
 
-  it("writes current/history rows under a completed run manifest", async () => {
+  it("writes immutable run/history rows under a completed run manifest without a legacy current mirror", async () => {
     const db = mockD1([
       {
         match: "COUNT(*) AS row_count",
@@ -885,9 +886,9 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       attemptedCount: 1,
       runRowsWrittenCount: 1,
       historyWrittenCount: 1,
-      currentMirroredCount: 1,
       warnings: [],
     });
+    expect(result).not.toHaveProperty("currentMirroredCount");
     const history = db.getHistory();
     const runStartIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"));
     const runRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows"));
@@ -895,30 +896,16 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history"),
     );
     const completeIndex = history.findIndex((entry) => entry.sql.includes("status = 'completed'"));
-    const currentMirrorIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("));
     expect(runStartIndex).toBeGreaterThanOrEqual(0);
     expect(runRowIndex).toBeGreaterThan(runStartIndex);
     expect(historyRowIndex).toBeGreaterThan(runRowIndex);
     expect(completeIndex).toBeGreaterThan(historyRowIndex);
-    expect(currentMirrorIndex).toBeGreaterThan(completeIndex);
+    // The legacy current-table mirror write is retired.
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("))).toBe(false);
     const runRowInsert = history.find(
       (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
     );
-    const currentMirrorInsert = history.find(
-      (entry) => entry.sql.includes("INSERT INTO redemption_backstop (") && entry.binds.includes("run-test"),
-    );
     expect(runRowInsert?.binds).toHaveLength(25);
-    expect(currentMirrorInsert?.binds).toHaveLength(25);
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("INSERT INTO redemption_backstop") && entry.binds.includes("run-test"),
-      ),
-    ).toBe(true);
     expect(
       history.some(
         (entry) =>
@@ -934,9 +921,9 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       attemptedCount: 1,
       runRowsWrittenCount: 1,
       historyWrittenCount: 1,
-      currentMirroredCount: 1,
       writeStatus: "completed",
     });
+    expect(finalMetadata).not.toHaveProperty("currentMirroredCount");
   });
 
   it("marks a started run as failed when row writes fail", async () => {
@@ -1006,7 +993,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       attemptedCount: 1,
       runRowsWrittenCount: 1,
       historyWrittenCount: 0,
-      currentMirroredCount: 0,
       writeStatus: "failed",
       writePhase: "history",
     });
@@ -1041,59 +1027,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       attemptedCount: 2,
       writeStatus: "failed",
       writePhase: "run-rows",
-    });
-  });
-
-  it("keeps the immutable completed run when the legacy current mirror fails", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) AS row_count",
-        rows: [],
-        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
-      },
-      {
-        match: "INSERT INTO redemption_backstop (",
-        rows: [],
-        throwError: new Error("current mirror failed"),
-      },
-    ]);
-
-    const result = await upsertRedemptionBackstopSnapshots(db, [makeWriteRecord()], {
-      runId: "run-current-warning",
-      expectedCount: 1,
-    });
-
-    expect(result).toMatchObject({
-      runId: "run-current-warning",
-      runRowsWrittenCount: 1,
-      historyWrittenCount: 1,
-      currentMirroredCount: 0,
-    });
-    expect(result.warnings[0]).toContain("Current mirror update failed");
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("status = 'failed'"))).toBe(false);
-    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
-    const warningMetadataUpdate = metadataUpdates.find((entry) => {
-      const metadata = JSON.parse(String(entry.binds[0] ?? "{}")) as Record<string, unknown>;
-      return metadata.writePhase === "current-mirror";
-    });
-    const warningMetadata = JSON.parse(String(warningMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
-    expect(warningMetadata).toMatchObject({
-      snapshotRunId: "run-current-warning",
-      writeStatus: "completed-with-warnings",
-      writePhase: "current-mirror",
-      writeWarnings: [expect.stringContaining("current mirror failed")],
-    });
-    const finalMetadata = JSON.parse(String(metadataUpdates[metadataUpdates.length - 1]?.binds[0] ?? "{}")) as Record<
-      string,
-      unknown
-    >;
-    expect(finalMetadata).toMatchObject({
-      snapshotRunId: "run-current-warning",
-      writeStatus: "completed-with-warnings",
-      writePhase: "retention",
-      writeWarnings: [expect.stringContaining("current mirror failed")],
     });
   });
 
@@ -1202,7 +1135,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     expect(result).toMatchObject({
       runId: "run-retention-warning",
       runRowsWrittenCount: 1,
-      currentMirroredCount: 1,
       retentionCutoff: 9_000,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
@@ -1256,6 +1188,102 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     const history = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
     expect(history[0]?.sql).toContain("DELETE FROM redemption_backstop_runs");
     expect(history[1]?.sql).toContain("DELETE FROM redemption_backstop_run_rows");
+  });
+});
+
+describe("loadRedemptionBackstopLiveSignalRows", () => {
+  const LIVE_SIGNAL_ROWS_SQL =
+    "SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id IN (?)";
+
+  function makeRunManifestRow(overrides: Record<string, unknown> = {}) {
+    return {
+      run_id: "run-live",
+      completed_at: 1_700_000_010,
+      expected_count: 1,
+      written_count: 1,
+      min_updated_at: 1_700_000_000,
+      max_updated_at: 1_700_000_000,
+      methodology_version: "4.07",
+      ...overrides,
+    };
+  }
+
+  it("serves narrow live-signal rows from the latest valid completed run", async () => {
+    const db = mockD1Strict([
+      { match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: [makeRunManifestRow()] },
+      {
+        match: LIVE_SIGNAL_ROWS_SQL,
+        matchBinds: ["run-live", "eurc-circle"],
+        rows: [
+          {
+            stablecoin_id: "eurc-circle",
+            immediate_capacity_ratio: 0.42,
+            route_family: "offchain-issuer",
+            updated_at: 1_700_000_000,
+          },
+        ],
+      },
+    ]);
+
+    const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
+
+    expect(rows).toEqual([
+      {
+        stablecoin_id: "eurc-circle",
+        immediate_capacity_ratio: 0.42,
+        route_family: "offchain-issuer",
+        updated_at: 1_700_000_000,
+      },
+    ]);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("skips invalid newer completed manifests when selecting the live-signal run", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          makeRunManifestRow({ run_id: "run-incomplete", completed_at: 1_700_000_030, expected_count: 2 }),
+          makeRunManifestRow({ run_id: "run-missing-max", completed_at: 1_700_000_020, max_updated_at: null }),
+          makeRunManifestRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
+        ],
+      },
+      {
+        match: LIVE_SIGNAL_ROWS_SQL,
+        matchBinds: ["run-valid", "eurc-circle"],
+        rows: [
+          {
+            stablecoin_id: "eurc-circle",
+            immediate_capacity_ratio: null,
+            route_family: "offchain-issuer",
+            updated_at: 1_700_000_000,
+          },
+        ],
+      },
+    ]);
+
+    const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.stablecoin_id).toBe("eurc-circle");
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("fails closed with the typed error when no completed run exists", async () => {
+    const db = mockD1Strict([{ match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: [] }]);
+
+    await expect(loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"])).rejects.toBeInstanceOf(
+      RedemptionBackstopSnapshotUnavailableError,
+    );
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("returns no rows without querying when no coins are requested", async () => {
+    const db = mockD1Strict([]);
+
+    await expect(loadRedemptionBackstopLiveSignalRows(db, [])).resolves.toEqual([]);
+    expect(db.getHistory()).toEqual([]);
   });
 });
 

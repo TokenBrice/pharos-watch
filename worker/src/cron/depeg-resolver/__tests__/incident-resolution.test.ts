@@ -184,7 +184,32 @@ describe("loadDdrContext", () => {
           },
         ],
       },
-      { match: "FROM redemption_backstop", rows: [] },
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [
+          {
+            run_id: "run-live",
+            completed_at: NOW_SEC - 30,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: NOW_SEC - 60,
+            max_updated_at: NOW_SEC - 60,
+            methodology_version: "4.07",
+            metadata_json: null,
+          },
+        ],
+      },
+      {
+        match: "FROM redemption_backstop_run_rows",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            immediate_capacity_ratio: 0.4,
+            route_family: "offchain-issuer",
+            updated_at: NOW_SEC - 60,
+          },
+        ],
+      },
       {
         match: "FROM safety_grade_history h",
         rows: [
@@ -205,7 +230,98 @@ describe("loadDdrContext", () => {
     expect(result.context.dewsByCoin.get("usdc-circle")?.signals_json).toBe(signalsJson);
     expect(result.context.liqByCoin.get("usdc-circle")?.total_tvl_usd).toBe(40);
     expect(result.context.liqTvlChange7dByCoin.get("usdc-circle")).toBeCloseTo(-60);
+    expect(result.context.redemptionByCoin.get("usdc-circle")).toMatchObject({
+      immediate_capacity_ratio: 0.4,
+      route_family: "offchain-issuer",
+      updated_at: NOW_SEC - 60,
+    });
     expect(result.context.safetyByCoin.get("usdc-circle")).toMatchObject({ grade: "A", score: 90 });
+  });
+
+  it("keeps a missing completed redemption run non-fatal with empty redemption context", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "usdc-circle",
+                  symbol: "USDC",
+                  name: "USD Coin",
+                  pegType: "peggedUSD",
+                  price: 0.97,
+                  circulating: { peggedUSD: 1_000_000_000 },
+                },
+              ],
+            }),
+            updated_at: NOW_SEC,
+          },
+        ],
+      },
+      { match: "FROM redemption_backstop_runs", rows: [] },
+    ]);
+
+    const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.context.redemptionByCoin.size).toBe(0);
+  });
+
+  it("degrades when the redemption live-signal read fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "usdc-circle",
+                  symbol: "USDC",
+                  name: "USD Coin",
+                  pegType: "peggedUSD",
+                  price: 0.97,
+                  circulating: { peggedUSD: 1_000_000_000 },
+                },
+              ],
+            }),
+            updated_at: NOW_SEC,
+          },
+        ],
+      },
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [
+          {
+            run_id: "run-live",
+            completed_at: NOW_SEC - 30,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: NOW_SEC - 60,
+            max_updated_at: NOW_SEC - 60,
+            methodology_version: "4.07",
+            metadata_json: null,
+          },
+        ],
+      },
+      {
+        match: "FROM redemption_backstop_run_rows",
+        rows: [],
+        throwError: new Error("run rows unavailable"),
+      },
+    ]);
+
+    const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      reason: expect.stringContaining("redemption_backstop:"),
+    });
   });
 });
 
