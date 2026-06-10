@@ -127,7 +127,10 @@ export function Header() {
           <SheetContent
             side="left"
             showCloseButton={false}
-            className="w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0"
+            // z-[70] lifts the drawer above the sticky chrome (header z-[56],
+            // rail z-[55], PSI strip z-[60]); the Sheet default z-50 would
+            // leave the drawer's own header row painted beneath them.
+            className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
