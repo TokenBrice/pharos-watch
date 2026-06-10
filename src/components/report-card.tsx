@@ -367,8 +367,10 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         </div>
       ) : null}
 
-      {/* Dimension breakdown — half-width beside the radar at xl+ when the card is in dual-column mode */}
-      <div className={cn("grid grid-cols-1 gap-4", hasRightColumn && "xl:grid-cols-2 xl:gap-6 xl:items-center")}>
+      {/* Dimension breakdown. In dual-column mode the radar stacks below the rows:
+          the safety column is ~530px there, and a side-by-side radar crushed the
+          factor labels into mid-word ellipses ("R.", "Dece…"). */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           {DIMENSION_ORDER.map((key) => (
             <DimensionRow
@@ -381,8 +383,8 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
           ))}
         </div>
         {hasRightColumn ? (
-          <div className="hidden xl:block">
-            <ReportCardRadar card={card} labels="short" size={340} />
+          <div className="hidden xl:flex xl:justify-center">
+            <ReportCardRadar card={card} labels="short" size={280} />
           </div>
         ) : null}
       </div>

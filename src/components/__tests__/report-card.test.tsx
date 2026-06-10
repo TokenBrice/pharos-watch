@@ -105,7 +105,7 @@ describe("ReportCardDetail", () => {
     expect(screen.queryByText(/Peg:/)).toBeNull();
   });
 
-  it("uses the larger desktop radar size in split detail layout", () => {
+  it("stacks a fixed-size radar below the dimension rows in split detail layout", () => {
     render(
       <ReportCardDetail
         card={makeReportCard()}
@@ -114,6 +114,8 @@ describe("ReportCardDetail", () => {
       />,
     );
 
-    expect(screen.getByTestId("report-card-radar").getAttribute("data-size")).toBe("340");
+    // 280px stacked under the rows: a side-by-side radar in the ~530px safety
+    // column crushed the dimension labels into mid-word ellipses.
+    expect(screen.getByTestId("report-card-radar").getAttribute("data-size")).toBe("280");
   });
 });
