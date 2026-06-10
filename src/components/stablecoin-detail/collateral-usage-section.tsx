@@ -25,9 +25,11 @@ function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; 
     >
       <StablecoinLogo src={logoSrc} name={entry.coin.name} size={24} />
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="min-w-0 truncate text-sm font-medium">{entry.coin.symbol}</span>
+        {/* Tickers are short bounded strings — never ellipsize them; the type
+            chip is the flexible element if the cell ever runs out of room. */}
+        <span className="shrink-0 text-sm font-medium">{entry.coin.symbol}</span>
         {entry.type !== "collateral" && (
-          <span className="shrink-0 rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+          <span className="min-w-0 truncate rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
             {entry.type}
           </span>
         )}
@@ -71,11 +73,14 @@ export function CollateralUsageSection({ entries }: CollateralUsageSectionProps)
     <CollateralUsageItem key={entry.coin.id} entry={entry} logoSrc={logos?.[entry.coin.id]} />
   );
 
-  const GRID_CLASSES = "grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-3";
+  // Container-query columns: this section mounts both full-width and inside
+  // the half-width Dependency Context split, so viewport breakpoints
+  // over-column the narrow case and squeeze tickers into ellipsis.
+  const GRID_CLASSES = "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3";
   const showsTypeBreakdown = usage.length > 3 && wrapperCount > 0;
 
   return (
-    <section id="collateral-usage" className="animate-in fade-in space-y-2.5 duration-300">
+    <section id="collateral-usage" className="@container animate-in fade-in space-y-2.5 duration-300">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-2.5">
         <h3 className="text-sm font-semibold text-foreground">
           Used by <span className="ml-1 font-normal text-muted-foreground tabular-nums">{usage.length}</span>
