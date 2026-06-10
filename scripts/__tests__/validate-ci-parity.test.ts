@@ -196,6 +196,7 @@ describe("validate-ci parity", () => {
       "npm run audit:deps",
       "npm run audit:pricing-providers",
       "npm run lint",
+      "npm run lint:typed",
       "npm run typecheck",
       "npm run check:agent-doc-sync",
       "npm run check:agent-skill-symlinks",
