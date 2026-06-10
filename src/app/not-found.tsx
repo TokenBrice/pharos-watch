@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { digestDisplay } from "@/lib/fonts/digest";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { openCommandPalette } from "@/lib/command-palette";
 import { guessRoute, type RouteSuggestion } from "@/lib/route-guess";
@@ -55,14 +54,13 @@ export default function NotFound() {
         className="opacity-20"
       />
       <div className="space-y-2">
-        <p
-          className={`${digestDisplay.className} text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80`}
-        >
+        {/* Georgia (`font-serif`), not Newsreader: the not-found boundary is
+            bundled into every route, and importing digestDisplay here
+            preloaded the digest font CSS app-wide (mythos review #19). */}
+        <p className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-frost-blue/80">
           Trail gone cold
         </p>
-        <h1
-          className={`${digestDisplay.className} text-4xl font-semibold tracking-tight sm:text-5xl`}
-        >
+        <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
           The lamp swept past this page.
         </h1>
         {failedPath && (
