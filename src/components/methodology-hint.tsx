@@ -4,7 +4,7 @@ import { forwardRef, type ComponentPropsWithoutRef, type ReactNode, type Synthet
 import Link from "next/link";
 import { CircleHelp } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
@@ -172,14 +172,15 @@ export function MethodologyHint({
         </Sheet>
       </span>
       <span className={hasInlineTrigger ? "hidden md:inline" : "hidden md:inline-flex"}>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>{renderTrigger()}</TooltipTrigger>
-            <TooltipContent className={cn("max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl", contentClassName)}>
-              <HintBody topic={topic} />
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* Click-to-open Popover, not a Tooltip: the body carries links, and a
+            tooltip closes on trigger blur, so Tab could never reach them
+            (WCAG 2.1.1). Popover keeps focus inside and dismisses on Esc. */}
+        <Popover>
+          <PopoverTrigger asChild>{renderTrigger()}</PopoverTrigger>
+          <PopoverContent className={cn("w-auto max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl", contentClassName)}>
+            <HintBody topic={topic} />
+          </PopoverContent>
+        </Popover>
       </span>
     </span>
   );
