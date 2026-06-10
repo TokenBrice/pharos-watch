@@ -196,11 +196,29 @@ export function HomeAltClient() {
         </BelowFold>
       </div>
 
-      {/* Editorial band — single hairline divides it from the dashboard above */}
+      {/* The directory table is the product's workbench — it follows the KPI
+          band directly; the editorial band reads after it (mythos #8). */}
+      <section
+        id="home-alt-rankings"
+        role="region"
+        aria-labelledby="home-alt-rankings-title"
+        className="mt-3 space-y-4 sm:mt-3.5"
+      >
+        <BelowFold
+          forced={hashTargetForcesMount}
+          minHeight={620}
+          rootMargin="0px"
+          placeholder={<RankingsSectionFallback />}
+        >
+          <HomeAltRankingsSection titleId="home-alt-rankings-title" />
+        </BelowFold>
+      </section>
+
+      {/* Editorial band — single hairline divides it from the workbench above */}
       <BelowFold forced={hashTargetForcesMount} minHeight={820}>
         <section
           aria-label="Daily digest"
-          className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
+          className="mt-8 pt-2.5 sm:mt-10 sm:pt-3"
         >
           <DailyDigest variant="preview" />
         </section>
@@ -209,22 +227,6 @@ export function HomeAltClient() {
           <HomepageDiscoveryModule suggestions={discoverySuggestions} />
         </div>
       </BelowFold>
-
-      <section
-        id="home-alt-rankings"
-        role="region"
-        aria-labelledby="home-alt-rankings-title"
-        className="mt-8 space-y-4 sm:mt-10"
-      >
-        <BelowFold
-          forced={hashTargetForcesMount}
-          minHeight={620}
-          rootMargin="0px 0px -65% 0px"
-          placeholder={<RankingsSectionFallback />}
-        >
-          <HomeAltRankingsSection titleId="home-alt-rankings-title" />
-        </BelowFold>
-      </section>
     </div>
   );
 }
