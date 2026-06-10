@@ -42,8 +42,6 @@ export function ContagionGraph({
   );
 
   if (minimalChrome) {
-    // lg:h-full lets the stage stretch to the Dependency Context split's row
-    // height instead of leaving dead space under the aspect-sized canvas.
     return <div className="min-w-0 lg:h-full">{stage}</div>;
   }
 
