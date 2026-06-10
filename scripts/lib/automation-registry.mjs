@@ -17,6 +17,7 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/maintenance/audit-pricing-provider-config.ts"],
   },
   { command: "npm run lint", deployImpact: "validation-only", paths: [] },
+  { command: "npm run lint:typed", deployImpact: "validation-only", paths: [] },
   { command: "npm run typecheck", deployImpact: "validation-only", paths: [] },
   {
     command: "npm run check:agent-doc-sync",

@@ -10,6 +10,7 @@
 // tsconfigs are referenced explicitly because the worker is excluded from the
 // root tsconfig (D1 type conflicts) and has its own.
 import tseslint from "typescript-eslint";
+import security from "eslint-plugin-security";
 
 const TYPED_RULES = {
   "@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: true, ignoreIIFE: true }],
@@ -27,13 +28,19 @@ const IGNORES = [
 
 export default tseslint.config(
   {
+    // Source files carry inline disables for the main config's `security/*`
+    // rules; register the plugin (rules off) so those directives resolve, and
+    // don't report them as unused — they're live in the fast lane.
+    linterOptions: { reportUnusedDisableDirectives: "off" },
+  },
+  {
     files: ["worker/src/**/*.ts"],
     ignores: IGNORES,
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { project: "./worker/tsconfig.json", tsconfigRootDir: import.meta.dirname },
     },
-    plugins: { "@typescript-eslint": tseslint.plugin },
+    plugins: { "@typescript-eslint": tseslint.plugin, security },
     rules: TYPED_RULES,
   },
   {
@@ -43,7 +50,7 @@ export default tseslint.config(
       parser: tseslint.parser,
       parserOptions: { project: "./tsconfig.typecheck.json", tsconfigRootDir: import.meta.dirname },
     },
-    plugins: { "@typescript-eslint": tseslint.plugin },
+    plugins: { "@typescript-eslint": tseslint.plugin, security },
     rules: TYPED_RULES,
   },
 );
