@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 describe("feed routes smoke", () => {
-  it("advertised .xml feed routes emit RSS content", async () => {
+  // Imports four route modules in one test; module transformation can exceed
+  // the default 5s under a fully loaded machine (parallel merge-gate matrix),
+  // so this smoke gets a generous timeout.
+  it("advertised .xml feed routes emit RSS content", { timeout: 30_000 }, async () => {
     const routes = [
       await import("../digest.xml/route"),
       await import("../depeg.xml/route"),
