@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { dexLiquidityHistoryQueryOptions } from "./api-hooks";
 import { supplyHistoryQueryOptions } from "./use-stablecoins";
 
 const DEBOUNCE_MS = 100;
@@ -30,12 +29,11 @@ export function usePrefetchStablecoin() {
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
         pendingCoinIdRef.current = null;
-        // Prefetch only the queries the detail page fires on first paint
-        // (view-model supply history + eager DexLiquidityCard), with matching
-        // query keys. Safety-score history (10y) and depeg events live behind
-        // below-fold LazySections and fetch on scroll instead.
+        // Prefetch only the query the detail page fires on first paint
+        // (view-model supply history), with a matching query key. DEX
+        // liquidity, safety-score history (10y), and depeg events live
+        // behind below-fold LazySections and fetch on scroll instead.
         void queryClient.prefetchQuery(supplyHistoryQueryOptions(coinId));
-        void queryClient.prefetchQuery(dexLiquidityHistoryQueryOptions(coinId, 90));
       }, DEBOUNCE_MS);
     },
     [queryClient]
