@@ -69521,6 +69521,26 @@
         "url": "https://docs.frankencoin.com/"
       }
     ],
+    "jurisdiction": {
+      "country": "Switzerland",
+      "regulator": "FINMA",
+      "license": "MiCA-compliant payment token"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "references": [
+        {
+          "label": "Frankencoin compliance summary",
+          "url": "https://frankencoin.com/compliance/#compliance-summary"
+        },
+        {
+          "label": "Frankencoin docs",
+          "url": "https://docs.frankencoin.com/"
+        }
+      ]
+    },
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "bounded-admin",
