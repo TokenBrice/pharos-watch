@@ -170,9 +170,9 @@ describe("YieldLeaderboardControls", () => {
         />,
       );
 
-      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const group = screen.getByRole("group", { name: "Filter by yield type" });
       const tabLabels = Array.from(
-        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+        group.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
       ).map((button) => button.textContent ?? "");
 
       expect(tabLabels).toEqual([
@@ -194,9 +194,9 @@ describe("YieldLeaderboardControls", () => {
         />,
       );
 
-      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const group = screen.getByRole("group", { name: "Filter by yield type" });
       const rebaseTab = Array.from(
-        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+        group.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
       ).find((button) => button.textContent?.startsWith("Rebase"));
       expect(rebaseTab).toBeTruthy();
 
@@ -214,9 +214,9 @@ describe("YieldLeaderboardControls", () => {
         />,
       );
 
-      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const group = screen.getByRole("group", { name: "Filter by yield type" });
       const tabs = Array.from(
-        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+        group.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
       );
       const activeTabs = tabs.filter((button) => button.getAttribute("aria-pressed") === "true");
       expect(activeTabs).toHaveLength(1);

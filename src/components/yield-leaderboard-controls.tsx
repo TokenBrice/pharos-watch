@@ -319,7 +319,7 @@ export function YieldLeaderboardControls({
                 ))}
               </select>
               <div
-                role="tablist"
+                role="group"
                 aria-label="Filter by currency"
                 className="hidden flex-wrap items-center gap-1.5 sm:flex"
               >
@@ -358,7 +358,7 @@ export function YieldLeaderboardControls({
                 ))}
               </select>
               <div
-                role="tablist"
+                role="group"
                 aria-label="Filter by yield type"
                 className="hidden flex-wrap items-center gap-1.5 sm:flex"
               >
