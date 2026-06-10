@@ -528,6 +528,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "isolated",
     maxConnections: 1, // DB row-count read plus optional webhook alert
   },
+  {
+    job: "cron-duration-watchdog",
+    label: "Cron duration budget watchdog",
+    group: "daily",
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 1, // DB duration aggregates plus optional webhook alert
+  },
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => {

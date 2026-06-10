@@ -611,8 +611,9 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 | `telegram-inactive-cleanup` | `runTelegramInactiveCleanup()` | `worker/src/cron/telegram-inactive-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 | `telegram-retention-cleanup` | `runTelegramRetentionCleanup()` | `worker/src/cron/telegram-retention-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 | `mint-burn-growth-watchdog` | `runMintBurnGrowthWatchdog()` | `worker/src/cron/mint-burn-growth-watchdog.ts` | [Mint/Burn Flows](./mint-burn-flows.md) |
+| `cron-duration-watchdog` | `runCronDurationWatchdog()` | `worker/src/cron/cron-duration-watchdog.ts` | This doc |
 
-Housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days, `telegram-inactive-cleanup` trims inactive Telegram subscriber state, and `telegram-retention-cleanup` prunes Telegram dead letters, alert-job audit rows, usage aggregates, chat diagnostics, and processed-update dedupe rows. `mint-burn-growth-watchdog` counts `mint_burn_events` rows against the append-only growth budget (alert threshold 2.3M rows ≈ the agreed ~5 GB D1 revisit point) and webhook-alerts with a 7-day redelivery cooldown when exceeded.
+Housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days, `telegram-inactive-cleanup` trims inactive Telegram subscriber state, and `telegram-retention-cleanup` prunes Telegram dead letters, alert-job audit rows, usage aggregates, chat diagnostics, and processed-update dedupe rows. `mint-burn-growth-watchdog` counts `mint_burn_events` rows against the append-only growth budget (alert threshold 2.3M rows ≈ the agreed ~5 GB D1 revisit point) and webhook-alerts with a 7-day redelivery cooldown when exceeded. `cron-duration-watchdog` aggregates 7-day `cron_runs` durations for every job with an explicit `CRON_TIMEOUT_MS` ceiling and webhook-alerts (same 7-day cooldown) when a job's average crosses 80% of its ceiling or it hits the cap 3+ times in a week, so the next provider/feature addition is budgeted into a different trigger slot before timeouts truncate runs.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -639,7 +640,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 15      | `5 8 * * *`        |                         4 (Bluechip batch of 3 + Anthropic; digest/recap chained)                  |    2     |
 | 16      | `10 8 * * *`       |                                  1 (weekly CoinGecko discovery scan)                               |    5     |
 | 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 18      | `0 3 * * *`        |             1 (status-probe, cron-history, Telegram inactive-cleanup, Telegram retention-cleanup, and mint/burn growth watchdog; DB-only plus one optional alert webhook)  |    6     |
+| 18      | `0 3 * * *`        |             1 (status-probe, cron-history, Telegram inactive-cleanup, Telegram retention-cleanup, mint/burn growth watchdog, and cron duration watchdog; DB-only plus one optional alert webhook at a time)  |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry but is not represented in `CRON_JOB_DEFINITIONS` because it does not create a separate `/api/status` job row. It is represented in `CRON_CONNECTION_BUDGET_ENTRIES` as the budget-only `digest-trigger-poll` entry, so `npm run check:cron-connections` enforces its one-connection peak alongside job-bearing trigger slots.
 
