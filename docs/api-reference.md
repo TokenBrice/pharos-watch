@@ -2254,6 +2254,7 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 **Supported routes**
 
 - `/api/og/stablecoin/:id`
+- `/api/og/chain/:id`
 - `/api/og/safety-scores`
 - `/api/og/depeg`
 - `/api/og/stability-index`
@@ -2264,12 +2265,12 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 
 **Error cases**
 
-- `404` with `text/plain` for unknown coin IDs inside `/api/og/stablecoin/:id`; unknown OG route patterns return the standard JSON `{ "error": "Unknown OG route" }`
+- `404` with `text/plain` for unknown coin IDs inside `/api/og/stablecoin/:id` and for unknown chain IDs (or chains with no tracked supply) inside `/api/og/chain/:id`; unknown OG route patterns return the standard JSON `{ "error": "Unknown OG route" }`
 - `503` when required cached data is not yet available
 - `400` for malformed URI encoding in `/api/og/stablecoin/:id`
 - `500` with `text/plain` body when OG image rendering fails
 
-`/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker.
+`/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker. `/api/og/chain/:id` accepts `CHAIN_META` chain IDs and renders supply, 7d trend, dominance, chain-health, and top-stablecoin data from the same cached stablecoins payload that backs `/api/chains`.
 
 ---
 

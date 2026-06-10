@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
-import { buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -35,6 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
     title: chainPageTitle(meta.name, deployments),
     description: buildChainMetaDescription(meta.name, deployments),
     canonical: `/chains/${chain}/`,
+    ogImage: buildApiOgImageUrl(API_PATHS.ogChain(chain)),
   });
 }
 

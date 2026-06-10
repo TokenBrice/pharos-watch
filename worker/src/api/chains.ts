@@ -82,7 +82,7 @@ function buildReportCardDependencyMeta(
   };
 }
 
-function isActiveChainAggregateAsset(asset: { id: string; frozen?: boolean; isDefunct?: boolean; defunct?: boolean }): boolean {
+export function isActiveChainAggregateAsset(asset: { id: string; frozen?: boolean; isDefunct?: boolean; defunct?: boolean }): boolean {
   return ACTIVE_IDS.has(asset.id)
     && asset.frozen !== true
     && asset.isDefunct !== true

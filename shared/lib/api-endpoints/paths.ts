@@ -91,6 +91,7 @@ export const API_PATHS = {
   chains: () => "/api/chains",
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  ogChain: (chainId: string) => `/api/og/chain/${chainId}`,
   ogDepeg: () => "/api/og/depeg",
   ogSafetyScores: () => "/api/og/safety-scores",
   ogStabilityIndex: () => "/api/og/stability-index",

@@ -7,6 +7,11 @@ import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/sta
 import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
 import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templates/stability-index-card";
+import { ChainCard, type ChainCardData } from "../lib/og-templates/chain-card";
+import { isActiveChainAggregateAsset } from "./chains";
+import { aggregateChains } from "@shared/lib/chain-aggregator";
+import { derivePegRates } from "@shared/lib/peg-rates";
+import { CHAIN_META } from "@shared/lib/chains";
 import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
@@ -546,10 +551,75 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
+// /api/og/chain/:id
+// ---------------------------------------------------------------------------
+
+async function handleChainOg(db: D1Database, chainId: string): Promise<Response> {
+  if (!CHAIN_META[chainId]) {
+    return new Response("Unknown chain", { status: 404, headers: { "Content-Type": "text/plain" } });
+  }
+
+  const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  if (stablecoinsResult.kind !== "ok") {
+    return new Response("Data not yet available", {
+      status: 503,
+      headers: { "Content-Type": "text/plain", "Retry-After": "60", "Cache-Control": "no-store" },
+    });
+  }
+
+  const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;
+  const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
+  const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
+
+  // Safety scores feed the chain health factor; render proceeds without them.
+  const safetyScores: Record<string, number> = {};
+  const reportCardResult = await loadReportCardCache(db);
+  if (reportCardResult.kind === "ok") {
+    for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
+      safetyScores[id] = entry.score;
+    }
+  }
+
+  const aggregated = aggregateChains({ peggedAssets: activePeggedAssets, safetyScores, pegRates });
+  const chain = aggregated.chains.find((entry) => entry.id === chainId);
+  if (!chain) {
+    return new Response("No tracked supply on this chain", {
+      status: 404,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
+  const topStablecoins = (chain.topStablecoins && chain.topStablecoins.length > 0
+    ? chain.topStablecoins
+    : [{ ...chain.dominantStablecoin, supplyUsd: chain.dominantStablecoin.share * chain.totalUsd }]
+  ).slice(0, 4);
+
+  const data: ChainCardData = {
+    name: chain.name,
+    totalUsd: chain.totalUsd,
+    change7dPct: chain.change7dPct,
+    stablecoinCount: chain.stablecoinCount,
+    dominanceShare: chain.dominanceShare,
+    healthScore: chain.healthScore,
+    healthBand: chain.healthBand,
+    topStablecoins: topStablecoins.map((coin) => ({
+      symbol: coin.symbol,
+      share: coin.share,
+      supplyUsd: coin.supplyUsd,
+    })),
+    lastUpdated: nowUtcLabel(),
+  };
+
+  const png = await renderPng(<ChainCard data={data} />);
+  return new Response(png, { headers: CACHE_HEADERS });
+}
+
+// ---------------------------------------------------------------------------
 // Main OG route dispatcher
 // ---------------------------------------------------------------------------
 
 const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
+const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
 
 export async function handleOg(db: D1Database, path: string): Promise<Response | null> {
   try {
@@ -563,6 +633,12 @@ export async function handleOg(db: D1Database, path: string): Promise<Response |
         return new Response("Malformed URI", { status: 400, headers: { "Content-Type": "text/plain" } });
       }
       return await handleStablecoinOg(db, coinId);
+    }
+
+    // /api/og/chain/:id
+    const chainMatch = path.match(CHAIN_OG_PATTERN);
+    if (chainMatch) {
+      return await handleChainOg(db, chainMatch[1]);
     }
 
     // /api/og/safety-scores

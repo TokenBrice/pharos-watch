@@ -11,6 +11,7 @@ import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/
 import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
 import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
 import { DepegCard } from "../../lib/og-templates/depeg-card";
+import { ChainCard } from "../../lib/og-templates/chain-card";
 
 describe("stablecoin OG card data", () => {
   it("marks unavailable 24h volume as null", () => {
@@ -274,6 +275,47 @@ describe("og cards render through satori", () => {
           recoveredToday: 1,
           newToday: 2,
           lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the chain card", async () => {
+    const svg = await renderSvg(
+      <ChainCard
+        data={{
+          name: "Ethereum",
+          totalUsd: 132_000_000_000,
+          change7dPct: 1.8,
+          stablecoinCount: 214,
+          dominanceShare: 0.52,
+          healthScore: 74,
+          healthBand: "healthy",
+          topStablecoins: [
+            { symbol: "USDT", share: 0.42, supplyUsd: 55_000_000_000 },
+            { symbol: "USDC", share: 0.31, supplyUsd: 41_000_000_000 },
+            { symbol: "DAI", share: 0.04, supplyUsd: 5_000_000_000 },
+          ],
+          lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the chain card without health data", async () => {
+    const svg = await renderSvg(
+      <ChainCard
+        data={{
+          name: "Obscure Chain",
+          totalUsd: 1_200_000,
+          change7dPct: -12.4,
+          stablecoinCount: 1,
+          dominanceShare: 0.000004,
+          healthScore: null,
+          healthBand: null,
+          topStablecoins: [{ symbol: "XUSD", share: 1, supplyUsd: 1_200_000 }],
         }}
       />,
     );
