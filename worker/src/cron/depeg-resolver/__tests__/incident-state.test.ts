@@ -27,8 +27,8 @@ function makeEventRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
 describe("ensureCanonicalIncidentsForEvents", () => {
   it("excludes quarantined events instead of assigning fallback pseudo-incidents", async () => {
     const events = [makeEventRow({ id: 1 }), makeEventRow({ id: 2, stablecoin_id: "lusd-liquity", symbol: "LUSD" })];
-    const stores = {
-      async ensureCanonicalIncidents(_db, inputs, options) {
+    const ensureCanonicalIncidents: DdrV2StoreContracts["ensureCanonicalIncidents"] =
+      async (_db, inputs, options) => {
         // Event 2 needs an explicit repair migration; event 1 links cleanly.
         options.onRepairRequired?.(2, "overlaps nearby canonical incident; explicit repair required");
         const input = inputs.find((entry) => entry.eventId === 1)!;
@@ -57,8 +57,8 @@ describe("ensureCanonicalIncidentsForEvents", () => {
             lockState: null,
           },
         ];
-      },
-    } as unknown as DdrV2StoreContracts;
+      };
+    const stores = { ensureCanonicalIncidents } as DdrV2StoreContracts;
 
     const { byEventId, quarantined } = await ensureCanonicalIncidentsForEvents(
       stores,
