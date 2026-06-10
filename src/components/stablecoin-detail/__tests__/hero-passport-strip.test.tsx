@@ -95,6 +95,8 @@ describe("HeroPassportStrip", () => {
     const mechanism = getByRole("link", { name: "Peg mechanism: Custodial Cash — jump to Key Information" });
     const [label, value] = Array.from(mechanism.querySelectorAll("span"));
     expect(label.textContent).toBe("Mechanism");
+    expect(label.className).toContain("uppercase");
+    expect(label.className).toContain("tracking-wider");
     expect(value.textContent).toBe("Custodial Cash");
     expect(value.className).toContain("uppercase");
     expect(value.className).toContain("font-mono");

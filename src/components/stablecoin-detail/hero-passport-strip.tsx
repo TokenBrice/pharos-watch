@@ -79,7 +79,9 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
               }
               className="pharos-focus-ring group flex min-h-11 shrink-0 snap-start flex-col justify-center rounded-sm lg:min-h-0"
             >
-              <span className="text-[10px] leading-tight text-muted-foreground">{item.category}</span>
+              <span className="text-[10px] font-medium uppercase tracking-wider leading-tight text-muted-foreground">
+                {item.category}
+              </span>
               <span
                 className={`whitespace-nowrap font-mono text-xs font-semibold uppercase leading-snug tracking-wide underline-offset-2 group-hover:underline ${
                   item.valueClass ?? "text-foreground"
