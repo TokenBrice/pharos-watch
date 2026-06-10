@@ -3,6 +3,7 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
+import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 
 const getReserveAdapterMock = vi.fn();
@@ -447,7 +448,9 @@ describe("syncLiveReserves", () => {
   });
 
   it("persists a deferred cursor on budget exhaustion and resumes from that coin on the next run", async () => {
-    const configuredIds = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).map((coin) => coin.id);
+    // The sync queue is evidence-class ordered, so expectations follow the
+    // ordered queue rather than raw registry order.
+    const configuredIds = SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id);
     let nowMs = 0;
     let activeRun = 1;
     const visitedByRun = new Map<number, string[]>();
@@ -643,14 +646,16 @@ describe("syncLiveReserves", () => {
       historyWriteFailedCoins?: string[];
     };
 
+    // The tiny budget admits exactly one coin: the head of the ordered queue.
+    const firstQueuedCoinId = SYNC_ORDERED_CONFIGURED_COINS[0]!.id;
     expect(result?.itemCount).toBe(1);
     expect(metadata).toMatchObject({
       synced: 1,
       failed: 0,
       warningCount: 1,
-      historyWriteFailedCoins: ["usdt-tether"],
+      historyWriteFailedCoins: [firstQueuedCoinId],
     });
-    expect(metadata.warnings).toContain("usdt-tether:history-write-failed");
+    expect(metadata.warnings).toContain(`${firstQueuedCoinId}:history-write-failed`);
     const historyWriteEvent = db.getHistory().find((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-write-failed"

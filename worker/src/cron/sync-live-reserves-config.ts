@@ -6,9 +6,13 @@ export interface LiveReserveSyncBudgetConfig {
   minimumAttemptBudgetMs: number;
 }
 
+// The leased outer wrapper gives sync-live-reserves a 12-minute wall-clock
+// budget. The internal run budget must leave room for the trailing D1
+// finalize timeout and the finalization margin: 11min + 30s + 5s = 11m35s,
+// keeping 25s of lease headroom for deferred-tail writes and cron logging.
 const DEFAULT_LIVE_RESERVE_SYNC_BUDGETS = {
   adapterTimeoutMs: 20_000,
-  runBudgetMs: 10 * 60 * 1000,
+  runBudgetMs: 11 * 60 * 1000,
   d1FinalizeTimeoutMs: 30_000,
   finalizationMarginMs: 5_000,
 };

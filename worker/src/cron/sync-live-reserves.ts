@@ -12,6 +12,7 @@ import {
   buildReserveAdapterAttemptChainError,
   breakerKeyForConfig,
   CONFIGURED_COINS,
+  SYNC_ORDERED_CONFIGURED_COINS,
   type ConfiguredCoin,
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
@@ -349,7 +350,16 @@ export async function syncLiveReserves(
   const runStartedMs = Date.now();
   const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
   const cursorState = await loadLiveReserveCursorState(db);
-  const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
+  // Cursor rotation semantics over the evidence-class-ordered queue: a
+  // cursored run rotates the full ordered queue to start at the first coin
+  // deferred by the previous run, processes that deferred tail first, then
+  // wraps around to the head until the budget is spent. Because any coin
+  // deferred in run N sits at the front of run N+1's queue, the weak-probe
+  // tail cannot starve indefinitely and a deferred independent coin is synced
+  // on the very next run. If the cursor coin is no longer in the queue (order
+  // or coverage changed between deploys), rotateFromCursor falls back to
+  // starting from the top of the ordered queue.
+  const orderedCoins = rotateConfiguredCoins(SYNC_ORDERED_CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const effectiveAdapterCtx: AdapterContext = {
     db,

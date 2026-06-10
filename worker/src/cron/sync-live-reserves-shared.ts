@@ -1,10 +1,63 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
+import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
 
 export const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
 export type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
 export type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
+
+const EVIDENCE_CLASS_SYNC_PRIORITY: Record<LiveReserveEvidenceClass, number> = {
+  "independent": 0,
+  "static-validated": 1,
+  "weak-live-probe": 2,
+};
+
+/**
+ * Builds the base sync queue order so run-budget truncation drops the
+ * least valuable work first:
+ *
+ * 1. Evidence class: `independent` adapters (score-grade collateral evidence)
+ *    run before `static-validated`, which run before `weak-live-probe`.
+ * 2. Source-invariant grouping: coins sharing a `source-invariant` adapter
+ *    (one fetch serves every coin) are made contiguous within their
+ *    evidence-class segment, anchored at the group's first occurrence, so the
+ *    already-paid shared fetch is reused immediately instead of the queue
+ *    tail paying full price after the budget is gone.
+ * 3. Otherwise the existing deterministic registry order is preserved.
+ */
+export function orderConfiguredCoinsForSync(
+  configuredCoins: readonly ConfiguredCoin[],
+): ConfiguredCoin[] {
+  const groupAnchorIndexes = new Map<string, number>();
+  const entries = configuredCoins.map((coin, index) => {
+    const config = coin.liveReservesConfig!;
+    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
+    const groupKey = definition.sharedSourceMode === "source-invariant"
+      ? `adapter:${config.adapter}`
+      : `coin:${coin.id}`;
+    if (!groupAnchorIndexes.has(groupKey)) {
+      groupAnchorIndexes.set(groupKey, index);
+    }
+    return {
+      coin,
+      index,
+      priority: EVIDENCE_CLASS_SYNC_PRIORITY[definition.evidenceClass],
+      groupKey,
+    };
+  });
+
+  return entries
+    .sort((a, b) => (
+      a.priority - b.priority
+      || groupAnchorIndexes.get(a.groupKey)! - groupAnchorIndexes.get(b.groupKey)!
+      || a.index - b.index
+    ))
+    .map((entry) => entry.coin);
+}
+
+export const SYNC_ORDERED_CONFIGURED_COINS = orderConfiguredCoinsForSync(CONFIGURED_COINS);
 
 export interface ReserveAttemptFailureSummary {
   source: "primary" | "fallback";
