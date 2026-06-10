@@ -627,9 +627,6 @@ export const VERIFIED_OR_UNVERIFIED_FRESHNESS = [
 export const VERIFIED_ONLY_FRESHNESS = [
   "verified",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
-export const UNVERIFIED_ONLY_FRESHNESS = [
-  "unverified",
-] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
 export const NOT_APPLICABLE_ONLY_FRESHNESS = [
   "not-applicable",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];

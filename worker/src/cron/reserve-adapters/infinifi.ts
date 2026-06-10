@@ -94,7 +94,7 @@ const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
 // and matching its value against the live staked exchange rate ties the
 // timestamp to the reserve state we are reporting. History values are rounded
 // to 4 decimals, so the tolerance covers rounding plus sub-cadence yield drift.
-export const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
+const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
 const RATE_CROSS_CHECK_TOLERANCE = 5e-4;
 const RATE_HISTORY_PROBE_TIMEOUT_MS = 6_000;
 
