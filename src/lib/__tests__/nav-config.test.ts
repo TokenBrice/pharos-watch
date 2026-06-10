@@ -15,9 +15,9 @@ describe("nav-config", () => {
       "/",
       "/safety-scores/",
       "/depeg/",
-      "/yield/",
-      "/alt-pegs/",
       "/freezewatch/",
+      "/alt-pegs/",
+      "/yield/",
       "/stability-index/",
       "/pharoswatchbot/",
     ]);
@@ -91,33 +91,29 @@ describe("nav-config", () => {
     ]);
   });
 
-  it("defines the core top rail run while preserving sidebar links on core pages", () => {
-    expect(CORE_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/", label: "Dashboard" },
-      { href: "/safety-scores/", label: "Safety Scores" },
-      { href: "/depeg/", label: "Depeg/DDR" },
-      { href: "/freezewatch/", label: "FreezeWatch" },
-      { href: "/alt-pegs/", label: "Alt-Pegs" },
-      { href: "/yield/", label: "Yield Intelligence" },
-      { href: "/stability-index/", label: "Stability Index" },
-      { href: "/pharoswatchbot/", label: "PharosWatchBot" },
-    ]);
+  it("mirrors the primary order on the core rail and suppresses duplicate core links beside it", () => {
+    // The rail and the sidebar primary block are the same set in the same
+    // order; two orderings of the same eight pages read as different menus.
+    expect(CORE_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual(
+      PRIMARY_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label })),
+    );
 
     expect(isCoreNavPath("/timeline/")).toBe(false);
     expect(isCoreNavPath("/learn/")).toBe(false);
     expect(isCoreNavPath("/status/")).toBe(false);
     expect(isCoreNavPath("/learn/mechanisms/")).toBe(false);
 
+    // On a core page the horizontal rail lists the full core set, so the
+    // sidebar keeps Dashboard as its only core entry; the groups stay intact.
     const corePageNav = getSidebarNavForPath("/yield/");
-    expect(corePageNav.primaryItems).toBe(PRIMARY_NAV_ITEMS);
+    expect(corePageNav.primaryItems.map((item) => item.href)).toEqual(["/"]);
     expect(corePageNav.groups).toBe(NAV_GROUPS);
-    expect(corePageNav.primaryItems.some((item) => item.href === "/depeg/")).toBe(true);
-    expect(corePageNav.primaryItems.some((item) => item.href === "/alt-pegs/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/mechanisms/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(true);
     expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/screener/")).toBe(true);
 
+    // Off the core set there is no rail, so the sidebar lists everything.
     const nonCorePageNav = getSidebarNavForPath("/stablecoin/usdt-tether/");
     expect(nonCorePageNav.primaryItems).toBe(PRIMARY_NAV_ITEMS);
     expect(nonCorePageNav.groups).toBe(NAV_GROUPS);

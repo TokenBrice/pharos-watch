@@ -64,13 +64,16 @@ export interface NavGroup {
 
 const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
+// Canonical core order — the top rail and the sidebar primary block must list
+// the same eight destinations in the same sequence, or the two menus read as
+// different products.
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   DASHBOARD_NAV_ITEM,
   { href: "/safety-scores/", label: "Safety Scores", icon: ShieldCheck, description: "Cross-market safety grades and contagion scenarios" },
   { href: "/depeg/", label: "Depeg/DDR", icon: Activity, description: "Live peg incidents, DEWS early warnings, DDR recovery outlooks, and reviews" },
-  { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
-  { href: "/alt-pegs/", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
   { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
+  { href: "/alt-pegs/", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
+  { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
   { href: "/stability-index/", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/pharoswatchbot/", label: "PharosWatchBot", icon: Send, description: "Push alerts for depegs, DEWS shifts, launches, and the daily digest" },
 ];
@@ -130,19 +133,8 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const _allNavItems: NavItem[] = [...PRIMARY_NAV_ITEMS, ...NAV_GROUPS.flatMap((g) => g.items)];
-const _byHref = (href: string): NavItem => _allNavItems.find((item) => item.href === href)!;
-
-export const CORE_NAV_ITEMS: NavItem[] = [
-  _byHref("/"),
-  _byHref("/safety-scores/"),
-  _byHref("/depeg/"),
-  _byHref("/freezewatch/"),
-  _byHref("/alt-pegs/"),
-  _byHref("/yield/"),
-  _byHref("/stability-index/"),
-  _byHref("/pharoswatchbot/"),
-];
+// The horizontal core rail shows exactly the primary set, in the same order.
+export const CORE_NAV_ITEMS: NavItem[] = PRIMARY_NAV_ITEMS;
 
 export function normalizeNavPath(pathname: string): string {
   if (pathname === "/") return "/";
@@ -155,7 +147,13 @@ export function isCoreNavPath(pathname: string | null | undefined): boolean {
   return CORE_NAV_ITEMS.some((item) => normalizeNavPath(item.href) === normalizedPath);
 }
 
-export function getSidebarNavForPath(_pathname: string | null | undefined): { primaryItems: NavItem[]; groups: NavGroup[] } {
+export function getSidebarNavForPath(pathname: string | null | undefined): { primaryItems: NavItem[]; groups: NavGroup[] } {
+  // While a core page is active the horizontal rail already lists the full
+  // core set, so the sidebar keeps Dashboard as its only core entry instead of
+  // duplicating all eight shortcuts beside an identical menu.
+  if (isCoreNavPath(pathname)) {
+    return { primaryItems: [DASHBOARD_NAV_ITEM], groups: NAV_GROUPS };
+  }
   return { primaryItems: PRIMARY_NAV_ITEMS, groups: NAV_GROUPS };
 }
 

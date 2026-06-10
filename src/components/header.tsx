@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, getSidebarNavForPath, isCoreNavPath } from "@/lib/nav-config";
+import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, NAV_GROUPS, PRIMARY_NAV_ITEMS, isCoreNavPath } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -80,7 +80,10 @@ export function Header() {
   const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
   const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
   const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
-  const { primaryItems, groups } = getSidebarNavForPath(pathname);
+  // The drawer is a modal menu with no rail beside it, so unlike the desktop
+  // sidebar it always lists the full core set.
+  const primaryItems = PRIMARY_NAV_ITEMS;
+  const groups = NAV_GROUPS;
   const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
   const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
   const isCorePath = isCoreNavPath(pathname);
