@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.06`
+- **Current methodology version:** `v4.07`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.06` update: fxSAVE now uses fresh ERC-4626 live redemption-capacity telemetry from the vault's idle fxSP balance instead of the prior low-confidence 20% heuristic strategy-buffer estimate.
+Latest `v4.07` update: conservative confidence defaults in the effective-exit blend (missing model confidence now applies the low 0.35 factor), live-proxy capacity with unknown route status always rolls up low confidence, the strong live-direct severe-depeg exemption is re-evaluated against the final resolved capacity state, and over-leveraged output-dependency compositions are flagged while the impaired share stays clamped at 100%.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
