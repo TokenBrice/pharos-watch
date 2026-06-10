@@ -113,6 +113,18 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   );
 }
 
+function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
+  if (coin.status === "pre-launch") return null;
+  if (coin.flags.pegCurrency !== "GOLD" && coin.flags.pegCurrency !== "SILVER") return null;
+  if (coin.commodityOunces != null && coin.commodityOunces > 0) return null;
+
+  return (
+    "GOLD/SILVER-pegged asset must declare commodityOunces (troy ounces per token); "
+    + "without it peg-rates silently treats the price as per-troy-ounce, fabricating peg deviation "
+    + "for non-1oz denominations and contaminating the commodity peer median"
+  );
+}
+
 function getReserveTotalIssue(coin: StablecoinMeta): string | null {
   if (!coin.reserves || coin.reserves.length === 0) return null;
 
@@ -438,6 +450,11 @@ if (errorCount === 0) {
     const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);
     if (runtimeAdmissionIssue) {
       reportError(`${entry.file} (${entry.coin.id}): ${runtimeAdmissionIssue}`);
+    }
+
+    const commodityOuncesIssue = getCommodityOuncesIssue(entry.coin);
+    if (commodityOuncesIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${commodityOuncesIssue}`);
     }
 
     for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {
