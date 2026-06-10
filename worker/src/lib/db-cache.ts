@@ -18,6 +18,20 @@ export async function getCache(db: D1Database, key: string): Promise<{ value: st
   return { value: row.value, updatedAt: row.updated_at };
 }
 
+/**
+ * Reads only updated_at for a cache key, avoiding the value-column transfer
+ * for multi-megabyte payloads when the caller may not need the body.
+ */
+export async function getCacheUpdatedAt(db: D1Database, key: string): Promise<number | null> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT updated_at FROM cache WHERE key = ?")
+      .bind(key)
+      .first<{ updated_at: number }>(),
+  );
+  return row?.updated_at ?? null;
+}
+
 export async function setCache(db: D1Database, key: string, value: string): Promise<void> {
   await runWithOverloadRetry(() =>
     db

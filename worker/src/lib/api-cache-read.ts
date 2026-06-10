@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { getCache, setCacheIfNewer } from "./db-cache";
+import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
@@ -164,8 +164,29 @@ export function createCacheHandler(
   },
 ): (db: D1Database) => Promise<Response> {
   return withErrorHandler(endpoint, async (db: D1Database): Promise<Response> => {
+    if (options?.responseReadyCache) {
+      // Probe updated_at only first so a fresh companion hit never transfers
+      // the (potentially multi-megabyte) canonical value column.
+      const canonicalUpdatedAt = await getCacheUpdatedAt(db, cacheKey);
+      if (canonicalUpdatedAt != null) {
+        const responseReady = await getResponseReadyCache(db, cacheKey);
+        if (responseReady?.updatedAt === canonicalUpdatedAt) {
+          const responseReadyBody = options.responseReadyCache === "json-object" && options.injectMeta !== "never"
+            ? injectMetaIntoJsonObject(responseReady.value, canonicalUpdatedAt, maxAgeSec)
+            : responseReady.value;
+          if (responseReadyBody != null) {
+            return new Response(responseReadyBody, {
+              headers: addFreshnessHeaders({
+                "Content-Type": "application/json",
+                "Cache-Control": cacheControl,
+              }, canonicalUpdatedAt, maxAgeSec),
+            });
+          }
+        }
+      }
+    }
+
     const cached = await getCache(db, cacheKey);
-    const responseReady = cached && options?.responseReadyCache ? await getResponseReadyCache(db, cacheKey) : null;
     if (!cached) {
       return errorResponse(503, "Data not yet available");
     }
@@ -174,15 +195,6 @@ export function createCacheHandler(
       "Content-Type": "application/json",
       "Cache-Control": cacheControl,
     }, cached.updatedAt, maxAgeSec);
-
-    if (responseReady?.updatedAt === cached.updatedAt) {
-      const responseReadyBody = options?.responseReadyCache === "json-object" && options.injectMeta !== "never"
-        ? injectMetaIntoJsonObject(responseReady.value, cached.updatedAt, maxAgeSec)
-        : responseReady.value;
-      if (responseReadyBody != null) {
-        return new Response(responseReadyBody, { headers });
-      }
-    }
 
     const parsed = readCachedJsonOr503<unknown>(endpoint, cacheKey, cached);
     if (!parsed.ok) {
