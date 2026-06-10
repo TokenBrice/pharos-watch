@@ -169,7 +169,7 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "chainlink-nav",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "xaum-matrixdock",
@@ -180,13 +180,17 @@
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
-        "chain": "ethereum",
+        "chain": "bsc",
         "rpcMode": "public-rpc"
       }
     },
     "params": {
-      "label": "Physical gold bars (LBMA 99.99%)",
-      "risk": "very-low"
+      "oracleAddress": "0xfa54C1c5F62ea3a5653a0b1b7148E26008eA1501",
+      "tokenAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
+      "assetLabel": "Physical gold bars (LBMA 99.99%)",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
     }
   },
   "launchDate": "2024-08-28"

@@ -242,24 +242,36 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "xusd-straitsx",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://www.straitsx.com/xusd",
       "label": "StraitsX"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.straitsx.com/xusd"
       }
     },
     "params": {
-      "label": "Tier 1 bank deposits & short-term securities",
-      "risk": "very-low"
+      "slices": [
+        {
+          "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
+          "pct": 50,
+          "risk": "very-low"
+        },
+        {
+          "name": "Short-term U.S. / MAS government securities",
+          "pct": 50,
+          "risk": "very-low"
+        }
+      ]
     }
   },
   "launchDate": "2024-02-01"

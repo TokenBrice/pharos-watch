@@ -226,24 +226,31 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "gyen-gyen",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://stablecoin.z.com/attestation/",
       "label": "GMO Trust"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://stablecoin.z.com/attestation/"
       }
     },
     "params": {
-      "label": "JPY fiat reserves",
-      "risk": "very-low"
+      "slices": [
+        {
+          "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
+          "pct": 100,
+          "risk": "very-low"
+        }
+      ]
     }
   },
   "launchDate": "2019-12-11"

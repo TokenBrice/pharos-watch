@@ -90,24 +90,31 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "audx-aussie-dollar-token",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://www.audxtoken.com/transparency",
       "label": "AUDX Transparency"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.audxtoken.com/transparency"
       }
     },
     "params": {
-      "label": "AUD cash and government-backed instruments",
-      "risk": "low"
+      "slices": [
+        {
+          "name": "AUD cash and government-backed instruments",
+          "pct": 100,
+          "risk": "low"
+        }
+      ]
     }
   },
   "mintAuthority": {
