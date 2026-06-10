@@ -107,7 +107,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` pill order is: `overview` (Risk), `context`, `liquidity`, `activity`, `history`, `explore`. Child cards can still expose deep-link anchors such as `#report-card`, `#reserves`, `#mint-authority`, `#price`, `#chart`, `#yield`, `#flows`, `#blacklist`, `#coin-timeline`, and `#explore-next`, but they are not top-level rail pills.
+- `LongformScrollspyNav` pill order is: `overview` (Risk), `context`, `liquidity`, `activity`, `history`, `explore`. Child cards can still expose deep-link anchors such as `#report-card`, `#reserves`, `#mint-authority`, `#redemption`, `#price`, `#chart`, `#yield`, `#flows`, `#blacklist`, `#coin-timeline`, and `#explore-next` — plus the passport sub-anchors `#mechanism`, `#attestation`, `#jurisdiction`, and `#contracts` inside `KeyInfoCard` — but they are not top-level rail pills.
 - Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the overview zone and are not top-level scrollspy entries.
@@ -120,7 +120,23 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 
 On `lg+` the hero's right column renders `HeroSignalsRail` — a four-pill stack (Safety / Peg / Liquidity / DEWS) that jumps to `#report-card` (for Safety, Peg, and DEWS) or `#liquidity`. This replaces the former desktop `SafetyGradeHero` duplicate that sat opposite the Safety Score card. On `<lg` the hero still renders `SafetyGradeHero` because the Safety Score card is far down the scroll on narrow screens.
 
-Hero signal chips below the identity block are severity-ordered: `DEWS`, `Freezable`, `Peg`, `Liquidity`, `30d Excess`, optional `1Y vs USD`, `Chains`. The chip previously labelled `BLACKLISTABLE` now reads `Freezable` (industry term; methodology docs still use "Blacklistable" as the canonical methodology label).
+Hero tertiary metric chips below the identity block are live signals only: on `<lg` a 2x2 grid of `DEWS`, `Peg`, `Liq`, `30d Excess` with optional `1Y vs USD` beneath; on `lg+` just `30d Excess` and optional `1Y vs USD` (DEWS/Peg/Liquidity live in the signals rail). The former `Freezable` and `Chains` chips moved into the hero passport strip below.
+
+### Hero passport strip
+
+`HeroPassportStrip` (June 2026, mythos item 23) docks at the bottom of the `HeroCard` behind a hairline `border-t` and renders the dossier's verification facts as identity-document fields — field name in small letters above, value in mono all-caps below, no pill chrome and no jump icon. Items come from `passportItems` on the hero view model (`buildHeroPassportItems` in `stablecoin-detail-view-model.ts`):
+
+| Field         | Value vocabulary                                                                 | Anchor target                                                              |
+| ------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Mechanism     | `MECHANISM_ARCHETYPE_SHORT_LABELS`; falls back to the backing badge label         | `#mechanism` (`#info` when the collateral/peg-stability block is absent)    |
+| Attestor      | `POR_TIER_STYLES` label (tier text tone via `textCls`), or PoR type label         | `#attestation`; omitted for decentralized coins or missing PoR              |
+| Jurisdiction  | `jurisdiction.country`, else muted `Not disclosed`                                | `#jurisdiction` (`#info` for decentralized coins, where the block is absent)|
+| Redeemability | `REDEMPTION_ACCESS_LABELS[entry.accessModel]`                                     | `#redemption`; omitted when no redemption-backstop record exists            |
+| Minting       | mint-authority `mintPathLabel`                                                    | `#mint-authority`; omitted when the mint-authority review is `not-reviewed` |
+| Freeze        | `Yes` / `Possible` / `Upstream` / `No` (amber/emerald text tones)                 | `#blacklist` for `BLACKLIST_STABLECOINS`, else `#mint-authority`, else the FreezeWatch coin filter |
+| Chains        | live `coinData.chains.length`                                                     | `#contracts` (`#info` when no curated contracts)                            |
+
+Values are authored-short and never CSS-truncated; on `<lg` the row is a snap-scroll carousel with a right-edge fade, on `lg+` it wraps. Hash entries intercept the click and re-align with the same retry cadence as `LongformScrollspyNav` (160/480/960/1800 ms) because deep targets sit below lazy sections whose height settles after the jump starts; targets carry `scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6` for sticky-chrome clearance. The strip absorbed the former identity-zone `MechanismChip` and `FreezablePill` and the tertiary `Chains` pill, so each fact has exactly one hero home; the strip hides entirely if fewer than three facts resolve.
 
 ### Classification taxonomy pills
 

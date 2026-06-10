@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Snowflake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -11,16 +10,10 @@ import {
   GOVERNANCE_LABELS,
   PEG_LABELS,
   PEG_LABELS_SHORT,
-  getMechanismArchetypeCtaNoun,
-  getMechanismArchetypeLabel,
-  getMechanismExplainerPath,
-  resolveMechanismArchetype,
 } from "@shared/lib/classification";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type {
   Infrastructure,
   ReportCard,
@@ -28,8 +21,6 @@ import type {
 } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
-import { getFreezableLabel } from "@/lib/blacklist-status";
-import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -39,20 +30,6 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
-
-function MechanismChip({ coin }: { coin: StablecoinMeta }) {
-  const archetype = resolveMechanismArchetype(coin, TRACKED_META_BY_ID);
-  if (!archetype) return null;
-  return (
-    <Link
-      href={getMechanismExplainerPath(archetype)}
-      aria-label={`Learn how ${getMechanismArchetypeCtaNoun(archetype)} stablecoins work`}
-      className="pharos-focus-ring inline-flex min-h-6 items-center rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-    >
-      {getMechanismArchetypeLabel(archetype)}
-    </Link>
-  );
-}
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -335,7 +312,6 @@ interface HeroIdentityProps {
   variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
-  reportCard?: ReportCard | null;
   verdict: StablecoinVerdict;
 }
 
@@ -343,56 +319,6 @@ interface HeroMobileIdentityDetailsProps {
   coin: StablecoinMeta;
   infrastructures: Infrastructure[];
   includeClassification?: boolean;
-}
-
-// Exported for unit testing; rendered indirectly via HeroMobileIdentity / HeroDesktopIdentity.
-export function FreezablePill({
-  coin,
-  reportCard,
-}: {
-  coin: StablecoinMeta;
-  reportCard?: ReportCard | null;
-}) {
-  if (!reportCard) return null;
-  const status = reportCard.rawInputs.canBeBlacklisted;
-  const label = status === false ? "Unfreezable" : getFreezableLabel(status);
-  if (label === null) return null;
-  let ariaLabel: string;
-  let toneClass: string;
-  switch (status) {
-    case true:
-      ariaLabel = "Freezable — issuer can freeze, block, or seize balances";
-      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-      break;
-    case "possible":
-      ariaLabel =
-        "Possible freeze — admin surfaces could enable freezing but no active address-level freezing is confirmed";
-      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-      break;
-    case "inherited":
-      ariaLabel = "Upstream freeze — freezing is inherited from an upstream issuer or collateral asset";
-      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-      break;
-    case false:
-      ariaLabel = "Unfreezable — no issuer-level freeze, block, or seize capability";
-      toneClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-      break;
-    default:
-      return null;
-  }
-  const href = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
-    ? "#blacklist"
-    : buildCoinTrackerLink(coin.id, "freezewatch", coin.symbol).href;
-  return (
-    <Link
-      href={href}
-      aria-label={ariaLabel}
-      className={`pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-[11px] font-semibold sm:min-h-0 sm:px-2.5 sm:py-0.5 ${toneClass}`}
-    >
-      <Snowflake className="h-3 w-3" aria-hidden />
-      {label}
-    </Link>
-  );
 }
 
 /**
@@ -484,7 +410,6 @@ export function HeroMobileIdentityDetails({
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        <MechanismChip coin={coin} />
         <HeroTagList tags={coin.tags} />
       </div>
     </>
@@ -497,7 +422,6 @@ export function HeroDesktopIdentity({
   variantParent,
   variantChipClass,
   infrastructures,
-  reportCard,
   verdict,
 }: HeroIdentityProps) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
@@ -517,7 +441,6 @@ export function HeroDesktopIdentity({
           <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
-          <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
@@ -531,7 +454,6 @@ export function HeroDesktopIdentity({
           </div>
         ) : null}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <MechanismChip coin={coin} />
           <HeroTagList tags={coin.tags} />
         </div>
       </div>

@@ -277,9 +277,15 @@ export function KeyInfoCard({
           )}
         </div>
 
-        {/* Collateral + Peg Stability */}
+        {/* Collateral + Peg Stability. The id anchors (here and on the PoR,
+            jurisdiction, and contracts blocks below) are hero passport-strip
+            jump targets; scroll-mt clears the mobile sticky summary + section
+            banner, while lg+ only needs breathing room. */}
         {hasDescription && (
-          <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
+          <div
+            id="mechanism"
+            className="grid scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2 lg:scroll-mt-6"
+          >
             {meta.collateral && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
@@ -346,7 +352,10 @@ export function KeyInfoCard({
         {/* Proof of Reserves + Jurisdiction (2-col on desktop) */}
         {!isDecentralized && (
           <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
-            <div>
+            <div
+              id="attestation"
+              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+            >
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Proof of Reserves
               </p>
@@ -369,7 +378,10 @@ export function KeyInfoCard({
               )}
             </div>
 
-            <div>
+            <div
+              id="jurisdiction"
+              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+            >
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Jurisdiction
               </p>
@@ -406,7 +418,10 @@ export function KeyInfoCard({
 
         {/* Contract Addresses */}
         {hasContracts && (
-          <div className="border-t border-border/40 pt-3 sm:pt-4">
+          <div
+            id="contracts"
+            className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] border-t border-border/40 pt-3 sm:pt-4 lg:scroll-mt-6"
+          >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Contract Deployments
             </p>

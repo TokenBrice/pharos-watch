@@ -88,7 +88,10 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
   if (!isReviewed || !profile) return null;
 
   return (
-    <Card id="mint-authority" className="rounded-xl">
+    <Card
+      id="mint-authority"
+      className="rounded-xl scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+    >
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <DetailSectionTitle>Mint Authority</DetailSectionTitle>

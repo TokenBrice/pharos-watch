@@ -8,7 +8,6 @@ import type {
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
 import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatBand } from "@shared/lib/classification";
-import { getFreezableLabel, getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
 
@@ -20,11 +19,6 @@ export interface HeroDisplayValue {
   value: string;
   sub?: string;
   color: string;
-}
-
-export interface HeroBlacklistDisplay extends HeroDisplayValue {
-  status: ReturnType<typeof getResolvedBlacklistStatus>;
-  methodologyTopic: "freezable" | "freezableNo" | "freezablePossible" | "freezableUpstream";
 }
 
 export interface HeroDewsDisplay {
@@ -87,41 +81,6 @@ export function buildLiquidityDisplay(liquidityData: DexLiquidityData | undefine
         sub: `${liquidityData.poolCount} pools`,
         color: getScoreColor(liquidityScore ?? 0),
       };
-}
-
-export function buildBlacklistDisplay(
-  blacklistStatus: ReturnType<typeof getResolvedBlacklistStatus>,
-): HeroBlacklistDisplay {
-  switch (blacklistStatus) {
-    case true:
-      return {
-        status: blacklistStatus,
-        value: getFreezableLabel(blacklistStatus) ?? "Freezable",
-        color: HERO_NEGATIVE_TREND_CLASS,
-        methodologyTopic: "freezable",
-      };
-    case "possible":
-      return {
-        status: blacklistStatus,
-        value: getFreezableLabel(blacklistStatus) ?? "Possible Freeze",
-        color: "text-amber-700 dark:text-amber-400",
-        methodologyTopic: "freezablePossible",
-      };
-    case "inherited":
-      return {
-        status: blacklistStatus,
-        value: getFreezableLabel(blacklistStatus) ?? "Upstream Freeze",
-        color: "text-amber-700 dark:text-amber-400",
-        methodologyTopic: "freezableUpstream",
-      };
-    default:
-      return {
-        status: blacklistStatus,
-        value: "No",
-        color: HERO_POSITIVE_TREND_CLASS,
-        methodologyTopic: "freezableNo",
-      };
-  }
 }
 
 export function buildExcessYieldDisplay(yieldRanking: YieldRanking | null): HeroDisplayValue {

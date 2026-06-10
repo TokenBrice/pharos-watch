@@ -93,7 +93,6 @@ interface HeroSectionBaseProps {
   hasPrevMonth: boolean;
   safePrevMonth: number | null;
   prevMonthTrendClass: string;
-  chainCount: number;
   earlyPegScore: boolean;
   trackingSpanDays: number;
   activeDepeg: boolean;
@@ -124,7 +123,6 @@ export function HeroCardMobileSection({
   safePrevMonth,
   prevMonthTrendClass,
   tertiaryMetrics,
-  chainCount,
   earlyPegScore,
   trackingSpanDays,
   activeDepeg,
@@ -192,7 +190,6 @@ export function HeroCardMobileSection({
 
       <HeroTertiaryMetrics
         metrics={tertiaryMetrics}
-        chainCount={chainCount}
         earlyPegScore={earlyPegScore}
         trackingSpanDays={trackingSpanDays}
         activeDepeg={activeDepeg}
@@ -208,7 +205,6 @@ export function HeroCardDesktopSection({
   coinData,
   logoSrc,
   verdict,
-  reportCard,
   variantParent,
   variantChipClass,
   infrastructures,
@@ -229,12 +225,10 @@ export function HeroCardDesktopSection({
   prevMonthTrendClass,
   signalRailItems,
   tertiaryMetrics,
-  chainCount,
   earlyPegScore,
   trackingSpanDays,
   activeDepeg,
 }: HeroSectionBaseProps & {
-  reportCard: ReportCard | null;
   signalRailItems: import("./hero-card-metrics").HeroSignalRailItem[];
   tertiaryMetrics: import("./hero-card-metrics").HeroTertiaryMetricConfig[];
 }) {
@@ -248,7 +242,6 @@ export function HeroCardDesktopSection({
             variantParent={variantParent}
             variantChipClass={variantChipClass}
             infrastructures={infrastructures}
-            reportCard={reportCard}
             verdict={verdict}
           />
 
@@ -285,7 +278,6 @@ export function HeroCardDesktopSection({
           <div className="mt-3">
             <HeroTertiaryMetrics
               metrics={tertiaryMetrics}
-              chainCount={chainCount}
               earlyPegScore={earlyPegScore}
               trackingSpanDays={trackingSpanDays}
               activeDepeg={activeDepeg}

@@ -268,6 +268,7 @@ export default function StablecoinDetailClient({
     viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
       <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
     ) : null;
+  const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
   const heroModel = buildStablecoinDetailHeroViewModel({
     coin: viewModel.coin,
     coinData: viewModel.coinData,
@@ -291,6 +292,9 @@ export default function StablecoinDetailClient({
     verdict: viewModel.verdict,
     variantParent: viewModel.variantParent,
     variantKind: viewModel.coin.variantKind ?? null,
+    resolvedMechanismArchetype,
+    mintAuthority: viewModel.mintAuthority,
+    redemptionBackstop: viewModel.redemptionBackstop ?? null,
   });
   const variantRelationshipCard =
     viewModel.variantParent && viewModel.coin.variantKind ? (
@@ -317,7 +321,6 @@ export default function StablecoinDetailClient({
   ) : null;
   const showPegChart =
     viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken && viewModel.supplyHistory.length > 0;
-  const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
   const archetypeOverride = viewModel.coin.archetypeOverride === true;
   const isWrapperVariant = viewModel.isVariant && !archetypeOverride;
   const parentArchetype =
@@ -401,7 +404,10 @@ export default function StablecoinDetailClient({
         <div className="min-w-0">
           {/* ── Key Info ── */}
           <div>
-            <section id="info">
+            <section
+              id="info"
+              className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+            >
               <KeyInfoCard
                 meta={viewModel.coin}
                 resolvedMechanismArchetype={resolvedMechanismArchetype}

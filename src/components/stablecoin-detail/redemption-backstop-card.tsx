@@ -41,7 +41,10 @@ export function RedemptionBackstopCard({
   const viewModel = buildRedemptionBackstopCardViewModel(entry);
 
   return (
-    <Card>
+    <Card
+      id="redemption"
+      className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+    >
       <CardHeader className="pb-3">
         <DetailSectionTitle>
           <MethodologyLabel topic="redemptionBackstop">Redemption Backstop</MethodologyLabel>

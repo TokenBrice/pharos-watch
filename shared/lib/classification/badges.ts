@@ -82,27 +82,36 @@ export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
   },
 };
 
-/** Proof-of-reserves attestor tier badge styles for the detail page. */
-export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string }> = {
+/**
+ * Proof-of-reserves attestor tier badge styles for the detail page.
+ * `textCls` is the text-only projection of the same ladder for flat surfaces
+ * (hero passport entries) that carry no pill background.
+ */
+export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string; textCls: string }> = {
   big4: {
     cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
     label: "Big-4 attestor",
+    textCls: "text-emerald-700 dark:text-emerald-400",
   },
   regional: {
     cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
     label: "Regional CPA",
+    textCls: "text-blue-700 dark:text-blue-400",
   },
   niche: {
     cls: "bg-muted/40 text-muted-foreground border-border/60",
     label: "Niche attestor",
+    textCls: "text-muted-foreground",
   },
   self: {
     cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
     label: "Self-attested",
+    textCls: "text-amber-700 dark:text-amber-400",
   },
   none: {
     cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30",
     label: "No attestation",
+    textCls: "text-red-700 dark:text-red-400",
   },
 };
 

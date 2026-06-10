@@ -140,6 +140,7 @@ Active detail pages keep one server-rendered semantic `h1` for crawlers and assi
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
 - Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
 - The `Contract Deployments` block shows a one-row, six-item icon preview on mobile with a `Show all` toggle; `sm+` renders labeled rows (chain logo + name link + truncated address + copy + explorer) in a 1/2/3-column grid with a nine-row preview and its own `Show all` toggle — the bare icon wall was retired in the June 2026 mythos pass (recognition fails past the top-10 chain logos)
+- A "verification passport" strip docks at the bottom of the hero card behind a hairline `border-t`: identity-document fields (Mechanism, Attestor, Jurisdiction, Redeemability, Minting, Freeze, Chains) with the field name in small muted letters above a mono all-caps value, each linking to the section that proves the fact. Flat document fields, not pills; data-driven text tones only (attestor tier ladder via `POR_TIER_STYLES.textCls`, freeze amber/emerald); snap-scroll carousel below `lg`, wrapping row on `lg+`. See `docs/stablecoin-detail-page.md` `### Hero passport strip` for the field/anchor contract.
 - `LongformScrollspyNav` renders as a sticky horizontal pill banner below `lg`; on `lg+`, the same section model moves into a sticky right-side rail with `variant="rail"`
 - A single `Explore Next` hub at the end of the page, replacing the older stack of repeated research/compare/related link grids with one consolidated crawlable route cluster
 
@@ -419,7 +420,7 @@ The preferred finish-level control language is now the shared pill system:
 - used on time-range controls, density toggles, lens pills, and lightweight route context summaries
 - pills should feel dense and precise, not marketing-chip playful
 
-`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 499. Following the May 2026 detail-page pass, this includes the hero tertiary chips (chains pill, proof-of-reserves tier chip, freezable pill), per-section freshness stamps, and the longform scrollspy. New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
+`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 499. Following the May 2026 detail-page pass, this includes the hero tertiary metric chips, per-section freshness stamps, and the longform scrollspy. (The former chains/freezable hero pills were absorbed into the flat hero passport strip in June 2026 — see `### Stablecoin Detail (Special)`.) New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
 
 ### Proof-of-Reserves Attestor Tier Ladder
 

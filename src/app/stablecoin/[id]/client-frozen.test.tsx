@@ -167,6 +167,7 @@ function makeFrozenViewModel(coin: StablecoinMeta) {
       archetype: "frozen-archive",
       label: "Frozen Archive",
     },
+    mintAuthority: { status: "not-reviewed" as const },
     handleRetryAll: vi.fn(),
   };
 }

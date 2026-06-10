@@ -239,15 +239,39 @@ const verdict = {
   label: "Institutional Default",
 } as const;
 
+type HeroBuilderParams = Parameters<typeof buildStablecoinDetailHeroViewModel>[0];
+
+const NOT_REVIEWED_MINT_AUTHORITY = { status: "not-reviewed" } as HeroBuilderParams["mintAuthority"];
+
 function HeroCardUnderTest({
   onOpenFeedback,
   verdict: testVerdict = verdict,
+  resolvedMechanismArchetype = null,
+  mintAuthority = NOT_REVIEWED_MINT_AUTHORITY,
+  redemptionBackstop = null,
   ...props
-}: Omit<Parameters<typeof buildStablecoinDetailHeroViewModel>[0], "verdict"> & {
-  verdict?: Parameters<typeof buildStablecoinDetailHeroViewModel>[0]["verdict"];
+}: Omit<
+  HeroBuilderParams,
+  "verdict" | "resolvedMechanismArchetype" | "mintAuthority" | "redemptionBackstop"
+> & {
+  verdict?: HeroBuilderParams["verdict"];
+  resolvedMechanismArchetype?: HeroBuilderParams["resolvedMechanismArchetype"];
+  mintAuthority?: HeroBuilderParams["mintAuthority"];
+  redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
   onOpenFeedback: () => void;
 }) {
-  return <HeroCard model={buildStablecoinDetailHeroViewModel({ ...props, verdict: testVerdict })} onOpenFeedback={onOpenFeedback} />;
+  return (
+    <HeroCard
+      model={buildStablecoinDetailHeroViewModel({
+        ...props,
+        verdict: testVerdict,
+        resolvedMechanismArchetype,
+        mintAuthority,
+        redemptionBackstop,
+      })}
+      onOpenFeedback={onOpenFeedback}
+    />
+  );
 }
 
 describe("HeroCard", () => {
@@ -287,11 +311,15 @@ describe("HeroCard", () => {
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
     expect(html).toContain("Liquidity");
-    // Task 1.6: "Blacklistable" hero chip is relabelled "Freezable"
-    expect(html).toContain("Freezable");
+    // Passport strip: the five verification facts as anchor-jump chips.
+    expect(html).toContain('aria-label="Verification passport"');
+    expect(html).toContain("Mechanism");
+    expect(html).toContain("RWA-Backed"); // archetype fallback when unresolved
+    expect(html).toContain("Jurisdiction");
+    expect(html).toContain("Freezable — issuer can freeze, block, or seize balances");
+    expect(html).toContain('href="#blacklist"'); // USDC is blacklist-tracked
+    expect(html).toContain("Chains");
     expect(html).not.toContain(">Blacklistable<");
-    // Freezable hint is attached via the methodology-hint trigger.
-    expect(html).toContain('data-testid="methodology-hint-freezable"');
     expect(html).toContain("30d Excess");
     expect(html).toContain("+0.85%");
     expect(html).toContain("30d vs USD 3M T-Bill");
@@ -349,8 +377,8 @@ describe("HeroCard", () => {
       />,
     );
 
-    expect(html).toContain("Freezable");
-    expect(html).toContain("Upstream");
+    expect(html).toContain("Upstream freeze — freezing is inherited from an upstream issuer or collateral asset");
+    expect(html).toContain(">Upstream<");
     expect(html).not.toContain("No issuer controls");
   });
 

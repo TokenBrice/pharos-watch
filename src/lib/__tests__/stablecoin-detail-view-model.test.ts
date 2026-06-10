@@ -866,10 +866,12 @@ describe("stablecoin detail hero view-model builder", () => {
         archetype: "distressed",
         label: "Distressed",
       },
+      resolvedMechanismArchetype: "fiat-cash",
+      mintAuthority: { status: "reviewed", mintPathLabel: "Issuer direct mint" } as never,
+      redemptionBackstop: { accessModel: "issuer-api" } as never,
     });
 
     expect(hero.header.coinName).toBe("USD Coin");
-    expect(hero.chainCount).toBe(2);
     expect(hero.market.safePrevMonth).toBeNull();
     expect(hero.market.prevDayTrendClass).toContain("text-red-700");
     expect(hero.market.prevWeekTrendClass).toContain("text-green-700");
@@ -887,6 +889,29 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(hero.signalRailItems.find((item) => item.key === "safety")).toMatchObject({
       primary: "B+",
       secondary: "79/100",
+    });
+
+    expect(hero.passportItems.find((item) => item.key === "mechanism")).toMatchObject({
+      value: "Custodial Cash",
+      href: "#mechanism",
+    });
+    // USDC is blacklist-tracked, so the freeze chip prefers the live tracker.
+    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
+      value: "Yes",
+      href: "#blacklist",
+    });
+    expect(hero.passportItems.find((item) => item.key === "chains")).toMatchObject({
+      value: "2",
+      href: "#contracts",
+    });
+    expect(hero.passportItems.find((item) => item.key === "jurisdiction")?.href).toBe("#jurisdiction");
+    expect(hero.passportItems.find((item) => item.key === "redeemability")).toMatchObject({
+      value: "Issuer / institutional",
+      href: "#redemption",
+    });
+    expect(hero.passportItems.find((item) => item.key === "minting")).toMatchObject({
+      value: "Issuer direct mint",
+      href: "#mint-authority",
     });
   });
 
@@ -935,15 +960,184 @@ describe("stablecoin detail hero view-model builder", () => {
         archetype: "uncategorized",
         label: "Uncategorized",
       },
+      resolvedMechanismArchetype: null,
+      mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed" } as never,
+      redemptionBackstop: null,
     });
 
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({
       value: "NR",
       sub: "3d tracked",
     });
-    expect(hero.tertiaryMetrics.find((metric) => metric.key === "blacklistable")?.display).toMatchObject({
-      value: "Upstream Freeze",
-      methodologyTopic: "freezableUpstream",
+    // DAI is not blacklist-tracked, so the upstream-freeze chip targets the
+    // mint-authority evidence section instead.
+    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
+      value: "Upstream",
+      href: "#mint-authority",
     });
+    // No redemption backstop record -> the redeemability entry is omitted.
+    expect(hero.passportItems.some((item) => item.key === "redeemability")).toBe(false);
+  });
+
+  it("builds passport chips with honest fallbacks for sparse coins", () => {
+    const sparseCoin = {
+      id: "mock-sparse",
+      symbol: "MSP",
+      name: "Mock Sparse",
+      flags: {
+        backing: "rwa-backed",
+        governance: "centralized",
+        pegCurrency: "USD",
+      },
+    } as never;
+
+    const hero = buildStablecoinDetailHeroViewModel({
+      coin: sparseCoin,
+      coinData: {
+        id: "mock-sparse",
+        name: "Mock Sparse",
+        symbol: "MSP",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: [],
+      } as never,
+      isNavToken: false,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+      verdict: { archetype: "uncategorized", label: "Uncategorized" },
+      resolvedMechanismArchetype: null,
+      mintAuthority: { status: "not-reviewed" } as never,
+      redemptionBackstop: null,
+    });
+
+    const byKey = new Map(hero.passportItems.map((item) => [item.key, item]));
+    // No archetype -> backing badge label; no description blocks -> #info.
+    expect(byKey.get("mechanism")).toMatchObject({ value: "RWA-Backed", href: "#info" });
+    // No proof of reserves -> attestor chip omitted entirely.
+    expect(byKey.has("attestor")).toBe(false);
+    // Undisclosed jurisdiction stays as an honest answer, muted.
+    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Not disclosed", href: "#jurisdiction" });
+    // No freeze section anywhere -> FreezeWatch coverage page link.
+    expect(byKey.get("freeze")).toMatchObject({ value: "No", href: "/freezewatch/?stablecoin=MSP" });
+    // No curated contracts -> chains chip falls back to the info card.
+    expect(byKey.get("chains")).toMatchObject({ value: "0", href: "#info" });
+    // Unreviewed mint authority / missing backstop -> both entries omitted.
+    expect(byKey.has("minting")).toBe(false);
+    expect(byKey.has("redeemability")).toBe(false);
+  });
+
+  it("builds attestor and jurisdiction passport chips from coin metadata", () => {
+    const attestedCoin = {
+      id: "mock-attested",
+      symbol: "MAT",
+      name: "Mock Attested",
+      collateral: "Cash and T-Bills",
+      pegMechanism: "Fiat redemption",
+      jurisdiction: { country: "Switzerland", regulator: "FINMA" },
+      proofOfReserves: { type: "independent-audit", url: "https://example.com", attestorTier: "big4" },
+      contracts: [{ chain: "ethereum", address: "0x1" }],
+      flags: {
+        backing: "rwa-backed",
+        governance: "centralized",
+        pegCurrency: "USD",
+      },
+    } as never;
+
+    const hero = buildStablecoinDetailHeroViewModel({
+      coin: attestedCoin,
+      coinData: {
+        id: "mock-attested",
+        name: "Mock Attested",
+        symbol: "MAT",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: ["ethereum", "base", "solana"],
+      } as never,
+      isNavToken: false,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+      verdict: { archetype: "uncategorized", label: "Uncategorized" },
+      resolvedMechanismArchetype: "tbill",
+      mintAuthority: { status: "reviewed", mintPathLabel: "Permissioned minter" } as never,
+      redemptionBackstop: { accessModel: "permissionless-onchain" } as never,
+    });
+
+    const byKey = new Map(hero.passportItems.map((item) => [item.key, item]));
+    expect(byKey.get("mechanism")).toMatchObject({ value: "Tokenized Treasury", href: "#mechanism" });
+    expect(byKey.get("redeemability")).toMatchObject({
+      value: "Permissionless onchain",
+      href: "#redemption",
+    });
+    expect(byKey.get("minting")).toMatchObject({ value: "Permissioned minter", href: "#mint-authority" });
+    expect(byKey.get("attestor")).toMatchObject({ value: "Big-4 attestor", href: "#attestation" });
+    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#jurisdiction" });
+    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts" });
+
+    // A decentralized coin omits the attestor chip and routes jurisdiction
+    // to the info card, mirroring the Key Information card's skip logic.
+    const decentralizedHero = buildStablecoinDetailHeroViewModel({
+      coin: {
+        ...(attestedCoin as object),
+        flags: { backing: "crypto-backed", governance: "decentralized", pegCurrency: "USD" },
+      } as never,
+      coinData: {
+        id: "mock-attested",
+        name: "Mock Attested",
+        symbol: "MAT",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: ["ethereum"],
+      } as never,
+      isNavToken: false,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegScoreResult: null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: null,
+      verdict: { archetype: "uncategorized", label: "Uncategorized" },
+      resolvedMechanismArchetype: "cdp",
+      mintAuthority: { status: "reviewed", mintPathLabel: "User-collateralized, governed" } as never,
+      redemptionBackstop: null,
+    });
+
+    const decentralizedByKey = new Map(decentralizedHero.passportItems.map((item) => [item.key, item]));
+    expect(decentralizedByKey.has("attestor")).toBe(false);
+    expect(decentralizedByKey.get("jurisdiction")?.href).toBe("#info");
   });
 });

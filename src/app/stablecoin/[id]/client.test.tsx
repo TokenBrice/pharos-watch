@@ -224,6 +224,7 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
       archetype: "uncategorized",
       label: "Uncategorized",
     },
+    mintAuthority: { status: "not-reviewed" as const },
     handleRetryAll: vi.fn(),
     ...overrides,
   };

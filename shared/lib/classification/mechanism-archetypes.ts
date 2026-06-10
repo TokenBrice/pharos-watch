@@ -9,6 +9,19 @@ export const MECHANISM_ARCHETYPE_LABELS: Record<MechanismArchetype, string> = {
   "rwa-credit-fund": "Tokenized Credit Fund",
 };
 
+/**
+ * Chip-length archetype names for dense surfaces (detail-hero passport strip).
+ * Values must stay short enough to never need CSS truncation inside a pill.
+ */
+export const MECHANISM_ARCHETYPE_SHORT_LABELS: Record<MechanismArchetype, string> = {
+  "fiat-cash": "Custodial Cash",
+  tbill: "Tokenized Treasury",
+  cdp: "Crypto CDP",
+  "synthetic-delta-neutral": "Hedged Synthetic",
+  algorithmic: "Reflexive / Unbacked",
+  "rwa-credit-fund": "Credit Fund",
+};
+
 export const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> = {
   "fiat-cash": "fiat-backed",
   tbill: "tokenized Treasury",
@@ -34,6 +47,10 @@ export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> 
 
 export function getMechanismArchetypeLabel(value: MechanismArchetype): string {
   return MECHANISM_ARCHETYPE_LABELS[value];
+}
+
+export function getMechanismArchetypeShortLabel(value: MechanismArchetype): string {
+  return MECHANISM_ARCHETYPE_SHORT_LABELS[value];
 }
 
 export function getMechanismArchetypeCtaNoun(value: MechanismArchetype): string {

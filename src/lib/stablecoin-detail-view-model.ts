@@ -12,6 +12,7 @@ import type {
   ReportCardsResponse,
   StablecoinAiSummary,
   StablecoinData,
+  MechanismArchetype,
   StablecoinListResponse,
   StablecoinMeta,
   RedemptionBackstopEntry,
@@ -56,7 +57,6 @@ import {
   HERO_MUTED_CLASS,
   HERO_NEGATIVE_TREND_CLASS,
   HERO_POSITIVE_TREND_CLASS,
-  buildBlacklistDisplay,
   buildDewsAccent,
   buildDewsDisplay,
   buildExcessYieldDisplay,
@@ -66,12 +66,13 @@ import {
   buildPegScoreAccent,
   buildPegScoreDisplay,
   buildPerformanceVsUsdDisplay,
-  type HeroBlacklistDisplay,
   type HeroDewsDisplay,
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
 
-export type { HeroBlacklistDisplay, HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
+export type { HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
+import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+export type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -694,11 +695,11 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
 }
 
 export interface HeroTertiaryMetricViewModel {
-  key: "dews" | "blacklistable" | "peg-score" | "liquidity" | "excess-yield" | "performance-vs-usd";
-  label: "DEWS" | "Freezable" | "Peg Score" | "Liquidity" | "30d Excess" | "1Y vs USD";
+  key: "dews" | "peg-score" | "liquidity" | "excess-yield" | "performance-vs-usd";
+  label: "DEWS" | "Peg Score" | "Liquidity" | "30d Excess" | "1Y vs USD";
   mobileLabel?: "Peg" | "Liq";
-  methodologyTopic?: "dewsBand" | HeroBlacklistDisplay["methodologyTopic"] | "pegScore" | "liquidityScore" | "pys";
-  display: HeroDisplayValue | HeroBlacklistDisplay | HeroDewsDisplay;
+  methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "pys";
+  display: HeroDisplayValue | HeroDewsDisplay;
   accentClass?: string;
 }
 
@@ -721,7 +722,6 @@ export interface HeroCardViewModel {
   variantKind?: VariantKind | null;
   variantChipClass: string | null;
   infrastructures: Infrastructure[];
-  chainCount: number;
   header: {
     coinId: string;
     coinName: string;
@@ -755,6 +755,7 @@ export interface HeroCardViewModel {
   tertiaryMetrics: HeroTertiaryMetricViewModel[];
   desktopTertiaryMetrics: HeroTertiaryMetricViewModel[];
   signalRailItems: HeroSignalRailItemViewModel[];
+  passportItems: HeroPassportItemViewModel[];
 }
 
 export type StablecoinDetailViewModel =
@@ -799,6 +800,9 @@ export interface BuildHeroCardViewModelParams {
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
+  resolvedMechanismArchetype: MechanismArchetype | null;
+  mintAuthority: MintAuthorityDetailViewModel;
+  redemptionBackstop: RedemptionBackstopEntry | null;
 }
 
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
@@ -835,11 +839,15 @@ export function buildStablecoinDetailHeroViewModel({
   verdict,
   variantParent,
   variantKind,
+  resolvedMechanismArchetype,
+  mintAuthority,
+  redemptionBackstop,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const recordedDepegEventCount = reportCard?.rawInputs.depegEventCount ?? null;
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
+  const passport = { coin, chainCount, blacklistStatus, resolvedMechanismArchetype, mintAuthority, redemptionBackstop };
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;
@@ -859,7 +867,6 @@ export function buildStablecoinDetailHeroViewModel({
 
   const pegScoreDisplay = buildPegScoreDisplay(isNavToken, pegScoreResult, recordedDepegEventCount);
   const liqDisplay = buildLiquidityDisplay(liquidityData);
-  const blacklistDisplay = buildBlacklistDisplay(blacklistStatus);
   const excessYieldDisplay = buildExcessYieldDisplay(yieldRanking);
   const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
   const dewsDisplay = buildDewsDisplay(stressSignal);
@@ -875,13 +882,6 @@ export function buildStablecoinDetailHeroViewModel({
       methodologyTopic: "dewsBand",
       display: dewsDisplay,
       accentClass: dewsAccent,
-    },
-    {
-      key: "blacklistable",
-      label: "Freezable",
-      methodologyTopic: blacklistDisplay.methodologyTopic,
-      display: blacklistDisplay,
-      accentClass: blacklistStatus === true ? "border-l-2 border-l-amber-500" : undefined,
     },
     {
       key: "peg-score",
@@ -964,7 +964,6 @@ export function buildStablecoinDetailHeroViewModel({
     variantKind,
     variantChipClass: variantKind ? getVariantDisplay(variantKind).chipClass : null,
     infrastructures,
-    chainCount,
     header: {
       coinId: coin.id,
       coinName: coin.name,
@@ -997,9 +996,10 @@ export function buildStablecoinDetailHeroViewModel({
     },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter(
-      (metric) => !["dews", "liquidity", "peg-score", "blacklistable"].includes(metric.key),
+      (metric) => !["dews", "liquidity", "peg-score"].includes(metric.key),
     ),
     signalRailItems,
+    passportItems: buildHeroPassportItems(passport),
   };
 }
 

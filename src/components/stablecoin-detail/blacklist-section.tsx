@@ -35,7 +35,10 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
   const { summary, isLoading } = state;
 
   return (
-    <section id="blacklist">
+    <section
+      id="blacklist"
+      className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+    >
       <Card className="p-4">
         <div className="mb-3">
           <DetailSectionTitle>

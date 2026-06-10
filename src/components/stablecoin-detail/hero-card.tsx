@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type {
   HeroCardViewModel,
@@ -15,6 +15,7 @@ import {
   HeroCardMobileSection,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
+import { HeroPassportStrip } from "./hero-passport-strip";
 
 type HeroSectionBaseProps = Omit<Parameters<typeof HeroCardMobileSection>[0], "tertiaryMetrics">;
 
@@ -46,17 +47,6 @@ function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode
 
 function renderMetricLabel(metric: HeroTertiaryMetricViewModel, mobile = false): React.ReactNode {
   const label = mobile ? (metric.mobileLabel ?? metric.label) : metric.label;
-  if (mobile && metric.key === "blacklistable" && metric.methodologyTopic) {
-    return (
-      <>
-        <span className="sr-only">Freezable</span>
-        <MethodologyHint
-          topic={metric.methodologyTopic}
-          buttonClassName="!h-11 !w-11 !min-h-11 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
-        />
-      </>
-    );
-  }
   if (!metric.methodologyTopic) return label;
   return (
     <MethodologyLabel topic={metric.methodologyTopic} compact={mobile}>
@@ -87,7 +77,6 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     variantParent,
     variantChipClass,
     infrastructures,
-    chainCount,
     header,
     price,
     market,
@@ -120,7 +109,6 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     hasPrevMonth: market.hasPrevMonth,
     safePrevMonth: market.safePrevMonth,
     prevMonthTrendClass: market.prevMonthTrendClass,
-    chainCount,
     earlyPegScore: peg.earlyPegScore,
     trackingSpanDays: peg.trackingSpanDays,
     activeDepeg: peg.activeDepeg,
@@ -141,6 +129,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         signalRailItems={signalRailItems}
         tertiaryMetrics={desktopTertiaryMetrics}
       />
+      <HeroPassportStrip items={model.passportItems} />
     </Card>
   );
 }
