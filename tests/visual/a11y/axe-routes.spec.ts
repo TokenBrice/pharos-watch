@@ -25,6 +25,13 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   // `out/stablecoin/` listing. The council brief named `/stablecoin/usdt`
   // but the routed slug is `usdt-tether`.
   { path: "/stablecoin/usdt-tether", tier: "detail" },
+  // Mythos P1-14: the original 4-route floor left ~36 route families
+  // unscanned; confirmed violations (the /yield tablist, the mini-app tabs)
+  // shipped in exactly that blind spot.
+  { path: "/yield", tier: "analytics" },
+  { path: "/timeline", tier: "analytics" },
+  { path: "/chains", tier: "analytics" },
+  { path: "/pharoswatchbot/app", tier: "mini-app" },
 ];
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag22a", "wcag22aa"];
@@ -46,6 +53,36 @@ function isWaivedNode(routePath: string, violation: Result, target: string): boo
       waiver.target === target,
   );
 }
+
+function summarizeViolations(routePath: string, violations: Result[]) {
+  return violations
+    .map((violation) => {
+      const nodes = violation.nodes.filter(
+        (node) => !node.target.some((target) => isWaivedNode(routePath, violation, target)),
+      );
+      return {
+        id: violation.id,
+        impact: violation.impact,
+        help: violation.help,
+        nodeCount: nodes.length,
+        firstTarget: nodes[0]?.target?.[0],
+      };
+    })
+    .filter((violation) => violation.nodeCount > 0);
+}
+
+// Layered surfaces (drawers, palettes, sheets) never render in the default
+// scans above; the mobile nav drawer is the highest-traffic one.
+test("a11y: open mobile nav drawer (overlay)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/about");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("dialog").waitFor();
+
+  const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  expect(summarizeViolations("/about#mobile-drawer", results.violations), "axe-core violations").toEqual([]);
+});
 
 for (const route of ROUTES) {
   test(`a11y: ${route.path} (${route.tier})`, async ({ page }) => {
