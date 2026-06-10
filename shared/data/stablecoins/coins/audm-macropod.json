@@ -105,24 +105,31 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "attestation-pdf-index",
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "audm-macropod",
+    "scoring": {
+      "maxSourceAgeSec": 10000000
+    },
     "display": {
       "url": "https://www.macropod.com/transparency",
       "label": "Macropod reserves"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.macropod.com/transparency"
       }
     },
     "params": {
-      "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "fallbackRpcUrl": "https://eth.llamarpc.com"
+      "slices": [
+        {
+          "name": "AUD cash held in segregated AUDM Trust account at a Big 4 Australian bank (NAB per public reporting)",
+          "pct": 100,
+          "risk": "very-low"
+        }
+      ]
     }
   },
   "mintAuthority": {

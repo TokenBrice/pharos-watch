@@ -187,20 +187,36 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "attestation-pdf-index",
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "europ-schuman",
+    "scoring": {
+      "maxSourceAgeSec": 10000000
+    },
     "display": {
       "url": "https://schuman.io/reserve-audits/",
       "label": "Schuman Reserve Audits"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://schuman.io/reserve-audits/"
       }
+    },
+    "params": {
+      "slices": [
+        {
+          "name": "Euro cash and cash equivalents (EU banks incl. Societe Generale)",
+          "pct": 98,
+          "risk": "very-low"
+        },
+        {
+          "name": "Additional reserve fund",
+          "pct": 2,
+          "risk": "low"
+        }
+      ]
     }
   },
   "launchDate": "2024-06-22"

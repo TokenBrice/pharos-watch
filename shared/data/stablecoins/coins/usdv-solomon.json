@@ -70,18 +70,31 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "attestation-mix",
     "breakerScope": "usdv-solomon",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
       "label": "Solomon attestations"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-solana"
+        "kind": "http-html",
+        "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
       }
+    },
+    "params": {
+      "slices": [
+        {
+          "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
+          "pct": 100,
+          "risk": "very-high"
+        }
+      ]
     }
   },
   "notices": [
