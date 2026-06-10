@@ -43,7 +43,7 @@ export async function completeMintBurnRun(input: {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
-}): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown> }> {
+}): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
   const laggingConfigs = input.configs
     .map((config) => {
       const key = mintBurnConfigKey(config);
@@ -71,8 +71,13 @@ export async function completeMintBurnRun(input: {
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
+  let error: string | null = null;
   if (input.lane !== "extended" && degradedStreak >= input.errorConsecutiveThreshold) {
     status = "error";
+    error =
+      `Degraded for ${degradedStreak} consecutive runs: ` +
+      `critical coverage ${input.criticalContractsSatisfied}/${input.criticalContractsEnabled}, ` +
+      `apiErrors=${input.apiErrors}`;
   } else if (degradedStreak >= input.degradeConsecutiveThreshold) {
     status = "degraded";
   }
@@ -179,5 +184,5 @@ export async function completeMintBurnRun(input: {
     roundtripsBacklogSaturated,
   });
 
-  return { status, metadata };
+  return { status, metadata, error };
 }

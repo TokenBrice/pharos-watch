@@ -195,6 +195,8 @@ export interface CronResult {
   itemCount?: number;
   metadata?: string;
   status?: "ok" | "degraded" | "error" | "skipped_locked";
+  /** Human-readable failure summary persisted to cron_runs.error when status is "error". */
+  error?: string;
 }
 
 export interface CronProgressUpdate {
@@ -325,8 +327,8 @@ export async function logCronRun(
       db
         .prepare(
           `INSERT INTO cron_runs
-             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           job,
@@ -336,13 +338,14 @@ export async function logCronRun(
           resolvedResult?.itemCount ?? null,
           resolvedResult?.metadata ?? null,
           slotStartedAt,
+          resolvedResult?.error ?? null,
         )
         .run(),
     );
     if (resultStatus === "error" && alertFn) {
-      await Promise.resolve(alertFn(`Cron ${job} returned error status`, resolvedResult?.metadata ?? "")).catch(
-        () => {},
-      );
+      await Promise.resolve(
+        alertFn(`Cron ${job} returned error status`, resolvedResult?.error ?? resolvedResult?.metadata ?? ""),
+      ).catch(() => {});
     }
   } catch (e) {
     try {

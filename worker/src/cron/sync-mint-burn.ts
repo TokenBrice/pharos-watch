@@ -69,7 +69,7 @@ export async function syncMintBurn(
   db: D1Database,
   alchemyApiKey: string | null,
   options: SyncMintBurnOptions = {},
-): Promise<{ itemCount: number; metadata: string; status?: SyncMintBurnStatus }> {
+): Promise<{ itemCount: number; metadata: string; status?: SyncMintBurnStatus; error?: string }> {
   const signal = options.signal;
   const lane = options.lane ?? "all";
   const jobName = resolveMintBurnJobName(lane, options.jobName);
@@ -352,5 +352,6 @@ export async function syncMintBurn(
     itemCount: rowsInserted,
     metadata,
     status,
+    ...(completion.error !== null ? { error: completion.error } : {}),
   };
 }
