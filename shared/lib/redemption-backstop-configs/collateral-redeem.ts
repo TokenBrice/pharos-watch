@@ -171,7 +171,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "nect-beraborrow": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
         sourceRef(
@@ -179,6 +180,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg",
           ["route", "capacity", "fees"],
         ),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Beraborrow's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
       ],
     },
     "fxusd-f-x-protocol": {
@@ -210,7 +214,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "usdk-orki": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
@@ -222,6 +227,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "route",
           "capacity",
         ]),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Orki's Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
       ],
     },
     "cdp-enosys": {
@@ -271,7 +279,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "ebusd-ebisu": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: undisclosedReviewedFee(),
       docs: [
@@ -281,6 +290,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet",
           ["capacity"],
         ),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads Ebisu's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
       ],
     },
     "ussd-sonic-labs": {
@@ -533,6 +545,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "fpi-frax": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
         "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
@@ -547,6 +560,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ],
       notes: [
         "Tracked metadata describes FPI as redeemable against a fully collateralized FRAX-backed system with the redemption price moving on-chain with CPI rather than staying fixed at $1",
+        "Fresh FPI collateral telemetry uses the FRAX-denominated stable buckets of FPI's collateral as live proxy redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
       ],
     },
     "hbd-hive": {

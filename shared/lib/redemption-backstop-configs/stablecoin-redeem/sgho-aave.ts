@@ -10,6 +10,7 @@ import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 export const SGHO_AAVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(
     "Aave sGHO previewRedeem path exits to GHO at the contract exchange rate; public docs reviewed do not publish a separate fixed redemption fee",
@@ -30,5 +31,6 @@ export const SGHO_AAVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ],
   notes: [
     "This route models the current legacy sGHO/stkGHO-compatible contract's previewRedeem exit into GHO, not the separate Aave Umbrella stkGHO safety-module cooldown route.",
+    "Fresh sGHO telemetry scores the contract's live previewRedeem(totalSupply) output as current direct redemption capacity into GHO; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
 };

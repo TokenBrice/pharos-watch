@@ -101,6 +101,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "syrupusdc-maple": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
       "Maple docs describe FIFO queued withdrawal requests for syrupUSDC and do not publish a separate protocol redemption fee",
@@ -125,11 +126,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
+      "Fresh ERC-4626 reserve telemetry reads the pool's idle USDC balance as the current redeemable bound while the FIFO queue still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "syrupusdt-maple": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
       "Maple docs describe FIFO queued withdrawal requests for syrupUSDT and do not publish a separate protocol redemption fee",
@@ -154,6 +157,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
       "Modeled route excludes secondary-market exits and instead scores the documented protocol withdrawal rail",
+      "Fresh ERC-4626 reserve telemetry reads the pool's idle USDT balance as the current redeemable bound while the FIFO queue still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "reusd-re-protocol": {
@@ -235,6 +239,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "susde-ethena": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     costModel: documentedVariableFee(
@@ -256,11 +261,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "sUSDe burns immediately into a claim on underlying USDe, but the user can only withdraw that USDe after the cooldown window has elapsed",
       "Ethena staking includes jurisdictional and sanctions-based restrictions on the staking contract itself, so the wrapper route is modeled as whitelisted-onchain rather than fully permissionless",
+      "Fresh ERC-4626 reserve telemetry reads the staking contract's USDe holdings as the current redeemable bound while the documented 7-day cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "syusd-aegis": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "days",
     costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
     docs: [
@@ -275,6 +282,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
       "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
+      "Fresh ERC-4626 reserve telemetry reads the staking vault's YUSD holdings as the current redeemable bound while the cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "witry-brix": {
@@ -309,6 +317,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "stkgho-umbrella-aave": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(),
     docs: [
       sourceRef("Aave Umbrella unstake guide", "https://aave.com/help/umbrella/unstake", [
@@ -330,6 +339,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "stkGHO exits through Aave Umbrella's cooldown and withdrawal-window flow back into GHO rather than through an immediate public stablecoin buffer",
       "Staked assets remain slashable during cooldown, so the route is modeled as queued eventual redeemability and not as live direct redemption capacity",
+      "Fresh ERC-4626 reserve telemetry reads the staking contract's idle GHO-denominated holdings as the current redeemable bound while the cooldown and withdrawal window still govern settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "cgusd-cygnus-finance": {
@@ -584,6 +594,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "apyusd-apyx": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -601,10 +612,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       ]),
       sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
     ],
+    notes: [
+      "Fresh ERC-4626 reserve telemetry reads the vault's idle apxUSD balance as the current redeemable bound while the documented unlock window still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+    ],
   },
   "savusd-avant": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
@@ -622,10 +637,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         ["settlement", "capacity"],
       ),
     ],
+    notes: [
+      "Fresh ERC-4626 reserve telemetry reads the staking vault's idle avUSD balance as the current redeemable bound while the one-day cooldown still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+    ],
   },
   "srusde-strata": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -640,6 +659,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "settlement",
       ]),
       sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
+    ],
+    notes: [
+      "Fresh ERC-4626 reserve telemetry reads the tranche vault's idle underlying balance as the current redeemable bound while the documented redemption window still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   },
   "scusd-rings": {

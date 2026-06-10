@@ -361,7 +361,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
       routeFamily: "collateral-redeem",
       outputAssetType: "mixed-collateral",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
@@ -658,7 +658,7 @@ describe("getRedemptionBackstopConfig", () => {
         settlementModel: "queued",
         executionModel: "rules-based-nav",
         outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        capacityModel: { kind: "reserve-sync-metadata" },
         costModel: { kind: "dynamic-or-unclear" },
         reviewedAt: "2026-03-23",
       });
@@ -724,7 +724,7 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("ousd-origin-protocol")).toMatchObject({
       routeFamily: "stablecoin-redeem",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 25 },
       reviewedAt: "2026-03-23",
     });
@@ -854,7 +854,7 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "queued",
       executionModel: "rules-based-nav",
       outputAssetType: "stable-single",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-05-10",
     });
@@ -871,9 +871,13 @@ describe("getRedemptionBackstopConfig", () => {
     });
 
     for (const id of ["stkgho-umbrella-aave", "usdrif-rif"] as const) {
-      const config = getRedemptionBackstopConfig(id);
-      expect(config?.docs?.length).toBeGreaterThan(0);
-      expect(resolveCapacitySemantics(config!.capacityModel)).toBe("eventual-only");
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
     }
+    // stkGHO now reads live ERC-4626 idle-balance telemetry as a current
+    // bounded buffer; only usdrif remains a documented eventual-only route.
+    expect(resolveCapacitySemantics(getRedemptionBackstopConfig("stkgho-umbrella-aave")!.capacityModel)).toBe(
+      "immediate-bounded",
+    );
+    expect(resolveCapacitySemantics(getRedemptionBackstopConfig("usdrif-rif")!.capacityModel)).toBe("eventual-only");
   });
 });

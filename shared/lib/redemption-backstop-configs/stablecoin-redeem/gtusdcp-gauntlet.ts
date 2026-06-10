@@ -3,7 +3,7 @@ import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const GTUSDCP_GAUNTLET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
-  capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "heuristic", basis: "strategy-buffer" },
+  capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
   executionModel: "rules-based-nav",
   costModel: undisclosedReviewedFee(
     "MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; public docs reviewed do not publish one fixed redemption fee",
@@ -22,5 +22,8 @@ export const GTUSDCP_GAUNTLET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig
       "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime",
       ["route", "capacity", "access"],
     ),
+  ],
+  notes: [
+    "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; the prior reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
   ],
 };

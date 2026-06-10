@@ -10,6 +10,7 @@ import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  capacityModel: { kind: "reserve-sync-metadata" },
   settlementModel: "queued",
   executionModel: "rules-based-nav",
   outputAssetType: "nav",
@@ -29,5 +30,6 @@ export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   notes: [
     "sAID is not a $1-pegged wrapper; this route models the holder-exercisable withdrawal into AID at unstaking NAV, including possible unrealized-loss haircuts.",
     "Final AID redemption into supported stablecoins remains whitelisted for primary-market users, while regular users generally exit AID through app or DEX liquidity.",
+    "Fresh ERC-4626 reserve telemetry reads the vault's idle AID balance as the current redeemable bound while the monthly FIFO cycle still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
   ],
 };
