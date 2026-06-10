@@ -27,6 +27,7 @@
   "pegMechanism": "Direct 1:1 euro issuance and redemption through Membrane's verified-customer platform, with public transparency and regulation pages describing reserve attestations",
   "llamaId": "98",
   "detailProvider": "defillama",
+  "launchDate": "2023-01-18",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.paxos.com/euroe-redemptions",

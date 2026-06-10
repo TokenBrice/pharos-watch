@@ -122,7 +122,8 @@
     "yieldConfig": {
       "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
       "yieldType": "governance-set"
-    }
+    },
+    "launchDate": "2025-03-19"
   },
   {
     "id": "aa-falconx-mev-capital",
@@ -6095,7 +6096,8 @@
       "peakMcap": 2751010,
       "sourceUrl": "https://www.buck.io/",
       "sourceLabel": "Buck shutdown notice"
-    }
+    },
+    "launchDate": "2026-01-05"
   },
   {
     "id": "buck-bucket-protocol",
@@ -14137,7 +14139,8 @@
       "peakMcap": 3377858,
       "sourceUrl": "https://www.paxos.com/euroe-redemptions",
       "sourceLabel": "Paxos EUROe Redemption Notice"
-    }
+    },
+    "launchDate": "2023-01-18"
   },
   {
     "id": "europ-schuman",
@@ -39186,7 +39189,8 @@
         "title": "On-chain reserve tracking pending",
         "message": "Live reserve tracking for scUSD is pending Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.rings.money/backing for the latest published addresses."
       }
-    ]
+    ],
+    "launchDate": "2024-12-09"
   },
   {
     "id": "sdai-sky",
@@ -45340,6 +45344,7 @@
       }
     ],
     "status": "pre-launch",
+    "launchDate": "2026-02-10",
     "announcedDate": "2026-01",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
@@ -57042,7 +57047,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2017-11-28"
   },
   {
     "id": "usdtb-ethena",
@@ -58743,6 +58749,7 @@
       }
     ],
     "status": "active",
+    "launchDate": "2026-02-12",
     "announcedDate": "2026-03",
     "launchPhase": "beta",
     "launchPhaseDetail": "Five audit reports are referenced in docs (Sherlock, Egis, Pashov x2, plus Zerocool AI audit); beta testing is still disclosed; Ethereum token contract is live with nonzero supply, while the public site still shows placeholder APY/TVL metrics and no CoinGecko or DefiLlama market row is available yet",
@@ -59224,7 +59231,8 @@
       "peakMcap": 2712729,
       "sourceUrl": "https://x.com/NeriteOrg/status/2045635669775487192?s=20",
       "sourceLabel": "Nerite post-incident update"
-    }
+    },
+    "launchDate": "2025-07-11"
   },
   {
     "id": "usp-pareto-credit",
@@ -59758,7 +59766,8 @@
       "peakMcap": 586592926,
       "sourceUrl": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million",
       "sourceLabel": "The Block"
-    }
+    },
+    "launchDate": "2024-06-02"
   },
   {
     "id": "ussd-sonic-labs",
@@ -69717,7 +69726,8 @@
     "yieldConfig": {
       "yieldSource": "Frankencoin Savings",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2023-10-28"
   },
   {
     "id": "zeusd-zoth",

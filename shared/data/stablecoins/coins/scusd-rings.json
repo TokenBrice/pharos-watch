@@ -119,5 +119,6 @@
       "sourceFreeRationale": "4/6 multisig and BoringVault role architecture taken from the LlamaRisk review and Veda/Rings docs; the exact governance multisig address, timelock delays, and module/guard status were not independently read on-chain.",
       "unresolvedQuestions": ["Resolve the on-chain Rings governance multisig address and role-timelock delays, and the published BoringVault/treasury backing addresses."]
     }
-  }
+  },
+  "launchDate": "2024-12-09"
 }

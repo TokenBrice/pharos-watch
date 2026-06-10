@@ -15,6 +15,7 @@
   "pegMechanism": "USG has no collateral redemption path. Tangent targets the peg with Peg Keeper contracts, price-dependent reward deductions, and dynamic interest: HEC borrowers can be interest-free while USG stays above each market's threshold but lose more collateral rewards as USG falls, while LEC borrowers pay price-dependent interest immediately.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
+  "launchDate": "2026-02-12",
   "links": [
     {
       "label": "Website",
