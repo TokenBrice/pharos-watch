@@ -131,7 +131,7 @@ export function FeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Send Feedback</DialogTitle>
         </DialogHeader>
@@ -203,7 +203,8 @@ export function FeedbackModal({
                 rows={4}
                 maxLength={2000}
                 disabled={status === "loading"}
-                className="resize-none"
+                className="max-w-full resize-none whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                style={{ fieldSizing: "fixed" }}
               />
               <p className="text-xs text-muted-foreground text-right">
                 {description.length}/2000
