@@ -1456,17 +1456,3 @@
     --dews-radar-calm-dot-bloom: transparent;
   }
 }
-
-/* Fix #144 - Feedback modal long text (URLs, hashes, etc.) overflow */
-[data-slot="textarea"],
-textarea {
-  overflow-wrap: break-word !important;
-  word-break: break-word !important;
-  white-space: pre-wrap !important;
-  hyphens: auto;
-}
-
-/* Slightly wider feedback modal for better UX */
-[role="dialog"] {
-  max-width: 560px !important;
-}
