@@ -8,10 +8,11 @@
  *
  * Data follow-up: per-chain 90d series is not yet exposed by the client API.
  * `chain_supply_history` exists in D1 (worker/src/cron/snapshot-chain-supply.ts)
- * but is not served. Until an endpoint lands, the lattice renders a structured
- * placeholder that preserves the real cohort ordering and labels, so the layout
- * contract is verifiable today. Once data arrives, pass `seriesByChain` and the
- * placeholder collapses into the real sparklines.
+ * but is not served. Until an endpoint lands and `seriesByChain` is passed,
+ * the lattice renders nothing: an all-placeholder band under a "coming soon"
+ * label read as live charts contradicted by their own header (mythos design
+ * review #17). Per-tile placeholders remain for chains missing series once
+ * real data partially lands.
  */
 
 import { useMemo } from "react";
@@ -197,6 +198,9 @@ export function ChainCohortLattice({
   if (tiles.length === 0) return null;
 
   const hasAnySeries = tiles.some((t) => t.polyline !== null);
+  // No real series at all means the whole band would be placeholder slopes —
+  // don't ship that to the page.
+  if (!hasAnySeries) return null;
 
   return (
     <section
@@ -213,14 +217,6 @@ export function ChainCohortLattice({
           </h2>
           <p className="pharos-kicker mt-1">Compare shapes, not absolute size.</p>
         </div>
-        {!hasAnySeries && (
-          <p
-            className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-            data-testid="chain-cohort-lattice-pending"
-          >
-            90d cohort coming soon
-          </p>
-        )}
       </header>
 
       {/* Horizontal scroll on very narrow viewports; grid above sm. */}
