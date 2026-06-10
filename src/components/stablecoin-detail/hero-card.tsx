@@ -15,6 +15,7 @@ import {
   HeroCardMobileSection,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
+import { HeroPassportMrz } from "./hero-passport-mrz";
 import { HeroPassportStrip } from "./hero-passport-strip";
 
 type HeroSectionBaseProps = Omit<Parameters<typeof HeroCardMobileSection>[0], "tertiaryMetrics">;
@@ -130,6 +131,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         tertiaryMetrics={desktopTertiaryMetrics}
       />
       <HeroPassportStrip items={model.passportItems} />
+      {model.mrz ? <HeroPassportMrz mrz={model.mrz} /> : null}
     </Card>
   );
 }

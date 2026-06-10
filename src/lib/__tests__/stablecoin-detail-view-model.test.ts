@@ -930,6 +930,17 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(hero.passportItems.find((item) => item.key === "genius")?.href).toBe("/compliance/?regime=genius");
     // Coverage-limited peg summary -> no Record field (can't honestly claim one).
     expect(hero.passportItems.some((item) => item.key === "record")).toBe(false);
+
+    // The machine-readable zone ships whenever the strip does: two 44-char
+    // TD3 lines plus the copyable citation pointing at the canonical page.
+    expect(hero.mrz).not.toBeNull();
+    for (const line of hero.mrz!.lines) {
+      expect(line).toMatch(/^[A-Z0-9<]{44}$/);
+    }
+    expect(hero.mrz!.lines[0].startsWith("PW<USA<")).toBe(true);
+    expect(hero.mrz!.copyText).toContain("Pharos Safety B+ (79/100)");
+    expect(hero.mrz!.copyText).toContain("https://pharos.watch/stablecoin/usdc-circle/");
+    expect(hero.mrz!.ariaLabel).toContain("Copy USDC research summary");
   });
 
   it("derives unavailable peg score and upstream freeze states", () => {

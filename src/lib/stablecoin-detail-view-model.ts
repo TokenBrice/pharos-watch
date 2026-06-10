@@ -43,7 +43,14 @@ import {
 import type { ApiMeta } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { isThreatBand } from "@shared/lib/classification";
+import {
+  BACKING_BADGE_STYLES,
+  MECHANISM_ARCHETYPE_SHORT_LABELS,
+  THREAT_BAND_LABELS,
+  isThreatBand,
+} from "@shared/lib/classification";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
@@ -73,6 +80,8 @@ import {
 export type { HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 export type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import { buildHeroPassportMrz, type HeroPassportMrzViewModel } from "@/lib/stablecoin-detail-mrz";
+export type { HeroPassportMrzViewModel } from "@/lib/stablecoin-detail-mrz";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -777,6 +786,8 @@ export interface HeroCardViewModel {
   desktopTertiaryMetrics: HeroTertiaryMetricViewModel[];
   signalRailItems: HeroSignalRailItemViewModel[];
   passportItems: HeroPassportItemViewModel[];
+  /** Machine-readable zone below the strip; null whenever the strip itself hides (<3 facts). */
+  mrz: HeroPassportMrzViewModel | null;
 }
 
 export type StablecoinDetailViewModel =
@@ -946,6 +957,38 @@ export function buildStablecoinDetailHeroViewModel({
       : []),
   ];
 
+  const passportItems = buildHeroPassportItems(passport);
+  // The machine-readable zone re-encodes the dossier facts; it docks under the
+  // strip and shares its >=3-facts visibility rule. Defunct report cards drop
+  // their grade the same way SafetyGradeHero does.
+  const mrz =
+    passportItems.length >= 3
+      ? buildHeroPassportMrz({
+          name: coin.name,
+          symbol: coin.symbol,
+          pegCurrency: coin.flags.pegCurrency,
+          jurisdictionCountry: coin.jurisdiction?.country ?? null,
+          launchDate: coin.launchDate ?? null,
+          overallGrade: reportCard && !reportCard.isDefunct ? reportCard.overallGrade : null,
+          overallScore: reportCard && !reportCard.isDefunct ? reportCard.overallScore : null,
+          pegScore: !isNavToken ? (pegScoreResult?.pegScore ?? null) : null,
+          liquidityScore:
+            liquidityData?.liquidityScore != null ? Math.round(liquidityData.liquidityScore) : null,
+          dewsScore: stressSignal != null ? Math.round(stressSignal.score) : null,
+          dewsBandLabel:
+            stressSignal != null && isThreatBand(stressSignal.band)
+              ? THREAT_BAND_LABELS[stressSignal.band]
+              : null,
+          chainCount,
+          blacklistStatus: blacklistStatus === false ? null : blacklistStatus,
+          mechanismArchetype: resolvedMechanismArchetype,
+          mechanismLabel: resolvedMechanismArchetype
+            ? MECHANISM_ARCHETYPE_SHORT_LABELS[resolvedMechanismArchetype]
+            : (BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? coin.flags.backing),
+          url: `${SITE_ORIGIN}${buildStablecoinUrl(coin.id)}`,
+        })
+      : null;
+
   const signalRailItems: HeroSignalRailItemViewModel[] = [
     {
       key: "safety",
@@ -1029,7 +1072,8 @@ export function buildStablecoinDetailHeroViewModel({
       (metric) => !["dews", "liquidity", "peg-score"].includes(metric.key),
     ),
     signalRailItems,
-    passportItems: buildHeroPassportItems(passport),
+    passportItems,
+    mrz,
   };
 }
 
