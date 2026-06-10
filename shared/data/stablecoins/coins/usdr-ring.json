@@ -105,8 +105,14 @@
         "capDescription": "Minting and burning to any address are uncapped and accessible to any contract granted the Minter/Burner role by Ring Protocol's Core.",
         "evidence": "Etherscan read of the verified USDR token (name 'Ring USD', symbol 'USDR') shows ERC20Burnable + CoreRef: Minter role can mint to any address with no cap; Burner role can burn; a Guardian/Governor can trigger emergency mode and the Core admin updates the Core reference.",
         "sources": [
-          { "label": "USDR token (Etherscan)", "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913" },
-          { "label": "RUSD docs", "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin/rusd" }
+          {
+            "label": "USDR token (Etherscan)",
+            "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+          },
+          {
+            "label": "RUSD docs",
+            "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin/rusd"
+          }
         ]
       },
       {
@@ -118,7 +124,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "The Core contract assigns Minter/Burner roles; the Governor/Guardian can grant roles, manage the Core address, and trigger emergency mode, so the Core admin can authorize new minters at will.",
         "sources": [
-          { "label": "Ring Protocol Core docs", "url": "https://docs.ring.exchange/protocol-core/protocol-controlled-value" }
+          {
+            "label": "Ring Protocol Core docs",
+            "url": "https://docs.ring.exchange/protocol-core/protocol-controlled-value"
+          }
         ]
       }
     ],
@@ -127,13 +136,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "USDR token (Etherscan)", "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913" },
-        { "label": "Ring stablecoin docs", "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin" }
+        {
+          "label": "USDR token (Etherscan)",
+          "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+        },
+        {
+          "label": "Ring stablecoin docs",
+          "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin"
+        }
       ],
       "sourceFreeRationale": "Token role model confirmed via Etherscan verified source read; the concrete Core/Governor admin address (EOA vs multisig) and current Minter-role holders were not enumerated.",
       "unresolvedQuestions": [
         "Enumerate the current Minter-role holders and resolve whether the Ring Core Governor/Guardian is an EOA, multisig, or timelock before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-09-12"
 }

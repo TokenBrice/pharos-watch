@@ -262,5 +262,6 @@
   "yieldConfig": {
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"
-  }
+  },
+  "launchDate": "2024-09-26"
 }

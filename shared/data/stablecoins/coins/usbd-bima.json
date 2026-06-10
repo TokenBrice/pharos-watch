@@ -161,7 +161,10 @@
         "capDescription": "Mint gated by per-collateral debt ceilings and a 150% minimum collateral ratio enforced by the TroveManager/Factory.",
         "evidence": "BIMA docs and mainnet-addresses page describe a Liquity-fork stack (BorrowerOperations, Factory, TroveManager, SortedTroves, StabilityPool) minting the USBD DebtToken against locked BTC collateral.",
         "sources": [
-          { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+          {
+            "label": "BIMA Mainnet Addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          }
         ]
       },
       {
@@ -175,7 +178,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "BimaCore is the central access-control hub; governance can add collateral types and adjust debt ceilings, stability fees, and collateral ratios. Owner/admin not disclosed or shown renounced in the docs.",
         "sources": [
-          { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+          {
+            "label": "BIMA Mainnet Addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          }
         ]
       }
     ],
@@ -184,13 +190,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Minting USBD", "url": "https://docs.bima.money/minting-usbd" },
-        { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+        {
+          "label": "Minting USBD",
+          "url": "https://docs.bima.money/minting-usbd"
+        },
+        {
+          "label": "BIMA Mainnet Addresses",
+          "url": "https://docs.bima.money/security/mainnet-addresses"
+        }
       ],
       "sourceFreeRationale": "Liquity-fork mechanism and contract addresses confirmed from BIMA docs; the BimaCore owner/admin and any timelock/multisig were not independently read on-chain, so immutability cannot be claimed.",
       "unresolvedQuestions": [
         "Read BimaCore owner/guardian on Etherscan to determine whether parameter/upgrade authority is renounced, timelocked, or held by an EOA/multisig before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-03-21"
 }

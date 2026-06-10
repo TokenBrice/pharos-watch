@@ -137,5 +137,6 @@
   "yieldConfig": {
     "yieldSource": "SMARDEX USDN rebasing vault",
     "yieldType": "rebase"
-  }
+  },
+  "launchDate": "2024-12-19"
 }

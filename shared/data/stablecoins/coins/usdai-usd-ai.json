@@ -208,5 +208,6 @@
     "provider": "USD.AI proof-of-reserves API",
     "attestorTier": "self",
     "cadence": "real-time"
-  }
+  },
+  "launchDate": "2025-05-23"
 }

@@ -110,13 +110,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "SoulPeg docs", "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg" },
-        { "label": "SPUSD contract (BscScan)", "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6" }
+        {
+          "label": "SoulPeg docs",
+          "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg"
+        },
+        {
+          "label": "SPUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the exact address holding MINTER_ROLE/BURNER_ROLE on the spUSD wrapper and the SoulPeg admin/operator multisig.",
         "Confirm whether the documented 1B supply cap is governance-mutable."
       ]
     }
-  }
+  },
+  "launchDate": "2025-07-30"
 }

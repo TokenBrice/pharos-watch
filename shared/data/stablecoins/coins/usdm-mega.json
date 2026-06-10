@@ -183,5 +183,6 @@
         "Resolve the on-chain owner/minter admin of the USDM token on MegaETH and Ethereum and confirm it cannot mint beyond USDtb-backed issuance."
       ]
     }
-  }
+  },
+  "launchDate": "2025-12-08"
 }

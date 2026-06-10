@@ -250,13 +250,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Parallelizer module docs", "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module" },
-        { "label": "parallel-parallelizer (GitHub)", "url": "https://github.com/parallel-protocol/parallel-parallelizer" }
+        {
+          "label": "Parallelizer module docs",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+        },
+        {
+          "label": "parallel-parallelizer (GitHub)",
+          "url": "https://github.com/parallel-protocol/parallel-parallelizer"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain governor and guardian addresses (and multisig thresholds) on the Parallelizer diamond across deployments.",
         "Confirm whether the governor is currently an onchain governance contract or a team multisig."
       ]
     }
-  }
+  },
+  "launchDate": "2025-06-05"
 }

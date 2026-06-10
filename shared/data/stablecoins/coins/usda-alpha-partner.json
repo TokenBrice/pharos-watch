@@ -114,5 +114,6 @@
         "Resolve which address(es) hold the MINT role and the role admin, and whether any off-chain reserve actually backs issued supply."
       ]
     }
-  }
+  },
+  "launchDate": "2025-08-07"
 }

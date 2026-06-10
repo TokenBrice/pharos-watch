@@ -121,13 +121,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "SIP-420 (Synthetix SIPs)", "url": "https://sips.synthetix.io/sips/sip-420/" },
-        { "label": "Synthetix 420 Pool blog", "url": "https://blog.synthetix.io/420-stake-it/" }
+        {
+          "label": "SIP-420 (Synthetix SIPs)",
+          "url": "https://sips.synthetix.io/sips/sip-420/"
+        },
+        {
+          "label": "Synthetix 420 Pool blog",
+          "url": "https://blog.synthetix.io/420-stake-it/"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/admin of the V3 core, 420-pool, and legacy sUSD token contracts and the Synthetix governance multisig/timelock.",
         "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority."
       ]
     }
-  }
+  },
+  "launchDate": "2019-09-26"
 }

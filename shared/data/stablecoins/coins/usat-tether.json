@@ -223,5 +223,6 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"
-  }
+  },
+  "launchDate": "2025-12-12"
 }

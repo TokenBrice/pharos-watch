@@ -135,5 +135,6 @@
     "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
     "yieldSource": "Inverse Finance sDOLA vault",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2024-01-31"
 }

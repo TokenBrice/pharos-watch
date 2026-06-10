@@ -183,13 +183,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Reserve Yield DTF overview", "url": "https://reserve.org/protocol/yield_dtfs/overview/" },
-        { "label": "Introducing USD3 (Reserve forum)", "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691" }
+        {
+          "label": "Reserve Yield DTF overview",
+          "url": "https://reserve.org/protocol/yield_dtfs/overview/"
+        },
+        {
+          "label": "Introducing USD3 (Reserve forum)",
+          "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain Governor/owner and any guardian/pauser roles on the USD3 RToken deployments (Ethereum and Base).",
         "Confirm current issuance/redemption throttle parameters."
       ]
     }
-  }
+  },
+  "launchDate": "2024-04-03"
 }

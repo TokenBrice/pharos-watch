@@ -188,5 +188,6 @@
       "title": "Low-liquidity fund token",
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats UKTBL as a NAV-priced fund share."
     }
-  ]
+  ],
+  "launchDate": "2025-07-16"
 }

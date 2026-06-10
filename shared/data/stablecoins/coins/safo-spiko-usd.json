@@ -150,7 +150,10 @@
           "url": "https://github.com/spiko-tech/contracts"
         }
       ],
-      "unresolvedQuestions": ["Resolve the live Permission Manager owner/role-holder addresses (multisig vs EOA) before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live Permission Manager owner/role-holder addresses (multisig vs EOA) before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-02-26"
 }

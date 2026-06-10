@@ -120,5 +120,6 @@
       "title": "Yield wrapper, not a plain cash stablecoin",
       "message": "stUSD is tracked because CoinGecko returns a live price and market cap, but its structure is a managed yield wrapper around stablecoin strategies rather than a simple fiat-backed dollar token."
     }
-  ]
+  ],
+  "launchDate": "2025-12-05"
 }

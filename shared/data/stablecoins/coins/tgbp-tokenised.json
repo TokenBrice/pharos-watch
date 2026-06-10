@@ -155,5 +155,6 @@
       "label": "GBP bank deposits",
       "risk": "very-low"
     }
-  }
+  },
+  "launchDate": "2025-08-01"
 }

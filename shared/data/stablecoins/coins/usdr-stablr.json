@@ -222,5 +222,6 @@
         "Confirm the exact implementation minter-role configuration and whether the 1/1 proxy-admin signer has any further organizational controls."
       ]
     }
-  }
+  },
+  "launchDate": "2024-12-06"
 }

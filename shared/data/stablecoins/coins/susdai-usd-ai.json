@@ -148,5 +148,6 @@
         "Resolve the sUSDai vault admin/upgrade controls and confirm exit-queue parameters cannot be used to mint base USDai supply."
       ]
     }
-  }
+  },
+  "launchDate": "2025-05-23"
 }

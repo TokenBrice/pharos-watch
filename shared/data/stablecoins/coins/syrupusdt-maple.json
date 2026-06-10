@@ -127,32 +127,32 @@
         "capDescription": "syrupUSDT shares are minted/burned by the Maple ERC-4626 vault against USDT deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDT supply.",
         "evidence": "Strategy-vault receipt: syrupUSDT shares represent a claim on USDT lent as overcollateralized institutional loans; minting shares only follows USDT deposits and does not expand the parent USDT monetary base."
       },
-    {
-      "chain": "ethereum",
-      "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
-      "label": "Inherited USDT (Tether) issuer mint path",
-      "role": "direct-minter",
-      "authorityType": "multisig",
-      "directMintAbility": "direct",
-      "threshold": 3,
-      "signerCount": 6,
-      "canRaiseCap": "unknown",
-      "modulesOrGuardsStatus": "not-applicable",
-      "sources": [
-        {
-          "label": "Tether transparency",
-          "url": "https://tether.to/en/transparency/"
-        },
-        {
-          "label": "Ethereum USDT contract",
-          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
-        }
-      ],
-      "evidence": "Underlying USDT supply is issuer-minted by Tether; Ethereum getOwner() resolves to this 3/6 multisig-style owner with direct supply authority. syrupUSDT wrapper shares inherit that base USDT authority."
+      {
+        "chain": "ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "label": "Inherited USDT (Tether) issuer mint path",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Tether transparency",
+            "url": "https://tether.to/en/transparency/"
+          },
+          {
+            "label": "Ethereum USDT contract",
+            "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+          }
+        ],
+        "evidence": "Underlying USDT supply is issuer-minted by Tether; Ethereum getOwner() resolves to this 3/6 multisig-style owner with direct supply authority. syrupUSDT wrapper shares inherit that base USDT authority."
       }
     ],
     "review": {
-    "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT; live USDT parent reads resolve the inherited 3/6 owner with direct supply authority.",
+      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT; live USDT parent reads resolve the inherited 3/6 owner with direct supply authority.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -163,5 +163,6 @@
       ],
       "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdt-tether, strategy-vault, wrapper reserve); posture mirrors the USDT parent mint authority."
     }
-  }
+  },
+  "launchDate": "2024-08-01"
 }

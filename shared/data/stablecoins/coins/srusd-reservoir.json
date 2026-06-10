@@ -159,5 +159,6 @@
   "yieldConfig": {
     "yieldSource": "Reservoir savings vault",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2024-08-19"
 }

@@ -146,5 +146,6 @@
       "title": "Contract-priced fund token",
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats STAC as a NAV-priced fund share."
     }
-  ]
+  ],
+  "launchDate": "2025-10-29"
 }

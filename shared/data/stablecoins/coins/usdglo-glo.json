@@ -232,5 +232,6 @@
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
-  }
+  },
+  "launchDate": "2022-11-01"
 }

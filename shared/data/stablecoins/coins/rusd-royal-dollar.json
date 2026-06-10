@@ -182,5 +182,6 @@
         "Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron RUSD contracts before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2026-02-11"
 }

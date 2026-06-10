@@ -228,5 +228,6 @@
         "url": "https://api.falcon.finance/api/v1/transparency"
       }
     }
-  }
+  },
+  "launchDate": "2025-02-10"
 }

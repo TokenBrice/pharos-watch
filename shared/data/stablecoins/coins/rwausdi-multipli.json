@@ -137,7 +137,10 @@
           "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
         }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-11-23"
 }

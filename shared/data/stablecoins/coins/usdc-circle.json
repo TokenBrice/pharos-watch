@@ -480,5 +480,6 @@
     "params": {
       "coinType": "usdc"
     }
-  }
+  },
+  "launchDate": "2018-08-03"
 }

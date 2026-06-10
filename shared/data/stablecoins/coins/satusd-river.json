@@ -163,13 +163,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "River docs", "url": "https://docs.river.inc" },
-        { "label": "Satoshi-Protocol GitHub", "url": "https://github.com/Satoshi-Protocol" }
+        {
+          "label": "River docs",
+          "url": "https://docs.river.inc"
+        },
+        {
+          "label": "Satoshi-Protocol GitHub",
+          "url": "https://github.com/Satoshi-Protocol"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/admin of the OFT mint contracts and the cross-chain peer configuration on each deployment.",
         "Confirm whether any core CDP contracts have renounced ownership versus retaining an upgrade/admin multisig."
       ]
     }
-  }
+  },
+  "launchDate": "2025-02-21"
 }

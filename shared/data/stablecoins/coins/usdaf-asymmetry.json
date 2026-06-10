@@ -130,10 +130,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "What is USDaf?", "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf" },
-        { "label": "Electisec USDaf v2 review", "url": "https://reports.electisec.com/2025-05-Asymmetry-USDaf-V2" }
+        {
+          "label": "What is USDaf?",
+          "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
+        },
+        {
+          "label": "Electisec USDaf v2 review",
+          "url": "https://reports.electisec.com/2025-05-Asymmetry-USDaf-V2"
+        }
       ],
-      "unresolvedQuestions": ["Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8."]
+      "unresolvedQuestions": [
+        "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-07-22"
 }
