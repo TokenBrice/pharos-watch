@@ -115,7 +115,6 @@ describe("HomeAltRankingsSection", () => {
     expect(stablecoinTablePropsMock).toHaveBeenCalledWith(expect.objectContaining({
       initialVisibleColumns: ALL_COLUMNS.map((column) => column.id),
       columnPreferenceNamespace: "pharos-home-alt-table-v2",
-      suppressDesktopHorizontalScroll: true,
       showHeaderMethodologyHints: false,
       pinnedStablecoinIds: ["usdc-circle"],
       onTogglePinnedStablecoin: togglePinnedMock,

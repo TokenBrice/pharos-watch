@@ -240,23 +240,25 @@ describe("StablecoinTable", () => {
     expect(shell.querySelector("[data-slot='table-container']")).toBeNull();
   });
 
-  it("can suppress desktop horizontal scrolling while keeping mobile overflow enabled", () => {
+  it("sizes the table to the visible columns so fixed-layout cells never squeeze below content width", () => {
     render(
       <StablecoinTable
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
         pegRates={{}}
-        suppressDesktopHorizontalScroll
       />,
     );
 
-    const table = screen.getAllByRole("table")[0];
+    const table = screen.getAllByRole("table")[0] as HTMLTableElement;
     const scrollContainer = table?.parentElement;
 
     expect(scrollContainer?.className).toContain("overflow-x-auto");
-    expect(scrollContainer?.className).toContain("xl:overflow-x-hidden");
-    expect(scrollContainer?.className).not.toContain("lg:overflow-x-hidden");
+    expect(scrollContainer?.className).not.toContain("overflow-x-hidden");
+    // Inline min-width is the sum of per-column minimums for the visible set;
+    // 420 is the floor, so any real column set resolves above it.
+    const minWidth = Number.parseInt(table.style.minWidth, 10);
+    expect(minWidth).toBeGreaterThanOrEqual(420);
   });
 
   it("honors all-column route defaults", () => {

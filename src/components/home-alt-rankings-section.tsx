@@ -89,7 +89,6 @@ export function HomeAltRankingsSection({
         reportCards={reportCardMap}
         initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
         columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
-        suppressDesktopHorizontalScroll
         showHeaderMethodologyHints={false}
         pinnedStablecoinIds={pinned.pinnedIds}
         onTogglePinnedStablecoin={pinned.togglePinned}

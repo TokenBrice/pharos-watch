@@ -58,7 +58,7 @@ const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
   ["report-cards"],
   ["dex-liquidity"],
 ];
-const MOBILE_TABLE_BASE_MIN_WIDTH_PX = 420;
+const TABLE_BASE_MIN_WIDTH_PX = 420;
 const PINNED_COLUMN_MIN_WIDTH_PX = 56;
 const VIRTUAL_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
   list: 32,
@@ -66,7 +66,10 @@ const VIRTUAL_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
   comfortable: 64,
   spacious: 75,
 };
-const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
+// Per-column content minimums. The table runs `table-fixed`; summing these for
+// the visible set yields the inline min-width at every tier, so the viewport
+// scrolls horizontally instead of squeezing cell content into neighbors.
+const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   rank: 40,
   name: 168,
   price: 88,
@@ -106,12 +109,12 @@ function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): b
   return left.every((id, index) => id === right[index]);
 }
 
-function getMobileTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
+function getTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
   const selectedWidth = visibleColumns.reduce(
-    (total, id) => total + MOBILE_COLUMN_MIN_WIDTH_PX[id],
+    (total, id) => total + COLUMN_MIN_WIDTH_PX[id],
     showPinnedControls ? PINNED_COLUMN_MIN_WIDTH_PX : 0,
   );
-  return Math.max(MOBILE_TABLE_BASE_MIN_WIDTH_PX, selectedWidth);
+  return Math.max(TABLE_BASE_MIN_WIDTH_PX, selectedWidth);
 }
 
 interface StablecoinHeaderDef {
@@ -199,7 +202,6 @@ interface StablecoinTableProps {
   reportCards?: Record<string, ReportCard>;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
-  suppressDesktopHorizontalScroll?: boolean;
   showHeaderMethodologyHints?: boolean;
   initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
@@ -226,7 +228,6 @@ export function StablecoinTable({
   reportCards,
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
-  suppressDesktopHorizontalScroll = false,
   showHeaderMethodologyHints = true,
   initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
@@ -294,8 +295,8 @@ export function StablecoinTable({
   const showPinnedControls = typeof onTogglePinnedStablecoin === "function";
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
   const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
-  const mobileTableMinWidthPx = useMemo(
-    () => getMobileTableMinWidthPx(visibleColumns, showPinnedControls),
+  const tableMinWidthPx = useMemo(
+    () => getTableMinWidthPx(visibleColumns, showPinnedControls),
     [showPinnedControls, visibleColumns],
   );
   const visibleColumnCount = visibleColumns.length + (showPinnedControls ? 1 : 0);
@@ -304,7 +305,7 @@ export function StablecoinTable({
       ...(showPinnedControls
         ? [{
           id: "pinned",
-          cellClassName: "w-[44px] text-center xl:w-[26px]",
+          cellClassName: "w-[44px] text-center xl:w-[36px]",
           skeletonClassName: "mx-auto h-4 w-4 rounded-full",
         }]
         : []),
@@ -439,16 +440,16 @@ export function StablecoinTable({
         striped="indexed"
         viewportClassName="max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"
         mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
-        tableClassName="min-w-[420px] xl:min-w-[820px] table-fixed"
+        tableClassName="min-w-[420px] table-fixed"
         tableProps={{
-          style: isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined,
+          style: { minWidth: tableMinWidthPx },
         }}
       >
         <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
         <TableHeader className="bg-muted">
           <TableRow rowIntent="static">
             {showPinnedControls ? (
-              <TableHead scope="col" className="w-[44px] text-center xl:w-[26px]">
+              <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
                 <span className="sr-only">Starred</span>
               </TableHead>
             ) : null}
@@ -474,11 +475,11 @@ export function StablecoinTable({
       className="animate-in fade-in duration-300"
       density={density}
       viewportRef={scrollRef}
-      viewportClassName={`max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
+      viewportClassName="max-h-[50vh] overscroll-y-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"
       mobileScrollHint="Swipe sideways for more columns. Risk cues stay visible in each row."
-      tableClassName="min-w-[420px] xl:min-w-[820px] table-fixed"
+      tableClassName="min-w-[420px] table-fixed"
       tableProps={{
-        style: isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined,
+        style: { minWidth: tableMinWidthPx },
       }}
       topSlot={(
         <>
@@ -519,7 +520,7 @@ export function StablecoinTable({
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {showPinnedControls && (
-                <TableHead scope="col" className="w-[44px] text-center xl:w-[26px]">
+                <TableHead scope="col" className="w-[44px] text-center xl:w-[36px]">
                   <span className="sr-only">Starred</span>
                 </TableHead>
               )}
