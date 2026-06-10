@@ -44,8 +44,8 @@ export const CANARY_CONTRACT_SMOKE_PATHS = [
 // OG image endpoints are public PNG routes outside the JSON contract set.
 // The per-coin route once 503ed for every coin in production for weeks with
 // nothing watching it (satori threw on the card template), so the smoke
-// probes one coin card plus one aggregate card on every run.
-export const OG_SMOKE_PATHS = ["/api/og/stablecoin/usdt-tether", "/api/og/depeg"];
+// probes one coin card, one per-chain card, and one aggregate card on every run.
+export const OG_SMOKE_PATHS = ["/api/og/stablecoin/usdt-tether", "/api/og/chain/ethereum", "/api/og/depeg"];
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;

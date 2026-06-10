@@ -234,8 +234,9 @@ describe("smoke-api path scopes", () => {
 });
 
 describe("smoke-api og image assertion", () => {
-  it("declares the per-coin and aggregate og probes", () => {
+  it("declares the per-coin, per-chain, and aggregate og probes", () => {
     expect(OG_SMOKE_PATHS).toContain("/api/og/stablecoin/usdt-tether");
+    expect(OG_SMOKE_PATHS).toContain("/api/og/chain/ethereum");
     expect(OG_SMOKE_PATHS).toContain("/api/og/depeg");
   });
 
