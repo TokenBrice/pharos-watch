@@ -4,7 +4,8 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { getCache, setCache } from "../lib/db-cache";
+import { setCache } from "../lib/db-cache";
+import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
 export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -34,24 +35,21 @@ export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Prom
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
   }
 
-  // One snapshot per UTC day. Use 20h (not 24h) so we tolerate daylight/leap-second
-  // drift without skipping a day. The cron fires every 15 min on the quarter-hourly
-  // lane; 23 of 24 previous runs within a day would otherwise overwrite the same
-  // INSERT OR REPLACE row keyed on snapshot_date.
-  const COOLDOWN_SEC = 20 * 3600;
-  const lastWrite = await getCache(db, "snapshot-supply:last-write");
-  throwIfAborted(signal);
-  if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
-  }
-
-  const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
-
-  // Floor to UTC midnight
+  // One snapshot per UTC day, keyed on the marker's stored snapshotDate. The
+  // previous 20h wall-clock cooldown drifted the write time through the whole
+  // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
+  // date-keying pins the write to the first healthy run after UTC midnight.
   const now = new Date();
   const snapshotDate = Math.floor(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
   );
+  const lastWrite = await getCompletedSupplySnapshot(db);
+  throwIfAborted(signal);
+  if (lastWrite?.snapshotDate === snapshotDate) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
+  }
+
+  const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
 
   const stmts: D1PreparedStatement[] = [];
 

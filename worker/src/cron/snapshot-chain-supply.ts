@@ -23,11 +23,23 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }) };
   }
 
-  // One snapshot per UTC day. See snapshot-supply.ts for the rationale.
-  const COOLDOWN_SEC = 20 * 3600;
+  // One snapshot per UTC day, keyed on the marker's stored snapshotDate.
+  // See snapshot-supply.ts for the drift rationale.
+  const now = new Date();
+  const snapshotDate = Math.floor(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000,
+  );
   const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
-  if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
+  if (lastWrite) {
+    let lastSnapshotDate: unknown;
+    try {
+      lastSnapshotDate = (JSON.parse(lastWrite.value) as { snapshotDate?: unknown }).snapshotDate;
+    } catch {
+      lastSnapshotDate = undefined;
+    }
+    if (lastSnapshotDate === snapshotDate) {
+      return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
+    }
   }
 
   // Accumulate per-chain totals
@@ -49,12 +61,6 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
       chainTotals.set(chainId, existing);
     }
   }
-
-  // Floor to UTC midnight
-  const now = new Date();
-  const snapshotDate = Math.floor(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000,
-  );
 
   const stmts: D1PreparedStatement[] = [];
   for (const [chainId, { totalUsd, coinCount }] of chainTotals) {

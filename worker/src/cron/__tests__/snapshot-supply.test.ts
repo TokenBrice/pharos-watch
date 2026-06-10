@@ -94,6 +94,75 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
   });
 
+  it("skips when today's UTC snapshot is already written", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const todaySnapshotDate = Math.floor(Date.UTC(2025, 5, 15) / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [],
+        first: {
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          updated_at: freshUpdatedAt,
+        },
+      },
+    ]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "already_written_today" });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
+  it("writes after UTC midnight even when the previous write is under 20 hours old", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const yesterdaySnapshotDate = Math.floor(Date.UTC(2025, 5, 14) / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [],
+        first: {
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({ snapshotDate: yesterdaySnapshotDate }),
+          // Written 22:00 UTC yesterday — 10.5h ago, inside the old 20h cooldown
+          updated_at: Math.floor(Date.now() / 1000) - 10.5 * 3600,
+        },
+      },
+    ]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.itemCount).toBe(2);
+  });
+
   it("blocks partial daily snapshots instead of writing a sparse day", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
     const cacheValue = JSON.stringify({

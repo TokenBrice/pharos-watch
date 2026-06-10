@@ -26,9 +26,9 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 371 entries: 369 active tracked + 2 shadow)
-5. Check the cooldown guard before building write statements:
+5. Check the once-per-UTC-date guard before building write statements:
    - read cache key `snapshot-supply:last-write`
-   - if the previous successful write is < 20 hours old, skip with `reason: "cooldown_active"` (one snapshot per UTC day; 20h tolerates clock drift without skipping a day)
+   - if the marker's stored `snapshotDate` equals today's UTC date, skip with `reason: "already_written_today"` (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
 6. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
@@ -244,7 +244,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 |-----------|----------|
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
-| Successful write < 20 hours ago | Skip write (`reason: "cooldown_active"`) |
+| Today's UTC snapshot already written | Skip write (`reason: "already_written_today"`) |
 | 0 prepared rows with a non-empty expected PSI set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the 80% guard |
 | 0 prepared rows after passing the 80% guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the expected PSI set is non-empty |
 | < 80% of tracked coins have valid data | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) |
