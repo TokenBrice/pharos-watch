@@ -75,6 +75,11 @@ const dates: Record<string, string> = {};
 walkPages(APP_DIR, "/", dates);
 addStablecoinDetailDates(dates);
 
+// The mechanism explainer hub date must move when any archetype content
+// module under the cluster changes — per-archetype Article JSON-LD sources
+// its dateModified from this entry — not only when the hub page.tsx does.
+dates["/learn/mechanisms/"] = getLastModified(join(APP_DIR, "learn/mechanisms"));
+
 syncGeneratedArtifacts({
   artifacts: [{ path: OUTPUT, contents: JSON.stringify(dates, null, 2) + "\n" }],
   check: CHECK_MODE,

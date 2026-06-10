@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import sitemapDates from "@/generated/sitemap-dates.json";
 import {
   PEG_LABELS_SHORT,
   getMechanismArchetypeLabel,
@@ -349,11 +350,13 @@ export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
   };
 }
 
-// First-publish date for the mechanism explainer cluster. Used as the
-// `datePublished` anchor for per-archetype Article JSON-LD; the day-to-day
-// "edited" timestamp is the build time captured at module load.
-const MECHANISM_EXPLAINER_DATE_PUBLISHED = "2024-01-01T00:00:00Z";
-const BUILD_DATE_MODIFIED = new Date().toISOString();
+// First-publish date for the mechanism explainer cluster (git: 9de91c809,
+// the commit that added src/app/learn/mechanisms). `dateModified` comes from
+// the git-derived sitemap date for the cluster, so it only moves when the
+// explainer content actually changes — not on every build.
+const MECHANISM_EXPLAINER_DATE_PUBLISHED = "2026-05-16T00:00:00Z";
+const MECHANISM_EXPLAINER_DATE_MODIFIED =
+  (sitemapDates as Record<string, string>)["/learn/mechanisms/"] ?? MECHANISM_EXPLAINER_DATE_PUBLISHED;
 
 /**
  * Build an `Article` JSON-LD document for a per-archetype explainer page.
@@ -382,6 +385,6 @@ export function buildArchetypeArticleJsonLd(archetype: MechanismArchetype): Reco
       termCode: archetype,
     },
     datePublished: MECHANISM_EXPLAINER_DATE_PUBLISHED,
-    dateModified: BUILD_DATE_MODIFIED,
+    dateModified: MECHANISM_EXPLAINER_DATE_MODIFIED,
   };
 }
