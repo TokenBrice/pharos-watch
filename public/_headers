@@ -18,9 +18,6 @@
   CDN-Cache-Control: no-store
   Content-Type: application/json; charset=utf-8
 
-/compare/
-  X-Robots-Tag: noindex, follow
-
 /stablecoin/*/yield/
   X-Robots-Tag: noindex, follow
 

@@ -516,6 +516,32 @@ function validateStaticHeaders(outDir, errors) {
   }
 }
 
+function collectNoindexHeaderRoutes(outDir) {
+  const headersPath = path.join(outDir, "_headers");
+  if (!fs.existsSync(headersPath)) return [];
+
+  const blocks = parseStaticHeadersFile(fs.readFileSync(headersPath, "utf8"));
+  const routes = [];
+  for (const block of blocks) {
+    const values = block.headers.get("x-robots-tag") ?? [];
+    if (values.length > 0 && getRobotsDirectives(values).has("noindex")) {
+      routes.push(block.route);
+    }
+  }
+  return routes;
+}
+
+function headerRouteMatchesPath(routePattern, pathname) {
+  // Cloudflare Pages _headers rules match the full path; `*` is a splat that
+  // crosses path segments.
+  const pattern = routePattern
+    .split("*")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  // eslint-disable-next-line security/detect-non-literal-regexp -- pattern is built from the repo-controlled _headers file with metacharacters escaped
+  return new RegExp(`^${pattern}$`).test(pathname);
+}
+
 function internalHrefParts(href) {
   if (!href) return null;
   if (href.startsWith("#")) {
@@ -1180,6 +1206,26 @@ export function collectSeoStaticCheckResult({
       }
       if (!routeSet.has(sitemapRoute.route)) {
         errors.push(`sitemap.xml URL has no local static HTML artifact: ${loc} (expected ${sitemapRoute.route})`);
+      }
+    }
+
+    // A sitemap entry signals "index this"; an X-Robots-Tag noindex header on
+    // the same route wins over meta robots and silently deindexes it. The
+    // /compare/ hub shipped with exactly this three-way conflict (header
+    // noindex + meta index + sitemap entry) for weeks.
+    const noindexHeaderRoutes = collectNoindexHeaderRoutes(outDir);
+    if (noindexHeaderRoutes.length > 0) {
+      for (const loc of locs) {
+        const sitemapRoute = sitemapRouteFromPharosUrl(loc);
+        if (!sitemapRoute || sitemapRoute.error) continue;
+        const pathname = new URL(loc).pathname;
+        for (const routePattern of noindexHeaderRoutes) {
+          if (headerRouteMatchesPath(routePattern, pathname)) {
+            errors.push(
+              `sitemap.xml URL ${loc} conflicts with _headers noindex rule ${routePattern}; drop one of the two signals`,
+            );
+          }
+        }
       }
     }
   }
