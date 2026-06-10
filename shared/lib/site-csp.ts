@@ -26,10 +26,12 @@ export function isTelegramMiniAppPath(pathname: string): boolean {
 }
 
 function buildScriptSrc(options: ContentSecurityPolicyOptions): string {
+  // No 'unsafe-eval': the static export, GTM/GA, the Cloudflare insights
+  // beacon, and telegram-web-app.js all run without eval (verified against
+  // the built chunks — Mythos audit P3-58).
   const scriptSrc = [
     "'self'",
     ...(options.nonce ? [`'nonce-${options.nonce}'`] : []),
-    "'unsafe-eval'",
     ...(options.telegramMiniApp ? ["https://telegram.org"] : []),
     "https://www.googletagmanager.com",
     "https://static.cloudflareinsights.com",

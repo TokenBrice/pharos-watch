@@ -205,7 +205,7 @@ describe("pages middleware markdown negotiation", () => {
     const csp = res.headers.get("Content-Security-Policy") ?? "";
 
     expect(csp).toContain("script-src 'self' 'nonce-");
-    expect(csp).toContain("'unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain("https://www.googletagmanager.com");
     expect(csp).toContain("https://static.cloudflareinsights.com");
     expect(imgSrc(csp)).toContain("https://www.googletagmanager.com");
@@ -316,7 +316,7 @@ describe("pages middleware markdown negotiation", () => {
 
   it("keeps the static fallback CSP free of unsafe inline script execution", () => {
     expect(buildContentSecurityPolicy("abc123")).toBe(
-      "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'nonce-abc123' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
     );
   });
 });
