@@ -57,12 +57,14 @@ function DiscoveryIcon({
       aria-hidden="true"
       className={cn(
         "grid shrink-0 place-items-center rounded-md border bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] text-[var(--discovery-accent)] transition-[background-color,border-color,box-shadow] duration-200 [border-color:color-mix(in_oklab,var(--discovery-accent)_24%,var(--border))] group-hover:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-hover:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))] group-hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] group-focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-focus-visible:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))]",
-        featured ? "h-20 w-20 sm:h-24 sm:w-24" : "h-14 w-14 sm:h-16 sm:w-16 xl:h-20 xl:w-20",
+        // Compact tiles are ~210px wide at xl; an xl icon upsize left the text
+        // column too narrow for the authored titles and one-liners.
+        featured ? "h-20 w-20 sm:h-24 sm:w-24" : "h-14 w-14 sm:h-16 sm:w-16 xl:h-14 xl:w-14",
       )}
     >
       <Icon
         aria-hidden="true"
-        className={featured ? "h-9 w-9 sm:h-10 sm:w-10" : "h-7 w-7 sm:h-8 sm:w-8 xl:h-9 xl:w-9"}
+        className={featured ? "h-9 w-9 sm:h-10 sm:w-10" : "h-7 w-7 sm:h-8 sm:w-8 xl:h-7 xl:w-7"}
         strokeWidth={1.85}
       />
     </span>
@@ -128,21 +130,23 @@ function CompactSurface({
     <Link
       href={suggestion.href}
       style={discoveryAccentStyle(suggestion)}
-      className="group pharos-focus-ring flex h-full min-h-28 items-center gap-3.5 px-4 py-4 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:outline-none sm:px-5 xl:min-h-32"
+      className="group pharos-focus-ring relative flex h-full min-h-28 items-center gap-3.5 px-4 py-4 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:outline-none sm:px-5 xl:min-h-32"
     >
       <DiscoveryIcon suggestion={suggestion} />
       <div className="min-w-0 flex-1">
         <GroupChip label={suggestion.groupLabel} />
-        <p className="mt-1.5 font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-foreground sm:text-[12px]">
+        <p className="mt-1.5 font-mono text-[11px] font-semibold uppercase leading-tight tracking-wide text-foreground sm:text-[12px] xl:text-[11px] xl:tracking-normal">
           {suggestion.title}
         </p>
-        <p className="mt-1 truncate text-[11px] leading-snug text-muted-foreground">
+        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
           {suggestion.shortDescription}
         </p>
       </div>
+      {/* Corner reveal: an inline arrow reserved ~28px the narrow xl tiles
+          can't spare; the one-liners were ellipsizing into noise. */}
       <ArrowUpRight
         aria-hidden="true"
-        className="h-3.5 w-3.5 shrink-0 self-center text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
+        className="absolute right-3 top-3 h-3.5 w-3.5 text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
         strokeWidth={2}
       />
     </Link>
