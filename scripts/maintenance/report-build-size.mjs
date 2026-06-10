@@ -45,6 +45,11 @@ const DEFAULT_BUDGETS = {
   // ceiling sits above the ~253 KB optimized payload.
   representativeDetailHtmlBytes: 270_000,
   representativeDetailPageTxtBytes: 90_000,
+  // Sum of gzip sizes of every script chunk referenced by a representative
+  // detail page's HTML — the eager first-load JS budget per route (Mythos
+  // #50). Current payload is ~771 KB gz per detail page; ratchet down after
+  // the registry split (#4) and chart-kit consolidation (#5) land.
+  representativeDetailEagerJsGzipBytes: 810_000,
 };
 
 const BUDGET_ENV = {
@@ -59,6 +64,7 @@ const BUDGET_ENV = {
   largestTxtBytes: "PHAROS_SIZE_BUDGET_LARGEST_TXT_BYTES",
   representativeDetailHtmlBytes: "PHAROS_SIZE_BUDGET_DETAIL_HTML_BYTES",
   representativeDetailPageTxtBytes: "PHAROS_SIZE_BUDGET_DETAIL_PAGE_TXT_BYTES",
+  representativeDetailEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_DETAIL_EAGER_JS_GZIP_BYTES",
 };
 
 const REPRESENTATIVE_DETAIL_ROUTES = [
@@ -224,6 +230,37 @@ const representativeDetails = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
 
 printTop("Representative stablecoin detail payloads", representativeDetails, 20);
 
+// Eager first-load JS per representative detail route: every script chunk the
+// page HTML references, gzip-summed. Catches per-route payload regressions the
+// whole-build totals can't see (one oversized shared chunk costs ×403 pages).
+const gzipSizeCache = new Map();
+function gzipSizeOf(filePath) {
+  if (!gzipSizeCache.has(filePath)) {
+    gzipSizeCache.set(filePath, gzipSync(readFileSync(filePath)).byteLength);
+  }
+  return gzipSizeCache.get(filePath);
+}
+
+const representativeDetailEagerJs = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
+  const htmlPath = path.join(outDir, route, "index.html");
+  if (!existsSync(htmlPath)) return [];
+  const html = readFileSync(htmlPath, "utf8");
+  const scriptSrcs = new Set(
+    [...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]),
+  );
+  let eagerGzipBytes = 0;
+  let scriptCount = 0;
+  for (const src of scriptSrcs) {
+    const chunkPath = path.join(outDir, src.replace(/^\//, ""));
+    if (!existsSync(chunkPath)) continue;
+    eagerGzipBytes += gzipSizeOf(chunkPath);
+    scriptCount += 1;
+  }
+  return [{ route, scriptCount, size: eagerGzipBytes, rel: `${route} (${scriptCount} scripts, gzip)` }];
+});
+
+printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
+
 if (check) {
   const failures = [];
   console.log("\nBudget checks");
@@ -241,6 +278,15 @@ if (check) {
     const budget =
       detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes;
     checkBudget(`${detail.route} ${detail.kind}`, detail.size, budget, failures);
+  }
+
+  for (const detail of representativeDetailEagerJs) {
+    checkBudget(
+      `${detail.route} eager JS gzip`,
+      detail.size,
+      budgets.representativeDetailEagerJsGzipBytes,
+      failures,
+    );
   }
 
   if (failures.length > 0) {
