@@ -42,18 +42,21 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Downgrade React Compiler rules to warnings — these flag valid patterns
-    // that aren't optimal for the compiler but work correctly at runtime.
+    // React Compiler rules flag patterns that are merely suboptimal for the
+    // compiler, but `lint` runs with --max-warnings=0, so a "warn" tier fails
+    // the gate exactly like "error" would. Keep these as errors so the
+    // configured severity matches actual enforcement; use a scoped
+    // eslint-disable with justification for the rare legitimate exception.
     // Suppress no-img-element — static export with unoptimized images makes
     // next/image functionally identical to <img>.
     rules: {
-      "react-hooks/preserve-manual-memoization": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/incompatible-library": "warn",
+      "react-hooks/preserve-manual-memoization": "error",
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/purity": "error",
+      "react-hooks/incompatible-library": "error",
       "@next/next/no-img-element": "off",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
