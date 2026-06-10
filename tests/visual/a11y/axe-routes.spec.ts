@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import type { Result } from "axe-core";
+import { TAGS, summarizeViolations } from "./axe-shared";
 
 /**
  * Wave 6 IDEA-16: automated axe-core regression floor.
@@ -14,8 +14,9 @@ import type { Result } from "axe-core";
  * exhaustively cover every component. As subsequent waves close existing
  * violations, this floor ratchets upward automatically.
  *
- * Known debt is waived at the node level. Do not disable whole axe rules here:
- * that hides broad regressions on routes that already pass the same rule.
+ * This file scans the unhydrated export (the state crawlers see); the
+ * hydrated-state companion lives in `axe-routes-hydrated.spec.ts`. Shared
+ * waivers and the violation summary live in `axe-shared.ts`.
  */
 const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   { path: "/about", tier: "discovery" },
@@ -33,43 +34,6 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   { path: "/chains", tier: "analytics" },
   { path: "/pharoswatchbot/app", tier: "mini-app" },
 ];
-
-const TAGS = ["wcag2a", "wcag2aa", "wcag22a", "wcag22aa"];
-
-interface AxeNodeWaiver {
-  routePath: string;
-  ruleId: string;
-  target: string;
-  note: string;
-}
-
-const KNOWN_NODE_WAIVERS: readonly AxeNodeWaiver[] = [];
-
-function isWaivedNode(routePath: string, violation: Result, target: string): boolean {
-  return KNOWN_NODE_WAIVERS.some(
-    (waiver) =>
-      waiver.routePath === routePath &&
-      waiver.ruleId === violation.id &&
-      waiver.target === target,
-  );
-}
-
-function summarizeViolations(routePath: string, violations: Result[]) {
-  return violations
-    .map((violation) => {
-      const nodes = violation.nodes.filter(
-        (node) => !node.target.some((target) => isWaivedNode(routePath, violation, target)),
-      );
-      return {
-        id: violation.id,
-        impact: violation.impact,
-        help: violation.help,
-        nodeCount: nodes.length,
-        firstTarget: nodes[0]?.target?.[0],
-      };
-    })
-    .filter((violation) => violation.nodeCount > 0);
-}
 
 // Layered surfaces (drawers, palettes, sheets) never render in the default
 // scans above; the mobile nav drawer is the highest-traffic one.

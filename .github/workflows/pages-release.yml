@@ -240,6 +240,16 @@ jobs:
             echo "local pre-publish statuses: seo=${seo_status}, a11y=${a11y_status}, ui=${ui_status}, mobile=${mobile_status}"
             exit 1
           fi
+      # Mythos P1-14 (second half): the bare-server scan above covers the
+      # crawl-state export; this one reuses the API-backed 4173 smoke server
+      # so axe sees the hydrated product (populated tables, hero metrics).
+      # It runs sequentially after the parallel block so it never competes
+      # with the mobile smoke for the API budget.
+      - name: Hydrated a11y scan (API-backed export)
+        env:
+          STATIC_EXPORT_PORT: "4173"
+          PLAYWRIGHT_REUSE_SERVER: "1"
+        run: npm run test:a11y:hydrated
       - name: Wait for validation gate
         if: ${{ inputs.wait_for_validate_job }}
         env:

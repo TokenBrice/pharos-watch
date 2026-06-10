@@ -15,7 +15,10 @@ export default defineConfig({
   webServer: {
     command: "npm run serve:static-export",
     url: staticExportBaseUrl,
-    reuseExistingServer: false,
+    // The deploy pipeline points hydrated a11y at its already-running
+    // API-backed smoke server (PLAYWRIGHT_REUSE_SERVER=1); every other lane
+    // gets a fresh server so stale processes can't mask config drift.
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
     timeout: 120_000,
   },
   expect: {
