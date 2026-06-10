@@ -6,11 +6,13 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.07`
+- **Current methodology version:** `v4.11`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.07` update: conservative confidence defaults in the effective-exit blend (missing model confidence now applies the low 0.35 factor), live-proxy capacity with unknown route status always rolls up low confidence, the strong live-direct severe-depeg exemption is re-evaluated against the final resolved capacity state, and over-leveraged output-dependency compositions are flagged while the impaired share stays clamped at 100%.
+Latest `v4.11` update: reviewed issuer rails with public at-par redemption terms AND attested ~100% highly-liquid reserves (PYUSD, USDP, USDG, GUSD) move from eventual-only `supply-full` to a `documented-bound` 25% same-day hot-buffer ratio (attested liquid share with a uniform 75% haircut, anchored above the worst observed primary-redemption wave). USDT, RLUSD, FDUSD, and USD1 deliberately stay eventual-only because their public terms do not commit to a settlement window. Issuer-specific stricter bounds (USDC's 7% cash floor) take precedence over the generic rule.
+
+Previous `v4.07` update: conservative confidence defaults in the effective-exit blend (missing model confidence now applies the low 0.35 factor), live-proxy capacity with unknown route status always rolls up low confidence, the strong live-direct severe-depeg exemption is re-evaluated against the final resolved capacity state, and over-leveraged output-dependency compositions are flagged while the impaired share stays clamped at 100%.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +22,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 309
-- **Route families:** 150 `offchain-issuer`, 61 `stablecoin-redeem`, 41 `collateral-redeem`, 38 `queue-redeem`, 10 `psm-swap`, 9 `basket-redeem`
+- **Configured coins:** 310
+- **Route families:** 150 `offchain-issuer`, 62 `stablecoin-redeem`, 41 `collateral-redeem`, 38 `queue-redeem`, 10 `psm-swap`, 9 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -51,7 +53,7 @@ Status semantics:
 - `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale or missing
 - `error` when zero routes resolve to a usable scored row because of route failures, cache misses, blocking unresolved states, or all configured routes missing capacity
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity` (plus per-family/per-provider `familyMissingCapacityBy` / `providerMissingCapacityBy` breakdowns when any capacity is missing, so a single failing adapter family cannot hide inside the aggregate tolerance), `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
 
 ---
 
@@ -287,7 +289,7 @@ Key columns:
 
 `details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
-`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run and filter current rows to that generation. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. If no completed manifest exists but the manifest table has run records and the current table contains rows with a non-null `snapshot_run_id`, readers return `503` instead of treating those partial manifested rows as legacy data. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap only when the current table has no manifested rows.
+`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. The true-legacy `MAX(updated_at)` fallback is retired: with no valid completed run, readers fail closed to `503` (fresh local databases 503 cleanly until the first completed sync).
 
 ### `redemption_backstop_history`
 
@@ -303,7 +305,7 @@ Stored fields:
 - `details_json`
 - `snapshot_run_id`
 
-The cron writes immutable `redemption_backstop_run_rows` first, writes daily history, marks the run manifest completed only after the immutable row count and bounds are valid, and then refreshes the legacy current mirror. Current-mirror failures are recorded as completed-run warnings instead of making partial current rows authoritative.
+The cron writes immutable `redemption_backstop_run_rows` first, writes daily history, and marks the run manifest completed only after the immutable row count and bounds are valid. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively, and the `redemption_backstop` table is frozen in place pending a separately coordinated destructive cleanup.
 
 ### `redemption_backstop_runs`
 
@@ -322,7 +324,7 @@ Stored fields:
 - `max_updated_at`
 - `metadata_json`
 
-The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. The legacy current mirror is refreshed only after the completed run exists; mirror failures are recorded as completed-run warnings because readers use immutable run rows as the authoritative snapshot source. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior only for current rows that are not tied to any manifested run.
+The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
 
 Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads and legacy fallback constraints stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 
@@ -334,8 +336,8 @@ Run manifests and immutable run rows are pruned after successful writes with a 1
 
 **File:** `worker/src/api/redemption-backstops.ts`
 
-- Returns `503` with `{ "error": "Data not yet available" }` until at least one 4-hourly sync has written readable rows
-- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when no valid completed run can be read cleanly from immutable run rows or a true legacy current snapshot; partial manifested current rows are not treated as authoritative
+- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when no valid completed run can be read cleanly from immutable run rows (including before the first completed sync on a fresh database); partial manifested current rows are not treated as authoritative
+- The response metadata carries `snapshotSource` (`run-rows` | `legacy-current`) so consumers can tell whether the snapshot came from immutable run rows or the run-scoped current-table fallback
 - Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run manifest or latest stored snapshot row for true legacy snapshots, and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
