@@ -4,6 +4,7 @@ import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
 import { CHAIN_META } from "../../shared/lib/chains";
+import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import {
@@ -122,6 +123,22 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
     "GOLD/SILVER-pegged asset must declare commodityOunces (troy ounces per token); "
     + "without it peg-rates silently treats the price as per-troy-ounce, fabricating peg deviation "
     + "for non-1oz denominations and contaminating the commodity peer median"
+  );
+}
+
+function getPegRuntimeSupportIssue(coin: StablecoinMeta): string | null {
+  if (coin.status === "pre-launch") return null;
+
+  const pegCurrency = coin.flags.pegCurrency;
+  const pegType = normalizePegTypeFromCurrency(pegCurrency);
+  const pegClass = classifyPegClass(pegCurrency, pegType, Boolean(coin.flags.navToken));
+  if (pegClass !== "unknown") return null;
+
+  return (
+    `pegCurrency ${pegCurrency} classifies as "unknown" peg class at runtime: price validation accepts any `
+    + "price under $100k with no peg band, no FX reference, and no depeg coverage. Before activating a coin "
+    + "on this peg, add it to classifyPegClass + FX_RATE_BOUNDS + HARDCODED_PRICE_BOUNDS and wire its FX rate "
+    + "(see the GELT/GEL promotion checklist pattern)"
   );
 }
 
@@ -455,6 +472,11 @@ if (errorCount === 0) {
     const commodityOuncesIssue = getCommodityOuncesIssue(entry.coin);
     if (commodityOuncesIssue) {
       reportError(`${entry.file} (${entry.coin.id}): ${commodityOuncesIssue}`);
+    }
+
+    const pegRuntimeSupportIssue = getPegRuntimeSupportIssue(entry.coin);
+    if (pegRuntimeSupportIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${pegRuntimeSupportIssue}`);
     }
 
     for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {

@@ -14,9 +14,18 @@ function hasHardcodedCoverage(pegType: string): boolean {
   return Object.keys(HARDCODED_PRICE_BOUNDS).some((key) => key !== "USD" && pegType.includes(key));
 }
 
+const unclassified: string[] = [];
+
 for (const pegCurrency of PEG_CURRENCY_VALUES) {
   const pegType = normalizePegTypeFromCurrency(pegCurrency);
   const pegClass = classifyPegClass(pegCurrency, pegType, false);
+  if (pegClass === "unknown") {
+    // Runtime-unsupported enum currency (no peg band, no FX reference).
+    // Legal for pre-launch-only pegs; check-stablecoin-data fails any
+    // non-pre-launch coin that uses one. Surface it so the gap stays visible.
+    unclassified.push(pegCurrency);
+    continue;
+  }
   if (pegClass !== "fiat_fx" && pegClass !== "commodity") continue;
 
   if (!pegType) {
@@ -60,4 +69,9 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
+if (unclassified.length > 0) {
+  console.log(
+    `WARN: runtime-unsupported enum peg currencies (pre-launch only, no validation coverage): ${unclassified.join(", ")}`,
+  );
+}
 console.log(`Price-bound parity check passed (${checked.length} fiat/commodity peg currencies).`);
