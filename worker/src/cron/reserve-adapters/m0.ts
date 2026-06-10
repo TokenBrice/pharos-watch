@@ -3,13 +3,12 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonPostWithRetry,
+  freshnessMetadataFromTimestamp,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestamps,
   requireJsonInputFromConfig,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface M0GraphQlResponse {
@@ -163,12 +162,11 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...(timestampSummary != null
-        ? verifiedFreshnessMetadata(timestampSummary.sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "dashboard-graphql",
-            "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        timestampSummary?.sourceTimestamp,
+        "dashboard-graphql",
+        "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
+      ),
       cashScaleApplied: M0_CASH_SCALE,
       cashUnits: "milli-usd-to-micro-usd",
       ...(timestampSummary != null

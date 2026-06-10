@@ -6,6 +6,7 @@ import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-sel
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
+  buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
   fetchOnchainRawCall,
@@ -121,15 +122,11 @@ export function adaptChainlinkPorResponse(
       : undefined;
   const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? reserveValue / supplyUsd : undefined;
 
-  const warnings: LiveReserveWarning[] = [];
-  if (collateralizationRatio != null && collateralizationRatio < 0.995) {
-    warnings.push(
-      reserveDegradedWarning(
-        "por-reserve-under-supply",
-        `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply`,
-      ),
-    );
-  }
+  const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
+    code: "por-reserve-under-supply",
+    message: (pct) => `Chainlink PoR reserves cover ${pct}% of multichain token supply`,
+    coverageRatio: collateralizationRatio,
+  });
   if (collateralizationRatio != null && collateralizationRatio > 1.1) {
     warnings.push(
       reserveDegradedWarning(

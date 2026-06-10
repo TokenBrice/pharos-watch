@@ -3,11 +3,11 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
   parsePositiveNumericLike,
   slicesFromValues,
   verifiedFreshnessMetadata,
-  reserveDegradedWarning,
 } from "./helpers";
 
 interface NestVaultPositionsParams {
@@ -212,18 +212,16 @@ export async function fetchNestVaultPositionsReserves(
   const totalSupply = parsePositiveNumericLike(price.data?.totalSupply);
   const sourceTimestamp = readLatestTimestamp(lastPriceUpdate);
   const navCoverageRatio = navUsd && navUsd > 0 ? totalReserveUsd / navUsd : null;
-  const warnings = navCoverageRatio != null && navCoverageRatio < 0.99
-    ? [
-      reserveDegradedWarning(
-        "nest-nav-coverage-gap",
-        `Nest position values cover ${(navCoverageRatio * 100).toFixed(2)}% of reported NAV`,
-      ),
-    ]
-    : undefined;
+  const warnings = buildCoverageShortfallWarnings({
+    code: "nest-nav-coverage-gap",
+    message: (pct) => `Nest position values cover ${pct}% of reported NAV`,
+    coverageRatio: navCoverageRatio,
+    thresholdRatio: 0.99,
+  });
 
   return {
     slices: slicesFromValues(values),
-    ...(warnings ? { warnings } : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
       details: {

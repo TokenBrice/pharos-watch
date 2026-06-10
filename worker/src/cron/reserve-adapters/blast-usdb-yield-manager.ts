@@ -4,11 +4,11 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
-  reserveDegradedWarning,
 } from "./helpers";
 
 const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
@@ -70,14 +70,11 @@ export async function fetchBlastUsdbYieldManagerReserves(
   const totalReserveUsd = decimalNumberFromBigInt(totalValueRaw, 18);
   const supplyUsd = decimalNumberFromBigInt(totalSupplyRaw, 18);
   const collateralizationRatio = totalReserveUsd / supplyUsd;
-  const warnings = collateralizationRatio < 0.995
-    ? [
-      reserveDegradedWarning(
-        "blast-usdb-undercollateralized",
-        `Blast USDYieldManager totalValue() is ${(collateralizationRatio * 100).toFixed(2)}% of USDB supply`,
-      ),
-    ]
-    : undefined;
+  const warnings = buildCoverageShortfallWarnings({
+    code: "blast-usdb-undercollateralized",
+    message: (pct) => `Blast USDYieldManager totalValue() is ${pct}% of USDB supply`,
+    coverageRatio: collateralizationRatio,
+  });
 
   return {
     slices: [
@@ -88,7 +85,7 @@ export async function fetchBlastUsdbYieldManagerReserves(
         coinId: "dai-makerdao",
       },
     ],
-    ...(warnings ? { warnings } : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
       details: {

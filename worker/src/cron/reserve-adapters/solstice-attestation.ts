@@ -3,10 +3,9 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface SolsticeTimelinePoint {
@@ -67,12 +66,11 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
       },
     ],
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "solstice-attestation-api",
-            "Solstice attestation payload did not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "solstice-attestation-api",
+        "Solstice attestation payload did not expose a trustworthy source timestamp",
+      ),
       totalReserveUsd,
       supplyUsd,
       collateralizationRatio,

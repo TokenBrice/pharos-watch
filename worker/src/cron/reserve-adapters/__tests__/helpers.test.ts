@@ -9,6 +9,7 @@ import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
   ADAPTER_USER_AGENT,
   accumulateBucketedExposure,
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildBucketSlices,
   buildUnknownExposureWarning,
@@ -17,6 +18,7 @@ import {
   decimalStringFromBigInt,
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   isReserveRisk,
   normalizeSlices,
   notApplicableFreshnessMetadata,
@@ -370,6 +372,27 @@ describe("notApplicableFreshnessMetadata", () => {
   });
 });
 
+describe("freshnessMetadataFromTimestamp", () => {
+  it("returns verified metadata when a source timestamp is present", () => {
+    expect(freshnessMetadataFromTimestamp(1_777_000_000, "issuer-api", "timestamp missing")).toEqual({
+      sourceTimestamp: 1_777_000_000,
+      freshnessMode: "verified",
+    });
+  });
+
+  it("falls back to unverified metadata when the timestamp is null or undefined", () => {
+    const expected = {
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+        freshnessReason: "timestamp missing",
+      },
+    };
+    expect(freshnessMetadataFromTimestamp(null, "issuer-api", "timestamp missing")).toEqual(expected);
+    expect(freshnessMetadataFromTimestamp(undefined, "issuer-api", "timestamp missing")).toEqual(expected);
+  });
+});
+
 describe("parsePositiveNumericLike", () => {
   it("accepts finite positive numbers and numeric strings", () => {
     expect(parsePositiveNumericLike(42)).toBe(42);
@@ -411,6 +434,49 @@ describe("unknown exposure helpers", () => {
       message: "unknown buckets",
       unknownExposurePct: 7,
     }).effect).toBe("degraded");
+  });
+});
+
+describe("buildCoverageShortfallWarnings", () => {
+  it("emits a degraded warning with the formatted coverage pct below the threshold", () => {
+    expect(buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `reserves cover ${pct}% of supply`,
+      coverageRatio: 0.987654,
+    })).toEqual([{
+      code: "reserve-undercollateralized",
+      message: "reserves cover 98.77% of supply",
+      severity: "warning",
+      effect: "degraded",
+    }]);
+  });
+
+  it("stays silent at or above the threshold and when the ratio is unknown", () => {
+    expect(buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `${pct}%`,
+      coverageRatio: 0.995,
+    })).toEqual([]);
+    expect(buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `${pct}%`,
+      coverageRatio: null,
+    })).toEqual([]);
+  });
+
+  it("honors a custom threshold ratio", () => {
+    expect(buildCoverageShortfallWarnings({
+      code: "nav-coverage-gap",
+      message: (pct) => `${pct}%`,
+      coverageRatio: 0.992,
+      thresholdRatio: 0.99,
+    })).toEqual([]);
+    expect(buildCoverageShortfallWarnings({
+      code: "nav-coverage-gap",
+      message: (pct) => `${pct}%`,
+      coverageRatio: 0.985,
+      thresholdRatio: 0.99,
+    })).toHaveLength(1);
   });
 });
 

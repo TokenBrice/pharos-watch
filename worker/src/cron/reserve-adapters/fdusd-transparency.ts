@@ -3,11 +3,10 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
   slicesFromPercentages,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -67,12 +66,11 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
     metadata: {
       sliceCount: entries.length,
       ...(asOf ? { asOf } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "html-disclosure",
-            "FDUSD reserve page did not expose a parseable 'As of' timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "html-disclosure",
+        "FDUSD reserve page did not expose a parseable 'As of' timestamp",
+      ),
       redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp),
     },
   };

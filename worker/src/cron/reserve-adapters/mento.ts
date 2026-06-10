@@ -6,13 +6,12 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   fetchTextWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromPercentages,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { requireJsonInput } from "./input-guards";
 
@@ -377,12 +376,11 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
     metadata: {
       entryCount: entries.length,
       totalPct,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "mento-analytics-api",
-            "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "mento-analytics-api",
+        "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
+      ),
       stableReservePct: stablePct,
     },
   };
@@ -449,12 +447,11 @@ export function adaptMentoCdpComposition(
       totalCollateralUsd,
       totalDebtUsd,
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "mento-analytics-api",
-            "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "mento-analytics-api",
+        "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
+      ),
     },
   };
 }

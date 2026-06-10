@@ -5,13 +5,12 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   fetchJsonWithRetry,
   normalizeSlices,
   reserveDegradedWarning,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 /* ---------- v2 balance-sheet API types ---------- */
@@ -205,12 +204,11 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
       sourceTotalAssetsUsd: sourceTotal,
       ...(sourceTotalGapPct > 0 ? { sourceTotalGapPct } : {}),
       assetCount: bySymbol.size,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "frax-balance-sheet-api",
-            "Frax balance-sheet response did not include asOfTimestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "frax-balance-sheet-api",
+        "Frax balance-sheet response did not include asOfTimestamp",
+      ),
       immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
@@ -343,12 +341,11 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
       assetCount: assets.length,
       liabilityCount: payload.liabilities?.length ?? 0,
       ...(payload.updatedAtBlock != null ? { updatedAtBlock: payload.updatedAtBlock } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "frax-fpi-collateral-api",
-            "Frax FPI collateral response did not include updatedAtTimestampSec",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "frax-fpi-collateral-api",
+        "Frax FPI collateral response did not include updatedAtTimestampSec",
+      ),
       immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,

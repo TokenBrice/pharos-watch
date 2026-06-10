@@ -14,11 +14,10 @@ import {
   decimalStringFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  freshnessMetadataFromTimestamp,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
@@ -117,12 +116,11 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       oracleRoundId: data.roundId.toString(),
       oracleUpdatedAt: data.updatedAt,
       oracleTimestampSource,
-      ...(data.updatedAt > 0
-        ? verifiedFreshnessMetadata(data.updatedAt)
-        : unverifiedFreshnessMetadata(
-            "onchain-oracle-getprice",
-            "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        data.updatedAt > 0 ? data.updatedAt : null,
+        "onchain-oracle-getprice",
+        "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
+      ),
       redemption: buildDocumentedRedemptionTelemetry(data.updatedAt > 0 ? data.updatedAt : null),
     },
   };

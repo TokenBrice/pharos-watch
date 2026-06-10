@@ -4,12 +4,12 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
-  reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
 
@@ -119,18 +119,15 @@ export async function fetchOriginVaultBalancesReserves(
   const totalValueUsd = decimalNumberFromBigInt(totalValueRaw, 18);
   const immediateRedeemableUsd = values.reduce((sum, value) => sum + value.idleValue, 0);
   const assetCoverageRatio = totalReserveUsd / totalValueUsd;
-  const warnings = assetCoverageRatio < 0.995
-    ? [
-      reserveDegradedWarning(
-        "origin-vault-coverage-gap",
-        `Origin vault asset probes cover ${(assetCoverageRatio * 100).toFixed(2)}% of totalValue()`,
-      ),
-    ]
-    : undefined;
+  const warnings = buildCoverageShortfallWarnings({
+    code: "origin-vault-coverage-gap",
+    message: (pct) => `Origin vault asset probes cover ${pct}% of totalValue()`,
+    coverageRatio: assetCoverageRatio,
+  });
 
   return {
     slices: slicesFromValues(values),
-    ...(warnings ? { warnings } : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
       details: {

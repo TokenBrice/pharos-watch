@@ -4,13 +4,12 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { extractEscapedJsonValueAfterKey } from "./html";
 
@@ -269,12 +268,11 @@ export function adaptReMetrics(html: string): AdapterResult {
       chainBreakdownCount: Object.keys(breakdowns).length,
       offchainCapitalUsd,
       trackedTokenCount: tokenValues.size,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "nextjs-embedded-payload",
-            "Re Metrics embedded payload did not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "nextjs-embedded-payload",
+        "Re Metrics embedded payload did not expose a trustworthy source timestamp",
+      ),
       stableAssetUsd: stableRedeemableUsd,
     },
   };

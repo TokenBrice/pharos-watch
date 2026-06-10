@@ -20,6 +20,18 @@ export function unverifiedFreshnessMetadata(
   };
 }
 
+export function freshnessMetadataFromTimestamp(
+  sourceTimestamp: number | null | undefined,
+  fallbackSource: string,
+  fallbackReason: string,
+):
+  | { sourceTimestamp: number; freshnessMode: "verified" }
+  | { freshnessMode: "unverified"; details: { freshnessSource: string; freshnessReason: string } } {
+  return sourceTimestamp != null
+    ? verifiedFreshnessMetadata(sourceTimestamp)
+    : unverifiedFreshnessMetadata(fallbackSource, fallbackReason);
+}
+
 export function notApplicableFreshnessMetadata(
   details?: Record<string, unknown>,
 ): { freshnessMode: "not-applicable"; details?: Record<string, unknown> } {

@@ -1,11 +1,13 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import type { OnchainRateProbe } from "./helpers";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   getJsonPath,
   isHttpJsonInput,
   parsePositiveNumericLike,
@@ -14,9 +16,6 @@ import {
   probeOnchainTotalSupply,
   requireOnchainInput,
   notApplicableFreshnessMetadata,
-  reserveDegradedWarning,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface JsonPathProbe {
@@ -98,21 +97,19 @@ export async function fetchSingleAssetReserves(
       throw new Error("single-asset source returned unreadable timestamp probe value");
     }
 
-    const freshnessMetadata = sourceTimestamp != null
-      ? verifiedFreshnessMetadata(sourceTimestamp)
-      : unverifiedFreshnessMetadata(
-          "single-asset-json-probe",
-          "The configured single-asset reserve probe does not include a trustworthy source timestamp",
-        );
+    const freshnessMetadata = freshnessMetadataFromTimestamp(
+      sourceTimestamp,
+      "single-asset-json-probe",
+      "The configured single-asset reserve probe does not include a trustworthy source timestamp",
+    );
     const collateralizationRatio = totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
       ? totalReserveUsd / supplyUsd
       : null;
-    const warnings: LiveReserveWarning[] = collateralizationRatio != null && collateralizationRatio < 0.995
-      ? [reserveDegradedWarning(
-          "reserve-undercollateralized",
-          `Single-asset reserve probe covers ${(collateralizationRatio * 100).toFixed(2)}% of observed supply`,
-        )]
-      : [];
+    const warnings = buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `Single-asset reserve probe covers ${pct}% of observed supply`,
+      coverageRatio: collateralizationRatio,
+    });
 
     return {
       slices,

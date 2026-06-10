@@ -7,13 +7,12 @@ import {
   extractAnchorWindow,
   extractTagById,
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
   slicesFromPercentages,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -153,12 +152,11 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       coinType,
       sliceCount: entries.length,
       expectedSliceCount: sliceConfigs.length,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "html-disclosure",
-            "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "html-disclosure",
+        "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
+      ),
       valueMode: useAbsoluteValues ? "absolute" : "percentage",
       rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),

@@ -3,12 +3,11 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveInfoWarning,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface UsdgoTransparencyPayload {
@@ -138,12 +137,11 @@ export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): Adapt
       },
     ]),
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "usdgo-transparency-api",
-            "USDGO transparency payload did not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "usdgo-transparency-api",
+        "USDGO transparency payload did not expose a trustworthy source timestamp",
+      ),
       totalReserveUsd,
       supplyUsd,
       componentTotalUsd,

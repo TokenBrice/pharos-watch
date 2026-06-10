@@ -5,12 +5,11 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   requireJsonInputFromConfig,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 export interface FirmMarket {
@@ -148,12 +147,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
       activeMarkets,
       totalMarkets: payload.markets.length,
       timestamp: sourceTimestamp,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "firm-markets-api",
-            "FiRM markets payload did not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "firm-markets-api",
+        "FiRM markets payload did not expose a trustworthy source timestamp",
+      ),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
     },
   };

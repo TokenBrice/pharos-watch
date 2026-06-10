@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
@@ -32,12 +33,11 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
     throw new Error("river-protocol-info missing TVL or circulating supply");
   }
   const collateralizationRatio = (totalReserveUsd ?? 0) / (supplyUsd ?? 1);
-  const warnings = collateralizationRatio < 0.995
-    ? [reserveDegradedWarning(
-        "reserve-undercollateralized",
-        `River protocol-info TVL covers ${(collateralizationRatio * 100).toFixed(2)}% of circulating satUSD`,
-      )]
-    : [];
+  const warnings = buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `River protocol-info TVL covers ${pct}% of circulating satUSD`,
+    coverageRatio: collateralizationRatio,
+  });
 
   const timestampSummary = summarizeSourceTimestamps([
     ...(payload.tvlData ?? []).map((point) => point.timestamp),

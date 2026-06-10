@@ -2,14 +2,14 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
-  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 const ZEPHYR_ATOM_DECIMALS = 12;
@@ -106,14 +106,11 @@ function requirePositive(value: number | null | undefined, label: string): numbe
 }
 
 function buildWarnings(collateralizationRatio: number): LiveReserveWarning[] {
-  return collateralizationRatio < 0.995
-    ? [
-        reserveDegradedWarning(
-          "reserve-undercollateralized",
-          `Zephyr ZEPH reserve covers ${(collateralizationRatio * 100).toFixed(2)}% of ZSD supply`,
-        ),
-      ]
-    : [];
+  return buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `Zephyr ZEPH reserve covers ${pct}% of ZSD supply`,
+    coverageRatio: collateralizationRatio,
+  });
 }
 
 function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
@@ -150,12 +147,11 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     slices: [ZEPHYR_RESERVE_SLICE],
     ...(buildWarnings(requiredRatio).length > 0 ? { warnings: buildWarnings(requiredRatio) } : {}),
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "zephyr-scanner-reserve-snapshot",
-            "Zephyr reserve snapshot did not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "zephyr-scanner-reserve-snapshot",
+        "Zephyr reserve snapshot did not expose a trustworthy source timestamp",
+      ),
       totalReserveUsd: requiredTotalReserveUsd,
       supplyUsd: requiredSupplyUsd,
       collateralizationRatio: requiredRatio,

@@ -3,14 +3,13 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
-  reserveDegradedWarning,
   stripTags,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -164,12 +163,11 @@ export function adaptSgForgeCoinvertible(
     throw htmlParseError("sgforge-coinvertible", "could not compute reserve collateralization ratio");
   }
 
-  const warnings = collateralizationRatio < 0.995
-    ? [reserveDegradedWarning(
-        "reserve-undercollateralized",
-        `SG Forge CoinVertible cash amount covers ${(collateralizationRatio * 100).toFixed(2)}% of circulation`,
-      )]
-    : [];
+  const warnings = buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `SG Forge CoinVertible cash amount covers ${pct}% of circulation`,
+    coverageRatio: collateralizationRatio,
+  });
 
   return {
     slices: [
@@ -189,12 +187,11 @@ export function adaptSgForgeCoinvertible(
       bankName,
       bankPct,
       ...(lastUpdate ? { lastUpdate } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "html-disclosure",
-            "SG Forge CoinVertible page did not expose a parseable 'Last update' timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "html-disclosure",
+        "SG Forge CoinVertible page did not expose a parseable 'Last update' timestamp",
+      ),
       redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };

@@ -4,6 +4,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
+  freshnessMetadataFromTimestamp,
   requireJsonInput,
   reserveInfoWarning,
   reserveDegradedWarning,
@@ -11,8 +12,6 @@ import {
   slicesFromPercentages,
   summarizeSourceTimestamps,
   type SourceTimestampSummary,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { extractEscapedJsonValueAfterKey } from "./html";
 
@@ -362,12 +361,11 @@ export function adaptUsdAiProofOfReserves(
       ...(unknownTypes.size > 0 ? { unknownReserveTypes: Array.from(unknownTypes).sort() } : {}),
       ...(ignoredAmountOnlyEntries.length > 0 ? { ignoredMissingShareEntryCount: ignoredAmountOnlyEntries.length } : {}),
       ...(totalWeight > 0n || syntheticUndisclosedShare > 0n ? { unknownExposurePct: weightToPct(unknownExposureWeight) } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "usdai-proof-of-reserves-api",
-            "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "usdai-proof-of-reserves-api",
+        "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
+      ),
       ...(sourceTimestampSummary != null
         ? {
             oldestSourceTimestamp: sourceTimestampSummary.sourceTimestamp,

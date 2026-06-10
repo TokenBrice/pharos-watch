@@ -8,6 +8,7 @@ export {
 } from "./input-guards";
 export { accumulateBucketedExposure, classifyBucketedValues } from "./classification";
 export {
+  buildCoverageShortfallWarnings,
   buildUnknownExposureWarning,
   buildBucketSlices,
   computeUnknownExposurePct,
@@ -22,6 +23,7 @@ export {
 } from "./slice-math";
 export {
   parseTimestampLikeToUnixSeconds,
+  freshnessMetadataFromTimestamp,
   notApplicableFreshnessMetadata,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestamps,

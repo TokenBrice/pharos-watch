@@ -6,10 +6,10 @@ import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
 } from "./helpers";
 import { toFiniteNumber } from "../../lib/number-utils";
 
@@ -176,12 +176,11 @@ function adaptAccountableDashboard(
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
       dashboardTimestamp: payload.data.ts,
-      ...(sourceTimestamp != null
-        ? { sourceTimestamp, freshnessMode: "verified" as const }
-        : unverifiedFreshnessMetadata(
-            "accountable-dashboard",
-            "Accountable dashboard payload does not expose a readable upstream timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "accountable-dashboard",
+        "Accountable dashboard payload does not expose a readable upstream timestamp",
+      ),
     },
   };
 }

@@ -4,11 +4,10 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   extractLabeledSpanText,
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -73,12 +72,11 @@ export function adaptBuckIoTransparency(html: string): AdapterResult {
     metadata: {
       sliceCount: slices.length,
       ...(lastUpdatedRaw ? { lastUpdated: lastUpdatedRaw } : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "html-disclosure",
-            "Buck transparency page did not expose a parseable 'Last updated' timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "html-disclosure",
+        "Buck transparency page did not expose a parseable 'Last updated' timestamp",
+      ),
       redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };

@@ -261,3 +261,23 @@ export function buildUnknownExposureWarning({
     ? reserveDegradedWarning(code, fullMessage)
     : reserveInfoWarning(code, fullMessage);
 }
+
+interface CoverageShortfallWarningOptions {
+  code: string;
+  /** Renders the warning message from the coverage percentage pre-formatted to two decimals. */
+  message: (coveragePct: string) => string;
+  coverageRatio: number | null | undefined;
+  thresholdRatio?: number;
+}
+
+export function buildCoverageShortfallWarnings({
+  code,
+  message,
+  coverageRatio,
+  thresholdRatio = 0.995,
+}: CoverageShortfallWarningOptions): LiveReserveWarning[] {
+  if (coverageRatio == null || coverageRatio >= thresholdRatio) {
+    return [];
+  }
+  return [reserveDegradedWarning(code, message((coverageRatio * 100).toFixed(2)))];
+}

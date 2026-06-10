@@ -567,10 +567,9 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface MyAdapterPayload { totalReserves: number; updatedAt?: string }
@@ -589,9 +588,7 @@ export async function fetchMyAdapterReserves(
   return {
     slices: [{ name: params.assetLabel, pct: 100, risk: params.assetRisk }],
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata("issuer-api", "payload has no source timestamp")),
+      ...freshnessMetadataFromTimestamp(sourceTimestamp, "issuer-api", "payload has no source timestamp"),
     },
   };
 }

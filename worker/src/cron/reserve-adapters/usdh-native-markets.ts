@@ -3,10 +3,9 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchPrimaryHtmlInput,
+  freshnessMetadataFromTimestamp,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -102,12 +101,11 @@ export function adaptUsdhNativeMarkets(html: string): AdapterResult {
     metadata: {
       attestationPeriod,
       attestationPdfPath: latest.pdfPath,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "html-disclosure",
-            "USDH reserves page did not expose a parseable attestation month",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "html-disclosure",
+        "USDH reserves page did not expose a parseable attestation month",
+      ),
       redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),
     },
   };

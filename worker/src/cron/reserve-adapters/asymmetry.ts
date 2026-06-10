@@ -3,13 +3,12 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  freshnessMetadataFromTimestamp,
   requireJsonInput,
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
-  unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface AsymmetryBranchStats {
@@ -117,12 +116,11 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
             },
           }
         : {}),
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "protocol-branch-api",
-            "Asymmetry branch composition payload does not expose a trustworthy source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        sourceTimestamp,
+        "protocol-branch-api",
+        "Asymmetry branch composition payload does not expose a trustworthy source timestamp",
+      ),
     },
   };
 }
