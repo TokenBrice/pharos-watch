@@ -31,6 +31,7 @@ import {
   recordTelegramChatCommandFlood,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
+  type TelegramChatCommandFloodResult,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
 import { logTelegramEvent } from "../lib/telegram-log";
@@ -593,22 +594,17 @@ async function dispatchParsedTelegramCommand(args: {
   const commandStartedAtMs = Date.now();
 
   // Per-chat flood cap runs first so dropped commands skip admin gating
-  // (a Telegram API call) and handler work entirely. Fails open: a store
-  // error must not take every light command down with it.
+  // (a Telegram API call) and handler work entirely. Fails open only for the
+  // flood-check store error itself: once the cap says no, the command must
+  // not run even if the notice reply or usage write fails.
+  let flood: TelegramChatCommandFloodResult | null = null;
   try {
-    const flood = await recordTelegramChatCommandFlood(db, {
+    flood = await recordTelegramChatCommandFlood(db, {
       chatId,
       nowSec: Math.floor(commandStartedAtMs / 1000),
       windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
       limit: CHAT_COMMAND_FLOOD_LIMIT,
     });
-    if (!flood.allowed) {
-      if (flood.firstExceeded) {
-        await reply("Too many commands at once — please slow down for a minute.");
-      }
-      await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "rate_limited", "chat-flood");
-      return;
-    }
   } catch (err) {
     logTelegramEvent({
       level: "warn",
@@ -618,6 +614,35 @@ async function dispatchParsedTelegramCommand(args: {
       command: parsedCommand.command,
       err: err instanceof Error ? err.message : String(err),
     });
+  }
+  if (flood && !flood.allowed) {
+    if (flood.firstExceeded) {
+      try {
+        await reply("Too many commands at once — please slow down for a minute.");
+      } catch (err) {
+        logTelegramEvent({
+          level: "warn",
+          message: "chat command flood notice reply failed",
+          chatId,
+          action: "command-flood",
+          command: parsedCommand.command,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    try {
+      await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "rate_limited", "chat-flood");
+    } catch (err) {
+      logTelegramEvent({
+        level: "warn",
+        message: "chat command flood usage record failed",
+        chatId,
+        action: "command-flood",
+        command: parsedCommand.command,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
   }
 
   if (
