@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
@@ -7,22 +8,30 @@ import { getVariantDisplay } from "@/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 
+// 6 bordered rows ≈ the dependency graph's height, so the Dependency Context
+// split stays balanced even for parents with dozens of variants (USDC).
+const PREVIEW_COUNT = 6;
+
 interface ParentVariantsCardProps {
   variants: StablecoinClientMeta[];
 }
 
 export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
   const { data: logos } = useLogos();
+  const [showAll, setShowAll] = useState(false);
 
   if (variants.length === 0) return null;
+
+  const needsCollapse = variants.length > PREVIEW_COUNT;
+  const visible = showAll ? variants : variants.slice(0, PREVIEW_COUNT);
 
   return (
     <section className="space-y-2.5">
       <h3 className="px-2.5 text-sm font-semibold text-foreground">
         Variants <span className="ml-1 font-normal text-muted-foreground tabular-nums">{variants.length}</span>
       </h3>
-      <div className="grid gap-1.5">
-        {variants.map((variant) => {
+      <div className={`grid gap-1.5 ${showAll ? "max-h-96 overflow-y-auto" : ""}`}>
+        {visible.map((variant) => {
           const display = variant.variantKind ? getVariantDisplay(variant.variantKind) : null;
 
           return (
@@ -47,6 +56,14 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
           );
         })}
       </div>
+      {needsCollapse && (
+        <button type="button"
+          onClick={() => setShowAll((prev) => !prev)}
+          className="pharos-focus-ring inline-flex min-h-11 w-fit items-center px-2.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline lg:min-h-9"
+        >
+          {showAll ? "Show less" : `Show all ${variants.length} variants`}
+        </button>
+      )}
     </section>
   );
 }
