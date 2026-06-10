@@ -545,3 +545,64 @@ describe("handlePegSummary", () => {
     });
   });
 });
+
+  it("serves peg data and event counters from the peg-analytics cache when fresh", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
+    const pegAnalyticsValue = JSON.stringify({
+      computedAtSec: nowSec,
+      depegEventsToday: 2,
+      depegEventsYesterday: 5,
+      pegData: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          pegType: "peggedUSD",
+          pegCurrency: "USD",
+          governance: "centralized",
+          currentDeviationBps: 12,
+          pegScore: 99,
+          pegPct: 99.9,
+          severityScore: 0,
+          spreadPenalty: 0,
+          eventCount: 1,
+          worstDeviationBps: -120,
+          activeDepeg: false,
+          lastEventAt: null,
+          trackingSpanDays: 400,
+          methodologyVersion: "6.08",
+        },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+      },
+      {
+        match: "cache",
+        matchBinds: ["peg-analytics"],
+        rows: [{ key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec }],
+        first: { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; pegScore: number | null; currentDeviationBps: number | null }>;
+      summary: { depegEventsToday: number; depegEventsYesterday: number };
+    };
+
+    // Counters can only come from the cache (the fallback compute path would
+    // count zero events from the empty depeg_events table).
+    expect(body.summary.depegEventsToday).toBe(2);
+    expect(body.summary.depegEventsYesterday).toBe(5);
+    const usdt = body.coins.find((coin) => coin.id === "usdt-tether");
+    expect(usdt?.pegScore).toBe(99);
+  });
