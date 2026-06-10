@@ -372,6 +372,7 @@ The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) ha
 - depeg table row severity accents (`rowAccentClass` → `border-l-red-500` / `border-l-orange-500` / `border-l-amber-500`)
 - stablecoin-detail hero metric accents (`accentClass` in `hero-card-metrics`)
 - internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
+- stablecoin-detail per-coin notices (`coin-notice.tsx`): the danger/warning/info alert stripe is severity-keyed data, deliberately kept through the June 2026 mythos review and normalized to the same 3px weight
 
 The **desktop sidebar** navigation active state no longer uses a left stripe (June 2026 "watch column" pass). It is now a frost lit-tab — a frost wash falling from the icon side, a hairline frost inset ring, a soft halo, and a frost-lit icon — defined by `.pharos-nav-active` in `globals.css`. See `### Navigation Active vs Inactive` below. The **mobile drawer** (`header.tsx`) still uses `border-l-2 border-l-frost-blue` on the active route group as its own treatment.
 
