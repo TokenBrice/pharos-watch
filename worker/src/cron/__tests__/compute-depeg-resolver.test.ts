@@ -895,4 +895,91 @@ describe("computeDepegResolver", () => {
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
   });
+
+  it("alerts once per newly quarantined event id and never re-alerts the same id", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const quarantiningStores = (eventIds: number[]) => {
+      const { stores } = storesFor();
+      stores.ensureCanonicalIncidents = vi.fn(async (_db, _events, options) => {
+        for (const eventId of eventIds) options.onRepairRequired?.(eventId, "incident-conflict");
+        return [];
+      });
+      return stores;
+    };
+
+    const quarantineDb = (markerValue: string | null) =>
+      mockD1([
+        { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [activeEvent()] },
+        { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [activeEvent()] },
+        {
+          match: "FROM cache WHERE key = ?",
+          rows:
+            markerValue == null
+              ? []
+              : [{ key: "ddr:quarantine-alerted-event-ids", value: markerValue, updated_at: NOW_SEC - 900 }],
+        },
+        { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      ]);
+
+    const cacheWrites = (db: MockD1Database, keyPrefix: string) =>
+      db
+        .getHistory()
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT OR REPLACE INTO cache") && String(entry.binds[0]).startsWith(keyPrefix),
+        );
+
+    const runOptions = {
+      runAt: NOW_SEC,
+      slot: "quarter-hour" as const,
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+    };
+
+    // First run: the new quarantined id alerts and records the marker.
+    const firstDb = quarantineDb(null);
+    const firstResult = await computeDepegResolver({
+      db: firstDb,
+      ...runOptions,
+      storeContracts: quarantiningStores([42]),
+    });
+    expect(firstResult.status).toBe("degraded");
+    const firstAlert = cacheWrites(firstDb, "cron:event:compute-depeg-resolver:quarantine-repair-required");
+    expect(firstAlert).toHaveLength(1);
+    expect(String(firstAlert[0].binds[1])).toContain("#42");
+    const firstMarker = cacheWrites(firstDb, "ddr:quarantine-alerted-event-ids");
+    expect(firstMarker).toHaveLength(1);
+    expect(firstMarker[0].binds[1]).toBe("[42]");
+
+    // Second run with the same id: no re-alert, marker untouched.
+    const secondDb = quarantineDb("[42]");
+    await computeDepegResolver({
+      db: secondDb,
+      ...runOptions,
+      storeContracts: quarantiningStores([42]),
+    });
+    expect(cacheWrites(secondDb, "cron:event:")).toHaveLength(0);
+    expect(cacheWrites(secondDb, "ddr:quarantine-alerted-event-ids")).toHaveLength(0);
+
+    // Third run with an additional new id: alerts for the new id only.
+    const thirdDb = quarantineDb("[42]");
+    await computeDepegResolver({
+      db: thirdDb,
+      ...runOptions,
+      storeContracts: quarantiningStores([42, 43]),
+    });
+    const thirdAlert = cacheWrites(thirdDb, "cron:event:compute-depeg-resolver:quarantine-repair-required");
+    expect(thirdAlert).toHaveLength(1);
+    expect(String(thirdAlert[0].binds[1])).toContain("#43");
+    expect(String(thirdAlert[0].binds[1])).not.toContain("#42");
+    const thirdMarker = cacheWrites(thirdDb, "ddr:quarantine-alerted-event-ids");
+    expect(thirdMarker).toHaveLength(1);
+    expect(thirdMarker[0].binds[1]).toBe("[42,43]");
+
+    warn.mockRestore();
+  });
 });

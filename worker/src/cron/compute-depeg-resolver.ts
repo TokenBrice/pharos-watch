@@ -1,5 +1,6 @@
 import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
-import type { CronResult } from "../lib/cron-logger";
+import { logCronEvent, type CronResult } from "../lib/cron-logger";
+import { getCache, setCache } from "../lib/db-cache";
 import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
   emptyDdrLineage,
@@ -13,6 +14,7 @@ import {
   loadPendingPromotionConfirmationTimes,
   recordConfirmedSeenOpportunities,
   recordSystemHealthDeferrals,
+  type QuarantinedIncidentEvent,
 } from "./depeg-resolver/incident-state";
 import { resolveDdrIncidents } from "./depeg-resolver/incident-resolution";
 import { normalizeComputeOptions } from "./depeg-resolver/options";
@@ -96,6 +98,44 @@ async function degradedPublicSnapshotFromCache(input: {
   };
 }
 
+const QUARANTINE_ALERTED_CACHE_KEY = "ddr:quarantine-alerted-event-ids";
+
+/**
+ * One-shot operator alert when a NEW event id enters repair-required
+ * quarantine: the run only degrades (no error alert), and the
+ * repairRequiredEvents metadata has no other consumer, so without this a
+ * repair-migration obligation could sit unnoticed indefinitely. Already-
+ * alerted ids persist in a cache marker so the same id never re-alerts.
+ */
+async function alertNewQuarantinedEvents(
+  db: D1Database,
+  quarantined: QuarantinedIncidentEvent[],
+): Promise<void> {
+  if (quarantined.length === 0) return;
+  try {
+    const marker = await getCache(db, QUARANTINE_ALERTED_CACHE_KEY);
+    const parsed: unknown = marker ? JSON.parse(marker.value) : [];
+    const alertedIds = new Set(
+      Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === "number") : [],
+    );
+    const newEvents = quarantined.filter((entry) => !alertedIds.has(entry.eventId));
+    if (newEvents.length === 0) return;
+    await logCronEvent(db, {
+      job: "compute-depeg-resolver",
+      eventType: "quarantine-repair-required",
+      severity: "warning",
+      message:
+        "DDR event(s) quarantined pending an explicit repair migration: " +
+        newEvents.map((entry) => `#${entry.eventId} (${entry.reason})`).join(", "),
+      metadata: { events: newEvents },
+    });
+    for (const entry of newEvents) alertedIds.add(entry.eventId);
+    await setCache(db, QUARANTINE_ALERTED_CACHE_KEY, JSON.stringify([...alertedIds]));
+  } catch (err) {
+    console.warn("[compute-depeg-resolver] Failed to alert on quarantined event(s):", err);
+  }
+}
+
 async function persistDegradedArtifacts(input: {
   db: D1Database;
   nowSec: number;
@@ -148,6 +188,7 @@ export async function computeDepegResolver(
   // repair migration and is surfaced via degraded status + metadata below.
   const quarantinedEventIds = new Set(quarantinedEvents.map((entry) => entry.eventId));
   const activeRows = loadedActiveRows.filter((row) => !quarantinedEventIds.has(row.id));
+  await alertNewQuarantinedEvents(db, quarantinedEvents);
 
   let rows: DdrRow[] = [];
   let lineage: DdrLineage = emptyDdrLineage(nowSec);
