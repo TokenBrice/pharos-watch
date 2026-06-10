@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import os from "node:os";
 import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
@@ -288,25 +289,33 @@ function findPlanItem(plan, cmd) {
 }
 
 export function buildExecutionBatches(plan) {
-  const prebuildCommands = COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => findPlanItem(plan, cmd)).filter(Boolean);
+  const matched = new Set();
+  const take = (item) => {
+    if (item) matched.add(item);
+    return item;
+  };
+
+  const prebuildCommands = COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => take(findPlanItem(plan, cmd))).filter(
+    Boolean,
+  );
   const hasPagesBuild = PAGES_VALIDATE_COMMANDS.every((cmd) => findPlanItem(plan, cmd));
   const postValidateUnits = [];
 
   if (hasPagesBuild) {
     postValidateUnits.push(
-      createExecutionUnit(PAGES_VALIDATE_COMMANDS.map((cmd) => findPlanItem(plan, cmd)).filter(Boolean)),
+      createExecutionUnit(PAGES_VALIDATE_COMMANDS.map((cmd) => take(findPlanItem(plan, cmd))).filter(Boolean)),
     );
   }
 
   for (const cmd of COMMON_VALIDATE_POSTBUILD_COMMANDS) {
-    const item = findPlanItem(plan, cmd);
+    const item = take(findPlanItem(plan, cmd));
     if (item) {
       postValidateUnits.push(createExecutionUnit([item]));
     }
   }
 
   for (const cmd of WORKER_VALIDATE_COMMANDS) {
-    const item = findPlanItem(plan, cmd);
+    const item = take(findPlanItem(plan, cmd));
     if (item) {
       postValidateUnits.push(createExecutionUnit([item]));
     }
@@ -314,9 +323,18 @@ export function buildExecutionBatches(plan) {
 
   const smokeUnits = [];
   for (const cmd of [...PAGES_SMOKE_VALIDATE_COMMANDS, ...WORKER_SMOKE_VALIDATE_COMMANDS]) {
-    const item = findPlanItem(plan, cmd);
+    const item = take(findPlanItem(plan, cmd));
     if (item) {
       smokeUnits.push(createExecutionUnit([item]));
+    }
+  }
+
+  // Plan items outside the known command groups (e.g. future additions to the
+  // plan builder, or hand-rolled plans in tests) must still execute — give
+  // each its own unit instead of silently dropping it from the parallel path.
+  for (const item of plan) {
+    if (!matched.has(item)) {
+      postValidateUnits.push(createExecutionUnit([item]));
     }
   }
 
@@ -327,16 +345,25 @@ export function buildExecutionBatches(plan) {
   ];
 }
 
+// Auto-parallel threshold: enough cores to absorb the post-validate matrix
+// while leaving headroom for other local work (this tree often hosts
+// concurrent agent sessions). MERGE_GATE_PARALLEL=1/0 remains the explicit
+// override in either direction.
+const MERGE_GATE_AUTO_PARALLEL_MIN_CORES = 12;
+
+export function resolveMergeGateParallelMode(env, availableCores = os.availableParallelism()) {
+  if (env.MERGE_GATE_PARALLEL === "1") return true;
+  if (env.MERGE_GATE_PARALLEL === "0") return false;
+  return availableCores >= MERGE_GATE_AUTO_PARALLEL_MIN_CORES;
+}
+
 export async function runExecutionBatches(
   plan,
   changedFiles,
   env = process.env,
-  { runCommandImpl = runShellCommand, exit = process.exit } = {},
+  { runCommandImpl = runShellCommand, exit = process.exit, availableCores } = {},
 ) {
-  // Default to serial execution to avoid local CPU contention from the
-  // noncritical test shard matrix (which is intended for CI runners with one shard
-  // per machine). Opt back in with MERGE_GATE_PARALLEL=1.
-  const parallelMode = env.MERGE_GATE_PARALLEL === "1";
+  const parallelMode = resolveMergeGateParallelMode(env, availableCores ?? os.availableParallelism());
   const batches = parallelMode ? buildExecutionBatches(plan) : plan.map((item) => [createExecutionUnit([item])]);
 
   await runCommandBatches(batches, {
