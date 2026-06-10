@@ -150,10 +150,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Nest smart contracts (Teller/Manager addresses)", "url": "https://docs.nest.credit/developers/smart-contracts" },
-        { "label": "How Nest vaults work (BoringVault/Teller/Manager roles)", "url": "https://nest.credit/blog/how-nest-vaults-work" }
+        {
+          "label": "Nest smart contracts (Teller/Manager addresses)",
+          "url": "https://docs.nest.credit/developers/smart-contracts"
+        },
+        {
+          "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
+          "url": "https://nest.credit/blog/how-nest-vaults-work"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain owner/authority of the Teller and Manager (Safe vs EOA) before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/authority of the Teller and Manager (Safe vs EOA) before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-10-30"
 }

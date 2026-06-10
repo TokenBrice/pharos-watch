@@ -197,5 +197,6 @@
         "Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2023-12-01"
 }

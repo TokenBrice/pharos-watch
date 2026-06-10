@@ -186,5 +186,6 @@
     "yieldSource": "infiniFi savings (siUSD)",
     "yieldType": "lending-vault"
   },
-  "custodyModel": "institutional-unregulated"
+  "custodyModel": "institutional-unregulated",
+  "launchDate": "2025-05-22"
 }

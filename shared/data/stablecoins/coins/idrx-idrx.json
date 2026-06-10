@@ -162,5 +162,6 @@
         "Resolve per-chain minter-admin and proxy admin across Polygon, Base, BSC, Klaytn, Gnosis, Etherlink, Worldchain, and Solana."
       ]
     }
-  }
+  },
+  "launchDate": "2023-05-23"
 }

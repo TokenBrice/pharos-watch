@@ -122,5 +122,6 @@
         "Resolve the on-chain owner/minter admin and any proxy admin for the KAU Ethereum contract."
       ]
     }
-  }
+  },
+  "launchDate": "2025-09-11"
 }

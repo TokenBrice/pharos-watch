@@ -145,11 +145,23 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Midas docs", "url": "https://docs.midas.app/" },
-        { "label": "Midas mHYPER", "url": "https://midas.app/mhyper" },
-        { "label": "Sherlock Midas audit (vault/access-control architecture)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+        {
+          "label": "Midas docs",
+          "url": "https://docs.midas.app/"
+        },
+        {
+          "label": "Midas mHYPER",
+          "url": "https://midas.app/mhyper"
+        },
+        {
+          "label": "Sherlock Midas audit (vault/access-control architecture)",
+          "url": "https://github.com/sherlock-audit/2024-05-midas"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders and the bridge/OFT admin for the Monad/Plasma/Katana deployments before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live on-chain MidasAccessControl role holders and the bridge/OFT admin for the Monad/Plasma/Katana deployments before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-07-15"
 }

@@ -75,10 +75,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Streamex GLDY", "url": "https://www.streamex.com/GLDY" }
+        {
+          "label": "Streamex GLDY",
+          "url": "https://www.streamex.com/GLDY"
+        }
       ],
       "sourceFreeRationale": "Classification based on the issuer/fund model in launch materials and coverage; the on-chain Base owner/minter admin for GLDY was not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain Base owner/minter admin for GLDY before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain Base owner/minter admin for GLDY before raising confidence."
+      ]
     }
   },
   "chainTier": "stage1-l2",
@@ -117,5 +122,6 @@
   "yieldConfig": {
     "yieldSource": "Streamex gold leasing yield",
     "yieldType": "fee-sharing"
-  }
+  },
+  "launchDate": "2025-11-03"
 }

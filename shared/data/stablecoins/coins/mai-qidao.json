@@ -203,5 +203,6 @@
         "Resolve the QiDao admin multisig (signers, threshold) and per-chain vault/minter authorization addresses before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2021-05-02"
 }

@@ -134,10 +134,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Blox docs", "url": "https://docs.blox.my" },
-        { "label": "MYRC whitepaper", "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf" }
+        {
+          "label": "Blox docs",
+          "url": "https://docs.blox.my"
+        },
+        {
+          "label": "MYRC whitepaper",
+          "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+        }
       ],
-      "unresolvedQuestions": ["Read the on-chain minter/owner key per chain (Ethereum/Arbitrum/Base + Solana mint authority) to confirm Blox control before raising confidence."]
+      "unresolvedQuestions": [
+        "Read the on-chain minter/owner key per chain (Ethereum/Arbitrum/Base + Solana mint authority) to confirm Blox control before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2023-08-31"
 }

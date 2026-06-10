@@ -191,5 +191,6 @@
         "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-10-03"
 }

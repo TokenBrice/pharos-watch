@@ -113,11 +113,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "JUSD site", "url": "https://jusd.app/" },
-        { "label": "JUSD whitepaper", "url": "https://jusd.app/whitepaper.pdf" }
+        {
+          "label": "JUSD site",
+          "url": "https://jusd.app/"
+        },
+        {
+          "label": "JUSD whitepaper",
+          "url": "https://jusd.app/whitepaper.pdf"
+        }
       ],
       "sourceFreeRationale": "Issuer-managed mint/burn taken from JUSD's public site and whitepaper; the on-chain token owner/minter admin and any reserve backing are unverified.",
-      "unresolvedQuestions": ["Resolve the on-chain JUSD owner/minter admin on BSC and Polygon and whether any audited reserve actually backs issued supply."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain JUSD owner/minter admin on BSC and Polygon and whether any audited reserve actually backs issued supply."
+      ]
     }
-  }
+  },
+  "launchDate": "2023-09-15"
 }

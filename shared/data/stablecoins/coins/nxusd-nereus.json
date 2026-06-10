@@ -120,13 +120,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Nereus governance docs", "url": "https://docs.nereus.finance/nereus-vision/governance" },
-        { "label": "NXUSD smart contracts docs", "url": "https://docs.nereus.finance/nereus-protocol/nxusd-smart-contracts" }
+        {
+          "label": "Nereus governance docs",
+          "url": "https://docs.nereus.finance/nereus-vision/governance"
+        },
+        {
+          "label": "NXUSD smart contracts docs",
+          "url": "https://docs.nereus.finance/nereus-protocol/nxusd-smart-contracts"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/minter admin of the NXUSD token and CDP contracts and the team multisig threshold on Snowtrace.",
         "Project pivoted away from the Avalanche lending product; confirm whether mint/CDP administration is still actively maintained."
       ]
     }
-  }
+  },
+  "launchDate": "2022-04-07"
 }

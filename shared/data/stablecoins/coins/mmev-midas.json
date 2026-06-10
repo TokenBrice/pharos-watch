@@ -144,11 +144,23 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Midas mMEV docs", "url": "https://docs.midas.app/tokens/mmev" },
-        { "label": "Midas mMEV risks", "url": "https://docs.midas.app/tokens/mmev/risks" },
-        { "label": "Sherlock Midas audit (vault/access-control architecture)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+        {
+          "label": "Midas mMEV docs",
+          "url": "https://docs.midas.app/tokens/mmev"
+        },
+        {
+          "label": "Midas mMEV risks",
+          "url": "https://docs.midas.app/tokens/mmev/risks"
+        },
+        {
+          "label": "Sherlock Midas audit (vault/access-control architecture)",
+          "url": "https://github.com/sherlock-audit/2024-05-midas"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders and any bridge admin for the Plume/Etherlink deployments before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live on-chain MidasAccessControl role holders and any bridge admin for the Plume/Etherlink deployments before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-02-04"
 }

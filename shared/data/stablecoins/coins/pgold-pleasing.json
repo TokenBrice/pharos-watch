@@ -124,7 +124,10 @@
           "url": "https://pleasing.gitbook.io/docs/solutions/tokenization-as-a-service-taas"
         }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Arbitrum/ApeChain PGOLD contracts and the LayerZero OFT admin before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner role on the Arbitrum/ApeChain PGOLD contracts and the LayerZero OFT admin before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-10-22"
 }

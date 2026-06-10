@@ -161,5 +161,6 @@
         "Resolve the mAPOLLO DepositVault/RedemptionVault and MidasAccessControl addresses and the DEFAULT_ADMIN_ROLE / mint-operator holders on Ethereum, and whether admin is a Safe/multisig."
       ]
     }
-  }
+  },
+  "launchDate": "2025-07-15"
 }

@@ -118,7 +118,10 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sourceFreeRationale": "Classification based on the issuer model described in RIB/Royal Coins materials; on-chain token owner/minter admin not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron REUR contracts before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron REUR contracts before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-02-11"
 }

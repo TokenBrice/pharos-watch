@@ -141,5 +141,6 @@
         "Read owner() live on Ethereum, Polygon, and Gnosis to resolve the current JPYC v1 owner address and confirm it is the JPYC Inc. issuer key or a Safe/multisig."
       ]
     }
-  }
+  },
+  "launchDate": "2021-01-26"
 }

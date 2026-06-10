@@ -84,11 +84,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "pmUSD site", "url": "https://pmusd.raac.io/" },
-        { "label": "RAAC docs", "url": "https://docs.raac.io/" }
+        {
+          "label": "pmUSD site",
+          "url": "https://pmusd.raac.io/"
+        },
+        {
+          "label": "RAAC docs",
+          "url": "https://docs.raac.io/"
+        }
       ],
       "sourceFreeRationale": "Manager-only/silo-multisig mint control taken from RAAC materials and the Curve proposal; the project states no public multisig addresses are available yet and on-chain admin was not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope."
+      ]
     }
-  }
+  },
+  "launchDate": "2025-12-09"
 }

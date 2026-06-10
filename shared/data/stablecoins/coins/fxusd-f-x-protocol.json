@@ -132,5 +132,6 @@
         "Resolve the on-chain f(x) Protocol governance owner/timelock and the specific vault/minter contract authority before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-02-23"
 }

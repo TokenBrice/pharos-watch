@@ -111,7 +111,10 @@
           "url": "https://docs.polymarket.com/concepts/pusd"
         }
       ],
-      "unresolvedQuestions": ["Confirm the CollateralOnramp pause/admin owner address (multisig vs EOA) on Polygon before raising confidence."]
+      "unresolvedQuestions": [
+        "Confirm the CollateralOnramp pause/admin owner address (multisig vs EOA) on Polygon before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-03-31"
 }

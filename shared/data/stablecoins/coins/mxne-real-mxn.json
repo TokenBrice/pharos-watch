@@ -171,5 +171,6 @@
         "Read the on-chain minter/owner role on Base and the Solana/Stellar mint authorities to confirm Brale control before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-05-22"
 }

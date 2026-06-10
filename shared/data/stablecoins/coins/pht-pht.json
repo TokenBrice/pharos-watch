@@ -160,5 +160,6 @@
       "coinId": "usdt-tether",
       "depType": "collateral"
     }
-  }
+  },
+  "launchDate": "2025-02-13"
 }

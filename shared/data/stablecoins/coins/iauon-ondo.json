@@ -134,5 +134,6 @@
         "Resolve the on-chain mint/minter-admin and proxy admin for the IAUon token across its Ethereum, BSC, Solana, and HyperEVM deployments."
       ]
     }
-  }
+  },
+  "launchDate": "2025-07-24"
 }

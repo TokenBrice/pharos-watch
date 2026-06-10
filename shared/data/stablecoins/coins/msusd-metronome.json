@@ -138,5 +138,6 @@
         "Resolve the Metronome DAO on-chain governance/admin authority (multisig/timelock) and the synth pool admin addresses before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2022-12-15"
 }

@@ -128,5 +128,6 @@
         "Resolve the defi.money admin/emergency multisig (signers, threshold) and the per-market controller/factory authority before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-06-25"
 }

@@ -135,7 +135,10 @@
           "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a"
         }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum and Base QCAD contracts before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner role on the Ethereum and Base QCAD contracts before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2026-01-20"
 }

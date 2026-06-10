@@ -149,7 +149,10 @@
           "url": "https://blog.openzeppelin.com/origin-dollar-audit-2/"
         }
       ],
-      "unresolvedQuestions": ["Confirm the live owner/Governor/Strategist addresses (timelock vs multisig) and current AMO strategy whitelist before raising confidence."]
+      "unresolvedQuestions": [
+        "Confirm the live owner/Governor/Strategist addresses (timelock vs multisig) and current AMO strategy whitelist before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2020-09-18"
 }

@@ -122,10 +122,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "MXNB whitepaper (FiatToken fork, masterMinter)", "url": "https://mxnb.mx/whitepaper.pdf" },
-        { "label": "Bitso/Juno docs", "url": "https://docs.bitso.com/juno" }
+        {
+          "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
+          "url": "https://mxnb.mx/whitepaper.pdf"
+        },
+        {
+          "label": "Bitso/Juno docs",
+          "url": "https://docs.bitso.com/juno"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the live masterMinter, minter, and proxy-admin addresses (and whether they are now Nvio-controlled) before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live masterMinter, minter, and proxy-admin addresses (and whether they are now Nvio-controlled) before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2024-01-26"
 }

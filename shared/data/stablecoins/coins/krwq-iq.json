@@ -186,5 +186,6 @@
         "Confirm whether issuer minting is EOA, multisig, or Safe-controlled."
       ]
     }
-  }
+  },
+  "launchDate": "2025-09-18"
 }

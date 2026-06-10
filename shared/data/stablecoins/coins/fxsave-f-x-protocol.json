@@ -130,5 +130,6 @@
       ],
       "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf fxusd-f-x-protocol, strategy-vault, wrapper reserve); posture mirrors the fxUSD parent mint authority."
     }
-  }
+  },
+  "launchDate": "2025-03-17"
 }

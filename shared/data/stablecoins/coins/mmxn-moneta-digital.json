@@ -133,10 +133,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Etherscan MMXN token (verified source: Mintable/Burnable/Pausable)", "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code" },
-        { "label": "Moneta Digital website", "url": "https://monetadigital.com/" }
+        {
+          "label": "Etherscan MMXN token (verified source: Mintable/Burnable/Pausable)",
+          "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code"
+        },
+        {
+          "label": "Moneta Digital website",
+          "url": "https://monetadigital.com/"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the live minter/pauser role holders and the Tron deployment's mint authority before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live minter/pauser role holders and the Tron deployment's mint authority before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "2021-06-15"
 }

@@ -64,11 +64,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Goldfish Gold", "url": "https://goldfishgold.com/" },
-        { "label": "Goldfish Gold Cyfrin review", "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf" }
+        {
+          "label": "Goldfish Gold",
+          "url": "https://goldfishgold.com/"
+        },
+        {
+          "label": "Goldfish Gold Cyfrin review",
+          "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
+        }
       ],
       "sourceFreeRationale": "Classification based on the issuer-managed model in project materials; the on-chain Ethereum owner/minter admin for GGBR was not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain Ethereum owner/minter admin for GGBR before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain Ethereum owner/minter admin for GGBR before raising confidence."
+      ]
     }
   },
   "custodyModel": "institutional-unregulated",
@@ -99,5 +107,6 @@
       "label": "Issuer-managed gold backing",
       "risk": "high"
     }
-  }
+  },
+  "launchDate": "2025-10-06"
 }

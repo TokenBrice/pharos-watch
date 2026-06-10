@@ -183,5 +183,6 @@
         "Confirm the live Teller/Manager owner addresses (multisig vs EOA) and the predicate proxy admin before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-12-10"
 }

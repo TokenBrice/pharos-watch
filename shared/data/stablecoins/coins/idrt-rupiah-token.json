@@ -127,5 +127,6 @@
         "Resolve the on-chain token owner/minter admin and any proxy admin for IDRT across its deployments before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2019-04-10"
 }

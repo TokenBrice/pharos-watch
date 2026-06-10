@@ -236,5 +236,6 @@
   "yieldConfig": {
     "yieldSource": "Ondo Finance T-bill fund",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2022-12-21"
 }

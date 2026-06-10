@@ -196,5 +196,6 @@
       }
     }
   },
-  "deploymentModel": "native-multichain"
+  "deploymentModel": "native-multichain",
+  "launchDate": "2024-08-09"
 }

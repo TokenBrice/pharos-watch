@@ -251,5 +251,6 @@
   "yieldConfig": {
     "yieldSource": "Re Protocol vault",
     "yieldType": "governance-set"
-  }
+  },
+  "launchDate": "2025-01-21"
 }

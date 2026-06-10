@@ -122,5 +122,6 @@
         "Confirm the live SNS controller/governance canister state for the GLDT swap and ledger canisters before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-07-09"
 }

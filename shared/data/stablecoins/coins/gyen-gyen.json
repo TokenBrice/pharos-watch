@@ -245,5 +245,6 @@
       "label": "JPY fiat reserves",
       "risk": "very-low"
     }
-  }
+  },
+  "launchDate": "2019-12-11"
 }

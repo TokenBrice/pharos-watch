@@ -116,7 +116,10 @@
         "canRaiseCap": "unknown",
         "evidence": "Spiko's published contract design assigns an in-house 'daily-operator' relayer responsibility for minting tokens to investor addresses and handling redemptions; minting is gated to investors who pass KYC and join permission groups.",
         "sources": [
-          { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" }
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
         ]
       },
       {
@@ -128,7 +131,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "A multisig 'super-admin' permission group holds full access to upgrade the UUPS-proxy contracts and manage permission groups (including the minter/burner roles); exact signer set and threshold not independently confirmed on-chain.",
         "sources": [
-          { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" }
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
         ]
       }
     ],
@@ -137,11 +143,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" },
-        { "label": "Spiko Pound", "url": "https://www.spiko.io/spiko-pound" }
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko Pound",
+          "url": "https://www.spiko.io/spiko-pound"
+        }
       ],
       "sourceFreeRationale": "Roles and minter design taken from Spiko's first-party contract documentation; live on-chain super-admin multisig signers/threshold and the relayer address were not independently read on-chain, so confidence is probable rather than verified.",
-      "unresolvedQuestions": ["Confirm the on-chain super-admin multisig signers/threshold and the daily-operator relayer address for the GBPSAFO deployments to reach verified."]
+      "unresolvedQuestions": [
+        "Confirm the on-chain super-admin multisig signers/threshold and the daily-operator relayer address for the GBPSAFO deployments to reach verified."
+      ]
     }
   },
   "chainTier": "ethereum",
@@ -159,5 +173,6 @@
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "launchDate": "2026-02-26"
 }
