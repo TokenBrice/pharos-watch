@@ -225,7 +225,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
           ) : (
             <>
               <span className="font-mono tabular-nums text-foreground/85">{formatShare(share)}</span>
-              <span className="mx-1 text-muted-foreground/60">·</span>
+              <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
               {bucket.count} stablecoins
             </>
           )}

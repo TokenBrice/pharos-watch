@@ -94,21 +94,6 @@ for (const route of ROUTES) {
     // Surface a readable failure: rule id + node count + first selector per
     // violation. This is the most useful signal when triaging which a11y
     // fix to ship next.
-    const summary = results.violations
-      .map((violation) => {
-        const nodes = violation.nodes.filter((node) =>
-          !node.target.some((target) => isWaivedNode(route.path, violation, target)),
-        );
-        return {
-          id: violation.id,
-          impact: violation.impact,
-          help: violation.help,
-          nodeCount: nodes.length,
-          firstTarget: nodes[0]?.target?.[0],
-        };
-      })
-      .filter((violation) => violation.nodeCount > 0);
-
-    expect(summary, "axe-core violations").toEqual([]);
+    expect(summarizeViolations(route.path, results.violations), "axe-core violations").toEqual([]);
   });
 }

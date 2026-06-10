@@ -129,7 +129,7 @@ function PostureChip({ item, logos }: { item: PostureItem; logos?: Record<string
                 {item.nowBps > 0 ? "+" : ""}
                 {item.nowBps}
               </span>
-              <span className="text-muted-foreground/55"> bps</span>
+              <span className="text-muted-foreground/70"> bps</span>
             </span>
           ) : null}
           {deepening ? (

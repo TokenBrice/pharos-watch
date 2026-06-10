@@ -100,7 +100,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
             <span className="text-xs font-medium text-muted-foreground">Custom</span>
           )}
         </div>
-        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/55">Drag to adjust</p>
+        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">Drag to adjust</p>
       </div>
       <div className="relative px-2.5 pt-3 pb-1">
         {/* Background track — runs through the center of the dot row */}

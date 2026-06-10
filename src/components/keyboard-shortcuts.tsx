@@ -91,9 +91,10 @@ export function KeyboardShortcuts({
         </div>
         <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
           <span>
-            Enable the single-key{" "}
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">[ / ]</kbd>{" "}
-            sidebar shortcut
+            Enable single-key shortcuts (
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">[ / ]</kbd>,{" "}
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
+            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>)
           </span>
           <input
             type="checkbox"

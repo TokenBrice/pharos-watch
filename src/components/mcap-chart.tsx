@@ -155,7 +155,7 @@ export function McapChart({
             <span className="text-foreground/85">{formatCurrency(readout.mcap)}</span>
             {readout.deltaPct != null ? (
               <>
-                <span className="text-muted-foreground/60">·</span>
+                <span aria-hidden="true" className="text-muted-foreground/60">·</span>
                 <span style={{ color: deltaColor }}>
                   {readout.deltaPct > 0 ? "+" : ""}
                   {readout.deltaPct.toFixed(2)}% 24h

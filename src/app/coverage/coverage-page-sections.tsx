@@ -123,7 +123,7 @@ export function CoverageFeatureSnapshotCard({
                   <span className="text-foreground">
                     {sourceDepthProgress.atTargetCount}/{sourceDepthProgress.totalCount}
                   </span>
-                  <span className="mx-1.5 text-muted-foreground/60">·</span>
+                  <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                   {sourceDepthProgress.atTargetMcapPct == null
                     ? "n/a"
                     : `${sourceDepthProgress.atTargetMcapPct.toFixed(0)}% cap`}
@@ -138,7 +138,7 @@ export function CoverageFeatureSnapshotCard({
                 detail={
                   <>
                     <span className="text-foreground">{widestFeature.coveragePct.toFixed(0)}%</span>
-                    <span className="mx-1.5 text-muted-foreground/60">·</span>
+                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {widestFeature.availableCount}/{widestFeature.totalCount}
                   </>
                 }
@@ -152,7 +152,7 @@ export function CoverageFeatureSnapshotCard({
                 detail={
                   <>
                     <span className="text-foreground">{narrowestFeature.coveragePct.toFixed(0)}%</span>
-                    <span className="mx-1.5 text-muted-foreground/60">·</span>
+                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {narrowestFeature.availableCount}/{narrowestFeature.totalCount}
                   </>
                 }
@@ -167,7 +167,7 @@ export function CoverageFeatureSnapshotCard({
                   <>
                     <span className="text-foreground">{mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}%</span>
                     <span className="ml-1 text-muted-foreground/80">cap</span>
-                    <span className="mx-1.5 text-muted-foreground/60">·</span>
+                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {mostConcentratedFeature.coveragePct.toFixed(0)}% count
                   </>
                 }

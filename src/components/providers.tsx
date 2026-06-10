@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
+import { isSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality
@@ -92,6 +93,9 @@ function AppProviders({ children }: { children: React.ReactNode }) {
         !event.metaKey &&
         !event.altKey
       ) {
+        // WCAG 2.1.4: single-character shortcut, read the disable flag at
+        // keypress time (same mechanism as the sidebar's [ / ] shortcut).
+        if (isSidebarShortcutDisabled()) return;
         event.preventDefault();
         setKeyboardShortcutsLoaded(true);
         setKeyboardShortcutsOpen(true);
@@ -104,6 +108,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 
       // Numeric column sort (1-9). Broadcast for tables to consume.
       if (event.key >= "1" && event.key <= "9") {
+        if (isSidebarShortcutDisabled()) return;
         event.preventDefault();
         const columnNumber = Number(event.key);
         window.dispatchEvent(

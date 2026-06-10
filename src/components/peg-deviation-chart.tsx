@@ -474,7 +474,7 @@ export function PegDeviationChart({
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
             <span className="text-foreground/85">${readout.price.toFixed(4)}</span>
-            <span className="text-muted-foreground/60">·</span>
+            <span aria-hidden="true" className="text-muted-foreground/60">·</span>
             <span style={{ color: readout.bandCssColor }}>
               {readout.sign}
               {readout.bps} bps

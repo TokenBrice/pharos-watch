@@ -103,7 +103,7 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
                 {Math.round((cell.probability ?? 0) * 100)}%
               </span>
             ) : (
-              <span className="font-mono text-[10px] leading-none text-muted-foreground/50">·</span>
+              <span aria-hidden="true" className="font-mono text-[10px] leading-none text-muted-foreground/50">·</span>
             )}
           </div>
         );

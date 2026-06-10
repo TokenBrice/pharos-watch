@@ -268,7 +268,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               {view.sourceExplorer.sourceIdentity.displayLabel}
             </TableSourceLink>
           </span>
-          <span className="text-muted-foreground/40">·</span>
+          <span aria-hidden="true" className="text-muted-foreground/40">·</span>
           <span
             className={cn(
               "rounded-full border px-2 py-0.5 text-[10px] font-medium",
@@ -279,13 +279,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </span>
           {sourceAgeMinutes !== null ? (
             <>
-              <span className="text-muted-foreground/40">·</span>
+              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
               <span className="text-muted-foreground">age {sourceAgeMinutes}m</span>
             </>
           ) : null}
           {sourceTvl !== null ? (
             <>
-              <span className="text-muted-foreground/40">·</span>
+              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
               <span className="font-mono tabular-nums text-muted-foreground">
                 TVL {formatCurrency(sourceTvl)}
               </span>
@@ -299,7 +299,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ) : null}
           {view.sourceExplorer.sourceSwitch.changed ? (
             <>
-              <span className="text-muted-foreground/40">·</span>
+              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
               <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
                 source changed
                 {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel
@@ -447,7 +447,7 @@ export function YieldChangeAttributionCard({
         >
           Why this APY changed
         </p>
-        <span className="text-muted-foreground/40">·</span>
+        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
           {attribution.confidence} confidence
         </span>

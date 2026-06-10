@@ -190,7 +190,7 @@ export function Header() {
                   >
                     <button type="button"
                       onClick={() => toggle(group.key)}
-                      className="flex w-full items-center justify-between mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65 hover:text-muted-foreground transition-colors"
+                      className="flex w-full items-center justify-between mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
                       aria-expanded={groupExpanded}
                       aria-controls={`mobile-nav-group-${group.key}`}
                     >
@@ -235,7 +235,7 @@ export function Header() {
                   className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
                   style={{ animationDelay: `${(primaryItems.length + groups.length + 1) * 50}ms`, animationDuration: "200ms" }}
                 >
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">Companion</p>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/70">Companion</p>
                   {COMPANION_NAV_ITEMS.map((item) => (
                     <MobileNavLink key={item.href} item={item} active={false} onNavigate={() => setOpen(false)} />
                   ))}

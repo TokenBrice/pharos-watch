@@ -68,7 +68,7 @@ export function SafetyScoreCalculator() {
               <label className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {DIMENSION_LABELS[dim.key]}{" "}
-                  <span className="text-muted-foreground/60">({weightLabel})</span>
+                  <span className="text-muted-foreground/70">({weightLabel})</span>
                 </span>
                 <span className="font-mono tabular-nums text-foreground">{values[dim.key]}</span>
               </label>

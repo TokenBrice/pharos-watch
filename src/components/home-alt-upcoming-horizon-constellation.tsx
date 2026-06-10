@@ -210,7 +210,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
                     <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
                       {LAUNCH_PHASE_LABELS[phase]}
                     </span>
-                    <span className="block font-mono text-[10px] leading-tight text-muted-foreground/65">
+                    <span className="block font-mono text-[10px] leading-tight text-muted-foreground/70">
                       {count} {count === 1 ? "coin" : "coins"}
                     </span>
                   </span>
