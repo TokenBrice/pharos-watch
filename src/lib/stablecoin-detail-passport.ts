@@ -147,10 +147,11 @@ function buildFreezePassportItem(
 }
 
 /**
- * The hero "passport" row: the verification facts (mechanism, attestor,
- * jurisdiction, launch date, MiCA/GENIUS regulatory visas, redeemability,
- * minting, freeze powers, peg track record, chain count) as document-style
- * anchor entries. Entries whose dedicated proof block does not render fall
+ * The hero "passport" row: the verification facts as document-style anchor
+ * entries, scanned in two clusters — how the token works (mechanism,
+ * redeemability, minting, freeze powers, peg track record, chain count), then
+ * who stands behind it (jurisdiction, MiCA/GENIUS regulatory visas, attestor,
+ * launch date). Entries whose dedicated proof block does not render fall
  * back to `#info`; the attestor entry is omitted entirely for decentralized
  * coins (mirroring the Key Information card's skip), and every other
  * conditional entry is omitted when its dataset has no record for the coin —
@@ -183,6 +184,8 @@ export function buildHeroPassportItems({
     : (BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? coin.flags.backing);
   const jurisdictionCountry = coin.jurisdiction?.country ?? null;
 
+  // Cluster 1 — how the token works: mechanism, exit path, supply controls,
+  // freeze powers, track record, footprint.
   const items: HeroPassportItemViewModel[] = [
     {
       key: "mechanism",
@@ -192,79 +195,6 @@ export function buildHeroPassportItems({
       ariaLabel: `Peg mechanism: ${mechanismValue} — jump to Key Information`,
     },
   ];
-
-  if (!isDecentralized && coin.proofOfReserves) {
-    const tierStyle = coin.proofOfReserves.attestorTier
-      ? POR_TIER_STYLES[coin.proofOfReserves.attestorTier]
-      : null;
-    const attestorLabel = tierStyle?.label ?? POR_BADGE_STYLES[coin.proofOfReserves.type].label;
-    items.push({
-      key: "attestor",
-      category: "Attestor",
-      value: attestorLabel,
-      href: "#attestation",
-      valueClass: tierStyle?.textCls,
-      ariaLabel: `Reserve attestation: ${attestorLabel} — jump to Proof of Reserves`,
-    });
-  }
-
-  items.push({
-    key: "jurisdiction",
-    category: "Jurisdiction",
-    value: jurisdictionCountry ?? "Not disclosed",
-    href: isDecentralized ? "#info" : "#jurisdiction",
-    valueClass: jurisdictionCountry ? undefined : HERO_MUTED_CLASS,
-    ariaLabel: jurisdictionCountry
-      ? `Jurisdiction: ${jurisdictionCountry} — jump to jurisdiction details`
-      : "Jurisdiction not disclosed — jump to Key Information",
-  });
-
-  // Date of issue: year only protects the strip's one-line width budget; the
-  // full date lives in the aria-label and the Key Information proof line.
-  if (coin.launchDate) {
-    const launchDateLong = formatLaunchDate(coin.launchDate);
-    if (launchDateLong) {
-      items.push({
-        key: "issued",
-        category: "Issued",
-        value: coin.launchDate.slice(0, 4),
-        href: "#info",
-        ariaLabel: `Issued: launched ${launchDateLong} — jump to Key Information`,
-      });
-    }
-  }
-
-  // Regulatory visas: MiCA jumps to its proof badge in the jurisdiction block;
-  // frozen assets carry the Key Information card's "Historical MiCA" framing.
-  if (coin.mica) {
-    const micaStyle = MICA_STATUS_BADGE_STYLES[coin.mica.status];
-    const micaPrefix = coin.status === "frozen" ? "Historical MiCA" : "MiCA";
-    items.push({
-      key: "mica",
-      category: "MiCA",
-      value: micaStyle.label,
-      href: "#jurisdiction",
-      valueClass: micaStyle.textCls,
-      ariaLabel: `${micaPrefix} status: ${micaStyle.label} — jump to jurisdiction details`,
-    });
-  }
-
-  // GENIUS renders nowhere on the detail page yet, so the visa links off-page
-  // to the Compliance Tracker (the Freeze field's FreezeWatch precedent). The
-  // regime is still in rulemaking, so the aria-label frames the value as
-  // pathway status — never a present-day federal license.
-  const geniusStatus = coin.genius?.authorizationStatus;
-  if (geniusStatus && geniusStatus !== "not-applicable" && geniusStatus !== "unknown") {
-    const geniusLabel = GENIUS_STATUS_SHORT_LABELS[geniusStatus];
-    items.push({
-      key: "genius",
-      category: "GENIUS",
-      value: geniusLabel,
-      href: "/compliance/?regime=genius",
-      valueClass: GENIUS_STATUS_TEXT_CLS[geniusStatus],
-      ariaLabel: `GENIUS Act pathway: ${geniusLabel} (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
-    });
-  }
 
   if (redemptionBackstop) {
     const accessLabel = REDEMPTION_ACCESS_LABELS[redemptionBackstop.accessModel];
@@ -327,6 +257,81 @@ export function buildHeroPassportItems({
     href: (coin.contracts?.length ?? 0) > 0 ? "#contracts" : "#info",
     ariaLabel: `Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"} — jump to contract deployments`,
   });
+
+  // Cluster 2 — who stands behind it: jurisdiction, its regulatory visas,
+  // reserve attestor, date of issue.
+  items.push({
+    key: "jurisdiction",
+    category: "Jurisdiction",
+    value: jurisdictionCountry ?? "Not disclosed",
+    href: isDecentralized ? "#info" : "#jurisdiction",
+    valueClass: jurisdictionCountry ? undefined : HERO_MUTED_CLASS,
+    ariaLabel: jurisdictionCountry
+      ? `Jurisdiction: ${jurisdictionCountry} — jump to jurisdiction details`
+      : "Jurisdiction not disclosed — jump to Key Information",
+  });
+
+  // Regulatory visas: MiCA jumps to its proof badge in the jurisdiction block;
+  // frozen assets carry the Key Information card's "Historical MiCA" framing.
+  if (coin.mica) {
+    const micaStyle = MICA_STATUS_BADGE_STYLES[coin.mica.status];
+    const micaPrefix = coin.status === "frozen" ? "Historical MiCA" : "MiCA";
+    items.push({
+      key: "mica",
+      category: "MiCA",
+      value: micaStyle.label,
+      href: "#jurisdiction",
+      valueClass: micaStyle.textCls,
+      ariaLabel: `${micaPrefix} status: ${micaStyle.label} — jump to jurisdiction details`,
+    });
+  }
+
+  // GENIUS renders nowhere on the detail page yet, so the visa links off-page
+  // to the Compliance Tracker (the Freeze field's FreezeWatch precedent). The
+  // regime is still in rulemaking, so the aria-label frames the value as
+  // pathway status — never a present-day federal license.
+  const geniusStatus = coin.genius?.authorizationStatus;
+  if (geniusStatus && geniusStatus !== "not-applicable" && geniusStatus !== "unknown") {
+    const geniusLabel = GENIUS_STATUS_SHORT_LABELS[geniusStatus];
+    items.push({
+      key: "genius",
+      category: "GENIUS",
+      value: geniusLabel,
+      href: "/compliance/?regime=genius",
+      valueClass: GENIUS_STATUS_TEXT_CLS[geniusStatus],
+      ariaLabel: `GENIUS Act pathway: ${geniusLabel} (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
+    });
+  }
+
+  if (!isDecentralized && coin.proofOfReserves) {
+    const tierStyle = coin.proofOfReserves.attestorTier
+      ? POR_TIER_STYLES[coin.proofOfReserves.attestorTier]
+      : null;
+    const attestorLabel = tierStyle?.label ?? POR_BADGE_STYLES[coin.proofOfReserves.type].label;
+    items.push({
+      key: "attestor",
+      category: "Attestor",
+      value: attestorLabel,
+      href: "#attestation",
+      valueClass: tierStyle?.textCls,
+      ariaLabel: `Reserve attestation: ${attestorLabel} — jump to Proof of Reserves`,
+    });
+  }
+
+  // Date of issue: year only protects the strip's one-line width budget; the
+  // full date lives in the aria-label and the Key Information proof line.
+  if (coin.launchDate) {
+    const launchDateLong = formatLaunchDate(coin.launchDate);
+    if (launchDateLong) {
+      items.push({
+        key: "issued",
+        category: "Issued",
+        value: coin.launchDate.slice(0, 4),
+        href: "#info",
+        ariaLabel: `Issued: launched ${launchDateLong} — jump to Key Information`,
+      });
+    }
+  }
 
   return items;
 }

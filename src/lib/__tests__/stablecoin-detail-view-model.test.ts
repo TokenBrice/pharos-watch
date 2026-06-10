@@ -1367,18 +1367,19 @@ describe("stablecoin detail hero view-model builder", () => {
       redemptionBackstop: { accessModel: "issuer-api" } as HeroBuilderParams["redemptionBackstop"],
     });
 
+    // Two scan clusters: how the token works, then who stands behind it.
     expect(hero.passportItems.map((item) => item.key)).toEqual([
       "mechanism",
-      "attestor",
-      "jurisdiction",
-      "issued",
-      "mica",
-      "genius",
       "redeemability",
       "minting",
       "freeze",
       "record",
       "chains",
+      "jurisdiction",
+      "mica",
+      "genius",
+      "attestor",
+      "issued",
     ]);
   });
 });

@@ -67,7 +67,7 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden"
       />
       <div
-        className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto lg:flex-wrap lg:overflow-visible ${distributionClass}`}
+        className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto lg:flex-wrap lg:gap-x-4 lg:overflow-visible ${distributionClass}`}
       >
         {items.map((item) => {
           const isHashJump = item.href.startsWith("#");
