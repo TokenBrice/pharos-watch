@@ -293,12 +293,31 @@ export async function loadReplayPriceCacheForTrustedContinuity(
   }
 }
 
+/**
+ * Carry-forward ceiling for last-known-good supplemental supply. Restores
+ * preserve the original supplyObservedAt, so age compounds run-over-run;
+ * without a ceiling a weeks-stale XAUT/PAXG supply would keep publishing into
+ * homepage totals indistinguishable from fresh. Past the ceiling the asset
+ * publishes with its real (empty) supply and the expiry is reported.
+ */
+export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
+
+function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
+  const observedAt = normalizeOptionalTimestamp(previous.supplyObservedAt);
+  // Rows without provenance get one restore; the cache read path stamps
+  // supplyObservedAt from the cache row, so age accrues from there.
+  if (observedAt == null) return true;
+  return nowSec - observedAt <= SUPPLEMENTAL_RESTORE_MAX_AGE_SEC;
+}
+
 export function mergeSupplementalLastKnownGood(
   supplementalAssets: PeggedAsset[],
   previousAssetsById: Map<string, PeggedAsset>,
   primaryAssetIds: Set<string>,
-): { assets: PeggedAsset[]; restoredCount: number; skippedDuplicates: number } {
+  nowSec: number = Math.floor(Date.now() / 1000),
+): { assets: PeggedAsset[]; restoredCount: number; skippedDuplicates: number; expiredRestoreIds: string[] } {
   const resolved = new Map<string, PeggedAsset>();
+  const expiredRestoreIds: string[] = [];
   let restoredCount = 0;
   let skippedDuplicates = 0;
 
@@ -316,6 +335,11 @@ export function mergeSupplementalLastKnownGood(
 
     const previous = previousAssetsById.get(id);
     if (previous && sumPegBuckets(previous.circulating) > 0) {
+      if (!isWithinRestoreCeiling(previous, nowSec)) {
+        expiredRestoreIds.push(id);
+        resolved.set(id, asset);
+        continue;
+      }
       const merged = markRestoredSupply(previous);
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         merged.price = asset.price;
@@ -341,6 +365,10 @@ export function mergeSupplementalLastKnownGood(
     if (primaryAssetIds.has(id) || resolved.has(id)) continue;
     const previous = previousAssetsById.get(id);
     if (!previous || sumPegBuckets(previous.circulating) <= 0) continue;
+    if (!isWithinRestoreCeiling(previous, nowSec)) {
+      expiredRestoreIds.push(id);
+      continue;
+    }
     resolved.set(id, markRestoredSupply(previous));
     restoredCount++;
   }
@@ -349,6 +377,7 @@ export function mergeSupplementalLastKnownGood(
     assets: [...resolved.values()],
     restoredCount,
     skippedDuplicates,
+    expiredRestoreIds,
   };
 }
 

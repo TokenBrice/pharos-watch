@@ -299,6 +299,7 @@ export async function loadStablecoinsIntake(
     [...goldTokens, ...silverTokens, ...fiatCgTokens],
     previousAssetsById,
     new Set(llamaData.peggedAssets.map((asset) => String(asset.id))),
+    input.syncStartSec,
   );
   if (supplementalResolution.assets.length > 0) {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...supplementalResolution.assets];
@@ -307,6 +308,13 @@ export async function loadStablecoinsIntake(
     console.log(
       `[sync-stablecoins] Supplemental resolution: restored=${supplementalResolution.restoredCount}, ` +
       `skippedDuplicates=${supplementalResolution.skippedDuplicates}`,
+    );
+  }
+  if (supplementalResolution.expiredRestoreIds.length > 0) {
+    console.warn(
+      "[sync-stablecoins] Supplemental supply carry-forward expired past the " +
+      "7d ceiling (publishing without restored supply): " +
+      supplementalResolution.expiredRestoreIds.join(", "),
     );
   }
 

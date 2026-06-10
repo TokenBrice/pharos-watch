@@ -354,17 +354,27 @@ export function HeroPriceCard({
 
 export function HeroMarketCapCard({
   coin,
+  coinData,
   mcap,
   safePrevDay,
   prevDayTrendClass,
   mobile = false,
 }: {
   coin: StablecoinMeta;
+  coinData?: StablecoinData;
   mcap: number;
   safePrevDay: number | null;
   prevDayTrendClass: string;
   mobile?: boolean;
 }) {
+  const supplyRestoredAsOf =
+    coinData?.supplyRestored === true && coinData.supplyObservedAt != null
+      ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : null;
   return (
     <div
       className={
@@ -381,6 +391,11 @@ export function HeroMarketCapCard({
       </p>
       {coin.flags.pegCurrency !== "USD" && (
         <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>
+      )}
+      {coinData?.supplyRestored === true && (
+        <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
+          Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}
+        </p>
       )}
       <p className={`mt-1 text-xs font-mono ${prevDayTrendClass}`}>
         {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}

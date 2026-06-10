@@ -167,6 +167,7 @@ export function HeroCardMobileSection({
         />
         <HeroMarketCapCard
           coin={coin}
+          coinData={coinData}
           mcap={mcap}
           safePrevDay={safePrevDay}
           prevDayTrendClass={prevDayTrendClass}
@@ -259,6 +260,7 @@ export function HeroCardDesktopSection({
             />
             <HeroMarketCapCard
               coin={coin}
+              coinData={coinData}
               mcap={mcap}
               safePrevDay={safePrevDay}
               prevDayTrendClass={prevDayTrendClass}
