@@ -150,7 +150,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               <MethodologyHint topic="ddrPredictionFrozen" asChild>
                 <button
                   type="button"
-                  className="pharos-focus-ring inline-flex min-h-6 items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 underline decoration-dotted decoration-emerald-700/50 underline-offset-2 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400 dark:decoration-emerald-400/50"
+                  className="pharos-focus-ring rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 underline decoration-dotted decoration-emerald-700/50 underline-offset-2 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400 dark:decoration-emerald-400/50"
                 >
                   Prediction frozen
                 </button>
