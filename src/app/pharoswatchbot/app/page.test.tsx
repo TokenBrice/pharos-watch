@@ -143,7 +143,9 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     expect(screen.getByText("Add a coin")).toBeTruthy();
-    expect(screen.getByText(/Launch intent:/)).toBeTruthy();
+    // The raw launch-intent payload echo was removed deliberately — deep links
+    // should route silently to the right view.
+    expect(screen.queryByText(/Launch intent:/)).toBeNull();
   });
 
   it("routes why start params to an in-app insight view", async () => {

@@ -1,18 +1,54 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { useEffect, useReducer, type ComponentType, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
-const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
+const { useStablecoinDetailViewModelMock, pendingDynamicLoads } = vi.hoisted(() => ({
   useStablecoinDetailViewModelMock: vi.fn(),
+  pendingDynamicLoads: [] as Promise<unknown>[],
 }));
 
+// Resolve dynamic() loaders so module-level vi.mocks take effect behind the
+// page's dynamic boundaries — but only swap in components explicitly marked
+// with RENDER_IN_DYNAMIC_STUB (set on test mocks whose content is asserted).
+// Real modules resolve too (their imports are drained in afterEach so they
+// don't outlive the environment) but keep rendering the opaque placeholder,
+// since they'd need providers (QueryClient etc.) this harness doesn't mount.
+// Await with findBy* when asserting marked sections' content.
+const RENDER_IN_DYNAMIC_STUB = "__renderInDynamicStub";
+
 vi.mock("next/dynamic", () => ({
-  default: () => () => <div data-testid="dynamic-detail-section" />,
+  default: (loader: () => Promise<ComponentType | { default: ComponentType }>) => {
+    let Resolved: ComponentType | null = null;
+    function DynamicStub(props: Record<string, unknown>) {
+      const [, force] = useReducer((x: number) => x + 1, 0);
+      useEffect(() => {
+        let mounted = true;
+        const load = Promise.resolve(loader()).then((mod) => {
+          const component = (typeof mod === "function" ? mod : mod.default) as ComponentType;
+          if ((component as unknown as Record<string, unknown>)[RENDER_IN_DYNAMIC_STUB] === true) {
+            Resolved = component;
+            if (mounted) force();
+          }
+        });
+        // Track in-flight module loads so afterEach can drain them before
+        // vitest tears the environment down (heavy unmocked modules would
+        // otherwise reject with EnvironmentTeardownError after the test).
+        pendingDynamicLoads.push(load.catch(() => undefined));
+        return () => {
+          mounted = false;
+        };
+      }, []);
+      if (!Resolved) return <div data-testid="dynamic-detail-section" />;
+      const Component = Resolved;
+      return <Component {...props} />;
+    }
+    return DynamicStub;
+  },
 }));
 
 vi.mock("next/link", () => ({
@@ -51,8 +87,8 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
-  ReservePanel: ({
+vi.mock("@/components/stablecoin-detail/reserve-panel", () => {
+  const ReservePanel = ({
     reserves,
     onRetry,
     isFetching,
@@ -67,8 +103,12 @@ vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
         Retry reserves
       </button>
     </section>
-  ),
-}));
+  );
+  // ReservePanel renders behind a dynamic() boundary; mark the mock so the
+  // next/dynamic stub swaps it in (see RENDER_IN_DYNAMIC_STUB above).
+  (ReservePanel as unknown as Record<string, unknown>).__renderInDynamicStub = true;
+  return { ReservePanel };
+});
 
 vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
   PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
@@ -195,8 +235,9 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
+    await Promise.allSettled(pendingDynamicLoads.splice(0));
   });
 
   it("renders static profile content in the loading fallback", () => {
@@ -232,7 +273,7 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
   });
 
-  it("renders reserve view in the overview stream when report-card data is unavailable", () => {
+  it("renders reserve view in the overview stream when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
@@ -250,7 +291,7 @@ describe("StablecoinDetailClient", () => {
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
-    const reservePanel = screen.getByTestId("reserve-panel");
+    const reservePanel = await screen.findByTestId("reserve-panel");
     const reportCardAnchor = container.querySelector("#report-card");
     expect(screen.queryByTestId("report-card")).toBeNull();
     expect(reservePanel.textContent).toContain("curated-fallback");
