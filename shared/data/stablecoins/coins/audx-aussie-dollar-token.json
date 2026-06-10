@@ -134,5 +134,6 @@
         "Resolve the on-chain token owner/minter admin on Ethereum, Polygon, and Conflux before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-08-26"
 }

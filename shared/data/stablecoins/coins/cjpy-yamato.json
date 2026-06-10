@@ -107,7 +107,9 @@
         }
       ],
       "sourceFreeRationale": "Mechanism and upgradeable DAO governance confirmed from Yamato docs; exact upgrade-admin/proxy owner and governance threshold not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve the Yamato upgrade admin/proxy owner and the YMT/veYMT governance execution path on-chain."]
+      "unresolvedQuestions": [
+        "Resolve the Yamato upgrade admin/proxy owner and the YMT/veYMT governance execution path on-chain."
+      ]
     }
   },
   "deploymentModel": "single-chain",
@@ -143,5 +145,6 @@
         "risk": "very-low"
       }
     }
-  }
+  },
+  "launchDate": "2023-07-27"
 }

@@ -119,5 +119,6 @@
       "title": "Private-credit vault exposure",
       "message": "AA_FalconXUSDC is a Pareto credit-vault share, not a par-redeemable Falcon Finance USDf wrapper. Monthly exits depend on the vault credit line and Pareto redemption process."
     }
-  ]
+  ],
+  "launchDate": "2025-06-18"
 }

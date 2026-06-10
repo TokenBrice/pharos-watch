@@ -274,5 +274,6 @@
       "risk": "low"
     }
   },
-  "deploymentModel": "native-multichain"
+  "deploymentModel": "native-multichain",
+  "launchDate": "2025-10-29"
 }

@@ -174,5 +174,6 @@
         "Resolve the on-chain token owner/minter admin and any proxy admin across Ethereum, Gnosis, Base, Polygon, BSC, Arbitrum, and Avalanche before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2023-06-15"
 }

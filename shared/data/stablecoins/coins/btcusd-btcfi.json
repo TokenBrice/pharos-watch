@@ -85,7 +85,9 @@
         }
       ],
       "sourceFreeRationale": "CDP mechanism confirmed from BTCfi/Bifrost materials; on-chain vault admin owner and any renouncement not independently resolved, so immutable classification is not asserted.",
-      "unresolvedQuestions": ["Resolve the on-chain BtcUSD minter/vault admin and whether owner() is renounced before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain BtcUSD minter/vault admin and whether owner() is renounced before raising confidence."
+      ]
     }
   },
   "chainTier": "unproven",
@@ -121,5 +123,6 @@
     "params": {
       "handlersUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
     }
-  }
+  },
+  "launchDate": "2024-07-22"
 }

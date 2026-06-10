@@ -246,7 +246,8 @@
     "yieldConfig": {
       "yieldSource": "Pareto FalconX Credit Vault",
       "yieldType": "lending-vault"
-    }
+    },
+    "launchDate": "2025-06-18"
   },
   {
     "id": "acrdx-anemoy-apollo",
@@ -399,7 +400,8 @@
     "yieldConfig": {
       "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-12-15"
   },
   {
     "id": "acred-apollo-securitize",
@@ -601,7 +603,8 @@
     "yieldConfig": {
       "yieldSource": "Apollo Diversified Credit Fund (private credit strategy NAV)",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2025-01-29"
   },
   {
     "id": "aeur-anchored-coins",
@@ -815,7 +818,8 @@
         "title": "Winding down",
         "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has since restructured collateral so that 100% of circulating AEUR is now backed at Swissquote Bank SA; bankruptcy proceedings no longer affect coverage. The issuer is winding down stablecoin operations to comply with MiCAR (which requires EU licensing for EUR issuers) and will not resume new AEUR issuance; AEUR was delisted from Binance EEA in March 2025. Redemptions continue (minimum 250,000 AEUR threshold for direct primary-market redemption)."
       }
-    ]
+    ],
+    "launchDate": "2023-07-19"
   },
   {
     "id": "aid-gaib",
@@ -1093,7 +1097,8 @@
         "label": "U.S. Treasury and accepted stablecoin reserves",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2025-10-29"
   },
   {
     "id": "alusd-alchemix",
@@ -1232,7 +1237,8 @@
         "risk": "medium",
         "coinId": "usdt-tether"
       }
-    ]
+    ],
+    "launchDate": "2021-02-27"
   },
   {
     "id": "apxusd-apyx",
@@ -1467,7 +1473,8 @@
           "SATA": "SATA (Strive preferred equity, BTC-linked)"
         }
       }
-    }
+    },
+    "launchDate": "2026-02-18"
   },
   {
     "id": "apyusd-apyx",
@@ -1662,7 +1669,8 @@
     "yieldConfig": {
       "yieldSource": "Apyx apyUSD vault",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-02-20"
   },
   {
     "id": "arc-anq",
@@ -1851,7 +1859,8 @@
     "yieldConfig": {
       "yieldSource": "Aster Earn asUSDF",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2024-11-21"
   },
   {
     "id": "audd-novatti",
@@ -2073,7 +2082,8 @@
         "label": "AUD bank deposits",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2023-09-07"
   },
   {
     "id": "audf-forte",
@@ -2252,7 +2262,8 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "launchDate": "2024-01-09"
   },
   {
     "id": "audm-macropod",
@@ -2405,7 +2416,8 @@
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
-    }
+    },
+    "launchDate": "2025-06-13"
   },
   {
     "id": "audm-mento",
@@ -2550,7 +2562,8 @@
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
-    }
+    },
+    "launchDate": "2025-03-22"
   },
   {
     "id": "audx-aussie-dollar-token",
@@ -2688,7 +2701,8 @@
         "label": "AUD cash and government-backed instruments",
         "risk": "low"
       }
-    }
+    },
+    "launchDate": "2024-08-26"
   },
   {
     "id": "ausd-agora",
@@ -2984,7 +2998,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-07-07"
   },
   {
     "id": "ausdt-tether-alloy",
@@ -3190,7 +3205,8 @@
           }
         ]
       }
-    }
+    },
+    "launchDate": "2024-03-11"
   },
   {
     "id": "avusd-avant",
@@ -3399,7 +3415,8 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "launchDate": "2024-11-15"
   },
   {
     "id": "axcnh-anchorx",
@@ -3507,7 +3524,8 @@
         "label": "CNH cash reserves",
         "risk": "very-low"
       }
-    }
+    },
+    "launchDate": "2025-09-16"
   },
   {
     "id": "aznd-mu-digital",
@@ -3691,7 +3709,8 @@
     "yieldConfig": {
       "yieldSource": "Mu Digital Asian Dollar credit fund",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2026-01-22"
   },
   {
     "id": "bc3m-backed",
@@ -3869,7 +3888,8 @@
     "yieldConfig": {
       "yieldSource": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF NAV accretion",
       "yieldType": "nav-appreciation"
-    }
+    },
+    "launchDate": "2023-06-15"
   },
   {
     "id": "bd-basedollar",
@@ -26680,6 +26700,13 @@
       "country": "South Korea",
       "regulator": "FSC / FSS (Digital Asset Basic Act pending)"
     },
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
+        "decimals": 18
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -26691,6 +26718,7 @@
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
+    "launchDate": "2026-01-05",
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",

@@ -149,5 +149,6 @@
         "Resolve the on-chain token owner/minter admin on Ethereum (0x0815...cbdd), Solana, and Redbelly before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-06-13"
 }

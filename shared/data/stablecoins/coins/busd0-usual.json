@@ -157,5 +157,6 @@
       ],
       "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usd0-usual, bond-maturity, locked-USD0 wrapper reserve); posture mirrors the USD0 parent mint authority."
     }
-  }
+  },
+  "launchDate": "2024-06-05"
 }

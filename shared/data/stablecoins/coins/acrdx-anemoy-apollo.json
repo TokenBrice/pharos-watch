@@ -149,5 +149,6 @@
         "Resolve the on-chain token owner/minter role on Ethereum, Plume, and Monad before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-12-15"
 }

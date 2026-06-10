@@ -117,5 +117,6 @@
         "Resolve the on-chain token owner/minter admin across Polygon, Gnosis, Celo, and Moonbeam before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2023-04-18"
 }

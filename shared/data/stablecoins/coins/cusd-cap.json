@@ -256,5 +256,6 @@
       "coinId": "pyusd-paypal"
     }
   ],
-  "deploymentModel": "third-party-bridge"
+  "deploymentModel": "third-party-bridge",
+  "launchDate": "2025-07-08"
 }

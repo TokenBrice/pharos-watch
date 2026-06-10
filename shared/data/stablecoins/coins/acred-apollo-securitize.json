@@ -198,5 +198,6 @@
       "title": "Private credit, not Treasuries",
       "message": "ACRED is a feeder into Apollo Diversified Credit Fund, which holds direct lending and structured credit positions. Risk profile is medium-to-high and closer to syrupUSDC than to BUIDL or BENJI. Token transfers are permissioned and redemption is monthly at NAV via Securitize Markets, with an on-demand pool sized to ~5% of NAV. Pharos tracks the Ethereum, Aptos, Avalanche, Ink, Polygon, and Solana deployments; the Sei issuance via Wormhole is not yet integrated."
     }
-  ]
+  ],
+  "launchDate": "2025-01-29"
 }

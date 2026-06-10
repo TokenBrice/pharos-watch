@@ -180,5 +180,6 @@
         "Resolve the on-chain token owner/minter admin on Ethereum (0x52c6...08A0) and Monad before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2026-01-22"
 }

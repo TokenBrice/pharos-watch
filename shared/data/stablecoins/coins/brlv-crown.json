@@ -153,5 +153,6 @@
         "Resolve the on-chain token owner/minter admin on Base (0xd204...7d36) and Ethereum (0xd7ca...e2f5) before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-07-03"
 }

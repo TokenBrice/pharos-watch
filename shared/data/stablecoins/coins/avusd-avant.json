@@ -205,5 +205,6 @@
         "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2024-11-15"
 }

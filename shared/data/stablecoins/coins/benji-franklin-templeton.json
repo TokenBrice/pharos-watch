@@ -214,5 +214,6 @@
         "Resolve the on-chain token owner/minter admin across Aptos, Arbitrum, Avalanche, Base, Ethereum, Polygon, Solana, and Stellar before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2023-10-03"
 }

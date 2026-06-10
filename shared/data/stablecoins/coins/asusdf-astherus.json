@@ -123,5 +123,6 @@
       ],
       "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usdf-astherus, savings-passthrough, wrapper reserve); posture mirrors the USDF parent mint authority."
     }
-  }
+  },
+  "launchDate": "2024-11-21"
 }

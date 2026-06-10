@@ -89,7 +89,9 @@
         }
       ],
       "sourceFreeRationale": "Liquity-v2 fork mechanism confirmed; Ebisu's exact admin/upgrade owner, multisig threshold, and immutability status not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve Ebisu's on-chain branch admin/owner and whether ownership is renounced; if renounced, reconsider immutable-user-collateralized."]
+      "unresolvedQuestions": [
+        "Resolve Ebisu's on-chain branch admin/owner and whether ownership is renounced; if renounced, reconsider immutable-user-collateralized."
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -207,5 +209,6 @@
         }
       ]
     }
-  }
+  },
+  "launchDate": "2025-06-05"
 }

@@ -191,5 +191,6 @@
       "title": "Active coverage pending",
       "message": "CHFAU launched on 2026-02-26 as a MiCAR-compliant, BaFin-licensed Swiss franc stablecoin, but CoinGecko does not yet publish usable live price data, so active price coverage remains pending."
     }
-  ]
+  ],
+  "launchDate": "2026-01-26"
 }

@@ -81,10 +81,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "DGLD Official", "url": "https://dgld.ch/" }
+        {
+          "label": "DGLD Official",
+          "url": "https://dgld.ch/"
+        }
       ],
       "sourceFreeRationale": "Classification based on issuer/custodian model in project materials; the on-chain owner/minter admin on Ethereum and the Base bridge deployment was not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin on Ethereum and the Base bridge mint authority for DGLD before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin on Ethereum and the Base bridge mint authority for DGLD before raising confidence."
+      ]
     }
   },
   "custodyModel": "institutional-regulated",
@@ -116,5 +121,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "third-party-bridge"
+  "deploymentModel": "third-party-bridge",
+  "launchDate": "2022-11-03"
 }

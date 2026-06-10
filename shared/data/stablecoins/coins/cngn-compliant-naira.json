@@ -111,10 +111,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "cNGN docs", "url": "https://docs.cngn.co/integrations/contract-addresses" }
+        {
+          "label": "cNGN docs",
+          "url": "https://docs.cngn.co/integrations/contract-addresses"
+        }
       ],
       "sourceFreeRationale": "Classification based on consortium issuer model in project materials/coverage; the on-chain minter/owner admin on each chain (and the Solana mint authority) was not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner admin per chain and the Solana SPL mint authority for cNGN before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner admin per chain and the Solana SPL mint authority for cNGN before raising confidence."
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -153,5 +158,6 @@
       "label": "Nigerian naira bank deposits",
       "risk": "medium"
     }
-  }
+  },
+  "launchDate": "2024-12-16"
 }

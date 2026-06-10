@@ -260,5 +260,6 @@
     "notes": "The shortlisting rationale cited a named US-nexus issuer (Mento Labs) but this is factually incorrect — Mento Labs GmbH is domiciled in Berlin, Germany. USDm meets the functional definition of a payment stablecoin (USD-peg, reserve-backed, designed for payments) but the issuer is a foreign entity with no US regulatory engagement. The GENIUS Act foreign-issuer pathway could theoretically apply when the framework is effective, but no steps toward compliance have been taken. Conservative status: no-public-authorization-found. Note: top-level reviewer and reviewedAt added to satisfy schema required fields.",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-07"
-  }
+  },
+  "launchDate": "2020-04-22"
 }

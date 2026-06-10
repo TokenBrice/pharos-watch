@@ -95,7 +95,10 @@
         "canRaiseCap": "unknown",
         "evidence": "Docs describe a Gateway contract that, on collateral deposit to the Secure Vault and on-chain ratio verification, mints DUSD to the user; redemption is gated by the StandX server validating DUSD balance and signed order authenticity (7-day unwind lock).",
         "sources": [
-          { "label": "Minting $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd" }
+          {
+            "label": "Minting $DUSD",
+            "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+          }
         ]
       },
       {
@@ -107,7 +110,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "The Settler manages delta-neutral positions across CEXes and the RSV Fund multisig bridges assets between on-chain and off-chain platforms; StandX can reject redemption orders, making the issuer backend a controlling party over the mint/redeem lifecycle.",
         "sources": [
-          { "label": "$DUSD Solutions", "url": "https://docs.standx.com/docs/dusd-solutions" }
+          {
+            "label": "$DUSD Solutions",
+            "url": "https://docs.standx.com/docs/dusd-solutions"
+          }
         ]
       }
     ],
@@ -116,13 +122,20 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Minting $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd" },
-        { "label": "Redeeming $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd" }
+        {
+          "label": "Minting $DUSD",
+          "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+        },
+        {
+          "label": "Redeeming $DUSD",
+          "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+        }
       ],
       "sourceFreeRationale": "Mechanism confirmed from StandX docs; on-chain Gateway minter admin and RSV Fund multisig threshold/signers not independently resolved.",
       "unresolvedQuestions": [
         "Resolve the on-chain admin/owner of the BSC Gateway (0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122) and Solana mint authority, plus the RSV Fund multisig threshold, before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-03-14"
 }

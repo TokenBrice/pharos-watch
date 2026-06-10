@@ -230,5 +230,6 @@
     "yieldSource": "cgUSD daily T-bill rebase",
     "yieldType": "rebase"
   },
-  "chainTier": "stage1-l2"
+  "chainTier": "stage1-l2",
+  "launchDate": "2024-02-20"
 }

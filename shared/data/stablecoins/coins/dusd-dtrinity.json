@@ -226,5 +226,6 @@
         "Resolve the on-chain owner/admin of the dUSD issuer and AMO contracts and the contributor multisig threshold; confirm whether the March 2026 dLEND pause affected dUSD mint controls."
       ]
     }
-  }
+  },
+  "launchDate": "2024-07-04"
 }

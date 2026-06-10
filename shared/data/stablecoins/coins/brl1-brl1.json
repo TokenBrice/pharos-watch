@@ -130,5 +130,6 @@
         "Resolve the on-chain Polygon token owner/minter admin (0x5c06...40b5) and any proxy admin before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2025-02-17"
 }

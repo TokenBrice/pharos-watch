@@ -113,7 +113,9 @@
         }
       ],
       "sourceFreeRationale": "CDP mechanism and DAO governance confirmed from Balanced docs/metadata; ICON Loans contract admin owner and DAO execution path not independently read on-chain.",
-      "unresolvedQuestions": ["Confirm the ICON Loans contract admin/owner and the Balanced DAO execution authority; track the v2 re-anchoring of issuance to Sonic."]
+      "unresolvedQuestions": [
+        "Confirm the ICON Loans contract admin/owner and the Balanced DAO execution authority; track the v2 re-anchoring of issuance to Sonic."
+      ]
     }
   },
   "chainTier": "mature-alt-l1",
@@ -145,5 +147,6 @@
       "risk": "high",
       "blacklistable": true
     }
-  ]
+  ],
+  "launchDate": "2024-04-04"
 }

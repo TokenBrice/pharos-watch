@@ -109,7 +109,9 @@
         }
       ],
       "sourceFreeRationale": "Mechanism and governance confirmed from Alchemix docs; on-chain owner/admin Safe internals and exact multisig threshold not independently resolved.",
-      "unresolvedQuestions": ["Confirm the live AlchemistV2 admin owner, the ALCX timelock/multisig threshold, and current mint-limit parameters on-chain."]
+      "unresolvedQuestions": [
+        "Confirm the live AlchemistV2 admin owner, the ALCX timelock/multisig threshold, and current mint-limit parameters on-chain."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",
@@ -133,5 +135,6 @@
       "risk": "medium",
       "coinId": "usdt-tether"
     }
-  ]
+  ],
+  "launchDate": "2021-02-27"
 }

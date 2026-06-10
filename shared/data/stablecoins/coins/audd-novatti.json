@@ -218,5 +218,6 @@
         "Resolve the per-chain token owner/minter admin and any proxy admin before raising confidence."
       ]
     }
-  }
+  },
+  "launchDate": "2023-09-07"
 }
