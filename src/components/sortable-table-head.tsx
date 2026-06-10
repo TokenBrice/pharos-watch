@@ -43,14 +43,20 @@ export function SortableTableHead<T extends string = string>({
       <span className={cn("flex w-full items-center gap-1", getButtonAlignment(className))}>
         <button
           type="button"
-          className="pharos-focus-ring -mx-2 inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-inherit transition-colors hover:bg-muted/50 sm:-mx-1 sm:min-h-8 sm:px-1"
+          // Trailing negative margin is dropped when an adornment follows: it
+          // pulled the sort hit-area over the adornment button, leaving only a
+          // ~8px clickable sliver (axe target-size "partially obscured").
+          className={cn(
+            "pharos-focus-ring -ml-2 inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-inherit transition-colors hover:bg-muted/50 sm:-ml-1 sm:min-h-8 sm:px-1",
+            adornment ? "mr-0" : "-mr-2 sm:-mr-1",
+          )}
           onClick={() => toggleSort(sortKey)}
           aria-label={label ? `Sort by ${label}` : undefined}
         >
           <span>{label}</span>
           <SortIcon columnKey={sortKey} sortKey={currentSortKey} sortDirection={sortDirection} />
         </button>
-        {adornment}
+        {adornment ? <span className="relative z-10 shrink-0">{adornment}</span> : null}
       </span>
     </TableHead>
   );
