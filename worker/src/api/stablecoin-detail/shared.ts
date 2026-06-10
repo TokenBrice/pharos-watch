@@ -136,20 +136,21 @@ export function createDetailResponseHelpers(config: {
   const queueCacheWrite = (body: string): void => {
     config.execCtx.waitUntil(
       (async () => {
-        if (body.length > DETAIL_CACHE_MAX_VALUE_BYTES) {
+        const bodyBytes = new TextEncoder().encode(body).length;
+        if (bodyBytes > DETAIL_CACHE_MAX_VALUE_BYTES) {
           console.error(
-            `[detail] cache write skipped stablecoin=${config.stablecoinId} bytes=${body.length} exceeds ${DETAIL_CACHE_MAX_VALUE_BYTES}`,
+            `[detail] cache write skipped stablecoin=${config.stablecoinId} bytes=${bodyBytes} exceeds ${DETAIL_CACHE_MAX_VALUE_BYTES}`,
           );
-          await recordCacheWriteFailure("value-too-large", body.length);
+          await recordCacheWriteFailure("value-too-large", bodyBytes);
           return;
         }
         try {
           await setCache(config.db, cacheKey, body);
         } catch (err) {
           console.error(
-            `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${body.length} error=${String(err).slice(0, 300)}`,
+            `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${bodyBytes} error=${String(err).slice(0, 300)}`,
           );
-          await recordCacheWriteFailure("write-error", body.length);
+          await recordCacheWriteFailure("write-error", bodyBytes);
         }
       })(),
     );

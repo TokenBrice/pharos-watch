@@ -9,7 +9,7 @@ import { sendAlert } from "../lib/alerts";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
+import { deleteCache, getCache, getCacheUpdatedAt, setCache } from "../lib/db-cache";
 import { buildCacheStatuses } from "../lib/api-freshness";
 
 const WATCHED_LANE_KEYS = [
@@ -52,7 +52,19 @@ export async function loadDetailWriteFailures(
     .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
     .all<{ key: string; value: string; updated_at: number }>());
 
-  return (rows.results ?? []).map((row) => {
+  const failures: DetailWriteFailureObservation[] = [];
+  for (const row of rows.results ?? []) {
+    const stablecoinId = row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length);
+
+    // A detail row written after the marker means a later cache write
+    // succeeded; the coin has recovered, so drop the stale marker instead of
+    // degrading runs and re-alerting for up to 24h.
+    const detailUpdatedAt = await getCacheUpdatedAt(db, `detail:${stablecoinId}`);
+    if (detailUpdatedAt != null && detailUpdatedAt > row.updated_at) {
+      await deleteCache(db, row.key);
+      continue;
+    }
+
     let reason = "unknown";
     let bytes: number | null = null;
     try {
@@ -62,13 +74,14 @@ export async function loadDetailWriteFailures(
     } catch {
       // keep defaults
     }
-    return {
-      stablecoinId: row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length),
+    failures.push({
+      stablecoinId,
       reason,
       bytes,
       ageSeconds: Math.max(0, nowSec - row.updated_at),
-    };
-  });
+    });
+  }
+  return failures;
 }
 
 function buildDetailWriteFailureMessage(

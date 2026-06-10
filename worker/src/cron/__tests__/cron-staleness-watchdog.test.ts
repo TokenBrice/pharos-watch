@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { buildCacheStatusesMock, cacheStore, sendAlertMock } = vi.hoisted(() => ({
+const { buildCacheStatusesMock, cacheStore, detailUpdatedAtStore, deletedCacheKeys, sendAlertMock } = vi.hoisted(() => ({
   buildCacheStatusesMock: vi.fn(),
   cacheStore: new Map<string, string>(),
+  detailUpdatedAtStore: new Map<string, number>(),
+  deletedCacheKeys: [] as string[],
   sendAlertMock: vi.fn(),
 }));
 
@@ -23,11 +25,13 @@ vi.mock("../../lib/db-cache", () => ({
     const value = cacheStore.get(key);
     return value == null ? null : { value, updatedAt: 0 };
   }),
+  getCacheUpdatedAt: vi.fn(async (_db: D1Database, key: string) => detailUpdatedAtStore.get(key) ?? null),
   setCache: vi.fn(async (_db: D1Database, key: string, value: string) => {
     cacheStore.set(key, value);
   }),
   deleteCache: vi.fn(async (_db: D1Database, key: string) => {
     cacheStore.delete(key);
+    deletedCacheKeys.push(key);
   }),
 }));
 
@@ -86,6 +90,8 @@ describe("cron staleness watchdog", () => {
   beforeEach(() => {
     buildCacheStatusesMock.mockReset();
     cacheStore.clear();
+    detailUpdatedAtStore.clear();
+    deletedCacheKeys.length = 0;
     sendAlertMock.mockReset();
     sendAlertMock.mockResolvedValue(true);
   });
@@ -218,6 +224,51 @@ describe("cron staleness watchdog", () => {
     );
     const marker = JSON.parse(cacheStore.get(DETAIL_ALERT_KEY) ?? "{}") as { lastAlertedAt?: number };
     expect(marker.lastAlertedAt).toBeGreaterThan(0);
+  });
+
+  it("treats a marker as recovered when the detail row was rewritten after it", async () => {
+    mockCacheStatus({ stablecoins: 0 });
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rows: FakeFailureRow[] = [
+      {
+        key: "detail-write-failure:usdt-tether",
+        value: JSON.stringify({ reason: "write-error", bytes: 500 }),
+        updated_at: nowSec - 600,
+      },
+    ];
+    detailUpdatedAtStore.set("detail:usdt-tether", nowSec - 60);
+
+    const result = await runCronStalenessWatchdog(fakeDb(rows), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      detailWriteFailures: Array<{ stablecoinId: string }>;
+    };
+
+    expect(result.status).toBe("ok");
+    expect(metadata.detailWriteFailures).toEqual([]);
+    expect(sendAlertMock).not.toHaveBeenCalled();
+    expect(deletedCacheKeys).toContain("detail-write-failure:usdt-tether");
+  });
+
+  it("keeps markers whose detail row predates the failure", async () => {
+    mockCacheStatus({ stablecoins: 0 });
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rows: FakeFailureRow[] = [
+      {
+        key: "detail-write-failure:usdt-tether",
+        value: JSON.stringify({ reason: "value-too-large", bytes: 2_000_000 }),
+        updated_at: nowSec - 600,
+      },
+    ];
+    detailUpdatedAtStore.set("detail:usdt-tether", nowSec - 3600);
+
+    const result = await runCronStalenessWatchdog(fakeDb(rows), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      detailWriteFailures: Array<{ stablecoinId: string }>;
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.detailWriteFailures.map((f) => f.stablecoinId)).toEqual(["usdt-tether"]);
+    expect(deletedCacheKeys).not.toContain("detail-write-failure:usdt-tether");
   });
 
   it("respects the alert cooldown for detail write-failure alerts", async () => {
