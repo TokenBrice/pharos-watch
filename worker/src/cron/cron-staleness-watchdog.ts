@@ -21,6 +21,68 @@ const WATCHED_LANE_KEYS = [
 const ALERT_COOLDOWN_SEC = 3600;
 const ALERT_CACHE_PREFIX = "cron-staleness-watchdog:alert:";
 
+// Markers written by the detail handler when a per-coin cache write fails or
+// exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
+// detail rows can't be age-monitored like cron lanes (an old row may just be
+// an unvisited coin), so the write failure itself is the staleness signal.
+const DETAIL_WRITE_FAILURE_PREFIX = "detail-write-failure:";
+const DETAIL_WRITE_FAILURE_FRESH_SEC = 24 * 3600;
+const DETAIL_WRITE_FAILURE_RETENTION_SEC = 7 * 24 * 3600;
+
+export interface DetailWriteFailureObservation {
+  stablecoinId: string;
+  reason: string;
+  bytes: number | null;
+  ageSeconds: number;
+}
+
+export async function loadDetailWriteFailures(
+  db: D1Database,
+  nowSec: number,
+): Promise<DetailWriteFailureObservation[]> {
+  // Prune markers past retention so resolved incidents age out of the table.
+  await db
+    .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
+    .bind(`${DETAIL_WRITE_FAILURE_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
+    .run();
+
+  const rows = await db
+    .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ? AND updated_at >= ?")
+    .bind(`${DETAIL_WRITE_FAILURE_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
+    .all<{ key: string; value: string; updated_at: number }>();
+
+  return (rows.results ?? []).map((row) => {
+    let reason = "unknown";
+    let bytes: number | null = null;
+    try {
+      const parsed = JSON.parse(row.value) as { reason?: unknown; bytes?: unknown };
+      if (typeof parsed.reason === "string") reason = parsed.reason;
+      if (typeof parsed.bytes === "number") bytes = parsed.bytes;
+    } catch {
+      // keep defaults
+    }
+    return {
+      stablecoinId: row.key.slice(DETAIL_WRITE_FAILURE_PREFIX.length),
+      reason,
+      bytes,
+      ageSeconds: Math.max(0, nowSec - row.updated_at),
+    };
+  });
+}
+
+function buildDetailWriteFailureMessage(
+  failures: readonly DetailWriteFailureObservation[],
+  nowSec: number,
+): string {
+  const lines = failures.map((failure) =>
+    `- detail:${failure.stablecoinId}: ${failure.reason}${failure.bytes != null ? ` (${failure.bytes} bytes)` : ""}, last failed ${formatStalenessDurationSeconds(failure.ageSeconds)} ago`,
+  );
+  return [
+    `Per-coin detail cache writes are failing (serving via synchronous upstream refetch) at ${new Date(nowSec * 1000).toISOString()}.`,
+    ...lines,
+  ].join("\n");
+}
+
 export interface CronStalenessObservation {
   laneKey: CacheFreshnessLaneKey;
   cacheKey: string;
@@ -219,11 +281,37 @@ export async function runCronStalenessWatchdog(
     alertedCacheKeys,
   });
 
+  const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
+  let detailFailureAlerted = false;
+  if (detailWriteFailures.length > 0 && alertWebhookUrl) {
+    const detailMarkerKey = alertCacheKey("detail-write-failures");
+    const detailMarkerRow = await getCache(db, detailMarkerKey);
+    const detailMarker = readMarker(detailMarkerRow?.value);
+    if (nowSec - (detailMarker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC) {
+      detailFailureAlerted = await sendAlert(
+        alertWebhookUrl,
+        "Detail cache writes failing",
+        buildDetailWriteFailureMessage(detailWriteFailures, nowSec),
+      );
+      await setCache(
+        db,
+        detailMarkerKey,
+        JSON.stringify({
+          firstStaleAt: detailMarker?.firstStaleAt ?? nowSec,
+          lastObservedAt: nowSec,
+          lastAlertedAt: detailFailureAlerted ? nowSec : detailMarker?.lastAlertedAt ?? 0,
+        } satisfies AlertMarker),
+      );
+    }
+  }
+
   return {
-    status: stale.length > 0 ? "degraded" : "ok",
-    itemCount: stale.length,
+    status: stale.length > 0 || detailWriteFailures.length > 0 ? "degraded" : "ok",
+    itemCount: stale.length + detailWriteFailures.length,
     metadata: JSON.stringify({
       stale,
+      detailWriteFailures,
+      detailFailureAlerted,
       attemptedAlerts: dueForAlert.map((observation) => observation.cacheKey),
       alerted: [...alertedCacheKeys],
       failedAlerts: dueForAlert

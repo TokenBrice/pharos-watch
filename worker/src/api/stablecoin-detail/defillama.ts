@@ -110,7 +110,16 @@ export function normalizeDefiLlamaDetailBody(
       [key: string]: unknown;
     }>;
     address?: unknown;
+    chainBalances?: unknown;
   };
+
+  // Drop the per-chain full-history blob: for large coins it is ~98% of the
+  // upstream payload (USDT: ~21.0 MB of 21.3 MB across 127 chains), has no
+  // consumer in the documented contract or the frontend, and pushed detail
+  // cache rows past D1's 2 MiB value cap — silently freezing flagship coins'
+  // cached detail for weeks. Current per-chain supply remains available via
+  // /api/stablecoins chainCirculating.
+  delete parsed.chainBalances;
 
   const schemaResult = DlDetailResponseSchema.safeParse(parsed);
   if (!schemaResult.success) {
@@ -126,7 +135,9 @@ export function normalizeDefiLlamaDetailBody(
   }
 
   if (!Array.isArray(parsed.tokens)) {
-    return curatedAddress ? JSON.stringify(parsed) : body;
+    // Serialize unconditionally so the chainBalances strip applies even when
+    // there is no curated address and no tokens array to normalize.
+    return JSON.stringify(parsed);
   }
 
   const isNonUsd = isNonUsdPeg(meta);

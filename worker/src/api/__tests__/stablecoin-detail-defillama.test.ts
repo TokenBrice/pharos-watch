@@ -130,4 +130,36 @@ describe("normalizeDefiLlamaDetailBody", () => {
   it("throws for invalid upstream JSON", () => {
     expect(() => normalizeDefiLlamaDetailBody("{", { flags: { pegCurrency: "EUR" } })).toThrow();
   });
+
+  it("strips the chainBalances blob while preserving other passthrough fields", () => {
+    // chainBalances is ~98% of the upstream payload for large coins and once
+    // pushed cached rows past D1's 2 MiB value cap (silently freezing them).
+    const body = JSON.stringify({
+      price: 1,
+      pegMechanism: "fiat-backed",
+      currentChainBalances: { Ethereum: { peggedUSD: 50 } },
+      chainBalances: { Ethereum: { tokens: [{ date: 1, circulating: { peggedUSD: 100 } }] } },
+      tokens: [{ totalCirculating: { peggedUSD: 100 } }],
+    });
+
+    const normalized = JSON.parse(
+      normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }),
+    ) as Record<string, unknown>;
+
+    expect(normalized.chainBalances).toBeUndefined();
+    expect(normalized.pegMechanism).toBe("fiat-backed");
+    expect(normalized.currentChainBalances).toEqual({ Ethereum: { peggedUSD: 50 } });
+  });
+
+  it("strips chainBalances even when the payload has no tokens array", () => {
+    const body = JSON.stringify({
+      price: 1,
+      chainBalances: { Ethereum: { tokens: [] } },
+    });
+
+    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, undefined)) as Record<string, unknown>;
+
+    expect(normalized.chainBalances).toBeUndefined();
+    expect(normalized.price).toBe(1);
+  });
 });

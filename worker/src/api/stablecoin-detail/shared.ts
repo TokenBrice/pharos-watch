@@ -10,6 +10,10 @@ export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
 export const DETAIL_UPSTREAM_MAX_RETRIES = 2;
 export const DETAIL_STALE_CACHE_MAX_AGE_SECONDS = DAY_SECONDS;
 const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
+// D1 caps a single value at 2 MiB (2,097,152 B); leave headroom so the write
+// is refused here (with a failure marker) instead of erroring inside D1.
+export const DETAIL_CACHE_MAX_VALUE_BYTES = 1_900_000;
+export const DETAIL_WRITE_FAILURE_KEY_PREFIX = "detail-write-failure:";
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];
@@ -114,15 +118,39 @@ export function createDetailResponseHelpers(config: {
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
 
+  // Failed/oversized cache writes used to vanish into sampled console logs,
+  // leaving flagship coins on a synchronous-refetch-per-request path for
+  // weeks. A small marker row makes the failure visible to the staleness
+  // watchdog, which alerts on fresh markers.
+  const recordCacheWriteFailure = async (reason: string, bytes: number): Promise<void> => {
+    try {
+      await setCache(
+        config.db,
+        `${DETAIL_WRITE_FAILURE_KEY_PREFIX}${config.stablecoinId}`,
+        JSON.stringify({ reason, bytes }),
+      );
+    } catch {
+      // D1 itself is unavailable; cron telemetry covers that failure mode.
+    }
+  };
+
   const queueCacheWrite = (body: string): void => {
     config.execCtx.waitUntil(
       (async () => {
+        if (body.length > DETAIL_CACHE_MAX_VALUE_BYTES) {
+          console.error(
+            `[detail] cache write skipped stablecoin=${config.stablecoinId} bytes=${body.length} exceeds ${DETAIL_CACHE_MAX_VALUE_BYTES}`,
+          );
+          await recordCacheWriteFailure("value-too-large", body.length);
+          return;
+        }
         try {
           await setCache(config.db, cacheKey, body);
         } catch (err) {
           console.error(
             `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${body.length} error=${String(err).slice(0, 300)}`,
           );
+          await recordCacheWriteFailure("write-error", body.length);
         }
       })(),
     );

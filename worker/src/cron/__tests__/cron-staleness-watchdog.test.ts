@@ -31,9 +31,39 @@ vi.mock("../../lib/db-cache", () => ({
   }),
 }));
 
-import { evaluateCronStaleness, runCronStalenessWatchdog } from "../cron-staleness-watchdog";
+import { evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog } from "../cron-staleness-watchdog";
 
 const ALERT_KEY = "cron-staleness-watchdog:alert:stablecoins";
+const DETAIL_ALERT_KEY = "cron-staleness-watchdog:alert:detail-write-failures";
+
+interface FakeFailureRow {
+  key: string;
+  value: string;
+  updated_at: number;
+}
+
+// Minimal D1 stand-in for the raw detail-write-failure marker queries
+// (everything else goes through the mocked db-cache module).
+function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
+  return {
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        run: async () => {
+          if (sql.startsWith("DELETE")) {
+            const cutoff = args[1] as number;
+            for (let i = failureRows.length - 1; i >= 0; i -= 1) {
+              if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
+            }
+          }
+          return { meta: { changes: 0 } };
+        },
+        all: async () => ({
+          results: failureRows.filter((row) => row.updated_at >= (args[1] as number)),
+        }),
+      }),
+    }),
+  } as unknown as D1Database;
+}
 
 function mockCacheStatus(ages: Record<string, number | null>) {
   buildCacheStatusesMock.mockResolvedValue({
@@ -95,7 +125,7 @@ describe("cron staleness watchdog", () => {
     sendAlertMock.mockResolvedValueOnce(false);
     mockCacheStatus({ stablecoins: 1_801 });
 
-    const result = await runCronStalenessWatchdog({} as D1Database, "https://alerts.example/webhook");
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       alerted: string[];
       attemptedAlerts: string[];
@@ -114,7 +144,7 @@ describe("cron staleness watchdog", () => {
     sendAlertMock.mockResolvedValueOnce(false);
     mockCacheStatus({ stablecoins: 0 });
 
-    const result = await runCronStalenessWatchdog({} as D1Database, "https://alerts.example/webhook");
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       recovered: string[];
       failedRecoveryAlerts: string[];
@@ -129,12 +159,87 @@ describe("cron staleness watchdog", () => {
     cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
     mockCacheStatus({ stablecoins: 0 });
 
-    const result = await runCronStalenessWatchdog({} as D1Database, "https://alerts.example/webhook");
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       deliveredRecoveryAlerts: string[];
     };
 
     expect(metadata.deliveredRecoveryAlerts).toEqual(["stablecoins"]);
     expect(cacheStore.has(ALERT_KEY)).toBe(false);
+  });
+
+  it("parses fresh detail write-failure markers and prunes expired ones", async () => {
+    const nowSec = 1_750_000_000;
+    const rows: FakeFailureRow[] = [
+      {
+        key: "detail-write-failure:usdt-tether",
+        value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }),
+        updated_at: nowSec - 600,
+      },
+      {
+        key: "detail-write-failure:old-coin",
+        value: JSON.stringify({ reason: "write-error", bytes: 100 }),
+        updated_at: nowSec - 8 * 24 * 3600,
+      },
+    ];
+
+    const failures = await loadDetailWriteFailures(fakeDb(rows), nowSec);
+
+    expect(failures).toEqual([
+      { stablecoinId: "usdt-tether", reason: "value-too-large", bytes: 21_000_000, ageSeconds: 600 },
+    ]);
+    // The 8-day-old marker is pruned by the retention DELETE.
+    expect(rows.map((row) => row.key)).toEqual(["detail-write-failure:usdt-tether"]);
+  });
+
+  it("degrades and alerts when detail cache writes are failing", async () => {
+    mockCacheStatus({ stablecoins: 0 });
+    const rows: FakeFailureRow[] = [
+      {
+        key: "detail-write-failure:usdt-tether",
+        value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }),
+        updated_at: Math.floor(Date.now() / 1000) - 60,
+      },
+    ];
+
+    const result = await runCronStalenessWatchdog(fakeDb(rows), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      detailWriteFailures: Array<{ stablecoinId: string }>;
+      detailFailureAlerted: boolean;
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.detailWriteFailures.map((f) => f.stablecoinId)).toEqual(["usdt-tether"]);
+    expect(metadata.detailFailureAlerted).toBe(true);
+    expect(sendAlertMock).toHaveBeenCalledWith(
+      "https://alerts.example/webhook",
+      "Detail cache writes failing",
+      expect.stringContaining("detail:usdt-tether: value-too-large"),
+    );
+    const marker = JSON.parse(cacheStore.get(DETAIL_ALERT_KEY) ?? "{}") as { lastAlertedAt?: number };
+    expect(marker.lastAlertedAt).toBeGreaterThan(0);
+  });
+
+  it("respects the alert cooldown for detail write-failure alerts", async () => {
+    mockCacheStatus({ stablecoins: 0 });
+    const nowSec = Math.floor(Date.now() / 1000);
+    cacheStore.set(
+      DETAIL_ALERT_KEY,
+      JSON.stringify({ firstStaleAt: nowSec - 120, lastObservedAt: nowSec - 120, lastAlertedAt: nowSec - 120 }),
+    );
+    const rows: FakeFailureRow[] = [
+      {
+        key: "detail-write-failure:usdt-tether",
+        value: JSON.stringify({ reason: "write-error", bytes: 500 }),
+        updated_at: nowSec - 60,
+      },
+    ];
+
+    const result = await runCronStalenessWatchdog(fakeDb(rows), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { detailFailureAlerted: boolean };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.detailFailureAlerted).toBe(false);
+    expect(sendAlertMock).not.toHaveBeenCalled();
   });
 });

@@ -470,6 +470,8 @@ When a D1 detail cache row exists but is older than the 5-minute TTL and younger
 
 For regular stablecoins the response still includes the raw DefiLlama detail fields, but the worker now also materializes `totalCirculatingUSD` and `totalCirculating` on each token row for contract consistency. Commodity and CG-only tokens are returned directly in the normalized shape above.
 
+The upstream `chainBalances` per-chain history blob is stripped before caching and serving: for large coins it is ~98% of the upstream payload (USDT: ~21 MB) and pushed cached rows past D1's 2 MiB value cap. Current per-chain supply remains available as `chainCirculating` on `GET /api/stablecoins`; consumers needing full per-chain history should query DefiLlama directly.
+
 For non-USD pegs, `totalCirculating` remains in native units while `totalCirculatingUSD` is converted to USD using the current token price before caching, so the USD field always reflects market cap regardless of peg type.
 
 ---
