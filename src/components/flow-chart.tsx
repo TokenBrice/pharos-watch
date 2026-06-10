@@ -12,6 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives/axes";
+import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
@@ -40,6 +41,23 @@ interface ChartDatum {
   rollingNet: number;
   isInterpolated: boolean;
 }
+
+const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "UTC",
+});
+
+const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
+  { id: "time", label: "Time (UTC)", format: (row) => FLOW_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "mint", label: "Minted (USD)", format: (row) => formatCurrency(row.mint, 0) },
+  { id: "burn", label: "Burned (USD)", format: (row) => formatCurrency(row.burn, 0) },
+  { id: "net", label: "Net flow (USD)", format: (row) => formatCurrency(row.net, 0) },
+  { id: "cumulative", label: "Cumulative (USD)", format: (row) => formatCurrency(row.cumulative, 0) },
+];
 
 const DAY_SECONDS = DAY_HOURS * 60 * 60;
 const WATERFALL_BUCKET_THRESHOLD_HOURS = 7 * DAY_HOURS;
@@ -262,6 +280,21 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         role="figure"
         aria-label={`Mint and burn waterfall chart showing ${chartData.length} ${useDailyBuckets ? "daily" : "hourly"} data points`}
       >
+        {(() => {
+          const { rows, truncated } = capDataForTable(chartData, 90);
+          const bucketLabel = useDailyBuckets ? "daily" : "hourly";
+          return (
+            <ChartDataTable
+              caption={
+                truncated
+                  ? `Mint and burn flow — most recent ${rows.length} of ${chartData.length} ${bucketLabel} buckets`
+                  : `Mint and burn flow — ${chartData.length} ${bucketLabel} buckets`
+              }
+              data={rows}
+              columns={FLOW_TABLE_COLUMNS}
+            />
+          );
+        })()}
         {isChartReady ? (
           <ComposedChart
             width={width}

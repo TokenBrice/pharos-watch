@@ -15,6 +15,7 @@ import {
 } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
@@ -33,6 +34,25 @@ function formatTooltip(value: number): [string, string] {
  * Calibrated to match the wider Pharos depeg threshold (100 bps for USD pegs)
  * and to give a calm gradient of severity inside that envelope.
  */
+const PEG_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+const PEG_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; price: number }>[] = [
+  { id: "date", label: "Date", format: (row) => PEG_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "price", label: "Price (USD)", format: (row) => `$${row.price.toFixed(6)}` },
+  {
+    id: "deviation",
+    label: "Deviation (bps)",
+    format: (row) => {
+      const bps = Math.round((row.price - 1) * 10000);
+      return `${bps > 0 ? "+" : ""}${bps}`;
+    },
+  },
+];
+
 const PEG_BAND_BPS = {
   tight: 25,
   drift: 50,
@@ -306,6 +326,20 @@ export function PegDeviationChart({
           role="figure"
           aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
         >
+          {(() => {
+            const { rows, truncated } = capDataForTable(visibleData, 90);
+            return (
+              <ChartDataTable
+                caption={
+                  truncated
+                    ? `Peg deviation history — most recent ${rows.length} of ${visibleData.length} data points`
+                    : `Peg deviation history — ${visibleData.length} data points`
+                }
+                data={rows}
+                columns={PEG_TABLE_COLUMNS}
+              />
+            );
+          })()}
           {isChartReady ? (
             <LineChart
               width={width}
