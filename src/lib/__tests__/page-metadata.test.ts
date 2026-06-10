@@ -135,6 +135,21 @@ describe("buildStablecoinDetailMetadata", () => {
     );
   });
 
+  it("gives pre-launch coins the static og card; live and frozen keep the worker card", () => {
+    const { active, preLaunch, frozen } = fixtures;
+    const ogUrl = (coin: unknown) => {
+      const metadata = buildStablecoinDetailMetadata(coin as Parameters<typeof buildStablecoinDetailMetadata>[0]);
+      const images = metadata.openGraph?.images as Array<{ url: string }>;
+      return images[0].url;
+    };
+
+    // Pre-launch ids are outside the worker's READABLE_IDS set, so the
+    // dynamic card 404s — the metadata must not reference it.
+    expect(ogUrl(preLaunch)).toBe("/og-card.png");
+    expect(ogUrl(active)).toBe(`https://api.pharos.watch/api/og/stablecoin/${active.id}`);
+    expect(ogUrl(frozen)).toBe(`https://api.pharos.watch/api/og/stablecoin/${frozen.id}`);
+  });
+
   it("falls back to symbol-led stablecoin titles when names are too long for snippets", () => {
     const longNameCoin = {
       ...fixtures.active,
