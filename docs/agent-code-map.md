@@ -17,6 +17,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/admin/error.tsx`
 - `src/app/admin/page.tsx` - route /admin; default:AdminPage, metadata
 - `src/app/alt-pegs/client.tsx` - AltPegsClient
+- `src/app/alt-pegs/error.tsx`
 - `src/app/alt-pegs/page.tsx` - route /alt-pegs; metadata
 - `src/app/api/page.tsx` - route /api; default:ApiAccessPage, metadata
 - `src/app/blacklist/page.tsx` - route /blacklist; default:LegacyBlacklistPage, metadata
@@ -25,6 +26,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/chains/[chain]/client.tsx` - ChainProfileClient
 - `src/app/chains/[chain]/page.tsx` - route /chains/[chain]; default:ChainProfilePage, generateMetadata, generateStaticParams
 - `src/app/chains/client.tsx` - ChainsLeaderboardClient
+- `src/app/chains/error.tsx`
 - `src/app/chains/page.tsx` - route /chains; default:ChainsPage, metadata
 - `src/app/changelog/page.tsx` - route /changelog; default:ChangelogPage, metadata
 - `src/app/compare/[slug]/page.tsx` - route /compare/[slug]; default:StaticComparisonPage, generateMetadata, generateStaticParams
@@ -49,6 +51,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/dependency-map/error.tsx`
 - `src/app/dependency-map/page.tsx` - route /dependency-map; metadata
 - `src/app/digest/[date]/page.tsx` - route /digest/[date]; default:DigestDetailPage, generateMetadata, generateStaticParams
+- `src/app/digest/error.tsx`
 - `src/app/digest/page.tsx` - route /digest; default:DigestArchivePage, metadata
 - `src/app/docs/[slug]/page.tsx` - route /docs/[slug]; default:DocPage, generateMetadata, generateStaticParams
 - `src/app/docs/page.tsx` - route /docs; default:DocsIndexPage, metadata
@@ -130,6 +133,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/timeline/client.tsx` - TimelineClient
 - `src/app/timeline/error.tsx`
 - `src/app/timeline/page.tsx` - route /timeline; default:TimelinePage, metadata
+- `src/app/upcoming/error.tsx`
 - `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
 - `src/app/yield/client.tsx` - YieldClient, YieldStoryCallouts, buildYieldStoryCallouts
 - `src/app/yield/error.tsx`
@@ -242,7 +246,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
-- ... 130 more files omitted; use `rg --files src/lib` for the full list.
+- ... 131 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -546,7 +550,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
-- `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, evaluateCronStaleness, runCronStalenessWatchdog
+- `worker/src/cron/cron-duration-watchdog.ts` - DURATION_ALERT_AVG_RATIO, DURATION_ALERT_CAP_HITS, runCronDurationWatchdog
+- `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, DetailWriteFailureObservation, evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog
 - `worker/src/cron/daily-digest.ts` - classifyRegime, generateDailyDigest
 - `worker/src/cron/daily-digest/collectors-history.ts` - collectCrossDayTrends, collectHistoricalContext, collectPsiContributors, collectTotalMcapAth
 - `worker/src/cron/daily-digest/collectors-market.ts` - collectActiveDepegs, collectBlacklistActivity, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity
@@ -610,8 +615,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- `worker/src/cron/dex-liquidity/challenger-publish.ts` - DexPriceChallengerPoolRow, DexPriceChallengerPublicationInput, DexPriceChallengerPublicationPlan, DexPriceChallengerSnapshotRow, DexPriceChallengerTableState, buildDexPriceChallengerPublicationPlan
-- ... 308 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 310 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -719,6 +723,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
 - `scripts/__tests__/lighthouse-static-export.test.ts`
+- `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
 - `scripts/__tests__/remote-d1.test.ts`
@@ -738,5 +743,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/test-merge-gate.test.ts`
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/__tests__/vitest-ci-args.test.ts`
-- `scripts/__tests__/wait-for-workflow-job.test.ts`
-- ... 164 more files omitted; use `rg --files scripts` for the full list.
+- ... 165 more files omitted; use `rg --files scripts` for the full list.
