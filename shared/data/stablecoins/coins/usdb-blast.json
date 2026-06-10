@@ -117,7 +117,10 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Metalayer contracts", "url": "https://metalayerlabs.mintlify.app/building/contracts" },
+        {
+          "label": "Metalayer contracts",
+          "url": "https://metalayerlabs.mintlify.app/building/contracts"
+        },
         {
           "label": "Metalayer WETH yield guide",
           "url": "https://metalayerlabs.mintlify.app/building/guides/weth-yield"
@@ -128,5 +131,6 @@
         "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy."
       ]
     }
-  }
+  },
+  "launchDate": "2026-06-10"
 }
