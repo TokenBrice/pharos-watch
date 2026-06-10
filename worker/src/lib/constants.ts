@@ -48,6 +48,13 @@ export const DEX_PRICE_CHECK_UI_MIN_TVL_USD = 250_000;
 /** D1 batch statement limit per db.batch() call */
 export const D1_BATCH_SIZE = 100;
 
+/**
+ * Cache-table key prefix for per-coin detail cache write-failure markers.
+ * Written by the detail handler on skipped/failed writes; scanned by the
+ * cron staleness watchdog, which alerts on fresh markers.
+ */
+export const DETAIL_WRITE_FAILURE_KEY_PREFIX = "detail-write-failure:";
+
 // --- External API base URLs ---
 
 export const ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api";

@@ -6,6 +6,7 @@ import {
 import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
 import { sendAlert } from "../lib/alerts";
+import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { buildCacheStatuses } from "../lib/api-freshness";
@@ -25,7 +26,6 @@ const ALERT_CACHE_PREFIX = "cron-staleness-watchdog:alert:";
 // exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
 // detail rows can't be age-monitored like cron lanes (an old row may just be
 // an unvisited coin), so the write failure itself is the staleness signal.
-const DETAIL_WRITE_FAILURE_PREFIX = "detail-write-failure:";
 const DETAIL_WRITE_FAILURE_FRESH_SEC = 24 * 3600;
 const DETAIL_WRITE_FAILURE_RETENTION_SEC = 7 * 24 * 3600;
 
@@ -43,12 +43,12 @@ export async function loadDetailWriteFailures(
   // Prune markers past retention so resolved incidents age out of the table.
   await db
     .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
-    .bind(`${DETAIL_WRITE_FAILURE_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
+    .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
     .run();
 
   const rows = await db
     .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ? AND updated_at >= ?")
-    .bind(`${DETAIL_WRITE_FAILURE_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
+    .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
     .all<{ key: string; value: string; updated_at: number }>();
 
   return (rows.results ?? []).map((row) => {
@@ -62,7 +62,7 @@ export async function loadDetailWriteFailures(
       // keep defaults
     }
     return {
-      stablecoinId: row.key.slice(DETAIL_WRITE_FAILURE_PREFIX.length),
+      stablecoinId: row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length),
       reason,
       bytes,
       ageSeconds: Math.max(0, nowSec - row.updated_at),

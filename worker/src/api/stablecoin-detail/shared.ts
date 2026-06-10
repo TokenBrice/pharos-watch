@@ -1,7 +1,7 @@
 import { setCache } from "../../lib/db-cache";
 import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { CACHE_PROFILES } from "../../lib/constants";
+import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-utils";
 
@@ -12,8 +12,7 @@ export const DETAIL_STALE_CACHE_MAX_AGE_SECONDS = DAY_SECONDS;
 const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
 // D1 caps a single value at 2 MiB (2,097,152 B); leave headroom so the write
 // is refused here (with a failure marker) instead of erroring inside D1.
-export const DETAIL_CACHE_MAX_VALUE_BYTES = 1_900_000;
-export const DETAIL_WRITE_FAILURE_KEY_PREFIX = "detail-write-failure:";
+const DETAIL_CACHE_MAX_VALUE_BYTES = 1_900_000;
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];

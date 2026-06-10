@@ -13,8 +13,8 @@ import { throwIfAborted } from "../lib/abort";
  * in a week, so capacity is budgeted before the timeout starts truncating
  * runs. Per-job stats are always emitted in cron metadata for trend review.
  */
-export const DURATION_ALERT_AVG_RATIO = 0.8;
-export const DURATION_ALERT_CAP_HITS = 3;
+const DURATION_ALERT_AVG_RATIO = 0.8;
+const DURATION_ALERT_CAP_HITS = 3;
 const LOOKBACK_SEC = 7 * 86400;
 // Skip jobs with too few recent runs (fresh deploys, paused lanes) — a 7d
 // average over a handful of runs is noise, not a trend.
