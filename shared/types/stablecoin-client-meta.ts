@@ -105,7 +105,6 @@ export type StablecoinClientMeta = Pick<
   | "symbol"
   | "oneLiner"
   | "flags"
-  | "pegMechanism"
   | "mechanismArchetype"
   | "archetypeOverride"
   | "geckoId"
@@ -126,10 +125,7 @@ export type StablecoinClientMeta = Pick<
   | "infrastructures"
   | "mica"
   | "yieldConfig"
-  | "liveReservesConfig"
-  | "proofOfReserves"
   | "reserves"
-  | "collateral"
   | "collateralQuality"
 > & {
   blacklistStatus?: BlacklistClientStatus;
@@ -144,7 +140,6 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "symbol",
   "oneLiner",
   "flags",
-  "pegMechanism",
   "mechanismArchetype",
   "archetypeOverride",
   "geckoId",
@@ -166,9 +161,6 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "mica",
   "genius",
   "yieldConfig",
-  "liveReservesConfig",
-  "proofOfReserves",
   "reserves",
-  "collateral",
   "collateralQuality",
 ] as const satisfies ReadonlyArray<keyof StablecoinClientMeta>;
