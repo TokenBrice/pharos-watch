@@ -481,6 +481,7 @@ function buildRouteCaptureScript() {
       innerWidth,
       overflowDelta: scrollWidth - innerWidth,
       scrollWidth,
+      hasUpstreamFailureNotice: text.includes("Failed to load") || text.includes("Refresh failed"),
       textLength: text.replace(/\\s+/g, " ").trim().length,
       textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 160),
       title: document.title,
@@ -538,7 +539,11 @@ export function assertRouteSummary(summary, { strictTouchTargets }) {
     failures.push(`horizontal overflow ${summary.scrollWidth}px > ${summary.innerWidth}px`);
   }
   const tableOutcome = getTableScanOutcome(summary.tableScan);
-  if (tableOutcome.failCount > 0) {
+  // Data-driven tables render degenerate geometry when the page is in its
+  // API-failure state (upstream/proxy unavailable or throttled). The check
+  // exists to catch CSS breakage, not upstream outages — the runner prints a
+  // WARN for these instead.
+  if (tableOutcome.failCount > 0 && !summary.hasUpstreamFailureNotice) {
     failures.push(
       `table geometry failures=${tableOutcome.failCount} (${tableOutcome.issues
         .slice(0, 3)
@@ -586,6 +591,14 @@ async function runRouteCheck(page, options) {
   try {
     let summary = await captureRoute(page, options);
     let failures = assertRouteSummary(summary, { consoleMessages, strictTouchTargets });
+    {
+      const tableOutcome = getTableScanOutcome(summary.tableScan);
+      if (tableOutcome.failCount > 0 && summary.hasUpstreamFailureNotice) {
+        console.log(
+          `[mobile-ui-smoke] WARN ${options.route} @ ${formatViewport(viewport)}: table geometry skipped — page is in upstream-data-failure state`,
+        );
+      }
+    }
     if (failures.length > 0 && failures.every((failure) => failure.startsWith("table geometry"))) {
       // Data-driven tables can still be settling when the host machine is
       // saturated (local merge-gate matrix, shared agent sessions); reload
