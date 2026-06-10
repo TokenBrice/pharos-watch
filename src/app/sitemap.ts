@@ -18,6 +18,7 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
+import { changelogs } from "@/data/changelogs";
 import { selectIndexableDepegEvents, selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
 
 export const dynamic = "force-static";
@@ -57,6 +58,30 @@ function fundingLastModified(): Date {
       lastEdited("/funding/").getTime(),
       fundingCosts.last_reviewed_at * 1000,
       fundingDonations.last_updated_at * 1000,
+    ),
+  );
+}
+
+/** /changelog/ moves when a new weekly entry lands, not with the daily data snapshot. */
+function changelogLastModified(): Date {
+  return new Date(
+    Math.max(
+      lastEdited("/changelog/").getTime(),
+      ...changelogs.map((entry) => new Date(entry.dateRange.to).getTime()),
+    ),
+  );
+}
+
+/** /docs/ moves when a published doc is edited, not with the daily data snapshot. */
+function docsIndexLastModified(): Date {
+  const metadata = docsMetadata as Record<string, { dateModified: string }>;
+  return new Date(
+    Math.max(
+      lastEdited("/docs/").getTime(),
+      ...PUBLIC_DOCS.map((doc) => {
+        const meta = metadata[doc.slug];
+        return meta ? new Date(meta.dateModified).getTime() : 0;
+      }),
     ),
   );
 }
@@ -290,7 +315,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/changelog/`,
-      lastModified: liveDataLastModified("/changelog/"),
+      lastModified: changelogLastModified(),
       changeFrequency: "weekly",
       priority: 0.5,
     },
@@ -453,7 +478,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const docsIndex: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/docs/`,
-      lastModified: liveDataLastModified("/docs/"),
+      lastModified: docsIndexLastModified(),
       changeFrequency: "monthly",
       priority: 0.6,
     },
