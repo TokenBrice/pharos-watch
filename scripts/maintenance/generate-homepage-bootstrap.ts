@@ -25,10 +25,11 @@ const REPO_ROOT = join(__dirname, "../..");
 const OUTPUT_PATH = join(REPO_ROOT, "src/generated/homepage-bootstrap.json");
 const CHECK_MODE = process.argv.includes("--check");
 const registry = FRONTEND_API_QUERY_REGISTRY;
-// App Router serializes server-rendered inline script content into the RSC
-// stream too, so every byte here effectively hits the homepage document twice.
-const MAX_HOMEPAGE_BOOTSTRAP_BYTES = 48_000;
-const MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES = 24_000;
+// App Router duplicates this server-rendered script into the RSC stream, so
+// inline only tiny seeds. Larger responses fetch after hydration instead of
+// burning the homepage HTML budget in the production Pages release.
+const MAX_HOMEPAGE_BOOTSTRAP_BYTES = 5_000;
+const MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES = 5_000;
 const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = [
   { id: "stablecoins", descriptor: registry.stablecoins },
   { id: "pegSummary", descriptor: registry.pegSummary },
