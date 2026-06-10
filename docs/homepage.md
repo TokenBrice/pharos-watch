@@ -33,7 +33,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 The visible top fold is split across four independently composed surfaces:
 
-- `CoreTopRail`, rendered directly under the global PSI `RegimeBar` on `/` and the core pages; it pairs the recent-events tape with the centered horizontal core submenu. On desktop core pages the combined rail is sticky at `top: 3px`, below the fixed PSI strip, so the tape and submenu persist while scrolling. On mobile, only the horizontal core submenu is sticky; the events tape scrolls away. The tape uses full mobile width plus the available desktop width to the right of the sidebar, while the submenu spans the full viewport.
+- `CoreTopRail`, rendered directly under the global PSI `RegimeBar` on `/` and the core pages; it pairs the recent-events tape with the centered horizontal core submenu. On desktop core pages the combined rail is sticky at `top: 3px`, below the fixed PSI strip, so the tape and submenu persist while scrolling. On mobile the sticky site header renders above it in the chrome stack; the events tape scrolls away and the core submenu pins just below the header. The tape uses full mobile width plus the available desktop width to the right of the sidebar, while the submenu spans the full viewport.
 - `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
 - `HomeAltHero`, whose text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
@@ -79,7 +79,7 @@ Homepage page discovery rotation is also browser-local:
 - value: `{ cursor: number }`, normalized to a non-negative integer
 - `HomeAltClient` chooses and stores a randomized spotlight cursor on homepage-client mount, even though the visual module is lazy-mounted below the fold
 - the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference/Guide pages, de-duplicates by `href`, interleaves groups, then renders one spotlight plus the next four compact modules
-- compact Page Discovery modules use route-specific `shortDescription` copy so the four minor tiles stay one-line and match the available tile width
+- compact Page Discovery modules use route-specific `shortDescription` copy sized for the tile width; the one-liners may wrap to a second line at `xl`, where the four minor tiles are narrowest
 
 ### `SiteHeader`
 
@@ -93,7 +93,7 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 ### `HomepageTape`
 
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it on the core route set, directly under the global PSI regime bar and above each page's local content. On desktop the combined tape + core submenu rail is sticky at `top: 3px`; the tape starts at the active sidebar width so it does not cover the main navigation. On mobile the tape spans the full viewport and remains in normal flow, while the core submenu itself is sticky at `top: 3px`; the mobile header offsets below that submenu on core pages. The centered core submenu spans the full viewport and includes Dashboard, Safety Scores, Depeg/DDR, FreezeWatch, Alt-Pegs, Yield Intelligence, Stability Index, and PharosWatchBot. While a core page is active, the sidebar hides duplicate core links and leaves Dashboard as the only core sidebar entry. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, while the core submenu still renders for navigation, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it on the core route set, directly under the global PSI regime bar and above each page's local content. On desktop the combined tape + core submenu rail is sticky at `top: 3px`; the tape starts at the active sidebar width so it does not cover the main navigation. On mobile the site header renders first in the chrome stack (sticky at `top: 3px`, above the rail in flow); the tape spans the full viewport beneath it and scrolls away, while the core submenu is sticky just below the 56px header. The tape shell uses an opaque card background: it is sticky on desktop, and a translucent fill without a backdrop blur let scrolled content ghost through the band. The centered core submenu spans the full viewport and includes Dashboard, Safety Scores, Depeg/DDR, FreezeWatch, Alt-Pegs, Yield Intelligence, Stability Index, and PharosWatchBot. While a core page is active, the sidebar hides duplicate core links and leaves Dashboard as the only core sidebar entry. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, while the core submenu still renders for navigation, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
 Each item carries the class styling from the homepage tape component. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 
@@ -128,11 +128,13 @@ Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 
 Under the fold (`HomeAltClient`):
 
-1. `DailyDigest` in `preview` mode
-2. `HomepageDiscoveryModule`
-3. `PegBrowseStrip`
-4. `StablecoinTable`
+1. `PegBrowseStrip`
+2. `StablecoinTable`
+3. `DailyDigest` in `preview` mode
+4. `HomepageDiscoveryModule`
 5. `HomeAltUpcomingHorizonConstellation`
+
+The directory table is the product's workbench, so it sits directly under the KPI band (June 2026 mythos pass); the editorial band (digest + discovery) follows it.
 
 ### Key Stablecoin Data
 
