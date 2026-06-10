@@ -51,7 +51,7 @@ describe("SiteHeader", () => {
     );
     expect(html).toMatch(/class="pharos-card-shell[^"]*md:flex-row/);
     expect(html).toMatch(/class="hidden[^"]*md:block/);
-    expect(html).toMatch(/class="ml-auto[^"]*md:hidden/);
+    expect(html).toMatch(/class="flex flex-wrap[^"]*md:hidden/);
     expect(html).toMatch(/class="hidden[^"]*md:flex/);
   });
 
@@ -61,6 +61,9 @@ describe("SiteHeader", () => {
       <SiteHeader tracked={200} total={180} pegCount={19} chainCount={96} />,
     );
     expect(html.match(/<h1\b/g)).toHaveLength(1);
+    // Below md the sticky site chrome carries the brand, so the masthead h1 is
+    // screen-reader-only there and renders visually from md up.
+    expect(html).toMatch(/<h1 class="sr-only md:not-sr-only/);
   });
 
   it("keeps stat pills and softens the unit labels to muted-foreground/70", () => {

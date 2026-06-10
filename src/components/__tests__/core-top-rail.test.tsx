@@ -49,7 +49,9 @@ describe("CoreTopRail", () => {
     const nav = screen.getByRole("navigation", { name: "Core pages" });
     expect(nav).toBeTruthy();
     expect(nav.className).toContain("sticky");
-    expect(nav.className).toContain("top-[3px]");
+    // Mobile: pins below the 56px site header, which renders first in the
+    // chrome stack since the top-chrome restack.
+    expect(nav.className).toContain("top-[calc(3px+3.5rem)]");
     expect(nav.className).toContain("lg:relative");
     expect(nav.className).toContain("lg:ml-[var(--pharos-core-rail-offset)]");
     expect(nav.className).toContain("lg:w-[calc(100%-var(--pharos-core-rail-offset))]");

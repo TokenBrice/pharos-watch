@@ -45,14 +45,14 @@ export function SiteHeader({ tracked, total, pegCount, chainCount }: SiteHeaderP
   return (
     <div className="pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3">
       <div className="flex min-w-0 items-center gap-2.5 md:gap-3.5">
-        <span className="md:hidden">
-          <PharosLogo size={26} className="shrink-0 rounded-lg shadow-sm" priority />
-        </span>
         <span className="hidden md:block">
           <PharosLogo size={32} className="rounded-lg shadow-sm" priority />
         </span>
         <div className="flex min-w-0 flex-col gap-0.5 md:flex-row md:items-baseline md:gap-3">
-          <h1 className="shrink-0 text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground md:text-[1.02rem] md:tracking-[0.16em]">
+          {/* Below md the sticky site chrome directly above already carries the
+              brand lockup, so the masthead h1 stays for SEO/a11y (exactly one
+              raw h1 per page) but only renders visually from md up. */}
+          <h1 className="sr-only md:not-sr-only md:shrink-0 md:font-mono md:text-[1.02rem] md:font-semibold md:uppercase md:tracking-[0.16em] md:text-foreground">
             Pharos
           </h1>
           <div className="hidden min-w-0 flex-1 md:flex md:items-baseline md:gap-2">
@@ -61,7 +61,7 @@ export function SiteHeader({ tracked, total, pegCount, chainCount }: SiteHeaderP
             </p>
           </div>
         </div>
-        <div className="ml-auto flex flex-wrap gap-1.5 text-[11px] md:hidden">
+        <div className="flex flex-wrap gap-1.5 text-[11px] md:hidden">
           <MetricPills metrics={headlineMetrics} />
         </div>
       </div>

@@ -43,7 +43,9 @@ export function CoreTopRail() {
       <HomepageTape placement="top" />
       <nav
         aria-label="Core pages"
-        className="pharos-rail-ground sticky top-[3px] z-[55] w-full border-b border-border/70 shadow-[0_1px_0_oklch(1_0_0_/0.04)] lg:relative lg:top-auto lg:z-50 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]"
+        // Mobile: pins below the 56px (h-14) site header, which now sits first
+        // in the chrome stack. Desktop: positioned by the lg-sticky wrapper.
+        className="pharos-rail-ground sticky top-[calc(3px+3.5rem)] z-[55] w-full border-b border-border/70 shadow-[0_1px_0_oklch(1_0_0_/0.04)] lg:relative lg:top-auto lg:z-50 lg:ml-[var(--pharos-core-rail-offset)] lg:w-[calc(100%-var(--pharos-core-rail-offset))]"
       >
         <div className="pharos-scrollbar-none overflow-x-auto overscroll-x-contain">
           <div className="mx-auto flex w-max min-w-full items-center justify-center [justify-content:safe_center] gap-1 px-2 py-2 sm:px-3 sm:py-1.5">

@@ -109,8 +109,10 @@ export default function RootLayout({
             <RouteChrome>
               <RegimeBar />
               <div className="h-[3px] shrink-0" />
-              <CoreTopRail />
+              {/* Mobile flow order: site header first, then the tape + core
+                  rail beneath it. Desktop is unaffected (Header is lg:hidden). */}
               <Header />
+              <CoreTopRail />
             </RouteChrome>
             <div className="flex min-h-screen">
               <RouteChrome>

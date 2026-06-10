@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, NAV_GROUPS, PRIMARY_NAV_ITEMS, isCoreNavPath } from "@/lib/nav-config";
+import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, NAV_GROUPS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -86,13 +86,13 @@ export function Header() {
   const groups = NAV_GROUPS;
   const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
   const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
-  const isCorePath = isCoreNavPath(pathname);
 
+  // The header renders above the core rail in flow, so it pins directly under
+  // the PSI strip on every route; z-[56] keeps the tape and rail sliding
+  // beneath it while scrolling.
   return (
     <header
-      className={`lg:hidden sticky z-50 border-b border-border/80 bg-background ${
-        isCorePath ? "top-[calc(3px+3.75rem)] sm:top-[calc(3px+2.75rem)]" : "top-[3px]"
-      }`}
+      className="lg:hidden sticky top-[3px] z-[56] border-b border-border/80 bg-background"
       style={{ boxShadow: "var(--elevation-rest)" }}
     >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
