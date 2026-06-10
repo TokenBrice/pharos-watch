@@ -375,7 +375,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 237 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 238 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -586,7 +586,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DDR_SNAPSHOT_TTL_SEC, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP
 - `worker/src/cron/depeg-resolver/context.ts` - DdrContextLoadResult, DdrLoadedContext, emptyDdrLineage, loadActiveConfirmedEvents, loadDdrContext, loadPolicyUniverseEvents
 - `worker/src/cron/depeg-resolver/incident-resolution.ts` - resolveDdrIncidents
-- `worker/src/cron/depeg-resolver/incident-state.ts` - applyConfirmationTimes, computeLockTiming, ensureCanonicalIncidentsForEvents, loadPendingPromotionConfirmationTimes, recordConfirmedSeenOpportunities, recordSystemHealthDeferrals
+- `worker/src/cron/depeg-resolver/incident-state.ts` - EnsureCanonicalIncidentsResult, QuarantinedIncidentEvent, applyConfirmationTimes, computeLockTiming, ensureCanonicalIncidentsForEvents, loadPendingPromotionConfirmationTimes
 - `worker/src/cron/depeg-resolver/options.ts` - normalizeComputeOptions
 - `worker/src/cron/depeg-resolver/persistence.ts` - persistDepegResolverReviewArtifacts, persistDepegResolverSnapshot
 - `worker/src/cron/depeg-resolver/public-projection.ts` - buildDdrResponse, buildDiagnosticSnapshot, buildSealPayload, buildV2PublicationBasePayload, normalizeErratumRecord
@@ -615,7 +615,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 310 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 311 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -679,7 +679,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 218 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 219 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
