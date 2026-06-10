@@ -19,9 +19,9 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 };
 
 describe("adaptReservoirReserves", () => {
-  it("declares the timestamp-less balance-sheet API as unverified-only freshness", () => {
+  it("declares the reviewed latest-state balance-sheet API as not-applicable-only freshness", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toEqual([
-      "unverified",
+      "not-applicable",
     ]);
   });
 
@@ -168,7 +168,7 @@ describe("adaptReservoirReserves", () => {
     expect(slices).toHaveLength(3);
   });
 
-  it("emits explicit unverified freshness details on fetched results", async () => {
+  it("emits reviewed not-applicable freshness with same-run-api redemption telemetry", async () => {
     const result = await fetchReservoirReserves(
       { id: "r" } as never,
       {
@@ -186,9 +186,10 @@ describe("adaptReservoirReserves", () => {
     );
 
     expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
+      freshnessMode: "not-applicable",
       details: {
         freshnessSource: "protocol-balance-sheet-api",
+        freshnessReason: expect.stringContaining("live contract state"),
       },
       totalAssetsUsd: 100,
       totalLiabilitiesUsd: 95,
@@ -196,8 +197,10 @@ describe("adaptReservoirReserves", () => {
       collateralizationRatio: 100 / 95,
       redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
     });
+    // No timestamped disclosure exists; the latest-state read must not invent one.
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.redemption).toMatchObject({
-      freshnessKind: "unverified",
+      freshnessKind: "same-run-api",
     });
   });
 

@@ -5,8 +5,8 @@ import {
   buildUnknownExposureWarning,
   classifyBucketedValues,
   fetchJsonWithRetry,
+  notApplicableFreshnessMetadata,
   requireJsonInputFromConfig,
-  unverifiedFreshnessMetadata,
 } from "./helpers";
 import type { ValueBucketRule } from "./classification";
 import { wrapperAssetMeta } from "./wrapper-assets";
@@ -269,10 +269,18 @@ export async function fetchReservoirReserves(
       unknownAssetCount: adapted.unknownAssets.length,
       ...(adapted.unknownAssets.length > 0 ? { unknownAssetLabels: adapted.unknownAssets } : {}),
       ...(adapted.sourceTotalGapPct > 0 ? { sourceTotalGapPct: adapted.sourceTotalGapPct } : {}),
-      ...unverifiedFreshnessMetadata(
-        "protocol-balance-sheet-api",
-        "Reservoir balance-sheet payload does not include a trustworthy source timestamp",
-      ),
+      // Reviewed latest-state read (2026-06-10): every balance-sheet asset row
+      // maps 1:1 to an on-chain position whose token + holder adapter contracts
+      // are disclosed by the sibling /api/reserves endpoint, accruing rows drift
+      // continuously between fetches, and spot RPC verification matched the
+      // steakUSDC row to convertToAssets(balanceOf(adapter)) within seconds of
+      // accrual. The payload is latest-state contract/API state, not a
+      // separately timestamped disclosure.
+      ...notApplicableFreshnessMetadata({
+        freshnessSource: "protocol-balance-sheet-api",
+        freshnessReason:
+          "Balance-sheet rows mirror Reservoir's disclosed on-chain adapter holdings (/api/reserves) and re-derive from live contract state on fetch",
+      }),
       unknownExposurePct: adapted.unknownExposurePct,
       ...(Number.isFinite(totalAssetsUsd) && totalAssetsUsd > 0 ? { totalAssetsUsd } : {}),
       ...(Number.isFinite(totalLiabilitiesUsd) && totalLiabilitiesUsd > 0 ? { totalLiabilitiesUsd } : {}),
@@ -293,7 +301,9 @@ export async function fetchReservoirReserves(
                 ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
                 : {}),
               capacityKind: "live-proxy-validated" as const,
-              freshnessKind: "unverified" as const,
+              // Capacity derives from the same latest-state balance-sheet read
+              // as the reserve slices (see freshness note above).
+              freshnessKind: "same-run-api" as const,
               routeStatus: "unknown" as const,
               routeStatusSource: "protocol-api" as const,
               sourceUrls: [primaryInput.url],

@@ -375,8 +375,16 @@ describe("validateAdapterOutput redemption telemetry", () => {
     );
   });
 
-  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only (infinifi)", () => {
-    const adapter = getReserveAdapter("infinifi");
+  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only", () => {
+    // No registry adapter is unverified-only anymore (infinifi gained a verified
+    // probe, reservoir is reviewed not-applicable), so cover the suppression
+    // branch with a synthetic unverified-only policy.
+    const baseAdapter = getReserveAdapter("infinifi");
+    expect(baseAdapter).not.toBeNull();
+    const adapter: ReserveAdapterDefinition = {
+      ...baseAdapter!,
+      validation: { ...baseAdapter!.validation, allowedFreshnessModes: ["unverified"] },
+    };
     const result = validateAdapterOutput(
       {
         slices,
@@ -388,23 +396,24 @@ describe("validateAdapterOutput redemption telemetry", () => {
           },
         },
       },
-      { adapter: adapter ?? undefined },
+      { adapter },
     );
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
   });
 
-  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only (reservoir)", () => {
+  it("does not flag same-run-api redemption freshness under reservoir's not-applicable policy", () => {
     const adapter = getReserveAdapter("reservoir");
     const result = validateAdapterOutput(
       {
         slices,
         metadata: {
           immediateRedeemableUsd: 1_000_000,
+          freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 1_000_000,
-            freshnessKind: "unverified",
+            freshnessKind: "same-run-api",
           },
         },
       },
@@ -413,6 +422,7 @@ describe("validateAdapterOutput redemption telemetry", () => {
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
+    expect(result.warnings.some((w) => w.code === "freshness-mode-disallowed")).toBe(false);
   });
 
   it("still emits redemption-capacity-unverified when the adapter allows verified freshness (ethena)", () => {
