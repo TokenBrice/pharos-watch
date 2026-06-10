@@ -194,10 +194,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Quill & Liquity v2 docs", "url": "https://docs.quill.finance/faq/quill-and-liquity-v2" },
-        { "label": "USDQ docs", "url": "https://docs.quill.finance/faq/usdusdq" }
+        {
+          "label": "Quill & Liquity v2 docs",
+          "url": "https://docs.quill.finance/faq/quill-and-liquity-v2"
+        },
+        {
+          "label": "USDQ docs",
+          "url": "https://docs.quill.finance/faq/usdusdq"
+        }
       ],
-      "unresolvedQuestions": ["Enumerate AccessManager roles and signer threshold for 0xBe589551397d0F28255e429DDB478620b1C2f08a before raising confidence."]
+      "unresolvedQuestions": [
+        "Enumerate AccessManager roles and signer threshold for 0xBe589551397d0F28255e429DDB478620b1C2f08a before raising confidence."
+      ]
     }
-  }
+  },
+  "launchDate": "1970-01-01"
 }
