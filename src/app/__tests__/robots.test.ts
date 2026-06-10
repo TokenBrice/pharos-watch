@@ -3,7 +3,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import robots from "../robots";
 
 describe("robots", () => {
-  it("allows crawlers to observe route-level noindex responses", () => {
+  it("allows crawlers to observe route-level noindex responses, except operational surfaces", () => {
     const metadata = robots();
 
     expect(metadata).toEqual({
@@ -11,6 +11,7 @@ describe("robots", () => {
         {
           userAgent: "*",
           allow: "/",
+          disallow: ["/admin/", "/admin-api/", "/pharoswatchbot/app/"],
         },
       ],
       sitemap: `${SITE_ORIGIN}/sitemap.xml`,

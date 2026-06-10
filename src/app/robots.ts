@@ -9,6 +9,10 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
+        // Operational surfaces that are noindex,nofollow anyway — disallowing
+        // them saves crawl budget. Routes that rely on crawlers observing a
+        // noindex response (portfolio, yield subpages, datasets) stay crawlable.
+        disallow: ["/admin/", "/admin-api/", "/pharoswatchbot/app/"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
