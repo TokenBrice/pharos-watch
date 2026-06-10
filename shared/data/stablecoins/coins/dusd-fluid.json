@@ -66,6 +66,23 @@
       "risk": "very-low"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "dusd-fluid",
+    "display": {
+      "url": "https://fluid.ch/dusd/",
+      "label": "Fluid DUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "info",

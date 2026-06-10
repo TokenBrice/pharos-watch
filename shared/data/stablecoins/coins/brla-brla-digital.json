@@ -92,6 +92,23 @@
       "risk": "low"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "brla-brla-digital",
+    "display": {
+      "url": "https://avenia.io/brla",
+      "label": "Avenia BRLA"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "polygon",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "chainTier": "established-alt-l1",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

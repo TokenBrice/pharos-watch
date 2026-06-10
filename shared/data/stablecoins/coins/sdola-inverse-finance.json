@@ -131,6 +131,32 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sdola-inverse-finance",
+    "display": {
+      "url": "https://www.inverse.finance/sDOLA",
+      "label": "Inverse Finance sDOLA"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "DOLA deposited in the sDOLA savings wrapper",
+        "risk": "high",
+        "coinId": "dola-inverse-finance",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x865377367054516e17014ccded1e7d814edc9ce4"
+      }
+    }
+  },
   "yieldConfig": {
     "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
     "yieldSource": "Inverse Finance sDOLA vault",

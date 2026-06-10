@@ -1238,6 +1238,23 @@
         "coinId": "usdt-tether"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "alusd-alchemix",
+      "display": {
+        "url": "https://alchemix.fi/",
+        "label": "Alchemix"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2021-02-27"
   },
   {
@@ -2404,17 +2421,24 @@
         "url": "https://www.macropod.com/transparency",
         "label": "Macropod reserves"
       },
-      "adapter": "curated-validated",
+      "scoring": {
+        "maxSourceAgeSec": 10000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.macropod.com/transparency"
         }
       },
       "params": {
-        "rpcUrl": "https://ethereum-rpc.publicnode.com",
-        "fallbackRpcUrl": "https://eth.llamarpc.com"
+        "slices": [
+          {
+            "name": "AUD cash held in segregated AUDM Trust account at a Big 4 Australian bank (NAB per public reporting)",
+            "pct": 100,
+            "risk": "very-low"
+          }
+        ]
       }
     },
     "launchDate": "2025-06-13"
@@ -2683,23 +2707,30 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "audx-aussie-dollar-token",
       "display": {
         "url": "https://www.audxtoken.com/transparency",
         "label": "AUDX Transparency"
       },
-      "adapter": "single-asset",
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.audxtoken.com/transparency"
         }
       },
       "params": {
-        "label": "AUD cash and government-backed instruments",
-        "risk": "low"
+        "slices": [
+          {
+            "name": "AUD cash and government-backed instruments",
+            "pct": 100,
+            "risk": "low"
+          }
+        ]
       }
     },
     "launchDate": "2024-08-26"
@@ -5386,6 +5417,23 @@
         "risk": "low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "brla-brla-digital",
+      "display": {
+        "url": "https://avenia.io/brla",
+        "label": "Avenia BRLA"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "polygon",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2023-04-18"
   },
   {
@@ -5678,16 +5726,34 @@
         "url": "https://crown-brlv.com/en/transparency/",
         "label": "Crown BRLV Transparency"
       },
-      "adapter": "curated-validated",
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "base",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.crown-brlv.com/en/transparency/"
         }
       },
       "params": {
-        "rpcUrl": "https://mainnet.base.org"
+        "slices": [
+          {
+            "name": "Brazilian Treasury bonds",
+            "pct": 99.9597,
+            "risk": "low"
+          },
+          {
+            "name": "ETFs linked to Tesouro Selic",
+            "pct": 0.0371,
+            "risk": "low"
+          },
+          {
+            "name": "Cash and equivalents",
+            "pct": 0.0032,
+            "risk": "low"
+          }
+        ]
       }
     },
     "launchDate": "2025-07-03"
@@ -11408,6 +11474,26 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "doc-money-on-chain",
+      "display": {
+        "url": "https://dapp.moneyonchain.com/",
+        "label": "Money On Chain"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "rootstock",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://public-node.rsk.co"
+      }
+    },
     "launchDate": "1970-01-01"
   },
   {
@@ -12081,6 +12167,23 @@
         "risk": "very-low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "dusd-fluid",
+      "display": {
+        "url": "https://fluid.ch/dusd/",
+        "label": "Fluid DUSD"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "notices": [
       {
         "type": "info",
@@ -12228,6 +12331,23 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "dusd-standx",
+      "display": {
+        "url": "https://docs.standx.com/",
+        "label": "StandX docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2025-03-14"
   },
   {
@@ -12888,6 +13008,23 @@
         "depType": "collateral"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "eur0-usual",
+      "display": {
+        "url": "https://tech.usual.money/overview/features/eur0",
+        "label": "Usual EUR0 docs"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2025-10-03"
   },
   {
@@ -14403,13 +14540,29 @@
         "url": "https://schuman.io/reserve-audits/",
         "label": "Schuman Reserve Audits"
       },
-      "adapter": "curated-validated",
+      "scoring": {
+        "maxSourceAgeSec": 10000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://schuman.io/reserve-audits/"
         }
+      },
+      "params": {
+        "slices": [
+          {
+            "name": "Euro cash and cash equivalents (EU banks incl. Societe Generale)",
+            "pct": 98,
+            "risk": "very-low"
+          },
+          {
+            "name": "Additional reserve fund",
+            "pct": 2,
+            "risk": "low"
+          }
+        ]
       }
     },
     "launchDate": "2024-06-22"
@@ -21467,23 +21620,30 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "gyen-gyen",
       "display": {
         "url": "https://stablecoin.z.com/attestation/",
         "label": "GMO Trust"
       },
-      "adapter": "single-asset",
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://stablecoin.z.com/attestation/"
         }
       },
       "params": {
-        "label": "JPY fiat reserves",
-        "risk": "very-low"
+        "slices": [
+          {
+            "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
+            "pct": 100,
+            "risk": "very-low"
+          }
+        ]
       }
     },
     "notices": [
@@ -23646,6 +23806,23 @@
         "risk": "low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "idrx-idrx",
+      "display": {
+        "url": "https://idrx.co/",
+        "label": "IDRX"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2023-05-23"
   },
   {
@@ -31590,6 +31767,23 @@
         "risk": "low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "mxnb-juno",
+      "display": {
+        "url": "https://mxnb.mx/transparency",
+        "label": "MXNB Transparency"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "launchDate": "2024-01-26"
   },
   {
@@ -38505,7 +38699,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://api.satoshiprotocol.org/protocol-info"
+          "url": "https://api-airdrop.river.inc/protocol-info"
         }
       }
     },
@@ -39654,6 +39848,32 @@
         "depType": "wrapper"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sdola-inverse-finance",
+      "display": {
+        "url": "https://www.inverse.finance/sDOLA",
+        "label": "Inverse Finance sDOLA"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "DOLA deposited in the sDOLA savings wrapper",
+          "risk": "high",
+          "coinId": "dola-inverse-finance",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x865377367054516e17014ccded1e7d814edc9ce4"
+        }
+      }
+    },
     "yieldConfig": {
       "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
       "yieldSource": "Inverse Finance sDOLA vault",
@@ -39774,6 +39994,32 @@
         "depType": "wrapper"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sdusd-dtrinity",
+      "display": {
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+        "label": "dTRINITY sdUSD"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "dLEND dUSD deposits",
+          "risk": "high",
+          "coinId": "dusd-dtrinity",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
@@ -42840,6 +43086,23 @@
         "risk": "high"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "susd-synthetix",
+      "display": {
+        "url": "https://www.synthetix.io/",
+        "label": "Synthetix"
+      },
+      "adapter": "curated-validated",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
@@ -57922,17 +58185,30 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "attestation-mix",
       "breakerScope": "usdv-solomon",
       "display": {
         "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
         "label": "Solomon attestations"
       },
-      "adapter": "curated-validated",
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-solana"
+          "kind": "http-html",
+          "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
         }
+      },
+      "params": {
+        "slices": [
+          {
+            "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
+            "pct": 100,
+            "risk": "very-high"
+          }
+        ]
       }
     },
     "notices": [
@@ -66084,17 +66360,21 @@
         "url": "https://www.matrixdock.com/xaum",
         "label": "Matrixdock"
       },
-      "adapter": "single-asset",
+      "adapter": "chainlink-nav",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
-          "chain": "ethereum",
+          "chain": "bsc",
           "rpcMode": "public-rpc"
         }
       },
       "params": {
-        "label": "Physical gold bars (LBMA 99.99%)",
-        "risk": "very-low"
+        "oracleAddress": "0xfa54C1c5F62ea3a5653a0b1b7148E26008eA1501",
+        "tokenAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
+        "assetLabel": "Physical gold bars (LBMA 99.99%)",
+        "assetRisk": "very-low",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
       }
     },
     "launchDate": "2024-08-28"
@@ -68078,23 +68358,35 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "xusd-straitsx",
       "display": {
         "url": "https://www.straitsx.com/xusd",
         "label": "StraitsX"
       },
-      "adapter": "single-asset",
+      "scoring": {
+        "maxSourceAgeSec": 4000000
+      },
+      "adapter": "attestation-pdf-index",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-html",
+          "url": "https://www.straitsx.com/xusd"
         }
       },
       "params": {
-        "label": "Tier 1 bank deposits & short-term securities",
-        "risk": "very-low"
+        "slices": [
+          {
+            "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
+            "pct": 50,
+            "risk": "very-low"
+          },
+          {
+            "name": "Short-term U.S. / MAS government securities",
+            "pct": 50,
+            "risk": "very-low"
+          }
+        ]
       }
     },
     "launchDate": "2024-02-01"

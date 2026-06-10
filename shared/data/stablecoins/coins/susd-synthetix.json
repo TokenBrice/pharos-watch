@@ -85,6 +85,23 @@
       "risk": "high"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "susd-synthetix",
+    "display": {
+      "url": "https://www.synthetix.io/",
+      "label": "Synthetix"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",

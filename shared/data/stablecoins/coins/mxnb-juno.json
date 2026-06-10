@@ -99,6 +99,23 @@
       "risk": "low"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "mxnb-juno",
+    "display": {
+      "url": "https://mxnb.mx/transparency",
+      "label": "MXNB Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

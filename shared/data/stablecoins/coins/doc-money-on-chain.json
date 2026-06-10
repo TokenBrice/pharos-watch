@@ -114,5 +114,25 @@
       "risk": "medium"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "doc-money-on-chain",
+    "display": {
+      "url": "https://dapp.moneyonchain.com/",
+      "label": "Money On Chain"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "rootstock",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://public-node.rsk.co"
+    }
+  },
   "launchDate": "1970-01-01"
 }

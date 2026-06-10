@@ -69,6 +69,32 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sdusd-dtrinity",
+    "display": {
+      "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+      "label": "dTRINITY sdUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "dLEND dUSD deposits",
+        "risk": "high",
+        "coinId": "dusd-dtrinity",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "dTRINITY dStake (sdUSD)",
     "yieldType": "lending-vault"

@@ -136,5 +136,22 @@
       "coinId": "usdt-tether"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "alusd-alchemix",
+    "display": {
+      "url": "https://alchemix.fi/",
+      "label": "Alchemix"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "launchDate": "2021-02-27"
 }

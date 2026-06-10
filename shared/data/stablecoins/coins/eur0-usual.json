@@ -143,5 +143,22 @@
       "depType": "collateral"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "eur0-usual",
+    "display": {
+      "url": "https://tech.usual.money/overview/features/eur0",
+      "label": "Usual EUR0 docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "launchDate": "2025-10-03"
 }

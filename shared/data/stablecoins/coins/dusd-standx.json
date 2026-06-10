@@ -81,6 +81,23 @@
       "risk": "medium"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "dusd-standx",
+    "display": {
+      "url": "https://docs.standx.com/",
+      "label": "StandX docs"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "bsc",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",

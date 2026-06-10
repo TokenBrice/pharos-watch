@@ -372,7 +372,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "apxusd-apyx",
@@ -720,7 +721,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "audm-mento",
@@ -799,7 +800,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "ausd-agora",
@@ -1681,7 +1682,8 @@
           "directMintAbility": "direct"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "brlm-mento",
@@ -1770,7 +1772,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "brz-transfero",
@@ -3585,7 +3587,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "dola-inverse-finance",
@@ -3860,7 +3863,8 @@
           "directMintAbility": "cap-limited"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "dusd-standx",
@@ -3911,7 +3915,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "ebusd-ebisu",
@@ -4190,7 +4195,8 @@
           "directMintAbility": "upgrade-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "eurau-allunity",
@@ -4707,7 +4713,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "eurot-token-teknoloji",
@@ -6952,7 +6958,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "gynusd-gyndore",
@@ -7728,7 +7734,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "inalpha-nest",
@@ -10230,7 +10237,8 @@
           "directMintAbility": "can-authorize"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "mxne-real-mxn",
@@ -12894,7 +12902,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "sdusd-dtrinity",
@@ -12941,7 +12950,8 @@
           "directMintAbility": "none"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "sfrxusd-frax",
@@ -13952,7 +13962,8 @@
           "directMintAbility": "parameter-only"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "curated-validated"
   },
   {
     "id": "susd1plus-lorenzo",
@@ -18949,7 +18960,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "usdx-hex-trust",
@@ -21431,7 +21442,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "chainlink-nav"
   },
   {
     "id": "xaut-tether",
@@ -22043,7 +22054,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "attestation-pdf-index"
   },
   {
     "id": "ybold-yearn",
