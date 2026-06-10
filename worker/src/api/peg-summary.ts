@@ -120,12 +120,17 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
   let depegEventsToday: number;
   let depegEventsYesterday: number;
+  // On a snapshot cache hit, deviations reflect the snapshot's compute time,
+  // which can lag the live stablecoins cache by up to 30 min; key the
+  // freshness fields to the older of the two.
+  let freshnessAsOf = stablecoinsCache.updatedAt;
   const now = Math.floor(Date.now() / 1000);
 
   if (pegAnalyticsCache.kind === "ok") {
     pegDataById = pegAnalyticsCache.pegDataById;
     depegEventsToday = pegAnalyticsCache.payload.depegEventsToday;
     depegEventsYesterday = pegAnalyticsCache.payload.depegEventsYesterday;
+    freshnessAsOf = Math.min(freshnessAsOf, pegAnalyticsCache.payload.computedAtSec);
   } else {
     const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
       peggedAssets,
@@ -210,11 +215,18 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     const currentBps = isNavToken ? null : pegData.currentDeviationBps;
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
 
-    // Build DEX price check if available (only for coins with meaningful supply)
+    // Build DEX price check if available (only for coins with meaningful
+    // supply). Skipped when the peg-reference authority gate withheld the
+    // deviation: the DEX cross-check would compare against the same untrusted
+    // self-referential reference, publishing an agrees/disagrees signal beside
+    // "ref n/a".
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
     const dexRow = dexPrices.get(meta.id);
     const supply = asset ? getCirculatingRaw(asset) : 0;
-    if (dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")) {
+    if (
+      pegData.pegReferenceUnavailable !== true &&
+      dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
+    ) {
       const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
       const dexBps = deriveDexDeviationBps(
         dexRow.dex_price_usd,
@@ -318,9 +330,9 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-      asOf: stablecoinsCache.updatedAt,
+      asOf: freshnessAsOf,
     }),
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.producerBacked,
-  }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
+  }, freshnessAsOf, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
 });

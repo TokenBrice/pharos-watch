@@ -1,8 +1,8 @@
 export const API_CACHE_PROFILES = {
   realtime: "public, s-maxage=60, max-age=10",
   // Cron-published payloads with 15-30 min producers: edge TTL near producer
-  // cadence instead of 60s, plus stale-while-revalidate so edge misses serve
-  // the stale copy while refreshing in the background.
+  // cadence instead of 60s. stale-while-revalidate only benefits browser
+  // caches; Cloudflare's edge cache does not honor it.
   producerBacked: "public, s-maxage=300, max-age=60, stale-while-revalidate=300",
   standard: "public, s-maxage=300, max-age=60",
   custom: "public, s-maxage=300, max-age=300",

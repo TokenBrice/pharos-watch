@@ -472,15 +472,45 @@ describe("handlePegSummary", () => {
       priceConfidence: "single-source",
       priceUpdatedAt: nowSec,
     });
-    const db = makePegSummaryDb([asset]);
+    const cacheValue = JSON.stringify({ peggedAssets: [asset] });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      { match: "depeg_events", rows: [] },
+      {
+        // A trusted DEX row must not leak a cross-check against the same
+        // untrusted self-referential median the gate just withheld.
+        match: "dex_prices",
+        rows: [
+          {
+            stablecoin_id: "eurc-circle",
+            dex_price_usd: 1.065,
+            deviation_from_primary_bps: 0,
+            source_pool_count: 4,
+            source_total_tvl: 10_000_000,
+            updated_at: nowSec - 60,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+    ]);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
-      coins: Array<{ id: string; currentDeviationBps: number | null; pegReferenceUnavailable?: boolean }>;
+      coins: Array<{
+        id: string;
+        currentDeviationBps: number | null;
+        pegReferenceUnavailable?: boolean;
+        dexPriceCheck?: { agrees: boolean } | null;
+      }>;
       summary: { coinsAtPeg: number };
     };
     const coin = body.coins.find((entry) => entry.id === "eurc-circle");
     expect(coin?.currentDeviationBps).toBeNull();
     expect(coin?.pegReferenceUnavailable).toBe(true);
+    expect(coin?.dexPriceCheck).toBeUndefined();
     expect(body.summary.coinsAtPeg).toBe(0);
   });
 
@@ -544,13 +574,12 @@ describe("handlePegSummary", () => {
       depegEventCoverageLimited: true,
     });
   });
-});
 
   it("serves peg data and event counters from the peg-analytics cache when fresh", async () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
     const pegAnalyticsValue = JSON.stringify({
-      computedAtSec: nowSec,
+      computedAtSec: nowSec - 1200,
       depegEventsToday: 2,
       depegEventsYesterday: 5,
       pegData: [
@@ -597,6 +626,7 @@ describe("handlePegSummary", () => {
     const body = (await res.json()) as {
       coins: Array<{ id: string; pegScore: number | null; currentDeviationBps: number | null }>;
       summary: { depegEventsToday: number; depegEventsYesterday: number };
+      methodology: { asOf: number };
     };
 
     // Counters can only come from the cache (the fallback compute path would
@@ -605,6 +635,10 @@ describe("handlePegSummary", () => {
     expect(body.summary.depegEventsYesterday).toBe(5);
     const usdt = body.coins.find((coin) => coin.id === "usdt-tether");
     expect(usdt?.pegScore).toBe(99);
+    // Freshness keys to the older snapshot compute time, not the newer live
+    // stablecoins cache the deviations no longer reflect.
+    expect(body.methodology.asOf).toBe(nowSec - 1200);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(1200);
   });
 
   it("falls back to direct compute when the peg-analytics cache read throws", async () => {
@@ -621,7 +655,9 @@ describe("handlePegSummary", () => {
         match: "cache",
         matchBinds: ["peg-analytics"],
         rows: [],
-        throwError: new Error("D1 DB is overloaded"),
+        // Non-retriable message: an overload-style error would run getCache's
+        // real 3-attempt backoff (~1s of sleeps) before falling back.
+        throwError: new Error("cache read failed"),
       },
       { match: "depeg_events", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -633,3 +669,4 @@ describe("handlePegSummary", () => {
     const body = (await res.json()) as { coins: Array<{ id: string }> };
     expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
   });
+});
