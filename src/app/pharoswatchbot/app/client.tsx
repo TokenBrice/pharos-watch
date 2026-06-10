@@ -272,6 +272,28 @@ export function PharosWatchBotMiniAppClient() {
     }
   };
 
+  const activateView = (key: ViewKey) => {
+    setView(key);
+    if (key !== "watchlist") setCoinInsightTarget(null);
+    webApp?.HapticFeedback?.selectionChanged?.();
+  };
+
+  // Roving tabindex needs the arrow-key half of the ARIA tabs contract,
+  // otherwise inactive tabs are unreachable by keyboard.
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const currentIndex = ORDERED_VIEWS.indexOf(view);
+    let nextIndex: number;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % ORDERED_VIEWS.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + ORDERED_VIEWS.length) % ORDERED_VIEWS.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = ORDERED_VIEWS.length - 1;
+    else return;
+    event.preventDefault();
+    const nextKey = ORDERED_VIEWS[nextIndex];
+    activateView(nextKey);
+    document.getElementById(`pharos-mini-app-tab-${nextKey}`)?.focus();
+  };
+
   return (
     <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
       <div className="mx-auto flex max-w-2xl flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
@@ -299,11 +321,8 @@ export function PharosWatchBotMiniAppClient() {
                   aria-controls={`pharos-mini-app-panel-${key}`}
                   aria-selected={view === key}
                   tabIndex={view === key ? 0 : -1}
-                  onClick={() => {
-                    setView(key);
-                    if (key !== "watchlist") setCoinInsightTarget(null);
-                    webApp?.HapticFeedback?.selectionChanged?.();
-                  }}
+                  onClick={() => activateView(key)}
+                  onKeyDown={handleTabKeyDown}
                   className={cn(
                     "pharos-focus-ring min-h-11 rounded-lg px-2 text-sm font-semibold capitalize transition-colors",
                     view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/40",
@@ -315,8 +334,6 @@ export function PharosWatchBotMiniAppClient() {
             </nav>
           ) : null}
         </div>
-        {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="pharos-numeric text-foreground">{startParam}</span></p> : null}
-
         <span className="sr-only" aria-live="polite">{announcement}</span>
 
         {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
