@@ -10,7 +10,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor, timeAgo } from "@shared/lib/format";
+import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, formatSignedPercent, getNetColor, timeAgo } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import {
   buildDewsBandCounts,
@@ -68,18 +68,14 @@ export function KpiBar() {
   const summary = pegData?.summary;
   const hasSummary = !!summary;
   const psiBandDisplay = hasPsiData ? psiBand : "";
-  const mcapChange24Display = hasStablecoinsData
-    ? `${mcapChange24hPct >= 0 ? "+" : ""}${mcapChange24hPct.toFixed(2)}%`
-    : "—";
-  const mcapChange7Display = hasStablecoinsData
-    ? `${mcapChange7dPct >= 0 ? "+" : ""}${mcapChange7dPct.toFixed(2)}%`
-    : "—";
+  const mcapChange24Display = hasStablecoinsData ? formatSignedPercent(mcapChange24hPct, 2) : "—";
+  const mcapChange7Display = hasStablecoinsData ? formatSignedPercent(mcapChange7dPct, 2) : "—";
   const mcapColorClass = hasStablecoinsData ? trendTextClass(mcapChange24hPct) : "text-muted-foreground";
   const mcap7ColorClass = hasStablecoinsData ? trendTextClass(mcapChange7dPct) : "text-muted-foreground";
   const pegStatusDisplay = hasSummary ? `${summary.coinsAtPeg}/${summary.totalTracked}` : "—";
   const usdtShareDisplay = hasStablecoinsData ? `${usdtUsdcSharePct.toFixed(1)}%` : "—";
   const dexVolDisplay = hasDexData ? formatCurrency(totalVol24h, 1) : "—";
-  const dexDeltaDisplay = hasDexData ? `${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}%` : "—";
+  const dexDeltaDisplay = hasDexData ? formatSignedPercent(volVs7dAvgPct, 1) : "—";
   const turnoverDisplay = hasStablecoinsData && hasDexData && totalMcap > 0 ? `${turnoverPct.toFixed(2)}%` : "—";
   const hasFlowData = !!flowData?.coins?.length;
   const netFlow24Display = hasFlowData ? formatSignedCurrency(netFlow24h, 1) : "—";

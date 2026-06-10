@@ -277,8 +277,7 @@ export function ChainsLeaderboardClient() {
                 <span>
                   <span className="pharos-kicker mr-1.5">7d</span>
                   <span className={cn("font-mono font-semibold tabular-nums", getNetColor(change7dPct))}>
-                    {change7dPct >= 0 ? "+" : ""}
-                    {change7dPct.toFixed(1)}%
+                    {formatSignedPercent(change7dPct, 1)}
                   </span>
                 </span>
               )}
