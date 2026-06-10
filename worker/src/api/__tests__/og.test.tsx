@@ -1,13 +1,23 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 // Plain `satori` entry (Node build) — deliberately NOT the aliased
 // `satori/standalone` stub, so the smoke tests below exercise the real
 // layout engine.
 import satori from "satori";
-import { deriveStablecoinOgCardData } from "../og";
+// The aliased standalone stub used by handleOg, mocked below so the handler
+// tests can inspect the element it would render.
+import satoriStandalone from "satori/standalone";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { deriveStablecoinOgCardData, handleOg } from "../og";
 import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
+
+vi.mock("satori/standalone", () => ({
+  init: vi.fn(),
+  default: vi.fn(async () => "<svg></svg>"),
+}));
 import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
 import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
 import { DepegCard } from "../../lib/og-templates/depeg-card";
@@ -77,6 +87,73 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("BACKING");
     expect(markup).toContain("Fiat");
     expect(markup).toContain("CeFi");
+  });
+
+  describe("peg-analytics cache hits", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    function makeOgDb(assets: ReturnType<typeof makeAsset>[]) {
+      const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
+      // Nav-inclusive payload, mirroring what the report-cards pass publishes.
+      const pegAnalyticsValue = JSON.stringify({
+        computedAtSec: nowSec,
+        depegEventsToday: 0,
+        depegEventsYesterday: 0,
+        pegData: [
+          { id: "fpi-frax", pegScore: 87 },
+          { id: "usdt-tether", pegScore: 99 },
+        ],
+      });
+      return mockD1([
+        {
+          match: "cache",
+          rows: [
+            { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+            { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+          ],
+        },
+        { match: "dex_liquidity", rows: [] },
+        { match: "stress_signals", rows: [] },
+        { match: "supply_history", rows: [] },
+        { match: "depeg_events", rows: [] },
+        { match: "mint_burn_hourly", rows: [] },
+      ]);
+    }
+
+    async function renderedCardData(db: D1Database, path: string): Promise<StablecoinCardData> {
+      const satoriMock = vi.mocked(satoriStandalone);
+      satoriMock.mockClear();
+      const res = await handleOg(db, path);
+      expect(res?.status).toBe(200);
+      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.type).toBe(StablecoinCard);
+      return element.props.data;
+    }
+
+    it("forces a null pegScore for nav tokens on the nav-inclusive cache-hit path", async () => {
+      const db = makeOgDb([
+        makeAsset({
+          id: "fpi-frax",
+          name: "Frax Price Index",
+          symbol: "FPI",
+          pegType: "peggedVAR",
+          price: 1.12,
+          circulating: { peggedVAR: 100_000_000 },
+        }),
+      ]);
+
+      const data = await renderedCardData(db, "/api/og/stablecoin/fpi-frax");
+      // The cache carries 87 (nav-inclusive for peg-summary), but the OG
+      // fallback compute excludes nav tokens; both branches must render "—".
+      expect(data.pegScore).toBeNull();
+    });
+
+    it("serves the cached pegScore for non-nav coins", async () => {
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+
+      const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
+      expect(data.pegScore).toBe(99);
+    });
   });
 
   it("renders variant context when provided", () => {

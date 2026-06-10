@@ -246,13 +246,19 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
+  const meta = TRACKED_META_BY_ID.get(id);
+
   // Cache-first: only pegScore is needed here, and the direct compute
   // re-scans ~21K depeg_events rows per render. The cache is published every
-  // 15 minutes by the report-cards pass.
+  // 15 minutes by the report-cards pass. The published cache is nav-inclusive
+  // (it also serves peg-summary) while the fallback compute excludes nav
+  // tokens, so force null for nav tokens to keep both branches in agreement.
   let pegScore: number | null = null;
   const pegAnalyticsCache = await loadPegAnalyticsCache(db).catch(() => null);
   if (pegAnalyticsCache && pegAnalyticsCache.kind === "ok") {
-    pegScore = pegAnalyticsCache.pegDataById.get(id)?.pegScore ?? null;
+    pegScore = meta?.flags.navToken === true
+      ? null
+      : pegAnalyticsCache.pegDataById.get(id)?.pegScore ?? null;
   } else {
     const methodologyAsOf =
       typeof stablecoinsPayload.updatedAt === "number"
@@ -266,7 +272,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     });
     pegScore = pegAnalytics.pegDataById.get(id)?.pegScore ?? null;
   }
-  const meta = TRACKED_META_BY_ID.get(id);
   const liq = dexLiqMap[id];
   const variantLabel = meta?.variantKind === "savings-passthrough"
     ? "Savings"
