@@ -34,9 +34,10 @@ const DEFAULT_BUDGETS = {
   largestHtmlBytes: 2_700_000,
   // Keep the homepage bootstrap/RSC payload from silently growing into the
   // mobile critical path again without constraining long-form docs pages.
-  // The current optimized homepage payload is near 288 KiB after inline critical CSS.
-  // Raise the ceiling slightly to preserve signal without blocking legitimate UI updates.
-  homepageHtmlBytes: 320_000,
+  // The homepage table moved directly under the KPI band (1f76d3c36), which
+  // grew the above-the-fold critical-CSS block and table shell to ~319 KiB
+  // optimized. Ceiling raised to keep ~4% headroom without losing signal.
+  homepageHtmlBytes: 340_000,
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
   largestTxtBytes: 1_300_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
