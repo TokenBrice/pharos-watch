@@ -3,6 +3,7 @@ import { groupIncidents, quarantinedCoins, structuralClass, type DdrActiveEventI
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import {
@@ -57,7 +58,9 @@ export function emptyDdrLineage(nowSec: number): DdrLineage {
 
 export async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
   try {
-    const result = await query();
+    // Transient "D1 DB is overloaded" spikes were converting whole DDR runs
+    // into failed cron_runs; these reads are idempotent and retryable.
+    const result = await runWithOverloadRetry(query);
     return { rows: result.results ?? [], error: null };
   } catch (error) {
     return {
@@ -100,7 +103,7 @@ async function buildCurrentDeviationMap(
 }
 
 export async function loadPolicyUniverseEvents(db: D1Database): Promise<DdrEventDbRow[]> {
-  const result = await db
+  const result = await runWithOverloadRetry(() => db
     .prepare(
       "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, " +
         "recovery_price, peg_reference, source, confirmation_sources, pending_reason, " +
@@ -111,12 +114,12 @@ export async function loadPolicyUniverseEvents(db: D1Database): Promise<DdrEvent
         "ORDER BY started_at ASC, id ASC",
     )
     .bind(DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT)
-    .all<DdrEventDbRow>();
+    .all<DdrEventDbRow>());
   return result.results ?? [];
 }
 
 export async function loadActiveConfirmedEvents(db: D1Database): Promise<DdrEventDbRow[]> {
-  const activeResult = await db
+  const activeResult = await runWithOverloadRetry(() => db
     .prepare(
       "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, " +
         "recovery_price, peg_reference, source, confirmation_sources, pending_reason, " +
@@ -125,7 +128,7 @@ export async function loadActiveConfirmedEvents(db: D1Database): Promise<DdrEven
         "AND (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')) " +
         "ORDER BY started_at ASC",
     )
-    .all<DdrEventDbRow>();
+    .all<DdrEventDbRow>());
 
   return (activeResult.results ?? []).filter((row) => {
     const status = TRACKED_META_BY_ID.get(row.stablecoin_id)?.status ?? null;
@@ -168,7 +171,7 @@ export async function loadDdrContext(
   };
 
   const windowStart = nowSec - TRAINING_WINDOW_SEC;
-  const histResult = await db
+  const histResult = await runWithOverloadRetry(() => db
     .prepare(
       "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price " +
         "FROM depeg_events WHERE ended_at IS NOT NULL AND started_at >= ? " +
@@ -182,7 +185,7 @@ export async function loadDdrContext(
       started_at: number;
       ended_at: number | null;
       recovery_price: number | null;
-    }>();
+    }>());
   const histRows = histResult.results ?? [];
   const historical = histRows.map((r) => ({
     stablecoinId: r.stablecoin_id,

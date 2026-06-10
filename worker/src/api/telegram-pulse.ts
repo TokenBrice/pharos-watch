@@ -1,4 +1,5 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   TelegramPulseSchema,
@@ -155,7 +156,7 @@ function buildLifecycleHistory(
 }
 
 async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatcherHistoryPoint[]> {
-  const historyRows = await db
+  const historyRows = await runWithOverloadRetry(() => db
     .prepare(
       `SELECT
          date(s.created_at, 'unixepoch') AS day,
@@ -172,7 +173,7 @@ async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatch
        GROUP BY day
        ORDER BY day ASC`,
     )
-    .all<{ day: string | null; day_ts: string | number | null; new_watchers: number | string | null }>();
+    .all<{ day: string | null; day_ts: string | number | null; new_watchers: number | string | null }>());
 
   let cumulativeWatchers = 0;
   return (historyRows.results ?? [])

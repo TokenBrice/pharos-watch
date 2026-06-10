@@ -6,6 +6,7 @@ import {
 import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
 import { sendAlert } from "../lib/alerts";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
@@ -41,15 +42,15 @@ export async function loadDetailWriteFailures(
   nowSec: number,
 ): Promise<DetailWriteFailureObservation[]> {
   // Prune markers past retention so resolved incidents age out of the table.
-  await db
+  await runWithOverloadRetry(() => db
     .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
     .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
-    .run();
+    .run());
 
-  const rows = await db
+  const rows = await runWithOverloadRetry(() => db
     .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ? AND updated_at >= ?")
     .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
-    .all<{ key: string; value: string; updated_at: number }>();
+    .all<{ key: string; value: string; updated_at: number }>());
 
   return (rows.results ?? []).map((row) => {
     let reason = "unknown";
