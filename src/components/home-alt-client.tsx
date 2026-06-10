@@ -88,7 +88,7 @@ const RANKINGS_SKELETON_COLUMNS: readonly TableSkeletonColumn[] = [
   { id: "grade", cellClassName: "text-center hidden md:table-cell", skeletonClassName: "mx-auto h-4 w-7" },
 ];
 
-const RANKINGS_SKELETON_HEADERS = ["#", "Coin", "Price", "Peg", "Market Cap", "24h", "7d", "Grade"] as const;
+const RANKINGS_SKELETON_HEADERS = ["#", "Name", "Price", "Peg", "Market Cap", "24h", "7d", "Grade"] as const;
 const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
   Peg: "hidden sm:table-cell",
   "24h": "hidden md:table-cell",

@@ -56,7 +56,9 @@ export function KeyInfoCard({
   const [openChain, setOpenChain] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
   const [showAllContractsDesktop, setShowAllContractsDesktop] = useState(false);
-  const [copiedChain, setCopiedChain] = useState<string | null>(null);
+  // Keyed by chain+address: some coins deploy twice on one chain, and a
+  // chain-only key would flash the copied check on both rows.
+  const [copiedContract, setCopiedContract] = useState<string | null>(null);
   const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const contracts = meta.contracts ?? [];
 
@@ -119,9 +121,9 @@ export function KeyInfoCard({
   function copyContractAddress(chain: string, address: string) {
     void navigator.clipboard?.writeText(address);
     trackEvent("contract_copied", { coin_id: meta.id, chain });
-    setCopiedChain(chain);
+    setCopiedContract(`${chain}:${address}`);
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-    copyResetTimer.current = setTimeout(() => setCopiedChain(null), 2000);
+    copyResetTimer.current = setTimeout(() => setCopiedContract(null), 2000);
   }
 
   return (
@@ -412,7 +414,7 @@ export function KeyInfoCard({
             {quickCopyContract ? (
               <ContractDetailRow
                 contract={quickCopyContract}
-                copied={copiedChain === quickCopyContract.chain}
+                copied={copiedContract === `${quickCopyContract.chain}:${quickCopyContract.address}`}
                 label={openContract ? "Selected contract" : "Primary contract"}
                 onCopy={copyContractAddress}
               />
@@ -438,7 +440,7 @@ export function KeyInfoCard({
                   <ContractLabeledRow
                     key={`${c.chain}-${c.address}`}
                     contract={c}
-                    copied={copiedChain === c.chain}
+                    copied={copiedContract === `${c.chain}:${c.address}`}
                     onCopy={copyContractAddress}
                   />
                 ))}
