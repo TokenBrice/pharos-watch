@@ -557,7 +557,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
           type="button"
           onClick={handleCopyPermalink}
           aria-label={copied ? "Permalink copied" : "Copy permalink to this event"}
-          className="pharos-focus-ring shrink-0 rounded p-1.5 text-muted-foreground opacity-30 transition-opacity hover:text-foreground hover:opacity-100 focus-visible:opacity-100 sm:p-0.5"
+          className="pharos-focus-ring shrink-0 rounded p-1.5 text-muted-foreground opacity-30 transition-opacity hover:text-foreground hover:opacity-100 focus-visible:opacity-100"
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>

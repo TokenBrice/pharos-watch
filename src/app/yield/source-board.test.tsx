@@ -95,7 +95,7 @@ describe("YieldSourceBoard", () => {
 
     render(<YieldSourceBoard model={model} />);
 
-    const confidenceBar = screen.getByRole("img", { name: /Confidence tier mix:/i });
+    const confidenceBar = screen.getByRole("group", { name: /Confidence tier mix:/i });
     expect(confidenceBar.getAttribute("aria-label")).toBe(
       "Confidence tier mix: 1 deterministic, 2 curated",
     );
@@ -126,8 +126,8 @@ describe("YieldSourceBoard", () => {
 
     render(<YieldSourceBoard model={zeroModel} />);
 
-    expect(screen.queryByRole("img", { name: /Confidence tier mix/i })).toBeNull();
-    expect(screen.queryByRole("img", { name: /Depth mix/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /Confidence tier mix/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /Depth mix/i })).toBeNull();
   });
 
   it("does not render an empty board", () => {

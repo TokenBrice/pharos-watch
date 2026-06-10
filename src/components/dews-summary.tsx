@@ -444,7 +444,10 @@ function DEWSRadar({
       style={{ height: compact ? "100%" : undefined, maxHeight: compact ? 470 : 440 }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
       aria-describedby={liveMessageId}
-      role="img"
+      // group, not img: the radar contains focusable role="button" blips, and
+      // interactive descendants inside an img role are invalid (axe
+      // nested-interactive). group keeps the accessible name.
+      role="group"
     >
       <defs>
         <radialGradient id={wakeGradId} cx={CX} cy={CY} r={OUTER_R} gradientUnits="userSpaceOnUse">

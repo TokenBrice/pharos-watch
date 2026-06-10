@@ -102,7 +102,10 @@ function StackBar({
 
   return (
     <div
-      role="img"
+      // group, not img: the segments are focusable tooltip triggers, and
+      // role="img" treats children as presentational (axe nested-interactive
+      // / aria-prohibited-attr on the labelled segments).
+      role="group"
       aria-label={ariaLabel}
       className="flex h-6 w-full overflow-hidden rounded-full bg-muted/30 sm:h-2"
     >
@@ -115,6 +118,10 @@ function StackBar({
             <Tooltip key={seg.key}>
               <TooltipTrigger asChild>
                 <span
+                  // aria-label is prohibited on role=generic; the focusable
+                  // trigger needs a real role (same pattern as the yield
+                  // rows' benchmark-mismatch dot).
+                  role={isTooNarrowForFocus ? undefined : "button"}
                   tabIndex={isTooNarrowForFocus ? undefined : 0}
                   aria-label={
                     isTooNarrowForFocus
@@ -232,6 +239,7 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <span
+                role="button"
                 tabIndex={0}
                 aria-label={`${YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label} confidence`}
                 className="pharos-focus-ring inline-flex min-h-6 min-w-6 cursor-help items-center justify-center rounded-full"
@@ -430,6 +438,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
           <div
             id={disclosureId}
             aria-hidden={openDisclosure === null}
+            inert={openDisclosure === null}
             className={cn(
               "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
               openDisclosure ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
@@ -459,6 +468,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
             <div
               id={ledgerId}
               aria-hidden={!showAllLanes}
+              inert={!showAllLanes}
               className={cn(
                 "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
                 showAllLanes ? "grid-rows-[1fr]" : "grid-rows-[0fr]",

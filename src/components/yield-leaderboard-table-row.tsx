@@ -1,8 +1,7 @@
 "use client";
 
 import { Fragment, memo, useMemo } from "react";
-import { TableCell } from "@/components/table";
-import { InteractiveTableRow } from "@/components/interactive-table-row";
+import { TableCell, TableRow } from "@/components/table";
 import {
   YieldCoinCell,
   YieldExpandedDetailsRow,
@@ -113,14 +112,21 @@ function YieldLeaderboardTableRowBase({
 
   return (
     <Fragment key={row.id}>
-      <InteractiveTableRow
+      {/* Not an InteractiveTableRow: yield rows contain focusable children
+          (compare checkbox, watchlist star, action buttons), and a row-level
+          role="button" with interactive descendants is invalid (axe
+          nested-interactive). Row click stays as a pointer convenience; the
+          accessible expand control is the chevron in YieldRowActionsCell
+          (desktop) / YieldMobileSummaryCell (mobile). */}
+      <TableRow
         id={`yield-row-${row.id}`}
-        onActivate={() => onToggleExpanded(row.id)}
-        onHover={() => onPrefetch(row.id)}
-        className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
-        ariaLabel={`${expanded ? "Collapse" : "Expand"} ${row.symbol} yield history`}
-        ariaControls={`yield-row-${row.id}-details`}
-        ariaExpanded={expanded}
+        onClick={() => onToggleExpanded(row.id)}
+        onMouseEnter={() => onPrefetch(row.id)}
+        className={
+          warningSignalCount >= 2
+            ? "cursor-pointer border-l-2 border-amber-500/50 hover:bg-muted/30"
+            : "cursor-pointer hover:bg-muted/30"
+        }
       >
         {/* WHY: below md we render a single full-width card cell; the per-column cells stay as table cells above md. */}
         <YieldMobileSummaryCell
@@ -137,6 +143,8 @@ function YieldLeaderboardTableRowBase({
           stabilityPct={labels.stabilityPct}
           stabilitySrLabel={labels.stabilitySrLabel}
           isCurrencyMismatchedBenchmark={isCurrencyMismatchedBenchmark}
+          expanded={expanded}
+          onToggleExpanded={onToggleExpanded}
         />
 
         <YieldCoinCell
@@ -192,7 +200,7 @@ function YieldLeaderboardTableRowBase({
           rawSourceRiskPenalty={rawSourceRiskPenalty}
         />
         <YieldRowActionsCell row={row} expanded={expanded} onToggleExpanded={onToggleExpanded} />
-      </InteractiveTableRow>
+      </TableRow>
       {expanded ? (
         <YieldExpandedDetailsRow
           row={row}

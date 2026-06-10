@@ -100,16 +100,19 @@ function YieldBenchmarkMismatchDot({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
+        {/* 24px hit area around the 6px dot (WCAG 2.5.8 target size). */}
         <span
           role="button"
           tabIndex={0}
           aria-label={label}
-          className="pharos-focus-ring inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+          className="pharos-focus-ring inline-flex h-6 w-6 items-center justify-center"
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") event.stopPropagation();
           }}
-        />
+        >
+          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+        </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[260px] text-[11px]">
         Benchmarked against USD because the {peg} reference rate isn{"’"}t wired yet. PYS may overstate excess yield.
@@ -203,6 +206,8 @@ export function YieldMobileSummaryCell({
   stabilityPct,
   stabilitySrLabel,
   isCurrencyMismatchedBenchmark,
+  expanded,
+  onToggleExpanded,
 }: {
   row: YieldViewModelRow;
   logo?: string;
@@ -217,6 +222,8 @@ export function YieldMobileSummaryCell({
   stabilityPct: number | null;
   stabilitySrLabel: string;
   isCurrencyMismatchedBenchmark: boolean;
+  expanded: boolean;
+  onToggleExpanded: (stablecoinId: string) => void;
 }) {
   const grade = row.safetyGrade;
   const warningSignalCount = row.warningSignals.length;
@@ -258,6 +265,23 @@ export function YieldMobileSummaryCell({
               {isCurrencyMismatchedBenchmark ? <YieldBenchmarkMismatchDot interactive={false} peg={row.peg} /> : null}
             </span>
           </div>
+          {/* The desktop chevron cell is hidden below md; this is the
+              keyboard-reachable expand control for the mobile card. */}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleExpanded(row.id);
+            }}
+            className="pharos-focus-ring inline-flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={expanded ? `Hide ${row.symbol} yield history` : `Show ${row.symbol} yield history`}
+            aria-expanded={expanded}
+            aria-controls={`yield-row-${row.id}-details`}
+          >
+            <ChevronDown
+              className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"}
+            />
+          </button>
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
           <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
@@ -566,7 +590,9 @@ export function YieldRowActionsCell({
             onToggleExpanded(row.id);
           }}
           className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label={expanded ? "Hide yield history" : "Show yield history"}
+          aria-label={expanded ? `Hide ${row.symbol} yield history` : `Show ${row.symbol} yield history`}
+          aria-expanded={expanded}
+          aria-controls={`yield-row-${row.id}-details`}
           title={expanded ? "Hide yield history" : "Show yield history"}
         >
           <ChevronDown
