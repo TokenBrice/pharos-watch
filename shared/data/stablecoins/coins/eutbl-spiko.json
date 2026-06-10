@@ -205,5 +205,6 @@
       "title": "Multi-chain EU-regulated MMF",
       "message": "EUTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
     }
-  ]
+  ],
+  "launchDate": "2024-04-19"
 }
