@@ -6,9 +6,11 @@ import {
   getAnalyticsPayloadUrls,
   getOverflowRoutes,
   getOverflowWorkerCount,
+  getExpectedGaNetworkSignals,
   getUnexpectedGaCspViolations,
   getUnexpectedGaAnalyticsFailures,
   hasGaConfigInit,
+  hasExpectedGaRuntimeState,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
   isAnalyticsCspViolation,
   isExpectedGaCollectAbort,
@@ -258,6 +260,79 @@ describe("getUnexpectedGaCspViolations", () => {
         "G-6TS0KG8H04",
       ),
     ).toEqual([analyticsViolation]);
+  });
+});
+
+describe("hasExpectedGaRuntimeState", () => {
+  it("requires the gtag global, expected config, and page_view dataLayer entry", () => {
+    expect(
+      hasExpectedGaRuntimeState({
+        dataLayerLength: 4,
+        gtagType: "function",
+        hasExpectedConfig: true,
+        hasPageView: true,
+        pageViewPath: "/",
+      }),
+    ).toBe(true);
+    expect(
+      hasExpectedGaRuntimeState({
+        dataLayerLength: 0,
+        gtagType: "undefined",
+        hasExpectedConfig: false,
+        hasPageView: false,
+        pageViewPath: null,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("getExpectedGaNetworkSignals", () => {
+  it("requires both gtag.js and a successful page_view collect response", () => {
+    const signals = getExpectedGaNetworkSignals(
+      {
+        failures: [],
+        responses: [
+          {
+            status: 200,
+            url: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+          },
+          {
+            status: 204,
+            url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+          },
+        ],
+      },
+      "G-6TS0KG8H04",
+    );
+
+    expect(signals.hasGtagScriptResponse).toBe(true);
+    expect(signals.hasCollectSignal).toBe(true);
+    expect(signals.collectResponses).toHaveLength(1);
+  });
+
+  it("can treat expected collect aborts as a local smoke signal", () => {
+    const signals = getExpectedGaNetworkSignals(
+      {
+        failures: [
+          {
+            errorText: "net::ERR_ABORTED",
+            url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+          },
+        ],
+        responses: [
+          {
+            status: 200,
+            url: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
+          },
+        ],
+      },
+      "G-6TS0KG8H04",
+      { tolerateCollectAbortAsSignal: true },
+    );
+
+    expect(signals.hasGtagScriptResponse).toBe(true);
+    expect(signals.hasCollectSignal).toBe(true);
+    expect(signals.collectAborts).toHaveLength(1);
   });
 });
 

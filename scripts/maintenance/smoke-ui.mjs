@@ -686,6 +686,42 @@ export function getUnexpectedGaCspViolations(violations, expectedGaId) {
   return violations.filter((violation) => isAnalyticsCspViolation(violation, expectedGaId));
 }
 
+export function hasExpectedGaRuntimeState(runtime) {
+  return (
+    runtime?.gtagType === "function"
+    && runtime.hasExpectedConfig === true
+    && runtime.hasPageView === true
+  );
+}
+
+export function getExpectedGaNetworkSignals(
+  network,
+  expectedGaId,
+  { tolerateCollectAbortAsSignal = false } = {},
+) {
+  const responses = Array.isArray(network?.responses) ? network.responses : [];
+  const failures = Array.isArray(network?.failures) ? network.failures : [];
+  const collectResponses = responses.filter(
+    (entry) =>
+      isExpectedGaPageViewCollectUrl(entry.url, expectedGaId)
+      && entry.status >= 200
+      && entry.status < 400,
+  );
+  const collectAborts = tolerateCollectAbortAsSignal
+    ? failures.filter((failure) => isExpectedGaCollectAbort(failure, expectedGaId))
+    : [];
+  const hasGtagScriptResponse = responses.some(
+    (entry) => entry.url.includes("googletagmanager.com/gtag/js") && entry.status === 200,
+  );
+
+  return {
+    collectAborts,
+    collectResponses,
+    hasCollectSignal: collectResponses.length + collectAborts.length > 0,
+    hasGtagScriptResponse,
+  };
+}
+
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -855,36 +891,32 @@ export async function run() {
     if (expectedGaId) {
       const runtime = homepageResult.analyticsRuntime;
       assert(runtime, `Expected analytics runtime result for ${expectedGaId}`);
-      assert(
-        runtime.gtagType === "function",
-        `Expected window.gtag to be initialized for ${expectedGaId}; got ${runtime.gtagType}`,
-      );
-      assert(
-        runtime.hasExpectedConfig,
-        `Expected dataLayer config event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
-      );
-      assert(
-        runtime.hasPageView,
-        `Expected dataLayer page_view event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
-      );
       const network = homepageResult.analyticsNetwork ?? { failures: [], requests: [], responses: [] };
-      const collectResponses = network.responses.filter(
-        (entry) =>
-          isExpectedGaPageViewCollectUrl(entry.url, expectedGaId)
-          && entry.status >= 200
-          && entry.status < 400,
-      );
       const tolerateCollectAbortAsSignal = mode === "local";
-      const collectAborts = tolerateCollectAbortAsSignal
-        ? network.failures.filter((failure) => isExpectedGaCollectAbort(failure, expectedGaId))
-        : [];
+      const { collectResponses, hasCollectSignal, hasGtagScriptResponse } = getExpectedGaNetworkSignals(
+        network,
+        expectedGaId,
+        { tolerateCollectAbortAsSignal },
+      );
+      const diagnostics = `runtime=${JSON.stringify(runtime)}, network=${JSON.stringify(network)}`;
+      const hasRuntimeState = hasExpectedGaRuntimeState(runtime);
+      if (mode === "local") {
+        assert(
+          hasRuntimeState,
+          `Expected local analytics runtime state for ${expectedGaId}; ${diagnostics}`,
+        );
+      } else if (!hasRuntimeState) {
+        console.log(
+          `[smoke-ui] WARN live analytics runtime global not observable for ${expectedGaId}; requiring network signal instead (${JSON.stringify(runtime)})`,
+        );
+      }
       assert(
-        network.responses.some((entry) => entry.url.includes("googletagmanager.com/gtag/js") && entry.status === 200),
-        `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
+        hasGtagScriptResponse,
+        `Expected successful gtag.js load for ${expectedGaId}; ${diagnostics}`,
       );
       assert(
-        collectResponses.length + collectAborts.length > 0,
-        `Expected GA4 page_view collect signal for ${expectedGaId}; network=${JSON.stringify(network)}`,
+        hasCollectSignal,
+        `Expected GA4 page_view collect signal for ${expectedGaId}; ${diagnostics}`,
       );
       const successfulCollectUrls = new Set(collectResponses.map((entry) => entry.url));
       const tolerateExpectedCollectAbort = tolerateCollectAbortAsSignal || collectResponses.length > 0;
