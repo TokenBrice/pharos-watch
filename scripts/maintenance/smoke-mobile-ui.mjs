@@ -376,7 +376,11 @@ function buildRouteCaptureScript() {
           .filter(({ rect }) => rect.width > 1 && intersects(rect, tableViewport))
           .sort((a, b) => a.rect.left - b.rect.left);
 
-        if (headerCells.length >= 3 && visibleHeaderCells.length < 3) {
+        const visibleBodyRowCount = Array.from(table.querySelectorAll("tbody tr")).filter(isElementVisible).length;
+        // Column geometry is only meaningful once data rows exist: an empty
+        // tbody (data still loading, or upstream/proxy failure leaving the
+        // shell rendered) collapses fixed-layout columns to zero width.
+        if (visibleBodyRowCount > 0 && headerCells.length >= 3 && visibleHeaderCells.length < 3) {
           tableScan.issues.push({
             kind: "too-few-visible-columns",
             selector: shortSelector(table),
