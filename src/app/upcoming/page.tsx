@@ -10,6 +10,17 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
+import aiSummaries from "../../../data/ai-summaries.json";
+
+// Server-side teaser selection: only the dozen pre-launch texts reach the
+// client instead of the full ai-summaries corpus.
+const typedSummaries = aiSummaries as Record<string, { text?: string }>;
+const PRE_LAUNCH_TEASERS = Object.fromEntries(
+  PRE_LAUNCH_STABLECOINS.flatMap((coin) => {
+    const text = typedSummaries[coin.id]?.text;
+    return text ? [[coin.id, text]] : [];
+  }),
+);
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Upcoming Stablecoins: Pre-launch Tracker",
@@ -97,7 +108,7 @@ export default function UpcomingPage() {
         , or open any upcoming coin page for a copy-ready exact command tied to that asset.
       </CalloutBanner>
 
-      <UpcomingClient />
+      <UpcomingClient teasers={PRE_LAUNCH_TEASERS} />
 
       {/* Server-rendered links for SEO crawlability */}
       <nav aria-label="Upcoming stablecoins index" className="sr-only">

@@ -29,15 +29,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { stripTermMarkup } from "@/lib/term-markup";
 import type { LaunchPhase } from "@shared/types";
-import aiSummaries from "../../data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
 
 const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch");
 const typedLogos = logosById;
-const typedSummaries = aiSummaries as Record<
-  string,
-  { title?: string; text?: string; updatedAt?: string }
->;
 
 // ---------------------------------------------------------------------------
 // Filter types
@@ -96,7 +91,10 @@ function phaseToggleClass(phase: LaunchPhase, active: boolean): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function UpcomingClient() {
+// Teasers are selected server-side in src/app/upcoming/page.tsx — importing
+// the full ai-summaries.json here would ship the whole 495 KB corpus to the
+// client for a dozen strings.
+export function UpcomingClient({ teasers }: { teasers: Record<string, string> }) {
   const [phaseFilter, setPhaseFilter] = useState<Set<LaunchPhase>>(new Set());
   const [pegFilter, setPegFilter] = useState<Set<string>>(new Set());
   const [backingFilter, setBackingFilter] = useState<Set<string>>(new Set());
@@ -284,7 +282,7 @@ export function UpcomingClient() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((coin) => {
-            const teaserText = typedSummaries[coin.id]?.text;
+            const teaserText = teasers[coin.id];
             const teaser = teaserText ? stripTermMarkup(teaserText) : null;
             const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
 
