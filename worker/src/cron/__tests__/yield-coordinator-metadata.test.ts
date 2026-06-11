@@ -149,6 +149,7 @@ describe("buildYieldSyncMetadata", () => {
       comparisonAnchorFreshness,
     })) as {
       sourceCoverage: {
+        publishedRankingCountDelta: number;
         onChainEnvelopeRejectionCount: number;
         onChainEnvelopeRejections: YieldEnvelopeRejection[];
         onChainEnvelopeRejectionsTruncated: boolean;
@@ -157,6 +158,7 @@ describe("buildYieldSyncMetadata", () => {
     };
 
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
+    expect(metadata.sourceCoverage.publishedRankingCountDelta).toBe(0);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections).toHaveLength(25);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections[0]).toEqual(envelopeRejections[0]);
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionsTruncated).toBe(true);

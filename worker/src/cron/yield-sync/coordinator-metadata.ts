@@ -171,6 +171,7 @@ export function buildYieldSyncMetadata(input: {
       previousPublishedOpportunityCount: input.previousPublishedOpportunityCount,
       publishedRankingCount: input.publishedRankingCount,
       previousPublishedRankingCount: input.previousPublishedRankingCount,
+      publishedRankingCountDelta: input.publishedRankingCount - input.previousPublishedRankingCount,
       dlPoolCount: input.dlPoolsMeta.poolCount,
       supplementalSourceMode: input.supplementalMeta.mode,
       supplementalSourceUpdatedAt: input.supplementalMeta.updatedAt,

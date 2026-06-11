@@ -136,6 +136,7 @@ interface RiskFreeRatesCachePayload {
     BRL: RiskFreeRateCachePayload | null;
     AUD: RiskFreeRateCachePayload | null;
     CAD: RiskFreeRateCachePayload | null;
+    RUB: RiskFreeRateCachePayload | null;
     TRY: RiskFreeRateCachePayload | null;
     SGD: RiskFreeRateCachePayload | null;
   };
@@ -311,6 +312,7 @@ export function parseRiskFreeRatesCache(
       BRL: parseOptional("BRL"),
       AUD: parseOptional("AUD"),
       CAD: parseOptional("CAD"),
+      RUB: parseOptional("RUB"),
       TRY: parseOptional("TRY"),
       SGD: parseOptional("SGD"),
     };

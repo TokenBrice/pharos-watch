@@ -4,6 +4,8 @@ import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
+  AUTO_LENDING_COLLISION_BLOCKLIST,
+  isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   LENDING_PROTOCOL_LABELS,
   ON_CHAIN_RATE_CONFIGS,
@@ -101,6 +103,22 @@ describe("yield config registry", () => {
       }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
     }
+  });
+
+  it("wires A7A5 through the RUB key-rate derived source", () => {
+    const config = RATE_DERIVED_CONFIGS.find((entry) => entry.stablecoinId === "a7a5-old-vector");
+    expect(config).toMatchObject({
+      spreadBps: 100,
+      benchmarkCurrency: "RUB",
+      benchmarkOverrideKey: "RUB",
+    });
+    expect(INTENTIONAL_GAP_REASONS["a7a5-old-vector"]).toBeUndefined();
+    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "a7a5-old-vector")).toMatchObject({
+      status: "covered",
+      strategies: expect.arrayContaining([
+        expect.objectContaining({ kind: "rate-derived" }),
+      ]),
+    });
   });
 
   it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {
@@ -314,12 +332,14 @@ describe("yield config registry", () => {
     expect(AUTO_LENDING_POOL_MAP).toMatchObject({
       "feusd-felix": "2bae7cf8-d278-4b27-9959-7f5f92c6f14b",
       "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
-      "doc-money-on-chain": "17b8f0d7-38e1-4080-9d2c-da1f5706e199",
       "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
-      "reusd-resupply": "a1b05c10-6d01-4b64-9247-4e86ca82a291",
+      "reusd-resupply": "02c7722b-dfd6-415b-8292-01dddb88c6fc",
       "xusd-babelfish": "59901fb6-d071-4923-822a-af871670a7fb",
       "usda-anzens": "fa66f3f5-24ba-4929-8549-9b811b68ef48",
+      "usdx-hex-trust": "be50b874-8147-440d-b8ca-f2c202e9ed64",
     });
+    expect(AUTO_LENDING_POOL_MAP["doc-money-on-chain"]).toBeUndefined();
+    expect(AUTO_LENDING_POOL_MAP["pmusd-precious-metals"]).toBeUndefined();
   });
 
   it("allows Wave 2 category-gated thin-chain and app-chain lenders", () => {
@@ -330,12 +350,54 @@ describe("yield config registry", () => {
       curvance: "Curvance",
       "scallop-lend": "Scallop",
       tydro: "Tydro",
+      bifi: "BiFi",
+      fraxlend: "Fraxlend v1",
     };
 
     for (const [protocol, label] of Object.entries(wave2Protocols)) {
       expect(LENDING_PROTOCOL_ALLOWLIST.has(protocol), protocol).toBe(true);
       expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBe(label);
     }
+  });
+
+  it("records auto-lending same-symbol collision blocks", () => {
+    expect(Object.keys(AUTO_LENDING_COLLISION_BLOCKLIST).sort()).toEqual([
+      "cusd-celo",
+      "nusd-nexus",
+      "usda-alpha-partner",
+      "usda-avalon",
+      "usdcx-movement",
+      "usdx-kava",
+      "usp-pareto-credit",
+      "usx-dforce",
+      "vusd-virtue",
+      "xusd-straitsx",
+    ]);
+
+    expect(isAutoLendingCollisionBlockedForStablecoin("usdx-kava", {
+      project: "clearpool-lending",
+      chain: "Flare",
+      symbol: "USDX",
+      underlyingTokens: ["0x4A771cC1a39fDd8AA08B8eA51F7FD412e73b3d2B"],
+    })).toBe(true);
+    expect(isAutoLendingCollisionBlockedForStablecoin("vusd-virtue", {
+      project: "curvance",
+      chain: "Monad",
+      symbol: "VUSD",
+      underlyingTokens: ["0x8d3F1518F8B516f6542E17f48e3f8589EcABc365"],
+    })).toBe(true);
+    expect(isAutoLendingCollisionBlockedForStablecoin("usdx-hex-trust", {
+      project: "clearpool-lending",
+      chain: "Flare",
+      symbol: "USDX",
+      underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
+    })).toBe(false);
+    expect(isAutoLendingCollisionBlockedForStablecoin("nusd-nexus", {
+      project: "pendle",
+      chain: "Ethereum",
+      symbol: "NUSD",
+      underlyingTokens: ["0xe556aba6fe6036275ec1f87eda296be72c811bce"],
+    })).toBe(true);
   });
 
   it("includes Aave v4 in lending discovery allowlist labels", () => {

@@ -19,6 +19,7 @@ import {
   BANXICO_CETES_28D_URL,
   BCB_SELIC_URL,
   BOC_CORRA_URL,
+  CBR_DAILY_INFO_SOAP_URL,
   CBRT_EVDS_FE_URL,
   CBRT_TLREF_SERIES_CODE,
   BENCHMARK_FETCH_TIMEOUT_MS,
@@ -69,6 +70,7 @@ const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
   BRL: "brl",
   AUD: "aud",
   CAD: "cad",
+  RUB: "rub",
   TRY: "try",
 };
 
@@ -99,7 +101,7 @@ function parseRate(rateRaw: string | number | null | undefined): number {
 }
 
 function isValidBenchmarkRateForKey(key: YieldBenchmarkKey, rate: number): boolean {
-  const maxRate = key === "TRY" ? 100 : 20;
+  const maxRate = key === "TRY" || key === "RUB" ? 100 : 20;
   return Number.isFinite(rate) && rate >= -10 && rate <= maxRate;
 }
 
@@ -398,6 +400,7 @@ async function writeStructuredBenchmarks(
         BRL: toCacheEntry(benchmarks.BRL),
         AUD: toCacheEntry(benchmarks.AUD),
         CAD: toCacheEntry(benchmarks.CAD),
+        RUB: toCacheEntry(benchmarks.RUB),
         TRY: toCacheEntry(benchmarks.TRY),
         SGD: toCacheEntry(benchmarks.SGD),
       }),
@@ -555,6 +558,10 @@ function formatBoeRequestDate(date: Date): string {
 
 function formatCbrtEvdsRequestDate(date: Date): string {
   return `${String(date.getUTCDate()).padStart(2, "0")}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${date.getUTCFullYear()}`;
+}
+
+function formatCbrSoapDate(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}T00:00:00`;
 }
 
 function buildBoeIadbCsvUrl(seriesCode: string, now = new Date(), lookbackDays = 21): string {
@@ -820,6 +827,24 @@ export function parseCbrtEvdsSeries(
   }
 }
 
+export function parseCbrKeyRateXml(xml: string): { recordDate: string; rate: number } | null {
+  const rows = xml.match(/<KR\b[\s\S]*?<\/KR>/gu) ?? [];
+  let latest: { recordDate: string; rate: number } | null = null;
+
+  for (const row of rows) {
+    const dt = row.match(/<DT>([^<]+)<\/DT>/u)?.[1]?.trim() ?? null;
+    const rateRaw = row.match(/<Rate>([^<]+)<\/Rate>/u)?.[1]?.trim() ?? null;
+    const recordDate = dt?.match(/^(\d{4}-\d{2}-\d{2})/u)?.[1] ?? null;
+    const rate = parseRate(rateRaw);
+    if (!recordDate || !isValidBenchmarkRateForKey("RUB", rate)) continue;
+    if (!latest || recordDate > latest.recordDate) {
+      latest = { recordDate, rate };
+    }
+  }
+
+  return latest;
+}
+
 async function tryBanxicoCetes(
   banxicoToken: string | null,
   signal?: AbortSignal,
@@ -899,6 +924,37 @@ async function tryCbrtTlref(signal?: AbortSignal): Promise<{ rate: number; recor
   });
 }
 
+function buildCbrKeyRateSoapBody(now = new Date()): string {
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">',
+    "<soap:Body>",
+    '<KeyRateXML xmlns="http://web.cbr.ru/">',
+    `<fromDate>${formatCbrSoapDate(addDays(now, -14))}</fromDate>`,
+    `<ToDate>${formatCbrSoapDate(now)}</ToDate>`,
+    "</KeyRateXML>",
+    "</soap:Body>",
+    "</soap:Envelope>",
+  ].join("");
+}
+
+async function tryCbrKeyRate(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  return fetchAndParseBenchmark({
+    url: CBR_DAILY_INFO_SOAP_URL,
+    method: "POST",
+    body: buildCbrKeyRateSoapBody(),
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "text/xml",
+      "Content-Type": "text/xml; charset=utf-8",
+      SOAPAction: '"http://web.cbr.ru/KeyRateXML"',
+    },
+    parse: parseCbrKeyRateXml,
+    warnLabel: "CBR key rate",
+    signal,
+  });
+}
+
 const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkProvider> = {
   EUR: {
     key: "EUR",
@@ -948,6 +1004,12 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
     source: "boc-valet-v122530",
     fallbackMode: "boc-corra-failed",
   },
+  RUB: {
+    key: "RUB",
+    fetch: ({ signal }) => tryCbrKeyRate(signal),
+    source: "cbr-key-rate",
+    fallbackMode: "cbr-key-rate-failed",
+  },
   TRY: {
     key: "TRY",
     fetch: ({ signal }) => tryCbrtTlref(signal),
@@ -966,6 +1028,7 @@ const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
   "MXN",
   "BRL",
   "CAD",
+  "RUB",
   "TRY",
 ] as const;
 
@@ -979,6 +1042,7 @@ const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
   "BRL",
   "AUD",
   "CAD",
+  "RUB",
   "TRY",
 ] as const;
 
@@ -1094,6 +1158,7 @@ export async function fetchTbillRate(
       BRL: buildRetainedBenchmark(previous.BRL, "circuit-open"),
       AUD: buildRetainedBenchmark(previous.AUD, "circuit-open"),
       CAD: buildRetainedBenchmark(previous.CAD, "circuit-open"),
+      RUB: buildRetainedBenchmark(previous.RUB, "circuit-open"),
       TRY: buildRetainedBenchmark(previous.TRY, "circuit-open"),
       SGD: null,
     };
@@ -1158,6 +1223,7 @@ export async function fetchTbillRate(
     BRL: resolvedByKey.BRL.meta,
     AUD: resolvedByKey.AUD.meta,
     CAD: resolvedByKey.CAD.meta,
+    RUB: resolvedByKey.RUB.meta,
     TRY: resolvedByKey.TRY.meta,
     SGD: null,
   };

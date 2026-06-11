@@ -238,6 +238,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
   { stablecoinId: "usdgo-osl", spreadBps: 38, label: "EFFR-linked reserve-yield proxy (net of 0.38% fee)", benchmarkCurrency: "USD_EFFR" },
   { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
+  { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
 ];
 
 /**
@@ -309,11 +310,6 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
-  "a7a5-old-vector": {
-    code: "issuer-distributed-yield",
-    since: "2026-05-22",
-    note: "RUB issuer-distributed reserve income uses the Russian central-bank rate minus 1pp, but no reliable RUB benchmark or issuer APY source is wired yet",
-  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

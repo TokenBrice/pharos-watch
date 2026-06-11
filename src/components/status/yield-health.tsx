@@ -63,7 +63,16 @@ function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): 
   if (coverageAudit.headlineGapCount == null && coverageAudit.recommendationCandidateCount == null) {
     return "queue unavailable";
   }
-  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates`;
+  const stale = coverageAudit.staleAutoLendingOverrideCount ?? 0;
+  const staleText = stale > 0 ? ` · ${stale} stale overrides` : "";
+  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates${staleText}`;
+}
+
+function rankingSubtext(health: YieldHealthSummary): string {
+  const age = ageLabel(health.rankingAgeSec);
+  if (health.rankingCountDelta == null || health.previousRankingCount == null) return age;
+  const sign = health.rankingCountDelta > 0 ? "+" : "";
+  return `${age} · ${sign}${health.rankingCountDelta} vs ${health.previousRankingCount}`;
 }
 
 function queueItemMeta(item: YieldCoverageAuditQueueItem): string {
@@ -152,7 +161,7 @@ export function YieldHealthCard({
           <StatTile
             label="Rankings"
             value={<span className={statusClassName(health.rankingStatus)}>{health.rankingCount ?? "-"}</span>}
-            subtext={ageLabel(health.rankingAgeSec)}
+            subtext={rankingSubtext(health)}
           />
           <StatTile
             label="Safety Coverage"

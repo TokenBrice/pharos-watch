@@ -9,7 +9,7 @@ import { YIELD_METHODOLOGY_V8 } from "../../data/methodology-changelogs/yield-me
 import { createMethodologyVersion } from "./base";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "8.29",
+  currentVersion: "8.291",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
     ...YIELD_METHODOLOGY_V8,

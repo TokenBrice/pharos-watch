@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yield Coverage Audit Drain"
+  short_description: "Drain yield coverage audit queues into reviewed changes."
+  default_prompt: "Use this skill to drain the Pharos Yield Intelligence coverage audit queue: verify candidate sources, promote safe coverage changes, document rejections, and run the required checks."

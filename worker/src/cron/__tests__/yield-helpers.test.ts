@@ -812,6 +812,14 @@ describe("findBestLendingPool", () => {
     expect(result!.pool).toBe("p1");
   });
 
+  it("filters caller-provided blocked pools before selecting the highest TVL match", () => {
+    const result = findBestLendingPool("USDT", pools, allowlist, {
+      isBlockedPool: (pool) => pool.pool === "p2",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("p1");
+  });
+
   it("skips blocked USR/Resolv lending venues", () => {
     const result = findBestLendingPool(
       "USDC",

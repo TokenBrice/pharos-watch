@@ -27,6 +27,7 @@ const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "native-exact-pool",
   "source-family-adapter",
   "lending-allowlist",
+  "stale-auto-lending-override",
   "quarantine-ready-to-restore",
 ] satisfies YieldCoverageAuditQueueItemKind[];
 const SOURCE_RISK_COVERAGE_FIELDS = [
@@ -367,6 +368,27 @@ function legacyPoolQueueItem(
   };
 }
 
+function legacyStaleAutoLendingOverrideQueueItem(row: Record<string, unknown>): YieldCoverageAuditQueueItem | null {
+  const stablecoinId = getString(row.stablecoinId);
+  const pool = getString(row.pool);
+  if (!stablecoinId || !pool) return null;
+  const reasons = getStringArray(row.reasons) ?? [];
+  return {
+    id: `stale-auto-lending-override:${stablecoinId}:${pool}`,
+    kind: "stale-auto-lending-override",
+    title: stablecoinId,
+    detail: `Override ${pool} no longer qualifies${reasons.length ? `: ${reasons.join(", ")}` : ""}`,
+    actionHint: "accept",
+    stablecoinIds: [stablecoinId],
+    pool,
+    project: getString(row.project) ?? undefined,
+    symbol: getString(row.symbol) ?? undefined,
+    chain: getString(row.chain) ?? undefined,
+    tvlUsd: getNumber(row.tvlUsd) ?? undefined,
+    apy: getNumber(row.apy) ?? undefined,
+  };
+}
+
 function legacyProtocolQueueItem(
   kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
   row: Record<string, unknown>,
@@ -433,6 +455,9 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
       actionHint: "watch" as const,
       stablecoinIds: [stablecoinId],
     })),
+    ...objectArray(payload?.staleAutoLendingOverrides).map((row) =>
+      legacyStaleAutoLendingOverrideQueueItem(row),
+    ),
     ...objectArray(payload?.unmatchedHighTvlPools).map((row) =>
       legacyPoolQueueItem("unmatched-high-tvl-pool", row),
     ),
@@ -569,6 +594,9 @@ export async function loadYieldHealthSummary(
     : freshnessStatus(rankingAgeSec, YIELD_RANKING_MAX_AGE_SEC, { missingIs: "stale" });
   const rankings = Array.isArray(rankingsPayload?.rankings) ? rankingsPayload.rankings : null;
   const sourceRiskCoverage = buildSourceRiskCoverage(rankings);
+  const syncSourceCoverage = getObject(crons["sync-yield-data"]?.lastRun?.metadata?.sourceCoverage);
+  const previousRankingCount = getNumber(syncSourceCoverage?.previousPublishedRankingCount);
+  const rankingCountDelta = getNumber(syncSourceCoverage?.publishedRankingCountDelta);
 
   const provenance = getObject(rankingsPayload?.provenance);
   const safetySnapshot = getObject(provenance?.safetySnapshot);
@@ -625,9 +653,15 @@ export async function loadYieldHealthSummary(
     "lendingAllowlistRecommendationCount",
     "lendingAllowlistRecommendations",
   );
+  const staleAutoLendingOverrideCount = getCount(
+    coverageAuditPayload,
+    "staleAutoLendingOverrideCount",
+    "staleAutoLendingOverrides",
+  );
   const headlineGapCount = sumKnown([
     manifestMissingCount,
     yieldBearingMissingFromRankingsCount,
+    staleAutoLendingOverrideCount,
     unmatchedHighTvlPoolCount,
     missingProtocolCount,
   ]);
@@ -653,6 +687,8 @@ export async function loadYieldHealthSummary(
     statusImpact: rankingStatus === "stale" ? "public-critical" : "admin-watch",
     runbookUrl: YIELD_RUNBOOK_URL,
     rankingCount: rankings?.length ?? null,
+    rankingCountDelta,
+    previousRankingCount,
     rankingUpdatedAt,
     rankingAgeSec,
     rankingMaxAgeSec: YIELD_RANKING_MAX_AGE_SEC,
@@ -689,6 +725,7 @@ export async function loadYieldHealthSummary(
       nativeExactPoolRecommendationCount,
       sourceFamilyAdapterRecommendationCount,
       lendingAllowlistRecommendationCount,
+      staleAutoLendingOverrideCount,
       ...coverageAuditQueue,
     },
     sourceRiskCoverage,

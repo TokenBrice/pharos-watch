@@ -9,6 +9,7 @@ import {
   buildProtocolCategoryLookupFromCachePayload,
   buildCoverageAuditOperatorQueue,
   identifyCoverageGaps,
+  identifyStaleAutoLendingOverrides,
   isHighConfidenceProtocolCategory,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
@@ -311,6 +312,33 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("flags deterministic auto-lending overrides that no longer pass static venue gates", () => {
+    const stale = identifyStaleAutoLendingOverrides([
+      {
+        pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
+        chain: "Flare",
+        project: "clearpool-lending",
+        symbol: "USDX",
+        tvlUsd: 1,
+        apy: 0.01,
+        apyBase: 0.01,
+        apyReward: null,
+        apyMean30d: 0.01,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
+      },
+    ]);
+
+    expect(stale).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdx-hex-trust",
+        pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
+        reasons: expect.arrayContaining(["below-apy-floor", "below-tvl-floor"]),
+      }),
+    );
+  });
+
   it("builds a transient operator queue from headline gaps and recommendation candidates", () => {
     const dlPools: DlPool[] = [
       { pool: "susde-native", chain: "Ethereum", project: "ethena", symbol: "sUSDe", tvlUsd: 50_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
@@ -328,6 +356,17 @@ describe("identifyCoverageGaps", () => {
       gaps,
       manifestMissingIds: ["missing-manifest"],
       yieldBearingMissingFromRankings: ["missing-ranking"],
+      staleAutoLendingOverrides: [{
+        stablecoinId: "usdx-hex-trust",
+        pool: "stale-usdx",
+        reasons: ["missing-pool"],
+        project: null,
+        symbol: null,
+        chain: null,
+        tvlUsd: null,
+        apy: null,
+        requiredMinTvlUsd: null,
+      }],
     });
 
     expect(queue).toMatchObject({
@@ -338,6 +377,7 @@ describe("identifyCoverageGaps", () => {
       expect.arrayContaining([
         expect.objectContaining({ kind: "manifest-missing", actionHint: "accept" }),
         expect.objectContaining({ kind: "ranking-missing", actionHint: "watch" }),
+        expect.objectContaining({ kind: "stale-auto-lending-override", actionHint: "accept" }),
       ]),
     );
     expect(queue.recommendationCandidates).toEqual(

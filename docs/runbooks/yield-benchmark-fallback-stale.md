@@ -7,7 +7,7 @@ Triggered by:
 
 ## Symptom
 
-Yield rows still publish, but benchmark provenance shows a fallback or retained market rate. Excess yield, PYS effective-yield adjustment, scatter-plot benchmark frames, and benchmark labels may be based on older USD/EUR/CHF benchmark inputs.
+Yield rows still publish, but benchmark provenance shows a fallback or retained market rate. Excess yield, PYS effective-yield adjustment, scatter-plot benchmark frames, and benchmark labels may be based on older benchmark inputs.
 
 ## Impact
 
@@ -44,7 +44,7 @@ WHERE key = 'yield-rankings';
 
 ## Common Causes
 
-- FRED, Treasury.gov, ECB, or SIX benchmark fetch failed during the daily `0 8 * * *` lane.
+- FRED, Treasury.gov, ECB, SIX, or central-bank benchmark fetches failed during the daily `0 8 * * *` lane.
 - `fetch-tbill-rate` retained the last market-derived rate after an upstream outage.
 - The benchmark cache exists but is malformed or missing one of the structured benchmark entries.
 - `sync-yield-data` is healthy but continues to mark rankings degraded because the retained USD benchmark is too old.
@@ -65,7 +65,7 @@ WHERE key = 'yield-rankings';
 ## Validation
 
 - `fetch-tbill-rate` has a recent `ok` or expected `degraded` run.
-- `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available EUR/CHF entries.
+- `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available non-USD benchmark entries.
 - New `yield-rankings` rows expose benchmark fields, and `fallbackMode` is null unless an upstream outage is still active.
 - `/yield/` scatter and table benchmark labels agree with the API payload.
 

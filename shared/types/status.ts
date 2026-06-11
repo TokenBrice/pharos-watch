@@ -555,6 +555,7 @@ export type YieldCoverageAuditQueueItemKind =
   | "native-exact-pool"
   | "source-family-adapter"
   | "lending-allowlist"
+  | "stale-auto-lending-override"
   | "quarantine-ready-to-restore";
 
 export interface YieldCoverageAuditQueueItem {
@@ -580,6 +581,8 @@ export interface YieldHealthSummary {
   statusImpact: "public-critical" | "admin-watch";
   runbookUrl: string;
   rankingCount: number | null;
+  rankingCountDelta: number | null;
+  previousRankingCount: number | null;
   rankingUpdatedAt: number | null;
   rankingAgeSec: number | null;
   rankingMaxAgeSec: number;
@@ -632,6 +635,7 @@ export interface YieldHealthSummary {
     nativeExactPoolRecommendationCount: number | null;
     sourceFamilyAdapterRecommendationCount: number | null;
     lendingAllowlistRecommendationCount: number | null;
+    staleAutoLendingOverrideCount: number | null;
     headlineGaps: YieldCoverageAuditQueueItem[];
     recommendationCandidates: YieldCoverageAuditQueueItem[];
     allowedActions: YieldCoverageAuditQueueAction[];

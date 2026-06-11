@@ -358,6 +358,20 @@ export function findBestLendingPool(
     chainFilter?: Set<string>;
     allowSymbolMatch?: boolean;
     reservedPoolIds?: Set<string>;
+    isBlockedPool?: (pool: {
+      pool: string;
+      symbol: string;
+      project: string;
+      tvlUsd: number;
+      apy: number;
+      apyBase: number | null;
+      apyReward: number | null;
+      stablecoin: boolean;
+      exposure: string;
+      poolMeta?: string | null;
+      underlyingTokens?: string[] | null;
+      chain?: string;
+    }) => boolean;
   },
 ): {
   pool: string;
@@ -385,6 +399,7 @@ export function findBestLendingPool(
     p.tvlUsd >= minTvlUsd &&
     !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
     !reservedPoolIds.has(p.pool) &&
+    !options?.isBlockedPool?.(p) &&
     (!chainFilter || !p.chain || chainFilter.has(resolveChainId(p.chain) ?? p.chain.toLowerCase()))
   );
 

@@ -23,6 +23,7 @@ import {
   parseBoeSoniaCompoundedIndexCsv,
   parseBojCallRateJson,
   parseBocValetSeries,
+  parseCbrKeyRateXml,
   parseCbrtEvdsSeries,
   parseEcbCompoundedEstrCsv,
   parseRbaF1MoneyMarketCsv,
@@ -77,6 +78,17 @@ const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
     { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
   ],
 });
+const CBR_KEY_RATE_XML_SNIPPET = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <KeyRateXMLResponse xmlns="http://web.cbr.ru/">
+      <KeyRateXMLResult>
+        <KR><DT>2026-06-09T00:00:00+03:00</DT><Rate>18.00</Rate></KR>
+        <KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR>
+      </KeyRateXMLResult>
+    </KeyRateXMLResponse>
+  </soap:Body>
+</soap:Envelope>`;
 
 const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
   props: {
@@ -126,8 +138,8 @@ function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
   });
 }
 
-/** Mocks every non-USD/EUR/CHF benchmark endpoint with a successful response. Used to
- *  isolate USD/EUR/CHF-specific test cases from added benchmark coverage. */
+/** Mocks every extended benchmark endpoint with a successful response. Used to
+ *  isolate provider-specific test cases from added benchmark coverage. */
 function okExtendedBenchmarkMocks(): Record<string, Response> {
   return {
     "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
@@ -156,6 +168,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
       }),
       { status: 200 },
     ),
+    "DailyInfoWebServ": new Response(CBR_KEY_RATE_XML_SNIPPET, { status: 200, headers: { "Content-Type": "text/xml" } }),
     "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
   };
 }
@@ -254,6 +267,8 @@ describe("fetchTbillRate", () => {
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadSource).toBe("boc-valet-v122530");
     expect(metadata.cadRate).toBe(4.75);
+    expect(metadata.rubSource).toBe("cbr-key-rate");
+    expect(metadata.rubRate).toBe(14.5);
     expect(metadata.trySource).toBe("cbrt-evds-tlref");
     expect(metadata.tryRate).toBe(40);
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
@@ -503,6 +518,7 @@ describe("fetchTbillRate", () => {
               BRL: null,
               AUD: null,
               CAD: null,
+              RUB: null,
               TRY: null,
               SGD: null,
             },
@@ -539,6 +555,7 @@ describe("fetchTbillRate", () => {
       "banxico.org.mx": null,
       "api.bcb.gov.br": null,
       "bankofcanada.ca/valet": null,
+      "DailyInfoWebServ": null,
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -546,7 +563,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
     expect(latestCachePayload()).toMatchObject({
@@ -578,6 +595,7 @@ describe("fetchTbillRate", () => {
       "banxico.org.mx": null,
       "api.bcb.gov.br": null,
       "bankofcanada.ca/valet": null,
+      "DailyInfoWebServ": null,
     });
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
@@ -603,7 +621,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -624,6 +642,7 @@ describe("fetchTbillRate", () => {
       "banxico.org.mx": null,
       "api.bcb.gov.br": null,
       "bankofcanada.ca/valet": null,
+      "DailyInfoWebServ": null,
     });
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
@@ -653,7 +672,7 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,try:cbrt-tlref-failed",
+      "usd:all-sources-failed-retained,usd_effr:fred-dff-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
     );
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
@@ -888,6 +907,28 @@ describe("parseBocValetSeries", () => {
   });
 });
 
+describe("parseCbrKeyRateXml", () => {
+  it("extracts the newest CBR key-rate observation from the SOAP response", () => {
+    const payload = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>
+<KeyRateXMLResponse xmlns="http://web.cbr.ru/"><KeyRateXMLResult><KeyRate xmlns="">
+<KR><DT>2026-06-10T00:00:00+03:00</DT><Rate>14.50</Rate></KR>
+<KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR>
+</KeyRate></KeyRateXMLResult></KeyRateXMLResponse>
+</soap:Body></soap:Envelope>`;
+
+    expect(parseCbrKeyRateXml(payload)).toEqual({
+      rate: 14.5,
+      recordDate: "2026-06-11",
+    });
+  });
+
+  it("skips invalid rows and enforces the RUB-specific sanity band", () => {
+    const payload = `<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>125.00</Rate></KR></KeyRate>`;
+    expect(parseCbrKeyRateXml(payload)).toBeNull();
+  });
+});
+
 describe("parseCbrtEvdsSeries", () => {
   it("extracts the latest BIST TLREF observation above the standard 20% cap", () => {
     expect(parseCbrtEvdsSeries(CBRT_TLREF_JSON_SNIPPET)).toEqual({
@@ -982,6 +1023,14 @@ describe("fetchTbillRate — new currency fetchers", () => {
           }),
           { status: 200 },
         ),
+        "cbr.ru/DailyInfoWebServ/DailyInfo.asmx": (_url, opts) => {
+          expect(opts?.method).toBe("POST");
+          expect(String(opts?.body ?? "")).toContain("KeyRateXML");
+          return new Response(
+            "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
+            { status: 200 },
+          );
+        },
         "evds3.tcmb.gov.tr/igmevdsms-dis/fe": (_url, opts) => {
           expect(opts?.method).toBe("POST");
           expect(String(opts?.body ?? "")).toContain('"series":"TP.BISTTLREF.ORAN"');
@@ -1002,6 +1051,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(metadata.mxnRate).toBe(10.45);
     expect(metadata.brlRate).toBe(12.75);
     expect(metadata.cadRate).toBe(4.75);
+    expect(metadata.rubRate).toBe(14.5);
     expect(metadata.tryRate).toBe(40);
     expect(calls.some((u) => u.includes("id=DFF"))).toBe(true);
     expect(calls.some((u) => u.includes("bankofengland.co.uk") && u.includes("SeriesCodes=IUDZOS2"))).toBe(true);
@@ -1010,6 +1060,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(true);
     expect(calls.some((u) => u.includes("api.bcb.gov.br"))).toBe(true);
     expect(calls.some((u) => u.includes("bankofcanada.ca/valet"))).toBe(true);
+    expect(calls.some((u) => u.includes("cbr.ru/DailyInfoWebServ/DailyInfo.asmx"))).toBe(true);
     expect(calls.some((u) => u.includes("evds3.tcmb.gov.tr/igmevdsms-dis/fe"))).toBe(true);
   });
 
@@ -1046,6 +1097,10 @@ describe("fetchTbillRate — new currency fetchers", () => {
           JSON.stringify({
             observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
           }),
+          { status: 200 },
+        ),
+        "cbr.ru/DailyInfoWebServ/DailyInfo.asmx": new Response(
+          "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
           { status: 200 },
         ),
         "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
@@ -1105,6 +1160,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
               BRL: null,
               AUD: null,
               CAD: null,
+              RUB: null,
               TRY: null,
               SGD: null,
             },
@@ -1167,6 +1223,7 @@ describe("getBenchmarkKeyForPegCurrency", () => {
     expect(getBenchmarkKeyForPegCurrency("BRL")).toBe("BRL");
     expect(getBenchmarkKeyForPegCurrency("AUD")).toBe("AUD");
     expect(getBenchmarkKeyForPegCurrency("CAD")).toBe("CAD");
+    expect(getBenchmarkKeyForPegCurrency("RUB")).toBe("RUB");
     expect(getBenchmarkKeyForPegCurrency("TRY")).toBe("TRY");
   });
 
@@ -1180,7 +1237,7 @@ describe("getBenchmarkKeyForPegCurrency", () => {
 
 describe("resolveBenchmarkForStablecoin", () => {
   function buildMeta(
-    key: "USD" | "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "TRY" | "SGD",
+    key: "USD" | "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "RUB" | "TRY" | "SGD",
   ) {
     return {
       ...withYieldBenchmarkStaticMeta(key, {
@@ -1201,7 +1258,7 @@ describe("resolveBenchmarkForStablecoin", () => {
 
   function buildRegistry(
     overrides: Partial<Record<
-      "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "TRY",
+      "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "RUB" | "TRY",
       boolean
     >> = {},
   ) {
@@ -1216,6 +1273,7 @@ describe("resolveBenchmarkForStablecoin", () => {
       BRL: overrides.BRL ? buildMeta("BRL") : null,
       AUD: overrides.AUD ? buildMeta("AUD") : null,
       CAD: overrides.CAD ? buildMeta("CAD") : null,
+      RUB: overrides.RUB ? buildMeta("RUB") : null,
       TRY: overrides.TRY ? buildMeta("TRY") : null,
       SGD: null,
     };

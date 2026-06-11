@@ -13,6 +13,7 @@ import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
+  isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
@@ -419,6 +420,7 @@ export function appendPoolFamilyYieldSources(params: {
 
       const pool = params.dlPools.find((entry) => entry.pool === poolId);
       if (!pool) continue;
+      if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
 
       const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
       const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
@@ -485,6 +487,7 @@ export function appendPoolFamilyYieldSources(params: {
           chainFilter,
           allowSymbolMatch,
           reservedPoolIds: reservedExplicitPoolIds,
+          isBlockedPool: (candidate) => isAutoLendingCollisionBlockedForStablecoin(meta.id, candidate),
         },
       );
       if (!pool) continue;

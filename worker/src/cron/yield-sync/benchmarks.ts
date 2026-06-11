@@ -25,6 +25,7 @@ export interface ParsedYieldBenchmarkRegistry {
   BRL: ParsedYieldBenchmarkMeta | null;
   AUD: ParsedYieldBenchmarkMeta | null;
   CAD: ParsedYieldBenchmarkMeta | null;
+  RUB: ParsedYieldBenchmarkMeta | null;
   TRY: ParsedYieldBenchmarkMeta | null;
   SGD: ParsedYieldBenchmarkMeta | null;
 }
@@ -86,6 +87,12 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     currency: "CAD",
     isProxy: true,
   },
+  RUB: {
+    // CBR DailyInfo KeyRateXML — Central Bank of Russia key rate.
+    label: "RUB CBR key rate",
+    currency: "RUB",
+    isProxy: false,
+  },
   TRY: {
     // CBRT EVDS TP.BISTTLREF.ORAN — BIST Turkish Lira Overnight Reference Rate.
     label: "TRY BIST TLREF overnight",
@@ -145,6 +152,7 @@ const NATIVE_BENCHMARK_PEG_CURRENCIES = new Set<YieldBenchmarkKey>([
   "BRL",
   "AUD",
   "CAD",
+  "RUB",
   "TRY",
 ]);
 
@@ -218,6 +226,7 @@ export function toYieldBenchmarkRegistry(
     BRL: parsed.BRL,
     AUD: parsed.AUD,
     CAD: parsed.CAD,
+    RUB: parsed.RUB,
     TRY: parsed.TRY,
     SGD: parsed.SGD,
   };

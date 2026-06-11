@@ -10,6 +10,8 @@ import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "./yield-config-explicit-pools";
 import {
   AUTO_LENDING_POOL_MAP as RAW_AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS as RAW_AUTO_LENDING_SAFETY_BYPASS_IDS,
+  AUTO_LENDING_COLLISION_BLOCKLIST,
+  isAutoLendingCollisionBlockedForStablecoin,
 } from "./yield-config-lending-protocols";
 import { YIELD_POOL_MAP as RAW_YIELD_POOL_MAP } from "./yield-config-pools";
 import {
@@ -58,4 +60,5 @@ export const PRICE_DERIVED_FALLBACK_IDS = derivedYieldConfig.priceDerivedFallbac
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = derivedYieldConfig.rateDerivedConfigs;
 export const AUTO_LENDING_POOL_MAP: Record<string, string> = derivedYieldConfig.autoLendingPoolMap;
 export const AUTO_LENDING_SAFETY_BYPASS_IDS = derivedYieldConfig.autoLendingSafetyBypassIds;
+export { AUTO_LENDING_COLLISION_BLOCKLIST, isAutoLendingCollisionBlockedForStablecoin };
 export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = derivedYieldConfig.manifest;

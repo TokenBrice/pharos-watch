@@ -176,7 +176,7 @@ export function YieldIntelligenceMethodologySection() {
                       <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
                       Treasury-tracking tokens, derives APY from the selected benchmark registry entry net of known fee
                       spreads, using USD by default, product-specific EFFR where configured, 3-month compounded €STR for EUR pegs, 3-month compounded SARON
-                      for Swiss-franc pegs, and BIST TLREF for TRY pegs. Rate-derived rows can also carry an explicit benchmark override for PYS/excess-yield provenance without changing the APY derivation benchmark
+                      for Swiss-franc pegs, the CBR key rate for RUB pegs, and BIST TLREF for TRY pegs. Rate-derived rows can also carry an explicit benchmark override for PYS/excess-yield provenance without changing the APY derivation benchmark
                     </li>
                   </ul>
                   <p>

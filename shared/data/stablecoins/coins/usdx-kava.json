@@ -33,6 +33,13 @@
       "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
     }
   ],
+  "contracts": [
+    {
+      "chain": "osmosis",
+      "address": "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
+      "decimals": 6
+    }
+  ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

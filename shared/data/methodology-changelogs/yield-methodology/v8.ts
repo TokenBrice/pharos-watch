@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.291",
+    title: "RUB Benchmark and Audit-Queue Coverage Repairs",
+    date: "2026-06-11",
+    effectiveAt: 1781179200,
+    summary:
+      "Yield Intelligence adds a RUB benchmark lane backed by the Central Bank of Russia key-rate SOAP feed, promotes A7A5 into rate-derived coverage, repairs audited lending-opportunity pins, and exposes coverage-regression telemetry for the monthly audit workflow.",
+    impact: [
+      "The benchmark registry adds optional `RUB`, sourced from the Central Bank of Russia DailyInfo `KeyRateXML` feed; RUB validation uses the same wider `[-10%, 100%]` band as TRY so high local reference rates are accepted",
+      "`a7a5-old-vector` leaves the intentional-gap manifest and resolves through a rate-derived `CBR key-rate reserve-yield proxy (net of 1.00pp)` row with `benchmarkOverrideKey: RUB`",
+      "`usdx-hex-trust` and `reusd-resupply` deterministic lending pins are repointed to live DeFiLlama pools, stale `doc-money-on-chain` and `pmusd-precious-metals` pins are removed, and `reusd-resupply` gets an exact-pool safety bypass with written rationale",
+      "`bifi` and `fraxlend` join the lending allowlist from the audit-queue follow-up, while the existing APY, TVL, safety, and category gates still decide whether their candidate pools publish",
+      "Same-symbol auto-lending collision blocks now protect unrelated pools such as Kava USDX vs Hex Trust USDX, Virtue VUSD vs Monad VUSD, and legacy Nexus NUSD vs Neutrl NUSD",
+      "The monthly coverage audit now emits stale auto-lending override queue items, and sync/status metadata exposes published ranking-count deltas so coverage regressions are visible in Yield Health",
+      "No global APY, TVL, safety, or floor policy changes were made; Binance BFUSD, Gate GUSD, Tradable notes, dEURO, and eBUSD remain deferred until stable public machine-readable APY sources or adapter paths are verified",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.29",
     title: "NAV Oracle, TRY TLREF, and Queue-Guided Coverage",
     date: "2026-06-09",

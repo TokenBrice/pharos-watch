@@ -32,6 +32,7 @@ export const YIELD_BENCHMARK_KEY_VALUES = [
   "BRL",
   "AUD",
   "CAD",
+  "RUB",
   "TRY",
   "SGD",
 ] as const;
@@ -234,6 +235,7 @@ const YieldBenchmarkRegistrySchema = z.object({
   BRL: YieldBenchmarkMetaSchema.nullable().optional(),
   AUD: YieldBenchmarkMetaSchema.nullable().optional(),
   CAD: YieldBenchmarkMetaSchema.nullable().optional(),
+  RUB: YieldBenchmarkMetaSchema.nullable().optional(),
   TRY: YieldBenchmarkMetaSchema.nullable().optional(),
   SGD: YieldBenchmarkMetaSchema.nullable().optional(),
 });

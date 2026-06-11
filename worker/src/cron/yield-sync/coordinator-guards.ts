@@ -34,6 +34,7 @@ function buildPublishedCoverageRegressionResult(params: {
       currentPublishedOpportunityCount: params.currentPublishedOpportunityCount,
       previousPublishedRankingCount: params.previousPublishedRankingCount,
       currentPublishedRankingCount: params.currentPublishedRankingCount,
+      publishedRankingCountDelta: params.currentPublishedRankingCount - params.previousPublishedRankingCount,
     }),
   };
 }

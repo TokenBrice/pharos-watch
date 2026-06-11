@@ -1,6 +1,20 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.29`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.291`.
+
+---
+
+## v8.291 - RUB Benchmark and Audit-Queue Coverage Repairs (June 11, 2026)
+
+- The benchmark registry adds `RUB`, sourced from the Central Bank of Russia DailyInfo `KeyRateXML` SOAP feed, with source metadata `cbr-key-rate` and failure mode `cbr-key-rate-failed`
+- RUB benchmark validation uses the wider `[-10%, 100%]` range so high local reference rates are not rejected by the standard 20% ceiling
+- `a7a5-old-vector` leaves the intentional-gap manifest and now resolves through a rate-derived `CBR key-rate reserve-yield proxy (net of 1.00pp)` row with `benchmarkOverrideKey: RUB`
+- `usdx-hex-trust` and `reusd-resupply` deterministic lending pins are repointed to live DeFiLlama pools, while stale `doc-money-on-chain` and `pmusd-precious-metals` pins are removed
+- `reusd-resupply` gets a coin-specific exact-pool safety bypass after review; the pinned Pendle row still has to pass pool-shape, APY, and TVL gates
+- `bifi` and `fraxlend` join the lending allowlist from the audit-queue follow-up; normal safety, APY, TVL, and source-shape publication gates still control whether their candidate pools appear
+- Same-symbol collision blocks now guard known false positives including Kava USDX vs Hex Trust USDX, Virtue VUSD vs Monad VUSD, and legacy Nexus NUSD vs Neutrl NUSD
+- The monthly coverage audit now emits `stale-auto-lending-override` queue items, and sync/status metadata exposes published ranking-count deltas for operator-visible coverage regression monitoring
+- Binance BFUSD, Gate GUSD, Tradable notes, dEURO, and eBUSD remain deferred after the June 11 probe because no stable public machine-readable APY source or adapter path was verified
 
 ---
 
@@ -134,7 +148,7 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 - `dola-inverse-finance` no longer carries yield-bearing metadata or static runtime mappings for the untracked sDOLA wrapper
 - The generic on-chain exchange-rate reader drops the DOLA/sDOLA parent mapping, reducing the generic vault set from 12 to 11
 - `usdn-smardex` now uses its exact SMARDEX USDN DeFiLlama single-exposure pool after the asset was corrected from NAV-token to rebase semantics
-- `a7a5-old-vector` is explicitly yield-bearing but remains an intentional runtime gap until a reliable RUB benchmark or issuer APY source is wired
+- `a7a5-old-vector` was explicitly yield-bearing but remained an intentional runtime gap until the RUB key-rate benchmark landed in v8.291
 - PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; v8.18 is a source-ownership and metadata correction
 
 ---

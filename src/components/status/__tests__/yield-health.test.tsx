@@ -33,6 +33,8 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
     statusImpact: "admin-watch",
     runbookUrl: "/docs/runbooks/yield-health",
     rankingCount: 120,
+    rankingCountDelta: 2,
+    previousRankingCount: 118,
     rankingUpdatedAt: 1_700_000_000,
     rankingAgeSec: 900,
     rankingMaxAgeSec: 43_200,
@@ -79,6 +81,7 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
       nativeExactPoolRecommendationCount: 2,
       sourceFamilyAdapterRecommendationCount: 1,
       lendingAllowlistRecommendationCount: 2,
+      staleAutoLendingOverrideCount: 0,
       headlineGaps: [
         {
           id: "manifest-missing:coin-a",
@@ -144,14 +147,24 @@ describe("YieldHealthCard", () => {
     render(<YieldHealthCard health={makeHealth()} />);
 
     expect(screen.getByText("1/4 fresh · 1 degraded · 1 stale · 1 missing")).toBeTruthy();
+    expect(screen.getByText(/\+2 vs 118/)).toBeTruthy();
   });
 
   it("renders source-risk coverage and coverage audit queue counts", () => {
-    render(<YieldHealthCard health={makeHealth()} />);
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          coverageAudit: {
+            ...makeHealth().coverageAudit,
+            staleAutoLendingOverrideCount: 2,
+          },
+        })}
+      />,
+    );
 
     expect(screen.getByText("80/120 rows with sourceRisk")).toBeTruthy();
     expect(screen.getByText("Warn below 75%")).toBeTruthy();
-    expect(screen.getByText(/Coverage queue: 3 gaps · 5 candidates/)).toBeTruthy();
+    expect(screen.getByText(/Coverage queue: 3 gaps · 5 candidates · 2 stale overrides/)).toBeTruthy();
     expect(screen.getByText("Coverage audit operator queue")).toBeTruthy();
     expect(screen.getAllByText("coin-a").length).toBeGreaterThan(0);
     expect(screen.getByText("sUSDe on ethena")).toBeTruthy();

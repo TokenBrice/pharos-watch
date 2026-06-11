@@ -146,6 +146,7 @@ const CHAIN_ALIASES: Record<string, string> = {
   "edgeX L1": "edgechain",
   "Secret": "secret",
   "Redbelly": "redbelly",
+  "Echelon Initia": "initia",
 };
 
 /**

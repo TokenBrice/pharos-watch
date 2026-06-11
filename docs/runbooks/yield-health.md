@@ -16,14 +16,14 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 
 ## First checks
 
-1. **Rankings cache:** inspect `yieldHealth.rankingUpdatedAt`, `rankingAgeSec`, and `rankingStatus` in `/api/status`.
+1. **Rankings cache:** inspect `yieldHealth.rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus`, `previousRankingCount`, and `rankingCountDelta` in `/api/status`.
 2. **Publisher cron:** inspect `crons["sync-yield-data"]` for latest status, error, metadata, and in-flight lease state.
 3. **Safety coverage:** inspect `yieldHealth.safetyCoverage`; coverage below `0.75` means read-time report-card hydration is sparse.
 4. **Supplemental cache:** inspect `yieldHealth.supplemental`; `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and `families` identify which optional source families are stale or absent. A fresh family row with `sourceCount: 0` is valid evidence that the family ran and found no candidates; a missing family row means the family did not publish its health marker. Age above 6h means optional source families may be sparse.
 5. **Benchmark:** inspect `yieldHealth.benchmark`; fallback or age above 48h means retained benchmark data is driving yield context.
 6. **Source-risk coverage:** inspect `yieldHealth.sourceRiskCoverage`; core fields below 75% coverage are admin-watch gaps. `venueRiskTier="unknown"` counts as missing evidence, not high risk.
 7. **Comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness`; any `staleAnchorCount > 0` is an admin-watch signal. `oldestAnchorAgeSeconds`, `oldestAnchorStablecoinId`, `oldestAnchorSourceKey`, and bounded `staleAnchorExamples` identify the affected derived-source rows.
-8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue. Candidate kind `quarantine-ready-to-restore` means a monthly quarantine re-probe succeeded and still requires manual source restoration.
+8. **Coverage audit:** inspect `yieldHealth.coverageAudit`; age above 45d means the monthly coverage review is late. `headlineGapCount`, `recommendationCandidateCount`, `staleAutoLendingOverrideCount`, `headlineGaps`, and `recommendationCandidates` are the read-only triage queue. Candidate kind `quarantine-ready-to-restore` means a monthly quarantine re-probe succeeded and still requires manual source restoration; headline kind `stale-auto-lending-override` means a deterministic lending pin no longer clears current static gates and needs removal, repointing, or a written bypass review.
 
 Access-gated surfaces:
 
@@ -48,7 +48,7 @@ Read-only JSON checks:
 curl -fsS https://ops-api.pharos.watch/api/status \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
   -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-  | jq '.yieldHealth | {status, statusImpact, sourceRiskCoverage, comparisonAnchorFreshness, coverageAudit}'
+  | jq '.yieldHealth | {status, statusImpact, rankingCount, previousRankingCount, rankingCountDelta, sourceRiskCoverage, comparisonAnchorFreshness, coverageAudit}'
 ```
 
 ```bash
@@ -112,7 +112,7 @@ LIMIT 10;
 - **Benchmark fallback:** inspect `risk_free_rates` cache and the latest `sync-yield-data` metadata. A retained fallback is acceptable briefly; treat retained data older than 48h as needing operator follow-up.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.
 - **Stale comparison anchors:** inspect `yieldHealth.comparisonAnchorFreshness.staleAnchorExamples` and the latest `sync-yield-data` metadata. This identifies rows whose derived APY is comparing against an old anchor; do not change arbitration or manually rewrite history rows solely to clear this watch signal.
-- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. Candidate kind `quarantine-ready-to-restore` identifies a successful quarantine re-probe for manual restoration review; it is not automatic source restoration. This is a triage convention only; `queuePersistence="deferred"` means there is no persistent dismissal state.
+- **Coverage-audit queue:** classify each headline gap or recommendation candidate from `yieldHealth.coverageAudit.headlineGaps` and `yieldHealth.coverageAudit.recommendationCandidates` as `accept`, `dismiss`, `intentional-gap`, or `watch` in the operator note for that audit cycle. Candidate kind `quarantine-ready-to-restore` identifies a successful quarantine re-probe for manual restoration review; it is not automatic source restoration. Headline kind `stale-auto-lending-override` identifies a deterministic auto-lending override whose current DeFiLlama row is missing or no longer clears static gates. This is a triage convention only; `queuePersistence="deferred"` means there is no persistent dismissal state.
 - **Old coverage audit:** inspect `yield-coverage-audit` cron history. It is monthly and watch-tier, so a late audit is a review backlog, not a public outage.
 
 ## Abort Conditions
@@ -129,7 +129,7 @@ LIMIT 10;
 - The admin Pipeline Yield Health card shows the expected field status and status-impact label.
 - If rankings were stale, `GET /api/yield-rankings` returns `200`, non-empty `rankings`, and a fresh `updatedAt` after recovery.
 - If the latest generation failed, `yield_publication_generations.failure_reason` explains the failure while the previous public cache remains valid.
-- Supplemental, benchmark, and coverage-audit fields move back to `healthy` or an understood `degraded` state after their owning cron/cache recovers.
+- Supplemental, benchmark, ranking-delta, and coverage-audit fields move back to `healthy` or an understood `degraded` state after their owning cron/cache recovers.
 - Source-risk coverage shows the expected ratios for `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, and `sourceRiskScore`.
 - Comparison-anchor freshness shows the expected anchored row count, stale anchor count, oldest stale anchor age/source, and bounded stale examples from the latest sync metadata.
 

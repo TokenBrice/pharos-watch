@@ -16,11 +16,18 @@ import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
   AUTO_LENDING_POOL_MAP,
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
+  isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "./yield-config";
+import {
+  getRequiredLendingOpportunityTvlUsd,
+} from "./yield-sync/resolve-helpers";
+import {
+  MIN_LENDING_POOL_APY,
+} from "../lib/constants";
 import {
   YIELD_ADAPTER_LIFECYCLE,
   type YieldAdapterLifecycleEntry,
@@ -226,6 +233,18 @@ export interface CoverageAuditOperatorQueue {
   allowedActions: YieldCoverageAuditQueueAction[];
   headlineGaps: CoverageAuditQueueItem[];
   recommendationCandidates: CoverageAuditQueueItem[];
+}
+
+export interface StaleAutoLendingOverride {
+  stablecoinId: string;
+  pool: string;
+  reasons: string[];
+  project: string | null;
+  symbol: string | null;
+  chain: string | null;
+  tvlUsd: number | null;
+  apy: number | null;
+  requiredMinTvlUsd: number | null;
 }
 
 export interface CoverageGapPool {
@@ -470,6 +489,23 @@ function buildPoolQueueItem(
   };
 }
 
+function buildStaleOverrideQueueItem(override: StaleAutoLendingOverride): CoverageAuditQueueItem {
+  return {
+    id: queueId("stale-auto-lending-override", `${override.stablecoinId}:${override.pool}`),
+    kind: "stale-auto-lending-override" as const,
+    title: override.stablecoinId,
+    detail: `Override ${override.pool} no longer qualifies: ${override.reasons.join(", ")}`,
+    actionHint: "accept" as const,
+    stablecoinIds: [override.stablecoinId],
+    pool: override.pool,
+    project: override.project ?? undefined,
+    symbol: override.symbol ?? undefined,
+    chain: override.chain ?? undefined,
+    tvlUsd: override.tvlUsd ?? undefined,
+    apy: override.apy ?? undefined,
+  };
+}
+
 function buildProtocolQueueItem(
   kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
   recommendation: ProtocolRecommendation,
@@ -497,11 +533,13 @@ export function buildCoverageAuditOperatorQueue({
   gaps,
   manifestMissingIds,
   yieldBearingMissingFromRankings,
+  staleAutoLendingOverrides = [],
   quarantineReadyToRestore = [],
 }: {
   gaps: CoverageGaps;
   manifestMissingIds: string[];
   yieldBearingMissingFromRankings: string[];
+  staleAutoLendingOverrides?: StaleAutoLendingOverride[];
   quarantineReadyToRestore?: QuarantineRestoreCandidate[];
 }): CoverageAuditOperatorQueue {
   const headlineGaps: CoverageAuditQueueItem[] = [
@@ -521,6 +559,7 @@ export function buildCoverageAuditOperatorQueue({
       actionHint: "watch" as const,
       stablecoinIds: [stablecoinId],
     })),
+    ...staleAutoLendingOverrides.map(buildStaleOverrideQueueItem),
     ...gaps.unmatchedHighTvlPools.map((pool) => buildPoolQueueItem("unmatched-high-tvl-pool", pool, "watch")),
     ...gaps.missingProtocols.map((pool) => buildPoolQueueItem("missing-protocol", pool, "watch")),
   ];
@@ -656,6 +695,57 @@ export function identifyCoverageGaps(
   };
 }
 
+export function identifyStaleAutoLendingOverrides(dlPools: DlPool[]): StaleAutoLendingOverride[] {
+  const poolById = new Map(dlPools.map((pool) => [pool.pool, pool] as const));
+  const staleOverrides: StaleAutoLendingOverride[] = [];
+
+  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
+    const pool = poolById.get(poolId);
+    if (!pool) {
+      staleOverrides.push({
+        stablecoinId,
+        pool: poolId,
+        reasons: ["missing-pool"],
+        project: null,
+        symbol: null,
+        chain: null,
+        tvlUsd: null,
+        apy: null,
+        requiredMinTvlUsd: null,
+      });
+      continue;
+    }
+
+    const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+      stablecoinId,
+      poolChain: pool.chain,
+      stablecoinSupplyById: new Map(),
+    });
+    const reasons: string[] = [];
+    if (pool.exposure !== "single") reasons.push("non-single-exposure");
+    if (!pool.stablecoin) reasons.push("not-stablecoin");
+    if (!LENDING_PROTOCOL_ALLOWLIST.has(pool.project)) reasons.push("project-not-allowlisted");
+    if (pool.apy < MIN_LENDING_POOL_APY) reasons.push("below-apy-floor");
+    if (pool.tvlUsd < requiredMinTvlUsd) reasons.push("below-tvl-floor");
+    if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) reasons.push("collision-blocked");
+    if (reasons.length === 0) continue;
+
+    staleOverrides.push({
+      stablecoinId,
+      pool: poolId,
+      reasons,
+      project: pool.project,
+      symbol: pool.symbol,
+      chain: pool.chain,
+      tvlUsd: pool.tvlUsd,
+      apy: pool.apy,
+      requiredMinTvlUsd,
+    });
+  }
+
+  return staleOverrides.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
+}
+
 /**
  * Async cron function: loads DL pools from cache/API, loads the existing yield
  * coverage state from the DB, computes gaps, and persists a summary report.
@@ -694,6 +784,7 @@ export async function runYieldCoverageAudit(
     LENDING_PROTOCOL_ALLOWLIST,
     protocolCategoryLookup.categoriesByProject,
   );
+  const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools);
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => !manifestById.has(coin.id))
@@ -756,6 +847,7 @@ export async function runYieldCoverageAudit(
     gaps,
     manifestMissingIds,
     yieldBearingMissingFromRankings,
+    staleAutoLendingOverrides,
     quarantineReadyToRestore: quarantineProbe.readyToRestore,
   });
 
@@ -774,6 +866,7 @@ export async function runYieldCoverageAudit(
     nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
     sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
     lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
+    staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
     exactPoolOverrideCount: explicitPoolOverrides.length,
     exactPoolOverrideYieldBearingCount: exactPoolOverrideYieldBearingIds.length,
     exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
@@ -786,6 +879,7 @@ export async function runYieldCoverageAudit(
     nativeExactPoolRecommendations: gaps.nativeExactPoolRecommendations,
     sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
+    staleAutoLendingOverrides,
     operatorQueue,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
@@ -810,6 +904,7 @@ export async function runYieldCoverageAudit(
     gaps.nativeExactPoolRecommendations.length +
     gaps.sourceFamilyAdapterRecommendations.length +
     gaps.lendingAllowlistRecommendations.length +
+    staleAutoLendingOverrides.length +
     quarantineProbe.readyToRestore.length +
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
@@ -830,6 +925,7 @@ export async function runYieldCoverageAudit(
       nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
       sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
       lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
+      staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
       exactPoolOverrideCount: explicitPoolOverrides.length,
       exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
       protocolCategoryStatus: protocolCategoryLookup.meta.status,

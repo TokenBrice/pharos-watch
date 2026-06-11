@@ -16,6 +16,7 @@ const CURRENCY_TO_COUNTRY: Record<string, string> = {
   ZAR: "ZA",
   CNY: "CN",
   CNH: "CN",
+  RUB: "RU",
   TRY: "TR",
   IDR: "ID",
   SGD: "SG",
@@ -123,6 +124,13 @@ const FLAGS: Record<string, ReactNode> = {
     <>
       <rect width="16" height="12" fill="#FFFFFF" />
       <circle cx="8" cy="6" r="3.6" fill="#BC002D" />
+    </>
+  ),
+  RU: (
+    <>
+      <rect width="16" height="4" fill="#FFFFFF" />
+      <rect y="4" width="16" height="4" fill="#0039A6" />
+      <rect y="8" width="16" height="4" fill="#D52B1E" />
     </>
   ),
 };
