@@ -1972,6 +1972,53 @@ describe("enrichMissingPrices", () => {
     expect(response.bodyUsed).toBe(true);
   });
 
+  it("writes the CMC local cooldown when the category endpoint returns 429", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "test-dollar",
+        name: "Test Dollar",
+        symbol: "TUSD",
+        price: 0,
+        cmcSlug: "test-dollar",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ status: { error_message: "rate limited" } }), {
+        status: 429,
+        headers: { "Retry-After": "1" },
+      })
+    ));
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "coinmarketcap",
+      status: 429,
+      success: false,
+    });
+    const cacheWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+    expect(cacheWrite?.binds[1]).toBe("1");
+  });
+
   it("skips Jupiter fetches when there are no Solana fallback candidates and the circuit is closed", async () => {
     const assets: PeggedAsset[] = [
       {

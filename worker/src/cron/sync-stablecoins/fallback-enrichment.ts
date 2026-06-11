@@ -1,4 +1,7 @@
-import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
+import {
+  createAuthoritativeLivePriceOverrideStats,
+  fetchAuthoritativeLivePriceOverrides,
+} from "../../lib/authoritative-price-sources";
 import { hasMissingPrice } from "./enrich-prices";
 import {
   applyProtocolPriceOverrides,
@@ -32,10 +35,12 @@ export async function runFallbackPriceEnrichmentPhase(
     validationReferences: input.validationReferences,
     logLabel: "Pre-rejected fallback price",
   });
+  const authoritativeOverrideStats = createAuthoritativeLivePriceOverrideStats();
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
     input.assets,
     input.signal,
     input.validationReferences,
+    { db: input.db, stats: authoritativeOverrideStats },
   );
   applyProtocolPriceOverrides({
     assets: input.assets,
@@ -76,6 +81,7 @@ export async function runFallbackPriceEnrichmentPhase(
     validationContexts: input.validationContexts,
     previousTrustedPrices: input.previousTrustedPrices,
     authoritativeOverrides,
+    authoritativeOverrideStats,
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
   }, "fallback-");
@@ -99,6 +105,7 @@ export async function runFallbackPriceEnrichmentPhase(
       itemsTotal: input.assets.length,
       metadata: {
         authoritativeOverrides: authoritativeOverrideCount,
+        authoritativeOverrideStats,
         rejectedPrices: rejectedCount,
         nativePegCorrections: nativePegCorrectionCount,
         nativePegFills: nativePegFillCount,
@@ -110,6 +117,7 @@ export async function runFallbackPriceEnrichmentPhase(
   return {
     enrichStats,
     authoritativeOverrideCount,
+    authoritativeOverrideStats,
     rejectedCount,
     cachedFallbackCount,
     nativePegCorrectionCount,

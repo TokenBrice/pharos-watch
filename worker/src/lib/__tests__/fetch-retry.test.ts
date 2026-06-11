@@ -80,6 +80,30 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
   });
 
+  it("waits on Retry-After before returning passthrough 429 responses", async () => {
+    const rateLimitedResponse = new Response(JSON.stringify({ error: "slow down" }), {
+      status: 429,
+      headers: { "Retry-After": "2" },
+    });
+    sleepWithSignalMock.mockImplementationOnce(async () => {
+      expect(rateLimitedResponse.bodyUsed).toBe(true);
+    });
+    const fetchMock = vi.fn().mockResolvedValue(rateLimitedResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchWithRetry(
+      "https://example.com/token",
+      undefined,
+      0,
+      { passthroughStatuses: [429] },
+    );
+
+    expect(res).not.toBe(rateLimitedResponse);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(2000, undefined);
+    await expect(res?.json()).resolves.toEqual({ error: "slow down" });
+  });
+
   it("backs off on 529 overload responses before succeeding", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))

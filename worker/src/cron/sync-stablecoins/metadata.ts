@@ -12,6 +12,7 @@ import {
 } from "@shared/lib/pricing-sources";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 
 function mapSourceToBucket(source: string) {
   return isPriceSourceHealthBucketKey(source) ? source : null;
@@ -147,6 +148,7 @@ export function buildStablecoinsSyncResult(input: {
   priceValidationStats: unknown;
   providerDiagnostics?: PricingProviderAttemptDiagnostic[];
   authoritativeOverrideCount?: number;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
   nativePegCorrectionCount?: number;
   nativePegFillCount?: number;
@@ -181,6 +183,7 @@ export function buildStablecoinsSyncResult(input: {
     assetCount: input.assets.length,
     enrichment: input.enrichStats,
     authoritativeOverrides: input.authoritativeOverrideCount ?? 0,
+    authoritativeOverrideStats: input.authoritativeOverrideStats,
     gtProbe: {
       updatedCount: input.gtProbe.updatedCount,
       ...input.gtProbe.stats,

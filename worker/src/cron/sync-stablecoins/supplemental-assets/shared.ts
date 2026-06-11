@@ -3,7 +3,8 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";
-import { DEFILLAMA_COINS } from "../../../lib/constants";
+import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
 
@@ -142,25 +143,54 @@ export async function fetchSupplementalPriceData(
   metas: StablecoinMeta[],
   logPrefix: string,
   signal?: AbortSignal,
+  db?: D1Database,
 ): Promise<SupplementalDefiLlamaPriceData> {
   if (metas.length === 0) return { coins: {} };
 
   const coinIds = metas.map((token) => token.geckoId).filter(Boolean).map((id) => `coingecko:${id}`).join(",");
   if (!coinIds) return { coins: {} };
 
-  const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
+  const dlAllowed = db ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS) : true;
+  if (!dlAllowed) {
+    console.warn(`[${logPrefix}] DefiLlama coins circuit open; using CoinGecko simple price fallback when available`);
+    return { coins: {} };
+  }
+
+  let priceRes: Response | null = null;
+  try {
+    priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn(`[${logPrefix}] Price fetch threw; using CoinGecko simple price fallback when available`, err);
+    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
+    return { coins: {} };
+  }
   if (!priceRes || !priceRes.ok) {
     console.warn(
       `[${logPrefix}] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`,
     );
     await cancelResponseBodyQuietly(priceRes);
+    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
     return { coins: {} };
   }
 
-  const parsed = DefiLlamaCoinsPriceSchema.safeParse(await priceRes.json());
+  let rawPriceData: unknown;
+  try {
+    rawPriceData = await priceRes.json();
+  } catch (err) {
+    await cancelResponseBodyQuietly(priceRes);
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn(`[${logPrefix}] Price payload parse failed; using CoinGecko simple price fallback when available`, err);
+    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
+    return { coins: {} };
+  }
+
+  const parsed = DefiLlamaCoinsPriceSchema.safeParse(rawPriceData);
   if (!parsed.success) {
+    if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
     return { coins: {} };
   }
 
+  if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, true);
   return { coins: parsed.data.coins ?? {} };
 }

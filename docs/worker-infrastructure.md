@@ -744,9 +744,9 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `DL_STABLECOINS`                     | `defillama-stablecoins`       | `sync-stablecoins`                                                                                                        |
 | `DL_STABLECOIN_DETAIL`               | `defillama-stablecoin-detail` | `GET /api/stablecoin/:id` (DefiLlama detail upstream)                                                                     |
-| `DL_COINS`                           | `defillama-coins`             | `enrich-prices`                                                                                                           |
+| `DL_COINS`                           | `defillama-coins`             | `enrich-prices`, supplemental CoinGecko-id mirror pricing                                                                 |
 | `DL_YIELDS`                          | `defillama-yields`            | `sync-yield-data`, `sync-dex-liquidity`                                                                                   |
-| `DL_PROTOCOLS`                       | `defillama-protocols`         | `sync-dex-liquidity`                                                                                                      |
+| `DL_PROTOCOLS`                       | `defillama-protocols`         | `sync-dex-liquidity`, supplemental gold protocol mcap/TVL fetches                                                         |
 | `CG_PRICES`                          | `coingecko-prices`            | `enrich-prices`                                                                                                           |
 | `CG_DETAIL_PLATFORMS`                | `coingecko-detail-platforms`  | `GET /api/stablecoin/:id` (CoinGecko-only detail provider)                                                                |
 | `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
@@ -770,6 +770,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `BITSTAMP_PRICES`                    | `bitstamp-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                                                                         |
+| `PROTOCOL_REDEEM`                    | `protocol-redeem`             | External live RPC-backed authoritative `protocol-redeem` overrides                                                        |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ORACLE`                       | `curve-oracle`                | `enrich-prices` crvUSD Curve oracle consensus                                                                             |
 | `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                                                                         |

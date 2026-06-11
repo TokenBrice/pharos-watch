@@ -92,8 +92,9 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   ),
   // special
   "defillama-contract": direct(CIRCUIT_SOURCE.DL_COINS, "DefiLlama coins.llama.fi contract fallback."),
-  "protocol-redeem": synthesized(
-    "Authoritative protocol override or inherited tracked-base price; no dedicated pricing-source circuit.",
+  "protocol-redeem": direct(
+    CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+    "External live protocol-redeem RPC overrides share a grouped circuit; local par and inherited tracked-base overrides do not create upstream failures.",
   ),
   "zephyr-scanner": synthesized(
     "Zephyr Scanner live-stats price telemetry is fetched inside the supplemental Zephyr asset path; no dedicated pricing-source circuit is registered.",

@@ -67,13 +67,14 @@ export async function fetchSilverTokens(
   cgData: CoinGeckoMcapData,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  db?: D1Database,
 ): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
 
   try {
     const [priceData, cgSupplyMap] = await Promise.all([
-      fetchSupplementalPriceData(SILVER_METAS, "silver", signal),
+      fetchSupplementalPriceData(SILVER_METAS, "silver", signal, db),
       fetchCoinGeckoCirculatingSupplyMap(SILVER_METAS, "silver", signal, coingeckoApiKey),
     ]);
 

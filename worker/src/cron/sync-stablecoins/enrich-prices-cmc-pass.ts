@@ -41,11 +41,21 @@ const CMC_CATEGORY_LIMIT = 300;
 const CMC_QUOTE_MAX_AGE_SEC = 60 * 60;
 const CMC_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
 const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/category";
+const CMC_LAST_FETCH_CACHE_KEY = "cmc_last_fetch";
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
   observedAt: number;
   symbol: string;
   slug?: string;
+}
+
+async function markCmcFetchCooldown(db: D1Database | undefined, reason: string): Promise<void> {
+  if (!db) return;
+  try {
+    await setCache(db, CMC_LAST_FETCH_CACHE_KEY, "1");
+  } catch (error) {
+    console.warn(`[enrich-prices] Failed to update CMC rate-limit timestamp after ${reason}:`, error);
+  }
 }
 
 export async function runCmcPass(
@@ -100,7 +110,7 @@ export async function runCmcPass(
     let shouldCall = true;
     if (db) {
       try {
-        const row = await getCache(db, "cmc_last_fetch");
+        const row = await getCache(db, CMC_LAST_FETCH_CACHE_KEY);
         if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
           shouldCall = false;
         }
@@ -232,11 +242,7 @@ export async function runCmcPass(
         diagnostics.push(diagnostic);
 
         if (db) {
-          try {
-            await setCache(db, "cmc_last_fetch", "1");
-          } catch (error) {
-            console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", error);
-          }
+          await markCmcFetchCooldown(db, "success");
           await recordProviderOutcomeSafe({
             db,
             circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
@@ -247,6 +253,9 @@ export async function runCmcPass(
       } else {
         diagnostics.push(await applyNonOkProviderDiagnostic(diagnostic, cmcRes));
         console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
+        if (cmcRes?.status === 429) {
+          await markCmcFetchCooldown(db, "429");
+        }
         await recordProviderOutcomeSafe({
           db,
           circuitSource: CIRCUIT_SOURCE.CMC_PRICES,

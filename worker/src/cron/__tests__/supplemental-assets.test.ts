@@ -6,7 +6,10 @@ import {
   selectSingleOnChainSupplyContract,
   selectSupplementalOnChainSupplyContract,
 } from "../sync-stablecoins/supplemental-assets";
+import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -28,6 +31,20 @@ function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"
       navToken: false,
     },
   } as StablecoinMeta;
+}
+
+function makeCircuitRow(source: string, state: "closed" | "open" | "half-open", openedAt: number | null = null) {
+  return {
+    key: `circuit:${source}`,
+    value: JSON.stringify({
+      state,
+      consecutiveFailures: state === "closed" ? 0 : 3,
+      lastFailureAt: openedAt,
+      lastSuccessAt: state === "closed" ? Math.floor(Date.now() / 1000) : null,
+      openedAt,
+    }),
+    updated_at: Math.floor(Date.now() / 1000),
+  };
 }
 
 describe("selectSingleOnChainSupplyContract", () => {
@@ -143,5 +160,98 @@ describe("fetchSupplementalPriceData", () => {
     const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
 
     await expect(fetchSupplementalPriceData([meta], "supplemental-test")).resolves.toEqual({ coins: {} });
+  });
+
+  it("skips supplemental DefiLlama price fetches while the DL coins circuit is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "open", nowSec)],
+      },
+    ]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({ coins: {} });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows half-open supplemental DefiLlama price probes to recover the DL coins circuit", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "open", nowSec - 31 * 60)],
+      },
+    ]);
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ coins: { "coingecko:test": { price: 1, timestamp: nowSec } } }), { status: 200 })
+    ));
+    const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({
+      coins: { "coingecko:test": { price: 1, timestamp: nowSec } },
+    });
+
+    const circuitWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+    expect(circuitWrites.length).toBeGreaterThanOrEqual(1);
+    expect(JSON.parse(String(circuitWrites[circuitWrites.length - 1]?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
+  it("records malformed supplemental DefiLlama price payloads as DL coins failures", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+      },
+    ]);
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ coins: { "coingecko:test": { price: "1.00" } } }), { status: 200 })
+    ));
+    const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({ coins: {} });
+
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 1,
+    });
+  });
+});
+
+describe("fetchGoldTokens", () => {
+  it("skips DefiLlama protocol fanout while the DL protocols circuit is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [
+          makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "closed"),
+          makeCircuitRow(CIRCUIT_SOURCE.DL_PROTOCOLS, "open", nowSec),
+        ],
+      },
+    ]);
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/protocol/")) {
+        throw new Error(`unexpected protocol fetch: ${url}`);
+      }
+      return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchGoldTokens({}, undefined, db)).resolves.toEqual([]);
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);
   });
 });

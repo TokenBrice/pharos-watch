@@ -26,6 +26,7 @@ export async function fetchFiatCoinGeckoTokens(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   fxFallbackRates?: Record<string, number>,
+  db?: D1Database,
 ): Promise<PeggedAsset[]> {
   if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -33,7 +34,7 @@ export async function fetchFiatCoinGeckoTokens(
   try {
     const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
     const [priceData, zephyrProtocolStats] = await Promise.all([
-      fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal),
+      fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal, db),
       hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),
     ]);
 

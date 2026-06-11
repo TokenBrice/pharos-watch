@@ -78,6 +78,7 @@ export async function syncViaCoingeckoFallback(
   const {
     enrichStats,
     authoritativeOverrideCount,
+    authoritativeOverrideStats,
     rejectedCount,
     cachedFallbackCount,
     nativePegCorrectionCount,
@@ -151,6 +152,7 @@ export async function syncViaCoingeckoFallback(
       nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
       authoritativeOverrides: authoritativeOverrideCount,
+      authoritativeOverrideStats,
       stalenessWarning,
       priceStaleness: stalenessSummary,
       upstreamFetchOk: false,

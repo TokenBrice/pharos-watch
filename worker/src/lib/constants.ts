@@ -170,6 +170,7 @@ export const CIRCUIT_SOURCE = {
   BITSTAMP_PRICES: "bitstamp-prices",
   COINBASE_PRICES: "coinbase-prices",
   REDSTONE_PRICES: "redstone-prices",
+  PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",
   CURVE_LIQUIDITY_API: "curve-liquidity-api",

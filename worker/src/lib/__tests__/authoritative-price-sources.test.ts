@@ -68,9 +68,12 @@ vi.mock("../../api/backfill-price-sources", () => ({
 }));
 
 import {
+  createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
   fetchAuthoritativeLivePriceOverrides,
 } from "../authoritative-price-sources";
+import { CIRCUIT_SOURCE } from "../constants";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   encodeUint256,
   fetchVaultAssetsPerShareViaSelector,
@@ -179,6 +182,163 @@ describe("authoritative-price-sources", () => {
       confidence: "high",
     });
     expect(overrides.has("usdt-tether")).toBe(false);
+  });
+
+  it("skips live RPC protocol-redeem overrides while the grouped circuit is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{
+          key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: nowSec,
+            lastSuccessAt: null,
+            openedAt: nowSec,
+          }),
+          updated_at: nowSec,
+        }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        circulating: { peggedUSD: 114_000_000 },
+      },
+    ], undefined, undefined, { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 0,
+      skippedCircuitOpen: 1,
+    });
+  });
+
+  it("records thrown live RPC protocol-redeem overrides as grouped circuit failures", async () => {
+    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        circulating: { peggedUSD: 114_000_000 },
+      },
+    ], undefined, undefined, { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      failedCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+  });
+
+  it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "susdc-spark",
+        name: "Spark USDC Vault",
+        symbol: "sUSDC",
+        circulating: { peggedUSD: 100_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        price: 1,
+        priceSource: "protocol-redeem",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ], undefined, undefined, { db, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      failedCount: 1,
+    });
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
+  });
+
+  it("stops live RPC protocol-redeem overrides when the wall-clock budget expires", async () => {
+    fetchEvmCallHexAtBlockMock.mockImplementation((
+      _chain: string,
+      _to: string,
+      _data: string,
+      _block: number | "latest",
+      options?: { signal?: AbortSignal },
+    ) => new Promise((_resolve, reject) => {
+      options?.signal?.addEventListener("abort", () => {
+        reject(options.signal?.reason ?? new DOMException("Aborted", "AbortError"));
+      }, { once: true });
+    }));
+    const stats = createAuthoritativeLivePriceOverrideStats(1);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "cusd-cap",
+        name: "Cap cUSD",
+        symbol: "CUSD",
+        circulating: { peggedUSD: 114_000_000 },
+      },
+    ], undefined, undefined, { wallClockBudgetMs: 1, stats });
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      failedCount: 0,
+      timedOut: true,
+    });
   });
 
   it("replays historical cUSD prices through the same authoritative provider", async () => {

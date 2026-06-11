@@ -41,6 +41,7 @@ export async function fetchVaultAssetsPerShareViaSelector(
   label: string,
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
+  options?: { throwOnNullQuote?: boolean },
 ): Promise<number | null> {
   const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
   const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
@@ -49,7 +50,11 @@ export async function fetchVaultAssetsPerShareViaSelector(
     extraRpcUrls: [...(config.rpcUrls ?? getArchiveFallbackRpcUrls(config.chain))],
   });
   if (!quoteHex) {
-    console.warn(`[authoritative-price-sources] ${config.id}: ${label}() returned null`);
+    const message = `[authoritative-price-sources] ${config.id}: ${label}() returned null`;
+    console.warn(message);
+    if (options?.throwOnNullQuote) {
+      throw new Error(message);
+    }
     return null;
   }
 
@@ -121,6 +126,8 @@ export interface LivePriceContext {
 
 export interface PriceSourceProvider {
   source: string;
+  liveCircuitSource?: string;
+  recordNullLiveResultAsCircuitFailure?: boolean;
   matches(stablecoinId: string): boolean;
   matchesHistoricalPrices?(stablecoinId: string): boolean;
   fetchLivePrice?(

@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import { CIRCUIT_SOURCE } from "../constants";
 import {
   collectHistoricalBlockPrices,
   decodeUint256WordBigInt,
@@ -56,6 +57,8 @@ async function fetchInfiniFiRedeemQuote(
 
 export const iusdInfinifiProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
+  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === IUSD_INFINIFI_ID;
   },

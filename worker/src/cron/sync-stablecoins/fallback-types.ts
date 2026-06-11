@@ -1,6 +1,7 @@
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CronResult } from "./shared";
 import type { PeggedAsset, EnrichmentStats } from "./enrich-prices";
@@ -80,6 +81,7 @@ export interface FallbackPriceEnrichmentInput extends FallbackPhaseContext, Fall
 export interface FallbackPriceEnrichmentOutput {
   enrichStats: EnrichmentStats;
   authoritativeOverrideCount: number;
+  authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
   rejectedCount: number;
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;

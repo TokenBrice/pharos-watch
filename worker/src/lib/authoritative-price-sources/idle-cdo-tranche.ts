@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import {
@@ -50,6 +51,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
   config: IdleCdoTrancheConfig,
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
+  options?: { throwOnNullQuote?: boolean },
 ): Promise<number | null> {
   const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
   const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.cdo, calldata, blockNumberOrTag, {
@@ -57,7 +59,11 @@ async function fetchIdleCdoTrancheAssetsPerShare(
     extraRpcUrls: getArchiveFallbackRpcUrls(config.chain),
   });
   if (!quoteHex) {
-    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned null`);
+    const message = `[authoritative-price-sources] ${config.id}: virtualPrice() returned null`;
+    console.warn(message);
+    if (options?.throwOnNullQuote) {
+      throw new Error(message);
+    }
     return null;
   }
   const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
@@ -78,6 +84,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
 
 export const idleCdoTrancheProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
+  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
   matches(stablecoinId: string): boolean {
     return IDLE_CDO_TRANCHES_BY_ID.has(stablecoinId);
   },
@@ -97,7 +104,12 @@ export const idleCdoTrancheProvider: PriceSourceProvider = {
     );
     if (!parent) return null;
 
-    const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal);
+    const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(
+      config,
+      "latest",
+      signal,
+      { throwOnNullQuote: true },
+    );
     if (assetsPerShare == null) return null;
 
     return buildParentDerivedLiveOverride(parent, assetsPerShare);

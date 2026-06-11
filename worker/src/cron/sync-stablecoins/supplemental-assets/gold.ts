@@ -1,8 +1,10 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
+import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
 import { throwIfAborted } from "../../../lib/abort";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import { cancelResponseBodyQuietly } from "../../../lib/response-body";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildPricedSupplementalAsset,
@@ -33,37 +35,56 @@ function findNearestTvl(
   return closest && closestDist < 2 * DAY_SECONDS ? closest.totalLiquidityUSD : null;
 }
 
-export async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal): Promise<PeggedAsset[]> {
+export async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal, db?: D1Database): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
   try {
-    const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal);
+    const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal, db);
 
     const mcapMap: Record<string, number> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tvlHistoryMap: Record<string, { date: number; totalLiquidityUSD: number }[]> = {};
     const tokensWithProtocol = GOLD_METAS.filter((token) => token.protocolSlug);
     const PROTOCOL_BATCH = 3;
-    for (let pi = 0; pi < tokensWithProtocol.length; pi += PROTOCOL_BATCH) {
-      const batch = tokensWithProtocol.slice(pi, pi + PROTOCOL_BATCH);
-      await Promise.all(batch.map(async (token) => {
-        try {
-          const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${token.protocolSlug}`, {
-            headers: { "User-Agent": USER_AGENT },
-            signal,
-          });
-          if (!res) return;
+    const protocolsAllowed = tokensWithProtocol.length > 0 && db
+      ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS)
+      : true;
+    let protocolFetchAttempts = 0;
+    let protocolFetchSuccesses = 0;
 
-          const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
-          if (data.mcap) {
-            mcapMap[token.id] = data.mcap;
-            mcapSourceById[token.id] = "defillama";
+    if (!protocolsAllowed) {
+      console.warn("[gold] DefiLlama protocols circuit open; using CoinGecko market-cap fallback when available");
+    } else {
+      for (let pi = 0; pi < tokensWithProtocol.length; pi += PROTOCOL_BATCH) {
+        const batch = tokensWithProtocol.slice(pi, pi + PROTOCOL_BATCH);
+        await Promise.all(batch.map(async (token) => {
+          protocolFetchAttempts += 1;
+          try {
+            const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${token.protocolSlug}`, {
+              headers: { "User-Agent": USER_AGENT },
+              signal,
+            });
+            if (!res || !res.ok) {
+              await cancelResponseBodyQuietly(res);
+              console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}: ${res?.status ?? "no response"}`);
+              return;
+            }
+
+            const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
+            protocolFetchSuccesses += 1;
+            if (data.mcap) {
+              mcapMap[token.id] = data.mcap;
+              mcapSourceById[token.id] = "defillama";
+            }
+            if (data.tvl) tvlHistoryMap[token.id] = data.tvl;
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
           }
-          if (data.tvl) tvlHistoryMap[token.id] = data.tvl;
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
-        }
-      }));
+        }));
+      }
+      if (db && protocolFetchAttempts > 0) {
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_PROTOCOLS, protocolFetchSuccesses > 0);
+      }
     }
 
     for (const token of GOLD_METAS) {

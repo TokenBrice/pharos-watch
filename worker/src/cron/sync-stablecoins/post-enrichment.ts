@@ -7,7 +7,11 @@
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
+import {
+  createAuthoritativeLivePriceOverrideStats,
+  fetchAuthoritativeLivePriceOverrides,
+  type AuthoritativeLivePriceOverrideStats,
+} from "../../lib/authoritative-price-sources";
 import { getPriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -81,10 +85,12 @@ export interface PriceValidationResult {
 export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
   missingBefore: Set<string>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
 }
 
 export interface SharedPriceCompletionResult extends PriceValidationResult {
   authoritativeOverrideCount: number;
+  authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
 }
 
 export interface MissingPriceEnrichmentInput {
@@ -364,11 +370,14 @@ export async function runSharedPriceCompletion(
   input: SharedPriceCompletionInput,
   abortStagePrefix: string,
 ): Promise<SharedPriceCompletionResult | CronResult> {
+  const authoritativeOverrideStats =
+    input.authoritativeOverrideStats ?? createAuthoritativeLivePriceOverrideStats();
   const authoritativeOverrides =
     input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(
       input.assets,
       input.signal,
       input.validationReferences,
+      { db: input.db, stats: authoritativeOverrideStats },
     );
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets: input.assets,
@@ -387,6 +396,7 @@ export async function runSharedPriceCompletion(
 
   return {
     authoritativeOverrideCount,
+    authoritativeOverrideStats,
     ...priceResult,
   };
 }

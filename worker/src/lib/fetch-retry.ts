@@ -47,7 +47,20 @@ export async function fetchWithRetry(
         signal: combinedSignal,
       });
       if (res.ok) return res;
-      if (passthroughStatuses.has(res.status)) return res;
+      if (passthroughStatuses.has(res.status)) {
+        const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i) : null;
+        if (passthroughDelayMs != null) {
+          const body = await res.text();
+          console.warn(`[fetch-retry] ${url} rate-limited (${res.status}), waiting ${passthroughDelayMs}ms before passthrough`);
+          await sleepWithSignal(passthroughDelayMs, signal);
+          return new Response(body, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: res.headers,
+          });
+        }
+        return res;
+      }
       const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i) : null;
       if (retryDelayMs != null) {
         const label = res.status === 529 ? "overloaded" : "rate-limited";

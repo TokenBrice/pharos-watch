@@ -15,7 +15,11 @@ import {
   createValidationContextResolver,
   prevalidatePrices,
 } from "./pricing";
-import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
+import {
+  createAuthoritativeLivePriceOverrideStats,
+  fetchAuthoritativeLivePriceOverrides,
+  type AuthoritativeLivePriceOverrideStats,
+} from "../../lib/authoritative-price-sources";
 import {
   enrichMissingPrices,
   fetchPrimaryPrices,
@@ -162,6 +166,7 @@ export async function runStablecoinsPricingStage(
       priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
       gtProbe: Awaited<ReturnType<typeof runGtProbePass>> | { updatedCount: number; stats: ReturnType<typeof createEmptyGtProbeStats> };
       authoritativeOverrideCount: number;
+      authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
       rejectedCount: number;
       nativePegCorrectionCount: number;
       nativePegFillCount: number;
@@ -220,10 +225,12 @@ export async function runStablecoinsPricingStage(
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
   });
+  const authoritativeOverrideStats = createAuthoritativeLivePriceOverrideStats();
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
     options.assets,
     options.signal,
     options.validationReferences,
+    { db: options.db, stats: authoritativeOverrideStats },
   );
   applyProtocolPriceOverrides({
     assets: options.assets,
@@ -287,6 +294,7 @@ export async function runStablecoinsPricingStage(
     primaryPriceResults,
     previousTrustedPrices,
     authoritativeOverrides,
+    authoritativeOverrideStats,
     returnIfAborted,
     abortResult,
   }, "");
@@ -323,6 +331,7 @@ export async function runStablecoinsPricingStage(
     itemsTotal: options.assets.length,
     metadata: {
       authoritativeOverrides: authoritativeOverrideCount,
+      authoritativeOverrideStats,
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
@@ -336,6 +345,7 @@ export async function runStablecoinsPricingStage(
     priceValidationStats,
     gtProbe,
     authoritativeOverrideCount,
+    authoritativeOverrideStats,
     rejectedCount,
     nativePegCorrectionCount,
     nativePegFillCount,

@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { CIRCUIT_SOURCE } from "../constants";
 import {
   buildParentDerivedLiveOverride,
   ETHEREUM_CHAIN,
@@ -156,11 +157,13 @@ async function fetchErc4626AssetsPerShare(
     "convertToAssets",
     blockNumberOrTag,
     signal,
+    blockNumberOrTag === "latest" ? { throwOnNullQuote: true } : undefined,
   );
 }
 
 export const erc4626NavProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
+  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
   matches(stablecoinId: string): boolean {
     return ERC4626_NAV_VAULTS_BY_ID.has(stablecoinId);
   },

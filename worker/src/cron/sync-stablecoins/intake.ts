@@ -172,6 +172,7 @@ export async function loadStablecoinsIntake(
     input.coingeckoApiKey,
     input.chainRpcs,
     input.fxFallbackRates,
+    input.db,
   );
 
   if (!dlAllowed) {
