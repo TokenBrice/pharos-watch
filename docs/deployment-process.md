@@ -296,7 +296,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 ### Concurrency and Rollback Scope
 
 - Both production-changing workflows share one global `concurrency` group (`production-deploy`): push/manual deploys and Pages rebuilds queue behind any active production deploy instead of canceling or overlapping post-promotion smoke or rollback work. Manual production dispatches are guarded to `refs/heads/main`.
-- The worker release path applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; the release runner reruns `check:migrations` immediately before remote apply and still requires a separate coordinated rollout for destructive cleanup after the new worker code is serving.
+- The worker release path applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; the release runner reruns `check:migrations` immediately before remote apply, writes the replayed schema fingerprint to the job summary for drift triage, and still requires a separate coordinated rollout for destructive cleanup after the new worker code is serving.
 - Automatic worker rollback changes traffic back to the previous Worker version when Workers Versions are available. Before promotion, the workflow captures the previous `worker/wrangler.toml` when the push base exists; if trigger sync or production API smoke fails, it also attempts `wrangler triggers deploy --config .rollback-wrangler.toml` to restore non-versioned route/domain/cron trigger settings. D1 schema/data rollback remains a separate D1 recovery step.
 
 ## Runtime Measurement Notes

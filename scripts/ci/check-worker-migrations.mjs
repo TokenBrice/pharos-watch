@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const LEGACY_DUPLICATE_PREFIX_ALLOWLIST = Object.freeze(["0056", "0061"]);
@@ -61,6 +62,109 @@ export function parseRolloutSafetyPolicy(manifestText) {
   return {
     enforcementPrefix: startMatch[1],
     requiredMode: headerMatch[1].toLowerCase(),
+  };
+}
+
+export function parseManifestMigrationRows(manifestText, { sectionHeading, nextHeading } = {}) {
+  const startIndex = sectionHeading ? manifestText.indexOf(sectionHeading) : 0;
+  if (startIndex === -1) {
+    throw new Error(`worker/migrations/MANIFEST.md is missing the "${sectionHeading}" section.`);
+  }
+
+  const sectionStart = sectionHeading ? startIndex + sectionHeading.length : 0;
+  const sectionEnd =
+    nextHeading && manifestText.indexOf(nextHeading, sectionStart) !== -1
+      ? manifestText.indexOf(nextHeading, sectionStart)
+      : manifestText.length;
+  const sectionText = manifestText.slice(sectionStart, sectionEnd);
+  const rows = [...sectionText.matchAll(/^\|\s*(\d{4})\s*\|\s*`([^`]+\.sql)`\s*\|/gm)].map(
+    ([, sequence, filename]) => ({
+      sequence,
+      filename,
+    }),
+  );
+
+  if (rows.length === 0) {
+    throw new Error(`worker/migrations/MANIFEST.md section "${sectionHeading}" has no migration rows.`);
+  }
+
+  return rows;
+}
+
+export function validateManifestMigrationParity(migrationFiles, manifestText) {
+  if (!migrationFiles.includes("0000_baseline.sql")) {
+    throw new Error("worker/migrations must include 0000_baseline.sql for fresh D1 setup replay.");
+  }
+
+  const activeRows = parseManifestMigrationRows(manifestText, {
+    sectionHeading: "## Individual Migrations",
+    nextHeading: "## Retired Individual Migrations",
+  });
+  const retiredRows = parseManifestMigrationRows(manifestText, {
+    sectionHeading: "## Retired Individual Migrations",
+    nextHeading: "## Known Anomalies",
+  });
+
+  const activeFiles = migrationFiles.filter((file) => file !== "0000_baseline.sql");
+  const activeManifestFiles = activeRows.map((row) => row.filename);
+  const retiredManifestFiles = retiredRows.map((row) => row.filename);
+  const activeFileSet = new Set(activeFiles);
+  const activeManifestFileSet = new Set(activeManifestFiles);
+  const retiredManifestFileSet = new Set(retiredManifestFiles);
+  const errors = [];
+
+  const duplicateActiveRows = activeManifestFiles.filter(
+    (filename, index) => activeManifestFiles.indexOf(filename) !== index,
+  );
+  if (duplicateActiveRows.length > 0) {
+    errors.push(`duplicate active manifest rows: ${[...new Set(duplicateActiveRows)].join(", ")}`);
+  }
+
+  const filesMissingFromManifest = activeFiles.filter((file) => !activeManifestFileSet.has(file));
+  if (filesMissingFromManifest.length > 0) {
+    errors.push(`migration files missing from active manifest table: ${filesMissingFromManifest.join(", ")}`);
+  }
+
+  const manifestRowsMissingFiles = activeManifestFiles.filter((file) => !activeFileSet.has(file));
+  if (manifestRowsMissingFiles.length > 0) {
+    errors.push(`active manifest rows without migration files: ${manifestRowsMissingFiles.join(", ")}`);
+  }
+
+  const retiredFilesStillPresent = retiredManifestFiles.filter((file) => migrationFiles.includes(file));
+  if (retiredFilesStillPresent.length > 0) {
+    errors.push(`retired manifest rows still have checked-in migration files: ${retiredFilesStillPresent.join(", ")}`);
+  }
+
+  const activeRowsWithBadSequence = activeRows.filter((row) => !row.filename.startsWith(`${row.sequence}_`));
+  if (activeRowsWithBadSequence.length > 0) {
+    errors.push(
+      `active manifest sequence/filename mismatches: ${activeRowsWithBadSequence
+        .map((row) => `${row.sequence} -> ${row.filename}`)
+        .join(", ")}`,
+    );
+  }
+
+  const retiredRowsWithBadSequence = retiredRows.filter((row) => !row.filename.startsWith(`${row.sequence}_`));
+  if (retiredRowsWithBadSequence.length > 0) {
+    errors.push(
+      `retired manifest sequence/filename mismatches: ${retiredRowsWithBadSequence
+        .map((row) => `${row.sequence} -> ${row.filename}`)
+        .join(", ")}`,
+    );
+  }
+
+  const activeRowsListedAsRetired = activeManifestFiles.filter((file) => retiredManifestFileSet.has(file));
+  if (activeRowsListedAsRetired.length > 0) {
+    errors.push(`migration rows listed as both active and retired: ${activeRowsListedAsRetired.join(", ")}`);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`worker/migrations/MANIFEST.md is out of sync with worker/migrations:\n- ${errors.join("\n- ")}`);
+  }
+
+  return {
+    activeManifestCount: activeRows.length,
+    retiredManifestCount: retiredRows.length,
   };
 }
 
@@ -152,6 +256,32 @@ export function validateRolloutSafetyAnnotation(file, sql, enforcementPrefix = R
   return { checked: true, mode };
 }
 
+const SCHEMA_FINGERPRINT_QUERY = `
+SELECT type, name, tbl_name, sql
+FROM sqlite_schema
+WHERE sql IS NOT NULL
+  AND name NOT LIKE 'sqlite_%'
+  AND tbl_name NOT LIKE 'sqlite_%'
+ORDER BY type, name, tbl_name
+`;
+
+function normalizeSchemaSql(sql) {
+  return sql.replace(/\s+/g, " ").trim();
+}
+
+export function createSchemaFingerprint(schemaRows) {
+  const normalizedRows = schemaRows
+    .map((row) => `${row.type}\t${row.name}\t${row.tblName}\t${normalizeSchemaSql(row.sql)}`)
+    .sort();
+  const digest = createHash("sha256").update(normalizedRows.join("\n")).digest("hex");
+
+  return {
+    algorithm: "sha256",
+    value: digest,
+    schemaRowCount: normalizedRows.length,
+  };
+}
+
 async function createExecutor(dbPath) {
   const sqlite3Probe = spawnSync("sqlite3", ["-version"], {
     encoding: "utf8",
@@ -176,6 +306,29 @@ async function createExecutor(dbPath) {
           throw new Error(detail || `sqlite3 exited with status ${result.status}`);
         }
       },
+      getSchemaRows() {
+        const result = spawnSync("sqlite3", ["-bail", "-json", dbPath, SCHEMA_FINGERPRINT_QUERY], {
+          encoding: "utf8",
+        });
+
+        if (result.error) {
+          throw new Error(`sqlite3 CLI schema fingerprint query failed: ${result.error.message}`);
+        }
+
+        if (result.status !== 0) {
+          const detail = (result.stderr || result.stdout || "").trim();
+          throw new Error(detail || `sqlite3 schema fingerprint query exited with status ${result.status}`);
+        }
+
+        const rows = JSON.parse(result.stdout || "[]");
+
+        return rows.map((row) => ({
+          type: String(row.type),
+          name: String(row.name),
+          tblName: String(row.tbl_name),
+          sql: String(row.sql),
+        }));
+      },
     };
   }
 
@@ -190,6 +343,14 @@ async function createExecutor(dbPath) {
       },
       execute(sql) {
         db.exec(sql);
+      },
+      getSchemaRows() {
+        return db.prepare(SCHEMA_FINGERPRINT_QUERY).all().map((row) => ({
+          type: String(row.type),
+          name: String(row.name),
+          tblName: String(row.tbl_name),
+          sql: String(row.sql),
+        }));
       },
     };
   } catch (error) {
@@ -208,6 +369,7 @@ async function createExecutor(dbPath) {
 export async function validateWorkerMigrations({
   migrationsDir = resolve("worker/migrations"),
   manifestPath = resolve("worker/migrations/MANIFEST.md"),
+  includeSchemaFingerprint = false,
 } = {}) {
   const migrationFiles = getMigrationFiles(migrationsDir);
   if (migrationFiles.length === 0) {
@@ -219,6 +381,7 @@ export async function validateWorkerMigrations({
   const rolloutSafetyPolicy = parseRolloutSafetyPolicy(manifestText);
   validateDuplicatePrefixAllowlist(allowlist);
   validateRolloutSafetyPolicy(rolloutSafetyPolicy);
+  const manifestParity = validateManifestMigrationParity(migrationFiles, manifestText);
   const { uniqueDuplicates, newDuplicates } = validateDuplicatePrefixes(migrationFiles, allowlist);
 
   if (newDuplicates.length > 0) {
@@ -229,6 +392,7 @@ export async function validateWorkerMigrations({
   const dbPath = join(tempDir, "migrations.db");
   const executor = await createExecutor(dbPath);
   let rolloutSafetyCheckedCount = 0;
+  let schemaFingerprint = null;
 
   try {
     for (const file of migrationFiles) {
@@ -243,6 +407,10 @@ export async function validateWorkerMigrations({
         throw new Error(`Migration replay failed for ${join(migrationsDir, file)}\n${message}`);
       }
     }
+
+    if (includeSchemaFingerprint) {
+      schemaFingerprint = createSchemaFingerprint(executor.getSchemaRows());
+    }
   } finally {
     executor.close();
     rmSync(tempDir, { force: true, recursive: true });
@@ -251,20 +419,80 @@ export async function validateWorkerMigrations({
   return {
     backend: executor.backend,
     migrationCount: migrationFiles.length,
+    manifestParity,
     rolloutSafetyCheckedCount,
+    schemaFingerprint,
     uniqueDuplicates,
   };
 }
 
+function parseCliArgs(argv) {
+  let includeSchemaFingerprint = false;
+  let schemaFingerprintOutput = process.env.PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH ?? null;
+
+  for (const arg of argv) {
+    if (arg === "--schema-fingerprint") {
+      includeSchemaFingerprint = true;
+      continue;
+    }
+
+    if (arg.startsWith("--schema-fingerprint-output=")) {
+      includeSchemaFingerprint = true;
+      schemaFingerprintOutput = arg.slice("--schema-fingerprint-output=".length);
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  if (schemaFingerprintOutput) {
+    includeSchemaFingerprint = true;
+  }
+
+  return { includeSchemaFingerprint, schemaFingerprintOutput };
+}
+
+function writeSchemaFingerprint(path, result) {
+  if (!result.schemaFingerprint) {
+    return;
+  }
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    migrations: {
+      count: result.migrationCount,
+      activeManifestCount: result.manifestParity.activeManifestCount,
+      retiredManifestCount: result.manifestParity.retiredManifestCount,
+      rolloutSafetyCheckedCount: result.rolloutSafetyCheckedCount,
+    },
+    schemaFingerprint: result.schemaFingerprint,
+  };
+
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
 async function main() {
   try {
-    const result = await validateWorkerMigrations();
+    const options = parseCliArgs(process.argv.slice(2));
+    const result = await validateWorkerMigrations({
+      includeSchemaFingerprint: options.includeSchemaFingerprint,
+    });
     if (result.uniqueDuplicates.length > 0) {
       console.warn(`⚠️  Known legacy duplicate prefixes: ${result.uniqueDuplicates.join(", ")} (suppressed)`);
     }
     console.log(
-      `Validated ${result.migrationCount} worker migrations with ${result.backend} (rollout safety checked: ${result.rolloutSafetyCheckedCount}).`,
+      `Validated ${result.migrationCount} worker migrations with ${result.backend} (manifest rows: ${result.manifestParity.activeManifestCount} active, ${result.manifestParity.retiredManifestCount} retired; rollout safety checked: ${result.rolloutSafetyCheckedCount}).`,
     );
+    if (result.schemaFingerprint) {
+      console.log(
+        `Schema fingerprint (${result.schemaFingerprint.algorithm}): ${result.schemaFingerprint.value} (${result.schemaFingerprint.schemaRowCount} schema rows).`,
+      );
+    }
+    if (options.schemaFingerprintOutput) {
+      writeSchemaFingerprint(options.schemaFingerprintOutput, result);
+      console.log(`Wrote schema fingerprint artifact to ${options.schemaFingerprintOutput}.`);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);

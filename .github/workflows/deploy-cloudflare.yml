@@ -163,7 +163,17 @@ jobs:
           --stop-message "stopping production Worker deployment."
           --timeout-message "Timed out waiting for validate / validate to finish."
       - name: Rehearse D1 migrations locally
-        run: npm run check:migrations
+        env:
+          PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH: ${{ runner.temp }}/worker-migration-schema-fingerprint.json
+        run: |
+          npm run check:migrations -- --schema-fingerprint
+          {
+            echo "## Worker migration schema fingerprint"
+            echo ""
+            echo "\`\`\`json"
+            cat "$PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Capture previous worker trigger config for rollback
         id: previous-worker-trigger-config
         env:

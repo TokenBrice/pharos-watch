@@ -5,8 +5,11 @@ import {
   REQUIRED_ROLLOUT_SAFETY_MODE,
   ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
+  createSchemaFingerprint,
+  parseManifestMigrationRows,
   parseDuplicatePrefixAllowlist,
   parseRolloutSafetyPolicy,
+  validateManifestMigrationParity,
   validateDuplicatePrefixAllowlist,
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
@@ -41,6 +44,102 @@ describe("parseRolloutSafetyPolicy", () => {
   });
 });
 
+describe("parseManifestMigrationRows", () => {
+  const manifestText = `
+## Individual Migrations (current active files)
+
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
+| 0073 | \`0073_price_cache_provenance.sql\` | Add provenance |
+
+## Retired Individual Migrations
+
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
+
+## Known Anomalies
+`;
+
+  it("reads migration table rows from a bounded manifest section", () => {
+    expect(
+      parseManifestMigrationRows(manifestText, {
+        sectionHeading: "## Individual Migrations",
+        nextHeading: "## Retired Individual Migrations",
+      }),
+    ).toEqual([
+      { sequence: "0072", filename: "0072_telegram_launch_alerts.sql" },
+      { sequence: "0073", filename: "0073_price_cache_provenance.sql" },
+    ]);
+  });
+});
+
+describe("validateManifestMigrationParity", () => {
+  const manifestText = `
+## Individual Migrations (current active files)
+
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
+| 0073 | \`0073_price_cache_provenance.sql\` | Add provenance |
+
+## Retired Individual Migrations
+
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
+
+## Known Anomalies
+`;
+
+  it("accepts one active manifest row per checked-in post-baseline migration", () => {
+    expect(
+      validateManifestMigrationParity(
+        ["0000_baseline.sql", "0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"],
+        manifestText,
+      ),
+    ).toEqual({
+      activeManifestCount: 2,
+      retiredManifestCount: 1,
+    });
+  });
+
+  it("fails when a checked-in migration is missing from the active manifest table", () => {
+    expect(() =>
+      validateManifestMigrationParity(
+        [
+          "0000_baseline.sql",
+          "0072_telegram_launch_alerts.sql",
+          "0073_price_cache_provenance.sql",
+          "0074_cron_slot_executions.sql",
+        ],
+        manifestText,
+      ),
+    ).toThrow("migration files missing from active manifest table: 0074_cron_slot_executions.sql");
+  });
+
+  it("fails when an active manifest row has no checked-in migration file", () => {
+    expect(() =>
+      validateManifestMigrationParity(["0000_baseline.sql", "0072_telegram_launch_alerts.sql"], manifestText),
+    ).toThrow("active manifest rows without migration files: 0073_price_cache_provenance.sql");
+  });
+
+  it("fails when a retired migration file remains checked in", () => {
+    expect(() =>
+      validateManifestMigrationParity(
+        [
+          "0000_baseline.sql",
+          "0072_telegram_launch_alerts.sql",
+          "0073_price_cache_provenance.sql",
+          "0086_treasury_stable_exposure_history.sql",
+        ],
+        manifestText,
+      ),
+    ).toThrow("retired manifest rows still have checked-in migration files");
+  });
+});
+
 describe("validateDuplicatePrefixes", () => {
   it("suppresses the historical duplicate prefixes from the manifest allowlist", () => {
     const { uniqueDuplicates, newDuplicates } = validateDuplicatePrefixes(
@@ -60,6 +159,31 @@ describe("validateDuplicatePrefixes", () => {
 
     expect(uniqueDuplicates).toEqual(["0070"]);
     expect(newDuplicates).toEqual(["0070"]);
+  });
+});
+
+describe("createSchemaFingerprint", () => {
+  it("produces a deterministic digest from normalized schema rows", () => {
+    const rows = [
+      {
+        type: "index",
+        name: "idx_example_value",
+        tblName: "example",
+        sql: "CREATE INDEX idx_example_value\nON example(value)",
+      },
+      {
+        type: "table",
+        name: "example",
+        tblName: "example",
+        sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
+      },
+    ];
+
+    expect(createSchemaFingerprint(rows)).toEqual(createSchemaFingerprint([...rows].reverse()));
+    expect(createSchemaFingerprint(rows)).toMatchObject({
+      algorithm: "sha256",
+      schemaRowCount: 2,
+    });
   });
 });
 
