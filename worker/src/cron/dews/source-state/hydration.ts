@@ -10,6 +10,7 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../../lib/cache-json";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity";
 import {
   CONTRACT_CONFIGS,
   getBlacklistConfigByContract,
@@ -175,7 +176,9 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
   try {
     dexLiqRows = await ctx.db
       .prepare(
-        "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at FROM dex_liquidity",
+        `SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at
+         FROM dex_liquidity
+         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
       .all<DexLiquidityRow>();
   } catch (error) {

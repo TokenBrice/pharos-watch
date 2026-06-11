@@ -116,7 +116,13 @@ describe("loadStatusForCoin", () => {
           stablecoin_id TEXT PRIMARY KEY,
           liquidity_score REAL,
           total_tvl_usd REAL NOT NULL,
-          updated_at INTEGER NOT NULL
+          updated_at INTEGER NOT NULL,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+        CREATE TABLE dex_liquidity_publication_generations (
+          generation_id TEXT PRIMARY KEY,
+          state TEXT NOT NULL
         );
         CREATE TABLE yield_data (
           stablecoin_id TEXT NOT NULL,

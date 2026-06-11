@@ -1,4 +1,5 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 /**
@@ -78,7 +79,12 @@ export async function loadStatusForCoin(
       .bind(stablecoinId)
       .first<{ price: number; updated_at: number }>(),
     db
-      .prepare("SELECT liquidity_score, total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = ?")
+      .prepare(
+        `SELECT liquidity_score, total_tvl_usd, updated_at
+         FROM dex_liquidity
+         WHERE stablecoin_id = ?
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+      )
       .bind(stablecoinId)
       .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
     db

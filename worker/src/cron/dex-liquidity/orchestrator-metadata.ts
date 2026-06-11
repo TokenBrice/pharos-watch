@@ -75,6 +75,10 @@ export function buildDexLiquidityCronMetadata(params: {
     failedSources: [...new Set(params.failedSources)],
     fallbackMode: [...new Set(params.fallbackSignals)],
     persistence: {
+      generationId: params.persistence.generationId ?? null,
+      expectedRowCount: params.persistence.expectedRowCount ?? null,
+      candidateRowsWritten: params.persistence.candidateRowsWritten ?? null,
+      currentGenerationRows: params.persistence.currentGenerationRows ?? null,
       placeholderRowsWritten: params.persistence.placeholderCount,
       orphanRowsDeleted: params.persistence.orphanRowsDeleted,
       orphanCleanupFailed: params.persistence.orphanCleanupFailed,

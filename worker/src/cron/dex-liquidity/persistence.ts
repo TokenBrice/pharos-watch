@@ -3,9 +3,46 @@ import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-versi
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
+const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * 86_400;
+
+const DEX_LIQUIDITY_ROW_COLUMNS = [
+  "stablecoin_id",
+  "symbol",
+  "total_tvl_usd",
+  "total_volume_24h_usd",
+  "total_volume_7d_usd",
+  "pool_count",
+  "pair_count",
+  "chain_count",
+  "protocol_tvl_json",
+  "chain_tvl_json",
+  "top_pools_json",
+  "liquidity_score",
+  "concentration_hhi",
+  "avg_pool_stress",
+  "weighted_balance_ratio",
+  "organic_fraction",
+  "effective_tvl_usd",
+  "durability_score",
+  "score_components_json",
+  "locked_liquidity_pct",
+  "coverage_class",
+  "coverage_confidence",
+  "source_mix_json",
+  "balance_measured_tvl_usd",
+  "organic_measured_tvl_usd",
+  "methodology_version",
+  "updated_at",
+] as const;
+
+const DEX_LIQUIDITY_ROW_COLUMN_SQL = DEX_LIQUIDITY_ROW_COLUMNS.join(", ");
+const DEX_LIQUIDITY_ROW_VALUE_PLACEHOLDERS = DEX_LIQUIDITY_ROW_COLUMNS.map(() => "?").join(", ");
+const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
+  "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
 
 /**
  * Compute the set of stablecoin ids whose DEX rows should be deleted.
@@ -26,15 +63,15 @@ export function computeDexPruneSet(
   return prune;
 }
 
-const DEX_LIQUIDITY_UPSERT_SQL = `INSERT INTO dex_liquidity
-  (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
-   pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json,
-   top_pools_json, liquidity_score, concentration_hhi,
-   avg_pool_stress, weighted_balance_ratio, organic_fraction,
-   effective_tvl_usd, durability_score, score_components_json,
-   locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json,
-   balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+const DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL = `INSERT OR REPLACE INTO dex_liquidity_run_rows
+  (generation_id, ${DEX_LIQUIDITY_ROW_COLUMN_SQL})
+VALUES (?, ${DEX_LIQUIDITY_ROW_VALUE_PLACEHOLDERS})`;
+
+const DEX_LIQUIDITY_PUBLISH_CURRENT_SQL = `INSERT INTO dex_liquidity
+  (${DEX_LIQUIDITY_ROW_COLUMN_SQL}, publication_generation_id, publication_state)
+SELECT ${DEX_LIQUIDITY_ROW_COLUMN_SQL}, generation_id, 'published'
+FROM dex_liquidity_run_rows
+WHERE generation_id = ?
 ON CONFLICT(stablecoin_id) DO UPDATE SET
   symbol = excluded.symbol,
   total_tvl_usd = excluded.total_tvl_usd,
@@ -61,10 +98,20 @@ ON CONFLICT(stablecoin_id) DO UPDATE SET
   balance_measured_tvl_usd = excluded.balance_measured_tvl_usd,
   organic_measured_tvl_usd = excluded.organic_measured_tvl_usd,
   methodology_version = excluded.methodology_version,
-  updated_at = excluded.updated_at
+  updated_at = excluded.updated_at,
+  publication_generation_id = excluded.publication_generation_id,
+  publication_state = excluded.publication_state
 WHERE dex_liquidity.updated_at <= excluded.updated_at`;
 
+export function buildDexLiquidityPublicationGenerationId(startSec: number): string {
+  return `dex-liquidity-${startSec}`;
+}
+
 export interface PersistScoresResult {
+  generationId?: string | null;
+  expectedRowCount?: number;
+  candidateRowsWritten?: number;
+  currentGenerationRows?: number;
   placeholderCount: number;
   orphanRowsDeleted: number;
   orphanCleanupFailed: boolean;
@@ -76,6 +123,243 @@ export interface HistoricalSnapshotWriteResult {
   snapshotRowsWritten: number;
   skipped: boolean;
   writeFailed: boolean;
+}
+
+interface CandidateGenerationCoverage {
+  rowCount: number;
+  activeAssetRows: number;
+  globalRows: number;
+  scoredAssetRows: number;
+}
+
+async function stageDexLiquidityPublicationGeneration(
+  db: D1Database,
+  params: {
+    generationId: string;
+    nowSec: number;
+    expectedRowCount: number;
+    metricsCount: number;
+    scoredCount: number;
+    signal?: AbortSignal;
+  },
+): Promise<void> {
+  throwIfAborted(params.signal);
+  await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `INSERT OR REPLACE INTO dex_liquidity_publication_generations (
+             generation_id, started_at, state, expected_row_count, written_row_count,
+             current_row_count, metadata_json, created_at, published_at, failed_at, failure_reason
+           ) VALUES (?, ?, 'staged', ?, 0, NULL, ?, ?, NULL, NULL, NULL)`,
+        )
+        .bind(
+          params.generationId,
+          params.nowSec,
+          params.expectedRowCount,
+          JSON.stringify({
+            methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION,
+            activeStablecoinCount: ACTIVE_STABLECOINS.length,
+            metricsCount: params.metricsCount,
+            scoredCount: params.scoredCount,
+          }),
+          params.nowSec,
+        )
+        .run(),
+    3,
+    params.signal,
+  );
+}
+
+async function markDexLiquidityPublicationGenerationFailed(
+  db: D1Database,
+  generationId: string,
+  nowSec: number,
+  reason: string,
+): Promise<void> {
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE dex_liquidity_publication_generations
+         SET state = 'failed', failed_at = ?, failure_reason = ?
+         WHERE generation_id = ? AND state != 'published'`,
+      )
+      .bind(nowSec, reason.slice(0, 240), generationId)
+      .run(),
+  );
+}
+
+async function loadCandidateGenerationCoverage(
+  db: D1Database,
+  generationId: string,
+  signal?: AbortSignal,
+): Promise<CandidateGenerationCoverage> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT
+             COUNT(*) AS row_count,
+             SUM(CASE WHEN stablecoin_id != '__global__' THEN 1 ELSE 0 END) AS active_asset_rows,
+             SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows,
+             SUM(CASE WHEN stablecoin_id != '__global__' AND liquidity_score IS NOT NULL THEN 1 ELSE 0 END) AS scored_asset_rows
+           FROM dex_liquidity_run_rows
+           WHERE generation_id = ?`,
+        )
+        .bind(generationId)
+        .first<{
+          row_count: number | null;
+          active_asset_rows: number | null;
+          global_rows: number | null;
+          scored_asset_rows: number | null;
+        }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return {
+    rowCount: row?.row_count ?? 0,
+    activeAssetRows: row?.active_asset_rows ?? 0,
+    globalRows: row?.global_rows ?? 0,
+    scoredAssetRows: row?.scored_asset_rows ?? 0,
+  };
+}
+
+function assertCandidateGenerationComplete(
+  coverage: CandidateGenerationCoverage,
+  expectedRowCount: number,
+): void {
+  if (
+    coverage.rowCount !== expectedRowCount ||
+    coverage.activeAssetRows !== ACTIVE_STABLECOINS.length ||
+    coverage.globalRows !== 1
+  ) {
+    throw new Error(
+      `Incomplete DEX liquidity generation: rows=${coverage.rowCount}/${expectedRowCount}, active=${coverage.activeAssetRows}/${ACTIVE_STABLECOINS.length}, global=${coverage.globalRows}`,
+    );
+  }
+}
+
+async function ensureNoNewerCurrentDexRows(
+  db: D1Database,
+  generationId: string,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT COUNT(*) AS cnt
+           FROM dex_liquidity
+           WHERE updated_at > ?
+             AND stablecoin_id IN (
+               SELECT stablecoin_id FROM dex_liquidity_run_rows WHERE generation_id = ?
+             )`,
+        )
+        .bind(nowSec, generationId)
+        .first<{ cnt: number | null }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  if ((row?.cnt ?? 0) > 0) {
+    throw new Error(`Refusing to publish stale DEX liquidity generation ${generationId}; newer current rows exist`);
+  }
+}
+
+async function publishDexLiquidityGeneration(
+  db: D1Database,
+  params: {
+    generationId: string;
+    nowSec: number;
+    expectedRowCount: number;
+    signal?: AbortSignal;
+  },
+): Promise<number> {
+  await ensureNoNewerCurrentDexRows(db, params.generationId, params.nowSec, params.signal);
+  throwIfAborted(params.signal);
+  await batchExecute(db, [
+    db.prepare(DEX_LIQUIDITY_PUBLISH_CURRENT_SQL).bind(params.generationId),
+    db
+      .prepare(
+        `UPDATE dex_liquidity_publication_generations
+         SET state = 'published',
+             published_at = ?,
+             failed_at = NULL,
+             failure_reason = NULL,
+             written_row_count = (
+               SELECT COUNT(*) FROM dex_liquidity_run_rows WHERE generation_id = ?
+             ),
+             current_row_count = (
+               SELECT COUNT(*) FROM dex_liquidity
+               WHERE publication_generation_id = ? AND publication_state = 'published'
+             )
+         WHERE generation_id = ?`,
+      )
+      .bind(params.nowSec, params.generationId, params.generationId, params.generationId),
+  ], { signal: params.signal });
+  throwIfAborted(params.signal);
+
+  const current = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT current_row_count
+           FROM dex_liquidity_publication_generations
+           WHERE generation_id = ? AND state = 'published'`,
+        )
+        .bind(params.generationId)
+        .first<{ current_row_count: number | null }>(),
+    3,
+    params.signal,
+  );
+  throwIfAborted(params.signal);
+  const currentRows = current?.current_row_count ?? 0;
+  if (currentRows !== params.expectedRowCount) {
+    throw new Error(
+      `DEX liquidity generation ${params.generationId} published ${currentRows}/${params.expectedRowCount} current rows`,
+    );
+  }
+  return currentRows;
+}
+
+async function pruneOldDexLiquidityGenerations(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  const cutoff = nowSec - DEX_LIQUIDITY_GENERATION_RETENTION_SEC;
+  await batchExecute(db, [
+    db
+      .prepare(
+        `DELETE FROM dex_liquidity_run_rows
+         WHERE generation_id IN (
+           SELECT generation_id
+           FROM dex_liquidity_publication_generations
+           WHERE started_at < ?
+             AND generation_id NOT IN (
+               SELECT publication_generation_id
+               FROM dex_liquidity
+               WHERE publication_generation_id IS NOT NULL
+             )
+         )`,
+      )
+      .bind(cutoff),
+    db
+      .prepare(
+        `DELETE FROM dex_liquidity_publication_generations
+         WHERE started_at < ?
+           AND generation_id NOT IN (
+             SELECT publication_generation_id
+             FROM dex_liquidity
+             WHERE publication_generation_id IS NOT NULL
+           )`,
+      )
+      .bind(cutoff),
+  ], { signal });
 }
 
 /** Persist liquidity scores to D1 (both data rows and zero-score rows). */
@@ -91,6 +375,17 @@ export async function persistScores(
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
   let orphanCleanupFailed = false;
+  const generationId = buildDexLiquidityPublicationGenerationId(nowSec);
+  const expectedRowCount = ACTIVE_STABLECOINS.length + 1;
+
+  await stageDexLiquidityPublicationGeneration(db, {
+    generationId,
+    nowSec,
+    expectedRowCount,
+    metricsCount: metrics.size,
+    scoredCount: scoreResults.size,
+    signal,
+  });
 
   for (const [id, m] of metrics) {
     const sr = scoreResults.get(id);
@@ -98,8 +393,9 @@ export async function persistScores(
 
     stmts.push(
       db
-        .prepare(DEX_LIQUIDITY_UPSERT_SQL)
+        .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
         .bind(
+          generationId,
           id,
           m.symbol,
           m.totalTvlUsd,
@@ -138,8 +434,9 @@ export async function persistScores(
       placeholderCount++;
       stmts.push(
         db
-          .prepare(DEX_LIQUIDITY_UPSERT_SQL)
+          .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
           .bind(
+            generationId,
             meta.id,
             meta.symbol,
             0,
@@ -175,8 +472,9 @@ export async function persistScores(
   // Write __global__ sentinel row with deduped cross-stablecoin aggregates
   stmts.push(
     db
-      .prepare(DEX_LIQUIDITY_UPSERT_SQL)
+      .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
       .bind(
+        generationId,
         "__global__",
         "__global__",
         globalAgg.totalTvl,
@@ -222,7 +520,11 @@ export async function persistScores(
       if (!DEX_LIQUIDITY_TABLES.has(table)) throw new Error(`Invalid DEX liquidity table: ${table}`);
       const existingRows = await db
         // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
-        .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
+        .prepare(
+          table === "dex_liquidity"
+            ? `SELECT DISTINCT stablecoin_id FROM ${table} WHERE ${DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER}`
+            : `SELECT DISTINCT stablecoin_id FROM ${table}`,
+        )
         .all<{ stablecoin_id: string }>();
       throwIfAborted(signal);
       const tableIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
@@ -241,13 +543,49 @@ export async function persistScores(
     console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
   }
 
-  // D1 batch limit — chunk
-  await batchExecute(db, stmts, { signal });
-  throwIfAborted(signal);
-  await writeFreshnessSentinel(db, "dex-liquidity", nowSec);
+  let candidateRowsWritten = 0;
+  let currentGenerationRows = 0;
+  try {
+    // D1 batch limit — chunk candidate rows before a single current-table publish.
+    await batchExecute(db, stmts, { signal });
+    throwIfAborted(signal);
+    const coverage = await loadCandidateGenerationCoverage(db, generationId, signal);
+    assertCandidateGenerationComplete(coverage, expectedRowCount);
+    candidateRowsWritten = coverage.rowCount;
+    currentGenerationRows = await publishDexLiquidityGeneration(db, {
+      generationId,
+      nowSec,
+      expectedRowCount,
+      signal,
+    });
+    throwIfAborted(signal);
+    await writeFreshnessSentinel(db, "dex-liquidity", nowSec, signal);
+    await pruneOldDexLiquidityGenerations(db, nowSec, signal);
+  } catch (err) {
+    if (!signal?.aborted) {
+      try {
+        await markDexLiquidityPublicationGenerationFailed(
+          db,
+          generationId,
+          nowSec,
+          err instanceof Error ? err.message : String(err),
+        );
+      } catch {
+        // Best-effort diagnostics only; preserve the original publication error.
+      }
+    }
+    rethrowIfAborted(err, signal);
+    throw err;
+  }
 
-  console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${placeholderCount} zero, 1 global)`);
+  console.log(
+    `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${metrics.size} with data, ${placeholderCount} zero, 1 global)`,
+  );
   return {
+    generationId,
+    expectedRowCount,
+    candidateRowsWritten,
+    currentGenerationRows,
     placeholderCount,
     orphanRowsDeleted,
     orphanCleanupFailed,

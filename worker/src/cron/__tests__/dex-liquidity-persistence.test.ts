@@ -10,7 +10,11 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
-import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
+import {
+  buildDexLiquidityPublicationGenerationId,
+  persistScores,
+  writeHistoricalSnapshots,
+} from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
 
 interface PreparedStatementWithMeta extends D1PreparedStatement {
@@ -22,7 +26,18 @@ interface DexPersistenceMockDb extends D1Database {
   getHistory(): Array<{ sql: string; binds: unknown[] }>;
 }
 
-function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; historyError?: unknown } = {}): DexPersistenceMockDb {
+function makeDb(options: {
+  historyRow?: { cnt: number; scored: number | null };
+  historyError?: unknown;
+  candidateCoverage?: {
+    row_count: number;
+    active_asset_rows: number;
+    global_rows: number;
+    scored_asset_rows: number;
+  };
+  currentGenerationRows?: number;
+  newerCurrentRows?: number;
+} = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
 
   function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
@@ -36,6 +51,20 @@ function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; 
       },
       first: async <T>() => {
         history.push({ sql, binds: [...boundValues] });
+        if (sql.includes("FROM dex_liquidity_run_rows") && sql.includes("row_count")) {
+          return (options.candidateCoverage ?? {
+            row_count: ACTIVE_STABLECOINS.length + 1,
+            active_asset_rows: ACTIVE_STABLECOINS.length,
+            global_rows: 1,
+            scored_asset_rows: 1,
+          }) as T;
+        }
+        if (sql.includes("updated_at > ?") && sql.includes("FROM dex_liquidity")) {
+          return { cnt: options.newerCurrentRows ?? 0 } as T;
+        }
+        if (sql.includes("current_row_count") && sql.includes("dex_liquidity_publication_generations")) {
+          return { current_row_count: options.currentGenerationRows ?? ACTIVE_STABLECOINS.length + 1 } as T;
+        }
         if (sql.includes("FROM dex_liquidity_history")) {
           if (options.historyError != null) {
             throw (options.historyError instanceof Error ? options.historyError : new Error(String(options.historyError)));
@@ -167,18 +196,23 @@ describe("dex-liquidity persistence", () => {
       placeholderCount: ACTIVE_STABLECOINS.length - 1,
       orphanRowsDeleted: 0,
       orphanCleanupFailed: false,
+      generationId: buildDexLiquidityPublicationGenerationId(1_700_000_000),
+      expectedRowCount: ACTIVE_STABLECOINS.length + 1,
+      candidateRowsWritten: ACTIVE_STABLECOINS.length + 1,
+      currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
     });
 
-    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(batchExecute).toHaveBeenCalledTimes(3);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const prepared = statements as PreparedStatementWithMeta[];
     expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
 
-    const usdtRow = prepared.find((stmt) => stmt.boundValues[0] === "usdt-tether");
-    const usdcPlaceholder = prepared.find((stmt) => stmt.boundValues[0] === "usdc-circle");
-    const globalRow = prepared.find((stmt) => stmt.boundValues[0] === "__global__");
+    const usdtRow = prepared.find((stmt) => stmt.boundValues[1] === "usdt-tether");
+    const usdcPlaceholder = prepared.find((stmt) => stmt.boundValues[1] === "usdc-circle");
+    const globalRow = prepared.find((stmt) => stmt.boundValues[1] === "__global__");
 
     expect(usdtRow?.boundValues).toEqual([
+      buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "usdt-tether",
       "USDT",
       123_456,
@@ -217,6 +251,7 @@ describe("dex-liquidity persistence", () => {
       1_700_000_000,
     ]);
     expect(usdcPlaceholder?.boundValues).toEqual([
+      buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "usdc-circle",
       "USDC",
       0,
@@ -246,6 +281,7 @@ describe("dex-liquidity persistence", () => {
       1_700_000_000,
     ]);
     expect(globalRow?.boundValues).toEqual([
+      buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "__global__",
       "__global__",
       456_789,
@@ -274,6 +310,9 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
+
+    const publishStatements = vi.mocked(batchExecute).mock.calls[1]?.[1] as PreparedStatementWithMeta[] | undefined;
+    expect(publishStatements?.some((stmt) => stmt.sql.includes("INSERT INTO dex_liquidity"))).toBe(true);
   });
 
   it("does not publish freshness when the signal aborts after score batch writes", async () => {
@@ -308,6 +347,72 @@ describe("dex-liquidity persistence", () => {
     ).rejects.toThrow("cron timed out");
 
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
+  });
+
+  it("does not publish current rows when a candidate generation is incomplete", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb({
+      candidateCoverage: {
+        row_count: ACTIVE_STABLECOINS.length,
+        active_asset_rows: ACTIVE_STABLECOINS.length - 1,
+        global_rows: 1,
+        scored_asset_rows: 1,
+      },
+    });
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+      ),
+    ).rejects.toThrow("Incomplete DEX liquidity generation");
+
+    const publishCalls = vi.mocked(batchExecute).mock.calls.filter(([, statements]) =>
+      (statements as PreparedStatementWithMeta[]).some((stmt) => stmt.sql.includes("INSERT INTO dex_liquidity")),
+    );
+    expect(publishCalls).toHaveLength(0);
+    expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
+  });
+
+  it("does not publish current rows when candidate chunked writes fail", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb();
+
+    vi.mocked(batchExecute).mockRejectedValueOnce(new Error("candidate batch failed"));
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+      ),
+    ).rejects.toThrow("candidate batch failed");
+
+    expect(vi.mocked(batchExecute).mock.calls).toHaveLength(1);
+    expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
   });
 
   it("skips historical snapshot writes when today's snapshot is already complete enough", async () => {

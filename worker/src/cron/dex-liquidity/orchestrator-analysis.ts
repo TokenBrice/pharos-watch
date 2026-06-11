@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import {
@@ -277,7 +278,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   ] = await Promise.all([
     params.db
       .prepare(
-        "SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL",
+        `SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
       .first<{ cnt: number }>()
       .catch((e) => {
@@ -285,7 +286,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
         return null;
       }),
     params.db
-      .prepare("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")
+      .prepare(
+        `SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+      )
       .first<{ total_tvl_usd: number | null; updated_at: number | null }>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous global TVL:", e);
@@ -296,6 +299,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         `SELECT coverage_class, COUNT(*) as cnt
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          GROUP BY coverage_class`,
       )
       .all<{ coverage_class: string | null; cnt: number }>()
@@ -307,7 +311,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd
          FROM dex_liquidity
-         WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL
+         WHERE stablecoin_id != '__global__'
+           AND liquidity_score IS NOT NULL
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY total_tvl_usd DESC
          LIMIT 10`,
       )
@@ -336,7 +342,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .prepare(
         `SELECT stablecoin_id, pool_count, coverage_confidence, total_tvl_usd, balance_measured_tvl_usd
          FROM dex_liquidity
-         WHERE stablecoin_id IN (${DRIFT_WATCHLIST.map(() => "?").join(", ")})`,
+         WHERE stablecoin_id IN (${DRIFT_WATCHLIST.map(() => "?").join(", ")})
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
       .bind(...DRIFT_WATCHLIST)
       .all<{

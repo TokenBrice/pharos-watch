@@ -14,6 +14,9 @@ type DexLiquiditySnapshot = Pick<
   "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"
 >;
 
+export const DEX_LIQUIDITY_PUBLISHED_ROW_FILTER =
+  "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
+
 export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
 
 export interface DexLiquidityLoadResult {
@@ -26,7 +29,9 @@ export async function loadDexLiquiditySnapshot(
 ): Promise<DexLiquidityLoadResult> {
   const rows = await db
     .prepare(
-      "SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count, updated_at FROM dex_liquidity",
+      `SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count, updated_at
+       FROM dex_liquidity
+       WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
     .all<DexLiquidityRow>();
 

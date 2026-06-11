@@ -20,6 +20,7 @@ import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health-version";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
@@ -276,6 +277,7 @@ export async function snapshotPublicDataset(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, pool_count, liquidity_score,
                 durability_score, coverage_class, updated_at
          FROM dex_liquidity
+         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY liquidity_score DESC`,
       )
       .all<DexLiquidityRow>();

@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type {
@@ -282,7 +283,7 @@ export async function computeDepthStability(
 
     const stabilityStmts: D1PreparedStatement[] = [];
     stabilityStmts.push(
-      db.prepare("UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__'")
+      db.prepare(`UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`)
     );
     for (const [id, stability] of tvlStabilityMap) {
       stabilityStmts.push(

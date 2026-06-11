@@ -2,6 +2,7 @@ import { recordCronFailure, type CronProgressReporter, type CronResult } from ".
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryMeta } from "./types";
@@ -136,7 +137,12 @@ function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
 
 async function readLiquidityCoverage(db: D1Database): Promise<Map<string, DiscoveryCoverage>> {
   const rows = await db
-    .prepare("SELECT stablecoin_id, pool_count, chain_count FROM dex_liquidity WHERE stablecoin_id != '__global__'")
+    .prepare(
+      `SELECT stablecoin_id, pool_count, chain_count
+       FROM dex_liquidity
+       WHERE stablecoin_id != '__global__'
+         AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+    )
     .all<LiquidityCoverageRow>();
 
   const coverage = new Map<string, DiscoveryCoverage>();

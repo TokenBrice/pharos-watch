@@ -12,6 +12,7 @@ import { suggestClosestToken } from "../lib/telegram-alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
@@ -184,6 +185,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         .prepare(
           `SELECT stablecoin_id, symbol, liquidity_score, total_tvl_usd, pool_count
              FROM dex_liquidity
+            WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
             ORDER BY liquidity_score DESC, total_tvl_usd DESC
             LIMIT ?`,
         )

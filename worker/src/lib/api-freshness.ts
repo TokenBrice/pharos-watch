@@ -1,5 +1,6 @@
 import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
 import {
   FRESHNESS_RATIOS,
   STATUS_CACHE_RATIO_THRESHOLDS,
@@ -67,7 +68,10 @@ interface SentinelBackedFreshnessResult {
 const SENTINEL_BACKED_CACHE_KEYS = Object.keys(FRESHNESS_SENTINEL_CONFIGS) as FreshnessSentinelBackedCacheKey[];
 
 const TABLE_FRESHNESS_FALLBACK_QUERIES: Record<FreshnessSentinelBackedCacheKey, string> = {
-  "dex-liquidity": "SELECT (? - MAX(updated_at)) as age FROM dex_liquidity WHERE liquidity_score > 0",
+  "dex-liquidity": `SELECT (? - MAX(updated_at)) as age
+    FROM dex_liquidity
+    WHERE liquidity_score > 0
+      AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
   "yield-data": "SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
   dews: "SELECT (? - MAX(computed_at)) as age FROM stress_signals",
 };

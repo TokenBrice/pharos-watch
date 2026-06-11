@@ -1,5 +1,6 @@
 import { decodeJsonString } from "../../lib/cache-json";
 import { isMissingTableError } from "../../lib/db";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
 
@@ -64,7 +65,9 @@ export async function loadLegacyDexPoolChallengers(
       .prepare(
         `SELECT stablecoin_id, top_pools_json, updated_at
          FROM dex_liquidity
-         WHERE stablecoin_id != '__global__' AND top_pools_json IS NOT NULL`,
+         WHERE stablecoin_id != '__global__'
+           AND top_pools_json IS NOT NULL
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
       .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
 
