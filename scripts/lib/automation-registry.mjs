@@ -236,6 +236,11 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
   },
   { command: "npm run typecheck:worker", deployImpact: "worker", paths: [] },
   {
+    command: "npm run validate:worker-scheduled-smoke",
+    deployImpact: "worker",
+    paths: ["worker/src/__tests__/index.scheduled.test.ts"],
+  },
+  {
     command: "npm run validate:pages-smoke",
     deployImpact: "pages",
     paths: ["scripts/maintenance/run-pages-smoke.mjs"],

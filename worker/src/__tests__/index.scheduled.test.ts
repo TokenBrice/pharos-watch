@@ -1,3 +1,4 @@
+import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../test-helpers/__shared/mock-d1";
 
@@ -21,10 +22,17 @@ const cronMocks = vi.hoisted(() => ({
   syncFxRates: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreStabilityIndex: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreDEWS: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  projectTape: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runTelegramDegradationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  cleanExpiredDisambiguations: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  publishTelegramPulseSnapshot: vi.fn(async () => undefined),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   publishReportCardCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  computeDepegResolver: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -42,8 +50,11 @@ const cronMocks = vi.hoisted(() => ({
   runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runPruneDetailCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runMintBurnGrowthWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runCronDurationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runYieldCoverageAudit: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
@@ -69,15 +80,20 @@ const cronMocks = vi.hoisted(() => ({
   runScheduledSlotWithFence: vi.fn(async (
     _db: D1Database,
     slotKey: string,
-    fn: () => Promise<void>,
+    fn: () => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
     opts: { slotStartedAt: number },
   ) => {
-    await fn();
+    const metadata = await fn();
     return {
       status: "ok",
+      resultStatus:
+        metadata && (metadata.jobsErrored > 0 || metadata.jobsDegraded > 0 || metadata.jobsSkipped > 0)
+          ? "degraded"
+          : "ok",
       slotKey,
       slotStartedAt: opts.slotStartedAt,
       owner: "slot-owner",
+      metadata,
     };
   }),
   getCache: vi.fn(async () => null),
@@ -99,10 +115,23 @@ vi.mock("../cron/dex-discovery/orchestrator", () => ({ syncDexDiscovery: cronMoc
 vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }));
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
+vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
 vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
+vi.mock("../cron/telegram-degradation-watchdog", () => ({
+  runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
+}));
+vi.mock("../cron/telegram-quiet-hours", () => ({
+  cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
+}));
+vi.mock("../api/telegram-pulse", () => ({ publishTelegramPulseSnapshot: cronMocks.publishTelegramPulseSnapshot }));
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
+vi.mock("../cron/cron-staleness-watchdog", () => ({
+  runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
+}));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
+vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
 vi.mock("../cron/publish-report-card-cache", () => ({ publishReportCardCache: cronMocks.publishReportCardCache }));
+vi.mock("../cron/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
 vi.mock("../cron/snapshot-safety-grade-history", () => ({
   snapshotSafetyGradeHistory: cronMocks.snapshotSafetyGradeHistory,
 }));
@@ -122,12 +151,17 @@ vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generate
 vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
 vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
+vi.mock("../cron/prune-detail-cache", () => ({ runPruneDetailCache: cronMocks.runPruneDetailCache }));
 vi.mock("../cron/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
 }));
 vi.mock("../cron/telegram-retention-cleanup", () => ({
   runTelegramRetentionCleanup: cronMocks.runTelegramRetentionCleanup,
 }));
+vi.mock("../cron/mint-burn-growth-watchdog", () => ({
+  runMintBurnGrowthWatchdog: cronMocks.runMintBurnGrowthWatchdog,
+}));
+vi.mock("../cron/cron-duration-watchdog", () => ({ runCronDurationWatchdog: cronMocks.runCronDurationWatchdog }));
 vi.mock("../cron/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
 vi.mock("../api/mint-burn-flows", () => ({
   refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
@@ -218,6 +252,62 @@ function makeCtx() {
 describe("worker.scheduled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("smokes every configured scheduled trigger without live provider fetches", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      throw new Error("scheduled smoke attempted a live fetch");
+    });
+    const db = mockD1();
+    const env = {
+      DB: db,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
+      ETHERSCAN_API_KEY: "etherscan",
+      ALCHEMY_API_KEY: "alchemy",
+      ANTHROPIC_API_KEY: "anthropic",
+      TWITTER_API_KEY: "tw-key",
+      TWITTER_API_SECRET: "tw-secret",
+      TWITTER_ACCESS_TOKEN: "tw-token",
+      TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
+      COINGECKO_API_KEY: "coingecko",
+    } as const;
+    const schedules = Object.entries(CRON_SCHEDULES) as Array<[keyof typeof CRON_SCHEDULES, string]>;
+
+    try {
+      expect(new Set(schedules.map(([, cron]) => cron)).size).toBe(schedules.length);
+
+      for (const [index, [, cron]] of schedules.entries()) {
+        const { ctx, waits } = makeCtx();
+        await worker.scheduled(
+          {
+            cron,
+            scheduledTime: Date.parse("2026-06-12T08:00:00Z") + index * 60_000,
+          } as ScheduledEvent,
+          env as never,
+          ctx,
+        );
+        await Promise.all(waits);
+      }
+
+      expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(schedules.length);
+      expect(cronMocks.runScheduledSlotWithFence.mock.calls.map((call) => call[1])).toEqual(
+        schedules.map(([scheduleKey]) => scheduleKey),
+      );
+      for (const call of cronMocks.runScheduledSlotWithFence.mock.calls) {
+        expect(call[0]).toBe(db);
+        expect(call[2]).toEqual(expect.any(Function));
+        expect(call[3]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
+      }
+      expect(cronMocks.logCronRun).toHaveBeenCalled();
+      for (const call of cronMocks.logCronRun.mock.calls) {
+        expect(call[4]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
+      }
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it("runs 15-min cron fan-out and chained jobs (charts excluded)", async () => {
@@ -335,6 +425,8 @@ describe("worker.scheduled", () => {
       slotKey: "quarterHourly",
       slotStartedAt: expectedSlotStartedAt,
       owner: "slot-owner",
+      resultStatus: "ok",
+      metadata: undefined,
     });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
@@ -368,6 +460,8 @@ describe("worker.scheduled", () => {
       slotKey: "quarterHourly",
       slotStartedAt: expectedSlotStartedAt,
       owner: "slot-owner",
+      resultStatus: "ok",
+      metadata: undefined,
     });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 

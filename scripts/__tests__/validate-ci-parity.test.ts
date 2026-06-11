@@ -129,7 +129,12 @@ describe("validate-ci parity", () => {
       { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/2", condition: null },
     ]);
     expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
-    expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
+    expect(extractRunSteps(typecheckWorkerJob)).toEqual(
+      WORKER_VALIDATE_COMMANDS.map((cmd) => ({
+        cmd,
+        condition: null,
+      })),
+    );
   });
 
   it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
@@ -192,6 +197,9 @@ describe("validate-ci parity", () => {
     );
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
+    expect(packageJson.scripts["validate:worker-scheduled-smoke"]).toBe(
+      "vitest run worker/src/__tests__/index.scheduled.test.ts",
+    );
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",

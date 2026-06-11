@@ -150,6 +150,7 @@ jobs:
         with:
           tooling-cache: "true"
       - run: npm run typecheck:worker
+      - run: npm run validate:worker-scheduled-smoke
 
   validate:
     needs:

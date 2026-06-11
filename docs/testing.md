@@ -28,6 +28,7 @@ npm run test:critical-contracts
 npm run test:invariants
 npm run coverage:critical
 npm run validate:pages-smoke
+npm run validate:worker-scheduled-smoke
 npm run validate:worker-smoke
 npm run test:smoke-api -- --base-url https://api.pharos.watch
 npm run test:smoke-ops
@@ -59,7 +60,7 @@ CI shape:
 
 Selected specialized checks:
 
-- Cron schedule/connection changes: `npm run check:cron-sync` and `npm run check:cron-connections`.
+- Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
 - GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
