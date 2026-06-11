@@ -160,6 +160,37 @@ export class CronTimeoutError extends Error {
   }
 }
 
+export const CRON_ABANDONED_JOB_GRACE_MS = 1_000;
+
+export interface CronJobAbandonedMetadata {
+  reason: "abandoned";
+  job: string;
+  stopReason: "timeout" | "lease_lost" | "aborted";
+  stopError: string;
+  leaseOwner: string | null;
+  renewFailures: number | null;
+  leaseLost: boolean | null;
+  ttlSec: number | null;
+  graceMs: number;
+  leaseHeldUntilTtl: boolean;
+}
+
+export class CronJobAbandonedError extends Error {
+  readonly metadata: CronJobAbandonedMetadata;
+
+  constructor(job: string, stopError: unknown, metadata: Omit<CronJobAbandonedMetadata, "reason" | "job" | "stopError">) {
+    const stopMessage = stopError instanceof Error ? stopError.message : String(stopError);
+    super(`Cron job "${job}" was abandoned after abort; lease left to expire by TTL (${stopMessage})`);
+    this.name = "CronJobAbandonedError";
+    this.metadata = {
+      reason: "abandoned",
+      job,
+      stopError: stopMessage,
+      ...metadata,
+    };
+  }
+}
+
 export function createLeaseOwner(job: string): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
@@ -188,6 +219,16 @@ function createAbortPromise(signal: AbortSignal, fallback: Error): Promise<never
     }
     signal.addEventListener("abort", rejectReason, { once: true });
   });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getStopReason(error: unknown): CronJobAbandonedMetadata["stopReason"] {
+  if (error instanceof CronLeaseLostError) return "lease_lost";
+  if (error instanceof CronTimeoutError) return "timeout";
+  return "aborted";
 }
 
 async function getScheduledSlotExecution(
@@ -446,7 +487,9 @@ export async function releaseCronLease(db: D1Database, job: string, owner: strin
 
 /**
  * Lease wrapper primitive for cron jobs. Acquires lease, keeps it alive with heartbeats,
- * runs the job, and releases lease in finally.
+ * runs the job, and releases the lease only after the job settles. If the job ignores
+ * timeout/lease-loss aborts, the lease is left to expire by TTL instead of being
+ * released while late writes may still be running.
  *
  * This helper does not yet wire cron status logging; integration is handled separately.
  */
@@ -512,10 +555,62 @@ export async function runCronWithLease<T>(
     ),
   );
 
+  let shouldReleaseLease = true;
+  let timerCleared = false;
+  const clearHeartbeat = () => {
+    if (timerCleared) return;
+    clearInterval(timer);
+    timerCleared = true;
+  };
+
+  type JobOutcome =
+    | { status: "fulfilled"; value: T }
+    | { status: "rejected"; error: unknown };
+
+  const jobOutcomePromise: Promise<JobOutcome> = Promise.resolve()
+    .then(() => fn({ leaseOwner: owner, signal: combinedSignal }))
+    .then(
+      (value) => ({ status: "fulfilled" as const, value }),
+      (error) => ({ status: "rejected" as const, error }),
+    );
+
   try {
-    const jobPromise = Promise.resolve().then(() => fn({ leaseOwner: owner, signal: combinedSignal }));
-    void jobPromise.catch(() => {});
-    const result = await Promise.race([jobPromise, stopPromise]);
+    const race = await Promise.race([
+      jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
+      stopPromise.catch((error) => ({ type: "stop" as const, error })),
+    ]);
+
+    if (race.type === "stop") {
+      clearHeartbeat();
+      const grace = await Promise.race([
+        jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
+        sleep(CRON_ABANDONED_JOB_GRACE_MS).then(() => ({ type: "abandoned" as const })),
+      ]);
+
+      if (grace.type === "abandoned") {
+        shouldReleaseLease = false;
+        throw new CronJobAbandonedError(job, race.error, {
+          stopReason: getStopReason(race.error),
+          leaseOwner: owner,
+          renewFailures,
+          leaseLost,
+          ttlSec,
+          graceMs: CRON_ABANDONED_JOB_GRACE_MS,
+          leaseHeldUntilTtl: true,
+        });
+      }
+
+      if (grace.outcome.status === "rejected") {
+        throw grace.outcome.error;
+      }
+      throw race.error;
+    }
+
+    if (race.outcome.status === "rejected") {
+      throw race.outcome.error;
+    }
+
+    const result = race.outcome.value;
     return {
       status: "ok",
       leaseOwner: owner,
@@ -524,12 +619,14 @@ export async function runCronWithLease<T>(
       result,
     };
   } finally {
-    clearInterval(timer);
-    try {
-      await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
-    } catch (releaseErr) {
-      // Best-effort release: lease expiry still guarantees eventual progress.
-      console.error(`[cron-lease] Failed to release lease for ${job}:`, releaseErr);
+    clearHeartbeat();
+    if (shouldReleaseLease) {
+      try {
+        await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
+      } catch (releaseErr) {
+        // Best-effort release: lease expiry still guarantees eventual progress.
+        console.error(`[cron-lease] Failed to release lease for ${job}:`, releaseErr);
+      }
     }
   }
 }

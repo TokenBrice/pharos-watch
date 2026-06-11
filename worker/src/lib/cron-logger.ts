@@ -1,4 +1,11 @@
-import { CRON_TIMEOUT_MS, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS, runWithOverloadRetry } from "./cron-lease";
+import {
+  CRON_ABANDONED_JOB_GRACE_MS,
+  CRON_TIMEOUT_MS,
+  CronJobAbandonedError,
+  CronTimeoutError,
+  DEFAULT_CRON_TIMEOUT_MS,
+  runWithOverloadRetry,
+} from "./cron-lease";
 import { setCache } from "./db-cache";
 
 // --- Cron failure recording ---
@@ -33,6 +40,21 @@ function classifyError(error: unknown): { name: string; message: string; stack?:
     };
   }
   return { name: "NonError", message: String(error) };
+}
+
+function serializeTerminalCronMetadata(error: unknown): string | null {
+  if (error instanceof CronJobAbandonedError) {
+    return JSON.stringify(error.metadata);
+  }
+  return null;
+}
+
+type CronJobOutcome =
+  | { status: "fulfilled"; value: CronResult | void }
+  | { status: "rejected"; error: unknown };
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -313,15 +335,52 @@ export async function logCronRun(
       console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
     }
   };
-  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+  const jobOutcomePromise: Promise<CronJobOutcome> = Promise.resolve()
+    .then(() => fn(ac.signal, reportProgress))
+    .then(
+      (value) => ({ status: "fulfilled" as const, value }),
+      (error) => ({ status: "rejected" as const, error }),
+    );
+  const timeoutPromise = new Promise<{ type: "timeout"; error: CronTimeoutError }>((resolve) => {
     timeoutHandle = setTimeout(() => {
       ac.abort(timeoutError);
-      reject(timeoutError);
+      resolve({ type: "timeout", error: timeoutError });
     }, timeoutMs);
   });
 
   try {
-    resolvedResult = await Promise.race([fn(ac.signal, reportProgress), timeoutPromise]);
+    const race = await Promise.race([
+      jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
+      timeoutPromise,
+    ]);
+    if (race.type === "timeout") {
+      const grace = await Promise.race([
+        jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
+        sleep(CRON_ABANDONED_JOB_GRACE_MS + 250).then(() => ({ type: "abandoned" as const })),
+      ]);
+
+      if (grace.type === "abandoned") {
+        throw new CronJobAbandonedError(job, race.error, {
+          stopReason: "timeout",
+          leaseOwner: null,
+          renewFailures: null,
+          leaseLost: null,
+          ttlSec: null,
+          graceMs: CRON_ABANDONED_JOB_GRACE_MS + 250,
+          leaseHeldUntilTtl: false,
+        });
+      }
+      if (grace.outcome.status === "rejected") {
+        throw grace.outcome.error;
+      }
+      throw race.error;
+    }
+
+    if (race.outcome.status === "rejected") {
+      throw race.outcome.error;
+    }
+
+    resolvedResult = race.outcome.value;
     const resultStatus = resolvedResult?.status ?? "ok";
     await runWithOverloadRetry(() =>
       db
@@ -348,15 +407,16 @@ export async function logCronRun(
       ).catch(() => {});
     }
   } catch (e) {
+    const terminalMetadata = serializeTerminalCronMetadata(e);
     try {
       await runWithOverloadRetry(() =>
         db
           .prepare(
             `INSERT INTO cron_runs
-               (job, started_at, duration_ms, status, error, slot_started_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+               (job, started_at, duration_ms, status, error, metadata, slot_started_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
           )
-          .bind(job, startSec, Date.now() - startMs, "error", String(e), slotStartedAt)
+          .bind(job, startSec, Date.now() - startMs, "error", String(e), terminalMetadata, slotStartedAt)
           .run(),
       );
     } catch (logErr) {

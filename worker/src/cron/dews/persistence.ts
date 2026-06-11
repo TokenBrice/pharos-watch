@@ -301,7 +301,7 @@ export async function persistDewsResults(params: {
 
   if (params.publishFreshnessSentinel && params.results.length > 0) {
     throwIfAborted(params.signal);
-    await writeFreshnessSentinel(params.db, "dews", params.nowSec);
+    await writeFreshnessSentinel(params.db, "dews", params.nowSec, params.signal);
   }
 
   return { rowsDropped, rowsRetiredCurrent };

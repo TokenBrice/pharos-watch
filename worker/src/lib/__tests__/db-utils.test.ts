@@ -14,6 +14,7 @@ import {
   savePriceCache,
   setCache,
   setCacheIfNewer,
+  writeFreshnessSentinel,
 } from "../db-cache";
 
 type CacheRow = { value: string; updated_at: number };
@@ -234,6 +235,19 @@ describe("db utility helpers", () => {
     expect(result).toEqual({ written: false, skippedBecauseNewer: true });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped write for "stablecoins"'));
     logSpy.mockRestore();
+  });
+
+  it("refuses cache publication when the signal is already aborted", async () => {
+    const { db, calls } = makeDb();
+    const controller = new AbortController();
+    controller.abort(new Error("publication aborted"));
+
+    await expect(setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000, controller.signal))
+      .rejects.toThrow("publication aborted");
+    await expect(writeFreshnessSentinel(db, "dews", 1700000000, controller.signal))
+      .rejects.toThrow("publication aborted");
+
+    expect(calls).toEqual([]);
   });
 
   it("returns last synced block or 0 when absent", async () => {

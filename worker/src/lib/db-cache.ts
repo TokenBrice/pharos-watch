@@ -1,5 +1,6 @@
 import { batchExecute, isMissingColumnError } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
+import { throwIfAborted } from "./abort";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
   getFreshnessSentinelCacheKey,
@@ -32,13 +33,17 @@ export async function getCacheUpdatedAt(db: D1Database, key: string): Promise<nu
   return row?.updated_at ?? null;
 }
 
-export async function setCache(db: D1Database, key: string, value: string): Promise<void> {
+export async function setCache(db: D1Database, key: string, value: string, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
   await runWithOverloadRetry(() =>
     db
       .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(key, value, Math.floor(Date.now() / 1000))
       .run(),
+    3,
+    signal,
   );
+  throwIfAborted(signal);
 }
 
 export async function deleteCache(db: D1Database, key: string): Promise<void> {
@@ -66,7 +71,9 @@ export async function setCacheIfNewer(
   key: string,
   value: string,
   syncStartSec: number,
+  signal?: AbortSignal,
 ): Promise<CacheWriteResult> {
+  throwIfAborted(signal);
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -76,7 +83,10 @@ export async function setCacheIfNewer(
       )
       .bind(key, value, syncStartSec)
       .run(),
+    3,
+    signal,
   );
+  throwIfAborted(signal);
   if (result.meta.changes === 0) {
     console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
     return { written: false, skippedBecauseNewer: true };
@@ -88,7 +98,9 @@ export async function writeFreshnessSentinel(
   db: D1Database,
   key: FreshnessSentinelBackedCacheKey,
   syncStartSec: number,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throwIfAborted(signal);
   await setCacheIfNewer(
     db,
     getFreshnessSentinelCacheKey(key),
@@ -98,7 +110,9 @@ export async function writeFreshnessSentinel(
       publishStatus: "ok",
     }),
     syncStartSec,
+    signal,
   );
+  throwIfAborted(signal);
 }
 
 export interface PriceCacheEntry {

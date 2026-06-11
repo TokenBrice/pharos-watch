@@ -5,6 +5,7 @@ vi.mock("../alerts", () => ({
 }));
 
 import { logCronRun } from "../cron-logger";
+import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 describe("logCronRun", () => {
@@ -170,12 +171,61 @@ describe("logCronRun", () => {
 
   it("fails fast with timeout error when job exceeds timeout", async () => {
     vi.useFakeTimers();
-    const hangingJob = logCronRun(db, "test-job", async () => new Promise(() => {}));
-    const timeoutExpectation = expect(hangingJob).rejects.toThrow(/timed out/i);
+    try {
+      const hangingJob = logCronRun(db, "test-job", async () => new Promise(() => {}));
+      const timeoutExpectation = expect(hangingJob).rejects.toThrow(/timed out/i);
 
-    await vi.advanceTimersByTimeAsync(5 * 60_000 + 100);
-    await timeoutExpectation;
-    vi.useRealTimers();
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
+      await timeoutExpectation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("logs abandoned metadata when a timed-out job does not settle", async () => {
+    vi.useFakeTimers();
+    try {
+      let insertedStatus: string | null = null;
+      let insertedError: string | null = null;
+      let insertedMetadata: string | null = null;
+      const dbWithCapture = {
+        prepare: (sql: string) => ({
+          bind: (...args: unknown[]) => ({
+            run: async () => {
+              if (sql.includes("INSERT INTO cron_runs")) {
+                insertedStatus = String(args[3] ?? null);
+                insertedError = String(args[4] ?? null);
+                insertedMetadata = typeof args[5] === "string" ? args[5] : null;
+              }
+              return { success: true, meta: { changes: 1 } };
+            },
+            all: async () => ({ results: [], success: true, meta: {} }),
+            first: async () => null,
+          }),
+          run: async () => ({ success: true, meta: { changes: 1 } }),
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => null,
+        }),
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const hangingJob = logCronRun(dbWithCapture, "test-job", async () => new Promise(() => {}));
+      const abandonedExpectation = expect(hangingJob).rejects.toBeInstanceOf(CronJobAbandonedError);
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
+      await abandonedExpectation;
+
+      expect(insertedStatus).toBe("error");
+      expect(insertedError).toContain("abandoned");
+      expect(JSON.parse(insertedMetadata ?? "{}")).toMatchObject({
+        reason: "abandoned",
+        job: "test-job",
+        stopReason: "timeout",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not DELETE from cron_runs on successful completion (prune moved to daily cron)", async () => {

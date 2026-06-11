@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireCronLease,
+  CRON_ABANDONED_JOB_GRACE_MS,
+  CronJobAbandonedError,
   CronLeaseLostError,
   isRetriableD1OverloadError,
   releaseCronLease,
@@ -477,7 +479,7 @@ describe("runCronWithLease", () => {
     await expect(runPromise).rejects.toBeInstanceOf(CronLeaseLostError);
   });
 
-  it("stops heartbeats once the outer abort signal fires", async () => {
+  it("stops heartbeats and leaves the lease until TTL when the outer abort signal fires", async () => {
     let renewCalls = 0;
     const countingDb = {
       prepare: (sql: string) => ({
@@ -510,12 +512,69 @@ describe("runCronWithLease", () => {
       { owner: "owner-z", ttlSec: 120, heartbeatSec: 1, abortSignal: ac.signal },
     );
 
+    const abandonedExpectation = expect(runPromise).rejects.toBeInstanceOf(CronJobAbandonedError);
     ac.abort(new Error("stop now"));
-    await expect(runPromise).rejects.toThrow("stop now");
+    await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
+    await abandonedExpectation;
 
     const renewCallsAtAbort = renewCalls;
     await vi.advanceTimersByTimeAsync(3000);
     expect(renewCalls).toBe(renewCallsAtAbort);
+  });
+
+  it("does not release an abandoned job lease before TTL expiry", async () => {
+    const db = makeLeaseDb();
+    const ac = new AbortController();
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      async () => new Promise(() => {}),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 30, abortSignal: ac.signal },
+    );
+
+    const abandonedExpectation = expect(runPromise).rejects.toBeInstanceOf(CronJobAbandonedError);
+    ac.abort(new Error("timeout"));
+    await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
+    await abandonedExpectation;
+
+    const stillLocked = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
+    expect(stillLocked).toBe(false);
+
+    vi.setSystemTime(new Date(Date.now() + 121_000));
+    const acquiredAfterTtl = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
+    expect(acquiredAfterTtl).toBe(true);
+  });
+
+  it("releases the lease when an aborted job settles during abandonment grace", async () => {
+    const db = makeLeaseDb();
+    const ac = new AbortController();
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      async ({ signal }) =>
+        new Promise((_resolve, reject) => {
+          const rejectSoon = () => {
+            setTimeout(() => reject(signal.reason), 10);
+          };
+          if (signal.aborted) {
+            rejectSoon();
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            rejectSoon();
+          }, { once: true });
+        }),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 30, abortSignal: ac.signal },
+    );
+
+    await vi.advanceTimersByTimeAsync(0);
+    const stopExpectation = expect(runPromise).rejects.toThrow("stop now");
+    ac.abort(new Error("stop now"));
+    await vi.advanceTimersByTimeAsync(10);
+    await stopExpectation;
+
+    const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
+    expect(reacquired).toBe(true);
   });
 });
 
