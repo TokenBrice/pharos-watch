@@ -42,7 +42,7 @@ export interface MintAuthorityClientSummary {
   confidence: MintAuthorityConfidence;
   summary: string;
   inheritedFrom?: string;
-  mintIncident?: MintAuthorityProfile["mintIncident"];
+  mintIncidents?: MintAuthorityProfile["mintIncidents"];
   controls?: MintAuthorityClientControlSummary[];
   sources?: StablecoinLink[];
   reviewedAt?: string;
@@ -66,7 +66,7 @@ export interface MintAuthorityCoverageSummary {
   authorityPosture: MintAuthorityPosture;
   confidence: MintAuthorityConfidence;
   inheritedFrom?: string;
-  mintIncident?: MintAuthorityProfile["mintIncident"];
+  mintIncidents?: MintAuthorityProfile["mintIncidents"];
   controls?: MintAuthorityCoverageControlSummary[];
 }
 

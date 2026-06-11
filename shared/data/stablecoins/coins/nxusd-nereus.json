@@ -94,20 +94,22 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "NXUSD is an overcollateralized CDP stablecoin minted on Avalanche against WBTC/WETH/AVAX/DAI collateral via Nereus Finance; the NRS/veNRS DAO and team multisig tune collateral and mint parameters.",
-    "mintIncident": {
-      "date": "2022-09-06",
-      "summary": "A flash-loan manipulation of the AVAX/USDC JLP collateral price let an attacker borrow far more NXUSD than justified by collateral, creating about $500K of NXUSD bad debt.",
-      "sources": [
-        {
-          "label": "Nereus Finance flash-loan analysis",
-          "url": "https://faraz.faith/2022-11-19-nereus-finance-flashloan-attack-analysis/"
-        },
-        {
-          "label": "Financial Express - Nereus NXUSD bad debt",
-          "url": "https://www.financialexpress.com/business/blockchain-avalanche-flash-loan-exploit-sees-371000-in-usdc-stolen-2659238/"
-        }
-      ]
-    },
+    "mintIncidents": [
+      {
+        "date": "2022-09-06",
+        "summary": "A flash-loan manipulation of the AVAX/USDC JLP collateral price let an attacker borrow far more NXUSD than justified by collateral, creating about $500K of NXUSD bad debt.",
+        "sources": [
+          {
+            "label": "Nereus Finance flash-loan analysis",
+            "url": "https://faraz.faith/2022-11-19-nereus-finance-flashloan-attack-analysis/"
+          },
+          {
+            "label": "Financial Express - Nereus NXUSD bad debt",
+            "url": "https://www.financialexpress.com/business/blockchain-avalanche-flash-loan-exploit-sees-371000-in-usdc-stolen-2659238/"
+          }
+        ]
+      }
+    ],
     "controls": [
       {
         "label": "Nereus NXUSD minter / CDP contracts",

@@ -48,15 +48,20 @@ function buildKeyCustodyAttestation(
   return { kind, sources };
 }
 
-function buildMintIncident(value: unknown): MintAuthorityClientSummary["mintIncident"] | undefined {
-  if (!isRecord(value)) return undefined;
-  const date = stringValue(value.date);
-  const summary = stringValue(value.summary);
-  if (!date || !summary) return undefined;
-  const sources: MintAuthorityClientSourceSummary[] = [];
-  appendSources(sources, value.sources, new Set());
-  if (sources.length === 0) return undefined;
-  return { date, summary, sources };
+function buildMintIncidents(value: unknown): MintAuthorityClientSummary["mintIncidents"] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const incidents: NonNullable<MintAuthorityClientSummary["mintIncidents"]> = [];
+  for (const incident of value) {
+    if (!isRecord(incident)) continue;
+    const date = stringValue(incident.date);
+    const summary = stringValue(incident.summary);
+    if (!date || !summary) continue;
+    const sources: MintAuthorityClientSourceSummary[] = [];
+    appendSources(sources, incident.sources, new Set());
+    if (sources.length === 0) continue;
+    incidents.push({ date, summary, sources });
+  }
+  return incidents.length > 0 ? incidents : undefined;
 }
 
 function buildControlSummary(value: unknown): MintAuthorityClientControlSummary | null {
@@ -119,8 +124,8 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
 
   const inheritedFrom = stringValue(profile.inheritedFrom);
   if (inheritedFrom) summary.inheritedFrom = inheritedFrom;
-  const mintIncident = buildMintIncident(profile.mintIncident);
-  if (mintIncident) summary.mintIncident = mintIncident;
+  const mintIncidents = buildMintIncidents(profile.mintIncidents);
+  if (mintIncidents) summary.mintIncidents = mintIncidents;
 
   const controls = Array.isArray(profile.controls)
     ? profile.controls
@@ -135,7 +140,9 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   appendSources(sources, review?.sources, seenUrls);
   const reviewedAt = stringValue(review?.reviewedAt);
   if (reviewedAt) summary.reviewedAt = reviewedAt;
-  appendSources(sources, mintIncident?.sources, seenUrls);
+  for (const incident of mintIncidents ?? []) {
+    appendSources(sources, incident.sources, seenUrls);
+  }
   appendSources(sources, profile.sources, seenUrls);
   for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
     if (!isRecord(control)) continue;

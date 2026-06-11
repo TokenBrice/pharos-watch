@@ -206,18 +206,24 @@ function projectKeyCustodyAttestation(value) {
   return { kind, sources };
 }
 
-function projectMintIncident(value) {
-  if (!isPlainObject(value)) {
+function projectMintIncidents(value) {
+  if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const { date, summary } = value;
-  const sources = projectLinks(value.sources);
-  if (typeof date !== "string" || typeof summary !== "string" || !sources || sources.length === 0) {
-    return undefined;
-  }
+  const incidents = value
+    .filter(isPlainObject)
+    .map((incident) => {
+      const { date, summary } = incident;
+      const sources = projectLinks(incident.sources);
+      if (typeof date !== "string" || typeof summary !== "string" || !sources || sources.length === 0) {
+        return null;
+      }
+      return { date, summary, sources };
+    })
+    .filter((incident) => incident !== null);
 
-  return { date, summary, sources };
+  return incidents.length > 0 ? incidents : undefined;
 }
 
 export function projectMintAuthoritySummary(coin) {
@@ -236,9 +242,9 @@ export function projectMintAuthoritySummary(coin) {
     summary.inheritedFrom = inheritedFrom;
   }
 
-  const mintIncident = projectMintIncident(profile.mintIncident);
-  if (mintIncident) {
-    summary.mintIncident = mintIncident;
+  const mintIncidents = projectMintIncidents(profile.mintIncidents);
+  if (mintIncidents) {
+    summary.mintIncidents = mintIncidents;
   }
 
   const controls = Array.isArray(profile.controls)

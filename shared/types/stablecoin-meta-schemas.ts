@@ -419,7 +419,7 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z.object({
   });
 });
 
-const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["mintIncident"]>> = z.object({
+const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["mintIncidents"]>[number]> = z.object({
   date: ReviewDateSchema,
   summary: z.string().min(12),
   sources: z.array(StablecoinLinkSchema).min(1),
@@ -431,7 +431,7 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z.obj
   confidence: z.enum(MINT_AUTHORITY_CONFIDENCE_VALUES),
   summary: z.string().min(12),
   inheritedFrom: z.string().min(1).optional(),
-  mintIncident: MintAuthorityIncidentSchema.optional(),
+  mintIncidents: z.array(MintAuthorityIncidentSchema).min(1).optional(),
   controls: z.array(MintAuthorityControlSchema).optional(),
   review: MintAuthorityReviewSchema,
 }).strict().superRefine((profile, ctx) => {

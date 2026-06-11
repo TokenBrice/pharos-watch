@@ -104,7 +104,7 @@ export function MintAuthorityScoreMethodologySection() {
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Caps</h3>
           <ul className="list-disc list-inside space-y-1">
-            <li>Incident cap: unbounded or compromised authority with a recorded `mintIncident` is capped at 10.</li>
+            <li>Incident cap: unbounded or compromised authority with a recorded mint incident is capped at 10.</li>
             <li>Unbounded cap: unbounded or compromised authority without a recorded incident is capped at 25.</li>
             <li>EOA cap: a non-issuer-context EOA that can mint or authorize minting without MPC/HSM attestation is capped at 40.</li>
             <li>Confidence cap: verified caps at 100, probable at 90, manual-review at 85, and unknown returns NR.</li>

@@ -242,7 +242,7 @@ export interface MintAuthorityDetailViewModel {
   sources: MintAuthorityDetailSourceViewModel[];
   score: MintAuthorityDetailScoreViewModel | null;
   reviewedAt: string | null;
-  mintIncident: MintAuthorityDetailIncidentViewModel | null;
+  mintIncidents: MintAuthorityDetailIncidentViewModel[];
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -273,7 +273,7 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   sources: [],
   score: null,
   reviewedAt: null,
-  mintIncident: null,
+  mintIncidents: [],
 };
 
 const MINT_PATH_LABELS: Record<string, string> = {
@@ -554,11 +554,17 @@ function formatMintAuthorityWeakestCustodyLabel(value: string | null | undefined
   return MINT_AUTHORITY_WEAKEST_CUSTODY_LABELS[value] ?? value;
 }
 
-function readMintIncident(value: unknown): MintAuthorityDetailIncidentViewModel | null {
-  if (!isRecord(value)) return null;
-  const date = stringValue(value.date);
-  const summary = stringValue(value.summary);
-  return date && summary ? { date, summary } : null;
+function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel[] {
+  if (!Array.isArray(value)) return [];
+  const incidents: MintAuthorityDetailIncidentViewModel[] = [];
+  for (const incident of value) {
+    if (!isRecord(incident)) continue;
+    const date = stringValue(incident.date);
+    const summary = stringValue(incident.summary);
+    if (date && summary) incidents.push({ date, summary });
+  }
+  // Newest first: the callout leads with the most recent incident.
+  return incidents.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function buildMintAuthorityScoreViewModel(
@@ -680,7 +686,7 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     sources: dedupedSources,
     score,
     reviewedAt: stringValue(candidate.reviewedAt) ?? stringValue(review?.reviewedAt),
-    mintIncident: readMintIncident(candidate.mintIncident),
+    mintIncidents: readMintIncidents(candidate.mintIncidents),
   };
 }
 

@@ -84,7 +84,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
     unresolvedReasonLabel: null,
   },
   reviewedAt: "2026-05-12",
-  mintIncident: null,
+  mintIncidents: [],
 };
 
 describe("MintAuthoritySection", () => {
@@ -150,10 +150,12 @@ describe("MintAuthoritySection", () => {
             capsApplied: ["Incident cap <= 10"],
             weakestControlCustodyLabel: "Single-key address - custody unverifiable",
           },
-          mintIncident: {
-            date: "2024-06-13",
-            summary: "Privileged mint authority created unbacked supply during an exploit.",
-          },
+          mintIncidents: [
+            {
+              date: "2024-06-13",
+              summary: "Privileged mint authority created unbacked supply during an exploit.",
+            },
+          ],
         }}
       />,
     );
@@ -162,5 +164,32 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Privileged mint authority created unbacked supply");
     expect(html).toContain("Incident cap &lt;= 10");
     expect(html).toContain("Single-key address - custody unverifiable");
+  });
+
+  it("features repeat mint incidents with a count header", () => {
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={{
+          ...REVIEWED_PROFILE,
+          mintIncidents: [
+            {
+              date: "2025-10-04",
+              summary: "Second exploit borrowed stablecoin with no collateral.",
+            },
+            {
+              date: "2024-01-30",
+              summary: "First exploit turned the borrow route into bad debt.",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(html).toContain("Repeat mint incidents (2)");
+    expect(html).toContain("2025-10-04");
+    expect(html).toContain("Second exploit borrowed stablecoin with no collateral.");
+    expect(html).toContain("2024-01-30");
+    expect(html).toContain("First exploit turned the borrow route into bad debt.");
+    expect(html).not.toContain("Mint incident 2025-10-04");
   });
 });

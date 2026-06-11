@@ -189,14 +189,25 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
 
         <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
 
-        {profile.mintIncident ? (
+        {profile.mintIncidents.length > 0 ? (
           <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="font-medium">Mint incident {profile.mintIncident.date}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
-                {profile.mintIncident.summary}
-              </p>
+              {profile.mintIncidents.length > 1 ? (
+                <p className="pb-1 font-medium">Repeat mint incidents ({profile.mintIncidents.length})</p>
+              ) : null}
+              <div className="divide-y divide-red-500/20">
+                {profile.mintIncidents.map((incident) => (
+                  <div key={incident.date} className="py-1.5 first:pt-0 last:pb-0">
+                    <p className="font-medium">
+                      {profile.mintIncidents.length > 1 ? incident.date : `Mint incident ${incident.date}`}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
+                      {incident.summary}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : null}

@@ -170,24 +170,26 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API, with live Ethereum owner and proxy-admin authority resolving to multisig-style contracts.",
-    "mintIncident": {
-      "date": "2026-05-24",
-      "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
-      "sources": [
-        {
-          "label": "StablR official incident notice",
-          "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
-        },
-        {
-          "label": "CoinDesk - StablR unbacked-token mint",
-          "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
-        },
-        {
-          "label": "Webacy - StablR exploit monitoring",
-          "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
-        }
-      ]
-    },
+    "mintIncidents": [
+      {
+        "date": "2026-05-24",
+        "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "sources": [
+          {
+            "label": "StablR official incident notice",
+            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "CoinDesk - StablR unbacked-token mint",
+            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+          },
+          {
+            "label": "Webacy - StablR exploit monitoring",
+            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
+          }
+        ]
+      }
+    ],
     "controls": [
       {
         "label": "USDR token owner",

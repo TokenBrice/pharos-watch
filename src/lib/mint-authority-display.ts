@@ -215,7 +215,7 @@ function mintAuthoritySummaryToScoringInput(
     authorityPosture: summary.authorityPosture,
     confidence: summary.confidence,
     inheritedFrom: summary.inheritedFrom,
-    mintIncident: summary.mintIncident,
+    mintIncidents: summary.mintIncidents,
     controls: summary.controls?.map((control) => ({
       label: control.label,
       authorityType: control.authorityType,

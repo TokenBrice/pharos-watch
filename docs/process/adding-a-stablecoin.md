@@ -252,7 +252,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `mintAuthority.controls[].modulesOrGuardsStatus` | `none-detected` \| `present` \| `unknown` \| `not-applicable`                                                        |
 | `mintAuthority.controls[].canRaiseCap` | `true` \| `false` \| `unknown`                                                                                           |
 | `mintAuthority.controls[].keyCustodyAttestation.kind` | `mpc` \| `hsm`                                                                                              |
-| `mintAuthority.mintIncident`  | `{ date, summary, sources[] }` for privileged-mint or unbacked-supply incidents                                           |
+| `mintAuthority.mintIncidents` | `[{ date, summary, sources[] }]` for privileged-mint or unbacked-supply incidents (one entry per incident)                                           |
 | `launchPhase`                  | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon`                                                                |
 
 ### Classification rules that are easy to get wrong
@@ -591,7 +591,7 @@ When authoring `mintAuthority`, verify:
 - each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
 - Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
 - EOA mint-capable controls should include `keyCustodyAttestation` when MPC/HSM custody is publicly evidenced; otherwise non-issuer-context EOA direct/can-authorize paths are capped by the score methodology.
-- Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncident` with source links.
+- Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncidents` entries with source links.
 - direct chain reads, proxy/admin reads, cap/facilitator registries, bridge route checks, and Safe state include observed block or source notes when they are part of the evidence.
 - wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
 - `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.

@@ -144,7 +144,7 @@ Values are authored-short and never CSS-truncated; on `<lg` the row is a snap-sc
 
 ### Mint Authority section
 
-`MintAuthoritySection` renders in the Context zone when compact review data is present. It shows the standalone Mint Authority Score and band, methodology badge, reviewed mint path, authority posture, confidence, reviewed date, weakest controller, component breakdown, caps, primary controls, key-custody labels, source links, and `mintIncident` callout when available.
+`MintAuthoritySection` renders in the Context zone when compact review data is present. It shows the standalone Mint Authority Score and band, methodology badge, reviewed mint path, authority posture, confidence, reviewed date, weakest controller, component breakdown, caps, primary controls, key-custody labels, source links, and `mintIncidents` callout when available (repeat incidents render as a dated list with a count header).
 
 The score is computed from `shared/lib/mint-authority-scoring.ts` through the detail view model and `src/lib/mint-authority-display.ts`. It is not a Safety Score input, report-card raw input, selector exclusion, or report-card ranking sort.
 

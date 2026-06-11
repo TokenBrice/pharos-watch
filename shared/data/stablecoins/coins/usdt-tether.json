@@ -313,20 +313,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
-    "mintIncident": {
-      "date": "2019-07-13",
-      "summary": "During an Omni-to-Tron chain swap, Tether accidentally minted 5B USDT instead of the intended 50M, then burned the excess supply to restore the intended issuance.",
-      "sources": [
-        {
-          "label": "CoinDesk - Tether accidental USDT mint",
-          "url": "https://www.coindesk.com/markets/2019/07/16/tether-accidentally-minted-5-billion-of-its-stablecoins-then-deleted-them"
-        },
-        {
-          "label": "The Paypers - Tether 5B USDT mint and burn",
-          "url": "https://thepaypers.com/payments/news/tether-minted-5-bln-usdt-by-mistake-immediately-burned-them"
-        }
-      ]
-    },
+    "mintIncidents": [
+      {
+        "date": "2019-07-13",
+        "summary": "During an Omni-to-Tron chain swap, Tether accidentally minted 5B USDT instead of the intended 50M, then burned the excess supply to restore the intended issuance.",
+        "sources": [
+          {
+            "label": "CoinDesk - Tether accidental USDT mint",
+            "url": "https://www.coindesk.com/markets/2019/07/16/tether-accidentally-minted-5-billion-of-its-stablecoins-then-deleted-them"
+          },
+          {
+            "label": "The Paypers - Tether 5B USDT mint and burn",
+            "url": "https://thepaypers.com/payments/news/tether-minted-5-bln-usdt-by-mistake-immediately-burned-them"
+          }
+        ]
+      }
+    ],
     "controls": [
       {
         "chain": "ethereum",

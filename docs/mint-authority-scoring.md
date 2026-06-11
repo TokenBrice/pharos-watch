@@ -26,7 +26,7 @@ Primary fields:
 - `confidence` - evidence quality: verified, probable, manual-review, or unknown.
 - `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, Safe module/guard state, key-custody attestation, sources, and evidence.
 - `inheritedFrom` - parent stablecoin id for wrappers and variants that inherit mint authority from a reviewed parent.
-- `mintIncident` - historical unbacked-mint or privileged-mint exploit evidence used for the hard incident cap.
+- `mintIncidents` - historical unbacked-mint or privileged-mint exploit evidence (one entry per incident) used for the hard incident cap.
 
 ## Formula
 
@@ -56,7 +56,7 @@ Caps apply after the weighted raw score:
 
 | Cap | Limit | Trigger |
 | --- | ----- | ------- |
-| Incident cap | 10 | `authorityPosture: "unbounded-or-compromised"` with a recorded `mintIncident`. |
+| Incident cap | 10 | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. |
 | Unbounded cap | 25 | Unbounded or compromised posture without a recorded incident. |
 | EOA cap | 40 | Non-issuer-context EOA can directly mint or authorize minting without MPC/HSM key-custody attestation. |
 | Confidence cap | 100 / 90 / 85 | Verified = 100, probable = 90, manual-review = 85. Unknown confidence returns `NR`. |

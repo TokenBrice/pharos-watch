@@ -109,7 +109,7 @@ export interface MintAuthorityScoringInput {
   authorityPosture: MintAuthorityPosture;
   confidence: MintAuthorityConfidence;
   inheritedFrom?: string;
-  mintIncident?: MintAuthorityProfile["mintIncident"];
+  mintIncidents?: MintAuthorityProfile["mintIncidents"];
   controls?: readonly MintAuthorityScoringControlInput[];
 }
 
@@ -168,7 +168,7 @@ function toMintAuthorityScoringInput(
     authorityPosture: profile.authorityPosture,
     confidence: profile.confidence,
     inheritedFrom: profile.inheritedFrom,
-    mintIncident: profile.mintIncident,
+    mintIncidents: profile.mintIncidents,
     controls: profile.controls,
   };
 }
@@ -358,7 +358,7 @@ function applyCaps(
   let cappedScore = score;
 
   if (input.authorityPosture === "unbounded-or-compromised") {
-    if (input.mintIncident) {
+    if (input.mintIncidents && input.mintIncidents.length > 0) {
       cappedScore = Math.min(cappedScore, MINT_AUTHORITY_CAPS.incident);
       capsApplied.push("incident-cap");
     } else {

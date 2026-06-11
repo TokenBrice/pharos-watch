@@ -152,11 +152,13 @@ describe("Mint Authority Score", () => {
   it("applies incident, unbounded, and confidence caps with traces", () => {
     const incident = score({
       authorityPosture: "unbounded-or-compromised",
-      mintIncident: {
-        date: "2026-03-22",
-        summary: "Unauthorized mint route exploited.",
-        sources: [{ label: "Incident", url: "https://example.com/incident" }],
-      },
+      mintIncidents: [
+        {
+          date: "2026-03-22",
+          summary: "Unauthorized mint route exploited.",
+          sources: [{ label: "Incident", url: "https://example.com/incident" }],
+        },
+      ],
     });
     expect(incident.score).toBe(10);
     expect(incident.capsApplied).toContain("incident-cap");

@@ -256,11 +256,11 @@ export interface MintAuthorityProfile {
   confidence: MintAuthorityConfidence;
   summary: string;
   inheritedFrom?: string;
-  mintIncident?: {
+  mintIncidents?: Array<{
     date: string;
     summary: string;
     sources: StablecoinLink[];
-  };
+  }>;
   controls?: MintAuthorityControl[];
   review: MintAuthorityReview;
 }

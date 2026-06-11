@@ -93,24 +93,26 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 2/2 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
-    "mintIncident": {
-      "date": "2026-05-24",
-      "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
-      "sources": [
-        {
-          "label": "StablR official incident notice",
-          "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
-        },
-        {
-          "label": "CoinDesk - StablR unbacked-token mint",
-          "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
-        },
-        {
-          "label": "Webacy - StablR exploit monitoring",
-          "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
-        }
-      ]
-    },
+    "mintIncidents": [
+      {
+        "date": "2026-05-24",
+        "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "sources": [
+          {
+            "label": "StablR official incident notice",
+            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "CoinDesk - StablR unbacked-token mint",
+            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+          },
+          {
+            "label": "Webacy - StablR exploit monitoring",
+            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
+          }
+        ]
+      }
+    ],
     "controls": [
       {
         "chain": "ethereum",
