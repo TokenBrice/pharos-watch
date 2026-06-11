@@ -1,5 +1,7 @@
 # Scripts
 
+> **Agent navigation** — large file (~127 KB, long inventory tables); Grep the heading or script name you need instead of reading wholesale: Overview · D1 Insights Capture · Curated Script Inventory · CI-Critical Scripts · Manual Advisory Scripts · Operational Notes · Safe Usage Guidelines.
+
 ## Overview
 
 Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.

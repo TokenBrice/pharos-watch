@@ -2,6 +2,8 @@
 
 Dedicated documentation for the live reserve-composition subsystem that powers `GET /api/stablecoin-reserves/:id`, the stablecoin-detail reserve card, and `/status` reserve-sync health.
 
+> **Agent navigation** — ~85 KB; Grep the heading you need instead of reading wholesale: Overview · Metadata Contract · Cron Behavior · Storage Model · API Contract · Adapter Registry · Frontend Consumers · Scope Boundaries · File Index.
+
 ---
 
 ## Overview

@@ -1,6 +1,6 @@
 ---
 name: resilience-classify
-description: Classify stablecoins that need explicit resilience overrides in the Pharos dashboard for `chainTier`, `deploymentModel`, `collateralQuality`, and `custodyModel`. Use when adding a stablecoin, auditing report-card accuracy, or reviewing cases where `inferResilienceDefaults()` in `shared/lib/report-cards.ts` is too optimistic.
+description: Add explicit resilience overrides (`chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`) where `inferResilienceDefaults()` is too optimistic. Use when adding a stablecoin or auditing report-card accuracy.
 ---
 
 # Resilience Classify

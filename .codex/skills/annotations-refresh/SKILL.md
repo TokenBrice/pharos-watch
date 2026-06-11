@@ -1,6 +1,6 @@
 ---
 name: annotations-refresh
-description: Drain the annotation-candidates queue, promote events to shared/data/annotations/curated-annotations.ts, drop or defer the rest. Use weekly during active event periods (post-depeg, post-regulatory action), monthly otherwise. The candidate queue is produced by `npm run candidates:annotations`.
+description: Drain the annotation-candidates queue (from `npm run candidates:annotations`) into shared/data/annotations/curated-annotations.ts. Use weekly during active event periods, monthly otherwise.
 user_invocable: true
 ---
 

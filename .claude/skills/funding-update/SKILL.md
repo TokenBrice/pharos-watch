@@ -18,12 +18,12 @@ This skill does **not** touch `shared/data/funding/costs.json`. Cost line items 
 ### Prerequisites
 
 - `ALCHEMY_API_KEY` present (covers 5 chains: ethereum, base, optimism, arbitrum, polygon).
-- `ETHERSCAN_API_KEY` present (used for Gnosis via Etherscan's V2 unified API — chainid=100). The legacy `api.gnosisscan.io` endpoints were deprecated in favor of this single multi-chain API.
-- `COINGECKO_API_KEY` present. Works against both hosts — check which tier you have:
-  - **Pro key:** `https://pro-api.coingecko.com/api/v3` with header `x-cg-pro-api-key`
-  - **Demo/Analyst key:** `https://api.coingecko.com/api/v3` with header `x-cg-demo-api-key`
+- `ETHERSCAN_API_KEY` present (used for Gnosis via Etherscan's V2 unified API — chainid=100).
+- `COINGECKO_API_KEY` present.
 
-All three are in `worker/.dev.vars`. If a demo-host call returns `error_code:10010` ("please change your root URL"), swap to the Pro host (same key).
+All three are in `worker/.dev.vars`.
+
+Extended reference (edge cases, history, examples): read ./reference.md when needed.
 
 ### Process
 
@@ -46,7 +46,7 @@ Run the six calls in parallel (or sequentially — it's one curl per chain, the 
 | arbitrum | `arb-mainnet.g.alchemy.com` |
 | polygon | `polygon-mainnet.g.alchemy.com` |
 
-**Category support differs by chain:** Alchemy's `internal` category is only supported on **ethereum and polygon**. On base, optimism, and arbitrum, pass `["external","erc20"]` only — adding `"internal"` returns `{"code":-32602,"message":"The 'internal' category is only supported for ETH and MATIC."}`.
+**Category support differs by chain:** Alchemy's `internal` category is only supported on **ethereum and polygon**. On base, optimism, and arbitrum, pass `["external","erc20"]` only.
 
 ```bash
 # Ethereum / Polygon (include "internal")
@@ -68,9 +68,9 @@ curl -s "https://base-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
   }]}'
 ```
 
-`fromBlock` can be omitted for low-volume wallets — Alchemy returns everything from genesis and we filter by `cursorsByChain[chain]` after. If any chain ever exceeds 1,000 transfers, add `"fromBlock": "0x<recent-block-hex>"` to that call.
+`fromBlock` can be omitted for low-volume wallets — Alchemy returns everything from genesis and we filter by `cursorsByChain[chain]` after.
 
-**Gnosis** — Etherscan V2 unified API with `chainid=100`. (The legacy `api.gnosisscan.io` V1 endpoints return `{"status":"0","result":"You are using a deprecated V1 endpoint"}`.) Three endpoints cover inbound native xDAI (`txlist`), ERC-20 (`tokentx`), and contract-sends (`txlistinternal`):
+**Gnosis** — Etherscan V2 unified API with `chainid=100`. Three endpoints cover inbound native xDAI (`txlist`), ERC-20 (`tokentx`), and contract-sends (`txlistinternal`):
 
 ```bash
 ADDR="0x5d698362edb8aea1c2b2483096bdee3265d860db"

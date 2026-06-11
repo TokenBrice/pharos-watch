@@ -6,6 +6,8 @@ Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trig
 
 **Deployed at:** `api.pharos.watch` (public integration API), `site-api.pharos.watch` (website-internal data lane), and `ops-api.pharos.watch` (operator lane; pair with Cloudflare Access before use)
 
+> **Agent navigation** — ~1,260 lines; Grep the heading you need instead of reading wholesale: Runtime Limits and Observability · Env Interface · Module Initialization · Public API Auth and Rate Limiting · HTTP Request Handling · Cron Scheduling · Telegram Alert Bot · logCronRun() Wrapper · Alert System · Shared Database Helpers · Undocumented Cron Details · Health & Status Endpoints · Key Constants · File Index.
+
 ---
 
 ## Runtime Limits and Observability

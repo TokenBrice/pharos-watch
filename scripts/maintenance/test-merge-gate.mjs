@@ -417,8 +417,14 @@ export async function runMergeGate({
   console.log(`[merge-gate] Head ref: ${headRef}`);
   console.log(`[merge-gate] Mode: ${stagedMode ? "staged" : "merged-diff"}`);
   console.log(`[merge-gate] Changed files: ${changedFiles.length}`);
-  for (const file of changedFiles) {
+  // Cap the listing: agent sessions re-read this output on every subsequent
+  // tool call, so a 200-file diff would burn context for no decision value.
+  const MAX_LISTED_FILES = 20;
+  for (const file of changedFiles.slice(0, MAX_LISTED_FILES)) {
     console.log(`  - ${file}`);
+  }
+  if (changedFiles.length > MAX_LISTED_FILES) {
+    console.log(`  … and ${changedFiles.length - MAX_LISTED_FILES} more`);
   }
 
   if (!forceFullDeploy && changedFiles.length === 0) {
@@ -441,8 +447,8 @@ export async function runMergeGate({
   console.log("[merge-gate] Command plan:");
   for (let i = 0; i < plan.length; i++) {
     const item = plan[i];
-    console.log(`${i + 1}. ${item.cmd}`);
-    console.log(`   reasons: ${item.reasons.join("; ")}`);
+    const extra = item.reasons.length > 1 ? ` (+${item.reasons.length - 1} more)` : "";
+    console.log(`${i + 1}. ${item.cmd} — ${item.reasons[0]}${extra}`);
   }
 
   if (dryRun) {

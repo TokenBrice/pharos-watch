@@ -1,6 +1,6 @@
 ---
 name: genius-research
-description: Research and populate U.S. GENIUS Act compliance data (the `genius` field) for a tracked stablecoin in the Pharos dashboard. Use when adding or auditing GENIUS applicability, authorization status, issuer pathway, regulator/enforcement/foreign-exception posture, or reserve/redemption disclosure in `shared/data/stablecoins/coins/*.json`.
+description: Research and populate the `genius` (U.S. GENIUS Act compliance) field for a tracked stablecoin. Use when adding or auditing GENIUS status, pathway, or disclosures in `shared/data/stablecoins/coins/*.json`.
 ---
 
 # GENIUS Research

@@ -1,6 +1,6 @@
 ---
 name: ai-summaries-refresh
-description: Drain the AI-summary staleness queue, refreshing summaries in data/ai-summaries.json whose baked-in grade/score/DEWS-band/depeg-count claims no longer match live Pharos data. Use after a score methodology bump, a batch of depeg events, or on a ~monthly cadence. The queue is produced by `npm run candidates:ai-summaries`.
+description: Drain the AI-summary staleness queue (from `npm run candidates:ai-summaries`) in data/ai-summaries.json. Use after a score methodology bump, a depeg batch, or on a ~monthly cadence.
 user_invocable: true
 ---
 

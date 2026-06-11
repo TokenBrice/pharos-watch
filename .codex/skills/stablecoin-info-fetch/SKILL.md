@@ -1,6 +1,6 @@
 ---
 name: stablecoin-info-fetch
-description: Verify and populate per-coin metadata fields for a tracked stablecoin in the Pharos dashboard, including collateral, peg mechanism, jurisdiction, links, `geckoId`, `cmcSlug`, `contracts`, `proofOfReserves`, and Mint Authority review context. Use when adding a stablecoin, filling metadata gaps, or auditing entries in `shared/data/stablecoins/coins/*.json` for one coin at a time.
+description: Verify and populate one tracked stablecoin's metadata (collateral, peg mechanism, jurisdiction, links, geckoId, contracts, proofOfReserves) in `shared/data/stablecoins/coins/*.json`. Use when adding a coin, filling metadata gaps, or auditing one coin's entry.
 ---
 
 # Stablecoin Info Fetch

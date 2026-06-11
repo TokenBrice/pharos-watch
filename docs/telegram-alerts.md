@@ -1,5 +1,7 @@
 # PharosWatchBot and Telegram Alerts
 
+> **Agent navigation** — ~75 KB; Grep the heading you need instead of reading wholesale: Overview · Mini App Launch Entrypoints · Files · Frontend Main Page · Public Pulse Privacy And Freshness · D1 Schema · Secrets and Bindings · Inline Keyboards (Callback Queries) · Webhook Command Flow · Dispatch Cron · Digest Appendices · Admin Visibility · Message Types · Digest vs Subscriber Alerts · Operational Notes · Runbooks.
+
 ## Overview
 
 Pharos runs PharosWatchBot for opt-in stablecoin alerts and Telegram channel posts.

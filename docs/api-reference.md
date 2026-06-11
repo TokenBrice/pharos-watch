@@ -6,6 +6,8 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` / `HEAD /api/og/*` return `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
+> **Agent navigation** — this reference is ~4,000 lines; never read it wholesale. Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Admin Auth And Idempotency · Public Endpoints (the generated quick-reference table lists every route) · Pages Function endpoints · Admin Endpoints. For one route, grep its path (e.g. `/api/stablecoins`).
+
 ## Surface Split
 
 The runtime now uses three HTTP lanes:

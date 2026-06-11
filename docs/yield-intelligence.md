@@ -2,6 +2,8 @@
 
 Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curated lending opportunities. Computes APY from deterministic on-chain reads, curated DeFiLlama pools, protocol-native yield APIs, price history, and benchmark-derived fallbacks; scores each coin via the Pharos Yield Score (PYS); and serves a dedicated `/yield` page plus a stablecoin-detail yield section. That detail section now renders for any asset with a live published ranking row, even when the coin itself is not statically marked `yieldBearing` (for example USDC/USDT lending opportunities or XAUT's curated Yo Protocol venue).
 
+> **Agent navigation** — ~1,200 lines; Grep the heading you need instead of reading wholesale: Methodology Versioning · Tracked Coins · Source-Aware APY Resolution · Pharos Yield Score (PYS) · Benchmark Registry · Warning Signals (Phase 2) · Database Schema · Cron Jobs · API Endpoints · Frontend · Constants · Testing · Edge Cases · File Index · Presentation Contracts.
+
 ---
 
 ## Methodology Versioning

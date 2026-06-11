@@ -35,3 +35,4 @@ This file is mirrored to `AGENTS.md`. Durable process guidance belongs in `/docs
 - Cron-backed hooks normally use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.
 - Worker cron jobs share Cloudflare's per-trigger 6-connection pool; consume response bodies before opening more fetches.
 - D1 migrations run before the new Worker is live; destructive cleanup needs a separate coordinated rollout.
+- Docs over ~1,500 lines (notably `docs/api-reference.md`): use the top navigation block, then Grep or offset-read only the matched section — never read wholesale.
