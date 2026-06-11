@@ -10,6 +10,7 @@ import {
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
+import { CRON_TIMEOUT_MS } from "../../../lib/cron-lease";
 import { SLOT_RUNNER_BY_KEY } from "../../scheduled";
 
 function sorted(values: Iterable<string>): string[] {
@@ -41,6 +42,13 @@ describe("scheduled runner contract", () => {
       const plan = SCHEDULED_SLOT_PLANS[entry.scheduleKey];
       expect(getScheduledSlotPlanBudgetEntries(plan), `${entry.job} must have a scheduled budget entry`)
         .toContain(entry.job);
+    }
+
+    const durationBudgetJobs = Object.keys(CRON_TIMEOUT_MS);
+    expect(sorted(durationBudgetJobs)).toEqual(sorted(CRON_JOB_DEFINITIONS.map((definition) => definition.job)));
+    for (const [job, timeoutMs] of Object.entries(CRON_TIMEOUT_MS)) {
+      expect(Number.isFinite(timeoutMs), `${job} duration budget must be finite`).toBe(true);
+      expect(timeoutMs, `${job} duration budget must be positive`).toBeGreaterThan(0);
     }
   });
 

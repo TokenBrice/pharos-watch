@@ -5,13 +5,15 @@ import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 
 /**
- * Duration-trend watchdog for fetch-heavy cron jobs with explicit app-level
+ * Duration-trend watchdog for status-tracked cron jobs with explicit app-level
  * timeouts (`CRON_TIMEOUT_MS`). sync-stablecoins already averages ~70% of its
  * 8-min ceiling and has hit the cap in production; adding the next provider
  * to a near-budget slot would tip it over with no warning. Alerts when a
  * job's 7-day average crosses 80% of its ceiling or it hits the cap 3+ times
  * in a week, so capacity is budgeted before the timeout starts truncating
- * runs. Per-job stats are always emitted in cron metadata for trend review.
+ * runs. Per-job stats are always emitted in cron metadata for trend review, and
+ * the scheduled-runner contract requires every status-tracked job to appear in
+ * the timeout map.
  */
 const DURATION_ALERT_AVG_RATIO = 0.8;
 const DURATION_ALERT_CAP_HITS = 3;
