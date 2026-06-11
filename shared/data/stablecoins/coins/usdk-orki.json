@@ -169,8 +169,8 @@
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
     "authorityPosture": "none-resolved",
-    "confidence": "manual-review",
-    "summary": "USDK is minted only when users borrow against overcollateralized CDPs (WETH/weETH/rswETH/swETH) in Orki's exclusive Liquity-v2 fork on Swellchain; mint is fixed to the registered branch contracts and the core is non-upgradeable with no admin-mint or freeze surface.",
+    "confidence": "verified",
+    "summary": "USDK is a Liquity-v2 BoldToken on Swellchain. owner() reverts (no Ownable); collateralRegistryAddress is set to 0xce9f80a0...; mint() reverts 'BoldToken: Caller is not BO or AP' for any non-branch sender; branch addresses are locked at construction. No individual admin can mint or alter branch assignments.",
     "controls": [
       {
         "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
@@ -181,26 +181,22 @@
         "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Orki is an exclusive Liquity-v2 fork; per the Liquity-v2 BoldToken design, mint/burn rights are fixed to the registered per-branch protocol contracts and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. ORKI governance does not control core minting."
+        "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1955f5 has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
       }
     ],
     "review": {
-      "evidence": "Orki USDK is an exclusive Liquity-v2 (BOLD) fork on Swellchain; minting is user-collateralized CDP borrowing with permissionless redemption, and docs describe a permissionless, non-custodial, no-opaque-governance design. Prior Pharos review confirmed the token has no freeze/blacklist/seizure/proxy-upgrade surface. Renouncement is grounded in the documented immutable Liquity-v2 architecture (mint confined to registered branch contracts, non-upgradeable core), not an independent on-chain owner() read.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Swellchain block 24247324: owner() reverts (no Ownable in pure BoldToken); collateralRegistryAddress = 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912; mint() from non-branch address reverts 'BoldToken: Caller is not BO or AP'; EIP-1967 proxy admin slot = zero; implementation (0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e) is non-upgradeable. Branch minters are permanently fixed; no individual or admin can grant new mint rights.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "Orki USDK docs",
-          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+          "label": "Orki USDK token on Swellchain (Swell explorer)",
+          "url": "https://explorer.swellnetwork.io/address/0x0000baa0b1678229863c0a941c1056b83a1955f5"
         },
         {
-          "label": "BOLD arrives on Swellchain",
-          "url": "https://orkifinance.substack.com/p/bold-arrives-on-swellchain"
+          "label": "Orki USDK docs",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x0000baa0b1678229863c0a941c1056b83a1955f5.",
-        "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
       ]
     }
   },

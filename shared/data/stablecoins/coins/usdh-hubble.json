@@ -79,43 +79,44 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USDH is Hubble Protocol's MakerDAO-style CDP stablecoin on Solana: borrowers mint USDH against overcollateralized whitelisted SOL/mSOL/BTC/ETH vaults at a 150% minimum ratio, with the HBB governance process administering collateral whitelisting and parameters.",
+    "confidence": "verified",
+    "summary": "USDH mint authority is a PDA of the immutable Hubble Protocol program (HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T, upgradeAuthority: None). CDP-bounded minting is enforced by immutable on-chain logic. The Hubble 2.0 immutability transition is confirmed: the live program has no upgrade authority.",
     "controls": [
       {
-        "label": "Hubble borrowing-market program (USDH mint authority)",
+        "label": "Hubble borrowing-market program (USDH mint authority PDA)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "solana",
-        "canRaiseCap": "unknown",
-        "capDescription": "Mint bounded by overcollateralized CDP vaults at a 150% minimum collateral ratio against whitelisted Solana assets.",
-        "evidence": "Hubble docs describe USDH as a CDP debt token minted by depositing whitelisted Solana collateral into borrowing-market vaults at a 150% minimum ratio; the USDH SPL mint authority is held by the Hubble program."
-      },
-      {
-        "label": "Hubble governance (HBB / collateral whitelisting + program admin)",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "chain": "solana",
-        "canRaiseCap": "unknown",
-        "evidence": "Hubble docs describe collateral asset whitelisting and parameter control via the HBB governance process (transitioning toward a fully autonomous/immutable Hubble 2.0); the program upgrade/admin authority is not independently confirmed."
+        "address": "AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq",
+        "canRaiseCap": false,
+        "capDescription": "Mint bounded by overcollateralized CDP vaults at a 150% minimum collateral ratio against whitelisted Solana assets; enforced by the immutable Hubble program.",
+        "sources": [
+          {
+            "label": "Hubble docs",
+            "url": "https://docs.hubbleprotocol.io"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 425778551, USDH mint USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX (standard SPL-Token) returned mintAuthority: AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq, freezeAuthority: None. getAccountInfo for the authority returned null (unfunded PDA). A live fee-drip transaction (slot 425776110, sig 2Rwx...) shows program HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T (Instruction: DripStabilityFees) invoking SPL MintTo and minting USDH, confirming AkzcmXAW is a PDA of HubbLeXBb. HubbLeXBb programData DDkP2... has upgradeAuthority: None (immutable at slot 425780430). Hubble 2.0 immutability transition confirmed."
       }
     ],
     "review": {
-      "evidence": "Hubble Protocol documentation describes USDH as a Solana MakerDAO-style overcollateralized CDP with HBB-token governance and collateral whitelisting; the on-chain USDH mint authority and Hubble program upgrade authority were not independently resolved.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Solana slot 425780430: USDH mint authority AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq confirmed as PDA of immutable Hubble program HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T (upgradeAuthority: None, programData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ). No freeze authority on the USDH mint. CDP-bound minting logic is locked; no upgrade path exists. Supply 1,228,904 USDH (slot 425779657).",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Hubble docs",
           "url": "https://docs.hubbleprotocol.io"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the USDH SPL mint authority and the Hubble borrowing-market program upgrade authority on a Solana explorer (multisig vs. program-derived).",
-        "Confirm whether the documented Hubble 2.0 immutability transition has occurred for the live borrow app.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Hubble borrowing-market program (USDH mint authority); Hubble governance (HBB / collateral whitelisting + program admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

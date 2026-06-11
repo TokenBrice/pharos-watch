@@ -106,8 +106,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply.",
+    "confidence": "verified",
+    "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply; the factory admin is a Vyper intermediary contract delegating to Curve DAO and an emergency multisig.",
     "controls": [
       {
         "chain": "ethereum",
@@ -117,8 +117,8 @@
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets. minter() on the crvUSD token returns this address.",
         "sources": [
           {
             "label": "Curve crvUSD resources",
@@ -129,24 +129,24 @@
             "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
           }
         ],
-        "evidence": "ControllerFactory source exposes debt-ceiling and market-admin functions; admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79 at Ethereum block 25165931."
+        "evidence": "At Ethereum block 25294733: ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. crvUSD token minter() returned ControllerFactory address. No proxy admin slot set (not upgradeable). eth_getCode confirms contract."
       },
       {
         "chain": "ethereum",
         "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
-        "label": "crvUSD ControllerFactory admin",
+        "label": "crvUSD ControllerFactory admin (Vyper intermediary)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "crvUSD ControllerFactory",
-            "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#readContract"
+            "label": "crvUSD ControllerFactory admin Etherscan",
+            "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
           }
         ],
-        "evidence": "ControllerFactory admin() returned this address; code is present, but signer or timelock setup was not resolved in this pass."
+        "evidence": "At Ethereum block 25294733: Verified as Vyper 0.4.3 contract (Blockscout source confirmed). Storage slot 0 = dao=0x40907540d8a6C65c637785e8f8B742ae6b0b9968 (Curve DAO Aragon Agent — AppProxyUpgradeable). Storage slot 1 = emergency=0x467947EE34aF926cF1DCac093870f613C96B1E0C (5-of-9 Gnosis Safe — getThreshold()=5, getOwners()=9 addresses; nonce=13). Contract enforces _check_dao() (DAO-only) for ownership transfers and _check_authorized() (DAO or emergency) for parameter adjustments. No upgrade admin on this contract."
       }
     ],
     "review": {
@@ -158,15 +158,15 @@
         {
           "label": "crvUSD ControllerFactory",
           "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory admin Etherscan",
+          "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
         }
       ],
-      "evidence": "Curve resources and ControllerFactory reads identify the factory and current admin address controlling debt ceilings and market configuration.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (crvUSD ControllerFactory; crvUSD ControllerFactory admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294733: ControllerFactory.admin()=Vyper intermediary 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79; crvUSD.minter()=ControllerFactory. The Vyper admin contract has dao=Curve DAO Aragon Agent (0x40907540, AppProxyUpgradeable) and emergency=5-of-9 multisig (0x467947EE). DAO path executes via Aragon vote; emergency multisig can reduce debt ceilings and adjust parameters. Neither component is upgradeable via proxy admin. All addresses confirmed as contracts.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

@@ -180,50 +180,76 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "AUSD uses role-gated EVM mint functions and a Solana Token-2022 mint authority. The Solana mint authority is directly resolved; EVM minter-role holders and signer setups still need enumeration.",
+    "confidence": "verified",
+    "summary": "AUSD uses role-gated EVM mint and a Solana Token-2022 mint authority, all ultimately controlled by Agora issuer EOAs. EVM: MINTER_ROLE held by EOA 0x65e2…, BRIDGE_MINTER_ROLE held by a bridge adapter contract owned by EOA 0xb805…, ACCESS_CONTROL_MANAGER_ROLE held by EOA 0x6889… (which also owns the proxy admin). Solana mint authority confirmed at EARe2…. No multisig detected anywhere in the chain.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
-        "label": "AUSD EVM role-gated mint implementation",
-        "role": "other",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "address": "0x65e28662b0dcd6d89d4652a61fb0896d4f58d7ff",
+        "label": "AUSD EVM MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Sourcify AUSD source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?fields=sources,abi"
-          },
-          {
-            "label": "Agora docs",
-            "url": "https://docs.agora.finance/"
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           }
         ],
-        "evidence": "Verified AgoraDollar source defines MINTER_ROLE, BRIDGE_MINTER_ROLE, ACCESS_CONTROL_MANAGER_ROLE, RATE_LIMIT_MANAGER_ROLE, mint functions for minters/bridge minters, and role-member/rate-limit getters. Current role holders were not enumerated in this pass, so this row records the unresolved role-gated implementation surface rather than a specific direct minter."
+        "evidence": "At Ethereum block 25294733, getMinterRoleMembers() on 0x00000000efe302beaa2b3e6e1b18d08d69a9012a returned [0x65e28662b0dcd6d89d4652a61fb0896d4f58d7ff]. eth_getCode returned empty bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9cab7ede13dc56652e44d2404e969c212f22689b",
+        "label": "AUSD EVM BRIDGE_MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ],
+        "evidence": "At Ethereum block 25294733, getBridgeMinterRoleMembers() returned [0x9cab7ede13dc56652e44d2404e969c212f22689b]. eth_getCode returned contract bytecode (1200 bytes). owner() on the bridge adapter returned EOA 0xb805ff516f02db3a2dc1791bd28d77c109b37570."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68898b77ebf7b55dca8a2e62d6fd74959a2930e2",
+        "label": "AUSD EVM ACCESS_CONTROL_MANAGER_ROLE holder (also proxy admin owner)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ],
+        "evidence": "At Ethereum block 25294733, getAccessControlManagerRoleMembers() returned [0x68898b77ebf7b55dca8a2e62d6fd74959a2930e2]. eth_getCode returned empty bytecode (EOA). Proxy admin contract at 0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee owner() also returned this EOA."
       },
       {
         "chain": "solana",
         "address": "EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP",
         "label": "AUSD Solana Token-2022 mint authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Solscan AUSD token",
             "url": "https://solscan.io/token/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
-          },
-          {
-            "label": "Agora Solana token metadata",
-            "url": "https://raw.githubusercontent.com/agora-finance/public-assets/refs/heads/master/src/token-metadata/solana-ausd.json"
           }
         ],
-        "evidence": "Solana finalized getAccountInfo for the local AUSD Token-2022 mint returned this mintAuthority; the same read returned freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
+        "evidence": "Solana getAccountInfo for AUSD Token-2022 mint AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9 returned mintAuthority EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP, freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH, and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
       }
     ],
     "review": {
@@ -233,22 +259,17 @@
           "url": "https://docs.agora.finance/"
         },
         {
-          "label": "Agora GitHub",
-          "url": "https://github.com/agora-finance"
+          "label": "Etherscan — AUSD proxy",
+          "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
         },
         {
-          "label": "Chaos Labs Agora proof of reserves",
-          "url": "https://oracles.chaoslabs.xyz/por-feeds/agora"
+          "label": "Agora GitHub",
+          "url": "https://github.com/agora-finance"
         }
       ],
-      "evidence": "Batch-A research verified the AUSD EVM role model and Solana Token-2022 mint authority. A follow-up Solana read against the local Pharos AUSD mint confirmed the current Solana mint authority address; EVM role-holder enumeration remains unresolved.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Call getMinterRoleMembers, getBridgeMinterRoleMembers, getAccessControlManagerRoleMembers, and rate-limit getters on the EVM contract.",
-        "Verify signer setup for Solana and EVM role-holder addresses.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "At Ethereum block 25294733: getMinterRoleMembers() → EOA 0x65e2…; getBridgeMinterRoleMembers() → bridge adapter 0x9cab… (owned by EOA 0xb805…); getAccessControlManagerRoleMembers() → EOA 0x6889… (also owns proxy admin 0xb8fc…). No Safe or multisig detected on any address. Solana mint authority at EARe2… confirmed from prior pass. All mint-capable surfaces are issuer-operated EOA custody.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "blacklistabilityReview": {

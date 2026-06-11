@@ -131,22 +131,29 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "MOVEUSD is a tokenized bank deposit minted by CFX Labs (FinCEN MSB) when approved customers deposit USD into FDIC-insured partner banks; CFX retains full control of the SPL mint authority and cross-chain burn-and-mint, so supply creation is fully issuer-controlled.",
+    "confidence": "verified",
+    "summary": "On-chain read at Solana slot 425778537 shows the MOVEUSD SPL mint authority is set to the mint address itself (self-referential). A non-executable SPL mint account cannot sign transactions, so no party can currently exercise the mint authority. The freeze authority is also self-referential. This is a chain-state data fix: the previous issuer-backend model does not match on-chain reality; new minting is effectively frozen at this address.",
     "controls": [
       {
-        "label": "CFX Labs issuance backend (SPL mint authority)",
+        "label": "MOVEUSD SPL mint authority (self-referential / effectively burned)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "none",
         "chain": "solana",
-        "canRaiseCap": "unknown",
-        "evidence": "CFX Labs mints MOVEUSD when USD is deposited at partner FDIC-insured banks and controls the token contracts/mint authority on every chain via Wormhole NTT burn-and-mint; no permissionless or user-collateralized mint route exists."
+        "address": "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+        "canRaiseCap": false,
+        "sources": [
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 425778537, getAccountInfo for mint 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm (standard SPL-Token, owner TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA) returned mintAuthority: 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm and freezeAuthority: 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm — both set to the mint account itself. The mint account is not executable and owned by the Token program; it cannot sign transactions. No signer can invoke MintTo. Supply is fixed at 120,020,117.706406 MOVEUSD."
       }
     ],
     "review": {
-      "evidence": "Public CFX/MoveUSD materials describe a centralized, fully-permissioned tokenized deposit: CFX Labs (registered MSB) mints against bank deposits and retains complete control over token contracts and mint authority across Solana/Base/Ethereum. SPL mint authority address not independently read.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Solana slot 425778537, MOVEUSD SPL mint 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm has self-referential mint and freeze authority. Recent transactions (slot 425778219) are token transfers, not mints. Supply is static. Chain-state data fix: mintPath remains issuer-direct-mint reflecting original issuance model, but directMintAbility updated to none — no further minting is possible via this SPL mint.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -156,12 +163,11 @@
         {
           "label": "Wormhole: MOVEUSD adopts NTT (issuer-controlled burn-and-mint)",
           "url": "https://wormhole.com/blog/moveusd-stablecoin-chooses-wormholes-ntt-standard-for-multichain-expansion"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
         }
-      ],
-      "sourceFreeRationale": "Issuer-controlled mint model is established from CFX materials and NTT coverage; the live Solana SPL mint/freeze authority address was not independently resolved.",
-      "unresolvedQuestions": [
-        "Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   }

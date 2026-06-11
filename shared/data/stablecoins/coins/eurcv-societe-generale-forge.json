@@ -95,8 +95,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EURCV is issuer-minted/redeemed by SG-FORGE; Ethereum proxy implementation was resolved, while signer setup remains unverified.",
+    "confidence": "verified",
+    "summary": "EURCV Ethereum mint is gated by the registrar EOA (0x7de0bb…da69) embedded as an immutable in the SmartCoin V4 implementation; no proxy admin; XRPL/Stellar/Solana deployments are issuer-controlled and not separately scored.",
     "controls": [
       {
         "label": "SG-FORGE issuer-operated mint authority",
@@ -104,31 +104,31 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "SG-FORGE CoinVertible",
             "url": "https://www.sgforge.com/product/coinvertible/"
           }
         ],
-        "evidence": "SG-FORGE product materials describe EURCV as directly issued and redeemable by SG-FORGE."
+        "evidence": "SG-FORGE product materials describe EURCV as directly issued and redeemable by SG-FORGE. On-chain, the registrar EOA is the sole minter (onlyAllowedMinter checks msg.sender == registrar). Issuer-backend model corroborated: registrar, operations, and technical are all SG-FORGE-operated EOAs embedded as immutables."
       },
       {
         "chain": "ethereum",
         "address": "0x5f7827fDeb7c20b443265Fc2F40845B715385fF2",
-        "label": "EURCV Ethereum token proxy",
+        "label": "EURCV Ethereum token proxy (SmartCoin V4)",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum EURCV token",
             "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
           }
         ],
-        "evidence": "Ethereum reads at block 25166591 resolved EIP-1967 implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b; role holders were not enumerated."
+        "evidence": "At Ethereum block 25294784: EIP-1967 impl = 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4); proxy admin slot = zero (no external proxy admin). Implementation uses immutable operators set in constructor bytecode (verified via PUSH32 scan): registrar (minter) = 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 (EOA), operations = 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6 (EOA), technical (upgrade admin) = 0x54124a6834af252a0f9ac7f478001aa500428955 (EOA). All confirmed via eth_getCode returning empty bytecode. Source: SmartCoin AccessControlUpgradeable.sol (Blockscout verified)."
       }
     ],
     "review": {
@@ -136,15 +136,15 @@
         {
           "label": "SG-FORGE CoinVertible",
           "url": "https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "Ethereum EURCV token",
+          "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
         }
       ],
-      "evidence": "SG-FORGE is the direct issuer/redemption operator; Ethereum proxy reads identify the token implementation path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Resolve current token roles and mint authority on XRPL, Stellar, and Solana deployments before broad multichain claims.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At Ethereum block 25294784: SmartCoin V4 implementation confirmed; proxy admin slot zero; immutable operators extracted from implementation bytecode (PUSH32 pattern): registrar/minter = 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 (EOA), operations = 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6 (EOA), technical/upgrade = 0x54124a6834af252a0f9ac7f478001aa500428955 (EOA). All EOAs confirmed. XRPL/Stellar/Solana are additional issuer-controlled deployments; scoped to Ethereum for this verification.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

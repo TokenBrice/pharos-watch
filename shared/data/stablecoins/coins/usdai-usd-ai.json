@@ -124,58 +124,84 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDai is minted by KYC'ed institutions depositing stablecoins (PYUSD) into the USDai contract's deposit() function, which mints 1:1; privileged protocol operations run under role-based access (STRATEGY_ADMIN_ROLE executed by a multisig, BRIDGE_ADMIN_ROLE for omnichain mint/burn), with a stated future transition to DAO governance.",
+    "confidence": "verified",
+    "summary": "USDai token (OToken implementation) only exposes mint()/burn() behind BRIDGE_ADMIN_ROLE; that role is held by a bridge contract (0xffa10065…). DEFAULT_ADMIN_ROLE (can grant any role) is held by a 3/3 Safe with a Zodiac Delay module (7-day timelock). The upgrade path runs through a ProxyAdmin whose owner contract is also controlled by the same 3/3 Safe. Same DEFAULT_ADMIN confirmed on Arbitrum, Base, and Plasma.",
     "controls": [
       {
-        "label": "USDai deposit/mint contract (KYC-gated deposit())",
+        "chain": "ethereum",
+        "address": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "label": "USDai BRIDGE_ADMIN_ROLE holder (bridge contract)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Per USD.AI technical docs, KYC'ed institutions call deposit(uint256 depositAmount, uint256 usdaiAmountMinimum) to transfer PYUSD into the USDai contract, which mints equivalent USDai; minting is gated to KYC'ed institutions rather than fully permissionless.",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "USD.AI technical protocol overview",
-            "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+            "label": "Sourcify USDai OToken implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad"
           }
-        ]
+        ],
+        "evidence": "At Ethereum block 25294801: RoleGranted event at block 22547994 grants BRIDGE_ADMIN_ROLE (0x751b795d…) to 0xffa10065…. Source code confirms mint()/burn() are gated by onlyRole(BRIDGE_ADMIN_ROLE). bridge.owner() = 0x5F0BC72F… (3/3 Safe)."
       },
       {
-        "label": "STRATEGY_ADMIN_ROLE (multisig)",
+        "chain": "ethereum",
+        "address": "0x5F0BC72FB5952b2f3F2E11404398eD507B25841F",
+        "label": "USDai DEFAULT_ADMIN Safe (3/3 with Zodiac Delay 7d)",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 3,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "STRATEGY_ADMIN_ROLE governs position managers and services redemptions; per USD.AI docs these operations are currently scheduled off-chain and executed by a multisig, with a stated future move to on-chain governance.",
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
+            "0x986868c921075f31514015E6ecdbB4A6526579b2",
+            "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
+          ],
+          "enabledModules": [
+            "0x719fB18e31287aB36771aB3038575253502E41AB"
+          ],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294801,
+          "source": "safe-api"
+        },
         "sources": [
           {
-            "label": "USD.AI technical protocol overview",
-            "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5F0BC72FB5952b2f3F2E11404398eD507B25841F/"
           }
-        ]
+        ],
+        "evidence": "At Ethereum block 25294801: RoleGranted event at block 22547979 grants DEFAULT_ADMIN_ROLE to this Safe. Safe API confirmed 3/3, one enabled module (Zodiac Delay 0x719fB18e…), zero guard. Delay module txCooldown=604800s (7 days), txExpiration=604800s; module.avatar()=this Safe. bridge contract owner also = this Safe. DEFAULT_ADMIN confirmed on Arbitrum and Base via hasRole."
       }
     ],
     "review": {
-      "evidence": "USD.AI technical docs confirm USDai is minted via a contract deposit() function by KYC'ed institutions depositing PYUSD (1:1), not by a fiat issuer backend. Privileged operations use STRATEGY_ADMIN_ROLE (currently a multisig) and BRIDGE_ADMIN_ROLE for omnichain mint/burn; governance is slated to move to the USD.AI DAO. This is the parent of sUSDai (susdai-usd-ai).",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "USD.AI technical protocol overview",
           "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
         },
         {
-          "label": "USD.AI docs",
-          "url": "https://docs.usd.ai"
+          "label": "Sourcify USDai OToken implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5F0BC72FB5952b2f3F2E11404398eD507B25841F/"
+        },
+        {
+          "label": "USDai RoleGranted events (Blockscout)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef&fromBlock=22300000&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "sourceFreeRationale": "Mint mechanism and role model confirmed from USD.AI first-party docs; the live multisig address, signer set, and threshold for STRATEGY_ADMIN_ROLE were not independently resolved on-chain.",
-      "unresolvedQuestions": [
-        "Resolve the live STRATEGY_ADMIN_ROLE multisig address, signer count, and threshold, plus the on-chain USDai contract owner/upgrade admin, before raising to verified.",
-        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
-      ]
+      "evidence": "At Ethereum block 25294801: OToken source confirms only BRIDGE_ADMIN_ROLE can mint/burn. RoleGranted scan found 2 grants: DEFAULT_ADMIN_ROLE→0x5F0BC72F… (3/3 Safe with Zodiac 7d Delay module) and BRIDGE_ADMIN_ROLE→0xffa10065… (bridge contract owned by same Safe). Proxy admin 0x2ddf39c7… owned by 0x0EEA1EE0… which is controlled by same Safe. DEFAULT_ADMIN confirmed on Arbitrum and Base.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "reserves": [

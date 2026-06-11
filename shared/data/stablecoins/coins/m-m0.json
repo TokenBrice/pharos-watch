@@ -46,8 +46,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -64,9 +64,13 @@
           {
             "label": "MToken technical specification",
             "url": "https://docs.m0.org/home/technical-specifications/m-token"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "Official deployments list MinterGateway at 0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E, and an on-chain MToken minterGateway() read returned that address."
+        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. eth_getCode confirms deployed contract. Slot 1 contains ERC712 domain name 'MinterGateway'. No external admin surface; cap governance rests with M0 TTG (POWER token holders via Registrar) — canRaiseCap=true, no modules applicable."
       },
       {
         "chain": "solana",
@@ -88,7 +92,7 @@
             "url": "https://docs.m0.org/home/technical-documentations/solana/"
           }
         ],
-        "evidence": "Official M0 deployments list the Solana M token and Portal program; M0 Solana docs describe Solana as a spoke in the cross-chain model with Ethereum as hub."
+        "evidence": "Official M0 deployments list the Solana M token and Portal program; M0 Solana docs describe Solana as a spoke in the cross-chain model with Ethereum as hub. On-chain Solana SPL mint authority state was not resolved in this verification pass."
       }
     ],
     "review": {
@@ -102,11 +106,11 @@
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
         }
       ],
-      "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. Solana Portal: SPL on-chain mint authority unresolved.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (M0 MinterGateway; M0 Solana Portal); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Solana Portal (mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY): Solana SPL mint authority and freeze authority state not verified on-chain; keep manual-review until Solana program account reads confirm mint authority holder and freeze authority."
       ]
     }
   },

@@ -101,7 +101,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank, with no permissionless or user-collateralized mint route.",
+    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank. On-chain, the ETH token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers); the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). No proxy admin.",
     "controls": [
       {
         "label": "Old Vector LLC issuance backend",
@@ -110,16 +110,50 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "evidence": "Issuer-operated primary-market mint/redeem: Old Vector LLC creates A7A5 supply against custodied RUB bank deposits via KYC-verified partners (e.g. a7a5.kg); no on-chain permissionless mint exists."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29",
+        "label": "A7A5 ETH token owner (custom 3-of-5 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25294793 (2026-06-11): owner() on A7A5 ETH (0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9) returns 0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29. That contract has getOwners() returning 5 EOA addresses (0x6dab4c10..., 0xae8dd5dd..., 0x8b04bdc0..., 0x99d3df8c..., 0x3353d63a...) and getThreshold()=3. All 5 owner addresses return no bytecode (EOA). No EIP-1967 proxy slots set, no modules detected (getModulesPaginated returned empty). No guard set."
+      },
+      {
+        "chain": "tron",
+        "address": "TML1DbrPXYDDwatGxw66iEwECnXCG54uJy",
+        "label": "A7A5 Tron token owner (3-of-5 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Tron block 83506136 (2026-06-11): owner() on A7A5 Tron (TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ) returns TML1DbrPXYDDwatGxw66iEwECnXCG54uJy, which is a Tron Multisig contract. getOwners() returns 5 owner hex addresses; getThreshold()=3. All 5 owner addresses resolve as non-contract EOAs on Tron."
       }
     ],
     "review": {
-      "evidence": "A7A5 project documentation and Pharos metadata describe a single centralized RUB issuer (Old Vector LLC) minting against off-chain bank reserves; redemption is restricted to authorized partners.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At ETH block 25294793 and Tron block 83506136 (2026-06-11): A7A5 ETH token owner confirmed as a custom 3-of-5 multisig (5 EOA owners); A7A5 Tron token owner confirmed as a Tron Multisig contract (3-of-5, 5 EOA owners). No proxy admin on the ETH token. The issuer-backend control (Old Vector LLC's off-chain KYC gating for mint/redeem) cannot be independently confirmed from chain state — the on-chain mint authority is the multisig owners above.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "Classification based on the issuer model in project materials; on-chain Ethereum/Tron token owner/minter admin not independently resolved.",
+      "sources": [
+        {
+          "label": "A7A5 ETH token Blockscout",
+          "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
+        },
+        {
+          "label": "A7A5 Tron owner Multisig (TML1Dbr...)",
+          "url": "https://tronscan.org/#/contract/TML1DbrPXYDDwatGxw66iEwECnXCG54uJy"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "The issuer-backend control (Old Vector LLC's off-chain process) cannot be confirmed from chain alone; promote only after the multisig owners above are corroborated as Old Vector LLC's operational keys via issuer documentation."
       ]
     }
   },

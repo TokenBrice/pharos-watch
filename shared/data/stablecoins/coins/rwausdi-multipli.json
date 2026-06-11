@@ -111,22 +111,47 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "rwaUSDi is Multipli's isolated, KYB-gated RWA collateral unit; verified institutions deposit supported tokenized RWAs and Multipli's issuance engine mints rwaUSDi 1:1 by NAV, restricting mint/redeem to KYB-verified entities.",
+    "confidence": "verified",
+    "summary": "rwaUSDi Ethereum and Base owner() both return a Gnosis Safe 1.4 proxy (0xf25c) with 3-of-7 signers on ETH and 3-of-5 on Base. No modules detected. Implementation at 0x2a66. All mint and upgrade paths flow through the same Safe.",
     "controls": [
       {
-        "label": "Multipli rwaUSDi issuance/peg module",
+        "label": "rwaUSDi Ethereum/Base owner — 3-of-7 Gnosis Safe (ETH) / 3-of-5 (Base)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
+        "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Multipli aggregates externally-issued tokenized RWAs into a single unit; KYB-verified institutions mint rwaUSDi against deposited collateral at NAV and redeem through scheduled windows, with Multipli controlling the compliance-gated issuance engine."
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8c7cc2d36d798bb196f0aa5add304fc70459f59e",
+            "0xe9ed3bbac9884ca6f080a2dd7ef95c6c3c592f6d",
+            "0xc57d410de0bdee7060bea55686da66b6c479d594",
+            "0x705f44d3df6feb61b95bc1a6cbd706c9c59766d1",
+            "0x4976b809f880a0c020f79889a0236d161116d248",
+            "0x21790e5e1f1749fd548ce1be42009c8e40e0e259",
+            "0x0b29e5c7a2d37237f9e05074ea58466bed4d2cc2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294865,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Ethereum: rwaUSDi token contract",
+            "url": "https://eth.blockscout.com/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+          }
+        ],
+        "evidence": "At Ethereum block 25294865: owner() on rwaUSDi ETH (0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4) returned 0xf25c404c101d40d88b5dcd64b82583dbc918dd25. Storage of 0xf25c: slot0=0x41675C (Safe 1.4 singleton), slot3=ownerCount 7, slot4=threshold 3, slot5=nonce 5. Seven owners traversed via linked list at mapping slot 2: 0x8c7c (EOA), 0xe9ed (EOA), 0xc57d (EOA), 0x705f (nested 1-of-1 Safe, EOA owner 0x8db6), 0x4976 (EOA), 0x2179 (EOA), 0x0b29 (EOA). Modules sentinel = 0x1 (none-detected). Implementation at 0x2a66bb2da3ad1c854e79307f64b862decd860d4c. Base chain same owner address with 3-of-5 configuration (ownerCount=5, threshold=3, nonce=7)."
       }
     ],
     "review": {
-      "evidence": "Multipli docs describe rwaUSDi as an isolated, compliance-gated (KYB) liquidity class where institutions deposit supported tokenized RWAs and mint a unified collateral unit at NAV; Multipli operates the issuance/peg module and access is restricted to KYB-verified entities, so this is an issuer-controlled mint rather than a single-parent wrapper or permissionless route.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Multipli docs",
@@ -135,12 +160,15 @@
         {
           "label": "Multipli unwind & peg module",
           "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
+        },
+        {
+          "label": "Ethereum: rwaUSDi token contract",
+          "url": "https://eth.blockscout.com/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
         }
       ],
-      "unresolvedQuestions": [
-        "Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "Ethereum block 25294865: owner() on both ETH and Base rwaUSDi returns 0xf25c (Gnosis Safe 1.4 proxy). ETH Safe: 3-of-7 (7 signers: 6 EOAs + 1 nested 1-of-1 Safe), no modules. Base Safe: same address, 3-of-5 configuration. No proxy admin slot set. Implementation confirmed at 0x2a66 (23116 bytes). owner() on impl = 0xf25c (same Safe). No permissionless mint route; all issuance gated by KYB and Multipli's Safe multisig.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2025-11-23"

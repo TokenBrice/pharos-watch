@@ -91,46 +91,106 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "fxUSD is minted CDP-style when users deposit wstETH/WBTC collateral into f(x) Protocol vaults; f(x) governance controls collateral onboarding, risk parameters, and protocol contracts.",
+    "confidence": "verified",
+    "summary": "fxUSD is minted CDP-style when users deposit wstETH/WBTC collateral into f(x) Protocol vaults; upgrade authority flows through a 3-day OZ TimelockController to a 6-of-9 Gnosis Safe.",
     "controls": [
       {
         "chain": "ethereum",
-        "label": "f(x) Protocol vault/minter contracts",
+        "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+        "label": "fxUSD token proxy (EIP-1967, OZ TransparentUpgradeableProxy)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; supply expands and contracts with collateral and redemptions, not by an off-protocol issuer minter.",
-        "evidence": "f(x) Protocol docs describe fxUSD as a decentralized stablecoin minted from overcollateralized wstETH/WBTC CDP positions with a Stability Pool defending the peg."
+        "sources": [
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          }
+        ],
+        "evidence": "At Ethereum block 25,294,712, EIP-1967 slots confirmed: implementation = 0xf729422d68c2cf00574fb5712972454cf402a9b1, proxy admin = 0x9b54b7703551d9d0ced177a78367560a8b2edda4 (OZ ProxyAdmin)."
       },
       {
         "chain": "ethereum",
-        "label": "f(x) Protocol governance / parameter admin",
-        "role": "governor",
-        "authorityType": "dao-governor",
+        "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "label": "f(x) Protocol OZ TimelockController (3-day delay)",
+        "role": "timelock",
+        "authorityType": "timelock",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "f(x) Protocol governance onboards collateral types, sets risk/liquidation parameters, and administers protocol contracts.",
-        "evidence": "f(x) Protocol materials describe governance over collateral onboarding and protocol risk parameters; on-chain admin owner/timelock not independently resolved."
+        "sources": [
+          {
+            "label": "TimelockController on Etherscan",
+            "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+          }
+        ],
+        "evidence": "ProxyAdmin owner = 0x68863fb8855b04509a835082478d6e3d0be4e61a (OZ TimelockController, minDelay = 259200s / 3 days). PROPOSER/EXECUTOR/CANCELLER/TIMELOCK_ADMIN = 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF (6-of-9 Safe). Additional TIMELOCK_ADMIN = 0xa1d0027Ca4C0CB79f9403d06A29470abC7b0a468 (EOA, no code)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF",
+        "label": "f(x) Protocol governance multisig (6-of-9 Gnosis Safe)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 6,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x38a93e70b0D8343657f802C1c3Fdb06aC8F8fe99",
+            "0x85DB62FdFA9Ee6050f8b422F74D75D2069dA102B",
+            "0xe3522d85d37F55735e9327CD7a5cDe3abaf28E03",
+            "0x74390470F4001Ca85D93bD546A4Ab1724359654B",
+            "0xeF0Ca09fbf9a5f61E657Fb208b46b8685c1d4766",
+            "0x8EcAB7B8ed8215cA52500cbf1548B9239173ef82",
+            "0x4088421cBDBa1501d8Fd09fD241717097Afb42Cb",
+            "0xcdF067F306E7a511Ef701588AFCdcff292B19282",
+            "0xC8Be49a9b1ca1A1cc654491a7cBbD27aBfA06A81"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25294712,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "f(x) Protocol multisig on Etherscan",
+            "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
+          }
+        ],
+        "evidence": "Safe API confirmed 6-of-9 Gnosis Safe v1.3.0 at block 25,294,712; no modules, no guard. Holds all timelock roles (PROPOSER, EXECUTOR, CANCELLER, TIMELOCK_ADMIN). A bare EOA (0xa1d0027…) also holds TIMELOCK_ADMIN_ROLE but not PROPOSER/EXECUTOR."
       }
     ],
     "review": {
-      "evidence": "f(x) Protocol documentation describes fxUSD as a CDP-minted dollar overcollateralized by wstETH/WBTC with governance-tuned risk parameters and a Stability Pool; no centralized issuer mint path is described.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25,294,712: fxUSD proxy admin = 0x9b54b7703551d9d0ced177a78367560a8b2edda4 (OZ ProxyAdmin) → owner = 0x68863fb8855b04509a835082478d6e3d0be4e61a (OZ TimelockController, minDelay 3 days) → proposer/executor = 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF (Gnosis Safe v1.3.0, 6-of-9, no modules). Full governance chain verified on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "f(x) Protocol docs",
           "url": "https://fxprotocol.gitbook.io/fx-docs"
+        },
+        {
+          "label": "fxUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        },
+        {
+          "label": "f(x) Protocol TimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+        },
+        {
+          "label": "f(x) Protocol governance multisig on Etherscan",
+          "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
         }
-      ],
-      "sourceFreeRationale": "CDP mint mechanism confirmed from f(x) Protocol docs; on-chain governance owner/timelock address not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain f(x) Protocol governance owner/timelock and the specific vault/minter contract authority before raising confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (f(x) Protocol vault/minter contracts; f(x) Protocol governance / parameter admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

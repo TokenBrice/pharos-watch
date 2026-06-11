@@ -66,7 +66,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; future collateral beyond IOTA/stIOTA was not independently verified.",
+    "summary": "VUSD is on IOTA Rebased (Move VM). The package at 0xd3b63e...904f is immutable, but contains an admin module. An AdminCap object (0x38a7b38d...) is held by EOA/address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12. AdminCap gates set_supply_limit, add_version, remove_module, and set_beneficiary — active admin privileges over mint supply.",
     "controls": [
       {
         "label": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork)",
@@ -78,33 +78,32 @@
         "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs using IOTA/stIOTA on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
       },
       {
-        "label": "Virtue Money admin (multisig)",
+        "label": "Virtue Money AdminCap holder",
         "role": "governor",
-        "authorityType": "multisig",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "This coin's metadata marks governanceQuality as multisig; Liquity V2 forks add new collateral branches via an admin, and IOTA contract metadata is not indexed, so owner renouncement could not be verified and an admin surface is assumed."
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At IOTA Rebased (confirmed via iota_getObject): AdminCap object 0x38a7b38d0f03338397d1c57f2cc2e3d7c5e3f6fe6887626aacc4cb4e8072c3f5 is owned by AddressOwner 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (version 591278735). Package 0xd3b63e...904f is Immutable (no upgrade). The admin module exposes no public entry functions but AdminCap gates vusd::set_supply_limit, add_version, remove_module, remove_version, and set_beneficiary. Whether this address is a single EOA or a multisig could not be determined on-chain."
       }
     ],
     "review": {
-      "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA; IBTC collateral was not supported by reviewed official sources. The IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "IOTA Rebased GraphQL confirmed AdminCap (type 0xd3b63e...::admin::AdminCap) is held by address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (AddressOwner). iota_getNormalizedMoveModulesByPackage revealed vusd module exposing set_supply_limit, add_version, remove_module, remove_version, set_beneficiary — all AdminCap-gated. Package owner type = Immutable (cannot be re-published). The AdminCap holder address owns no other enumerable objects, so it may be a multisig or single-keypair; cannot confirm threshold/type from chain state alone.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "What is VUSD (Virtue docs)",
-          "url": "https://docs.virtue.money/overview/what-is-vusd"
+          "label": "VUSD package on IOTA Rebased (GraphQL)",
+          "url": "https://graphql.mainnet.iota.cafe"
         },
         {
-          "label": "Virtue on IOTA (iota.org)",
-          "url": "https://www.iota.org/learn/showcases/virtue"
+          "label": "What is VUSD (Virtue docs)",
+          "url": "https://docs.virtue.money/overview/what-is-vusd"
         }
       ],
       "unresolvedQuestions": [
-        "Confirm the on-chain owner/admin of the Virtue Money core/branch contracts on IOTA EVM and whether ownership is renounced (which would warrant immutable-user-collateralized).",
-        "Confirm whether a separate governance token / DAO exists beyond a team multisig.",
-        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
+        "Determine whether AdminCap holder 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 is a single-keypair EOA or a multisig (required to finalize authorityType and threshold/signerCount for the governor control).",
+        "If AdminCap is held by a multisig, obtain threshold, signer count, and guard/modules state to complete verified classification."
       ]
     }
   }

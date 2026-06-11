@@ -77,8 +77,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "DOLA minting is controlled by the token operator contract; Inverse documentation describes DOLA supply expansion through Fed/operator contracts rather than permissionless user minting.",
+    "confidence": "verified",
+    "summary": "DOLA minting is controlled by the token operator, a Compound Timelock (48h delay) administered by a Compound GovernorBravo using INV governance token. All DOLA supply changes require an on-chain INV vote followed by a 48-hour timelock execution delay.",
     "mintIncidents": [
       {
         "date": "2022-04-02",
@@ -99,12 +99,12 @@
       {
         "chain": "ethereum",
         "address": "0x926dF14a23BE491164dCF93f4c468A50ef659D5B",
-        "label": "DOLA token operator",
+        "label": "DOLA token operator (Timelock, 48h delay)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Etherscan contract source",
@@ -119,7 +119,7 @@
             "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
           }
         ],
-        "evidence": "On-chain DOLA operator() read returned 0x926dF14a23BE491164dCF93f4c468A50ef659D5B. The address has contract code and did not verify as a Safe through getThreshold(); no threshold or signer set was publicly verified."
+        "evidence": "At Ethereum block 25294782: DOLA.operator() = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B confirmed. Contract bytecode identified as Compound Timelock: admin() = 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 (GovernorBravo), delay = 0x2a300 = 172800s (48h). GovernorBravo slot 0 stores Timelock address confirming circular DAO governance pairing."
       }
     ],
     "review": {
@@ -127,14 +127,15 @@
         {
           "label": "Etherscan contract source",
           "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        },
+        {
+          "label": "Inverse Finance governance",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
         }
       ],
-      "evidence": "DOLA has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (DOLA token operator); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote → GovernorBravo → 48h Timelock → DOLA mint/burn. No multisig bypass.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

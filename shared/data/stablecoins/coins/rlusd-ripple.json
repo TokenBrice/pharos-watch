@@ -132,22 +132,44 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "RLUSD is issuer-operated by Ripple; mint authority is modeled as centralized issuer minting in the MVP.",
+    "summary": "RLUSD Ethereum minting is gated by Ripple's custom MultiSign contract (0x97e9, 31 signers, quorum=2, confirmed as MINTER_ROLE holder). XRPL issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has master key active, no signer_list, Ripple-controlled. UPGRADER_ROLE and DEFAULT_ADMIN holders on ETH are unresolvable (non-enumerable AccessControl, zero RoleGranted events ever emitted).",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "label": "RLUSD Ethereum minter — Ripple MultiSign contract (31-of-31, quorum=2)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "address": "0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "threshold": 2,
+        "signerCount": 31,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD token contract",
+            "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+          },
+          {
+            "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
+            "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+          }
+        ],
+        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure — custom Ripple EIP-712 multisig."
+      },
+      {
+        "label": "RLUSD XRPL issuer account (Ripple master key)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
-            "label": "Ripple stablecoin",
-            "url": "https://ripple.com/solutions/stablecoin/"
+            "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+            "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
           }
         ],
-        "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin."
+        "evidence": "XRPL account_info for rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De: Flags = 0x819a0000 (RequireDestTag, DisallowXRP, DefaultRipple, DepositAuth SET; NoFreeze NOT set; GlobalFreeze NOT set). RegularKey = none. No signer_list present. Master key active; XRPL issuance fully controlled by Ripple. Total XRPL RLUSD obligations = 761,696,376 RLUSD."
       }
     ],
     "review": {
@@ -155,13 +177,21 @@
         {
           "label": "Ripple stablecoin",
           "url": "https://ripple.com/solutions/stablecoin/"
+        },
+        {
+          "label": "Ethereum: RLUSD token contract",
+          "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+        },
+        {
+          "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
+          "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
         }
       ],
-      "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "ETH: MINTER_ROLE holder confirmed as 0x97e9 (Ripple MultiSign, 31 signers, quorum=2). XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De master key active, no signer_list. UPGRADER_ROLE and DEFAULT_ADMIN holders on ETH not findable: OZ v5 non-enumerable AccessControl, getRoleMemberCount/getRoleMember revert, zero RoleGranted events ever emitted across full contract history.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "UPGRADER_ROLE (0xa615a8afb6fffcb8c6809ac0997b5c9c12b8cc97651150f14c8f6203168cff4c) and DEFAULT_ADMIN_ROLE holders on RLUSD ETH are not discoverable: OZ v5 UUPS non-enumerable AccessControl, getRoleMemberCount/getRoleMember revert, zero RoleGranted events emitted in contract history. The upgrade path controller is unconfirmable from on-chain state without direct Ripple disclosure."
       ]
     }
   },

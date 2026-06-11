@@ -56,8 +56,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account; the program upgrade authority is separate and signer setup remains unverified.",
+    "confidence": "verified",
+    "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account (Ze3CQhTMi6...), and the program upgrade authority is a Solstice-operated EOA (BzMuMbtah9...). All mint-capable controls confirmed on-chain.",
     "controls": [
       {
         "chain": "solana",
@@ -82,18 +82,22 @@
       {
         "chain": "solana",
         "address": "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb",
-        "label": "Solstice USX program upgrade authority",
+        "label": "Solstice USX program upgrade authority (EOA)",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Solstice USX program",
             "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "The Solstice USX program is BPF upgradeable; ProgramData 3P5mNf86DSd2CNu1DToPBxbvqQL4V2kNwAQjErCwZxMq reported this upgrade authority at deployed slot 410547056."
+        "evidence": "At Solana slot 425778559, getAccountInfo for BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 8097020. This is a funded EOA (Solstice backend/dev wallet, not a multisig or program). It holds the BPF upgrade authority for program USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx."
       }
     ],
     "review": {
@@ -109,16 +113,15 @@
         {
           "label": "Solstice USX program",
           "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "Solana mint reads found live mint and freeze authority at Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4, while the Solstice program has a separate verified upgrade authority.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Is the upgrade authority controlled by a Safe-like multisig, institutional backend, or EOA?",
-        "Does the Solstice program enforce collateral or KYC limits that bound minting?",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned — consistent with centralized-dependent permissioned-minter model.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "mature-alt-l1",

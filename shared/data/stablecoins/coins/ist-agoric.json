@@ -113,8 +113,8 @@
       }
     ],
     "review": {
-      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -126,10 +126,9 @@
           "url": "https://docs.inter.trade/"
         }
       ],
-      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from Inter Protocol docs; the live on-chain Economic Committee membership and governance contract state were not independently read.",
+      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from docs; Agoric chain governance state is not publicly queryable without a node endpoint, blocking on-chain confirmation.",
       "unresolvedQuestions": [
-        "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Inter Protocol vaults + PSM (minter contracts); BLD stakers + Economic Committee governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Confirm the current Economic Committee member addresses and governance contract state via Agoric REST API (e.g. https://main.api.agoric.net) or a live Agoric node before raising confidence."
       ]
     }
   }

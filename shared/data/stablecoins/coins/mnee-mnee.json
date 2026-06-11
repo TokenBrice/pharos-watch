@@ -128,40 +128,58 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "MNEE minting is controlled by a validator-style minter set: mint operations require three valid minter signatures and the caller must itself be a minter; the proxy has a separate upgrade/admin path.",
+    "confidence": "verified",
+    "summary": "MNEE uses a threshold-signature validator set: minting requires 3-of-5 current isMinter addresses to co-sign (admin EOA + 4 independent signers). The proxy admin is a ProxyAdmin contract owned by an EOA. All 5 current minters confirmed via isMinter() on-chain; the admin EOA is also confirmed as an EOA (no code).",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
-        "label": "MNEE minter validator set",
+        "label": "MNEE minter validator set (3-of-5)",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 3,
-        "signerCount": 4,
+        "signerCount": 5,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Implementation source has roleHolders = 4 and requiredSignatures = 3; mintBurnPauseUnpause mints only when signers are current minters and msg.sender is a minter."
+        "sources": [
+          {
+            "label": "Sourcify MNEE implementation source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x6D2E08839cEc8699565a86D046E64324826039c9/sources/src/MNEEv2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25294738: roleHolders() = 4, requiredSignatures() = 3 (constants in source). ChangeMinter event reconstruction confirms 5 active isMinter addresses: admin EOA 0x00C81F5f… plus four signer addresses (0x5502cadb…, 0x1adda839…, 0x8245faef…, 0x863879ef…). isMinter() returned true for all five. The admin was set isMinter in the initializer; the four signers were set via replaceValidator. Three of the four non-admin signers are EOAs; 0x1adda839… is a 23-byte contract (stub)."
       },
       {
         "chain": "ethereum",
         "address": "0x00C81F5f28c854F57D83afB894f9385465ee7d85",
-        "label": "MNEE token admin",
+        "label": "MNEE token admin (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "admin() through the proxy returned this address at Ethereum block 25165886; code length read indicated no contract code."
+        "sources": [
+          {
+            "label": "Sourcify MNEE implementation source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x6D2E08839cEc8699565a86D046E64324826039c9/sources/src/MNEEv2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25294738, admin() returned this address; eth_getCode returned no bytecode (EOA). The admin role can call replaceValidator (with required co-signatures) to rotate the minter set."
       },
       {
         "chain": "ethereum",
         "address": "0xa3b670f2dd1722c3d4b98f146467840540c2c53e",
-        "label": "MNEE EIP-1967 proxy admin",
+        "label": "MNEE EIP-1967 ProxyAdmin contract",
         "role": "proxy-admin",
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25165886; code length read showed contract code, but the contract setup was not resolved."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify MNEE token/proxy verification record",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf"
+          }
+        ],
+        "evidence": "At Ethereum block 25294738, EIP-1967 admin slot returned 0xa3b670f2dd1722c3d4b98f146467840540c2c53e; owner() on that ProxyAdmin returned EOA 0x3de5F6B51E7E154b12D1D8F3a4708848cd729974 (eth_getCode = empty, confirmed EOA)."
       }
     ],
     "review": {
@@ -173,16 +191,15 @@
         {
           "label": "Sourcify MNEE token/proxy verification record",
           "url": "https://sourcify.dev/server/v2/contract/1/0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf"
+        },
+        {
+          "label": "MNEE ChangeMinter events (Blockscout)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf&fromBlock=0&toBlock=latest&topic0=0xcba8b2f67b1b66244252c443e6260110af641687bcceb46c810da702119ec828"
         }
       ],
-      "evidence": "Direct reads at Ethereum block 25165886: EIP-1967 implementation = 0x6d2e08839cec8699565a86d046e64324826039c9, EIP-1967 admin = 0xa3b670f2dd1722c3d4b98f146467840540c2c53e, admin() = 0x00C81F5f28c854F57D83afB894f9385465ee7d85.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate current minter validator addresses and confirm all four active signers.",
-        "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (MNEE minter validator set; MNEE token admin; MNEE EIP-1967 proxy admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294738: roleHolders()=4 (constant), requiredSignatures()=3 (constant). ChangeMinter event log (9 events) reconstructed current minter set as 5 addresses. isMinter() confirmed true for all 5. Proxy admin contract identified, its owner is an EOA (no bytecode). Source code confirms threshold-signature minting; no on-chain enumerable role list — membership confirmed from event reconstruction.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-unregulated",

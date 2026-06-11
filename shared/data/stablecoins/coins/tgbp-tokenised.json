@@ -91,8 +91,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "tGBP is a UUPS-upgradeable OFT token (StableTokenV1OFT) by BCP Technologies whose owner can mint and burn; minting occurs once an equivalent GBP deposit is verified off-chain by the team, with no separate role-gated minter.",
+    "confidence": "verified",
+    "summary": "tGBP is a TransparentUpgradeable proxy; the single owner EOA 0xAF4fCE...595C0 controls mint, burn, and upgrade via the ProxyAdmin contract it also owns.",
     "controls": [
       {
         "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
@@ -103,29 +103,32 @@
         "address": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; Ethereum owner() returned 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and cast code returned 0x.",
+        "evidence": "At Ethereum block 25294789: owner() returned 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; eth_getCode returned empty bytecode (EOA confirmed). EIP-1967 proxy admin slot = 0x666b8f67969a22a4015d6d523d8671ee714b114f (ProxyAdmin contract, 2632-byte bytecode); proxy admin owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 (same EOA). Implementation = 0x94321d80d3c5cdac63b75f723ae64ca7f94be547. One EOA controls both the token owner role (mint/burn) and the ProxyAdmin (upgrade authority).",
         "sources": [
           {
             "label": "OpenZeppelin tGBP audit",
             "url": "https://www.openzeppelin.com/news/tgbp-audit"
+          },
+          {
+            "label": "Ethereum tGBP token",
+            "url": "https://etherscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           }
         ]
       }
     ],
     "review": {
-      "evidence": "OpenZeppelin's audit of BCP Technologies' tGBP (StableTokenV1OFT) confirms a single owner controls mint and burn with UUPS upgradeability and no separate minter role; minting is gated on off-chain GBP deposit verification. This is owner-gated permissioned minting rather than a pure backend-only model.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294789: owner() confirmed as EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 (empty bytecode). EIP-1967 proxy admin slot = 0x666b8f67969a22a4015d6d523d8671ee714b114f (ProxyAdmin contract) whose owner() = same EOA. Implementation = 0x94321d80d3c5cdac63b75f723ae64ca7f94be547. Proxy admin blocker resolved: single EOA owns both mint/burn authority and upgrade authority.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "OpenZeppelin tGBP audit",
           "url": "https://www.openzeppelin.com/news/tgbp-audit"
+        },
+        {
+          "label": "Ethereum tGBP token",
+          "url": "https://etherscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
         }
-      ],
-      "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; live Ethereum owner read resolved to an EOA.",
-      "unresolvedQuestions": [
-        "Resolve the proxy admin before raising to verified.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (StableTokenV1OFT owner (mint/burn + upgrade authority)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

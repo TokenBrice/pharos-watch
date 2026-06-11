@@ -123,32 +123,83 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "apxUSD minting is routed through Apyx's MinterV0 contract, where an m-of-n minter submits EIP-712 signed orders and AccessManager delays/permissions gate the eventual apxUSD mint.",
+    "confidence": "verified",
+    "summary": "apxUSD minting on Ethereum is gated by an OZ AccessManager: ROLE_MINTER (roleId=2) is a Gnosis Safe 3-of-6, ROLE_MINT_STRAT (roleId=1) is MinterV0 (EIP-712 order flow), and ADMIN_ROLE is an EOA deployer. All confirmed at Ethereum block 25294762.",
     "controls": [
       {
-        "label": "Apyx MinterV0 signed-order mint path",
+        "label": "apxUSD AccessManager — Ethereum",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "OZ v5 AccessManager deployed at Ethereum block 24481039 by EOA 0x0442cc5bbfbc4b7dc3a14f9766c21c82b45f0024 (initialAdmin). ADMIN_ROLE (roleId=0) held by deployer EOA. ROLE_MINT_STRAT (roleId=1, labelled 'ROLE_MINT_STRAT') held by MinterV0 contract 0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e. ROLE_MINTER (roleId=2, labelled 'ROLE_MINTER') held by Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. Both roles confirmed via RoleGranted event logs.",
+        "sources": [
+          {
+            "label": "apxUSD AccessManager on Etherscan",
+            "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+          }
+        ]
+      },
+      {
+        "label": "Apyx MinterV0 — Ethereum (ROLE_MINT_STRAT)",
         "role": "backend-signer",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "chain": "ethereum",
+        "address": "0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "signingModel": "EIP-712 signed orders submitted by an m-of-n minter wallet",
-          "rateLimits": "MinterV0 includes rate limiting and AccessManager-delayed execution per Apyx contract documentation",
-          "pausersAdminsUpgraders": "AccessManager manages mint permissions; live role holders were not independently enumerated"
+          "signingModel": "EIP-712 signed orders (beneficiary + amount + nonce + notBefore/notAfter) submitted by authorized signers; executeMint() is also AccessManager-restricted",
+          "rateLimits": "MinterV0 includes rate limiting and AccessManager-enforced execution delay",
+          "pausersAdminsUpgraders": "AccessManager ADMIN_ROLE (EOA) controls role grants and delays; MinterV0 authority() = AccessManager 0xe167330e"
         },
+        "evidence": "MinterV0 source confirmed on Etherscan (ContractName: MinterV0); authority() returns AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824. executeMint() is `restricted` (AccessManager-gated). Holds ROLE_MINT_STRAT (roleId=1) confirmed via RoleGranted log.",
         "sources": [
           {
-            "label": "Apyx docs",
-            "url": "https://docs.apyx.fi"
-          },
-          {
-            "label": "Apyx EVM contracts",
-            "url": "https://apyx-labs.github.io/evm-contracts/"
+            "label": "Apyx MinterV0 on Etherscan",
+            "url": "https://etherscan.io/address/0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e"
           }
-        ],
-        "evidence": "Apyx technical documentation describes MinterV0 handling apxUSD minting through EIP-712 signed orders, rate limits, AccessManager integration, and whitelisted beneficiary checks."
+        ]
+      },
+      {
+        "label": "Apyx ROLE_MINTER Safe — Ethereum",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": null,
+          "observedBlock": 25294762,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25294762: getOwners() returned 6 addresses, threshold()=3, getModulesPaginated(start=0x1,10) returned empty array (no modules), guard slot 6 = 0x0 (no guard), VERSION()='1.4.1'. Holds ROLE_MINTER (roleId=2) per AccessManager RoleGranted event log.",
+        "sources": [
+          {
+            "label": "Apyx ROLE_MINTER Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          }
+        ]
       }
     ],
     "review": {
@@ -160,15 +211,15 @@
         {
           "label": "Apyx EVM contracts",
           "url": "https://apyx-labs.github.io/evm-contracts/"
+        },
+        {
+          "label": "apxUSD AccessManager on Etherscan",
+          "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
         }
       ],
-      "evidence": "Apyx docs say whitelisted users deposit collateral and receive newly minted apxUSD; Apyx's contract documentation identifies MinterV0 as the mint route using EIP-712 signed orders, an m-of-n minter wallet, AccessManager checks, and beneficiary screening.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Apyx MinterV0 signed-order mint path); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "Ethereum block 25294762: apxUSD proxy impl=0xdd71fd67… (ApxUSD source confirmed); AccessManager 0xe167330e deployed block 24481039 by EOA 0x0442cc5b (initialAdmin=ADMIN_ROLE holder). ROLE_MINT_STRAT(1)=MinterV0 0x2c36e1…; ROLE_MINTER(2)=Safe 3-of-6 0xf9862efc (no modules, no guard, v1.4.1). apxUSD.mint() is `restricted`; MinterV0.executeMint() is also `restricted`. Base deployment uses separate AccessManager 0x8afde6a9 with same ROLE_MINTER holder 0xf9862efc (BSC contract 0x6b378…). Supply cap enforced in mint(). Recent AccessManager execution logs confirm active minting.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "rwa",

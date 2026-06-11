@@ -54,7 +54,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "LISUSD exposes a role-based minter with a supply cap; manager/admin roles can change the cap and role assignments, with a hard-coded default admin timelock address in the verified implementation.",
+    "summary": "LISUSD uses a Maker-style wards() auth pattern; wards(timelock) = 1 confirmed. Timelock (24h delay) owns proxy admin and is the only confirmed ward. Minter ward set could not be enumerated from pruned BSC history; active mint wards besides the timelock remain unconfirmed.",
     "mintIncidents": [
       {
         "date": "2022-12-02",
@@ -79,34 +79,34 @@
       {
         "chain": "bsc",
         "address": "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5",
-        "label": "LISUSD MINTER role",
+        "label": "LISUSD MINTER ward (actual minter addresses unconfirmed)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
-        "capDescription": "mint(address,uint256) requires totalSupply + amount <= supplyCap; manager can setSupplyCap at or above current total supply.",
+        "capDescription": "LISUSD uses wards() Maker-style auth; mint() reverts with 'LisUSD/not-authorized-minter' unless caller is a ward. Specific minter contract addresses could not be enumerated from pruned BSC history.",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Verified implementation source defines Role.MINTER, Role.MANAGER, Role.ADMIN; mint is onlyMinter and setSupplyCap is onlyManager."
+        "evidence": "At BSC block 103622030: mint(timelock, 1) revert message = 'LisUSD/not-authorized-minter' confirms custom wards-based guard (not OpenZeppelin AccessControl). wards() mapping is Maker-style (storage slot 0 = 1). No mint Transfer events from address(0) found in last 49K blocks; BSC publicnode history pruned beyond that. Minter ward addresses could not be enumerated via Rely/Deny event scan due to pruning."
       },
       {
         "chain": "bsc",
         "address": "0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253",
-        "label": "LISUSD hard-coded default admin",
+        "label": "LISUSD admin timelock (24h delay, ward confirmed)",
         "role": "minter-admin",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Verified source comments label DEFAULT_ADMIN as the TimeLock contract and onlyAdmin allows this address to rely/deny role assignments."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At BSC block 103622030: eth_getCode = CONTRACT (len=14880). getMinDelay() = 86400 (24h). wards(this_address) on LISUSD = 1 (confirmed ward). Sourcify source labels DEFAULT_ADMIN as TimeLock and onlyAdmin gates rely()/deny() calls. Proxy admin (0x1fa3e471...) owner() = this timelock address."
       },
       {
         "chain": "bsc",
         "address": "0x1fa3e4718168077975ff4039304cc2e19ae58c4c",
-        "label": "LISUSD EIP-1967 proxy admin",
+        "label": "LISUSD EIP-1967 proxy admin (owned by timelock)",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "EIP-1967 admin slot returned this address at BSC block 100175656."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At BSC block 103622030: EIP-1967 admin slot on LISUSD proxy = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. eth_getCode = CONTRACT (len=3764). owner() = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253 (timelock). Can upgrade LISUSD implementation."
       }
     ],
     "review": {
@@ -116,13 +116,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
         }
       ],
-      "evidence": "Direct read at BSC block 100175656: EIP-1967 implementation = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8 and proxy admin = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. Source shows MINTER/ADMIN/MANAGER roles, cap-limited mint, and DEFAULT_ADMIN = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At BSC block 103622030: LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8; proxy admin = 0x1fa3e471... (owned by timelock). wards(timelock=0x07D274...) = 1. Custom Maker-style auth confirmed (mint reverts 'LisUSD/not-authorized-minter' for non-wards). Timelock getMinDelay() = 86400s (24h). Minter ward set (CDP/PSM join contracts) could not be enumerated — publicnode prunes BSC logs beyond last 50K blocks and Relay events were not emitted in that window.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate current wards by role.",
-        "Verify the default admin timelock contract and proxy admin setup/threshold.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
+        "Enumerate current LISUSD minter wards (CDP Interaction/Join contracts) via a full-history BSC archive node or BSC Blockscout Rely event scan. wards(timelock)=1 is confirmed but active minting contracts remain unconfirmed."
       ]
     }
   },

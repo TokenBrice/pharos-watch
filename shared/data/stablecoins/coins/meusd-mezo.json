@@ -164,13 +164,11 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
         }
       ],
-      "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route. At Ethereum block 25294738: three mintList entries confirmed true (0x52b952…, 0xe9c3d2…, 0x52931…); NTT inbound cap from Base (wh-chain 30) = 256M tokens confirmed live via getInboundLimitParams; noOp contracts (0x52b952…, 0xe9c3d2…) are 166-byte bytecode that only expose noOp() which always reverts — they cannot initiate minting and are dead mintList entries. The Mezo-side CDP public RPC (rpc.mezo.org) was unreachable; Mezo chain state cannot be independently confirmed from this environment.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Decode Mezo-side borrower/CDP contract admin and collateral parameter authority.",
-        "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mezo MUSD borrower/CDP mint path; MUSD token owner Safe; MUSD Wormhole NTT manager); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Mezo-side borrower/CDP admin cannot be confirmed: rpc.mezo.org was unreachable; Mezo chain state requires a working Mezo RPC or Mezo block explorer to resolve."
       ]
     }
   },

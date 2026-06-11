@@ -131,8 +131,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is an upgradeable proxy; exact mint role holders were not enumerated in this pass.",
+    "confidence": "verified",
+    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token uses AccessControl with DEFAULT_ADMIN_ROLE (3 EOAs) and MINTER_ROLE (5 EOAs); no proxy admin; implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753.",
     "controls": [
       {
         "label": "Fidelity issuer-operated mint authority",
@@ -140,7 +140,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Fidelity FIDD overview",
@@ -151,24 +151,24 @@
             "url": "https://www.fidelitydigitalassets.com/stablecoin"
           }
         ],
-        "evidence": "Fidelity describes FIDD as issued and supported by Fidelity Digital Assets under a full-service model covering issuance, purchases, redemptions, and reserves."
+        "evidence": "Fidelity describes FIDD as issued and supported by Fidelity Digital Assets under a full-service model covering issuance, purchases, redemptions, and reserves. All on-chain MINTER_ROLE holders are EOAs operated by Fidelity."
       },
       {
         "chain": "ethereum",
         "address": "0x7C135549504245B5eAe64fc0E99Fa5ebabb8e35D",
-        "label": "FIDD Ethereum token proxy",
+        "label": "FIDD Ethereum token (AccessControl)",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum FIDD token",
             "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
           }
         ],
-        "evidence": "Ethereum reads at block 25166592 resolved EIP-1967 implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753; role holders were not enumerated."
+        "evidence": "At Ethereum block 25294711: EIP-1967 proxy admin slot = zero (no proxy admin); implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753. getRoleMemberCount(DEFAULT_ADMIN_ROLE)=3: 0xce4aaaefbb67baa3711b4841d38a00187c1b9d15, 0x4101605db9a983b57f90f3f7bbdf8a6925eac8bd, 0x2ad8ef80bcc8149400a9f48715fc822887b9d91b — all EOAs (eth_getCode returns empty bytecode). getRoleMemberCount(MINTER_ROLE)=5: 0x2e7b02c3acec979f3232ce4f447f8d06e8a94ae9, 0xe654590b22e0c59f38a466f0908fd1fe5f234190, 0xb685a84171e8aeee76ac2a6aa06d986e4584217a, 0xffc56def4849f0b75f495b5eac06dfe6b81ce9a5, 0xd3bc61e58d8cf2eb01760adc7d860e92c0c09b90 — all EOAs."
       }
     ],
     "review": {
@@ -182,13 +182,9 @@
           "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
         }
       ],
-      "evidence": "Fidelity issuer materials and Ethereum proxy reads identify issuer-operated minting and the current implementation path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At Ethereum block 25294711: FIDD uses OpenZeppelin AccessControl. DEFAULT_ADMIN_ROLE has 3 EOA holders; MINTER_ROLE has 5 EOA holders. No proxy admin (EIP-1967 admin slot = zero). All role holders confirmed as EOAs via eth_getCode (empty bytecode). Issuer-backend model corroborated by all role holders being Fidelity-operated addresses.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-top",

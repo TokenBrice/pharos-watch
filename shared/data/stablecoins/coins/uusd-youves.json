@@ -102,8 +102,8 @@
       }
     ],
     "review": {
-      "evidence": "Youves documentation describes uUSD as an overcollateralized Tezos CDP whose minting engine is administered by the Murmuration-derived Youves DAO contract (YOU governance) with a keyholder break-glass guardian; the live on-chain admin wiring and guardian threshold were not independently confirmed.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Tezos level 13594990 (2026-06-11), TzKT bigmap reads of all three uUSD engine administrator bigmaps (7710, 22750, 75204) confirm KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4 (FlatYouves DEX Admin) as the sole or primary admin across all engines; that contract's storage holds 7 Tezos public keys with threshold 4 (4-of-7 Tezos multisig, stored_counter=120). The uUSD token admin bigmap (7705) lists the three vault-creator / engine contracts as administrators. The Youves DAO governance token is KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL (YOU Governance). The relationship between the DAO governance contract and the engine admin (FlatYouves DEX Admin multisig) is not confirmed on-chain — the DAO is not directly wired as an engine admin; the 4-of-7 multisig appears to be the operative administrator.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -113,12 +113,19 @@
         {
           "label": "Minting on youves (deep-dive)",
           "url": "https://medium.com/@youves/minting-on-youves-a-deep-dive-1d27dbefa5b7"
+        },
+        {
+          "label": "TzKT: uUSD engine KT1FFE2 admin bigmap",
+          "url": "https://tzkt.io/KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH/storage/"
+        },
+        {
+          "label": "TzKT: FlatYouves DEX Admin multisig",
+          "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/"
         }
       ],
       "unresolvedQuestions": [
-        "Confirm on Tezos that the DAO contract is the sole admin of the minting engine and the current state of the keyholder break-glass guardian multisig.",
-        "Confirm live target/emergency collateral ratios per collateral type.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Youves minting engine / vault contracts; Youves DAO contract (YOU governance) + break-glass guardian); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Confirm whether the Youves DAO contract (KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL, YOU Governance) has any on-chain authority over the engine admins, or whether the 4-of-7 FlatYouves DEX Admin multisig (KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4) is the sole operative admin.",
+        "Confirm the identity of the 7 keyholder signers and whether any are controlled by the DAO versus issuer team."
       ]
     }
   }

@@ -137,8 +137,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDCV is issued by Societe Generale-FORGE, a MiCA-authorized e-money institution (ACPR); onboarded institutional investors subscribe by sending USD to SG-FORGE's bank account 1:1, and SG-FORGE mints and delivers the tokens against reserves segregated at BNY Mellon.",
+    "confidence": "verified",
+    "summary": "USDCV Ethereum mint is gated by the registrar EOA (0x7de0bb…da69) immutable in the shared SmartCoin V4 implementation (same as EURCV); no proxy admin; Solana deployment is issuer-controlled and not separately scored.",
     "controls": [
       {
         "label": "SG-FORGE issuance backend",
@@ -146,29 +146,46 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Per SG-FORGE materials, onboarded institutional investors buy USDCV 1:1 by sending USD to SG-FORGE's bank account, after which SG-FORGE sends the minted tokens to the investor wallet; redemption mirrors this. Centralized issuer-controlled mint, no permissionless route.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Per SG-FORGE materials, onboarded institutional investors buy USDCV 1:1 by sending USD to SG-FORGE's bank account; SG-FORGE mints tokens to investor wallet. On-chain, the registrar EOA (immutable) is the sole minter. Issuer-backend model corroborated: all role holders are SG-FORGE-operated EOAs.",
         "sources": [
           {
             "label": "SG-FORGE CoinVertible",
             "url": "https://www.sgforge.com/product/coinvertible/"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5422374b27757da72d5265cc745ea906e0446634",
+        "label": "USDCV Ethereum token proxy (SmartCoin V4)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USDCV token",
+            "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
+          }
+        ],
+        "evidence": "At Ethereum block 25294784: EIP-1967 impl = 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (same SmartCoin V4 as EURCV); proxy admin slot = zero. Immutable operators from implementation bytecode (PUSH32 scan): registrar (minter) = 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 (EOA), operations = 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6 (EOA), technical (upgrade admin) = 0x54124a6834af252a0f9ac7f478001aa500428955 (EOA). All confirmed as EOAs via eth_getCode."
       }
     ],
     "review": {
-      "evidence": "SG-FORGE (MiCA EMI, ACPR-authorized) is the sole issuer of USDCV; per SG-FORGE materials minting is a centralized 1:1 subscription against USD sent to SG-FORGE's bank account with reserves segregated at BNY Mellon. No permissionless mint path.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294784: USDCV and EURCV share implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4, UUPS). Proxy admin slot zero. Immutable operators extracted from bytecode: registrar/minter EOA 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69, operations EOA 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6, technical/upgrade EOA 0x54124a6834af252a0f9ac7f478001aa500428955. All EOAs confirmed. On-chain model corroborates SG-FORGE issuer-backend description.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "SG-FORGE CoinVertible",
           "url": "https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "Ethereum USDCV token",
+          "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
         }
-      ],
-      "sourceFreeRationale": "Issuer-controlled mint model confirmed from SG-FORGE first-party materials; the on-chain USDCV token owner/minter admin and proxy admin were not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain USDCV token owner/minter admin and proxy admin (Ethereum/Solana) before raising to verified.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

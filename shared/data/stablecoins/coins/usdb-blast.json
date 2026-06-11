@@ -89,8 +89,8 @@
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager: stablecoins (USDC/USDT/DAI) deposited into Blast's L1 bridge are escrowed and routed to MakerDAO/DSR while USDB is minted as an OptimismMintableERC20 on Blast, redeemable on bridging back.",
+    "confidence": "verified",
+    "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager. The L1 USDYieldManager is owned by a 3/5 Gnosis Safe (Blast operator multisig). USDB on Blast is an OP-stack predeploy with ProxyAdmin at the L2 standard predeploy (0x4200…0018).",
     "controls": [
       {
         "label": "Blast USDYieldManager (L1 stablecoin escrow/yield manager)",
@@ -99,22 +99,56 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xa230285d5683C74935aD14c446e137c8c8828438",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
-        "evidence": "Metalayer/Blast docs list 0xa230285d5683C74935aD14c446e137c8c8828438 as the Ethereum L1 USDYieldManager that escrows stablecoins and routes yield; USDB on Blast is minted/burned by the bridge path against L1 deposits and withdrawals."
+        "evidence": "At Ethereum block 25294780: eth_getCode(0xa230285d5683C74935aD14c446e137c8c8828438) returned contract bytecode. owner() = 0x4f72ee94b8ba3be7f886565d3583a7f636c58b05 (Blast operator Safe). Metalayer/Blast docs confirm this contract escrows stablecoins and routes yield.",
+        "sources": [
+          {
+            "label": "Metalayer contracts",
+            "url": "https://metalayerlabs.mintlify.app/building/contracts"
+          }
+        ]
       },
       {
-        "label": "Blast bridge operators (Blast multisig)",
+        "label": "Blast operator multisig (USDYieldManager owner)",
         "role": "bridge-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "L2BEAT and Blast docs describe Blast operators controlling the bridge and yield-provider configuration that backs USDB; this is a privileged admin surface rather than a permissionless user-collateralized mint."
+        "chain": "ethereum",
+        "address": "0x4f72ee94b8ba3be7f886565d3583a7f636c58b05",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x6520ad883d3d76f0120443c72ad7463cab2439a4",
+            "0x480ea8ba8de8d05a30f4f4cbede1e28e05ae1b2c",
+            "0xf97ec9b92efda3afe52945b4e9ade0394c9e705d",
+            "0xab5972612e8cee66f246feacb8d500df3c6cfada",
+            "0x7dbdfbb265bf26e626b44132ef4e3a3e6eec1282"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25294780,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25294780: USDYieldManager.owner() = 0x4f72ee94b8ba3be7f886565d3583a7f636c58b05. Storage slot 0 = GnosisSafe v1.3.0 masterCopy (0xd9db270c…), slot 3 = ownerCount = 5, slot 4 = threshold = 3, slot 1 = 0 (no modules). getOwners() returned 5 addresses.",
+        "sources": [
+          {
+            "label": "Blast USDYieldManager (Etherscan)",
+            "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Blast/Metalayer documentation describes USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while the Ethereum L1 USDYieldManager escrows stablecoins into yield strategies; this is a bridge/synthetic mint, not a user-collateralized CDP.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294780 (Ethereum) / 36048781 (Blast): USDYieldManager owner = Blast operator Safe 0x4f72ee94b8 (5 owners, threshold 3, GnosisSafe v1.3.0, no modules). USDB on Blast is a UUPS proxy (implementation 0x4ef0d78847…) with ProxyAdmin at OP-stack predeploy 0x4200…0018 (L2ProxyAdmin). All bridge-admin controls confirmed on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -122,14 +156,9 @@
           "url": "https://metalayerlabs.mintlify.app/building/contracts"
         },
         {
-          "label": "Metalayer WETH yield guide",
-          "url": "https://metalayerlabs.mintlify.app/building/guides/weth-yield"
+          "label": "Blast USDYieldManager (Etherscan)",
+          "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the bridge/yield-manager owner and the Blast operator multisig threshold and signer set on-chain.",
-        "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy.",
-        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
       ]
     }
   },

@@ -59,40 +59,105 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "IUSD's receipt token can be minted by addresses holding infiniFi's RECEIPT_TOKEN_MINTER core role; the current core/governor setup was not resolved in this pass.",
+    "confidence": "verified",
+    "summary": "IUSD receipt token minting is gated by RECEIPT_TOKEN_MINTER role in the infiniFi Core (0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490). Four protocol contracts hold the role: MintController, PLSmoother, MigrationController, and a TransparentUpgradeableProxy. The ultimate admin is a 7/4 Gnosis Safe (0x80608f852d152024c0a2087b16939235fec2400c) holding PROPOSER_ROLE and MINOR_ROLES_MANAGER in the Core.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
-        "label": "IUSD receipt-token minter role",
+        "address": "0x49877d937b9a00d50557bdc3d87287b5c3a4c256",
+        "label": "infiniFi MintController",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Verified source defines ReceiptToken.mint(address,uint256) guarded by onlyCoreRole(CoreRoles.RECEIPT_TOKEN_MINTER); CoreRoles also defines GOVERNOR and role-management roles."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 1) = 0x49877d937b9a00d50557bdc3d87287b5c3a4c256; Blockscout identifies contract as MintController."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b",
+        "label": "infiniFi mint path proxy (TransparentUpgradeableProxy)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 0) = 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b; Blockscout identifies as TransparentUpgradeableProxy."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc324569141697045b9ede54b5d4623a691ed57a4",
+        "label": "infiniFi PLSmoother",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 2) = 0xc324569141697045b9ede54b5d4623a691ed57a4; Blockscout identifies as PLSmoother."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5f5403656e4db95accf1064a714b1bce351839f8",
+        "label": "infiniFi MigrationController",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 3) = 0x5f5403656e4db95accf1064a714b1bce351839f8; Blockscout identifies as MigrationController."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "label": "infiniFi admin Safe (PROPOSER_ROLE + MINOR_ROLES_MANAGER)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x7a823623b18335a9c1284ac45315fe89972fd421",
+            "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
+            "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
+            "0x6dfa1a32604088eb969242aaffb92420f78373f6",
+            "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
+            "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
+            "0x383965940c950008a4b67bfaa477fdf6ac91a7f7"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25294795,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25294795: Core.getRoleMember(PROPOSER_ROLE, 0) = 0x80608f852d152024c0a2087b16939235fec2400c. Storage slot 0 = GnosisSafe v1.4.1 masterCopy (0x41675c09…), slot 3 = ownerCount = 7, slot 4 = threshold = 4, slot 1 = 0 (no modules). getOwners() returned 7 addresses. Core.getRoleMember(MINOR_ROLES_MANAGER, 0) = same Safe address.",
+        "sources": [
+          {
+            "label": "infiniFi Core (Etherscan)",
+            "url": "https://etherscan.io/address/0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490"
+          }
+        ]
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Sourcify IUSD ReceiptToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/tokens/ReceiptToken.sol"
+          "label": "Sourcify infiniFi CoreRoles source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c/sources/src/libraries/CoreRoles.sol"
         },
         {
-          "label": "Sourcify infiniFi CoreRoles source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/libraries/CoreRoles.sol"
+          "label": "infiniFi Core (Etherscan)",
+          "url": "https://etherscan.io/address/0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490"
         }
       ],
-      "evidence": "Direct read/source verification at Ethereum block 25165886. The token source exposes direct minting through RECEIPT_TOKEN_MINTER; current core address and role holders were not read.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Read the token's current Core contract address.",
-        "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (IUSD receipt-token minter role); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294795: Core contract = 0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490 (confirmed from token storage slot 0). RECEIPT_TOKEN_MINTER count = 4 (all protocol contracts: MintController, proxy, PLSmoother, MigrationController). PROPOSER_ROLE (1 holder) and MINOR_ROLES_MANAGER (1 of 2 holders) both point to Safe 0x80608f852d (7 owners, threshold 4, GnosisSafe v1.4.1, no modules). All mint-capable controls confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "exotic",

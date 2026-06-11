@@ -100,8 +100,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner reads resolve to an EOA while the EIP-1967 proxy admin is a contract whose owner resolves to an EOA.",
+    "confidence": "verified",
+    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum and BSC both have the same EOA owner and same proxy-admin contract whose owner is also a confirmed EOA.",
     "controls": [
       {
         "label": "Banking Circle issuer-operated mint authority",
@@ -109,7 +109,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Eurite about page",
@@ -120,12 +120,12 @@
             "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
           }
         ],
-        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT issued on Ethereum and BSC."
+        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT. On-chain addressable surfaces (owner EOA + proxy-admin EOA) confirmed; issuer-backend control corroborated by MiCA credit-institution licensing."
       },
       {
         "chain": "ethereum",
         "address": "0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D",
-        "label": "EURI Ethereum token owner",
+        "label": "EURI token owner (Ethereum and BSC)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -137,17 +137,23 @@
             "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
           }
         ],
-        "evidence": "owner() returned this address at Ethereum block 25166591; code read returned no contract bytecode."
+        "evidence": "owner() returned 0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D on both Ethereum (block 25294735) and BSC (block 103620570); eth_getCode = 0x on both chains (EOA confirmed)."
       },
       {
         "chain": "ethereum",
         "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
-        "label": "EURI EIP-1967 proxy admin",
+        "label": "EURI EIP-1967 proxy admin (Ethereum and BSC)",
         "role": "proxy-admin",
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "EIP-1967 admin slot returned this address in a 2026-05-25 Ethereum RPC read; code size was nonzero and owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURI token",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ],
+        "evidence": "EIP-1967 proxy admin slot returned 0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC on both Ethereum (block 25294735) and BSC (block 103620570). proxy-admin.owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21 on both chains; eth_getCode = 0x (EOA confirmed)."
       }
     ],
     "review": {
@@ -159,15 +165,15 @@
         {
           "label": "EURI whitepaper",
           "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        },
+        {
+          "label": "Ethereum EURI token",
+          "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
         }
       ],
-      "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path. A 2026-05-25 Ethereum RPC read corrected the proxy-admin classification from no-code EOA to contract-owned admin.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Review BSC deployment roles before extending this to all EURI chains.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

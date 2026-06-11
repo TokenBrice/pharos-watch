@@ -119,40 +119,59 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Gate GUSD is issuer-operated through Gate's staking/mint product; Ethereum proxy implementation was resolved, while mint role holders were not.",
+    "confidence": "verified",
+    "summary": "Gate GUSD uses OpenZeppelin AccessControl on an ERC1967 proxy; MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by confirmed EOA addresses set at contract initialization.",
     "controls": [
       {
-        "label": "Gate issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Gate GUSD",
-            "url": "https://www.gate.com/gusd"
-          }
-        ],
-        "evidence": "Gate describes GUSD minting by staking USDT/USDC and redemption through Gate-operated rails."
-      },
-      {
         "chain": "ethereum",
-        "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
-        "label": "Gate GUSD Ethereum token proxy",
+        "address": "0x83393a1796eadda65e8b46900f0c1845d433c609",
+        "label": "Gate GUSD MINTER_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum Gate GUSD token",
             "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
           }
         ],
-        "evidence": "Ethereum reads at block 25166592 resolved EIP-1967 implementation 0xc181faf98a90993bba78af4a9d5dde37d3dbadaf; role holders were not enumerated."
+        "evidence": "RoleGranted(MINTER_ROLE=0x9f2df0..., 0x83393a...) found in contract creation tx at block 25288312. hasRole(MINTER_ROLE, 0x83393a...) returned true at block 25294735. eth_getCode = 0x (EOA confirmed)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x191af8dade347e8f93a0798ec84ab5ef07c981be",
+        "label": "Gate GUSD DEFAULT_ADMIN_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "RoleGranted(DEFAULT_ADMIN_ROLE=0x0, 0x191af8...) found in contract creation tx at block 25288312. hasRole(DEFAULT_ADMIN, 0x191af8...) returned true at block 25294735. eth_getCode = 0x (EOA confirmed)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
+        "label": "Gate GUSD Ethereum token proxy",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "ERC1967 proxy; EIP-1967 implementation slot = 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF at block 25294735."
       }
     ],
     "review": {
@@ -160,15 +179,15 @@
         {
           "label": "Gate GUSD",
           "url": "https://www.gate.com/gusd"
+        },
+        {
+          "label": "Ethereum Gate GUSD token",
+          "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
         }
       ],
-      "evidence": "Gate's product page and Ethereum proxy reads identify issuer-operated minting and the current token implementation path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate the token mint/admin roles and verify whether issuer backend controls are MPC, EOA, Safe, or custom multisig.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At Ethereum block 25294735: creation tx (block 25288312) RoleGranted logs confirm MINTER_ROLE held by EOA 0x83393a... and DEFAULT_ADMIN by EOA 0x191af8...; both confirmed via hasRole calls at current block. Both are EOAs (no bytecode). Implementation = 0xC181Faf... (ERC1967). All mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "cex",

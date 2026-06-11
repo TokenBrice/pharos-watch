@@ -105,18 +105,22 @@
     "summary": "StandX DUSD is minted on-chain via the protocol Gateway when users deposit USDT/USDC into the StandX Secure Vault; the StandX off-chain Settler/backend manages delta-neutral CEX hedges and validates redemption order signatures, with an RSV Fund multisig bridging assets on/off-chain.",
     "controls": [
       {
-        "label": "StandX Gateway mint/redeem contract",
+        "label": "StandX Gateway / program mint authority (PDA of immutable StandX program on Solana; BSC admin unresolved)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Docs describe a Gateway contract that, on collateral deposit to the Secure Vault and on-chain ratio verification, mints DUSD to the user; redemption is gated by the StandX server validating DUSD balance and signed order authenticity (7-day unwind lock).",
         "sources": [
           {
             "label": "Minting $DUSD",
             "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
           }
-        ]
+        ],
+        "evidence": "Solana (confirmed): at slot 425778638, DUSD Solana mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, owned by immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB (upgradeAuthority: None). BSC (unresolved): DUSD BSC token 0xaf44... has multi-layer proxy admin — full chain: 0x2c02(proxy→0xdf09)→0x00b4(proxy→0xb69f AccessControl+UUPS). Role holders in BSC AccessControl not enumerable via standard ABI. Docs describe Gateway contract minting on collateral deposit with 7-day redemption lock."
       },
       {
         "label": "StandX Settler / backend + RSV Fund multisig",
@@ -135,8 +139,8 @@
       }
     ],
     "review": {
-      "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Mint requires depositing USDT/USDC to the StandX Secure Vault; the protocol opens hedging shorts and mints DUSD. Redemption is backend-attested with a 7-day lock. Supply creation is fully issuer-controlled against delta-neutral collateral.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Solana: at slot 425778638, DUSD mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, which is owned by StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. StandX program has upgradeAuthority: None (immutable, programData 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe at slot 425779135). Solana mint authority is a PDA of an immutable program. BSC: DUSD token 0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122 has slot 0 = 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a (admin proxy pointing to implementation 0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1); slot 1 of that proxy = 0x00b4f9b510893505acefb10ec91cbc972185088e (a second proxy pointing to 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b, a 31KB AccessControl+UUPS implementation). Actual admin role holders in the BSC AccessControl contract cannot be enumerated — non-enumerable AccessControl with all ABI calls reverting through the proxy.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -146,12 +150,14 @@
         {
           "label": "Redeeming $DUSD",
           "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "sourceFreeRationale": "Mechanism confirmed from StandX docs; on-chain Gateway minter admin and RSV Fund multisig threshold/signers not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain admin/owner of the BSC Gateway (0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122) and Solana mint authority, plus the RSV Fund multisig threshold, before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "BSC: BSC admin chain 0xaf44→slot0→0x2c02(proxy→0xdf09)→slot1→0x00b4(proxy→0xb69f AccessControl+UUPS); non-enumerable AccessControl means actual DEFAULT_ADMIN_ROLE and MINTER_ROLE holders cannot be read via standard ABI calls. Identify role holders via event logs (RoleGranted events) or issuer disclosure before raising confidence."
       ]
     }
   },

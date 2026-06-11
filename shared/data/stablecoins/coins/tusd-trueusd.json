@@ -160,8 +160,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "TUSD is issuer-backed; Ethereum mint control resolves through the token controller/mint-key path, with controller ownership held by a 2/3 Safe.",
+    "confidence": "verified",
+    "summary": "TUSD is issuer-backed; Ethereum mint control resolves through the token controller/mint-key path, with controller ownership held by a confirmed 2/3 Gnosis Safe (no modules, no guard).",
     "controls": [
       {
         "chain": "ethereum",
@@ -196,8 +196,18 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0xdb13f2A1Ece32Ae876eD8f2AC9e8c3671643D2E0",
+            "0x3e6bF90E716d2ca36a186168bfee5dF9ea4A6c94",
+            "0x382D7a2A4847bd6c7D333bFa420B70Db63B869dE"
+          ],
           "threshold": 2,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xd5D82B6aDDc9027B22dCA772Aa68D5d74cdBdF44",
+          "observedBlock": 25294735,
+          "source": "safe-api",
+          "version": "1.1.1"
         },
         "sources": [
           {
@@ -205,7 +215,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
           }
         ],
-        "evidence": "Safe getThreshold() returned 2 and getOwners() returned 3 owners at Ethereum block 25165911; worker Safe API review found no modules and zero guard."
+        "evidence": "Safe API returned threshold=2, owners=[0xdb13f2A1..., 0x3e6bF90E..., 0x382D7a2A...], modules=[], guard=0x0, masterCopy=0x34CfAC64... (Gnosis Safe 1.1.1), nonce=42. Token controller owner() confirmed as this Safe at Ethereum block 25294735."
       }
     ],
     "review": {
@@ -217,14 +227,15 @@
         {
           "label": "Ethereum TUSD contract",
           "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
         }
       ],
-      "evidence": "TrueUSD is issuer-backed; Ethereum contract review resolved the token controller, mint-key path, and 2/3 Safe controller owner.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (TUSD token controller; TUSD controller owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294735: TUSD token controller owner() = 0x93fde11c8107127A80ce95100dF611790E4413c9 (Safe, confirmed). Safe API: threshold=2, 3 owners, no modules, no guard. Controller code confirmed (nonzero). All mint-capable controls verified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

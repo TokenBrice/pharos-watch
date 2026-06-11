@@ -132,8 +132,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "UTY is XSY/YieldPoint's delta-neutral synthetic dollar on Avalanche: token mint/burn is restricted to the MANAGEMENT_SMART_CONTRACT_ROLE holder, while DEFAULT_ADMIN_ROLE controls that role and upgrades.",
+    "confidence": "verified",
+    "summary": "UTY is XSY/YieldPoint's delta-neutral synthetic dollar on Avalanche: mint/burn is restricted to MANAGEMENT_SMART_CONTRACT_ROLE (held by a UUPS proxy management contract); DEFAULT_ADMIN_ROLE is held by an EOA (issuer-controlled MPC key) that can grant roles and authorize UUPS upgrades on both UTY and the management contract.",
     "controls": [
       {
         "label": "UTY management smart contract role holder",
@@ -143,10 +143,10 @@
         "chain": "avalanche",
         "address": "0x9b9CF4f6255f6b451132BDf7a3682c7299D4C77A",
         "canRaiseCap": "unknown",
-        "evidence": "Avalanche source and live role reads show mint() and burn() are restricted to MANAGEMENT_SMART_CONTRACT_ROLE; hasRole confirmed this address holds that role."
+        "evidence": "At Avalanche block 87747299: eth_getCode returned CONTRACT (len=342); owner() returned 0xA78062AC8D1a3a882d9D7fc3487C342903B742F4; EIP-1967 impl slot = 0x000...495b2335367121e370ac13df6c656714660a4179 (UUPS proxy). hasRole(MANAGEMENT_SMART_CONTRACT_ROLE=0x4eb44751..., this_address) on UTY token returned true."
       },
       {
-        "label": "UTY DEFAULT_ADMIN_ROLE / owner",
+        "label": "UTY DEFAULT_ADMIN_ROLE / owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -154,12 +154,12 @@
         "address": "0xA78062AC8D1a3a882d9D7fc3487C342903B742F4",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "owner() and hasRole(DEFAULT_ADMIN_ROLE) returned this address; DEFAULT_ADMIN_ROLE can grant/revoke the management role and authorize upgrades."
+        "evidence": "At Avalanche block 87747299: eth_getCode returned empty (EOA confirmed). hasRole(DEFAULT_ADMIN_ROLE=0x0, this_address) on UTY token returned true. owner() on both UTY proxy and management contract returned this address. UTY EIP-1967 impl slot = 0x000...639c72eea35e50f5e2911891389fc4e8422587c4 (UUPS); UUPS upgrade gated by DEFAULT_ADMIN_ROLE. EOA represents issuer-operated key (issuer-context EOA expected per brief)."
       }
     ],
     "review": {
-      "evidence": "XSY/YieldPoint docs describe Unity/UTY as a synthetic dollar; verified Avalanche source shows mint/burn restricted to MANAGEMENT_SMART_CONTRACT_ROLE, with live role reads resolving 0x9b9C...C77A as the management role holder and 0xA780...42F4 as DEFAULT_ADMIN_ROLE/owner.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Avalanche block 87747299: UTY token (0xdbc5192a...) is a UUPS proxy (impl 0x639c72ee...); management contract (0x9b9CF4f6...) is a UUPS proxy (impl 0x495b2335...); both have owner = EOA 0xA78062AC... (eth_getCode empty). hasRole(MANAGEMENT_SMART_CONTRACT_ROLE, management_contract) = true on UTY; hasRole(DEFAULT_ADMIN_ROLE, EOA) = true; hasRole(MINTER_ROLE, EOA) = false (EOA does not hold direct mint). UUPS upgrade path for both contracts controlled by EOA via DEFAULT_ADMIN_ROLE.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -171,14 +171,9 @@
           "url": "https://yieldpoint.io/"
         },
         {
-          "label": "UTY contract source",
+          "label": "UTY contract on Routescan",
           "url": "https://routescan.io/address/0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a/contract/43114/code"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve whether the DEFAULT_ADMIN_ROLE EOA is controlled by a multisig, MPC, or other policy layer.",
-        "Confirm the precise custodian split and any attestation quorum behind issuance.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (UTY management smart contract role holder; UTY DEFAULT_ADMIN_ROLE / owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

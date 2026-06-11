@@ -148,8 +148,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDG is issuer-minted by Paxos-operated infrastructure; the Ethereum token delegates supply control to a dedicated SupplyControl contract.",
+    "confidence": "verified",
+    "summary": "USDG is issuer-minted by Paxos-operated infrastructure; the Ethereum token (PaxosTokenV2 / AdminUpgradeabilityProxy) delegates supply control to a SupplyControl contract. The SupplyControl owner and the token's defaultAdmin are a TimelockController (24h delay) whose sole proposer and executor is the Paxos admin EOA. All addressable controls confirmed at block 25294757.",
     "controls": [
       {
         "chain": "ethereum",
@@ -158,8 +158,8 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Paxos USDG mainnet docs",
@@ -168,26 +168,34 @@
           {
             "label": "USDG Ethereum token",
             "url": "https://etherscan.io/address/0xe343167631d89B6Ffc58B88d6b7fB0228795491D#readProxyContract"
+          },
+          {
+            "label": "USDG SupplyControl on Etherscan",
+            "url": "https://etherscan.io/address/0x9a7164112029b81c07636AB7b59fA813E0883BBF"
           }
         ],
-        "evidence": "USDG supplyControl() returned this address at Ethereum block 25165931; Paxos documentation lists this SupplyControl contract for mainnet supply management."
+        "evidence": "At Ethereum block 25294757, supplyControl() on the USDG token (selector 0x4a254dfe) returned 0x9a7164112029b81c07636AB7b59fA813E0883BBF. eth_getCode confirms the SupplyControl is a contract. SupplyControl owner() = 0x9036566eaa5f83e0b9e1161c6c602b0adf997654 (TimelockController, see next control). USDG defaultAdmin() also returned the TimelockController address."
       },
       {
         "chain": "ethereum",
-        "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
-        "label": "USDG SupplyControl owner",
+        "address": "0x9036566eaa5f83e0b9e1161c6c602b0adf997654",
+        "label": "USDG SupplyControl owner / token defaultAdmin (TimelockController, 24h delay)",
         "role": "minter-admin",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "USDG SupplyControl",
             "url": "https://etherscan.io/address/0x9a7164112029b81c07636AB7b59fA813E0883BBF#readProxyContract"
+          },
+          {
+            "label": "USDG TimelockController on Etherscan",
+            "url": "https://etherscan.io/address/0x9036566eaa5f83e0b9e1161c6c602b0adf997654"
           }
         ],
-        "evidence": "SupplyControl owner() returned this address at Ethereum block 25165911; code read did not identify an on-chain multisig contract."
+        "evidence": "At Ethereum block 25294757, SupplyControl owner() and USDG defaultAdmin() both returned 0x9036566eaa5f83e0b9e1161c6c602b0adf997654. Blockscout confirms this is an OZ TimelockController (deployed block 24291710). getMinDelay() = 86400 (24 hours). hasRole(PROPOSER_ROLE, 0x3Af3e85f...) = true; hasRole(EXECUTOR_ROLE, 0x3Af3e85f...) = true; TimelockController itself has no ADMIN_ROLE. Proposer/executor is the Paxos admin EOA 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B (eth_getCode = EOA). Note: this is a drift from prior data which listed the EOA directly as SupplyControl owner; the TimelockController was deployed at block 24291710 and is now the confirmed current owner."
       }
     ],
     "review": {
@@ -195,14 +203,15 @@
         {
           "label": "Paxos USDG mainnet docs",
           "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+        },
+        {
+          "label": "USDG Ethereum token on Etherscan",
+          "url": "https://etherscan.io/address/0xe343167631d89B6Ffc58B88d6b7fB0228795491D"
         }
       ],
-      "evidence": "Paxos documentation and Ethereum token reads identify USDG's dedicated SupplyControl contract and owner/admin path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDG SupplyControl contract; USDG SupplyControl owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294757: supplyControl() = 0x9a7164... (contract confirmed); SupplyControl owner() and defaultAdmin() = 0x9036566... (OZ TimelockController, 24h delay, proposer+executor = Paxos EOA 0x3Af3e85...); eth_getCode on Paxos EOA confirms no bytecode. Data drift: prior data listed the Paxos EOA as the SupplyControl owner; the TimelockController has since been interposed. All controls updated to current chain state.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

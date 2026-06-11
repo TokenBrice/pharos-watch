@@ -63,18 +63,18 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "JPYC is a centralized mintable ERC-20. The current regulated Ethereum token uses a FiatToken-style proxy implementation with role-managed minting; RPC reads resolve the token owner Safe, minterAdmin contract, and minterAdmin owner Safe.",
+    "confidence": "verified",
+    "summary": "JPYC is a centralized FiatToken-style ERC-20. Minting requires being a configured minter with allowance; the sole ever-configured minter (0x11f14c2b…) currently has zero allowance on all three chains. Effective mint authority runs through the minterAdmin contract (owned by a 2/3 Safe) which calls configureMinter. The token owner (3/5 Safe) controls upgrades and minterAdmin replacement. Owner Safe and minterAdmin owner Safe confirmed unchanged on Ethereum, Polygon, and Avalanche.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
-        "label": "JPYC regulated Ethereum proxy mint surface",
+        "label": "JPYC regulated token proxy (Ethereum, Polygon, Avalanche)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Sourcify JPYC implementation source",
@@ -85,7 +85,7 @@
             "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
           }
         ],
-        "evidence": "EIP-1967 implementation read returned 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e at Ethereum block 25201628; verified source exposes onlyMinters mint plus minterAdmin-gated configureMinter/removeMinter/minterAllowance."
+        "evidence": "At Ethereum block 25294712, MinterConfigured scan (Blockscout) returned one ever-configured minter: 0x11f14c2bfe398379b361019aa440f792c27f9384; isMinter() returns false and minterAllowance() returns 0 on all three chains (Ethereum, Polygon, Avalanche). The minterAdmin contract 0x029ba134… is the effective gating layer and can call configureMinter to re-activate minting."
       },
       {
         "chain": "ethereum",
@@ -95,14 +95,14 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum JPYC token",
             "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#readProxyContract"
           }
         ],
-        "evidence": "minterAdmin() returned this contract at Ethereum block 25201628; owner() on the minterAdmin returned 0x5BA1b9aAf56Af1B761519F924079681D8d061F94, but the minterAdmin contract source was not verified by Sourcify."
+        "evidence": "At Ethereum block 25294712, minterAdmin() on Ethereum, Polygon, and Avalanche all returned 0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694. owner() on the minterAdmin returned 0x5BA1b9aAf56Af1B761519F924079681D8d061F94 (2/3 Safe, confirmed). Contract bytecode 7667 bytes (not an EOA)."
       },
       {
         "chain": "ethereum",
@@ -117,9 +117,16 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 2,
+          "owners": [
+            "0xd32E9481639290418EF5329BC843f5d69896A11f",
+            "0x1Ebe8C10353B8E45406Fe506Ada82e4c2F1Fe087",
+            "0x87C4a22D1dd8F52c09767CeE4439EA331b2D5fF1"
+          ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294712,
           "source": "safe-api"
         },
         "sources": [
@@ -128,7 +135,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
           }
         ],
-        "evidence": "minterAdmin.owner() returned this Safe at Ethereum block 25201628. Safe API returned threshold 2, three owners, no modules, and zero guard."
+        "evidence": "At Ethereum block 25294712, Safe API returned threshold 2, three owners, no enabled modules, zero guard, masterCopy 0x41675C…."
       },
       {
         "chain": "ethereum",
@@ -143,9 +150,18 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 3,
+          "owners": [
+            "0x11F14C2Bfe398379b361019aA440f792c27f9384",
+            "0xd32E9481639290418EF5329BC843f5d69896A11f",
+            "0x1Ebe8C10353B8E45406Fe506Ada82e4c2F1Fe087",
+            "0xEE9491B977B3e3C1357E85020baD6D9584022636",
+            "0x87C4a22D1dd8F52c09767CeE4439EA331b2D5fF1"
+          ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294712,
           "source": "safe-api"
         },
         "sources": [
@@ -158,7 +174,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9/"
           }
         ],
-        "evidence": "owner() returned this Safe at Ethereum block 25201628; verified source gates updateMinterAdmin and UUPS upgrades behind onlyOwner. Safe API returned threshold 3, five owners, no modules, and zero guard."
+        "evidence": "At Ethereum block 25294712, owner() returned this Safe; Safe API returned threshold 3, five owners, no enabled modules, zero guard, masterCopy 0x41675C…. owner() also confirmed matching Safe on Polygon and Avalanche."
       }
     ],
     "review": {
@@ -172,23 +188,17 @@
           "url": "https://repo.sourcify.dev/contracts/full_match/1/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e/metadata.json"
         },
         {
-          "label": "Safe Transaction Service",
+          "label": "Safe Transaction Service (token owner)",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9/"
         },
         {
-          "label": "Safe Transaction Service",
+          "label": "Safe Transaction Service (minterAdmin owner)",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
         }
       ],
-      "evidence": "Ethereum RPC reads for the current regulated token identify the role-gated mint implementation, minterAdmin contract, token owner Safe, and minterAdmin owner Safe.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Reconstruct current configured minter addresses and allowances from events or explorer-indexed logs.",
-        "Resolve minterAdmin contract internals beyond its owner() surface.",
-        "Repeat owner/minterAdmin reads on Polygon and Avalanche before applying one multichain profile.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (JPYC regulated Ethereum proxy mint surface; JPYC minterAdmin contract; JPYC minterAdmin owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-regulated",

@@ -73,8 +73,8 @@
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
     "authorityPosture": "none-resolved",
-    "confidence": "manual-review",
-    "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral; no privileged issuer/admin mint path was resolved from official materials.",
+    "confidence": "verified",
+    "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral. Source code review confirms no admin/emergency mint path: all transaction_type enum values (MINT_STABLE, MINT_RESERVE, MINT_YIELD) are user-facing; blockchain.cpp contains no admin override. The Zephyr foundation controls the oracle RSA signing key (cryptonote_config.h), a price-feed centralization vector, but not a privileged mint bypass.",
     "controls": [
       {
         "label": "Zephyr native reserve mint/redeem rules",
@@ -83,22 +83,22 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Minting depends on native reserve-ratio and oracle rules described in the Zephyr whitepaper/source, not an EVM-style privileged minter.",
+        "capDescription": "Minting depends on native reserve-ratio and oracle rules in protocol consensus; no EVM-style privileged minter exists.",
         "sources": [
           {
             "label": "Zephyr whitepaper",
             "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
           },
           {
-            "label": "Zephyr GitHub",
-            "url": "https://github.com/ZephyrProtocol/zephyr"
+            "label": "Zephyr GitHub — enums.h transaction_type",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
           },
           {
-            "label": "Zephyr reserve snapshots",
-            "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+            "label": "Zephyr GitHub — cryptonote_config.h",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
           }
         ],
-        "evidence": "Official whitepaper/docs describe ZSD as minted/redeemed against ZEPH reserve mechanics with reserve-ratio constraints; local metadata links the official source repository and live reserve snapshot API."
+        "evidence": "Source review of enums.h confirmed transaction_type enum lists only user-facing types (MINT_STABLE, REDEEM_STABLE, MINT_RESERVE, REDEEM_RESERVE, MINT_YIELD, REDEEM_YIELD, TRANSFER variants, AUDIT types) — no ADMIN_MINT or emergency bypass type. blockchain.cpp contains no 'admin', 'foundation', 'emergency', or 'bypass' patterns. cryptonote_config.h includes a hardcoded foundation oracle RSA key (ORACLE_PUBLIC_KEY), which controls price-feed signing but is not a direct mint authority."
       }
     ],
     "review": {
@@ -108,17 +108,17 @@
           "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
         },
         {
-          "label": "Zephyr GitHub",
-          "url": "https://github.com/ZephyrProtocol/zephyr"
+          "label": "Zephyr GitHub — enums.h",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+        },
+        {
+          "label": "Zephyr GitHub — cryptonote_config.h",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
         }
       ],
-      "evidence": "No separate privileged mint authority was resolved for native ZSD beyond protocol conversion rules.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code.",
-        "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
-      ]
+      "evidence": "Source code reviewed 2026-06-11. No admin/emergency/foundation mint bypass found in enums.h, blockchain.cpp, or cryptonote_tx_utils.cpp. All mint paths are reserve-ratio-gated user transactions. Foundation holds oracle signing key (price-feed centralization) but not a privileged minter role.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "reserves": [

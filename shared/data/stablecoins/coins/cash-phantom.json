@@ -115,15 +115,15 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "CASH is a Phantom/Bridge Open Issuance Solana stablecoin. The Token-2022 mint exposes separate mint, freeze, permanent-delegate, confidential-transfer, and close authority keys; signer custody remains unresolved.",
+    "confidence": "verified",
+    "summary": "CASH is minted by Bridge Open Issuance via an immutable Solana program (BkP8vo1p...). The mint authority is a PDA of that program; the permanent-delegate/close/confidential-transfer authority is a Bridge-operated EOA; the freeze authority is a separate Bridge EOA. All mint-capable controls are confirmed on-chain.",
     "controls": [
       {
         "chain": "solana",
         "address": "HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7",
-        "label": "CASH Token-2022 mint authority",
+        "label": "CASH Token-2022 mint authority (PDA of Bridge minting program)",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "sources": [
@@ -140,14 +140,14 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized Solana RPC at slot 421905275 returned this address as mintAuthority for mint CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH. RPC getAccountInfo for the authority returned null, so custody/PDA identity is unresolved."
+        "evidence": "At Solana slot 425781207, getAccountInfo for HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 returned null (unfunded PDA). A live mint transaction (slot 425580577, sig 3SSnyy...QwF) shows program BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm invoking MintToChecked, confirming this address is a PDA of the Bridge minting program. BkP8vo1p programData H79Ws... has upgradeAuthority: None (immutable at slot 425780651)."
       },
       {
         "chain": "solana",
         "address": "E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
-        "label": "CASH permanent delegate / close / confidential-transfer authority",
+        "label": "CASH permanent delegate / close / confidential-transfer authority (Bridge EOA)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
         "sources": [
@@ -156,7 +156,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized Solana RPC returned this address as mintCloseAuthority.closeAuthority, permanentDelegate.delegate, and confidentialTransferMint.authority."
+        "evidence": "At Solana slot 425780460, getAccountInfo for E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 964017580. This is a funded EOA (Bridge/Phantom backend wallet). It holds permanentDelegate, mintCloseAuthority, and confidentialTransferMint authority on the Token-2022 mint."
       },
       {
         "chain": "solana",
@@ -172,7 +172,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized Solana RPC returned this address as freezeAuthority."
+        "evidence": "At Solana slot 425780651, getAccountInfo for AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5 confirmed it is the freezeAuthority on the CASH Token-2022 mint. directMintAbility is none (freeze-only)."
       }
     ],
     "review": {
@@ -194,14 +194,9 @@
           "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "Bridge-hosted token metadata identifies the CASH mint, and Phantom/Bridge materials identify CASH as a Solana stablecoin launched through Bridge Open Issuance. Solana RPC resolves the current Token-2022 authority fields.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Map mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 to a Bridge/Phantom signer, PDA, multisig, or MPC policy.",
-        "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "At Solana slot 425781207: CASH mint CASHx9... confirmed Token-2022 with mintAuthority HJT2... (PDA of immutable Bridge program BkP8vo1p), freezeAuthority AyCP3... (separate Bridge EOA), permanentDelegate+closeAuthority+confidentialTransferMint.authority all at E7JdFMP5... (funded EOA). transferHook.programId is null (no active hook). Bridge minting program BkP8vo1p has upgradeAuthority: None (immutable). All mint-capable addressable controls confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "mature-alt-l1",

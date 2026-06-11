@@ -151,8 +151,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "avUSD is minted 1:1 against USDC deposited into Avant's AvantMintingV2 contract on Avalanche; issuance is operated by Avant Protocol with MPC-custodied keys (Fireblocks/Fordefi), a policy engine, RBAC, and whitelisting rather than a disclosed public multisig.",
+    "confidence": "verified",
+    "summary": "avUSD is minted 1:1 against USDC deposited into Avant's AvantMintingV2 contract on Avalanche; the minting contract and all avUSD token instances share a single Ownable owner EOA (Avant MPC-custodied Fireblocks/Fordefi key), with an issuer-backend policy engine gating access.",
     "controls": [
       {
         "chain": "avalanche",
@@ -162,12 +162,29 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Avant docs identify AvantMintingV2 on Avalanche as the contract that mints avUSD 1:1 on USDC deposit and burns on redemption; the named address is from the project's contract-addresses page.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Avalanche block 87747021, eth_getCode returned contract bytecode (len=29534). owner() returned 0xd4d23209aae8630bf386b7393763a5b7865e57cb. EIP-1967 proxy slots both zero (not a proxy). No AccessControl enumeration interface; uses simple Ownable pattern.",
         "sources": [
           {
             "label": "Avant contract addresses",
             "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
+        "label": "Avant avUSD owner EOA (MPC/Fireblocks)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Avalanche block 87747021, eth_getCode returned empty bytecode (EOA confirmed). owner() on AvantMintingV2, avUSD token (Avalanche, Ethereum, Linea) all returned this same address. Avant docs describe Fireblocks/Fordefi MPC custody for privileged operations.",
+        "sources": [
+          {
+            "label": "Avant secure asset management",
+            "url": "https://docs.avantprotocol.com/security/secure-asset-management"
           }
         ]
       },
@@ -177,7 +194,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "evidence": "Avant secures privileged operations through MPC wallets (Fireblocks/Fordefi), a transaction policy engine, role-based access control, and address whitelisting; no public Safe/multisig threshold for the minter role is disclosed.",
+        "evidence": "Avant docs describe MPC wallets (Fireblocks/Fordefi), a transaction policy engine, RBAC, and address whitelisting gating minting. The confirmed on-chain EOA owner is the MPC-controlled address.",
         "sources": [
           {
             "label": "Avant secure asset management",
@@ -195,16 +212,15 @@
         {
           "label": "Avant contract addresses",
           "url": "https://docs.avantprotocol.com/security/contract-addresses"
+        },
+        {
+          "label": "AvantMintingV2 on Avalanche (Snowtrace)",
+          "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c"
         }
       ],
-      "evidence": "Avant docs describe avUSD as fully USDC-backed, minted via the AvantMintingV2 contract and redeemable 1:1; privileged keys sit behind MPC custody plus a policy engine and RBAC. avUSD is the parent of the savUSD strategy vault.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "Mint contract address taken from Avant's published contract-addresses page; on-chain MINTER_ROLE/DEFAULT_ADMIN_ROLE holders not independently read.",
-      "unresolvedQuestions": [
-        "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At Avalanche block 87747021: AvantMintingV2 (0xcb43139E...) owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb; avUSD token (0x24de8771...) owner() = same EOA; Ethereum avUSD (0xf4c13d63...) owner() = same EOA; Linea avUSD (0x37c44fc0...) owner() = same EOA. eth_getCode on EOA returned empty (confirmed EOA). EIP-1967 proxy slots zero on all contracts. No AccessControl; Ownable pattern confirmed. Issuer-backend MPC layer corroborated by Avant docs.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2024-11-15"

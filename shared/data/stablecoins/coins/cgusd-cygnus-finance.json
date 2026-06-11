@@ -129,8 +129,8 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity.",
+    "confidence": "verified",
+    "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity. Both the vault and oracle are owned by a TimelockController with 10s delay, controlled by a 2/11 Safe as proposer.",
     "controls": [
       {
         "label": "Cygnus accounting oracle/rebase + reserve custodian",
@@ -139,8 +139,9 @@
         "directMintAbility": "can-authorize",
         "chain": "base",
         "address": "0x3430BcaDc7F23C42e7054e20f129d67baA91B184",
-        "canRaiseCap": "unknown",
-        "evidence": "The cgUSD vault contract exposes handleOracleReport(), which is gated to the accountingOracle address loaded from the Cygnus locator rather than to the vault owner. A 2026-05-25 Base RPC read resolved the locator oracleReportComponents() accountingOracle to this address.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Base block 47199109, owner() on oracle contract 0x3430BcaDc7F23C42e7054e20f129d67baA91B184 returned 0xfECAB866b450b97dB38500898e9272c1D18918b7 (the same TimelockController that owns the vault). Oracle is a contract (15726-byte code).",
         "sources": [
           {
             "label": "Cygnus cgUSD mint mechanics",
@@ -149,31 +150,40 @@
         ]
       },
       {
-        "label": "cgUSD vault owner (mint/pause admin)",
+        "label": "cgUSD vault + oracle admin (TimelockController, 10s delay)",
         "role": "minter-admin",
         "authorityType": "contract",
         "chain": "base",
         "address": "0xfECAB866b450b97dB38500898e9272c1D18918b7",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "The Base cgUSD contract is an OpenZeppelin Ownable ERC-4626 vault with a mint() that issues shares for deposited assets and owner-controlled pause/resume; a 2026-05-25 Base RPC read resolved owner() to this timelock/admin address, but its signer/governance setup was not independently decoded."
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Base block 47199109, the cgUSD vault owner() and accounting oracle owner() both return 0xfECAB866b450b97dB38500898e9272c1D18918b7; minDelay() = 10 seconds (essentially no delay); PROPOSER_ROLE and CANCELLER_ROLE held by 0x188f3264dee2a74c6389c48fb71ae16e2f568722 (2/11 Safe); EXECUTOR_ROLE held by 4 addresses (0xf3d8ce43, 0xe080a417, 0x73e4e2af, 0x8baa9594); DEFAULT_ADMIN_ROLE self-administered by the timelock; no RoleRevoked events found. RoleGranted logs confirmed via Base Blockscout.",
+        "sources": [
+          {
+            "label": "cgUSD vault on Base (Basescan)",
+            "url": "https://basescan.org/address/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+          },
+          {
+            "label": "cgUSD TimelockController (Basescan)",
+            "url": "https://basescan.org/address/0xfECAB866b450b97dB38500898e9272c1D18918b7"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with daily NAV rebases and an AMO managing on-chain liquidity; contract source and 2026-05-25 Base RPC reads show handleOracleReport is gated by the locator accountingOracle, while owner() resolves to a separate timelock/admin address.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Base block 47199109: cgUSD vault owner() = TimelockController 0xfECAB866; accounting oracle owner() = same; TimelockController minDelay = 10s; PROPOSER_ROLE = 2/11 Safe (0x188f3264, getOwners returns 11, getThreshold = 2); EXECUTOR_ROLE held by 4 contracts; DEFAULT_ADMIN_ROLE self-held; no modules on the Safe proposer or the timelock. All mint-capable controls confirmed from chain state.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Cygnus cgUSD v1 docs",
           "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+        },
+        {
+          "label": "cgUSD TimelockController RoleGranted logs (Blockscout)",
+          "url": "https://base.blockscout.com/address/0xfECAB866b450b97dB38500898e9272c1D18918b7/logs"
         }
-      ],
-      "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Owner/oracle addresses were read, but governance and operator custody were not decoded.",
-      "unresolvedQuestions": [
-        "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Cygnus accounting oracle/rebase + reserve custodian; cgUSD vault owner (mint/pause admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

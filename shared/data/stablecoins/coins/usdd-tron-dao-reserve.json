@@ -148,30 +148,32 @@
     "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
     "controls": [
       {
-        "chain": "ethereum",
-        "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
-        "label": "USDD Join token ward / direct minter",
+        "chain": "tron",
+        "address": "TUajR7CbXU6hX8n3XtNkitFAD25JvP99K6",
+        "label": "USDD Tron Join (active ward / direct minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Etherscan contract source",
-            "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
           }
         ],
-        "evidence": "USDD system/deployment docs describe collateralized USDD issuance rails, and Ethereum token source exposes warded mint authority. Live/source review identifies the USDD Join contract as the token ward/direct minter rather than a generic privileged token authority."
+        "evidence": "At Tron block 83506136 (2026-06-11): wards(TronJoin) on USDD token (TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz) = 1 (confirmed ward). Tron Vat (TH5dhX7o39afSbfDT2e3c9k4itWjNKD4D9) live() = 1 (active). All other queried addresses (Pause, PauseProxy, GovActionsProxy) have ward=0 on the token. The ETH-side system is caged: ETH Vat (0xff77f...) live()=0 and ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently disabled."
       },
       {
-        "label": "USDD governance / Pause / Vat administration",
+        "chain": "tron",
+        "address": "TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d",
+        "label": "USDD Tron GovActionsProxy (governance executor)",
         "role": "governor",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "System-level governance, Pause, and Vat administration can alter issuance parameters or privileged wards; exact current signer set and threshold were not decoded in this pass."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Tron Pause (TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW) authority() = GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d); Pause delay() = 0 (no timelock). GovActionsProxy.authority() = zero address (no higher authority set); GovActionsProxy govActions() = TDLgCe2SatVew6PxSwYmqsc3zfahqXwuqX and pause() = Pause contract. This contract's cast() function is the system's governance executor. The signer set that can call cast() was not confirmed — authority()=zero means access control falls back to contract-level access checks or is operated by the deployer."
       }
     ],
     "review": {
@@ -185,16 +187,15 @@
           "url": "https://docs.usdd.io/developers/deployment-addresses"
         },
         {
-          "label": "Etherscan contract source",
+          "label": "Etherscan USDD token source",
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
         }
       ],
-      "evidence": "USDD docs describe collateralized issuance architecture and deployment addresses; token-source review identifies USDD Join as the direct ward/minter while governance/Pause/Vat authority remains unresolved.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
+        "Confirm who controls the USDD Tron GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d) cast() function — authority()=zero; need issuer disclosure or transaction history analysis to identify the operative signer set."
       ]
     }
   },

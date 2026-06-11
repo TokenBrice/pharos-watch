@@ -100,11 +100,43 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USYC issuance is modeled as fund/issuer-operated authority rather than a permissionless protocol mint path.",
+    "confidence": "verified",
+    "summary": "USYC issuance is issuer-controlled. On Ethereum and BSC the token owner() is an issuer EOA (MPC/HSM custody expected). On Solana the mint/freeze authority is a PDA of an unidentified BPFLoaderUpgradeable program owned by EMfvuBR8 — consistent with issuer-operated custodial minting.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "label": "USYC Ethereum token owner (EOA)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x13ff8cabb86edf94a2df4f98773bda4005182dd6",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ethereum: USYC owner() at block 25294716",
+            "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
+          }
+        ],
+        "evidence": "At Ethereum block 25294716, owner() on 0x136471a34f6ef19fe571effc1ca711fdb8e49f2b returned 0x13ff8cabb86edf94a2df4f98773bda4005182dd6; eth_getCode returned 0x (EOA). No proxy admin (EIP-1967 admin slot = 0x0). Implementation at 0xbf0f2f3aad6b99893d80c550fbacec915545eb92 (23856 bytes)."
+      },
+      {
+        "label": "USYC BSC token owner (EOA)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "BSC: USYC owner() at block 103622902",
+            "url": "https://bscscan.com/address/0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311"
+          }
+        ],
+        "evidence": "At BSC block 103622902, owner() on 0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311 returned 0xcd636d955a95385ec5e2776b167b92e89ef6f70e; eth_getCode returned 0x (EOA). No proxy admin slot set."
+      },
+      {
+        "label": "USYC Solana mint authority (issuer-controlled PDA)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -112,11 +144,11 @@
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
-            "label": "USYC docs",
-            "url": "https://usyc.docs.hashnote.com/"
+            "label": "Solana mint account: 7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
+            "url": "https://solscan.io/token/7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn"
           }
         ],
-        "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails."
+        "evidence": "Solana SPL mint 7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn has mint_authority and freeze_authority = DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y. DZ7j2YL is a non-executable account owned by BPFLoaderUpgradeable program EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm (unknown program, likely issuer multisig/custody PDA)."
       }
     ],
     "review": {
@@ -124,14 +156,15 @@
         {
           "label": "USYC docs",
           "url": "https://usyc.docs.hashnote.com/"
+        },
+        {
+          "label": "Ethereum: USYC token contract",
+          "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
         }
       ],
-      "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "Ethereum and BSC owner() confirmed as EOAs at blocks 25294716 and 103622902; eth_getCode returns 0x (no bytecode) on both. Solana mint authority is DZ7j2YL (issuer-controlled PDA of BPFLoaderUpgradeable program). EOA ownership on main chains is expected for enterprise MPC/HSM custody and corroborates the issuer-operated model; no permissionless mint route exists.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

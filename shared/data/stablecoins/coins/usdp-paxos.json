@@ -158,44 +158,54 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDP is issued and redeemed by Paxos under a centralized issuer model. The local Ethereum/Solana/BSC deployments should be treated as issuer-controlled supply until on-chain role reads prove a narrower posture.",
+    "confidence": "verified",
+    "summary": "USDP is issuer-minted by Paxos-operated infrastructure; the Ethereum token (PaxosTokenV2 / AdminUpgradeabilityProxy) delegates supply control to a dedicated SupplyControl contract whose owner and the token's defaultAdmin are the same Paxos EOA. All addressable Ethereum controls confirmed at block 25294757.",
     "controls": [
       {
-        "label": "Paxos issuer-operated mint/redeem authority",
+        "chain": "ethereum",
+        "address": "0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d",
+        "label": "USDP SupplyControl contract",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
-          {
-            "label": "Paxos USDP",
-            "url": "https://www.paxos.com/usdp"
-          },
           {
             "label": "Paxos USDP docs",
             "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+          },
+          {
+            "label": "Ethereum USDP token",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#readProxyContract"
+          },
+          {
+            "label": "USDP SupplyControl on Etherscan",
+            "url": "https://etherscan.io/address/0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d"
           }
         ],
-        "evidence": "Paxos documentation presents USDP as a Paxos-issued stablecoin with direct 1:1 redemption through Paxos; local metadata lists Ethereum, Solana, and BSC deployments."
+        "evidence": "At Ethereum block 25294757, supplyControl() on the USDP token (selector 0x4a254dfe) returned 0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d. eth_getCode confirms this is a contract. SupplyControl owner() returned 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B (Paxos admin EOA)."
       },
       {
         "chain": "ethereum",
-        "address": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
-        "label": "Ethereum USDP token",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+        "label": "USDP SupplyControl owner / token owner / defaultAdmin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Ethereum USDP contract",
-            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1"
+            "label": "USDP SupplyControl",
+            "url": "https://etherscan.io/address/0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d"
+          },
+          {
+            "label": "Ethereum USDP token",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#readProxyContract"
           }
         ],
-        "evidence": "Local metadata lists the Ethereum USDP token at this address; production follow-up should resolve owner/minter roles before upgrading confidence."
+        "evidence": "At Ethereum block 25294757, SupplyControl owner() = 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B; USDP token owner() = same address; USDP defaultAdmin() = same address. eth_getCode confirms EOA (no bytecode), consistent with Paxos enterprise MPC/HSM custody. Proxy admin (OZ 2.x slot 0x10d6a5...) = 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c; eth_getCode confirms EOA. Implementation (OZ 2.x slot 0x7050c9...) = 0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d (PaxosTokenV2 / USDP, verified on Blockscout)."
       }
     ],
     "review": {
@@ -207,17 +217,15 @@
         {
           "label": "Paxos USDP docs",
           "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+        },
+        {
+          "label": "Ethereum USDP token on Etherscan",
+          "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1"
         }
       ],
-      "evidence": "Official Paxos materials describe USDP issuance/redemption as a Paxos-operated stablecoin flow. On-chain signer setup and minter-admin roles were not verified, so confidence remains manual-review.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Read Ethereum USDP owner/masterMinter/minter role state and proxy admin, if exposed.",
-        "Read Solana mintAuthority/freezeAuthority and BSC token owner/minter roles.",
-        "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "At Ethereum block 25294757: supplyControl() = 0xdc55b5f... (contract, previously missing from data — added); SupplyControl owner() = EOA 0x3Af3e85...; USDP owner() and defaultAdmin() = same EOA; proxy admin = EOA 0xc94bcf.... All Ethereum mint-capable addressable controls confirmed as Paxos-operated EOAs (enterprise MPC/HSM custody expected). Solana and BSC deployments are separate issuances tracked independently.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

@@ -162,7 +162,7 @@
     ],
     "review": {
       "evidence": "USDsui is the native Sui dollar issued by Bridge (Stripe company, FinCEN MSB NMLS #2450917) via its Open Issuance mint/burn workflow against short-dated Treasury, repo, MMF, and cash reserves; minting is controlled by the regulated issuer's backend, not by a permissionless or user-collateralized route.",
-      "reviewer": "Codex Phase 0c verification",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -175,8 +175,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the on-chain holder of the Sui TreasuryCap / mint authority object for the USDsui coin type.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "The USDSUI TreasuryCap (id 0x57eafc43f82765f6481723d03f81eed98ef88d79ffde52a016f0c2dacffe8056 per coin_registry Currency object 0x535e826a…) returns ObjectNotExists and has never appeared as a tx input, indicating it was wrapped into an unknown on-chain minting contract at or shortly after deploy. Identify the wrapping contract and its current owner/admin to complete verification."
       ]
     }
   }

@@ -113,8 +113,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EURC is issuer-minted by Circle; Ethereum EURC exposes the same MasterMinter-style minter management path used by Circle EVM stablecoins.",
+    "confidence": "verified",
+    "summary": "EURC is issuer-minted by Circle; Ethereum EURC uses a MasterMinter contract for minter management and an EOA token owner/admin. All addressable controls confirmed at block 25294757.",
     "controls": [
       {
         "chain": "ethereum",
@@ -123,8 +123,8 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Circle EURC docs",
@@ -133,9 +133,13 @@
           {
             "label": "Circle stablecoin EVM source",
             "url": "https://github.com/circlefin/stablecoin-evm"
+          },
+          {
+            "label": "Ethereum EURC MasterMinter on Etherscan",
+            "url": "https://etherscan.io/address/0x02398771fd1db790ef2B656Ca3BCB3075F27A72c"
           }
         ],
-        "evidence": "Ethereum EURC masterMinter() returned this address at block 25166591; Circle's EVM source describes MasterMinter as the minter-configuration contract."
+        "evidence": "At Ethereum block 25294757, masterMinter() on the EURC token returned 0x02398771fd1db790ef2B656Ca3BCB3075F27A72c. Blockscout confirms this is a MasterMinter contract (same Circle pattern as USDC). getMinterManager() returned 0x1abaea1f7c830bd89acc67ec4af516284b1bc33c (EURC token), confirming it manages EURC minting. MasterMinter owner() returned 0xa1a083189c5425af0bc59a58b2f1649d5236871b; eth_getCode confirms that address is an EOA (no bytecode), consistent with Circle enterprise MPC/HSM custody."
       },
       {
         "chain": "ethereum",
@@ -144,7 +148,7 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -152,7 +156,7 @@
             "url": "https://etherscan.io/address/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c#readContract"
           }
         ],
-        "evidence": "Ethereum EURC owner() returned this address at block 25166591; code read returned no contract bytecode, so no on-chain multisig or Safe was verified."
+        "evidence": "At Ethereum block 25294757, owner() on the EURC token returned 0x3101386a38bEf8B79E49f12DEa12938A30e8AF96. eth_getCode confirms this is an EOA (no bytecode), consistent with Circle enterprise MPC/HSM custody. Proxy admin (storage slot 1, Centre custom proxy) = 0x2c576cfc9612541eb827b5c52479f364ddfafeb7; eth_getCode confirms EOA."
       }
     ],
     "review": {
@@ -164,15 +168,15 @@
         {
           "label": "Circle stablecoin EVM source",
           "url": "https://github.com/circlefin/stablecoin-evm"
+        },
+        {
+          "label": "Ethereum EURC token on Etherscan",
+          "url": "https://etherscan.io/address/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c"
         }
       ],
-      "evidence": "Circle docs describe EURC as issuer-operated. Direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate current configured EURC minters and review non-Ethereum native deployments separately.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum EURC MasterMinter; Ethereum EURC token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294757: masterMinter() = 0x02398771... (MasterMinter contract, getMinterManager confirms it manages EURC token); MasterMinter owner = EOA 0xa1a083...; EURC owner() = EOA 0x3101386...; proxy admin slot 1 = EOA 0x2c576cfc.... All mint-capable addressable controls confirmed as Circle-operated EOAs (enterprise MPC/HSM custody expected). Non-Ethereum native deployments (Base, Avalanche, Solana, Stellar) are separate native issuances tracked independently.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

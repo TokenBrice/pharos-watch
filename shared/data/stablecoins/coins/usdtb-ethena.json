@@ -132,44 +132,46 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves; on-chain mint/burn uses MINTER_BURNER_ROLE administration rather than Ethena USDe signed-order minting.",
+    "confidence": "verified",
+    "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves; on-chain mint/burn uses MINTER_BURNER_ROLE (single EOA) administered by DEFAULT_ADMIN_ROLE (single EOA), both confirmed on-chain.",
     "controls": [
       {
-        "label": "USDtb MINTER_BURNER_ROLE mint/burn authority",
+        "chain": "ethereum",
+        "address": "0x364366a7164fb518eafaa42af0c86eddab78e6f3",
+        "label": "USDtb MINTER_BURNER_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
-          {
-            "label": "USDtb introduction",
-            "url": "https://docs.usdtb.money/introduction"
-          },
           {
             "label": "USDtb mint and redeem docs",
             "url": "https://docs.usdtb.money/mint-and-redeem"
+          },
+          {
+            "label": "Ethereum USDtb contract",
+            "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
           }
         ],
-        "evidence": "USDtb docs describe Anchorage Digital Bank USDtb issuance/redemption against reserves; verified implementation exposes MINTER_BURNER_ROLE for mint/burn rather than USDe signed-order rails."
+        "evidence": "At Ethereum block 25294739, hasRole(MINTER_BURNER_ROLE=0xcfd53186, 0x364366) returned true. eth_getCode returned empty (EOA confirmed). This is the sole active MINTER_BURNER_ROLE holder per Blockscout RoleGranted/RoleRevoked log scan from block 21287284. Issuer-operated model corroborated by USDtb docs (Anchorage Digital Bank)."
       },
       {
         "chain": "ethereum",
         "address": "0xd93826BB299765c87D13AeBa2A7E5d9B27A03956",
-        "label": "USDtb DEFAULT_ADMIN_ROLE",
+        "label": "USDtb DEFAULT_ADMIN_ROLE holder",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "USDtb implementation source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x9d6d2510c2f4e2949cc3f85c38f5d58f1f8b9589?fields=abi,metadata"
+            "label": "Ethereum USDtb contract",
+            "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
           }
         ],
-        "evidence": "Role review identifies this address as DEFAULT_ADMIN_ROLE, which can grant/revoke MINTER_BURNER_ROLE."
+        "evidence": "At Ethereum block 25294739, hasRole(DEFAULT_ADMIN_ROLE=0x00, 0xd93826) returned true. eth_getCode returned empty (EOA confirmed). Two earlier DEFAULT_ADMIN_ROLE holders (0x0c24fc, 0xe897d8) were revoked per Blockscout event scan; 0xd93826 is the sole active admin."
       }
     ],
     "review": {
@@ -181,14 +183,15 @@
         {
           "label": "USDtb mint and redeem docs",
           "url": "https://docs.usdtb.money/mint-and-redeem"
+        },
+        {
+          "label": "Ethereum USDtb contract",
+          "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
         }
       ],
-      "evidence": "USDtb docs describe Anchorage Digital Bank issuer-operated mint/redeem rails backed by BUIDL and cash reserves, and implementation review shows MINTER_BURNER_ROLE plus DEFAULT_ADMIN_ROLE rather than Ethena USDe signed-order minting.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At block 25294739: MINTER_BURNER_ROLE (0xcfd53186 from contract constant) held solely by 0x364366 (EOA); DEFAULT_ADMIN_ROLE held solely by 0xd93826 (EOA) after two revocations. Both confirmed via hasRole reads + eth_getCode. Issuer-backend EOA custody (MPC/HSM) corroborated by Anchorage Digital Bank USDtb docs. BLOCKLISTER_ROLE, PAUSER_ROLE, and sanction-list role (0x548c) are separate non-minting roles.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

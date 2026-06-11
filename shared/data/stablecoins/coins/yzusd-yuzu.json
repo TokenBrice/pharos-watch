@@ -255,8 +255,8 @@
       }
     ],
     "review": {
-      "evidence": "Yuzu Money docs and third-party reviews describe yzUSD primary mint/redeem as gated to accredited/qualified/institutional investors at 1:1 with USDT0, with collateral run through a Fordefi MPC workspace restricted to whitelisted protocols and overcollateralization plus a yzPP first-loss tranche; authored self-contained as the parent of syzUSD (no inheritedFrom).",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Plasma block 24247237 (via plasma.drpc.org): yzUSD (0x6695c0f8706c5ace3bdf8995073179cca47926dc) is a UUPS proxy; implementation slot = 0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe; EIP-1967 proxy admin slot = 0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa (ProxyAdmin contract); owner() on the UUPS proxy returned 0x2130457539612ae9838e0314cda1a8abbdb7cfbc (contract, 10898 bytes); ProxyAdmin.owner() also returns the same address. The owner contract reverts on owner(), getOwners(), and getRoleMemberCount() — it is not a Safe and not standard AccessControl; identity unresolvable from on-chain reads alone.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -268,10 +268,8 @@
           "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc"
         }
       ],
-      "sourceFreeRationale": "Eligible-investor-gated mint and Fordefi MPC custody taken from Yuzu docs/coverage; the on-chain yzUSD minter role/owner and the MPC signer policy were not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain yzUSD minter/owner admin on Plasma and the Fordefi MPC quorum/policy controlling collateral operations.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "Identify the custom governance contract at 0x2130457539612ae9838e0314cda1a8abbdb7cfbc on Plasma: it owns both the yzUSD UUPS proxy and its ProxyAdmin but reverts on all standard owner/role queries. Confirm its signer set and quorum before promotion."
       ]
     }
   }

@@ -52,9 +52,9 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "REUSD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "REUSD mint() requires operators[msg.sender] || msg.sender == owner(). No operators have been set (zero SetOperator events). owner() returns the Core contract (0xc07e…), which is Resupply's on-chain governance hub. Core.execute() is callable only by the Voter contract (0x1111…), a token-weighted on-chain governance contract requiring quorum and voting period. No EOA or multisig holds direct mint access.",
     "mintIncidents": [
       {
         "date": "2025-06-26",
@@ -73,34 +73,45 @@
     ],
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
-        "role": "direct-minter",
-        "authorityType": "unknown",
+        "chain": "ethereum",
+        "address": "0xc07e000044f95655c11fda4cd37f70a94d7e0a7d",
+        "label": "REUSD owner — Resupply Core governance contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Etherscan contract source",
-            "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+            "label": "Blockscout — REUSD contract",
+            "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+          },
+          {
+            "label": "Blockscout — Core contract",
+            "url": "https://eth.blockscout.com/address/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
           }
         ],
-        "evidence": "REUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "At Ethereum block 25294733: owner() on REUSD returned 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. eth_getCode returned contract (2372 bytes). REUSD source: mint() requires operators[msg.sender] || msg.sender == owner(); no SetOperator events found (0 logs). Core source: execute() callable only by voter 0x11111111063874ce8dc6232cb5c1c849359476e6 (token-weighted on-chain governance) or operators with explicit per-selector permissions. Storage slot 1 on Core confirmed voter address."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+          "label": "Blockscout — REUSD contract source",
+          "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+        },
+        {
+          "label": "Blockscout — Core contract source",
+          "url": "https://eth.blockscout.com/address/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+        },
+        {
+          "label": "Blockscout — Voter contract source",
+          "url": "https://eth.blockscout.com/address/0x11111111063874ce8dc6232cb5c1c849359476e6"
         }
       ],
-      "evidence": "REUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "At Ethereum block 25294733: REUSD mint() gated by owner (Core 0xc07e…) or operators (none set — zero SetOperator events). Core.execute() callable only by Voter 0x1111… (on-chain token governance with quorum requirement) or permissioned operators. No EOA or Safe holds direct mint access. Mint authority is DAO-governed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "exotic",

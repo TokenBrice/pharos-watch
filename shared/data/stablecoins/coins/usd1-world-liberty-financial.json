@@ -176,8 +176,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USD1 is issuer-backed; the Ethereum token owner/controller is contract-based and its default admin is a 3/6 Safe behind a 3-day admin delay.",
+    "confidence": "verified",
+    "summary": "USD1 is issuer-backed; the Ethereum token owner is an AccessControl controller whose defaultAdmin is a 3/6 Safe. MINTER_ROLE is held by that Safe, a BitGo 2/3 WalletSimple, and one EOA.",
     "controls": [
       {
         "chain": "ethereum",
@@ -187,19 +187,15 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "timelockDelaySec": 259200,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
-          {
-            "label": "USD1 website",
-            "url": "https://worldlibertyfinancial.com/usd1"
-          },
           {
             "label": "Ethereum USD1 contract",
             "url": "https://etherscan.io/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#readProxyContract"
           }
         ],
-        "evidence": "Ethereum token owner/controller reads resolved to this contract. Its defaultAdminDelay was reported as 259200 seconds in the verified-source review."
+        "evidence": "At Ethereum block 25294739, USD1 token owner() returned this controller contract (confirmed). controller defaultAdmin() returned 0x0D190B74 (the curated Safe). Contract has 12193 bytes bytecode."
       },
       {
         "chain": "ethereum",
@@ -211,19 +207,66 @@
         "threshold": 3,
         "signerCount": 6,
         "timelockDelaySec": 259200,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0xCa09699CA19324C42884A5C88805E715F48A24B1",
+            "0x12F9FAcFa1a3F1658c060795083aF4B07A9a2ff7",
+            "0xb9019Fd4503C90f524EEc0807A80e4C8f3eB38Cd",
+            "0x99c9f601100ddC6DEbF6d24Fc1A8CD673cD53a3C",
+            "0x74c6551dEFb2E44fe888ED23818986D4FcE23DEa",
+            "0x03E798b42d81D8328041de1e3294545b701550f0"
+          ],
           "threshold": 3,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294739,
+          "source": "safe-api"
         },
         "sources": [
           {
-            "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d/"
+            "label": "Safe API snapshot",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d"
           }
         ],
-        "evidence": "Controller default-admin review resolved this Safe; getThreshold() returned 3 and getOwners() returned 6 owners at Ethereum block 25165911."
+        "evidence": "At Ethereum block 25294739, controller defaultAdmin() returned this Safe (confirmed). Safe API: threshold=3, 6 owners, modules=[], guard=zero, masterCopy=0x41675C (Gnosis Safe 1.4.1). Also holds MINTER_ROLE on the controller directly."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0f33afb00334EA05F6f0E64fC919920eCd4Bd16C",
+        "label": "USD1 MINTER_ROLE BitGo WalletSimple",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USD1 controller",
+            "url": "https://etherscan.io/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2"
+          }
+        ],
+        "evidence": "At block 25294739, hasRole(MINTER_ROLE, 0x0f33afb0) returned true on the controller. Contract is a BitGo WalletSimple (EIP-1167 minimal proxy, WalletFactory 0xa7198f48); 2-of-3 multisig with signers 0xd8fab08c, 0xb7ef75ec, 0x833b62b1 confirmed via isSigner() reads and creation log."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x87e0017503560a655309c470666645472c66246e",
+        "label": "USD1 MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USD1 controller",
+            "url": "https://etherscan.io/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2"
+          }
+        ],
+        "evidence": "At block 25294739, hasRole(MINTER_ROLE, 0x87e001) returned true on the controller. eth_getCode returned empty (EOA confirmed). Issuer-backend minting endpoint."
       }
     ],
     "review": {
@@ -231,14 +274,15 @@
         {
           "label": "USD1 website",
           "url": "https://worldlibertyfinancial.com/usd1"
+        },
+        {
+          "label": "Ethereum USD1 contract",
+          "url": "https://etherscan.io/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#readProxyContract"
         }
       ],
-      "evidence": "World Liberty Financial presents USD1 as issuer-backed; Ethereum contract reads identify the token owner/controller and 3/6 Safe default-admin path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USD1 token owner/controller; USD1 controller default-admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At block 25294739: token owner() = controller 0xee9b1a09 (contract, confirmed). Controller defaultAdmin() = 3/6 Safe 0x0D190B74 (Safe API snapshot: 6 owners, no modules, guard=zero). MINTER_ROLE active holders: Safe 0x0D190B74, BitGo WalletSimple 0x0f33afb0 (2/3 signers confirmed), EOA 0x87e001. One earlier MINTER_ROLE holder (0xf9e47d37) revoked. All on-chain mint surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

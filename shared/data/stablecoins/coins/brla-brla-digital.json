@@ -113,26 +113,74 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "BRLA is issued by Avenia (formerly BRLA Digital); after KYC, users mint and redeem 1:1 for BRL through the issuer's centralized platform, backed by Brazilian government bonds and BRL cash in regulated custody.",
+    "confidence": "verified",
+    "summary": "BRLA is issued by Avenia (formerly BRLA Digital); mint() on each chain requires the issuer-held operator role; on Polygon two EOAs currently hold the role, on Gnosis four addresses (3 EOAs + 1 proxy contract) hold the role — all confirmed via on-chain hasRole reads.",
     "controls": [
       {
-        "label": "Avenia issuance backend",
+        "label": "Avenia operator wallet — Polygon (primary)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Issuer-operated mint/redeem: Avenia creates BRLA supply against custodied BRL bonds and cash and redeems 1:1 for BRL after KYC; no permissionless or user-collateralized mint route exists across its native multichain deployments."
+        "chain": "polygon",
+        "address": "0x36cd3733f4fc53fe49206f2398fcafee8ede4b34",
+        "canRaiseCap": false,
+        "evidence": "At Polygon block 88321577, hasRole(0xf48dee1a…,0x36cd3733…) returned true on proxy 0xe6a537…; eth_getCode returned no bytecode (EOA). Role hash 0xf48dee1a72497b9e734e498e1b3086c0d2dbcca13f16f15848f974469f906bbf is the sole mint-capable role constant in the deployed bytecode (confirmed via PUSH32 bytecode scan). mint() is onlyRole and no role-enumeration is exposed (non-enumerable AccessControlUpgradeable, UUPS proxy, no proxy admin).",
+        "sources": [
+          {
+            "label": "BRLA Polygon contract",
+            "url": "https://polygonscan.com/address/0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+          }
+        ]
+      },
+      {
+        "label": "Avenia operator wallet — Polygon (secondary)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "polygon",
+        "address": "0x55127198f2cea3c81cb912f5595098c2885c9fac",
+        "canRaiseCap": false,
+        "evidence": "At Polygon block 88321577, hasRole(0xf48dee1a…,0x55127198…) returned true; eth_getCode = no bytecode (EOA). No RoleRevoked events for this address.",
+        "sources": [
+          {
+            "label": "BRLA Polygon contract",
+            "url": "https://polygonscan.com/address/0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+          }
+        ]
+      },
+      {
+        "label": "Avenia operator wallets — Gnosis (EOAs)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "gnosis",
+        "canRaiseCap": false,
+        "evidence": "At Gnosis block 46643103, three EOAs hold the operator role (0x97667070…) on 0xfecb3f7c…: 0x19df6878…, 0xbb6878b9…, 0xca0402fb… — all confirmed hasRole=true; code=0 for each. A fourth holder (0xa5e1a817…) is an ERC1967Proxy (340 bytes) representing the Avenia minting backend. Celo deployment at the same address uses the same pattern.",
+        "sources": [
+          {
+            "label": "BRLA Gnosis contract",
+            "url": "https://gnosisscan.io/address/0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "BRLA materials describe a single issuer (Avenia) minting BRLA against off-chain Brazilian government bonds and BRL cash in regulated custody, with monthly attestations; mint/redeem is KYC-gated and centralized.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "Polygon block 88321577: two EOA operator role holders confirmed via hasRole; role hash 0xf48dee1a… is the only mint-capable constant in bytecode (BRLAV1_1 / UUPS, non-enumerable AccessControl). Gnosis block 46643103: three EOA + one ERC1967Proxy operator role holders confirmed. Celo uses the same contract address. Moonbeam totalSupply=0 (inactive). BRLA contract source (BRLAV1_1) verifies mint() gated by the operator role. No proxy admin on any deployment; upgrader role is separate.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins across Polygon, Gnosis, Celo, and Moonbeam not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin across Polygon, Gnosis, Celo, and Moonbeam before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+      "sources": [
+        {
+          "label": "BRLA Polygon contract (proxy)",
+          "url": "https://polygonscan.com/address/0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        },
+        {
+          "label": "BRLA Gnosis contract",
+          "url": "https://gnosisscan.io/address/0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        },
+        {
+          "label": "Avenia BRLA website",
+          "url": "https://avenia.io/brla"
+        }
       ]
     }
   },

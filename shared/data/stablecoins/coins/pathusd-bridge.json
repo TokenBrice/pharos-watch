@@ -179,7 +179,7 @@
     ],
     "review": {
       "evidence": "Tempo docs describe pathUSD as a TIP-20 precompile stablecoin where the administrative authority can mint/burn arbitrarily; Bridge (FinCEN MSB) operates issuance and redemption against a cash/Treasury/repo/MMF reserve, with no permissionless or user-collateralized mint route.",
-      "reviewer": "Codex Phase 0c verification",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -192,8 +192,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "Tempo chain has no standard public EVM RPC and no accessible block explorer API; the TIP-20 precompile token administrator address for pathUSD (0x20c0000000000000000000000000000000000000) cannot be confirmed via on-chain reads with available tooling. Resolve via Tempo chain native tooling or issuer disclosure of the administrator key/multisig before raising confidence."
       ]
     }
   }

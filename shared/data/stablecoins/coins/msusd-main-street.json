@@ -53,39 +53,95 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "MSUSD can be minted by a configured minter or stakedmsUSD contract; the owner can set those addresses and raise the supply limit, with UUPS upgrades gated by the contract's timelock check.",
+    "confidence": "verified",
+    "summary": "MSUSD on Ethereum mints via a configured minter contract (0x70c0c12) owned by a 3/4 Safe; on Sonic, the 3/4 Safe mints directly (minter() = zero). Both Safes share the same 4 signers.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
-        "label": "MSUSD configured minter / stakedmsUSD",
+        "address": "0x70c0c12fbb3acfff8e48abf027436971cf2ade14",
+        "label": "MSUSD Ethereum minter contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Verified source allows mint(to,amount) only from minter or stakedmsUSD; owner can setMinter, setStakedmsUSD, and setSupplyLimit."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294721, minter() on the MSUSD proxy (0x4ba01f22827018b4772cd326c7627fb4956a7c00) returned 0x70c0c12fbb3acfff8e48abf027436971cf2ade14; that contract's owner() returns 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 (the ETH owner Safe). The minter contract code is 246 bytes (proxy pattern).",
+        "sources": [
+          {
+            "label": "MSUSD Ethereum (Etherscan)",
+            "url": "https://etherscan.io/address/0x4ba01f22827018b4772cd326c7627fb4956a7c00"
+          }
+        ]
       },
       {
         "chain": "ethereum",
         "address": "0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858",
-        "label": "MSUSD Ethereum owner",
+        "label": "MSUSD Ethereum owner (3/4 Safe)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() returned this address at Ethereum block 25165887."
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x5A8F0e61B503D958D0c9996268b373555295402D",
+            "0x7C7BC56841070b577FD1413f14381bd8466aD5c0",
+            "0x95d617E8be77D8Ad57745Ae814FeD83e55bb4108",
+            "0x19F63Dda10b162F0a35c3018ef3710606273D8E3"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "version": "1.4.1",
+          "observedBlock": 25294721,
+          "source": "safe-api"
+        },
+        "evidence": "Safe API (eth) confirmed 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 has 4 owners, threshold 3, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x41675C099F32341bf84BFc5382aF534df5C7461a (Safe v1.4.1). eth_getCode confirmed it is a contract (Gnosis proxy bytecode).",
+        "sources": [
+          {
+            "label": "Safe Transaction Service - Ethereum",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
+          }
+        ]
       },
       {
         "chain": "sonic",
         "address": "0x861a58d3DE287196c5546d10c7afFa479E0963e4",
-        "label": "MSUSD Sonic owner",
+        "label": "MSUSD Sonic owner (3/4 Safe)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() returned this address at Sonic block 71320471; Sonic implementation source was not verified in this pass."
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x5A8F0e61B503D958D0c9996268b373555295402D",
+            "0x7C7BC56841070b577FD1413f14381bd8466aD5c0",
+            "0x95d617E8be77D8Ad57745Ae814FeD83e55bb4108",
+            "0x19F63Dda10b162F0a35c3018ef3710606273D8E3"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "version": "1.4.1+L2",
+          "observedBlock": 73491022,
+          "source": "safe-api"
+        },
+        "evidence": "Safe API (sonic) confirmed 0x861a58d3DE287196c5546d10c7afFa479E0963e4 has the same 4 owners as the ETH Safe, threshold 3, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). Sonic minter() on the token returns zero address (owner mints directly).",
+        "sources": [
+          {
+            "label": "Safe Transaction Service - Sonic",
+            "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x861a58d3DE287196c5546d10c7afFa479E0963e4/"
+          }
+        ]
       }
     ],
     "review": {
@@ -93,17 +149,15 @@
         {
           "label": "Sourcify MSUSD implementation source",
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x96271bEa7A9c4B8eDd6c3A05E548f05F157ADA46/sources/src/v2/msUSDV2.sol"
+        },
+        {
+          "label": "Safe Transaction Service - Ethereum",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
         }
       ],
-      "evidence": "Direct reads: Ethereum implementation = 0x96271bea7a9c4b8edd6c3a05e548f05f157ada46 and owner() = 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 at block 25165887; Sonic implementation = 0xfbe86362f4fc7aac3acaf1b36ae211816f2fc478 and owner() = 0x861a58d3DE287196c5546d10c7afFa479E0963e4 at block 71320471.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Read current minter(), stakedmsUSD(), supplyLimit(), and timelock state.",
-        "Identify whether owner addresses are Safes, EOAs, or contracts with threshold/timelock controls.",
-        "Verify Sonic implementation source.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
-      ]
+      "evidence": "Ethereum block 25294721: MSUSD proxy owner() = 0x0eAe4ACb (3/4 Safe, Safe API confirmed), minter() = 0x70c0c12 (contract, owner = same Safe). Sonic block 73491022: MSUSD proxy owner() = 0x861a58d3 (3/4 Safe, same 4 signers, Safe API sonic confirmed), minter() = 0x0 (direct owner minting). Both Safes: threshold 3, no modules, no guard, known masterCopies.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "rwa",

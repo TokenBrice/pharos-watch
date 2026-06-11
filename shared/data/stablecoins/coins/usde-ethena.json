@@ -282,7 +282,7 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
     "controls": [
       {
@@ -293,7 +293,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethena mint and redeem docs",
@@ -304,7 +304,7 @@
             "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
           }
         ],
-        "evidence": "Ethereum USDe minter() returned this address at block 25165931; Ethena docs describe signed mint/redeem order flows and backend trust assumptions."
+        "evidence": "At Ethereum block 25294739, USDe minter() returned 0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3 (confirmed). Ethena docs describe signed mint/redeem order flows with this contract as the active minting endpoint; backend trust assumptions documented."
       },
       {
         "chain": "ethereum",
@@ -318,16 +318,33 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0x66096e581863EC2682e4E317Da41B80510a274F6",
+            "0x18d32B1AB042b5E9a3430e77fDE8B4783A019234",
+            "0xb93C042c688F1Cf038bab03C4F832F2630Bb7d8F",
+            "0x66892C66711B2640360C3123E6C23C0cFa50550F",
+            "0xE3F95F2e1aDEC092337FB5D93C1fE87558658b11",
+            "0x99682F56F4ccCF61BD7e449924f2f62D395e1E45",
+            "0x980742eDEA6b0df3566C19Ff4945c57E95449a13",
+            "0x54D0D64f7326b128959bf37Ed7B5f2510656a471",
+            "0xE987E14b2E204fdf5827a3cFCa7D476E8Df6a99E",
+            "0xe5cA87dA3A209aD85FdcbB515e1bD92644e9E1A6"
+          ],
           "threshold": 5,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25294739,
+          "source": "safe-api"
         },
         "sources": [
           {
-            "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862/"
+            "label": "Safe API snapshot",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862"
           }
         ],
-        "evidence": "Ethereum USDe owner() returned this Safe; getThreshold() returned 5 and getOwners() returned 10 owners at block 25165911. Worker Safe API review found no modules and zero guard."
+        "evidence": "At Ethereum block 25294739, USDe owner() returned this Safe (confirmed). Safe API returned: threshold=5, 10 owners, modules=[], guard=zero address, masterCopy=0xd9Db27 (Gnosis Safe 1.3.0)."
       }
     ],
     "review": {
@@ -339,14 +356,15 @@
         {
           "label": "Ethena trust assumptions",
           "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        },
+        {
+          "label": "Ethereum USDe token contract",
+          "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
         }
       ],
-      "evidence": "Ethena documentation describes signed order minting; Ethereum reads identify the active token minter and 5/10 Safe token-owner path.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "evidence": "At block 25294739: minter() confirmed at 0xe3490297 (issuer-backend; Ethena signed-order mint docs corroborate). owner() confirmed at 5/10 Safe 0x3B0AAf6e (Safe API snapshot: 10 owners, no modules, guard=zero). All addressable on-chain mint surfaces confirmed; issuer-backend model corroborated by docs.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

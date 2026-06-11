@@ -120,7 +120,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "NUSD is a synthetic delta-neutral dollar whose token grants MINTER_ROLE to Neutrl's StableMinter and DEFAULT_ADMIN_ROLE to a separate admin; mint is routed through Neutrl's Router.sol into AssetReserve/StableMinter, while redemption is KYC-gated.",
     "controls": [
       {
@@ -158,12 +158,12 @@
         "address": "0x51De41ec06e779715d7FB71Ef83A736cFc903217",
         "label": "NUSD DEFAULT_ADMIN_ROLE (token admin)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The NUSD token admin (DEFAULT_ADMIN_ROLE, with transferAdmin/acceptAdmin) can grant/revoke MINTER_ROLE and DENYLIST_MANAGER_ROLE, concentrating mint-authorization and denylist control in a single admin.",
-        "evidence": "Ethereum hasRole(DEFAULT_ADMIN_ROLE) reads on 2026-05-25 returned true for 0x51De41ec06e779715d7FB71Ef83A736cFc903217 and false for the prior constructor/admin address 0xE78615F841c3C013173FBE7679d17442C8673Cc1.",
+        "evidence": "At Ethereum block 25294779, eth_getCode(0x51De41ec06e779715d7FB71Ef83A736cFc903217) returned 0x (empty bytecode) — confirmed EOA. hasRole(DEFAULT_ADMIN_ROLE) previously confirmed true for this address.",
         "sources": [
           {
             "label": "NUSD token (Etherscan)",
@@ -173,8 +173,8 @@
       }
     ],
     "review": {
-      "evidence": "Ethereum reads of the NUSD token show MINTER_ROLE assigned to StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D, live DEFAULT_ADMIN_ROLE at 0x51De41ec06e779715d7FB71Ef83A736cFc903217, and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294779: MINTER_ROLE confirmed held by StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D (contract); DEFAULT_ADMIN_ROLE confirmed held by 0x51De41ec06e779715d7FB71Ef83A736cFc903217, verified EOA by eth_getCode returning 0x. All mint-capable controls confirmed addressable.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -185,11 +185,6 @@
           "label": "Neutrl minting docs",
           "url": "https://docs.neutrl.finance/"
         }
-      ],
-      "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Ethereum role reads and Neutrl docs; whether the live admin is an EOA, multisig, or Safe was not verified on-chain.",
-      "unresolvedQuestions": [
-        "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

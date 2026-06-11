@@ -97,46 +97,80 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF) to mint synths; there is no direct redemption (only debt repayment). The Metronome DAO (MET governance) controls collateral factors, debt parameters, and protocol admin.",
+    "confidence": "verified",
+    "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF); upgrade authority over the token proxy is controlled by a 3-of-5 Gnosis Safe (no modules, no timelock).",
     "controls": [
       {
         "chain": "ethereum",
-        "label": "Metronome Synth pool/minter contracts",
+        "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+        "label": "msUSD token proxy (EIP-1967, OZ TransparentUpgradeableProxy)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "msUSD is minted only against deposited collateral within Metronome Synth pools at governance-set collateral factors (75-85%); supply is bounded by collateralized debt with no off-protocol issuer minter and no direct redemption.",
-        "evidence": "Metronome Synth docs describe depositing collateral to mint synthetic assets (msUSD) at fixed collateral factors with debt repayment to reclaim collateral and intra-protocol synth-swap peg arbitrage."
+        "sources": [
+          {
+            "label": "msUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+          }
+        ],
+        "evidence": "At Ethereum block 25,290,617, EIP-1967 slots confirmed: implementation = 0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390, proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin)."
       },
       {
         "chain": "ethereum",
-        "label": "Metronome DAO governance / parameter admin",
+        "address": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "label": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
         "role": "governor",
-        "authorityType": "dao-governor",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "MET is the Metronome DAO governance token; governance sets collateral factors, fees, debt parameters, and administers the synth pools and protocol contracts.",
-        "evidence": "Metronome docs state MET serves as the governance token for the Metronome DAO, which administers the synth protocol's collateral and risk parameters."
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xa13011197D6793453d86eBCD3B13Cc49A234C339",
+            "0xB5AbDABE50b5193d4dB92a16011792B22bA3Ef51",
+            "0xb3983cDdBa4B127960A4cDD531AB989264509e23",
+            "0x25FCe091c5b51edEfc7a4A0E765f10ed032e804F",
+            "0xf3e996C8cd4ab3fDad381584D5Bd90C01Ec3C082"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25290617,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Metronome DAO multisig on Etherscan",
+            "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+          }
+        ],
+        "evidence": "ProxyAdmin owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33. Safe API confirmed Gnosis Safe v1.3.0, 3-of-5, nonce 365, no modules, no guard at block 25,290,617."
       }
     ],
     "review": {
-      "evidence": "Metronome Synth documentation describes msUSD as an overcollateralized synth minted at governance-set collateral factors with no direct redemption, administered by the MET-governed Metronome DAO.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Metronome Synth docs",
           "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+        },
+        {
+          "label": "msUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        },
+        {
+          "label": "Metronome DAO multisig on Etherscan",
+          "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
         }
-      ],
-      "sourceFreeRationale": "Synth-CDP mint mechanism and MET DAO governance confirmed from Metronome docs; the on-chain governance owner/multisig and pool admin addresses were not independently read.",
-      "unresolvedQuestions": [
-        "Resolve the Metronome DAO on-chain governance/admin authority (multisig/timelock) and the synth pool admin addresses before raising confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Metronome Synth pool/minter contracts; Metronome DAO governance / parameter admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

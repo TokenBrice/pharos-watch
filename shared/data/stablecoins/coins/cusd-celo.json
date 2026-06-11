@@ -76,16 +76,25 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 4,
-        "signerCount": 7,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "version": "1.4.1+L2",
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "version": "1.4.1+L2",
+          "observedBlock": 69286148,
           "source": "safe-api"
         },
         "sources": [
@@ -112,13 +121,11 @@
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
         }
       ],
-      "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners (down from 7 in prior data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). Prior evidence confirmed isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Owner count corrected from 7 to 6 (data drift fix).",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage.",
-        "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mento USDm token owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
       ]
     }
   },

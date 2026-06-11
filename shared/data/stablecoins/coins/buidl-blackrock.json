@@ -110,8 +110,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "BUIDL share/token issuance is operated through Securitize fund administration; the Ethereum proxy target exposes issueTokens mint functions and owner reads resolve to an externally owned address.",
+    "confidence": "verified",
+    "summary": "BUIDL share/token issuance is operated through Securitize fund administration; the Ethereum custom proxy owner is a confirmed EOA and the proxy target resolves to the curated Securitize implementation.",
     "controls": [
       {
         "chain": "ethereum",
@@ -121,7 +121,7 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Securitize BUIDL",
@@ -132,7 +132,7 @@
             "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec#readProxyContract"
           }
         ],
-        "evidence": "BUIDL proxy target() returned this implementation; source review identified Securitize issueTokens mint functions."
+        "evidence": "At Ethereum block 25294735, BUIDL proxy storage slot 1 (target) returned 0x603BB6909BE14F83282E03632280D91bE7fB83b2; code read confirms contract (34472 bytes). Securitize issueTokens mint surface confirmed."
       },
       {
         "chain": "ethereum",
@@ -149,7 +149,7 @@
             "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec#readProxyContract"
           }
         ],
-        "evidence": "Ethereum BUIDL owner() returned this address at block 25165931; code read returned no contract bytecode, so no on-chain multisig threshold was verified."
+        "evidence": "At Ethereum block 25294735, BUIDL proxy owner() returned 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e; eth_getCode returned 0x (EOA confirmed). Proxy uses custom Proxy contract with public owner and target slots."
       }
     ],
     "review": {
@@ -157,14 +157,15 @@
         {
           "label": "Securitize BUIDL",
           "url": "https://securitize.io/blackrock/buidl"
+        },
+        {
+          "label": "Ethereum BUIDL proxy",
+          "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec"
         }
       ],
-      "evidence": "Securitize materials describe BUIDL issuance through fund administration; Ethereum proxy/source reads identify the issueTokens implementation and owner/admin address.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (BUIDL implementation issueTokens surface; BUIDL token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At Ethereum block 25294735: owner() = 0xe01605f6b6dC593b7d2917F4a0940db2A625b09e (EOA, no bytecode); proxy slot 1 (target) = 0x603BB6909BE14F83282E03632280D91bE7fB83b2 (Securitize implementation, 34472 bytes). Custom Proxy contract (public owner + target); no EIP-1967 admin slot. Both mint-capable controls confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

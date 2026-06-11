@@ -85,8 +85,8 @@
       }
     ],
     "review": {
-      "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO, with vault collateral, auctions, and future collateral support. No first-party technical docs expose the current XSC owner/admin, so the governance/admin surface remains manual-review.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO. XSC (XT Smart Chain) is not EVM-indexed by any public keyless RPC or explorer API accessible in this environment; no public XSC block explorer with programmatic access was found. On-chain verification of vault contracts, owner/admin, pause, and upgrade authority is not possible without chain-specific tooling.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -95,8 +95,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the current XSC XTDao vault contracts, owner/admin, pause, and upgrade authority.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (XTDao vault/protocol mint route; XTDao collateral-parameter governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "XSC chain has no publicly accessible keyless RPC or block explorer API; on-chain verification of XTDao vault owner/admin requires either direct XSC node access or a public XSC explorer with contract read support."
       ]
     }
   }

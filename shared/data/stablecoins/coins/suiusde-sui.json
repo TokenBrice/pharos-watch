@@ -65,37 +65,57 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "suiUSDe is Sui's eSui Dollar powered by Ethena economics, but the Sui package defines a native coin with a TreasuryCap; the live TreasuryCap holder is unresolved, so the Sui deployment cannot be treated as inherited-only USDe authority.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "suiUSDe minting is controlled via a Treasury shared object that wraps the TreasuryCap. The single AdminRole holder (0xe3dbc438…) also holds the package UpgradeCap, giving one EOA full mint and upgrade authority.",
     "controls": [
       {
-        "label": "suiUSDe Sui TreasuryCap mint authority",
+        "label": "suiUSDe Treasury shared object (wraps TreasuryCap)",
         "role": "direct-minter",
-        "authorityType": "unknown",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
         "chain": "sui",
-        "address": "0x41d587e5336f1c86cad50d38a7136db99333bb9bda91cea4ba69115defeb1402::sui_usde::SUI_USDE",
-        "canRaiseCap": "unknown",
-        "evidence": "Sui coin metadata identifies eSui Dollar/suiUSDe, and the normalized Move module exposes init_treasury returning TreasuryCap<SUI_USDE>, DenyCapV2, and MetadataCap; the current TreasuryCap holder remains unresolved."
+        "address": "0xe6c3c84c34ba2f4869b5df23161ea8700c14e1de1328808258702567e40366ea",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sui fullnode RPC – Treasury object",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At Sui checkpoint 285785957, sui_getObject for 0xe6c3c84c…40366ea returns type treasury::Treasury, owner Shared (initial_shared_version 758887726). Dynamic object field read confirms TreasuryCap<SUI_USDE> (id 0xae5039…54bda) is wrapped inside the Treasury (ObjectOwner pointing to the Treasury's inner dynamic-field wrapper at 0x19a91d…0c21). DenyCap and MetadataCap are also stored inside the Treasury object (deny_cap and metadata_cap fields confirmed)."
       },
       {
-        "label": "Ethena economic/backing dependency",
-        "role": "backend-signer",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "Sui ecosystem materials describe suiUSDe/eSui Dollar as a synthetic dollar issued in collaboration with Ethena and powered by Ethena-style backing; this is an economic dependency, not proof that Sui mint authority is inherited-only."
+        "label": "suiUSDe AdminRole holder (mints via Treasury) and UpgradeCap owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "sui",
+        "address": "0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d",
+        "canRaiseCap": true,
+        "sources": [
+          {
+            "label": "Sui fullnode RPC – RoleAuthorized events",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At Sui checkpoint 285785957: suix_queryEvents for RoleAuthorized<AdminRole> returns a single event (tx 97LB9KNbTjNFwq2QXdA6HzSe4RjSXa63Y2WFP6fBaBfx) granting AdminRole to 0xe3dbc438…. Additional events confirm this address also holds EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole. suix_getOwnedObjects confirms UpgradeCap 0x764653924d7bc3b8… for package 0x41d587… (policy=0, version=1) is also owned by this address. sui_getObject for the address returns notExists confirming it is an EOA (Sui address, not a smart contract)."
       }
     ],
     "review": {
-      "evidence": "Sui coin metadata and normalized Move module output show suiUSDe is a native Sui coin with a TreasuryCap, while Sui/Ethena materials describe Ethena-powered economics; exact TreasuryCap/admin ownership remains unresolved.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Sui checkpoint 285785957: TreasuryCap<SUI_USDE> (id 0xae5039…) is wrapped inside Treasury shared object 0xe6c3c84c… as a dynamic object field. AdminRole and all operational roles are held by EOA 0xe3dbc438…, which also owns the package UpgradeCap (policy=0). The deployer 0xcebe2945… initially held roles but they were rotated to 0xe3dbc438… before the current state. DenyCap is stored inside the Treasury (not externally owned). All mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "Sui metadata/module reads establish a local TreasuryCap mint surface; exact holder and signer model were not resolved.",
-      "unresolvedQuestions": [
-        "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence.",
-        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
+      "sources": [
+        {
+          "label": "Sui fullnode RPC",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "suiUSDe Treasury object on Sui",
+          "url": "https://suiscan.xyz/mainnet/object/0xe6c3c84c34ba2f4869b5df23161ea8700c14e1de1328808258702567e40366ea"
+        }
       ]
     }
   }

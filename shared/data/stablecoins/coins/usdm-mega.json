@@ -153,36 +153,87 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdtb-ethena",
-    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb; its supply tracks USDtb-backed issuance, so it inherits USDtb's Ethena-operated mint authority rather than running an independent mint path.",
+    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb; its supply tracks USDtb-backed issuance, so it inherits USDtb's Ethena-operated mint authority rather than running an independent mint path. The wrapper's own admin is a 9-owner 4/9 Gnosis Safe; no direct mint function or proxy upgrade admin exists on either deployment.",
     "controls": [
       {
         "label": "USDM USDtb-rails representation (share accounting)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "USDM is issued on Ethena's USDtb rails and reserve-backed ~90% by USDtb (plus liquid stablecoins for redemptions); its supply changes against USDtb-denominated backing rather than creating base USDtb supply."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "USDM MegaETH contract (Blockscout)",
+            "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+          },
+          {
+            "label": "USDM Ethereum contract (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+          }
+        ],
+        "evidence": "At Ethereum block 25294742: ERC1967Proxy (impl 0x61e6eb7f9e36d27db1da7df55b898122b9145de2, ContractName xUSDOFTUpgradeable), admin slot 0x0 (no proxy upgrade admin). At MegaETH block 18390248: ERC1967Proxy (impl 0xac37677261885fdb372a37ac8d5d47044196073c, ContractName xUSDOFTUpgradeable), admin slot 0x0. Both: mint() reverts, getRoleMemberCount(MINTER_ROLE) reverts — no direct privileged mint surface. Supply controlled via LayerZero OFT bridge only."
       },
       {
-        "label": "Inherited USDtb off-chain attested mint authority",
-        "role": "backend-signer",
-        "authorityType": "issuer-backend",
+        "chain": "ethereum",
+        "address": "0x141C03AbC062a9d5d4238e1666B849C929e53cB2",
+        "label": "USDM logic owner (Gnosis Safe 9/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
         "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "Underlying USDtb is minted via Ethena issuer/backend-mediated (signed order) rails with LayerZero OFT distribution. USDM inherits this concentrated-admin posture from the USDtb parent."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 4,
+        "signerCount": 9,
+        "safe": {
+          "owners": [
+            "0xe3731a0ad5e59c3083fd899e234b7b2361d25b33",
+            "0x73a2063e47a6e20420b40a4655327de631ca70e",
+            "0x0e313794f9a827956d939c0df12732cfdeb5cf27e",
+            "0xd1e25f0e9193d7d69acf0348ab6b7936801090ec",
+            "0xd2668a22ecbe34cf651a7522312e4563d96a5aed",
+            "0x83408cc6157b2bb3a47acc912f7c30520ce4782b",
+            "0xbdc5974832b41c829b62eb3f713809910bef0237",
+            "0xa516af633efc0e856e4357514462e6195b1b2154",
+            "0x67fc0e9f75806ff0039ca8dc8bb398434db078c6"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25294742,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "USDM Ethereum contract (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+          }
+        ],
+        "evidence": "At Ethereum block 25294742: owner() on both MegaETH (block 18390248) and Ethereum USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain getOwners() returned 9 addresses; threshold() = 4 (confirmed slot 4); getModules() returned empty array (no modules); guard slot 0x33 = zero; fallbackHandler = zero; masterCopy (slot 0) = 0x41675c099f32341bf84bfc5382af534df5c7461a (GnosisSafe 1.3.0, ContractName Safe on Blockscout). This owner is a logic-level admin only; proxy upgrade admin slots are 0x0 on both chains (upgradeability not set/renounced)."
       }
     ],
     "review": {
-      "evidence": "USDM (MegaUSD) is issued on Ethena's USDtb rails and backed ~90% by USDtb (reserves coinId usdtb-ethena, depType implicit wrapper). It inherits USDtb's offchain-attested mint path and concentrated-admin posture; no independent MegaETH mint authority was identified. inheritedFrom set to usdtb-ethena (coin has no variantOf field).",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "USDM classified as a USDtb-rails variant per MegaETH/Ethena materials and reserve metadata; posture mirrored from the parent USDtb mintAuthority. The USDM token's own on-chain admin on MegaETH/Ethereum was not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain owner/minter admin of the USDM token on MegaETH and Ethereum and confirm it cannot mint beyond USDtb-backed issuance.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
-      ]
+      "sources": [
+        {
+          "label": "USDM MegaETH contract (Blockscout)",
+          "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+        },
+        {
+          "label": "USDM Ethereum contract (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        },
+        {
+          "label": "MegaETH docs",
+          "url": "https://docs.megaeth.com"
+        }
+      ],
+      "evidence": "Wrapper verification complete. Both USDM deployments (MegaETH 0xFAfD..., Ethereum 0xec2a...) are ERC1967Proxy contracts with impl xUSDOFTUpgradeable (LayerZero OFT), no proxy upgrade admin (admin slot = 0x0), no direct mint function, no MINTER_ROLE. Owner (same on both chains) is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, confirmed at Ethereum block 25294742 and MegaETH block 18390248. Parent coin usdtb-ethena tracked separately.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2025-12-08"

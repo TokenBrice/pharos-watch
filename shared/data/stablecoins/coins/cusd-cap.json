@@ -60,13 +60,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/vault/Vault.sol"
         }
       ],
-      "evidence": "Direct read at Ethereum block 25165886: EIP-1967 implementation = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. MegaETH address 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc had no code at block 19924084 despite being present in local metadata.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294782: EIP-1967 implementation slot = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6 (CapToken, 33KB, UUPS). insuranceFund() = 0x5eaf535b1e399de08db23b4e18bd3cd29e16b825 (GnosisSafe v1.4.1 proxy); interestReceiver() = 0xa1a20abdc873cf291c22ce3c8968ec06277324d0. ABI exposes addAsset, setDepositCap, upgradeToAndCall behind custom AccessDenied checks. No getRoleMemberCount/hasRole in ABI, zero RoleGranted events, no owner() — role holders not enumerable on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve the AccessControl contract address and current role holders.",
-        "Read current deposit caps, supported assets, upgrade authority, and whether a timelock or Safe controls AccessControl.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Cap cUSD vault mint path); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        "Vault (0xcccc62962d17b8914c62d74ffb843d73b2a3cccc) uses a custom non-enumerable AccessControl: no getRoleMemberCount/hasRole in ABI, no RoleGranted events emitted, and no owner()/admin() exposed. UUPS proxy implementation (0xa76645e15c267b876999bf7689e0b2c1ee29bfe6, CapToken) exposes addAsset/setDepositCap/upgradeToAndCall behind custom AccessDenied checks with no standard query path. Cannot enumerate role holders on-chain; verification requires off-chain documentation or a Cap-specific role enumeration interface."
       ]
     }
   },

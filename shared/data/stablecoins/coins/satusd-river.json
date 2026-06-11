@@ -137,30 +137,50 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "satUSD (River, formerly Satoshi Protocol) is a Liquity-v1-derived omni-CDP: users lock BTC/ETH/BNB/LSTs on a source chain and LayerZero OFT messaging authorizes a native satUSD mint on the destination chain, with the RIVER governance token steering parameters.",
+    "confidence": "verified",
+    "summary": "satUSD (River, formerly Satoshi Protocol) is a Liquity-v1-derived omni-CDP: users lock BTC/ETH/BNB/LSTs on a source chain and LayerZero OFT messaging authorizes a native satUSD mint on the destination chain. The OFT contracts on Ethereum and Base are UUPS proxies owned by a single EOA.",
     "controls": [
       {
         "label": "River omni-CDP borrower-operations / OFT mint",
-        "role": "minter-admin",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Mint capped by per-branch overcollateralized CDP debt; cross-chain mint is authorized by LayerZero OFT messages confirming source-chain collateral lockup.",
-        "evidence": "River docs and LayerZero integration coverage describe a Liquity-v1-style CDP whose collateral stays source-chain; OFT _lzSend/_lzReceive messages relay collateral state to authorize satUSD mint on the destination chain."
+        "evidence": "River docs and LayerZero integration coverage describe a Liquity-v1-style CDP whose collateral stays source-chain; OFT _lzSend/_lzReceive messages relay collateral state to authorize satUSD mint on the destination chain.",
+        "sources": [
+          {
+            "label": "River docs",
+            "url": "https://docs.river.inc"
+          }
+        ]
       },
       {
-        "label": "RIVER governance / cross-chain OFT peer admin",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "chain": "ethereum",
+        "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "label": "satUSD OFT owner (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "evidence": "RIVER token holders govern protocol parameters; the OFT/peer and message-relay configuration is admin-controlled rather than the immutable admin-key-free Liquity-v1 baseline."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25294721, owner() on the satUSD Ethereum contract (0x1958853a8be062dc4f401750eb233f5850f0d0d2, UUPS proxy with impl 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d) returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode returned 0x (EOA). Base OFT (0x70654aad8b7734dc319d0c3608ec7b32e03fa162) owner() also returned the same EOA.",
+        "sources": [
+          {
+            "label": "satUSD on Etherscan",
+            "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+          },
+          {
+            "label": "satUSD on Basescan",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "River/Satoshi Protocol documentation, the Satoshi-Protocol GitHub org, and LayerZero integration coverage describe a Liquity-v1-derived omni-CDP with cross-chain OFT mint authorization and RIVER-token governance; no on-chain owner/peer admin was independently confirmed.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At Ethereum block 25294721: owner() on satUSD ETH UUPS proxy = 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode = 0x (confirmed EOA). Base OFT owner() = same EOA. The ETH contract has an EIP-1967 implementation slot pointing to 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d (no separate proxy admin). EOA ownership is issuer-standard enterprise custody (MPC/HSM indistinguishable on-chain); per brief, this does not block verification.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -168,14 +188,9 @@
           "url": "https://docs.river.inc"
         },
         {
-          "label": "Satoshi-Protocol GitHub",
-          "url": "https://github.com/Satoshi-Protocol"
+          "label": "satUSD on Etherscan",
+          "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the on-chain owner/admin of the OFT mint contracts and the cross-chain peer configuration on each deployment.",
-        "Confirm whether any core CDP contracts have renounced ownership versus retaining an upgrade/admin multisig.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (River omni-CDP borrower-operations / OFT mint; RIVER governance / cross-chain OFT peer admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

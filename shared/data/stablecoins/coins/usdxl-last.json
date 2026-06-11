@@ -101,37 +101,51 @@
         "chain": "hyperevm",
         "canRaiseCap": "unknown",
         "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market.",
-        "evidence": "HypurrFi docs describe USDXL as modeled on Aave's GHO: a CDP-style synthetic dollar minted against deposited collateral in the pooled (Aave-v3-fork) market and burned on repayment."
+        "evidence": "At HyperEVM block 37547570: mint(0x1111...,10) reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED, confirming bucket-gated GHO-style minting model. New Pooled borrows are suspended (wind-down in progress, settlement target July 30 2026)."
       },
       {
-        "label": "HypurrFi / Last governance (ACL admin multisig)",
+        "label": "HypurrFi / Last proxy admin Safe (upgrade authority)",
         "role": "governor",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "chain": "hyperevm",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "This coin's metadata marks governanceQuality as multisig; HypurrFi (Aave-v3 fork) uses ACL-manager roles and demonstrated pause authority (markets frozen during the March 2026 Aave-v3 rounding-error disclosure), indicating an admin multisig controls facilitator/risk parameters."
+        "address": "0xf050623d497be7ea6653fd205a537d10300b4c6e",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x67a6d918c3adfc36b047a8684491481114f6b3a6",
+            "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 37547570,
+          "source": "onchain"
+        },
+        "evidence": "At HyperEVM block 37547570: EIP-1967 proxy admin slot of USDXL (0xca79db4b...) = 0xf050623d...; getOwners() returned [0x67a6d918..., 0xae04ce2f...]; Safe storage slot 3 (ownerCount) = 2, slot 4 (threshold) = 2, slot 5 (guard) = 0; getModulesPaginated returned empty array (no modules). masterCopy = 0xfb1bffc9... This Safe controls USDXL implementation upgrades."
       }
     ],
     "review": {
-      "evidence": "HypurrFi documentation describes USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control. Current HypurrFi wind-down materials state Pooled new borrows are suspended, USDXL rates are set to 30%, and full Legacy/Pooled settlement targets July 30, 2026.",
-      "reviewer": "Codex Phase 0c verification",
+      "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (bucket exhausted, wind-down active). The Safe proxy admin can upgrade the implementation; ACL admin for facilitator bucket not separately confirmed on-chain but is consistent with the same multisig governance.",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "HypurrFi USDXL docs",
-          "url": "https://docs.hypurrfi.com/products/usdxl"
+          "label": "USDXL token on HyperEVM",
+          "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
         },
         {
-          "label": "HypurrFi USDXL launch",
-          "url": "https://hypurrfi.beehiiv.com/p/on-usdxl-stability-and-pegs"
+          "label": "HypurrFi USDXL docs",
+          "url": "https://docs.hypurrfi.com/products/usdxl"
         }
       ],
       "unresolvedQuestions": [
-        "Confirm the HypurrFi ACL-admin / pool-admin multisig threshold and signer set on HyperEVM.",
-        "Confirm contract-level enforcement of suspended Pooled borrows and any remaining Legacy issuance caps during wind-down.",
-        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
+        "Confirm whether the ACL admin controlling the GHO facilitator bucket is the same Safe (0xf050623d) or a separate address; the proxy admin Safe is confirmed 2/2 but the facilitator-bucket admin was not separately identified on-chain."
       ]
     }
   }

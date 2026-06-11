@@ -137,8 +137,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDf uses AccessControl mint/admin roles; the verified Ethereum default-admin path is a 4/6 Safe, while active minter-role holders still need enumeration.",
+    "confidence": "verified",
+    "summary": "USDf uses AccessControl; DEFAULT_ADMIN_ROLE is a 4/6 Safe and MINTER_ROLE is held by a Falcon-owned PreCollateralizedMinter contract (also admin'd by the Safe). Both confirmed on-chain.",
     "controls": [
       {
         "chain": "ethereum",
@@ -149,23 +149,49 @@
         "directMintAbility": "can-authorize",
         "threshold": 4,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
           "threshold": 4,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25294739,
+          "source": "onchain"
         },
         "sources": [
-          {
-            "label": "Falcon docs",
-            "url": "https://docs.falcon.finance"
-          },
           {
             "label": "Ethereum USDf contract",
             "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
           }
         ],
-        "evidence": "Verified source uses AccessControl; DEFAULT_ADMIN_ROLE is held by this Safe. getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Active MINTER_ROLE holders remain unresolved."
+        "evidence": "At Ethereum block 25294739, hasRole(DEFAULT_ADMIN_ROLE=0x00, 0x1e482b60) returned true (confirmed). getOwners() returned 6 owners, getThreshold()=4, guard storage slot=zero, getModules() returned empty array, masterCopy slot=0x41675c (Gnosis Safe 1.4.1). All reads via publicnode RPC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3A4F41dac6000a59B79669B9356B5eB71bF4Cc59",
+        "label": "USDf PreCollateralizedMinter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USDf contract",
+            "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+          }
+        ],
+        "evidence": "At block 25294739, hasRole(MINTER_ROLE=0x9f2df0fe, 0x3A4F41) returned true (confirmed via Blockscout RoleGranted scan). Contract is named PreCollateralizedMinter (verified source, 3395 bytes). hasRole(DEFAULT_ADMIN_ROLE, 0x1e482b60) on this contract returned true — the admin Safe controls it. No RoleRevoked events found."
       }
     ],
     "review": {
@@ -173,15 +199,15 @@
         {
           "label": "Falcon docs",
           "url": "https://docs.falcon.finance"
+        },
+        {
+          "label": "Ethereum USDf contract",
+          "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
         }
       ],
-      "evidence": "Falcon documentation presents USDf as issuer/protocol-operated; verified Ethereum source and role reads identify a 4/6 Safe admin path but not the full active minter set.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate current MINTER_ROLE holders across USDf deployments.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDf default admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "evidence": "At block 25294739: DEFAULT_ADMIN_ROLE = 4/6 Safe 0x1e482b60 (RPC-confirmed: 6 owners, no modules, guard=zero, masterCopy Gnosis Safe 1.4.1). MINTER_ROLE = PreCollateralizedMinter 0x3A4F41 (verified source), which is itself admin'd by the same Safe. Blockscout event scan confirms no revocations. All mint-capable on-chain surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

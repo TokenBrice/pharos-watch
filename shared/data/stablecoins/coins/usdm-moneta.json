@@ -160,7 +160,7 @@
     ],
     "review": {
       "evidence": "USDM is issued by Moneta (USA) / NBX (EEA, MiCA-notified) on Cardano; mint/redeem is centralized and KYC-gated against reserves at Fidelity/Western Asset/Amundi, with a Charli3 reserve oracle checked before mint. No permissionless mint path is described.",
-      "reviewer": "Codex Phase 0c verification",
+      "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -168,10 +168,8 @@
           "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
         }
       ],
-      "sourceFreeRationale": "Issuer-controlled, oracle-gated mint model confirmed from Moneta/Charli3 materials; the Cardano minting-policy controller / policy keys for USDM were not independently resolved on-chain.",
       "unresolvedQuestions": [
-        "Resolve the Cardano minting-policy controller / policy keys for USDM and how the Charli3 oracle gate is enforced before raising confidence.",
-        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        "Cardano minting policy 0014df105553444d (USDM asset): the minting-policy script hash and its controlling keys are not readable via standard on-chain API calls (Koios getAccountInfo does not expose policy-key signatories). Resolve via Cardano CLI policy-id inspection or issuer disclosure of the policy script before raising confidence."
       ]
     }
   },
