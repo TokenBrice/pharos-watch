@@ -58,6 +58,14 @@ describe("writeEdgeCache", () => {
     writeEdgeCache(makeContext(), new Response("{}", { status: 200 }), ctx);
     await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
 
-    expect(warn).toHaveBeenCalledWith("[edge-cache] Failed to write response:", expect.any(Error));
+    const [payload] = warn.mock.calls[warn.mock.calls.length - 1] ?? [];
+    expect(JSON.parse(String(payload))).toMatchObject({
+      scope: "http",
+      level: "warn",
+      event: "edge_cache_write_failed",
+      route: "/api/stablecoins",
+      errorName: "Error",
+      errorMessage: "cache unavailable",
+    });
   });
 });

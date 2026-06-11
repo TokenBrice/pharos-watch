@@ -86,10 +86,15 @@ describe("router contract: strict frontend paths are routable", () => {
       expect(response!.status).toBe(500);
       expect(response!.headers.get("Content-Type")).toBe("application/json");
       await expect(response!.json()).resolves.toEqual({ error: "Internal Server Error" });
-      expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("[router] Error in /api/health:"),
-        expect.any(Error),
-      );
+      const [payload] = consoleError.mock.calls[consoleError.mock.calls.length - 1] ?? [];
+      expect(JSON.parse(String(payload))).toMatchObject({
+        scope: "http",
+        level: "error",
+        event: "route_handler_error",
+        route: "/api/health",
+        errorName: "Error",
+        errorMessage: "boom",
+      });
     } finally {
       vi.doUnmock("../../routes/registry");
       vi.resetModules();

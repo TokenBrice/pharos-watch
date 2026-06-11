@@ -135,7 +135,12 @@ describe("runFourHourlyReserveSyncSlot", () => {
   it("swallows drift check errors and logs them", async () => {
     vi.mocked(checkCollateralDrift).mockRejectedValue(new Error("drift blew up"));
 
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toBeUndefined();
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
+      jobsRun: 3,
+      jobsErrored: 0,
+      jobsDegraded: 0,
+      jobsSkipped: 0,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Drift check failed"),
       expect.any(Error),
