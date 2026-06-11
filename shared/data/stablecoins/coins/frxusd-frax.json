@@ -408,9 +408,13 @@
           "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
         }
       ],
-      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner. Phase 0c did not promote confidence because current custodian owner reads no longer matched the older Frax Comptroller Safe evidence.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current owner() reads for listed frxUSD custodian proxies returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937 instead of the Frax Comptroller Safe; resolve the current custodian owner/admin path before verified confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (frxUSD-USDB Custodian Proxy; frxUSD-WTGXX Custodian Proxy; frxUSD-BUIDL Custodian Proxy); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

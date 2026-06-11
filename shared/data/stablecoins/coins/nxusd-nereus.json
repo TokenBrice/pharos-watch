@@ -133,8 +133,8 @@
     ],
     "review": {
       "evidence": "Nereus Finance documentation and explorer coverage describe NXUSD as an overcollateralized Avalanche CDP minted against whitelisted crypto collateral, with an NRS/veNRS DAO and a team multisig administering parameters; no on-chain owner/minter admin was independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Nereus governance docs",
@@ -147,7 +147,8 @@
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/minter admin of the NXUSD token and CDP contracts and the team multisig threshold on Snowtrace.",
-        "Project pivoted away from the Avalanche lending product; confirm whether mint/CDP administration is still actively maintained."
+        "Project pivoted away from the Avalanche lending product; confirm whether mint/CDP administration is still actively maintained.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Nereus NXUSD minter / CDP contracts; Nereus governance (NRS / veNRS DAO + team multisig)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

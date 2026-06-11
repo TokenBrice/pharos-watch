@@ -210,12 +210,13 @@
         }
       ],
       "evidence": "Official Paxos materials describe USDP issuance/redemption as a Paxos-operated stablecoin flow. On-chain signer setup and minter-admin roles were not verified, so confidence remains manual-review.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Read Ethereum USDP owner/masterMinter/minter role state and proxy admin, if exposed.",
         "Read Solana mintAuthority/freezeAuthority and BSC token owner/minter roles.",
-        "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service."
+        "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

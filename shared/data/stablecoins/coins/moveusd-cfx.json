@@ -146,8 +146,8 @@
     ],
     "review": {
       "evidence": "Public CFX/MoveUSD materials describe a centralized, fully-permissioned tokenized deposit: CFX Labs (registered MSB) mints against bank deposits and retains complete control over token contracts and mint authority across Solana/Base/Ethereum. SPL mint authority address not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "CFX docs (key features)",
@@ -160,7 +160,8 @@
       ],
       "sourceFreeRationale": "Issuer-controlled mint model is established from CFX materials and NTT coverage; the live Solana SPL mint/freeze authority address was not independently resolved.",
       "unresolvedQuestions": [
-        "Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX."
+        "Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   }

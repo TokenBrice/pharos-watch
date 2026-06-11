@@ -86,11 +86,12 @@
         }
       ],
       "evidence": "Direct read/source verification at Ethereum block 25165886. The token source exposes direct minting through RECEIPT_TOKEN_MINTER; current core address and role holders were not read.",
-      "reviewer": "Codex mint-authority top100 batch-b",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Read the token's current Core contract address.",
-        "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls."
+        "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (IUSD receipt-token minter role); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

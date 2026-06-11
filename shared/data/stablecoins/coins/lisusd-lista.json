@@ -117,11 +117,12 @@
         }
       ],
       "evidence": "Direct read at BSC block 100175656: EIP-1967 implementation = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8 and proxy admin = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. Source shows MINTER/ADMIN/MANAGER roles, cap-limited mint, and DEFAULT_ADMIN = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253.",
-      "reviewer": "Codex mint-authority top100 batch-b",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Enumerate current wards by role.",
-        "Verify the default admin timelock contract and proxy admin setup/threshold."
+        "Verify the default admin timelock contract and proxy admin setup/threshold.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

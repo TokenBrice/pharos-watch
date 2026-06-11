@@ -112,8 +112,8 @@
     ],
     "review": {
       "evidence": "Nerite docs and the NeriteOrg/nerite Liquity-v2 monorepo fork describe immutable, non-upgradeable core contracts where USND is minted only through user Troves/BorrowerOperations; mechanism matches Liquity v2's renounced-admin design, though live owner() renouncement was not independently read on-chain.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Nerite Protocol",
@@ -126,7 +126,8 @@
       ],
       "sourceFreeRationale": "Immutability/no-admin-mint established from project docs and the Liquity-v2 fork lineage; the on-chain owner()/renouncement state was not independently read, hence manual-review rather than verified.",
       "unresolvedQuestions": [
-        "Confirm on-chain that no system contract retains an owner/admin able to mint or alter collateral branches."
+        "Confirm on-chain that no system contract retains an owner/admin able to mint or alter collateral branches.",
+        "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
       ]
     }
   }

@@ -176,11 +176,12 @@
         }
       ],
       "evidence": "Direct reads at Ethereum block 25165886: EIP-1967 implementation = 0x6d2e08839cec8699565a86d046e64324826039c9, EIP-1967 admin = 0xa3b670f2dd1722c3d4b98f146467840540c2c53e, admin() = 0x00C81F5f28c854F57D83afB894f9385465ee7d85.",
-      "reviewer": "Codex mint-authority top100 batch-b",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Enumerate current minter validator addresses and confirm all four active signers.",
-        "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig."
+        "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (MNEE minter validator set; MNEE token admin; MNEE EIP-1967 proxy admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

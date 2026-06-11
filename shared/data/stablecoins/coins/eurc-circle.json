@@ -167,10 +167,11 @@
         }
       ],
       "evidence": "Circle docs describe EURC as issuer-operated. Direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate current configured EURC minters and review non-Ethereum native deployments separately."
+        "Enumerate current configured EURC minters and review non-Ethereum native deployments separately.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum EURC MasterMinter; Ethereum EURC token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

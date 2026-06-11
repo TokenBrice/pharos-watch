@@ -130,8 +130,8 @@
     ],
     "review": {
       "evidence": "Reserve docs describe eUSD as a permissionless basket-mint RToken backed by Aave/Compound deposits with RSR first-loss staking; basket/parameter changes run through a per-RToken Governor + ~7-day TimelockController, while factory contracts are immutable.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Reserve docs",
@@ -144,7 +144,8 @@
       ],
       "sourceFreeRationale": "Permissionless basket-mint + timelock governance model confirmed from Reserve docs; exact eUSD Governor/Timelock addresses and current quorum not independently read on-chain.",
       "unresolvedQuestions": [
-        "Resolve the deployed eUSD Governor and TimelockController addresses and the exact timelock delay/quorum on-chain."
+        "Resolve the deployed eUSD Governor and TimelockController addresses and the exact timelock delay/quorum on-chain.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (RToken contract (permissionless basket mint); eUSD Governor + TimelockController (basket governance)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

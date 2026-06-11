@@ -114,8 +114,8 @@
     ],
     "review": {
       "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Inter Protocol governance docs",
@@ -128,7 +128,8 @@
       ],
       "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from Inter Protocol docs; the live on-chain Economic Committee membership and governance contract state were not independently read.",
       "unresolvedQuestions": [
-        "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence."
+        "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Inter Protocol vaults + PSM (minter contracts); BLD stakers + Economic Committee governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

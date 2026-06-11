@@ -198,8 +198,11 @@
         }
       ],
       "evidence": "Paxos documentation and Ethereum token reads identify USDG's dedicated SupplyControl contract and owner/admin path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDG SupplyControl contract; USDG SupplyControl owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

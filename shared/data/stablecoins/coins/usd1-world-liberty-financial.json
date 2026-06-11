@@ -234,8 +234,11 @@
         }
       ],
       "evidence": "World Liberty Financial presents USD1 as issuer-backed; Ethereum contract reads identify the token owner/controller and 3/6 Safe default-admin path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USD1 token owner/controller; USD1 controller default-admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

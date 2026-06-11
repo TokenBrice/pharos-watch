@@ -222,8 +222,11 @@
         }
       ],
       "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

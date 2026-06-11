@@ -185,10 +185,11 @@
         }
       ],
       "evidence": "Gemini source and Ethereum reads identify the custodian-controlled print/mint architecture and current custodian/implementation addresses.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "The custodian contract's operational signer setup was not resolved as a Safe, multisig, timelock, or EOA set."
+        "The custodian contract's operational signer setup was not resolved as a Safe, multisig, timelock, or EOA set.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (GUSD custodian contract); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

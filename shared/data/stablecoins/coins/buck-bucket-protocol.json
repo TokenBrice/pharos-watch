@@ -119,11 +119,12 @@
         }
       ],
       "evidence": "Bucket docs describe BUCK minting through collateralized borrowing and redemption mechanics. Sui module/object reads identify the live TreasuryCap holder object and externally owned admin/upgrade authorities.",
-      "reviewer": "Codex mint-authority follow-up non-EVM lane",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Identify whether 0x169451f78c5f099a57b0126902a7e61a0c9dace2a8e40caa16168e874d0f0156 and 0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b are multisigs, governance objects, custodial EOAs, or operational keys.",
-        "Decode current collateral caps and max-mint parameters before raising confidence above manual-review."
+        "Decode current collateral caps and max-mint parameters before raising confidence above manual-review.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

@@ -154,7 +154,7 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "FRAX mint authority is an AMO/governance hybrid; the Ethereum AMO Minter is owned by the Frax Comptroller 3/5 Safe.",
     "controls": [
       {
@@ -165,7 +165,7 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Frax AMO docs",
@@ -176,7 +176,7 @@
             "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
           }
         ],
-        "evidence": "FRAX AMO Minter owner() returned the Frax Comptroller Safe at Ethereum block 25165911; the AMO Minter controls AMO minting/allocation surfaces."
+        "evidence": "Phase 0c Ethereum owner() read returned the Frax Comptroller Safe at block 25294518; the AMO Minter controls AMO minting/allocation surfaces."
       },
       {
         "chain": "ethereum",
@@ -191,15 +191,30 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 3,
-          "source": "manual"
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294518,
+          "source": "safe-api"
         },
         "sources": [
           {
             "label": "Safe transaction service",
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
           }
         ],
-        "evidence": "getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911. Worker Safe API review found no modules and no guard."
+        "evidence": "Phase 0c Safe verification refreshed current state: 3/5 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294518."
       }
     ],
     "review": {
@@ -207,11 +222,15 @@
         {
           "label": "Frax AMO docs",
           "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ],
-      "evidence": "Frax AMO documentation and Ethereum reads identify the AMO Minter and Frax Comptroller 3/5 Safe owner path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Phase 0c refreshed FRAX AMO Minter owner() and Frax Comptroller Safe state at Ethereum block 25294518; the AMO Minter owner resolves to the 3/5 Frax Safe with no enabled modules or guard.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

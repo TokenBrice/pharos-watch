@@ -162,10 +162,11 @@
         }
       ],
       "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path. A 2026-05-25 Ethereum RPC read corrected the proxy-admin classification from no-code EOA to contract-owned admin.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Review BSC deployment roles before extending this to all EURI chains."
+        "Review BSC deployment roles before extending this to all EURI chains.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

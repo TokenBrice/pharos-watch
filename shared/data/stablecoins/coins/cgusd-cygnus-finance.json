@@ -162,8 +162,8 @@
     ],
     "review": {
       "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with daily NAV rebases and an AMO managing on-chain liquidity; contract source and 2026-05-25 Base RPC reads show handleOracleReport is gated by the locator accountingOracle, while owner() resolves to a separate timelock/admin address.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Cygnus cgUSD v1 docs",
@@ -172,7 +172,8 @@
       ],
       "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Owner/oracle addresses were read, but governance and operator custody were not decoded.",
       "unresolvedQuestions": [
-        "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence."
+        "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Cygnus accounting oracle/rebase + reserve custodian; cgUSD vault owner (mint/pause admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

@@ -190,10 +190,11 @@
         }
       ],
       "evidence": "USDD docs describe collateralized issuance architecture and deployment addresses; token-source review identifies USDD Join as the direct ward/minter while governance/Pause/Vat authority remains unresolved.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence."
+        "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

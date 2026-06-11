@@ -90,11 +90,12 @@
     ],
     "review": {
       "evidence": "Sui coin metadata and normalized Move module output show suiUSDe is a native Sui coin with a TreasuryCap, while Sui/Ethena materials describe Ethena-powered economics; exact TreasuryCap/admin ownership remains unresolved.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Sui metadata/module reads establish a local TreasuryCap mint surface; exact holder and signer model were not resolved.",
       "unresolvedQuestions": [
-        "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence."
+        "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   }

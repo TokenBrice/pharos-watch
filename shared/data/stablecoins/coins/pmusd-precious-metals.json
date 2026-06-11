@@ -81,8 +81,8 @@
     ],
     "review": {
       "evidence": "RAAC documentation and the Curve governance proposal describe pmUSD as an f(x) V1 fork where collateral silos mint the pmUSD fToken under manager/admin control via authorized multisigs; no permissionless user-open mint route is described and public multisig addresses are not yet disclosed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "pmUSD site",
@@ -95,7 +95,8 @@
       ],
       "sourceFreeRationale": "Manager-only/silo-multisig mint control taken from RAAC materials and the Curve proposal; the project states no public multisig addresses are available yet and on-chain admin was not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope."
+        "Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope.",
+        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
       ]
     }
   },

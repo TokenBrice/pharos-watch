@@ -174,11 +174,12 @@
         }
       ],
       "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
-      "reviewer": "Codex mint-authority top100 batch-a",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Verify operational custody and signer identities for the owner multisig-style contract.",
-        "Check whether additional chain deployments exist and share the same issuer control."
+        "Check whether additional chain deployments exist and share the same issuer control.",
+        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
       ]
     }
   },

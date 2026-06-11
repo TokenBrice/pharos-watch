@@ -79,8 +79,11 @@
         }
       ],
       "evidence": "Usual documentation describes USD0 issuance through DaoCollateral and SwapperEngine collateral/routing contracts backed by RWA/custody rails, with governance/collateral-admin parameter control rather than a generic issuer backend.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-25"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Usual DaoCollateral; Usual SwapperEngine; USUAL governance / collateral admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",

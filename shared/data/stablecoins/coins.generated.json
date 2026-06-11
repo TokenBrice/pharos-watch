@@ -63,10 +63,11 @@
       "review": {
         "sourceFreeRationale": "Classification based on the issuer model in project materials; on-chain Ethereum/Tron token owner/minter admin not independently resolved.",
         "evidence": "A7A5 project documentation and Pharos metadata describe a single centralized RUB issuer (Old Vector LLC) minting against off-chain bank reserves; redemption is restricted to authorized partners.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence."
+          "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -1028,12 +1029,13 @@
           }
         ],
         "evidence": "GAIB docs describe AID mint and redeem routes against accepted stablecoins; Ethereum role-event reconstruction identified current MINTER_ROLE holders and default admins for the AID token.",
-        "reviewer": "Codex mint-authority follow-up EVM lane",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Reconstruct Arbitrum, Base, and BSC role holders before treating AID as fully reviewed across all deployments.",
           "Identify the two Ethereum MINTER_ROLE contract holders and the additional default-admin account custody model.",
-          "Resolve redemption and bridge route controls before raising confidence above manual-review."
+          "Resolve redemption and bridge route controls before raising confidence above manual-review.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -1404,10 +1406,11 @@
           }
         ],
         "evidence": "Apyx docs say whitelisted users deposit collateral and receive newly minted apxUSD; Apyx's contract documentation identifies MinterV0 as the mint route using EIP-712 signed orders, an m-of-n minter wallet, AccessManager checks, and beneficiary screening.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence."
+          "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Apyx MinterV0 signed-order mint path); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -2917,11 +2920,12 @@
           }
         ],
         "evidence": "Batch-A research verified the AUSD EVM role model and Solana Token-2022 mint authority. A follow-up Solana read against the local Pharos AUSD mint confirmed the current Solana mint authority address; EVM role-holder enumeration remains unresolved.",
-        "reviewer": "Codex mint-authority top100 batch-a",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Call getMinterRoleMembers, getBridgeMinterRoleMembers, getAccessControlManagerRoleMembers, and rate-limit getters on the EVM contract.",
-          "Verify signer setup for Solana and EVM role-holder addresses."
+          "Verify signer setup for Solana and EVM role-holder addresses.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -3379,10 +3383,11 @@
         ],
         "sourceFreeRationale": "Mint contract address taken from Avant's published contract-addresses page; on-chain MINTER_ROLE/DEFAULT_ADMIN_ROLE holders not independently read.",
         "evidence": "Avant docs describe avUSD as fully USDC-backed, minted via the AvantMintingV2 contract and redeemable 1:1; privileged keys sit behind MPC custody plus a policy engine and RBAC. avUSD is the parent of the savUSD strategy vault.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence."
+          "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -5359,10 +5364,11 @@
       "review": {
         "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins across Polygon, Gnosis, Celo, and Moonbeam not independently resolved.",
         "evidence": "BRLA materials describe a single issuer (Avenia) minting BRLA against off-chain Brazilian government bonds and BRL cash in regulated custody, with monthly attestations; mint/redeem is KYC-gated and centralized.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain token owner/minter admin across Polygon, Gnosis, Celo, and Moonbeam before raising confidence."
+          "Resolve the on-chain token owner/minter admin across Polygon, Gnosis, Celo, and Moonbeam before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -5827,10 +5833,11 @@
         ],
         "sourceFreeRationale": "Classification based on issuer model in project materials; on-chain token owner/minter admin and per-chain proxy admin not independently resolved.",
         "evidence": "Transfero project materials describe a single centralized issuer minting BRZ against BRL cash reserves with KYC-gated mint/redeem; no permissionless or user-collateralized mint route exists.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain owner/minter admin on each BRZ deployment before raising confidence."
+          "Resolve the on-chain owner/minter admin on each BRZ deployment before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -6300,11 +6307,12 @@
           }
         ],
         "evidence": "Bucket docs describe BUCK minting through collateralized borrowing and redemption mechanics. Sui module/object reads identify the live TreasuryCap holder object and externally owned admin/upgrade authorities.",
-        "reviewer": "Codex mint-authority follow-up non-EVM lane",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Identify whether 0x169451f78c5f099a57b0126902a7e61a0c9dace2a8e40caa16168e874d0f0156 and 0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b are multisigs, governance objects, custodial EOAs, or operational keys.",
-          "Decode current collateral caps and max-mint parameters before raising confidence above manual-review."
+          "Decode current collateral caps and max-mint parameters before raising confidence above manual-review.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -6470,8 +6478,11 @@
           }
         ],
         "evidence": "Securitize materials describe BUIDL issuance through fund administration; Ethereum proxy/source reads identify the issueTokens implementation and owner/admin address.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (BUIDL implementation issueTokens surface; BUIDL token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -7410,11 +7421,12 @@
           }
         ],
         "evidence": "Bridge-hosted token metadata identifies the CASH mint, and Phantom/Bridge materials identify CASH as a Solana stablecoin launched through Bridge Open Issuance. Solana RPC resolves the current Token-2022 authority fields.",
-        "reviewer": "Codex mint-authority follow-up non-EVM lane",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Map mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 to a Bridge/Phantom signer, PDA, multisig, or MPC policy.",
-          "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions."
+          "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -8405,10 +8417,11 @@
         ],
         "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Owner/oracle addresses were read, but governance and operator custody were not decoded.",
         "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with daily NAV rebases and an AMO managing on-chain liquidity; contract source and 2026-05-25 Base RPC reads show handleOracleReport is gated by the locator accountingOracle, while owner() resolves to a separate timelock/admin address.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence."
+          "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Cygnus accounting oracle/rebase + reserve custodian; cgUSD vault owner (mint/pause admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -9396,10 +9409,11 @@
           }
         ],
         "evidence": "Curve resources and ControllerFactory reads identify the factory and current admin address controlling debt ceilings and market configuration.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path."
+          "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (crvUSD ControllerFactory; crvUSD ControllerFactory admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -9732,8 +9746,11 @@
           }
         ],
         "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (M0 MinterGateway backing rail; M0 SwapFacility extension router); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -9935,11 +9952,12 @@
           }
         ],
         "evidence": "Direct read at Ethereum block 25165886: EIP-1967 implementation = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. MegaETH address 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc had no code at block 19924084 despite being present in local metadata.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Resolve the AccessControl contract address and current role holders.",
-          "Read current deposit caps, supported assets, upgrade authority, and whether a timelock or Safe controls AccessControl."
+          "Read current deposit caps, supported assets, upgrade authority, and whether a timelock or Safe controls AccessControl.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Cap cUSD vault mint path); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -10217,11 +10235,12 @@
           }
         ],
         "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
-        "reviewer": "Codex mint-authority follow-up family lane",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage.",
-          "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
+          "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mento USDm token owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -10634,8 +10653,11 @@
           }
         ],
         "evidence": "Maker/Sky Chainlog and Ethereum reads identify DaiJoin as the ERC-20 DAI adapter and the Pause Proxy as the governance executor for module and parameter changes.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (DaiJoin token adapter; Maker/Sky Pause Proxy governance executor); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -11589,8 +11611,11 @@
           }
         ],
         "evidence": "DOLA has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (DOLA token operator); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -12291,10 +12316,11 @@
         ],
         "sourceFreeRationale": "Mechanism confirmed from StandX docs; on-chain Gateway minter admin and RSV Fund multisig threshold/signers not independently resolved.",
         "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Mint requires depositing USDT/USDC to the StandX Secure Vault; the protocol opens hedging shorts and mints DUSD. Redemption is backend-attested with a 7-day lock. Supply creation is fully issuer-controlled against delta-neutral collateral.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain admin/owner of the BSC Gateway (0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122) and Solana mint authority, plus the RSV Fund multisig threshold, before raising confidence."
+          "Resolve the on-chain admin/owner of the BSC Gateway (0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122) and Solana mint authority, plus the RSV Fund multisig threshold, before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -13377,10 +13403,11 @@
           }
         ],
         "evidence": "Circle docs describe EURC as issuer-operated. Direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Enumerate current configured EURC minters and review non-Ethereum native deployments separately."
+          "Enumerate current configured EURC minters and review non-Ethereum native deployments separately.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum EURC MasterMinter; Ethereum EURC token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -13570,10 +13597,11 @@
           }
         ],
         "evidence": "SG-FORGE is the direct issuer/redemption operator; Ethereum proxy reads identify the token implementation path.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve current token roles and mint authority on XRPL, Stellar, and Solana deployments before broad multichain claims."
+          "Resolve current token roles and mint authority on XRPL, Stellar, and Solana deployments before broad multichain claims.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -13765,8 +13793,11 @@
           }
         ],
         "evidence": "Monerium documentation and Ethereum owner reads identify the issuer mint route and the current Ethereum token owner Safe.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -13996,10 +14027,11 @@
           }
         ],
         "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path. A 2026-05-25 Ethereum RPC read corrected the proxy-admin classification from no-code EOA to contract-owned admin.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Review BSC deployment roles before extending this to all EURI chains."
+          "Review BSC deployment roles before extending this to all EURI chains.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -15766,10 +15798,11 @@
         ],
         "sourceFreeRationale": "Permissionless basket-mint + timelock governance model confirmed from Reserve docs; exact eUSD Governor/Timelock addresses and current quorum not independently read on-chain.",
         "evidence": "Reserve docs describe eUSD as a permissionless basket-mint RToken backed by Aave/Compound deposits with RSR first-loss staking; basket/parameter changes run through a per-RToken Governor + ~7-day TimelockController, while factory contracts are immutable.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the deployed eUSD Governor and TimelockController addresses and the exact timelock delay/quorum on-chain."
+          "Resolve the deployed eUSD Governor and TimelockController addresses and the exact timelock delay/quorum on-chain.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (RToken contract (permissionless basket mint); eUSD Governor + TimelockController (basket governance)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -16425,7 +16458,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "FDUSD is issuer-backed; Ethereum/BSC token ownership resolves to a 4/6 Safe that controls mint/admin authority.",
       "controls": [
         {
@@ -16440,8 +16473,20 @@
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
+            "owners": [
+              "0x418DfC379BD6C0964d7b47F0c14Fce71084811A6",
+              "0xE1Bb6D44e9e9Ba5F59Deaa89AF0970020a9a9722",
+              "0xD92b6fB17777a6e1Bb7709250AA4E60472c77e7D",
+              "0x82A5AAd82f309d476565ef20e9768FddD7C37231",
+              "0x1cD3586BAc47e31C070fa5cDF54dEF0d1519DaA9",
+              "0x80EEF36e9963B92373Da348CE1543357cBaAAc62"
+            ],
             "threshold": 4,
-            "source": "manual"
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294485,
+            "source": "safe-api"
           },
           "sources": [
             {
@@ -16455,9 +16500,13 @@
             {
               "label": "Safe transaction service",
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
             }
           ],
-          "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Safe API review confirmed 4/6 owners, no modules, and zero guard."
+          "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/6 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
         }
       ],
       "review": {
@@ -16465,11 +16514,15 @@
           {
             "label": "First Digital USD",
             "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
           }
         ],
-        "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -16916,10 +16969,11 @@
           }
         ],
         "evidence": "Fidelity issuer materials and Ethereum proxy reads identify issuer-operated minting and the current implementation path.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems."
+          "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -17184,7 +17238,7 @@
     "mintAuthority": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "FPI mint/admin authority is Frax-governed; the FPI Controller Pool is owned by a 3/5 Frax Comptroller Safe.",
       "controls": [
         {
@@ -17195,7 +17249,7 @@
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "Frax AMO docs",
@@ -17206,7 +17260,7 @@
               "url": "https://etherscan.io/address/0x2397321b301B80A1C0911d6f9ED4B6033d43cF51#readContract"
             }
           ],
-          "evidence": "FPI Controller Pool owner() returned the FPI Comptroller Safe at Ethereum block 25165911."
+          "evidence": "Phase 0c Ethereum owner() read returned the FPI Comptroller Safe at block 25294518."
         },
         {
           "chain": "ethereum",
@@ -17220,16 +17274,31 @@
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
+            "owners": [
+              "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+              "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+              "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+            ],
             "threshold": 3,
-            "source": "manual"
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294518,
+            "source": "safe-api"
           },
           "sources": [
             {
               "label": "Safe transaction service",
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
             }
           ],
-          "evidence": "getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911. Worker Safe API review found no modules and no guard."
+          "evidence": "Phase 0c Safe verification refreshed current state: 3/5 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294518."
         }
       ],
       "review": {
@@ -17237,11 +17306,15 @@
           {
             "label": "Frax AMO docs",
             "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
           }
         ],
-        "evidence": "Frax documentation and Ethereum reads identify the FPI Controller Pool and 3/5 Frax Comptroller Safe owner path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "Phase 0c refreshed FPI Controller Pool owner() and FPI Comptroller Safe state at Ethereum block 25294518; the controller owner resolves to the 3/5 FPI Safe with no enabled modules or guard.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -17372,7 +17445,7 @@
     "mintAuthority": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "FRAX mint authority is an AMO/governance hybrid; the Ethereum AMO Minter is owned by the Frax Comptroller 3/5 Safe.",
       "controls": [
         {
@@ -17383,7 +17456,7 @@
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "Frax AMO docs",
@@ -17394,7 +17467,7 @@
               "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
             }
           ],
-          "evidence": "FRAX AMO Minter owner() returned the Frax Comptroller Safe at Ethereum block 25165911; the AMO Minter controls AMO minting/allocation surfaces."
+          "evidence": "Phase 0c Ethereum owner() read returned the Frax Comptroller Safe at block 25294518; the AMO Minter controls AMO minting/allocation surfaces."
         },
         {
           "chain": "ethereum",
@@ -17408,16 +17481,31 @@
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
+            "owners": [
+              "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+              "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+              "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+            ],
             "threshold": 3,
-            "source": "manual"
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294518,
+            "source": "safe-api"
           },
           "sources": [
             {
               "label": "Safe transaction service",
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
             }
           ],
-          "evidence": "getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911. Worker Safe API review found no modules and no guard."
+          "evidence": "Phase 0c Safe verification refreshed current state: 3/5 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294518."
         }
       ],
       "review": {
@@ -17425,11 +17513,15 @@
           {
             "label": "Frax AMO docs",
             "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
           }
         ],
-        "evidence": "Frax AMO documentation and Ethereum reads identify the AMO Minter and Frax Comptroller 3/5 Safe owner path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "Phase 0c refreshed FRAX AMO Minter owner() and Frax Comptroller Safe state at Ethereum block 25294518; the AMO Minter owner resolves to the 3/5 Frax Safe with no enabled modules or guard.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -17834,9 +17926,13 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner. Phase 0c did not promote confidence because current custodian owner reads no longer matched the older Frax Comptroller Safe evidence.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current owner() reads for listed frxUSD custodian proxies returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937 instead of the Frax Comptroller Safe; resolve the current custodian owner/admin path before verified confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (frxUSD-USDB Custodian Proxy; frxUSD-WTGXX Custodian Proxy; frxUSD-BUIDL Custodian Proxy); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -18836,10 +18932,11 @@
         ],
         "sourceFreeRationale": "CDP mint mechanism confirmed from f(x) Protocol docs; on-chain governance owner/timelock address not independently resolved.",
         "evidence": "f(x) Protocol documentation describes fxUSD as a CDP-minted dollar overcollateralized by wstETH/WBTC with governance-tuned risk parameters and a Stability Pool; no centralized issuer mint path is described.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain f(x) Protocol governance owner/timelock and the specific vault/minter contract authority before raising confidence."
+          "Resolve the on-chain f(x) Protocol governance owner/timelock and the specific vault/minter contract authority before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (f(x) Protocol vault/minter contracts; f(x) Protocol governance / parameter admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -21134,10 +21231,11 @@
           }
         ],
         "evidence": "Gate's product page and Ethereum proxy reads identify issuer-operated minting and the current token implementation path.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Enumerate the token mint/admin roles and verify whether issuer backend controls are MPC, EOA, Safe, or custom multisig."
+          "Enumerate the token mint/admin roles and verify whether issuer backend controls are MPC, EOA, Safe, or custom multisig.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -21372,10 +21470,11 @@
           }
         ],
         "evidence": "Gemini source and Ethereum reads identify the custodian-controlled print/mint architecture and current custodian/implementation addresses.",
-        "reviewer": "Codex mint-authority full-gap batch-2",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "The custodian contract's operational signer setup was not resolved as a Safe, multisig, timelock, or EOA set."
+          "The custodian contract's operational signer setup was not resolved as a Safe, multisig, timelock, or EOA set.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (GUSD custodian contract); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -22095,7 +22194,7 @@
     "mintAuthority": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "HCHF is minted only by HLiquity's immutable Liquity-v1-fork protocol contracts when users borrow against overcollateralized HBAR Troves; the Hedera token has no admin/freeze/wipe/pause key, only a protocol supply key, so no privileged party can mint or seize.",
       "controls": [
         {
@@ -22107,7 +22206,13 @@
           "directMintAbility": "none",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "Hedera Mirror Node token metadata for 0.0.6070123 shows admin_key, freeze_key, wipe_key, and pause_key all null; only supply_key is set. Minting is therefore confined to the HLiquity protocol contracts that issue HCHF against HBAR Trove collateral, with no holder-freeze or unbounded admin-mint path."
+          "sources": [
+            {
+              "label": "Hedera Mirror Node token 0.0.6070123",
+              "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+            }
+          ],
+          "evidence": "Phase 0c Hedera Mirror Node read returned null admin_key, freeze_key, wipe_key, and pause_key for token 0.0.6070123; only the protocol supply_key is present."
         }
       ],
       "review": {
@@ -22121,9 +22226,9 @@
             "url": "https://docs.hliquity.org/overview/overview"
           }
         ],
-        "evidence": "HLiquity is an immutable, governance-free Liquity v1 fork on Hedera; HCHF is debt minted against overcollateralized HBAR Troves. I confirmed renouncement on-chain via the Hedera Mirror Node: token 0.0.6070123 has null admin/freeze/wipe/pause keys and only a protocol supply key, so there is no privileged owner or freeze authority. This satisfies immutable-user-collateralized / none-resolved.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25"
+        "evidence": "Phase 0c refreshed the Hedera Mirror Node token state for HCHF: admin_key, freeze_key, wipe_key, and pause_key are null, with only the protocol supply key present; no privileged admin mint/freeze/wipe/pause key is resolved.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -23170,10 +23275,11 @@
         ],
         "sourceFreeRationale": "HoneyFactory mint mechanism and governance whitelist confirmed from Berachain docs; the live HoneyFactory owner/governance admin address was not independently read on-chain.",
         "evidence": "Berachain HONEY documentation describes a governed basket-collateral mint via the HoneyFactory contract with per-asset vaults, governance-controlled collateral whitelisting and rates, and Basket Mode safety controls.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the live HoneyFactory owner/admin and the governance executor that controls collateral whitelisting and rates before raising confidence."
+          "Resolve the live HoneyFactory owner/admin and the governance executor that controls collateral whitelisting and rates before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (HoneyFactory mint hub; Berachain governance (collateral whitelist & rate admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -24235,10 +24341,11 @@
         ],
         "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from Inter Protocol docs; the live on-chain Economic Committee membership and governance contract state were not independently read.",
         "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence."
+          "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Inter Protocol vaults + PSM (minter contracts); BLD stakers + Economic Committee governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -24358,10 +24465,11 @@
         ],
         "sourceFreeRationale": "CDP mint mechanism and INDY DAO governance confirmed from Indigo docs; Cardano-native validator/governance script authority not independently resolved on-chain.",
         "evidence": "Indigo Protocol documentation describes iUSD as a CDP-minted synthetic dollar on Cardano governed by INDY token holders who control collateral onboarding and risk parameters; no centralized issuer minter exists.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the Indigo on-chain governance script authority and CDP minting policy parameters before raising confidence."
+          "Resolve the Indigo on-chain governance script authority and CDP minting policy parameters before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Indigo CDP minting validators; Indigo INDY DAO governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -24465,11 +24573,12 @@
           }
         ],
         "evidence": "Direct read/source verification at Ethereum block 25165886. The token source exposes direct minting through RECEIPT_TOKEN_MINTER; current core address and role holders were not read.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Read the token's current Core contract address.",
-          "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls."
+          "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (IUSD receipt-token minter role); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -25192,12 +25301,13 @@
           }
         ],
         "evidence": "Ethereum RPC reads for the current regulated token identify the role-gated mint implementation, minterAdmin contract, token owner Safe, and minterAdmin owner Safe.",
-        "reviewer": "Codex stablecoin DB audit follow-up",
-        "reviewedAt": "2026-05-29",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Reconstruct current configured minter addresses and allowances from events or explorer-indexed logs.",
           "Resolve minterAdmin contract internals beyond its owner() surface.",
-          "Repeat owner/minterAdmin reads on Polygon and Avalanche before applying one multichain profile."
+          "Repeat owner/minterAdmin reads on Polygon and Avalanche before applying one multichain profile.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (JPYC regulated Ethereum proxy mint surface; JPYC minterAdmin contract; JPYC minterAdmin owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -25963,11 +26073,12 @@
         ],
         "sourceFreeRationale": "Solana mint/redeem program ID and upgrade authority were not read live on-chain in this pass; classification rests on the documented whitelisted institutional mint model operated via Ethena.",
         "evidence": "JupUSD launch coverage and project materials describe permissioned mint/redeem limited to KYC/KYB institutions through Ethena's Stablecoin-as-a-Service backend; reserves (90% USDtb, 10% USDC) are custodied by Porto via Anchorage. Public users access JupUSD via secondary markets, not direct mint.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Read the JupUSD Solana mint authority and program upgrade authority (and any multisig) to confirm the controlling keys.",
-          "Confirm the allowlist mechanism gating approved minter addresses."
+          "Confirm the allowlist mechanism gating approved minter addresses.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -26111,10 +26222,11 @@
         ],
         "sourceFreeRationale": "Frankencoin-fork ownerless veto-governed minter model confirmed from coverage and the OFD reference; the live Citrea JUSD contract owner()/registry state was not independently read on-chain.",
         "evidence": "Coverage and the Oracle-Free-Dollar/Frankencoin reference confirm JUSD is an immutable, ownerless Frankencoin fork on Citrea minting against overcollateralized BTC via plugin/position modules subject to a qualified-holder veto; mirrors the verified Frankencoin (ZCHF) governed-minter model.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Confirm on-chain that the Citrea JUSD contract has no owner and that minting is gated solely by the registered-minter/veto registry before raising confidence."
+          "Confirm on-chain that the Citrea JUSD contract has no owner and that minting is gated solely by the registered-minter/veto registry before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (JUSD Frankencoin-style minter registry; JUICE pool-share holder veto governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -27553,11 +27665,12 @@
           }
         ],
         "evidence": "Direct read at BSC block 100175656: EIP-1967 implementation = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8 and proxy admin = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. Source shows MINTER/ADMIN/MANAGER roles, cap-limited mint, and DEFAULT_ADMIN = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Enumerate current wards by role.",
-          "Verify the default admin timelock contract and proxy admin setup/threshold."
+          "Verify the default admin timelock contract and proxy admin setup/threshold.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -28309,8 +28422,11 @@
           }
         ],
         "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (M0 MinterGateway; M0 Solana Portal); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -28958,11 +29074,12 @@
           }
         ],
         "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
-        "reviewer": "Codex mint-authority top100 batch-c",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Decode Mezo-side borrower/CDP contract admin and collateral parameter authority.",
-          "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
+          "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mezo MUSD borrower/CDP mint path; MUSD token owner Safe; MUSD Wormhole NTT manager); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -30276,11 +30393,12 @@
           }
         ],
         "evidence": "Direct reads at Ethereum block 25165886: EIP-1967 implementation = 0x6d2e08839cec8699565a86d046e64324826039c9, EIP-1967 admin = 0xa3b670f2dd1722c3d4b98f146467840540c2c53e, admin() = 0x00C81F5f28c854F57D83afB894f9385465ee7d85.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Enumerate current minter validator addresses and confirm all four active signers.",
-          "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig."
+          "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (MNEE minter validator set; MNEE token admin; MNEE EIP-1967 proxy admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -30588,10 +30706,11 @@
         ],
         "sourceFreeRationale": "Issuer-controlled mint model is established from CFX materials and NTT coverage; the live Solana SPL mint/freeze authority address was not independently resolved.",
         "evidence": "Public CFX/MoveUSD materials describe a centralized, fully-permissioned tokenized deposit: CFX Labs (registered MSB) mints against bank deposits and retains complete control over token contracts and mint authority across Solana/Base/Ethereum. SPL mint authority address not independently read.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX."
+          "Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -30876,12 +30995,13 @@
           }
         ],
         "evidence": "Direct reads: Ethereum implementation = 0x96271bea7a9c4b8edd6c3a05e548f05f157ada46 and owner() = 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 at block 25165887; Sonic implementation = 0xfbe86362f4fc7aac3acaf1b36ae211816f2fc478 and owner() = 0x861a58d3DE287196c5546d10c7afFa479E0963e4 at block 71320471.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Read current minter(), stakedmsUSD(), supplyLimit(), and timelock state.",
           "Identify whether owner addresses are Safes, EOAs, or contracts with threshold/timelock controls.",
-          "Verify Sonic implementation source."
+          "Verify Sonic implementation source.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -31011,10 +31131,11 @@
         ],
         "sourceFreeRationale": "Synth-CDP mint mechanism and MET DAO governance confirmed from Metronome docs; the on-chain governance owner/multisig and pool admin addresses were not independently read.",
         "evidence": "Metronome Synth documentation describes msUSD as an overcollateralized synth minted at governance-set collateral factors with no direct redemption, administered by the MET-governed Metronome DAO.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the Metronome DAO on-chain governance/admin authority (multisig/timelock) and the synth pool admin addresses before raising confidence."
+          "Resolve the Metronome DAO on-chain governance/admin authority (multisig/timelock) and the synth pool admin addresses before raising confidence.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Metronome Synth pool/minter contracts; Metronome DAO governance / parameter admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -31670,8 +31791,11 @@
           }
         ],
         "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (M0 MinterGateway backing rail; M0 SwapFacility extension router; M0 SwapFacility extension router); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -33124,10 +33248,11 @@
         ],
         "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Ethereum role reads and Neutrl docs; whether the live admin is an EOA, multisig, or Safe was not verified on-chain.",
         "evidence": "Ethereum reads of the NUSD token show MINTER_ROLE assigned to StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D, live DEFAULT_ADMIN_ROLE at 0x51De41ec06e779715d7FB71Ef83A736cFc903217, and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence."
+          "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -33586,11 +33711,12 @@
           }
         ],
         "evidence": "Nereus Finance documentation and explorer coverage describe NXUSD as an overcollateralized Avalanche CDP minted against whitelisted crypto collateral, with an NRS/veNRS DAO and a team multisig administering parameters; no on-chain owner/minter admin was independently confirmed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the on-chain owner/minter admin of the NXUSD token and CDP contracts and the team multisig threshold on Snowtrace.",
-          "Project pivoted away from the Avalanche lending product; confirm whether mint/CDP administration is still actively maintained."
+          "Project pivoted away from the Avalanche lending product; confirm whether mint/CDP administration is still actively maintained.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Nereus NXUSD minter / CDP contracts; Nereus governance (NRS / veNRS DAO + team multisig)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -34414,10 +34540,11 @@
           }
         ],
         "evidence": "Tempo docs describe pathUSD as a TIP-20 precompile stablecoin where the administrative authority can mint/burn arbitrarily; Bridge (FinCEN MSB) operates issuance and redemption against a cash/Treasury/repo/MMF reserve, with no permissionless or user-collateralized mint route.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence."
+          "Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -35703,10 +35830,11 @@
         ],
         "sourceFreeRationale": "Manager-only/silo-multisig mint control taken from RAAC materials and the Curve proposal; the project states no public multisig addresses are available yet and on-chain admin was not independently resolved.",
         "evidence": "RAAC documentation and the Curve governance proposal describe pmUSD as an f(x) V1 fork where collateral silos mint the pmUSD fToken under manager/admin control via authorized multisigs; no permissionless user-open mint route is described and public multisig addresses are not yet disclosed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope."
+          "Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -36358,8 +36486,11 @@
           }
         ],
         "evidence": "Paxos documentation and Ethereum token reads identify PYUSD's dedicated SupplyControl contract and owner/admin path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (PYUSD SupplyControl contract; PYUSD SupplyControl owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -37048,8 +37179,11 @@
           }
         ],
         "evidence": "REUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
+        ]
       }
     },
     "contracts": [
@@ -37417,8 +37551,11 @@
           }
         ],
         "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -38294,10 +38431,11 @@
           }
         ],
         "evidence": "Multipli docs describe rwaUSDi as an isolated, compliance-gated (KYB) liquidity class where institutions deposit supported tokenized RWAs and mint a unified collateral unit at NAV; Multipli operates the issuance/peg module and access is restricted to KYB-verified entities, so this is an issuer-controlled mint rather than a single-parent wrapper or permissionless route.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence."
+          "Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -38764,11 +38902,12 @@
           }
         ],
         "evidence": "River/Satoshi Protocol documentation, the Satoshi-Protocol GitHub org, and LayerZero integration coverage describe a Liquity-v1-derived omni-CDP with cross-chain OFT mint authorization and RIVER-token governance; no on-chain owner/peer admin was independently confirmed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the on-chain owner/admin of the OFT mint contracts and the cross-chain peer configuration on each deployment.",
-          "Confirm whether any core CDP contracts have renounced ownership versus retaining an upgrade/admin multisig."
+          "Confirm whether any core CDP contracts have renounced ownership versus retaining an upgrade/admin multisig.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (River omni-CDP borrower-operations / OFT mint; RIVER governance / cross-chain OFT peer admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -39328,7 +39467,7 @@
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "sBOLD is a K3 Capital ERC-4626 wrapper over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD, and K3 wrapper administration resolves to a 2/3 Safe.",
       "inheritedFrom": "bold-liquity",
       "controls": [
@@ -39370,6 +39509,7 @@
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294485,
             "source": "safe-api"
           },
           "sources": [
@@ -39380,9 +39520,13 @@
             {
               "label": "sBOLD owner Safe API",
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
             }
           ],
-          "evidence": "Ethereum owner() resolved to this Safe; Safe API returned a 2/3 Safe with no enabled modules and the zero guard."
+          "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 2/3 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d."
         }
       ],
       "review": {
@@ -39390,11 +39534,15 @@
           {
             "label": "Liquity v2 docs",
             "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
           }
         ],
-        "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard.",
-        "reviewer": "Codex mint-authority full-gap batch-4",
-        "reviewedAt": "2026-05-24"
+        "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -39812,8 +39960,11 @@
           }
         ],
         "evidence": "On-chain asset read confirms sDAI wraps DAI; durable mint authority inherits from reviewed parent DAI.",
-        "reviewer": "Codex mint-authority full-gap batch-4",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control; keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -42736,10 +42887,11 @@
       "review": {
         "sourceFreeRationale": "Sui metadata/module reads establish a local TreasuryCap mint surface; exact holder and signer model were not resolved.",
         "evidence": "Sui coin metadata and normalized Move module output show suiUSDe is a native Sui coin with a TreasuryCap, while Sui/Ethena materials describe Ethena-powered economics; exact TreasuryCap/admin ownership remains unresolved.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence."
+          "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -43196,11 +43348,12 @@
           }
         ],
         "evidence": "Synthetix SIP repository (notably SIP-420) and protocol coverage describe sUSD as an overcollateralized debt-pool stablecoin governed via the SIP process, with legacy per-staker SNX minting deprecated in favor of a protocol-owned debt pool; on-chain admin not independently confirmed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the on-chain owner/admin of the V3 core, 420-pool, and legacy sUSD token contracts and the Synthetix governance multisig/timelock.",
-          "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority."
+          "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Synthetix V3 / 420-pool minting contracts; Synthetix governance (SIP process / DAO)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -45734,7 +45887,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "tGBP is a UUPS-upgradeable OFT token (StableTokenV1OFT) by BCP Technologies whose owner can mint and burn; minting occurs once an equivalent GBP deposit is verified off-chain by the team, with no separate role-gated minter.",
       "controls": [
         {
@@ -45764,10 +45917,11 @@
         ],
         "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; live Ethereum owner read resolved to an EOA.",
         "evidence": "OpenZeppelin's audit of BCP Technologies' tGBP (StableTokenV1OFT) confirms a single owner controls mint and burn with UUPS upgradeability and no separate minter role; minting is gated on off-chain GBP deposit verification. This is owner-gated permissioned minting rather than a pure backend-only model.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the proxy admin before raising to verified."
+          "Resolve the proxy admin before raising to verified.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (StableTokenV1OFT owner (mint/burn + upgrade authority)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -46640,8 +46794,11 @@
           }
         ],
         "evidence": "TrueUSD is issuer-backed; Ethereum contract review resolved the token controller, mint-key path, and 2/3 Safe controller owner.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (TUSD token controller; TUSD controller owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -46827,12 +46984,12 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "U is issuer-operated; Ethereum/BSC token ownership resolves to a 2/4 Safe that controls mint/admin authority.",
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0x59f94ade4F881F21EA608aD4448Bf70b78E37187",
+          "address": "0x59F94AdE4F881f21ea608AD4448bf70B78e37187",
           "label": "U token owner Safe",
           "role": "direct-minter",
           "authorityType": "safe",
@@ -46842,8 +46999,18 @@
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
+            "owners": [
+              "0x7A24b3449c8241cbA2129AA97b965200F67FC51A",
+              "0x42fA2acc689A90D94F807C58b3476788e3605d0f",
+              "0x7D155808c369bD1666D84c512aD98dCFc7399bFD",
+              "0xEFcB5d32dd52Cc58dEF9034c4359db09bE9361cA"
+            ],
             "threshold": 2,
-            "source": "manual"
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25294518,
+            "source": "safe-api"
           },
           "sources": [
             {
@@ -46853,9 +47020,13 @@
             {
               "label": "Ethereum U contract",
               "url": "https://etherscan.io/address/0xce24439F2D9C6a2289f741120fE202248B666666#readProxyContract"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
             }
           ],
-          "evidence": "Ethereum/BSC token owner reads resolve to this Safe; getThreshold() returned 2 and getOwners() returned 4 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+          "evidence": "Phase 0c Safe verification refreshed current state: 2/4 owners, no enabled modules, zero guard, fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, observed against Ethereum block 25294518."
         }
       ],
       "review": {
@@ -46863,11 +47034,15 @@
           {
             "label": "U website",
             "url": "https://u.tech/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
           }
         ],
-        "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294518.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -47278,11 +47453,12 @@
           }
         ],
         "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
-        "reviewer": "Codex mint-authority top100 batch-a",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Verify operational custody and signer identities for the owner multisig-style contract.",
-          "Check whether additional chain deployments exist and share the same issuer control."
+          "Check whether additional chain deployments exist and share the same issuer control.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -47818,8 +47994,11 @@
           }
         ],
         "evidence": "Usual documentation describes USD0 issuance through DaoCollateral and SwapperEngine collateral/routing contracts backed by RWA/custody rails, with governance/collateral-admin parameter control rather than a generic issuer backend.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-25"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Usual DaoCollateral; Usual SwapperEngine; USUAL governance / collateral admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -48121,8 +48300,11 @@
           }
         ],
         "evidence": "World Liberty Financial presents USD1 as issuer-backed; Ethereum contract reads identify the token owner/controller and 3/6 Safe default-admin path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USD1 token owner/controller; USD1 controller default-admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -48961,10 +49143,11 @@
           }
         ],
         "evidence": "USDaf is an exclusive Liquity-v2 fork on Ethereum (audited 10x across the BOLD codebase plus Asymmetry's collateral changes); Asymmetry docs state the system is entirely immutable, permissionless, and non-upgradeable. Minting is user-collateralized CDP borrowing confined to the registered branch contracts. Renouncement is grounded in the documented, audited immutable Liquity-v2 architecture rather than an independent on-chain owner() read.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8."
+          "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8.",
+          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
         ]
       }
     },
@@ -49194,10 +49377,11 @@
         ],
         "sourceFreeRationale": "Mint mechanism and role model confirmed from USD.AI first-party docs; the live multisig address, signer set, and threshold for STRATEGY_ADMIN_ROLE were not independently resolved on-chain.",
         "evidence": "USD.AI technical docs confirm USDai is minted via a contract deposit() function by KYC'ed institutions depositing PYUSD (1:1), not by a fiat issuer backend. Privileged operations use STRATEGY_ADMIN_ROLE (currently a multisig) and BRIDGE_ADMIN_ROLE for omnichain mint/burn; governance is slated to move to the USD.AI DAO. This is the parent of sUSDai (susdai-usd-ai).",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the live STRATEGY_ADMIN_ROLE multisig address, signer count, and threshold, plus the on-chain USDai contract owner/upgrade admin, before raising to verified."
+          "Resolve the live STRATEGY_ADMIN_ROLE multisig address, signer count, and threshold, plus the on-chain USDai contract owner/upgrade admin, before raising to verified.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -49566,11 +49750,12 @@
           }
         ],
         "evidence": "Blast/Metalayer documentation describes USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while the Ethereum L1 USDYieldManager escrows stablecoins into yield strategies; this is a bridge/synthetic mint, not a user-collateralized CDP.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the bridge/yield-manager owner and the Blast operator multisig threshold and signer set on-chain.",
-          "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy."
+          "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -49978,8 +50163,11 @@
           }
         ],
         "evidence": "Circle documentation describes USDC as issuer-operated, and direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum USDC MasterMinter; Ethereum USDC token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -50399,7 +50587,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "USDCV is issued by Societe Generale-FORGE, a MiCA-authorized e-money institution (ACPR); onboarded institutional investors subscribe by sending USD to SG-FORGE's bank account 1:1, and SG-FORGE mints and delivers the tokens against reserves segregated at BNY Mellon.",
       "controls": [
         {
@@ -50426,10 +50614,11 @@
         ],
         "sourceFreeRationale": "Issuer-controlled mint model confirmed from SG-FORGE first-party materials; the on-chain USDCV token owner/minter admin and proxy admin were not independently resolved.",
         "evidence": "SG-FORGE (MiCA EMI, ACPR-authorized) is the sole issuer of USDCV; per SG-FORGE materials minting is a centralized 1:1 subscription against USD sent to SG-FORGE's bank account with reserves segregated at BNY Mellon. No permissionless mint path.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain USDCV token owner/minter admin and proxy admin (Ethereum/Solana) before raising to verified."
+          "Resolve the on-chain USDCV token owner/minter admin and proxy admin (Ethereum/Solana) before raising to verified.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -50764,10 +50953,11 @@
           }
         ],
         "evidence": "USDD docs describe collateralized issuance architecture and deployment addresses; token-source review identifies USDD Join as the direct ward/minter while governance/Pause/Vat authority remains unresolved.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence."
+          "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -51031,8 +51221,11 @@
           }
         ],
         "evidence": "Ethena documentation describes signed order minting; Ethereum reads identify the active token minter and 5/10 Safe token-owner path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -51312,11 +51505,12 @@
           }
         ],
         "evidence": "Direct read: owner() = 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 at BSC block 100175621. Source line scan showed ADMIN_ROLE, MINTER_AND_BURN_ROLE, and mint() guarded by MINTER_AND_BURN_ROLE.",
-        "reviewer": "Codex mint-authority top100 batch-b",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Enumerate current MINTER_AND_BURN_ROLE holders and DEFAULT_ADMIN_ROLE holders.",
-          "Verify whether 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 is a timelock, Safe, or EOA and whether it can grant/revoke minters."
+          "Verify whether 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 is a timelock, Safe, or EOA and whether it can grant/revoke minters.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -51507,10 +51701,11 @@
           }
         ],
         "evidence": "Falcon documentation presents USDf as issuer/protocol-operated; verified Ethereum source and role reads identify a 4/6 Safe admin path but not the full active minter set.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Enumerate current MINTER_ROLE holders across USDf deployments."
+          "Enumerate current MINTER_ROLE holders across USDf deployments.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDf default admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -51910,8 +52105,11 @@
           }
         ],
         "evidence": "Paxos documentation and Ethereum token reads identify USDG's dedicated SupplyControl contract and owner/admin path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDG SupplyControl contract; USDG SupplyControl owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -52616,11 +52814,12 @@
           }
         ],
         "evidence": "Hubble Protocol documentation describes USDH as a Solana MakerDAO-style overcollateralized CDP with HBB-token governance and collateral whitelisting; the on-chain USDH mint authority and Hubble program upgrade authority were not independently resolved.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the USDH SPL mint authority and the Hubble borrowing-market program upgrade authority on a Solana explorer (multisig vs. program-derived).",
-          "Confirm whether the documented Hubble 2.0 immutability transition has occurred for the live borrow app."
+          "Confirm whether the documented Hubble 2.0 immutability transition has occurred for the live borrow app.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Hubble borrowing-market program (USDH mint authority); Hubble governance (HBB / collateral whitelisting + program admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -52820,10 +53019,11 @@
         ],
         "sourceFreeRationale": "Issuer-controlled mint model confirmed from USDH/Bridge materials; the on-chain USDH token owner/minter admin on HyperEVM and HyperCore was not independently resolved.",
         "evidence": "USDH is issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB) and designed by Native Markets; mint/redeem is centralized 1:1 through Bridge against HQLA reserves with monthly BPM LLP attestations. No permissionless mint path is described.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain USDH token owner/minter admin on HyperEVM (and HyperCore tokenId controller) before raising confidence."
+          "Resolve the on-chain USDH token owner/minter admin on HyperEVM (and HyperCore tokenId controller) before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -53198,10 +53398,11 @@
           }
         ],
         "evidence": "Orki USDK is an exclusive Liquity-v2 (BOLD) fork on Swellchain; minting is user-collateralized CDP borrowing with permissionless redemption, and docs describe a permissionless, non-custodial, no-opaque-governance design. Prior Pharos review confirmed the token has no freeze/blacklist/seizure/proxy-upgrade surface. Renouncement is grounded in the documented immutable Liquity-v2 architecture (mint confined to registered branch contracts, non-upgradeable core), not an independent on-chain owner() read.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x0000baa0b1678229863c0a941c1056b83a1955f5."
+          "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x0000baa0b1678229863c0a941c1056b83a1955f5.",
+          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
         ]
       }
     },
@@ -53650,10 +53851,11 @@
       "review": {
         "sourceFreeRationale": "USDM classified as a USDtb-rails variant per MegaETH/Ethena materials and reserve metadata; posture mirrored from the parent USDtb mintAuthority. The USDM token's own on-chain admin on MegaETH/Ethereum was not independently resolved.",
         "evidence": "USDM (MegaUSD) is issued on Ethena's USDtb rails and backed ~90% by USDtb (reserves coinId usdtb-ethena, depType implicit wrapper). It inherits USDtb's offchain-attested mint path and concentrated-admin posture; no independent MegaETH mint authority was identified. inheritedFrom set to usdtb-ethena (coin has no variantOf field).",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain owner/minter admin of the USDM token on MegaETH and Ethereum and confirm it cannot mint beyond USDtb-backed issuance."
+          "Resolve the on-chain owner/minter admin of the USDM token on MegaETH and Ethereum and confirm it cannot mint beyond USDtb-backed issuance.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -53871,10 +54073,11 @@
         ],
         "sourceFreeRationale": "Issuer-controlled, oracle-gated mint model confirmed from Moneta/Charli3 materials; the Cardano minting-policy controller / policy keys for USDM were not independently resolved on-chain.",
         "evidence": "USDM is issued by Moneta (USA) / NBX (EEA, MiCA-notified) on Cardano; mint/redeem is centralized and KYC-gated against reserves at Fidelity/Western Asset/Amundi, with a Charli3 reserve oracle checked before mint. No permissionless mint path is described.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the Cardano minting-policy controller / policy keys for USDM and how the Charli3 oracle gate is enforced before raising confidence."
+          "Resolve the Cardano minting-policy controller / policy keys for USDM and how the Charli3 oracle gate is enforced before raising confidence.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -55396,12 +55599,13 @@
           }
         ],
         "evidence": "Official Paxos materials describe USDP issuance/redemption as a Paxos-operated stablecoin flow. On-chain signer setup and minter-admin roles were not verified, so confidence remains manual-review.",
-        "reviewer": "Codex mint-authority full-gap batch-5",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Read Ethereum USDP owner/masterMinter/minter role state and proxy admin, if exposed.",
           "Read Solana mintAuthority/freezeAuthority and BSC token owner/minter roles.",
-          "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service."
+          "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service.",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -56838,8 +57042,11 @@
           }
         ],
         "evidence": "Sky Chainlog and mainnet reads identify USDS_JOIN as an authorized USDS minter path and the Sky Pause Proxy as an authorized governance executor with a 2-day Pause delay. UsdsJoin mints USDS only against Vat.dai balance, while governance can change system modules, parameters, and authorizations.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDS_JOIN token adapter; Sky Pause Proxy governance executor); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -57322,10 +57529,11 @@
           }
         ],
         "evidence": "USDsui is the native Sui dollar issued by Bridge (Stripe company, FinCEN MSB NMLS #2450917) via its Open Issuance mint/burn workflow against short-dated Treasury, repo, MMF, and cash reserves; minting is controlled by the regulated issuer's backend, not by a permissionless or user-collateralized route.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain holder of the Sui TreasuryCap / mint authority object for the USDsui coin type."
+          "Resolve the on-chain holder of the Sui TreasuryCap / mint authority object for the USDsui coin type.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -57544,8 +57752,11 @@
           }
         ],
         "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum USDT token owner multisig); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+        ]
       }
     },
     "contracts": [
@@ -57937,8 +58148,11 @@
           }
         ],
         "evidence": "USDtb docs describe Anchorage Digital Bank issuer-operated mint/redeem rails backed by BUIDL and cash reserves, and implementation review shows MINTER_BURNER_ROLE plus DEFAULT_ADMIN_ROLE rather than Ethena USDe signed-order minting.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-25"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -58078,8 +58292,11 @@
           }
         ],
         "evidence": "USDU has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
+        ]
       }
     },
     "contracts": [
@@ -58733,11 +58950,12 @@
           }
         ],
         "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions, with KAVA on-chain governance and a Stability Committee controlling debt limits, collateral, ratios, and fees; specific live parameters and module admin not independently confirmed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm current x/cdp parameters (global debt limit, fees) and whether new USDX issuance is still enabled given the sustained depeg.",
-          "Confirm the Stability Committee membership/threshold."
+          "Confirm the Stability Committee membership/threshold.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Kava x/cdp module (USDX mint); Kava on-chain governance + Stability Committee (KAVA)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -58845,11 +59063,12 @@
           }
         ],
         "evidence": "HypurrFi documentation describes USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control. Current HypurrFi wind-down materials state Pooled new borrows are suspended, USDXL rates are set to 30%, and full Legacy/Pooled settlement targets July 30, 2026.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the HypurrFi ACL-admin / pool-admin multisig threshold and signer set on HyperEVM.",
-          "Confirm contract-level enforcement of suspended Pooled borrows and any remaining Legacy issuance caps during wind-down."
+          "Confirm contract-level enforcement of suspended Pooled borrows and any remaining Legacy issuance caps during wind-down.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -58984,7 +59203,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
       "controls": [
         {
@@ -58999,8 +59218,21 @@
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
+            "owners": [
+              "0x58417F57F29c6b03114129e0EB59A174B1f41504",
+              "0x189D409b807aC1949Fe82c143270992FE9457607",
+              "0x60F030d621a4Ab27DfF024a8e43eB36e2D95FB02",
+              "0xaA1E4eef723ceaDd137B3AD39ea540dA4B092f8e",
+              "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D",
+              "0x020679fF2Bc53758bEbAD1bBe0ab0CF7c1beD241",
+              "0x6A95a204aD4a6842b2f0aE3BBb59f35E85594f46"
+            ],
             "threshold": 4,
-            "source": "manual"
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294485,
+            "source": "safe-api"
           },
           "sources": [
             {
@@ -59010,9 +59242,13 @@
             {
               "label": "Ethereum USDY contract",
               "url": "https://etherscan.io/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C#code"
+            },
+            {
+              "label": "Safe Transaction Service",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
             }
           ],
-          "evidence": "AccessControl role reads showed this Safe holds default admin/minter authority; getThreshold() returned 4 and getOwners() returned 7 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+          "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/7 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
         }
       ],
       "review": {
@@ -59020,11 +59256,15 @@
           {
             "label": "Ondo docs",
             "url": "https://docs.ondo.finance/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
           }
         ],
-        "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path.",
-        "reviewer": "Codex mint-authority address pass",
-        "reviewedAt": "2026-05-24"
+        "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -59924,10 +60164,11 @@
         ],
         "sourceFreeRationale": "Immutability/no-admin-mint established from project docs and the Liquity-v2 fork lineage; the on-chain owner()/renouncement state was not independently read, hence manual-review rather than verified.",
         "evidence": "Nerite docs and the NeriteOrg/nerite Liquity-v2 monorepo fork describe immutable, non-upgradeable core contracts where USND is minted only through user Troves/BorrowerOperations; mechanism matches Liquity v2's renounced-admin design, though live owner() renouncement was not independently read on-chain.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Confirm on-chain that no system contract retains an owner/admin able to mint or alter collateral branches."
+          "Confirm on-chain that no system contract retains an owner/admin able to mint or alter collateral branches.",
+          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
         ]
       }
     },
@@ -60221,7 +60462,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA, and the Funding Manager is verified as an active allowed minter.",
       "controls": [
         {
@@ -60275,11 +60516,12 @@
           }
         ],
         "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP; allowedMinters reads confirm the Funding Manager as an active direct minter.",
-        "reviewer": "Codex mint-authority top100 batch-c",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Enumerate current MinterSet events for any additional allowed minters before finalizing the complete direct-minter set.",
-          "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained."
+          "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Piku Funding Manager; USP token owner EOA); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -61304,10 +61546,11 @@
           }
         ],
         "evidence": "dForce/Unitus docs describe USX minting through overcollateralized borrow routes; MSD source exposes owner-managed minters and direct mint(address,uint256), and Ethereum reads identify current owner, proxy admin, and minter list.",
-        "reviewer": "Codex mint-authority full-gap batch-6",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve owner/proxy-admin contract governance and any threshold or timelock."
+          "Resolve owner/proxy-admin contract governance and any threshold or timelock.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USX MSD token minter registry; USX token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -61437,7 +61680,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account; the program upgrade authority is separate and signer setup remains unverified.",
       "controls": [
         {
@@ -61493,11 +61736,12 @@
           }
         ],
         "evidence": "Solana mint reads found live mint and freeze authority at Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4, while the Solstice program has a separate verified upgrade authority.",
-        "reviewer": "Codex mint-authority top100 batch-a",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Is the upgrade authority controlled by a Safe-like multisig, institutional backend, or EOA?",
-          "Does the Solstice program enforce collateral or KYC limits that bound minting?"
+          "Does the Solstice program enforce collateral or KYC limits that bound minting?",
+          "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
         ]
       }
     },
@@ -61660,8 +61904,11 @@
           }
         ],
         "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -61818,11 +62065,12 @@
           }
         ],
         "evidence": "XSY/YieldPoint docs describe Unity/UTY as a synthetic dollar; verified Avalanche source shows mint/burn restricted to MANAGEMENT_SMART_CONTRACT_ROLE, with live role reads resolving 0x9b9C...C77A as the management role holder and 0xA780...42F4 as DEFAULT_ADMIN_ROLE/owner.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Resolve whether the DEFAULT_ADMIN_ROLE EOA is controlled by a multisig, MPC, or other policy layer.",
-          "Confirm the precise custodian split and any attestation quorum behind issuance."
+          "Confirm the precise custodian split and any attestation quorum behind issuance.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (UTY management smart contract role holder; UTY DEFAULT_ADMIN_ROLE / owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -62131,11 +62379,12 @@
           }
         ],
         "evidence": "Youves documentation describes uUSD as an overcollateralized Tezos CDP whose minting engine is administered by the Murmuration-derived Youves DAO contract (YOU governance) with a keyholder break-glass guardian; the live on-chain admin wiring and guardian threshold were not independently confirmed.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm on Tezos that the DAO contract is the sole admin of the minting engine and the current state of the keyholder break-glass guardian multisig.",
-          "Confirm live target/emergency collateral ratios per collateral type."
+          "Confirm live target/emergency collateral ratios per collateral type.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Youves minting engine / vault contracts; Youves DAO contract (YOU governance) + break-glass guardian); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -63532,11 +63781,12 @@
           }
         ],
         "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA; IBTC collateral was not supported by reviewed official sources. The IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
           "Confirm the on-chain owner/admin of the Virtue Money core/branch contracts on IOTA EVM and whether ownership is renounced (which would warrant immutable-user-collateralized).",
-          "Confirm whether a separate governance token / DAO exists beyond a team multisig."
+          "Confirm whether a separate governance token / DAO exists beyond a team multisig.",
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
         ]
       }
     },
@@ -67919,8 +68169,11 @@
           }
         ],
         "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
-        "reviewer": "Codex mint-authority full-gap batch-6",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
+        ]
       }
     },
     "contracts": [
@@ -68077,10 +68330,11 @@
           }
         ],
         "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO, with vault collateral, auctions, and future collateral support. No first-party technical docs expose the current XSC owner/admin, so the governance/admin surface remains manual-review.",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the current XSC XTDao vault contracts, owner/admin, pause, and upgrade authority."
+          "Resolve the current XSC XTDao vault contracts, owner/admin, pause, and upgrade authority.",
+          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (XTDao vault/protocol mint route; XTDao collateral-parameter governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
         ]
       }
     },
@@ -68544,8 +68798,11 @@
           }
         ],
         "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
-        "reviewer": "Codex mint-authority full-gap batch-6",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
+        ]
       }
     },
     "contracts": [
@@ -68903,8 +69160,11 @@
           }
         ],
         "evidence": "Figure/Provenance documentation describes YLDS issuance as an issuer-mediated stablecoin process.",
-        "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
+        "unresolvedQuestions": [
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+        ]
       }
     },
     "contracts": [
@@ -69815,10 +70075,11 @@
         ],
         "sourceFreeRationale": "Eligible-investor-gated mint and Fordefi MPC custody taken from Yuzu docs/coverage; the on-chain yzUSD minter role/owner and the MPC signer policy were not independently resolved.",
         "evidence": "Yuzu Money docs and third-party reviews describe yzUSD primary mint/redeem as gated to accredited/qualified/institutional investors at 1:1 with USDT0, with collateral run through a Fordefi MPC workspace restricted to whitelisted protocols and overcollateralization plus a yzPP first-loss tranche; authored self-contained as the parent of syzUSD (no inheritedFrom).",
-        "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Resolve the on-chain yzUSD minter/owner admin on Plasma and the Fordefi MPC quorum/policy controlling collateral operations."
+          "Resolve the on-chain yzUSD minter/owner admin on Plasma and the Fordefi MPC quorum/policy controlling collateral operations.",
+          "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
         ]
       }
     },
@@ -70910,7 +71171,7 @@
     "mintAuthority": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral; no privileged issuer/admin mint path was resolved from official materials.",
       "controls": [
         {
@@ -70950,10 +71211,11 @@
           }
         ],
         "evidence": "No separate privileged mint authority was resolved for native ZSD beyond protocol conversion rules.",
-        "reviewer": "Codex mint-authority full-gap batch-6",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code."
+          "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code.",
+          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
         ]
       }
     },
@@ -71059,7 +71321,7 @@
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "none-resolved",
-      "confidence": "probable",
+      "confidence": "manual-review",
       "summary": "ZYS is a yield-share variant over the Zephyr ZSD yield reserve; supply risk should inherit reviewed ZSD native reserve mechanics.",
       "inheritedFrom": "zsd-zephyr-protocol",
       "controls": [
@@ -71096,10 +71358,11 @@
           }
         ],
         "evidence": "ZYS should inherit the ZSD mint-authority profile as a yield-share variant.",
-        "reviewer": "Codex mint-authority full-gap batch-6",
-        "reviewedAt": "2026-05-24",
+        "reviewer": "Codex Phase 0c verification",
+        "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Add only after adding the ZSD parent snippet, because none-resolved inheritance requires the parent profile."
+          "Add only after adding the ZSD parent snippet, because none-resolved inheritance requires the parent profile.",
+          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
         ]
       }
     },

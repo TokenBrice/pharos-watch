@@ -195,11 +195,12 @@
         }
       ],
       "evidence": "Bridge-hosted token metadata identifies the CASH mint, and Phantom/Bridge materials identify CASH as a Solana stablecoin launched through Bridge Open Issuance. Solana RPC resolves the current Token-2022 authority fields.",
-      "reviewer": "Codex mint-authority follow-up non-EVM lane",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Map mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 to a Bridge/Phantom signer, PDA, multisig, or MPC policy.",
-        "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions."
+        "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

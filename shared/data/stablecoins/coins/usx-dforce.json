@@ -132,10 +132,11 @@
         }
       ],
       "evidence": "dForce/Unitus docs describe USX minting through overcollateralized borrow routes; MSD source exposes owner-managed minters and direct mint(address,uint256), and Ethereum reads identify current owner, proxy admin, and minter list.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve owner/proxy-admin contract governance and any threshold or timelock."
+        "Resolve owner/proxy-admin contract governance and any threshold or timelock.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USX MSD token minter registry; USX token owner); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

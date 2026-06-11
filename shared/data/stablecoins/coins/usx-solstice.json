@@ -56,7 +56,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
+    "confidence": "manual-review",
     "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account; the program upgrade authority is separate and signer setup remains unverified.",
     "controls": [
       {
@@ -112,11 +112,12 @@
         }
       ],
       "evidence": "Solana mint reads found live mint and freeze authority at Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4, while the Solstice program has a separate verified upgrade authority.",
-      "reviewer": "Codex mint-authority top100 batch-a",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Is the upgrade authority controlled by a Safe-like multisig, institutional backend, or EOA?",
-        "Does the Solstice program enforce collateral or KYC limits that bound minting?"
+        "Does the Solstice program enforce collateral or KYC limits that bound minting?",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

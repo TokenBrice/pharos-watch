@@ -111,12 +111,12 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "U is issuer-operated; Ethereum/BSC token ownership resolves to a 2/4 Safe that controls mint/admin authority.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x59f94ade4F881F21EA608aD4448Bf70b78E37187",
+        "address": "0x59F94AdE4F881f21ea608AD4448bf70B78e37187",
         "label": "U token owner Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -127,7 +127,17 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 2,
-          "source": "manual"
+          "owners": [
+            "0x7A24b3449c8241cbA2129AA97b965200F67FC51A",
+            "0x42fA2acc689A90D94F807C58b3476788e3605d0f",
+            "0x7D155808c369bD1666D84c512aD98dCFc7399bFD",
+            "0xEFcB5d32dd52Cc58dEF9034c4359db09bE9361cA"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 25294518,
+          "source": "safe-api"
         },
         "sources": [
           {
@@ -137,9 +147,13 @@
           {
             "label": "Ethereum U contract",
             "url": "https://etherscan.io/address/0xce24439F2D9C6a2289f741120fE202248B666666#readProxyContract"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
           }
         ],
-        "evidence": "Ethereum/BSC token owner reads resolve to this Safe; getThreshold() returned 2 and getOwners() returned 4 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+        "evidence": "Phase 0c Safe verification refreshed current state: 2/4 owners, no enabled modules, zero guard, fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, observed against Ethereum block 25294518."
       }
     ],
     "review": {
@@ -147,11 +161,15 @@
         {
           "label": "U website",
           "url": "https://u.tech/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
         }
       ],
-      "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294518.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

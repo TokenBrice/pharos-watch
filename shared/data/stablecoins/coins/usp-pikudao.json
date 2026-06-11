@@ -58,7 +58,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
+    "confidence": "manual-review",
     "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA, and the Funding Manager is verified as an active allowed minter.",
     "controls": [
       {
@@ -112,11 +112,12 @@
         }
       ],
       "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP; allowedMinters reads confirm the Funding Manager as an active direct minter.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Enumerate current MinterSet events for any additional allowed minters before finalizing the complete direct-minter set.",
-        "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained."
+        "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Piku Funding Manager; USP token owner EOA); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

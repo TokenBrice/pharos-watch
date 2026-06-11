@@ -366,8 +366,11 @@
         }
       ],
       "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum USDT token owner multisig); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

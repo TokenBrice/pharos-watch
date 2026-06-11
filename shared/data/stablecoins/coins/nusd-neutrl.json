@@ -174,8 +174,8 @@
     ],
     "review": {
       "evidence": "Ethereum reads of the NUSD token show MINTER_ROLE assigned to StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D, live DEFAULT_ADMIN_ROLE at 0x51De41ec06e779715d7FB71Ef83A736cFc903217, and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "NUSD token (Etherscan)",
@@ -188,7 +188,8 @@
       ],
       "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Ethereum role reads and Neutrl docs; whether the live admin is an EOA, multisig, or Safe was not verified on-chain.",
       "unresolvedQuestions": [
-        "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence."
+        "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

@@ -114,11 +114,12 @@
     ],
     "review": {
       "evidence": "A7A5 project documentation and Pharos metadata describe a single centralized RUB issuer (Old Vector LLC) minting against off-chain bank reserves; redemption is restricted to authorized partners.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Classification based on the issuer model in project materials; on-chain Ethereum/Tron token owner/minter admin not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence."
+        "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

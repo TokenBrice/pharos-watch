@@ -135,8 +135,8 @@
     ],
     "review": {
       "evidence": "Synthetix SIP repository (notably SIP-420) and protocol coverage describe sUSD as an overcollateralized debt-pool stablecoin governed via the SIP process, with legacy per-staker SNX minting deprecated in favor of a protocol-owned debt pool; on-chain admin not independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "SIP-420 (Synthetix SIPs)",
@@ -149,7 +149,8 @@
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/admin of the V3 core, 420-pool, and legacy sUSD token contracts and the Synthetix governance multisig/timelock.",
-        "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority."
+        "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Synthetix V3 / 420-pool minting contracts; Synthetix governance (SIP process / DAO)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

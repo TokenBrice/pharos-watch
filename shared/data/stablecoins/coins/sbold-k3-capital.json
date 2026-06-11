@@ -64,7 +64,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "sBOLD is a K3 Capital ERC-4626 wrapper over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD, and K3 wrapper administration resolves to a 2/3 Safe.",
     "inheritedFrom": "bold-liquity",
     "controls": [
@@ -106,6 +106,7 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294485,
           "source": "safe-api"
         },
         "sources": [
@@ -116,9 +117,13 @@
           {
             "label": "sBOLD owner Safe API",
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
           }
         ],
-        "evidence": "Ethereum owner() resolved to this Safe; Safe API returned a 2/3 Safe with no enabled modules and the zero guard."
+        "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 2/3 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d."
       }
     ],
     "review": {
@@ -126,11 +131,15 @@
         {
           "label": "Liquity v2 docs",
           "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
         }
       ],
-      "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard.",
-      "reviewer": "Codex mint-authority full-gap batch-4",
-      "reviewedAt": "2026-05-24"
+      "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "single-chain",

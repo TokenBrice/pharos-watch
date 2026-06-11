@@ -142,7 +142,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
     "controls": [
       {
@@ -158,7 +158,20 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 4,
-          "source": "manual"
+          "owners": [
+            "0x58417F57F29c6b03114129e0EB59A174B1f41504",
+            "0x189D409b807aC1949Fe82c143270992FE9457607",
+            "0x60F030d621a4Ab27DfF024a8e43eB36e2D95FB02",
+            "0xaA1E4eef723ceaDd137B3AD39ea540dA4B092f8e",
+            "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D",
+            "0x020679fF2Bc53758bEbAD1bBe0ab0CF7c1beD241",
+            "0x6A95a204aD4a6842b2f0aE3BBb59f35E85594f46"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294485,
+          "source": "safe-api"
         },
         "sources": [
           {
@@ -168,9 +181,13 @@
           {
             "label": "Ethereum USDY contract",
             "url": "https://etherscan.io/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C#code"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
           }
         ],
-        "evidence": "AccessControl role reads showed this Safe holds default admin/minter authority; getThreshold() returned 4 and getOwners() returned 7 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+        "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/7 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
       }
     ],
     "review": {
@@ -178,11 +195,15 @@
         {
           "label": "Ondo docs",
           "url": "https://docs.ondo.finance/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
         }
       ],
-      "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

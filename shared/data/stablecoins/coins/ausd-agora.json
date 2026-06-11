@@ -242,11 +242,12 @@
         }
       ],
       "evidence": "Batch-A research verified the AUSD EVM role model and Solana Token-2022 mint authority. A follow-up Solana read against the local Pharos AUSD mint confirmed the current Solana mint authority address; EVM role-holder enumeration remains unresolved.",
-      "reviewer": "Codex mint-authority top100 batch-a",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Call getMinterRoleMembers, getBridgeMinterRoleMembers, getAccessControlManagerRoleMembers, and rate-limit getters on the EVM contract.",
-        "Verify signer setup for Solana and EVM role-holder addresses."
+        "Verify signer setup for Solana and EVM role-holder addresses.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

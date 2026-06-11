@@ -256,14 +256,23 @@
     ],
     "review": {
       "evidence": "Yuzu Money docs and third-party reviews describe yzUSD primary mint/redeem as gated to accredited/qualified/institutional investors at 1:1 with USDT0, with collateral run through a Fordefi MPC workspace restricted to whitelisted protocols and overcollateralization plus a yzPP first-loss tranche; authored self-contained as the parent of syzUSD (no inheritedFrom).",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Yuzu Stablecoin (yzUSD) docs", "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd" },
-        { "label": "yzUSD token (Plasmascan)", "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc" }
+        {
+          "label": "Yuzu Stablecoin (yzUSD) docs",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        },
+        {
+          "label": "yzUSD token (Plasmascan)",
+          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        }
       ],
       "sourceFreeRationale": "Eligible-investor-gated mint and Fordefi MPC custody taken from Yuzu docs/coverage; the on-chain yzUSD minter role/owner and the MPC signer policy were not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain yzUSD minter/owner admin on Plasma and the Fordefi MPC quorum/policy controlling collateral operations."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain yzUSD minter/owner admin on Plasma and the Fordefi MPC quorum/policy controlling collateral operations.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+      ]
     }
   }
 }

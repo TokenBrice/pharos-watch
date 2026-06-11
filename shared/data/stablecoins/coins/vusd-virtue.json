@@ -89,15 +89,22 @@
     ],
     "review": {
       "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA; IBTC collateral was not supported by reviewed official sources. The IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "What is VUSD (Virtue docs)", "url": "https://docs.virtue.money/overview/what-is-vusd" },
-        { "label": "Virtue on IOTA (iota.org)", "url": "https://www.iota.org/learn/showcases/virtue" }
+        {
+          "label": "What is VUSD (Virtue docs)",
+          "url": "https://docs.virtue.money/overview/what-is-vusd"
+        },
+        {
+          "label": "Virtue on IOTA (iota.org)",
+          "url": "https://www.iota.org/learn/showcases/virtue"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm the on-chain owner/admin of the Virtue Money core/branch contracts on IOTA EVM and whether ownership is renounced (which would warrant immutable-user-collateralized).",
-        "Confirm whether a separate governance token / DAO exists beyond a team multisig."
+        "Confirm whether a separate governance token / DAO exists beyond a team multisig.",
+        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
       ]
     }
   }

@@ -55,8 +55,11 @@
         }
       ],
       "evidence": "On-chain asset read confirms sDAI wraps DAI; durable mint authority inherits from reviewed parent DAI.",
-      "reviewer": "Codex mint-authority full-gap batch-4",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control; keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "variantOf": "dai-makerdao",

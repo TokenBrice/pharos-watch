@@ -165,11 +165,12 @@
         }
       ],
       "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Decode Mezo-side borrower/CDP contract admin and collateral parameter authority.",
-        "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
+        "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mezo MUSD borrower/CDP mint path; MUSD token owner Safe; MUSD Wormhole NTT manager); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

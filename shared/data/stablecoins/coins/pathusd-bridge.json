@@ -179,8 +179,8 @@
     ],
     "review": {
       "evidence": "Tempo docs describe pathUSD as a TIP-20 precompile stablecoin where the administrative authority can mint/burn arbitrarily; Bridge (FinCEN MSB) operates issuance and redemption against a cash/Treasury/repo/MMF reserve, with no permissionless or user-collateralized mint route.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Tempo pathUSD docs",
@@ -192,7 +192,8 @@
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence."
+        "Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   }

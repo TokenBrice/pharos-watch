@@ -342,8 +342,11 @@
         }
       ],
       "evidence": "Ethena documentation describes signed order minting; Ethereum reads identify the active token minter and 5/10 Safe token-owner path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

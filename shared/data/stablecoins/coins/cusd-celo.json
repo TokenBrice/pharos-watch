@@ -113,11 +113,12 @@
         }
       ],
       "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage.",
-        "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
+        "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Mento USDm token owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

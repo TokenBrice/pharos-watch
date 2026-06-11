@@ -89,8 +89,8 @@
     ],
     "review": {
       "evidence": "Indigo Protocol documentation describes iUSD as a CDP-minted synthetic dollar on Cardano governed by INDY token holders who control collateral onboarding and risk parameters; no centralized issuer minter exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Indigo Protocol docs",
@@ -99,7 +99,8 @@
       ],
       "sourceFreeRationale": "CDP mint mechanism and INDY DAO governance confirmed from Indigo docs; Cardano-native validator/governance script authority not independently resolved on-chain.",
       "unresolvedQuestions": [
-        "Resolve the Indigo on-chain governance script authority and CDP minting policy parameters before raising confidence."
+        "Resolve the Indigo on-chain governance script authority and CDP minting policy parameters before raising confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Indigo CDP minting validators; Indigo INDY DAO governance); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

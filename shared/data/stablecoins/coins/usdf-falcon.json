@@ -176,10 +176,11 @@
         }
       ],
       "evidence": "Falcon documentation presents USDf as issuer/protocol-operated; verified Ethereum source and role reads identify a 4/6 Safe admin path but not the full active minter set.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate current MINTER_ROLE holders across USDf deployments."
+        "Enumerate current MINTER_ROLE holders across USDf deployments.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDf default admin Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

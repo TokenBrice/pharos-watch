@@ -139,10 +139,11 @@
         }
       ],
       "evidence": "SG-FORGE is the direct issuer/redemption operator; Ethereum proxy reads identify the token implementation path.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve current token roles and mint authority on XRPL, Stellar, and Solana deployments before broad multichain claims."
+        "Resolve current token roles and mint authority on XRPL, Stellar, and Solana deployments before broad multichain claims.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

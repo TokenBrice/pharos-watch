@@ -71,7 +71,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved",
-    "confidence": "probable",
+    "confidence": "manual-review",
     "summary": "ZYS is a yield-share variant over the Zephyr ZSD yield reserve; supply risk should inherit reviewed ZSD native reserve mechanics.",
     "inheritedFrom": "zsd-zephyr-protocol",
     "controls": [
@@ -108,10 +108,11 @@
         }
       ],
       "evidence": "ZYS should inherit the ZSD mint-authority profile as a yield-share variant.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Add only after adding the ZSD parent snippet, because none-resolved inheritance requires the parent profile."
+        "Add only after adding the ZSD parent snippet, because none-resolved inheritance requires the parent profile.",
+        "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
       ]
     }
   },

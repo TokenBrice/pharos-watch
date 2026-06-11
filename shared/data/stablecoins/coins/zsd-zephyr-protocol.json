@@ -73,7 +73,7 @@
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
     "authorityPosture": "none-resolved",
-    "confidence": "probable",
+    "confidence": "manual-review",
     "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral; no privileged issuer/admin mint path was resolved from official materials.",
     "controls": [
       {
@@ -113,10 +113,11 @@
         }
       ],
       "evidence": "No separate privileged mint authority was resolved for native ZSD beyond protocol conversion rules.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code."
+        "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code.",
+        "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
       ]
     }
   },

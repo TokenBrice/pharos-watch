@@ -193,8 +193,11 @@
         }
       ],
       "evidence": "Sky Chainlog and mainnet reads identify USDS_JOIN as an authorized USDS minter path and the Sky Pause Proxy as an authorized governance executor with a 2-day Pause delay. UsdsJoin mints USDS only against Vat.dai balance, while governance can change system modules, parameters, and authorizations.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (USDS_JOIN token adapter; Sky Pause Proxy governance executor); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

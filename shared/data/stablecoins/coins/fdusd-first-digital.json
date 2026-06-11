@@ -145,7 +145,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "FDUSD is issuer-backed; Ethereum/BSC token ownership resolves to a 4/6 Safe that controls mint/admin authority.",
     "controls": [
       {
@@ -161,7 +161,19 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 4,
-          "source": "manual"
+          "owners": [
+            "0x418DfC379BD6C0964d7b47F0c14Fce71084811A6",
+            "0xE1Bb6D44e9e9Ba5F59Deaa89AF0970020a9a9722",
+            "0xD92b6fB17777a6e1Bb7709250AA4E60472c77e7D",
+            "0x82A5AAd82f309d476565ef20e9768FddD7C37231",
+            "0x1cD3586BAc47e31C070fa5cDF54dEF0d1519DaA9",
+            "0x80EEF36e9963B92373Da348CE1543357cBaAAc62"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294485,
+          "source": "safe-api"
         },
         "sources": [
           {
@@ -175,9 +187,13 @@
           {
             "label": "Safe transaction service",
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
           }
         ],
-        "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Safe API review confirmed 4/6 owners, no modules, and zero guard."
+        "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/6 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
       }
     ],
     "review": {
@@ -185,11 +201,15 @@
         {
           "label": "First Digital USD",
           "url": "https://www.firstdigitallabs.com/fdusd"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
         }
       ],
-      "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

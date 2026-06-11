@@ -176,8 +176,11 @@
         }
       ],
       "evidence": "Monerium documentation and Ethereum owner reads identify the issuer mint route and the current Ethereum token owner Safe.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

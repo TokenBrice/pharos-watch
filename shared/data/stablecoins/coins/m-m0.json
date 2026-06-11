@@ -103,8 +103,11 @@
         }
       ],
       "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (M0 MinterGateway; M0 Solana Portal); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "infrastructures": [

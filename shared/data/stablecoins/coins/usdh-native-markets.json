@@ -157,8 +157,8 @@
     ],
     "review": {
       "evidence": "USDH is issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB) and designed by Native Markets; mint/redeem is centralized 1:1 through Bridge against HQLA reserves with monthly BPM LLP attestations. No permissionless mint path is described.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "USDH reserves",
@@ -171,7 +171,8 @@
       ],
       "sourceFreeRationale": "Issuer-controlled mint model confirmed from USDH/Bridge materials; the on-chain USDH token owner/minter admin on HyperEVM and HyperCore was not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain USDH token owner/minter admin on HyperEVM (and HyperCore tokenId controller) before raising confidence."
+        "Resolve the on-chain USDH token owner/minter admin on HyperEVM (and HyperCore tokenId controller) before raising confidence.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

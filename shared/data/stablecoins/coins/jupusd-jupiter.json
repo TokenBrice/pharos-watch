@@ -184,8 +184,8 @@
     ],
     "review": {
       "evidence": "JupUSD launch coverage and project materials describe permissioned mint/redeem limited to KYC/KYB institutions through Ethena's Stablecoin-as-a-Service backend; reserves (90% USDtb, 10% USDC) are custodied by Porto via Anchorage. Public users access JupUSD via secondary markets, not direct mint.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "JupUSD website",
@@ -199,7 +199,8 @@
       "sourceFreeRationale": "Solana mint/redeem program ID and upgrade authority were not read live on-chain in this pass; classification rests on the documented whitelisted institutional mint model operated via Ethena.",
       "unresolvedQuestions": [
         "Read the JupUSD Solana mint authority and program upgrade authority (and any multisig) to confirm the controlling keys.",
-        "Confirm the allowlist mechanism gating approved minter addresses."
+        "Confirm the allowlist mechanism gating approved minter addresses.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   }

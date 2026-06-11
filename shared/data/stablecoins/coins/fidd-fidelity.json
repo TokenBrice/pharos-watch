@@ -183,10 +183,11 @@
         }
       ],
       "evidence": "Fidelity issuer materials and Ethereum proxy reads identify issuer-operated minting and the current implementation path.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems."
+        "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

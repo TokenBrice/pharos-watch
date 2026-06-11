@@ -235,8 +235,8 @@
     ],
     "review": {
       "evidence": "Berachain HONEY documentation describes a governed basket-collateral mint via the HoneyFactory contract with per-asset vaults, governance-controlled collateral whitelisting and rates, and Basket Mode safety controls.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Berachain HONEY docs",
@@ -245,7 +245,8 @@
       ],
       "sourceFreeRationale": "HoneyFactory mint mechanism and governance whitelist confirmed from Berachain docs; the live HoneyFactory owner/governance admin address was not independently read on-chain.",
       "unresolvedQuestions": [
-        "Resolve the live HoneyFactory owner/admin and the governance executor that controls collateral whitelisting and rates before raising confidence."
+        "Resolve the live HoneyFactory owner/admin and the governance executor that controls collateral whitelisting and rates before raising confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (HoneyFactory mint hub; Berachain governance (collateral whitelist & rate admin)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

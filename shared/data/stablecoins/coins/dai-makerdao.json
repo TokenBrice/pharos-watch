@@ -225,8 +225,11 @@
         }
       ],
       "evidence": "Maker/Sky Chainlog and Ethereum reads identify DaiJoin as the ERC-20 DAI adapter and the Pause Proxy as the governance executor for module and parameter changes.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (DaiJoin token adapter; Maker/Sky Pause Proxy governance executor); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
+      ]
     }
   },
   "deploymentModel": "canonical-bridge",

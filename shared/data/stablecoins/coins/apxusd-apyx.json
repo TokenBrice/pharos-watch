@@ -163,10 +163,11 @@
         }
       ],
       "evidence": "Apyx docs say whitelisted users deposit collateral and receive newly minted apxUSD; Apyx's contract documentation identifies MinterV0 as the mint route using EIP-712 signed orders, an m-of-n minter wallet, AccessManager checks, and beneficiary screening.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence."
+        "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Apyx MinterV0 signed-order mint path); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

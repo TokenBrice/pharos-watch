@@ -234,12 +234,13 @@
         }
       ],
       "evidence": "GAIB docs describe AID mint and redeem routes against accepted stablecoins; Ethereum role-event reconstruction identified current MINTER_ROLE holders and default admins for the AID token.",
-      "reviewer": "Codex mint-authority follow-up EVM lane",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Reconstruct Arbitrum, Base, and BSC role holders before treating AID as fully reviewed across all deployments.",
         "Identify the two Ethereum MINTER_ROLE contract holders and the additional default-admin account custody model.",
-        "Resolve redemption and bridge route controls before raising confidence above manual-review."
+        "Resolve redemption and bridge route controls before raising confidence above manual-review.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

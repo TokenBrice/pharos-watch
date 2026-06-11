@@ -181,12 +181,13 @@
         }
       ],
       "evidence": "Ethereum RPC reads for the current regulated token identify the role-gated mint implementation, minterAdmin contract, token owner Safe, and minterAdmin owner Safe.",
-      "reviewer": "Codex stablecoin DB audit follow-up",
-      "reviewedAt": "2026-05-29",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Reconstruct current configured minter addresses and allowances from events or explorer-indexed logs.",
         "Resolve minterAdmin contract internals beyond its owner() surface.",
-        "Repeat owner/minterAdmin reads on Polygon and Avalanche before applying one multichain profile."
+        "Repeat owner/minterAdmin reads on Polygon and Avalanche before applying one multichain profile.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (JPYC regulated Ethereum proxy mint surface; JPYC minterAdmin contract; JPYC minterAdmin owner Safe); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

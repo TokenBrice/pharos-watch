@@ -96,12 +96,13 @@
         }
       ],
       "evidence": "Direct reads: Ethereum implementation = 0x96271bea7a9c4b8edd6c3a05e548f05f157ada46 and owner() = 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 at block 25165887; Sonic implementation = 0xfbe86362f4fc7aac3acaf1b36ae211816f2fc478 and owner() = 0x861a58d3DE287196c5546d10c7afFa479E0963e4 at block 71320471.",
-      "reviewer": "Codex mint-authority top100 batch-b",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
         "Read current minter(), stakedmsUSD(), supplyLimit(), and timelock state.",
         "Identify whether owner addresses are Safes, EOAs, or contracts with threshold/timelock controls.",
-        "Verify Sonic implementation source."
+        "Verify Sonic implementation source.",
+        "Phase 0c (2026-06-11): at least one mint-capable authority remains unresolved or non-addressable in current chain state; keep manual-review until that role is identified and checked."
       ]
     }
   },

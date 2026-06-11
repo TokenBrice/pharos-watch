@@ -161,10 +161,11 @@
         }
       ],
       "evidence": "Curve resources and ControllerFactory reads identify the factory and current admin address controlling debt ceilings and market configuration.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path."
+        "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (crvUSD ControllerFactory; crvUSD ControllerFactory admin); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   },

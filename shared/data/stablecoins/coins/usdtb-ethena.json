@@ -184,8 +184,11 @@
         }
       ],
       "evidence": "USDtb docs describe Anchorage Digital Bank issuer-operated mint/redeem rails backed by BUIDL and cash reserves, and implementation review shows MINTER_BURNER_ROLE plus DEFAULT_ADMIN_ROLE rather than Ethena USDe signed-order minting.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-25"
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

@@ -103,15 +103,22 @@
     ],
     "review": {
       "evidence": "Youves documentation describes uUSD as an overcollateralized Tezos CDP whose minting engine is administered by the Murmuration-derived Youves DAO contract (YOU governance) with a keyholder break-glass guardian; the live on-chain admin wiring and guardian threshold were not independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Youves governance docs", "url": "https://docs.youves.com/governance/Governance-Mechanism/" },
-        { "label": "Minting on youves (deep-dive)", "url": "https://medium.com/@youves/minting-on-youves-a-deep-dive-1d27dbefa5b7" }
+        {
+          "label": "Youves governance docs",
+          "url": "https://docs.youves.com/governance/Governance-Mechanism/"
+        },
+        {
+          "label": "Minting on youves (deep-dive)",
+          "url": "https://medium.com/@youves/minting-on-youves-a-deep-dive-1d27dbefa5b7"
+        }
       ],
       "unresolvedQuestions": [
         "Confirm on Tezos that the DAO contract is the sole admin of the minting engine and the current state of the keyholder break-glass guardian multisig.",
-        "Confirm live target/emergency collateral ratios per collateral type."
+        "Confirm live target/emergency collateral ratios per collateral type.",
+        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Youves minting engine / vault contracts; Youves DAO contract (YOU governance) + break-glass guardian); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

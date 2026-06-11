@@ -198,11 +198,12 @@
         }
       ],
       "evidence": "Avant docs describe avUSD as fully USDC-backed, minted via the AvantMintingV2 contract and redeemable 1:1; privileged keys sit behind MPC custody plus a policy engine and RBAC. avUSD is the parent of the savUSD strategy vault.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Mint contract address taken from Avant's published contract-addresses page; on-chain MINTER_ROLE/DEFAULT_ADMIN_ROLE holders not independently read.",
       "unresolvedQuestions": [
-        "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence."
+        "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence.",
+        "Phase 0c (2026-06-11): issuer/backend mint authority cannot be independently confirmed from chain state alone; keep manual-review until current signer/process evidence is corroborated by issuer documentation or role-holder reads."
       ]
     }
   },

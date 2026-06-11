@@ -114,8 +114,8 @@
     ],
     "review": {
       "evidence": "Blast/Metalayer documentation describes USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while the Ethereum L1 USDYieldManager escrows stablecoins into yield strategies; this is a bridge/synthetic mint, not a user-collateralized CDP.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Codex Phase 0c verification",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Metalayer contracts",
@@ -128,7 +128,8 @@
       ],
       "unresolvedQuestions": [
         "Confirm the bridge/yield-manager owner and the Blast operator multisig threshold and signer set on-chain.",
-        "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy."
+        "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy.",
+        "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
       ]
     }
   },
