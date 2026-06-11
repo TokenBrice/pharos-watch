@@ -101,6 +101,7 @@ export default defineConfig({
       ...configDefaults.exclude,
       ...worktreeExcludes,
       ".claude/**",
+      "agents/**",
       ".next/**",
       "out/**",
       "coverage/**",
