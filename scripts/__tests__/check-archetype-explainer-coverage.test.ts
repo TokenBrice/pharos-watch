@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { validateArchetypeExplainerCoverage } from "../ci/check-archetype-explainer-coverage";
 
 describe("validateArchetypeExplainerCoverage", () => {
-  it("passes against the current repo state", async () => {
-    vi.resetModules();
-    const mod = await import("../ci/check-archetype-explainer-coverage");
-    const result = mod.validateArchetypeExplainerCoverage();
+  it("passes against the current repo state", () => {
+    const result = validateArchetypeExplainerCoverage();
     expect(result.findings).toEqual([]);
     expect(result.failedArchetypes.size).toBe(0);
   }, 15_000);
