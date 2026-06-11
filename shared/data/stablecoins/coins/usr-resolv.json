@@ -145,6 +145,20 @@
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "USR minting was gated by an off-chain backend: users deposited collateral on-chain via requestSwap, then an off-chain SERVICE_ROLE signer attested the USR amount and completed the mint via completeSwap. The minting contract performed no oracle, ratio, per-tx, or max-supply check, and the SERVICE_ROLE was a single EOA whose compromise let an attacker mint 80M unbacked USR in March 2026.",
+    "mintIncident": {
+      "date": "2026-03-22",
+      "summary": "A compromised off-chain SERVICE_ROLE key and unchecked mint parameters let the attacker mint about 80M unbacked USR and extract roughly $25M.",
+      "sources": [
+        {
+          "label": "The Block — Resolv USR 80M unbacked mint",
+          "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+        },
+        {
+          "label": "CoinDesk — Resolv stablecoin exploit",
+          "url": "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Resolv SERVICE_ROLE off-chain minting signer",

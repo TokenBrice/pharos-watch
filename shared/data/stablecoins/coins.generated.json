@@ -11538,6 +11538,20 @@
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
       "summary": "DOLA minting is controlled by the token operator contract; Inverse documentation describes DOLA supply expansion through Fed/operator contracts rather than permissionless user minting.",
+      "mintIncident": {
+        "date": "2022-04-02",
+        "summary": "Inverse Finance's Anchor/Frontier oracle-manipulation incident let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
+        "sources": [
+          {
+            "label": "CoinDesk — Inverse Finance exploit",
+            "url": "https://www.coindesk.com/tech/2022/04/02/defi-lender-inverse-finance-exploited-for-156-million"
+          },
+          {
+            "label": "BlockSec — Inverse oracle manipulation analysis",
+            "url": "https://blocksecteam.medium.com/price-oracle-manipulation-attack-on-inverse-finance-a5544218ea91"
+          }
+        ]
+      },
       "controls": [
         {
           "chain": "ethereum",
@@ -29469,6 +29483,20 @@
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "verified",
       "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
+      "mintIncident": {
+        "date": "2024-01-30",
+        "summary": "Abracadabra cauldron borrow logic was exploited to enable unauthorized MIM borrowing, turning the stablecoin mint/borrow route into bad debt.",
+        "sources": [
+          {
+            "label": "Neptune Mutual — Abracadabra exploit analysis",
+            "url": "https://medium.com/neptune-mutual/how-was-abracadabra-money-exploited-77c6b0701819"
+          },
+          {
+            "label": "DefiLlama hacks database",
+            "url": "https://defillama.com/hacks"
+          }
+        ]
+      },
       "controls": [
         {
           "chain": "ethereum",
@@ -36851,6 +36879,20 @@
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
       "summary": "REUSD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+      "mintIncident": {
+        "date": "2025-06-26",
+        "summary": "Resupply's crvUSD/wstUSR market exploit manipulated exchange-rate and solvency logic so negligible collateral could borrow up to the reUSD debt limit, leaving bad debt through the stablecoin borrow route.",
+        "sources": [
+          {
+            "label": "Halborn — Resupply hack explained",
+            "url": "https://www.halborn.com/blog/post/explained-the-resupply-hack-june-2025"
+          },
+          {
+            "label": "BlockSec — Resupply attack analysis",
+            "url": "https://blocksecteam.medium.com/blocksec-in-depth-analysis-and-reflections-on-the-resupply-protocol-attack-incident-932be23e1433"
+          }
+        ]
+      },
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -60178,6 +60220,20 @@
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
       "summary": "USR minting was gated by an off-chain backend: users deposited collateral on-chain via requestSwap, then an off-chain SERVICE_ROLE signer attested the USR amount and completed the mint via completeSwap. The minting contract performed no oracle, ratio, per-tx, or max-supply check, and the SERVICE_ROLE was a single EOA whose compromise let an attacker mint 80M unbacked USR in March 2026.",
+      "mintIncident": {
+        "date": "2026-03-22",
+        "summary": "A compromised off-chain SERVICE_ROLE key and unchecked mint parameters let the attacker mint about 80M unbacked USR and extract roughly $25M.",
+        "sources": [
+          {
+            "label": "The Block — Resolv USR 80M unbacked mint",
+            "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+          },
+          {
+            "label": "CoinDesk — Resolv stablecoin exploit",
+            "url": "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr"
+          }
+        ]
+      },
       "controls": [
         {
           "label": "Resolv SERVICE_ROLE off-chain minting signer",

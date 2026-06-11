@@ -111,6 +111,20 @@
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
+    "mintIncident": {
+      "date": "2024-01-30",
+      "summary": "Abracadabra cauldron borrow logic was exploited to enable unauthorized MIM borrowing, turning the stablecoin mint/borrow route into bad debt.",
+      "sources": [
+        {
+          "label": "Neptune Mutual — Abracadabra exploit analysis",
+          "url": "https://medium.com/neptune-mutual/how-was-abracadabra-money-exploited-77c6b0701819"
+        },
+        {
+          "label": "DefiLlama hacks database",
+          "url": "https://defillama.com/hacks"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
