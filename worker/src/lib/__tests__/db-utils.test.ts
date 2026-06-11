@@ -131,6 +131,41 @@ describe("db utility helpers", () => {
     expect(batchCalls.map((chunk) => chunk.length)).toEqual([2, 2, 1]);
   });
 
+  it("does not start batch execution when the abort signal is already aborted", async () => {
+    const { db, batchCalls } = makeDb();
+    const stmts = Array.from({ length: 2 }, () => ({}) as D1PreparedStatement);
+    const controller = new AbortController();
+    controller.abort(new Error("batch aborted"));
+
+    await expect(batchExecute(db, stmts, { chunkSize: 1, signal: controller.signal })).rejects.toThrow(
+      "batch aborted",
+    );
+    expect(batchCalls).toHaveLength(0);
+  });
+
+  it("stops batch execution between chunks when the abort signal fires", async () => {
+    const controller = new AbortController();
+    const batchCalls: D1PreparedStatement[][] = [];
+    const db = {
+      prepare: () => {
+        throw new Error("prepare unused");
+      },
+      batch: async (stmts: D1PreparedStatement[]) => {
+        batchCalls.push(stmts);
+        controller.abort(new Error("batch stopped"));
+        return stmts.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    const stmts = Array.from({ length: 3 }, () => ({}) as D1PreparedStatement);
+
+    await expect(batchExecute(db, stmts, { chunkSize: 1, signal: controller.signal })).rejects.toThrow(
+      "batch stopped",
+    );
+    expect(batchCalls).toHaveLength(1);
+  });
+
   it("uses the shared chunkArray implementation while preserving the D1 default", () => {
     expect(chunkArray([1, 2, 3], 2)).toEqual([[1, 2], [3]]);
     expect(chunkArray(Array.from({ length: 91 }, (_, index) => index)).map((chunk) => chunk.length)).toEqual([90, 1]);

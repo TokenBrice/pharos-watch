@@ -125,7 +125,7 @@ export async function snapshotSupply(
   if (stmts.length > 0) {
     try {
       throwIfAborted(signal);
-      await batchExecute(db, stmts);
+      await batchExecute(db, stmts, { signal });
       throwIfAborted(signal);
       await setCache(db, "snapshot-supply:last-write", JSON.stringify({ snapshotDate }));
     } catch (err) {

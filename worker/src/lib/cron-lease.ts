@@ -36,6 +36,30 @@ export function isRetriableD1OverloadError(err: unknown): boolean {
   );
 }
 
+function abortReason(signal: AbortSignal): unknown {
+  return signal.reason ?? new Error("aborted");
+}
+
+function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  if (signal.aborted) {
+    return Promise.reject(abortReason(signal));
+  }
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timeout);
+      reject(abortReason(signal));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 export async function runWithOverloadRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -43,16 +67,16 @@ export async function runWithOverloadRetry<T>(
 ): Promise<T> {
   let attempt = 0;
   while (true) {
-    if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+    if (signal?.aborted) throw abortReason(signal);
     try {
       return await fn();
     } catch (err) {
       if (!isRetriableD1OverloadError(err) || attempt >= maxRetries) {
         throw err;
       }
-      if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+      if (signal?.aborted) throw abortReason(signal);
       const delayMs = Math.round(150 * 2 ** attempt * (0.5 + Math.random() * 0.5));
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      await sleepWithAbort(delayMs, signal);
       attempt++;
     }
   }

@@ -6,6 +6,7 @@ import {
   releaseCronLease,
   renewCronLease,
   runCronWithLease,
+  runWithOverloadRetry,
   runScheduledSlotWithFence,
 } from "../cron-lease";
 
@@ -353,6 +354,27 @@ describe("D1 overload retry classification", () => {
     expect(isRetriableD1OverloadError(new Error("D1_ERROR: D1 DB storage operation exceeded timeout which caused object to be reset."))).toBe(true);
     expect(isRetriableD1OverloadError(new Error("D1_ERROR: internal error; reference = abc123"))).toBe(true);
     expect(isRetriableD1OverloadError(new Error("D1_ERROR: no such table: cache"))).toBe(false);
+  });
+
+  it("aborts retry backoff without waiting for the retry timer", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const fn = vi.fn(async () => {
+        throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+      });
+
+      const promise = runWithOverloadRetry(fn, 3, controller.signal);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      controller.abort(new Error("retry aborted"));
+
+      await expect(promise).rejects.toThrow("retry aborted");
+      expect(fn).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -5,6 +5,11 @@ import { runWithOverloadRetry } from "./cron-lease";
 export const D1_MAX_BOUND_PARAMETERS = 100;
 export { D1_SAFE_IN_CLAUSE_BIND_LIMIT, chunkArray } from "./collections";
 
+export interface BatchExecuteOptions {
+  chunkSize?: number;
+  signal?: AbortSignal;
+}
+
 function d1ErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -21,11 +26,21 @@ export function isMissingColumnError(error: unknown): boolean {
 export async function batchExecute(
   db: D1Database,
   stmts: D1PreparedStatement[],
-  chunkSize = D1_BATCH_SIZE,
+  optionsOrChunkSize: number | BatchExecuteOptions = D1_BATCH_SIZE,
 ): Promise<number> {
+  const options = typeof optionsOrChunkSize === "number"
+    ? { chunkSize: optionsOrChunkSize }
+    : optionsOrChunkSize;
+  const chunkSize = options.chunkSize ?? D1_BATCH_SIZE;
+  const signal = options.signal;
+  if (!Number.isInteger(chunkSize) || chunkSize <= 0) {
+    throw new RangeError(`batchExecute requires a positive integer chunkSize (received ${chunkSize})`);
+  }
   let changes = 0;
   for (let i = 0; i < stmts.length; i += chunkSize) {
-    const result = await runWithOverloadRetry(() => db.batch(stmts.slice(i, i + chunkSize)));
+    if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+    const result = await runWithOverloadRetry(() => db.batch(stmts.slice(i, i + chunkSize)), 3, signal);
+    if (signal?.aborted) throw signal.reason ?? new Error("aborted");
     for (const row of result) {
       changes += Number(row?.meta?.changes ?? 0);
     }

@@ -105,7 +105,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 ### D1 overload retry posture
 
-Cron persistence helpers retry transient D1 queue pressure through `runWithOverloadRetry()` in `worker/src/lib/cron-lease.ts`. Retried errors include `D1 DB is overloaded`, `Requests queued for too long`, D1 storage-operation reset timeouts (`D1 DB storage operation exceeded timeout ...`), and Cloudflare D1 internal-reference errors (`D1_ERROR: internal error; reference = ...`). Live reserve, redemption-backstop, cache-sentinel, and DEWS persistence paths should route bursty run-manifest writes, cleanup, prune, and chunked batch work through this helper or `batchExecute()` so one transient D1 queue spike does not fail a whole scheduled run.
+Cron persistence helpers retry transient D1 queue pressure through `runWithOverloadRetry()` in `worker/src/lib/cron-lease.ts`. Retried errors include `D1 DB is overloaded`, `Requests queued for too long`, D1 storage-operation reset timeouts (`D1 DB storage operation exceeded timeout ...`), and Cloudflare D1 internal-reference errors (`D1_ERROR: internal error; reference = ...`). Retry backoff is abort-aware, and `batchExecute()` can accept an `AbortSignal` so chunked persistence can stop before the next D1 batch after cron timeout or lease loss. Live reserve, redemption-backstop, cache-sentinel, and DEWS persistence paths should route bursty run-manifest writes, cleanup, prune, and chunked batch work through this helper or `batchExecute()` so one transient D1 queue spike does not fail a whole scheduled run.
 
 ### D1 query budgeting
 
