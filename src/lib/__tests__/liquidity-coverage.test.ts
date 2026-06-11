@@ -76,6 +76,7 @@ const UNSUPPORTED_CHAINS = new Set([
   "fluent",
   "initia",
   "agoric",
+  "iota",
 ]);
 
 describe("liquidity coverage", () => {

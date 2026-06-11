@@ -113,12 +113,25 @@ describe("client registry field contract", () => {
     expect(projected.mintAuthoritySummary).toEqual({
       mintPath: "issuer-direct-mint",
       authorityPosture: "concentrated-admin",
-      controls: [{ authorityType: "safe", directMintAbility: "direct" }],
+      confidence: "verified",
+      controls: [
+        {
+          authorityType: "safe",
+          directMintAbility: "direct",
+          label: "Issuer minter",
+          threshold: 2,
+          signerCount: 3,
+          timelockDelaySec: 86_400,
+          modulesOrGuardsStatus: "none-detected",
+        },
+      ],
     });
     expect(JSON.stringify(projected)).not.toContain("Issuer minter can create supply");
     expect(JSON.stringify(projected)).not.toContain("Long reviewer evidence");
     expect(JSON.stringify(projected)).not.toContain("Control-level evidence");
     expect(JSON.stringify(projected)).not.toContain("Should not ship");
+    expect(JSON.stringify(projected)).not.toContain("Daily cap");
+    expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000001");
     expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000002");
   });
 
