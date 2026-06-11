@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractExportedEnvInterfaceBody,
+  parseWorkerEnvInterfaceBindings,
   parseWorkerEnvInterfaceKeys,
+  parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract.mjs";
 
 function withTempEnvSource(source: string): string {
@@ -63,6 +65,30 @@ describe("check-env-contract worker Env parser", () => {
     }
   });
 
+  it("parses top-level Env binding types", () => {
+    const filePath = withTempEnvSource(`
+      export interface Env {
+        DB: D1Database;
+        CORS_ORIGIN: string;
+        OPTIONAL_KEY?: string;
+        NESTED?: {
+          INNER_KEY: string;
+        };
+      }
+    `);
+
+    try {
+      expect([...parseWorkerEnvInterfaceBindings(filePath)]).toEqual([
+        ["DB", { optional: false, type: "D1Database" }],
+        ["CORS_ORIGIN", { optional: false, type: "string" }],
+        ["OPTIONAL_KEY", { optional: true, type: "string" }],
+        ["NESTED", { optional: true, type: "{" }],
+      ]);
+    } finally {
+      rmSync(dirname(filePath), { recursive: true, force: true });
+    }
+  });
+
   it("fails closed when worker env.ts does not export Env", () => {
     const filePath = withTempEnvSource("export interface NotEnv { API_KEY: string; }\n");
     try {
@@ -70,5 +96,45 @@ describe("check-env-contract worker Env parser", () => {
     } finally {
       rmSync(dirname(filePath), { recursive: true, force: true });
     }
+  });
+});
+
+describe("check-env-contract Wrangler binding parser", () => {
+  it("extracts source-owned Worker bindings and vars from wrangler.toml", () => {
+    const result = parseWranglerWorkerConfigBindings(`
+      name = "stablecoin-api"
+
+      [vars]
+      CORS_ORIGIN = "https://pharos.watch"
+      SELF_URL = 'https://api.pharos.watch'
+      lower_key = "ignored"
+
+      [[d1_databases]]
+      binding = "DB"
+      database_name = "stablecoin-db"
+
+      [triggers]
+      crons = ["*/15 * * * *"]
+    `);
+
+    expect([...result.bindings]).toEqual([
+      ["CORS_ORIGIN", { source: "[vars]", type: "string" }],
+      ["SELF_URL", { source: "[vars]", type: "string" }],
+      ["DB", { source: "[[d1_databases]]", type: "D1Database" }],
+    ]);
+    expect([...result.duplicates]).toEqual([]);
+    expect(result.unsupported).toEqual([]);
+  });
+
+  it("reports duplicate Wrangler binding keys", () => {
+    const result = parseWranglerWorkerConfigBindings(`
+      [vars]
+      CORS_ORIGIN = "https://pharos.watch"
+
+      [[d1_databases]]
+      binding = "CORS_ORIGIN"
+    `);
+
+    expect([...result.duplicates]).toEqual(["CORS_ORIGIN"]);
   });
 });

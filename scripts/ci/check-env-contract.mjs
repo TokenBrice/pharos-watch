@@ -13,6 +13,7 @@ const {
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
 const workerEnvPath = resolve(repoRoot, "worker/src/lib/env.ts");
+const wranglerConfigPath = resolve(repoRoot, "worker/wrangler.toml");
 
 const DOC_SCAN_FILES = [
   resolve(repoRoot, "README.md"),
@@ -66,6 +67,10 @@ const DOC_NON_ENV_TOKENS = new Set([
   "SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS",
   "SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS",
   "ENV_BINDINGS",
+]);
+
+const WRANGLER_BINDING_SECTIONS = new Map([
+  ["d1_databases", { property: "binding", type: "D1Database" }],
 ]);
 
 function normalizeText(text) {
@@ -139,19 +144,26 @@ export function extractExportedEnvInterfaceBody(source) {
 }
 
 export function parseWorkerEnvInterfaceKeys(filePath) {
+  return new Set(parseWorkerEnvInterfaceBindings(filePath).keys());
+}
+
+export function parseWorkerEnvInterfaceBindings(filePath) {
   const source = readFileSync(filePath, "utf8");
   const body = extractExportedEnvInterfaceBody(source);
   if (!body) {
     throw new Error(`${relative(repoRoot, filePath)} is missing export interface Env`);
   }
 
-  const keys = new Set();
+  const bindings = new Map();
   let typeLiteralDepth = 0;
   for (const rawLine of splitLines(body)) {
     const line = rawLine.replace(/\/\/.*$/u, "").trim();
-    const match = typeLiteralDepth === 0 ? /^([A-Z][A-Z0-9_]*|DB)\??\s*:/u.exec(line) : null;
+    const match = typeLiteralDepth === 0 ? /^([A-Z][A-Z0-9_]*|DB)(\?)?\s*:\s*([^;]+);?/u.exec(line) : null;
     if (match) {
-      keys.add(match[1]);
+      bindings.set(match[1], {
+        optional: match[2] === "?",
+        type: match[3].trim().replace(/\s+/gu, " "),
+      });
     }
     for (const char of line) {
       if (char === "{") {
@@ -162,7 +174,161 @@ export function parseWorkerEnvInterfaceKeys(filePath) {
     }
   }
 
-  return keys;
+  return bindings;
+}
+
+function parseTomlSectionHeader(line) {
+  const content = line.trim().split("#", 1)[0].trim();
+  const isArraySection = content.startsWith("[[") && content.endsWith("]]");
+  const isTableSection = !isArraySection && content.startsWith("[") && content.endsWith("]");
+  if (!isArraySection && !isTableSection) {
+    return null;
+  }
+
+  const name = isArraySection ? content.slice(2, -2) : content.slice(1, -1);
+  if (!isTomlSectionName(name)) {
+    return null;
+  }
+  return {
+    label: isArraySection ? `[[${name}]]` : `[${name}]`,
+    name,
+  };
+}
+
+function isTomlSectionName(name) {
+  if (name.length === 0) {
+    return false;
+  }
+  for (const char of name) {
+    const isLower = char >= "a" && char <= "z";
+    const isUpper = char >= "A" && char <= "Z";
+    const isDigit = char >= "0" && char <= "9";
+    if (!isLower && !isUpper && !isDigit && char !== "_" && char !== "." && char !== "-") {
+      return false;
+    }
+  }
+  return true;
+}
+
+function parseTomlKey(line) {
+  let cursor = 0;
+  while (cursor < line.length && /\s/u.test(line[cursor])) {
+    cursor += 1;
+  }
+
+  let key = "";
+  while (cursor < line.length) {
+    const char = line[cursor];
+    const isLower = char >= "a" && char <= "z";
+    const isUpper = char >= "A" && char <= "Z";
+    const isDigit = char >= "0" && char <= "9";
+    if (!isLower && !isUpper && !isDigit && char !== "_") {
+      break;
+    }
+    key += char;
+    cursor += 1;
+  }
+  if (key.length === 0) {
+    return null;
+  }
+
+  while (cursor < line.length && /\s/u.test(line[cursor])) {
+    cursor += 1;
+  }
+  return line[cursor] === "=" ? key : null;
+}
+
+function parseTomlStringValue(line, key) {
+  if (parseTomlKey(line) !== key) {
+    return null;
+  }
+
+  const equalsIndex = line.indexOf("=");
+  if (equalsIndex < 0) {
+    return null;
+  }
+  const value = line.slice(equalsIndex + 1).trimStart();
+  const quote = value[0];
+  if (quote !== "'" && quote !== "\"") {
+    return null;
+  }
+
+  let parsed = "";
+  for (let cursor = 1; cursor < value.length; cursor += 1) {
+    const char = value[cursor];
+    if (char === quote) {
+      return parsed;
+    }
+    if (quote === "\"" && char === "\\" && cursor + 1 < value.length) {
+      cursor += 1;
+      parsed += value[cursor];
+      continue;
+    }
+    parsed += char;
+  }
+  return null;
+}
+
+function addWranglerBinding(bindings, duplicates, key, binding) {
+  if (bindings.has(key)) {
+    duplicates.add(key);
+  }
+  bindings.set(key, binding);
+}
+
+export function parseWranglerWorkerConfigBindings(source) {
+  const bindings = new Map();
+  const duplicates = new Set();
+  const unsupported = [];
+  let section = null;
+
+  for (const rawLine of splitLines(source)) {
+    const line = rawLine.trim();
+    if (line.length === 0 || line.startsWith("#")) {
+      continue;
+    }
+
+    const nextSection = parseTomlSectionHeader(rawLine);
+    if (nextSection) {
+      section = nextSection;
+      continue;
+    }
+
+    if (!section) {
+      continue;
+    }
+
+    if (section.name === "vars") {
+      const key = parseTomlKey(rawLine);
+      if (key && isEnvKeyCandidate(key)) {
+        addWranglerBinding(bindings, duplicates, key, {
+          source: section.label,
+          type: "string",
+        });
+      }
+      continue;
+    }
+
+    const bindingSpec = WRANGLER_BINDING_SECTIONS.get(section.name);
+    if (!bindingSpec) {
+      continue;
+    }
+
+    const key = parseTomlStringValue(rawLine, bindingSpec.property);
+    if (!key) {
+      continue;
+    }
+    if (!isEnvKeyCandidate(key)) {
+      unsupported.push({ key, source: section.label });
+      continue;
+    }
+    addWranglerBinding(bindings, duplicates, key, {
+      source: section.label,
+      type: bindingSpec.type,
+    });
+  }
+
+  return { bindings, duplicates, unsupported };
 }
 
 function addRegexMatches(set, source, pattern, captureIndex = 1) {
@@ -370,7 +536,9 @@ function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) 
 export function runEnvContractCheck({ consoleImpl = console, exit = process.exit } = {}) {
   const envExample = parseEnvExampleKeys(envExamplePath);
   const manifestEnvKeys = new Set(getAllEnvBindingKeys());
-  const workerEnvInterfaceKeys = parseWorkerEnvInterfaceKeys(workerEnvPath);
+  const workerEnvInterfaceBindings = parseWorkerEnvInterfaceBindings(workerEnvPath);
+  const workerEnvInterfaceKeys = new Set(workerEnvInterfaceBindings.keys());
+  const wranglerConfigBindings = parseWranglerWorkerConfigBindings(readFileSync(wranglerConfigPath, "utf8"));
   const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
   const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
   const knownEnvKeys = new Set([
@@ -399,6 +567,49 @@ export function runEnvContractCheck({ consoleImpl = console, exit = process.exit
     );
   }
 
+  if (wranglerConfigBindings.duplicates.size > 0) {
+    errors.push(
+      `worker/wrangler.toml declares duplicate Worker binding keys: ${[...wranglerConfigBindings.duplicates].sort().join(", ")}`,
+    );
+  }
+
+  if (wranglerConfigBindings.unsupported.length > 0) {
+    errors.push(
+      `worker/wrangler.toml declares unsupported Worker binding keys: ${
+        wranglerConfigBindings.unsupported
+          .map((binding) => `${binding.key} (${binding.source})`)
+          .sort()
+          .join(", ")
+      }`,
+    );
+  }
+
+  const wranglerBindingsMissingFromEnv = [...wranglerConfigBindings.bindings]
+    .filter(([key]) => !workerEnvInterfaceKeys.has(key))
+    .map(([key, binding]) => `${key} (${binding.source})`)
+    .sort();
+  if (wranglerBindingsMissingFromEnv.length > 0) {
+    errors.push(
+      `worker/wrangler.toml declares bindings missing from worker/src/lib/env.ts Env: ${wranglerBindingsMissingFromEnv.join(", ")}`,
+    );
+  }
+
+  const wranglerBindingTypeMismatches = [...wranglerConfigBindings.bindings]
+    .filter(([key, binding]) => {
+      const envBinding = workerEnvInterfaceBindings.get(key);
+      return envBinding && envBinding.type !== binding.type;
+    })
+    .map(([key, binding]) => {
+      const envBinding = workerEnvInterfaceBindings.get(key);
+      return `${key} (${binding.source}) is ${binding.type}, Env declares ${envBinding.type}`;
+    })
+    .sort();
+  if (wranglerBindingTypeMismatches.length > 0) {
+    errors.push(
+      `worker/wrangler.toml binding types drift from worker/src/lib/env.ts Env: ${wranglerBindingTypeMismatches.join("; ")}`,
+    );
+  }
+
   for (const [key, filePaths] of documentedEnvKeys) {
     if (knownEnvKeys.has(key)) continue;
     errors.push(`Verified env docs reference unknown env key ${key} in ${formatFileList(filePaths)}`);
@@ -414,7 +625,7 @@ export function runEnvContractCheck({ consoleImpl = console, exit = process.exit
   }
 
   consoleImpl.log(
-    "Environment contract is in sync with the shared manifest, generated docs blocks, and referenced env names.",
+    "Environment contract is in sync with Wrangler bindings, the shared manifest, generated docs blocks, and referenced env names.",
   );
   return true;
 }
