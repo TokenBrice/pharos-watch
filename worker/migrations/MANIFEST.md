@@ -96,6 +96,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0150     | `0150_usdxl_ddr_tail_90095_link.sql`                     | Link USDXL sealed DDR tail event 90095 and advance the canonical incident through authorized append-only repair records                          |
 | 0151     | `0151_cron_runs_ok_started_index.sql`                    | Add a partial cron_runs(job, started_at DESC) index for latest successful-run freshness lookups                                                  |
 | 0152     | `0152_dex_liquidity_publication_generations.sql`         | Add DEX-liquidity publication generations and per-run row staging before current-table publication                                               |
+| 0153     | `0153_status_reliability_idempotency.sql`                | Add nullable idempotency keys and partial unique indexes for retry-safe status transitions and probe runs                                        |
 
 ## Retired Individual Migrations
 

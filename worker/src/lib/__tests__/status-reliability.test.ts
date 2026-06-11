@@ -100,7 +100,7 @@ describe("status-reliability", () => {
 
   it("rolls back a seeded status write when the transition insert fails", async () => {
     const { db, store } = makeStatefulDb({
-      failOnSql: "INSERT INTO status_transitions",
+      failOnSql: "status_transitions",
       failMessage: "seed transition failed",
     });
     const issues: Array<{ code: string; operation: string; message: string }> = [];
@@ -122,7 +122,7 @@ describe("status-reliability", () => {
 
   it("rolls back an update when the transition insert fails", async () => {
     const { db, store } = makeStatefulDb({
-      failOnSql: "INSERT INTO status_transitions",
+      failOnSql: "status_transitions",
       failMessage: "update transition failed",
     });
     store.stateRow = {
@@ -157,6 +157,17 @@ describe("status-reliability", () => {
       code: "status_state_persistence_failed",
       operation: "update_status_state",
     });
+  });
+
+  it("retries status-state batches without duplicating transition rows", async () => {
+    const { db, store } = makeStatefulDb({ failBatchAfterApplyOnce: true });
+
+    const result = await reconcileStatusState(db, 100, "healthy", 0.95, []);
+
+    expect(result.persistenceSucceeded).toBe(true);
+    expect(store.stateRow?.current_status).toBe("healthy");
+    expect(store.transitions).toHaveLength(1);
+    expect(store.transitions[0]?.idempotency_key).toBeTruthy();
   });
 
   it("returns snapshots with staleness metadata and nulls on DB failure", async () => {
@@ -309,6 +320,22 @@ describe("status-reliability", () => {
       failCount: 2,
       p95LatencyMs: 450,
     });
+  });
+
+  it("retries status probe writes without duplicating probe rows", async () => {
+    const { db, store } = makeStatefulDb({ failRunAfterApplyOnceOnSql: "status_probe_runs" });
+
+    await expect(writeStatusProbeRun(db, 300, {
+      status: "healthy",
+      sampleCount: 3,
+      passCount: 3,
+      failCount: 0,
+      p95LatencyMs: 90,
+      details: { route: "/api/status" },
+    })).resolves.toBe(true);
+
+    expect(store.probes).toHaveLength(1);
+    expect(store.probes[0]?.idempotency_key).toBeTruthy();
   });
 
   it("tracks discrepancy streaks and alert timestamps", async () => {

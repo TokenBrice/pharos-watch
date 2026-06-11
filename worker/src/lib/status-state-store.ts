@@ -6,6 +6,7 @@ import type {
 import { decideNextStatus } from "./status-reliability-decision";
 import {
   buildFallbackStatusState,
+  buildStatusTransitionIdempotencyKey,
   clampConfidence,
   parseCauses,
   persistStatusStateAtomically,
@@ -77,6 +78,17 @@ export async function reconcileStatusState(
       causes,
       at: now,
     };
+    const transitionIdempotencyKey = buildStatusTransitionIdempotencyKey({
+      scope: STATUS_SCOPE,
+      previousStatus: null,
+      nextStatus: seed.current_status,
+      rawStatus: seed.raw_status,
+      transitionType: transition.transitionType,
+      reason: transition.reason,
+      confidence: transition.confidence,
+      causesJson,
+      createdAt: now,
+    });
     const persistenceSucceeded = await persistStatusStateAtomically(
       db,
       [
@@ -85,7 +97,19 @@ export async function reconcileStatusState(
             `INSERT INTO status_state
              (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
               consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(scope) DO UPDATE SET
+               current_status = excluded.current_status,
+               raw_status = excluded.raw_status,
+               last_evaluated_at = excluded.last_evaluated_at,
+               last_changed_at = excluded.last_changed_at,
+               consecutive_healthy = excluded.consecutive_healthy,
+               consecutive_degraded = excluded.consecutive_degraded,
+               consecutive_stale = excluded.consecutive_stale,
+               confidence = excluded.confidence,
+               causes_json = excluded.causes_json,
+               updated_at = excluded.updated_at
+             WHERE status_state.updated_at <= excluded.updated_at`,
           )
           .bind(
             seed.scope,
@@ -102,9 +126,9 @@ export async function reconcileStatusState(
           ),
         db
           .prepare(
-            `INSERT INTO status_transitions
-             (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT OR IGNORE INTO status_transitions
+             (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at, idempotency_key)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
             STATUS_SCOPE,
@@ -116,6 +140,7 @@ export async function reconcileStatusState(
             transition.confidence,
             causesJson,
             now,
+            transitionIdempotencyKey,
           ),
       ],
       onIssue,
@@ -179,6 +204,19 @@ export async function reconcileStatusState(
       at: now,
     };
   }
+  const transitionIdempotencyKey = transition
+    ? buildStatusTransitionIdempotencyKey({
+        scope: STATUS_SCOPE,
+        previousStatus: current.current_status,
+        nextStatus,
+        rawStatus,
+        transitionType: transition.transitionType,
+        reason: decision.reason,
+        confidence: normalizedConfidence,
+        causesJson,
+        createdAt: now,
+      })
+    : null;
 
   const statements = [
     db
@@ -206,9 +244,9 @@ export async function reconcileStatusState(
       ? [
           db
             .prepare(
-              `INSERT INTO status_transitions
-               (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT OR IGNORE INTO status_transitions
+               (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at, idempotency_key)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
             .bind(
               STATUS_SCOPE,
@@ -220,6 +258,7 @@ export async function reconcileStatusState(
               normalizedConfidence,
               causesJson,
               now,
+              transitionIdempotencyKey,
             ),
         ]
       : []),

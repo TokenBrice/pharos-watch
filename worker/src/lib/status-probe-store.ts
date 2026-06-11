@@ -1,5 +1,7 @@
 import type { StatusProbeSummary } from "@shared/types/status";
+import { runWithOverloadRetry } from "./cron-lease";
 import {
+  buildStatusProbeRunIdempotencyKey,
   reportStatusPersistenceIssue,
   type StatusLevel,
   type StatusPersistenceIssueReporter,
@@ -27,23 +29,36 @@ export async function writeStatusProbeRun(
   },
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<boolean> {
+  const detailsJson = row.details ? JSON.stringify(row.details) : null;
+  const idempotencyKey = buildStatusProbeRunIdempotencyKey({
+    createdAt: now,
+    status: row.status,
+    sampleCount: row.sampleCount,
+    passCount: row.passCount,
+    failCount: row.failCount,
+    p95LatencyMs: row.p95LatencyMs,
+    detailsJson,
+  });
   try {
-    await db
-      .prepare(
-        `INSERT INTO status_probe_runs
-         (sample_count, pass_count, fail_count, p95_latency_ms, status, details_json, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        row.sampleCount,
-        row.passCount,
-        row.failCount,
-        row.p95LatencyMs,
-        row.status,
-        row.details ? JSON.stringify(row.details) : null,
-        now,
-      )
-      .run();
+    await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO status_probe_runs
+           (sample_count, pass_count, fail_count, p95_latency_ms, status, details_json, created_at, idempotency_key)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          row.sampleCount,
+          row.passCount,
+          row.failCount,
+          row.p95LatencyMs,
+          row.status,
+          detailsJson,
+          now,
+          idempotencyKey,
+        )
+        .run(),
+    );
     return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_probe_write_failed", "write-status-probe", error);

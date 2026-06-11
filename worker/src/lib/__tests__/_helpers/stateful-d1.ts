@@ -30,6 +30,7 @@ export interface StatusTransitionRow {
   confidence: number;
   causes_json: string | null;
   created_at: number;
+  idempotency_key?: string | null;
 }
 
 export interface StatusProbeRow {
@@ -40,6 +41,7 @@ export interface StatusProbeRow {
   fail_count: number;
   p95_latency_ms: number;
   details_json: string | null;
+  idempotency_key?: string | null;
 }
 
 export interface DiscrepancyStateRow {
@@ -56,6 +58,8 @@ export interface DiscrepancyStateRow {
 export interface StatefulDbOptions {
   failOnSql?: string;
   failMessage?: string;
+  failBatchAfterApplyOnce?: boolean;
+  failRunAfterApplyOnceOnSql?: string;
   seed?: Partial<StatusStateRow>;
 }
 
@@ -89,6 +93,8 @@ function seedToStateRow(seed: Partial<StatusStateRow>): StatusStateRow {
 }
 
 export function makeStatefulDb(options: StatefulDbOptions = {}) {
+  let batchPostApplyFailureUsed = false;
+  let runPostApplyFailureUsed = false;
   const store: {
     stateRow: StatusStateRow | null;
     transitions: StatusTransitionRow[];
@@ -187,7 +193,11 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           confidence: Number(boundValues[7]),
           causes_json: boundValues[8] as string | null,
         };
-      } else if (sql.includes("INSERT INTO status_transitions")) {
+      } else if (sql.includes("status_transitions") && sql.includes("INSERT")) {
+        const idempotencyKey = (boundValues[9] as string | null) ?? null;
+        if (idempotencyKey && store.transitions.some((row) => row.idempotency_key === idempotencyKey)) {
+          return { success: true, meta: { changes: 0 } };
+        }
         store.transitions.push({
           id: store.transitions.length + 1,
           scope: String(boundValues[0]),
@@ -199,8 +209,13 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           confidence: Number(boundValues[6]),
           causes_json: boundValues[7] as string | null,
           created_at: Number(boundValues[8]),
+          idempotency_key: idempotencyKey,
         });
-      } else if (sql.includes("INSERT INTO status_probe_runs")) {
+      } else if (sql.includes("status_probe_runs") && sql.includes("INSERT")) {
+        const idempotencyKey = (boundValues[7] as string | null) ?? null;
+        if (idempotencyKey && store.probes.some((row) => row.idempotency_key === idempotencyKey)) {
+          return { success: true, meta: { changes: 0 } };
+        }
         store.probes.push({
           created_at: Number(boundValues[6]),
           status: boundValues[4] as StatusLevel,
@@ -209,6 +224,7 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           fail_count: Number(boundValues[2]),
           p95_latency_ms: Number(boundValues[3]),
           details_json: (boundValues[5] as string | null) ?? null,
+          idempotency_key: idempotencyKey,
         });
       } else if (sql.includes("INSERT INTO status_discrepancy_state")) {
         store.discrepancy = {
@@ -253,6 +269,15 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
         };
       }
 
+      if (
+        options.failRunAfterApplyOnceOnSql &&
+        !runPostApplyFailureUsed &&
+        sql.includes(options.failRunAfterApplyOnceOnSql)
+      ) {
+        runPostApplyFailureUsed = true;
+        throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+      }
+
       return { success: true, meta: { changes: 1 } };
     },
   });
@@ -261,6 +286,7 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
     prepare: (sql: string) => createStatement(sql),
     batch: async (statements: Array<{ run?: () => Promise<unknown> }>) => {
       const snapshot = cloneStatefulStore(store);
+      let postApplyFailureThisCall = false;
       try {
         for (const statement of statements) {
           if (!statement.run) {
@@ -268,12 +294,19 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           }
           await statement.run();
         }
+        if (options.failBatchAfterApplyOnce && !batchPostApplyFailureUsed) {
+          batchPostApplyFailureUsed = true;
+          postApplyFailureThisCall = true;
+          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+        }
         return [];
       } catch (error) {
-        store.stateRow = snapshot.stateRow;
-        store.transitions = snapshot.transitions;
-        store.probes = snapshot.probes;
-        store.discrepancy = snapshot.discrepancy;
+        if (!postApplyFailureThisCall) {
+          store.stateRow = snapshot.stateRow;
+          store.transitions = snapshot.transitions;
+          store.probes = snapshot.probes;
+          store.discrepancy = snapshot.discrepancy;
+        }
         throw error;
       }
     },

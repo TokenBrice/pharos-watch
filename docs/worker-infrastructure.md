@@ -1182,6 +1182,8 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 
 Default reads use the raw status snapshot produced by `status-self-check` and recompute only the lightweight response wrappers, current status-state/probe/timeline views, and admin supplements. Snapshot age is bounded to 30 minutes; operators can force the previous live raw computation path with `GET /api/status?refresh=live`.
 
+Status hysteresis transitions and self-probe history use nullable `idempotency_key` columns with partial unique indexes. The status-state batch writer and probe writer run through `runWithOverloadRetry()`, so ambiguous D1 overload retries can reapply the same state/probe write without duplicating append-only transition or probe rows.
+
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
 | `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |

@@ -5,6 +5,7 @@ import type {
 } from "@shared/types/status";
 import { clamp } from "@shared/lib/math";
 import { decodeJsonString } from "./cache-json";
+import { runWithOverloadRetry } from "./cron-lease";
 import { logMalformedJsonPath } from "./json-decode-observability";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
@@ -117,6 +118,32 @@ export function transitionType(from: StatusLevel | null, to: StatusLevel): "degr
   return SEVERITY[to] > SEVERITY[from] ? "degrade" : "recover";
 }
 
+export function buildStatusTransitionIdempotencyKey(input: {
+  scope: string;
+  previousStatus: StatusLevel | null;
+  nextStatus: StatusLevel;
+  rawStatus: StatusLevel;
+  transitionType: "degrade" | "recover" | "init";
+  reason: string;
+  confidence: number;
+  causesJson: string | null;
+  createdAt: number;
+}): string {
+  return JSON.stringify(input);
+}
+
+export function buildStatusProbeRunIdempotencyKey(input: {
+  createdAt: number;
+  status: StatusLevel;
+  sampleCount: number;
+  passCount: number;
+  failCount: number;
+  p95LatencyMs: number;
+  detailsJson: string | null;
+}): string {
+  return JSON.stringify(input);
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -147,7 +174,7 @@ export async function persistStatusStateAtomically(
   operation: string,
 ): Promise<boolean> {
   try {
-    await db.batch(statements);
+    await runWithOverloadRetry(() => db.batch(statements));
     return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_state_persistence_failed", operation, error);
