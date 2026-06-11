@@ -148,10 +148,42 @@ async function stageDexLiquidityPublicationGeneration(
     () =>
       db
         .prepare(
-          `INSERT OR REPLACE INTO dex_liquidity_publication_generations (
+          `INSERT INTO dex_liquidity_publication_generations (
              generation_id, started_at, state, expected_row_count, written_row_count,
              current_row_count, metadata_json, created_at, published_at, failed_at, failure_reason
-           ) VALUES (?, ?, 'staged', ?, 0, NULL, ?, ?, NULL, NULL, NULL)`,
+           ) VALUES (?, ?, 'staged', ?, 0, NULL, ?, ?, NULL, NULL, NULL)
+           ON CONFLICT(generation_id) DO UPDATE SET
+             started_at = excluded.started_at,
+             state = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.state
+               ELSE 'staged'
+             END,
+             expected_row_count = excluded.expected_row_count,
+             written_row_count = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.written_row_count
+               ELSE 0
+             END,
+             current_row_count = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.current_row_count
+               ELSE NULL
+             END,
+             metadata_json = excluded.metadata_json,
+             created_at = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.created_at
+               ELSE excluded.created_at
+             END,
+             published_at = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.published_at
+               ELSE NULL
+             END,
+             failed_at = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.failed_at
+               ELSE NULL
+             END,
+             failure_reason = CASE
+               WHEN dex_liquidity_publication_generations.state = 'published' THEN dex_liquidity_publication_generations.failure_reason
+               ELSE NULL
+             END`,
         )
         .bind(
           params.generationId,

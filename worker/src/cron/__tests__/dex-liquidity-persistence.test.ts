@@ -37,6 +37,7 @@ function makeDb(options: {
   };
   currentGenerationRows?: number;
   newerCurrentRows?: number;
+  publicationState?: { value: "staged" | "published" | "failed" | null };
 } = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
 
@@ -75,6 +76,15 @@ function makeDb(options: {
       },
       run: async () => {
         history.push({ sql, binds: [...boundValues] });
+        if (sql.includes("dex_liquidity_publication_generations") && sql.includes("INSERT")) {
+          if (options.publicationState != null) {
+            if (sql.includes("INSERT OR REPLACE")) {
+              options.publicationState.value = "staged";
+            } else if (options.publicationState.value !== "published") {
+              options.publicationState.value = "staged";
+            }
+          }
+        }
         return { success: true, meta: { changes: 1 } };
       },
     } as unknown as PreparedStatementWithMeta;
@@ -413,6 +423,42 @@ describe("dex-liquidity persistence", () => {
     expect(vi.mocked(batchExecute).mock.calls).toHaveLength(1);
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
+  });
+
+  it("keeps an already-published generation published when restaging a retry", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const publicationState = { value: "published" as const };
+    const db = makeDb({ publicationState });
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+      ),
+    ).resolves.toMatchObject({
+      generationId: buildDexLiquidityPublicationGenerationId(1_700_000_000),
+      currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
+    });
+
+    expect(publicationState.value).toBe("published");
+    const stageSql = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT INTO dex_liquidity_publication_generations") &&
+        entry.sql.includes("ON CONFLICT(generation_id) DO UPDATE")
+      )?.sql;
+    expect(stageSql).toContain("dex_liquidity_publication_generations.state = 'published'");
   });
 
   it("skips historical snapshot writes when today's snapshot is already complete enough", async () => {

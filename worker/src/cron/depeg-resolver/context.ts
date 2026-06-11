@@ -12,6 +12,7 @@ import {
   type DexHistoryRow,
 } from "../../api/dex-liquidity-response";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import {
   loadRedemptionBackstopLiveSignalRows,
   RedemptionBackstopSnapshotUnavailableError,
@@ -234,7 +235,8 @@ export async function loadDdrContext(
   const liqResult = await queryRows("dex_liquidity", () => db
     .prepare(
       `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, updated_at FROM dex_liquidity ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)})`,
+        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) ` +
+        `AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
     .bind(...activeCoinIds)
     .all<{
