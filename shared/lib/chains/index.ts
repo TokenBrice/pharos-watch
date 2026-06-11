@@ -113,6 +113,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   tezos:     { name: "Tezos",   explorerUrl: "https://tzkt.io",                  evmChainId: null,  type: "other", logoPath: "/chains/tezos.png"     },
   cardano:   { name: "Cardano", explorerUrl: "https://cardanoscan.io",           evmChainId: null,  type: "other", logoPath: "/chains/cardano.png"   },
   icp:       { name: "Internet Computer", explorerUrl: "https://dashboard.internetcomputer.org", evmChainId: null, type: "other", logoPath: "/chains/icp.png" },
+  iota:      { name: "IOTA",    explorerUrl: "https://iotascan.com",             evmChainId: null,  type: "other", logoPath: "/chains/iota.svg"      },
   noble:     { name: "Noble",   explorerUrl: "https://www.mintscan.io/noble",    evmChainId: null,  type: "other", logoPath: "/chains/noble.png"     },
   osmosis:   { name: "Osmosis", explorerUrl: "https://www.mintscan.io/osmosis",  evmChainId: null,  type: "other", logoPath: "/chains/osmosis.png"   },
   mantra:    { name: "MANTRA",  explorerUrl: "https://www.mintscan.io/mantra",   evmChainId: null,  type: "other", logoPath: "/chains/mantra.png"    },

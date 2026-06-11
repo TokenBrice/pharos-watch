@@ -30,6 +30,13 @@
       "url": "https://docs.virtue.money/overview/what-is-vusd"
     }
   ],
+  "contracts": [
+    {
+      "chain": "iota",
+      "address": "0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD",
+      "decimals": 6
+    }
+  ],
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
@@ -53,13 +60,6 @@
       "name": "IOTA, stIOTA, and IBTC collateral",
       "pct": 100,
       "risk": "high"
-    }
-  ],
-  "notices": [
-    {
-      "type": "info",
-      "title": "IOTA contract excluded",
-      "message": "CoinGecko verifies the IOTA VUSD object, but IOTA is not yet a supported Pharos chain. Runtime coverage uses the CoinGecko supplemental path and leaves contracts[] empty."
     }
   ],
   "mintAuthority": {

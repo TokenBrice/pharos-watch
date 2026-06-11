@@ -28,5 +28,11 @@ describe("buildExplorerUrl", () => {
       entityType: "contract",
       value: "0xabc",
     })).toBe("https://starkscan.co/contract/0xabc");
+
+    expect(buildExplorerUrl({
+      chainKey: "iota",
+      entityType: "contract",
+      value: "0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD",
+    })).toBe("https://iotascan.com/mainnet/coin/0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD");
   });
 });

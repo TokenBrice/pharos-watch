@@ -41,5 +41,9 @@ export function buildExplorerUrl(input: ExplorerUrlInput): string | null {
     return `${explorerUrl}/contract/${input.value}`;
   }
 
+  if (input.chainKey === "iota" && input.entityType === "contract") {
+    return `${explorerUrl}/mainnet/coin/${input.value}`;
+  }
+
   return `${explorerUrl}/address/${input.value}`;
 }
