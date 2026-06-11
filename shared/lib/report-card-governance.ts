@@ -14,13 +14,10 @@ import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./mint-authority-scoring";
 
 /**
- * Safety Score v8 (pending activation): weight of the Mint Authority Score in
- * the penalty-only decentralization blend. The blend runs only when a caller
- * passes `options.mintAuthorityScore`; no caller does until the v8.0
- * methodology activation wires the worker snapshot builder
- * (see agents/mint-authority-score-in-safety-score.md).
+ * Safety Score v8: weight of the Mint Authority Score in the penalty-only
+ * decentralization blend.
  */
-export const MAS_BLEND_WEIGHT = 0.35;
+const MAS_BLEND_WEIGHT = 0.35;
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -117,7 +114,7 @@ export function scoreDecentralization(
     score = Math.max(0, score + penalty);
   }
 
-  // Penalty-only Mint Authority blend (inert until a caller passes the score):
+  // Penalty-only Mint Authority blend:
   // privileged-mint risk can undermine a decentralization claim, never improve it.
   const mintAuthorityScore =
     typeof options.mintAuthorityScore === "number" && Number.isFinite(options.mintAuthorityScore)

@@ -60,7 +60,7 @@ export const MINT_AUTHORITY_CAPS = {
 } as const;
 
 /** Incident-age decay tier boundaries (years since the most recent incident). */
-export const MINT_AUTHORITY_INCIDENT_DECAY_YEARS = { aging: 2, dated: 4 } as const;
+const MINT_AUTHORITY_INCIDENT_DECAY_YEARS = { aging: 2, dated: 4 } as const;
 
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
@@ -70,7 +70,7 @@ const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
  * no-incident unbounded cap. Unparseable or missing dates stay at the
  * strictest tier.
  */
-export function resolveIncidentCap(
+function resolveIncidentCap(
   incidents: NonNullable<MintAuthorityProfile["mintIncidents"]>,
   nowMs: number,
 ): number {

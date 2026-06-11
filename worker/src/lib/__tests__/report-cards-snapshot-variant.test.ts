@@ -160,10 +160,10 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
 
     expect(ybold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
     expect(sbold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
-    // v8: wrappers inherit the parent's PRE-blend score (frxUSD 75) minus the
-    // haircut (-3 = 72), then take their own mint-authority drag once:
-    // round(72*0.65 + 62*0.35) = 69. The parent's blended 70 is only a ceiling.
-    expect(frxusd?.dimensions.decentralization.score).toBe(70);
+    // v8: frxUSD blends from the 75 pre-blend decentralization score and its
+    // verified MAS 64: round(75*0.65 + 64*0.35) = 71. Wrappers inherit the
+    // parent's pre-blend score minus haircut, then take their own MAS drag once.
+    expect(frxusd?.dimensions.decentralization.score).toBe(71);
     expect(sfrxusd?.dimensions.decentralization.score).toBe(69);
     expect(ybold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sbold?.dimensions.decentralization.score).toBeGreaterThan(10);

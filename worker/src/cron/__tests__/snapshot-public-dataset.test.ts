@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
@@ -29,6 +30,7 @@ const STABLECOINS_CACHE_PAYLOAD = {
 };
 
 const REPORT_CARD_CACHE_PAYLOAD = {
+  methodologyVersion: SAFETY_SCORE_VERSION,
   scores: {
     "usdc-circle": { score: 92.4, grade: "A-" },
     "usdt-tether": { score: 78.1, grade: "B" },

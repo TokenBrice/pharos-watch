@@ -1,5 +1,6 @@
 import { getCache, setCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
@@ -11,8 +12,13 @@ export interface ReportCardScoreEntry {
 export interface ReportCardCachePayload {
   scores: Record<string, ReportCardScoreEntry>;
   updatedAt: number;
+  methodologyVersion: string;
   degradedInputs?: ReportCardCacheInputStatus;
 }
+
+type ParsedReportCardCachePayload = Omit<ReportCardCachePayload, "methodologyVersion"> & {
+  methodologyVersion?: string;
+};
 
 export interface ReportCardCacheInputStatus {
   inputsStale: boolean;
@@ -25,6 +31,7 @@ export type ReportCardCacheFailureReason =
   | "missing-cache"
   | "json-parse-failed"
   | "invalid-payload"
+  | "methodology-mismatch"
   | "stale-cache";
 
 export type ReportCardCacheLoadResult =
@@ -33,6 +40,7 @@ export type ReportCardCacheLoadResult =
 
 export interface LoadReportCardCacheOptions {
   maxAgeMs?: number;
+  expectedMethodologyVersion?: string;
 }
 
 export interface WriteReportCardCacheOptions {
@@ -44,13 +52,22 @@ export interface WriteReportCardCacheOptions {
 /** Shared max-age budget for report-card-dependent read paths. */
 export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
-function isValidReportCardCachePayload(value: unknown): value is ReportCardCachePayload {
+function isValidReportCardCachePayload(value: unknown): value is ParsedReportCardCachePayload {
   if (!value || typeof value !== "object") return false;
-  const parsed = value as { scores?: unknown; updatedAt?: unknown; degradedInputs?: unknown };
+  const parsed = value as {
+    scores?: unknown;
+    updatedAt?: unknown;
+    methodologyVersion?: unknown;
+    degradedInputs?: unknown;
+  };
   return parsed.scores != null
     && typeof parsed.scores === "object"
     && typeof parsed.updatedAt === "number"
     && Number.isFinite(parsed.updatedAt)
+    && (
+      parsed.methodologyVersion == null
+      || (typeof parsed.methodologyVersion === "string" && parsed.methodologyVersion.length > 0)
+    )
     && (
       parsed.degradedInputs == null
       || isValidReportCardCacheInputStatus(parsed.degradedInputs)
@@ -99,7 +116,7 @@ export async function loadReportCardCache(
   db: D1Database,
   options: LoadReportCardCacheOptions = {},
 ): Promise<ReportCardCacheLoadResult> {
-  const decoded = decodeCachedJson<ReportCardCachePayload, ReportCardCacheFailureReason>(
+  const decoded = decodeCachedJson<ParsedReportCardCachePayload, ReportCardCacheFailureReason>(
     await getCache(db, "report_card_cache"),
     {
       mode: "strict",
@@ -116,14 +133,23 @@ export async function loadReportCardCache(
     return { kind: "error", reason: decoded.reason, updatedAt: decoded.updatedAt };
   }
 
+  const expectedMethodologyVersion = options.expectedMethodologyVersion ?? SAFETY_SCORE_VERSION;
+  if (decoded.payload.methodologyVersion !== expectedMethodologyVersion) {
+    return { kind: "error", reason: "methodology-mismatch", updatedAt: decoded.payload.updatedAt };
+  }
+  const payload: ReportCardCachePayload = {
+    ...decoded.payload,
+    methodologyVersion: expectedMethodologyVersion,
+  };
+
   if (options.maxAgeMs != null) {
-    const ageMs = Date.now() - decoded.payload.updatedAt * 1000;
+    const ageMs = Date.now() - payload.updatedAt * 1000;
     if (ageMs > options.maxAgeMs) {
-      return { kind: "error", reason: "stale-cache", updatedAt: decoded.payload.updatedAt };
+      return { kind: "error", reason: "stale-cache", updatedAt: payload.updatedAt };
     }
   }
 
-  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.payload.updatedAt };
+  return { kind: "ok", payload, updatedAt: payload.updatedAt };
 }
 
 export async function writeReportCardCache(
@@ -147,6 +173,7 @@ export async function writeReportCardCache(
     JSON.stringify({
       scores,
       updatedAt,
+      methodologyVersion: SAFETY_SCORE_VERSION,
       degradedInputs: buildReportCardCacheInputStatus(options),
     } satisfies ReportCardCachePayload),
   );

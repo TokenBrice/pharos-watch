@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadReportCardCache, writeReportCardCache } from "../report-card-cache";
 
@@ -64,6 +65,7 @@ describe("loadReportCardCache", () => {
           "usdt-tether": { score: 71, grade: "B" },
         },
         updatedAt: staleUpdatedAt,
+        methodologyVersion: SAFETY_SCORE_VERSION,
       }), staleUpdatedAt),
       { maxAgeMs: 2 * 3600 * 1000 },
     );
@@ -84,6 +86,7 @@ describe("loadReportCardCache", () => {
           "usdt-tether": { score: 71, grade: "B" },
         },
         updatedAt: payloadUpdatedAt,
+        methodologyVersion: SAFETY_SCORE_VERSION,
       }), rowUpdatedAt),
     );
 
@@ -94,8 +97,44 @@ describe("loadReportCardCache", () => {
           "usdt-tether": { score: 71, grade: "B" },
         },
         updatedAt: payloadUpdatedAt,
+        methodologyVersion: SAFETY_SCORE_VERSION,
       },
       updatedAt: payloadUpdatedAt,
+    });
+  });
+
+  it("rejects cache payloads from older Safety Score methodologies", async () => {
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        scores: {
+          "usdt-tether": { score: 73, grade: "B+" },
+        },
+        updatedAt: 1_700_000_000,
+        methodologyVersion: "7.29",
+      })),
+    );
+
+    expect(result).toEqual({
+      kind: "error",
+      reason: "methodology-mismatch",
+      updatedAt: 1_700_000_000,
+    });
+  });
+
+  it("rejects legacy cache payloads without methodology version", async () => {
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        scores: {
+          "usdt-tether": { score: 73, grade: "B+" },
+        },
+        updatedAt: 1_700_000_000,
+      })),
+    );
+
+    expect(result).toEqual({
+      kind: "error",
+      reason: "methodology-mismatch",
+      updatedAt: 1_700_000_000,
     });
   });
 
@@ -106,6 +145,7 @@ describe("loadReportCardCache", () => {
           "usdt-tether": { score: 71, grade: "B" },
         },
         updatedAt: 1_700_000_000,
+        methodologyVersion: SAFETY_SCORE_VERSION,
         degradedInputs: {
           inputsStale: true,
           liquidityStale: false,
@@ -148,6 +188,7 @@ describe("writeReportCardCache", () => {
         rated: { score: 82, grade: "B+" },
       },
       updatedAt: 1_777_000_000,
+      methodologyVersion: SAFETY_SCORE_VERSION,
       degradedInputs: {
         inputsStale: true,
         liquidityStale: true,

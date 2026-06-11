@@ -55,6 +55,10 @@ import {
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
+import {
+  formatMintAuthorityCustodyAttestation,
+  formatMintAuthorityWeakestCustodyLabel,
+} from "@/lib/stablecoin-detail-mint-authority-format";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
@@ -426,12 +430,6 @@ const MINT_AUTHORITY_UNRESOLVED_REASON_LABELS: Record<string, string> = {
   "unscored-posture": "Unscored posture",
 };
 
-const MINT_AUTHORITY_WEAKEST_CUSTODY_LABELS: Record<string, string> = {
-  "single-key address - custody unverifiable": "Single-key address - custody unverifiable",
-  "single-key address - MPC-attested": "Single-key address - MPC-attested",
-  "single-key address - HSM-attested": "Single-key address - HSM-attested",
-};
-
 function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
   const pegCurrency = coin.flags.pegCurrency;
   return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
@@ -539,19 +537,6 @@ function formatMintAuthorityCap(cap: string): string {
 function formatMintAuthorityUnresolvedReason(reason: string | null): string | null {
   if (!reason) return null;
   return MINT_AUTHORITY_UNRESOLVED_REASON_LABELS[reason] ?? reason.replaceAll("-", " ");
-}
-
-function formatMintAuthorityCustodyAttestation(value: unknown): string | null {
-  if (!isRecord(value)) return null;
-  const kind = stringValue(value.kind);
-  if (kind === "mpc") return "MPC-attested custody";
-  if (kind === "hsm") return "HSM-attested custody";
-  return null;
-}
-
-function formatMintAuthorityWeakestCustodyLabel(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return MINT_AUTHORITY_WEAKEST_CUSTODY_LABELS[value] ?? value;
 }
 
 function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel[] {

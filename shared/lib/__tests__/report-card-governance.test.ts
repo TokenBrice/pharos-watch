@@ -72,7 +72,7 @@ describe("scoreDecentralization (v6 — 5-band penalty)", () => {
   });
 });
 
-describe("scoreDecentralization mint-authority blend (v8, pending activation)", () => {
+describe("scoreDecentralization mint-authority blend (v8)", () => {
   const makeMeta = (chainTier: string, deploymentModel: string, governanceQuality?: string) => ({
     flags: { backing: "crypto-backed" as const, governance: "decentralized" as const },
     chainTier,
@@ -89,7 +89,7 @@ describe("scoreDecentralization mint-authority blend (v8, pending activation)", 
     const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 20 });
     expect(result.score).toBe(62);
     expect(result.detail).toContain("Mint authority: 20/100 (Exposed)");
-    expect(result.detailItems.some((item) => item.label === "Mint authority" && item.detail === "-23")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-23")).toBe(true);
   });
 
   it("never lifts the dimension when the MAS exceeds it", () => {
@@ -97,7 +97,7 @@ describe("scoreDecentralization mint-authority blend (v8, pending activation)", 
     const meta = makeMeta("ethereum", "single-chain", "single-entity");
     const result = scoreDecentralization("centralized", meta as never, { mintAuthorityScore: 80 });
     expect(result.score).toBe(20);
-    expect(result.detailItems.some((item) => item.label === "Mint authority")).toBe(false);
+    expect(result.detailItems?.some((item) => item.label === "Mint authority")).toBe(false);
   });
 
   it("skips the blend when the MAS is null, absent, or not finite", () => {
@@ -150,7 +150,7 @@ describe("scoreDecentralization mint-authority blend (v8, pending activation)", 
     const meta = makeMeta("mature-alt-l1", "single-chain");
     const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 30 });
     expect(result.score).toBe(50);
-    expect(result.detailItems.some((item) => item.label === "Chain")).toBe(true);
-    expect(result.detailItems.some((item) => item.label === "Mint authority" && item.detail === "-10")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Chain")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-10")).toBe(true);
   });
 });

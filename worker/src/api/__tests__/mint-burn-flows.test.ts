@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import {
@@ -308,6 +309,7 @@ describe("handleMintBurnFlows contract tests", () => {
       ],
     });
     const reportCardCache = JSON.stringify({
+      methodologyVersion: SAFETY_SCORE_VERSION,
       scores: {
         "usdc-circle": { score: 80, grade: "A" },
         "usdt-tether": { score: 40, grade: "C" },
