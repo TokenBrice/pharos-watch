@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
 import { formatInterval, formatLatency } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { CronGroup } from "./crons-section";
 
 type CronEntry = CronGroup["entries"][number];
@@ -216,27 +217,30 @@ export function CronLaneTable({ groups, nowSeconds, emptyLabel }: CronLaneTableP
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.38fr)]">
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-background/35">
-        <div className="overflow-x-auto">
-          <table className="min-w-[58rem] w-full border-collapse text-left text-xs">
-            <thead className="border-b border-border/70 bg-muted/30 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">State</th>
-                <th className="px-3 py-2 font-medium">Job</th>
-                <th className="px-3 py-2 font-medium">Trigger</th>
-                <th className="px-3 py-2 font-medium">Last</th>
-                <th className="px-3 py-2 font-medium">Good</th>
-                <th className="px-3 py-2 font-medium">Run</th>
-                <th className="px-3 py-2 font-medium">Items</th>
-                <th className="px-3 py-2 font-medium">Streak</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/55">
+      <TableFrame
+        tableId="cron-lane"
+        chrome="bare"
+        className="overflow-hidden rounded-xl border border-border/60 bg-background/35"
+        tableClassName="min-w-[58rem] border-collapse text-left text-xs"
+      >
+        <TableHeader className="border-b border-border/70 bg-muted/30 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <TableRow rowIntent="static">
+            <TableHead className="px-3 py-2 font-medium">State</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Job</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Trigger</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Last</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Good</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Run</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Items</TableHead>
+            <TableHead className="px-3 py-2 font-medium">Streak</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="divide-y divide-border/55">
               {rows.map((row) => {
                 const isSelected = selectedRow?.job === row.job;
                 const lastRun = row.cron.lastRun;
                 return (
-                  <tr
+                  <TableRow
                     key={row.job}
                     data-testid={`cron-row-${row.job}`}
                     className={cn(
@@ -245,7 +249,7 @@ export function CronLaneTable({ groups, nowSeconds, emptyLabel }: CronLaneTableP
                       isSelected ? "bg-primary/8" : "hover:bg-muted/25",
                     )}
                   >
-                    <td className="px-3 py-2 align-top">
+                    <TableCell className="px-3 py-2 align-top">
                       <button
                         type="button"
                         onClick={() => setSelectedJob(row.job)}
@@ -255,8 +259,8 @@ export function CronLaneTable({ groups, nowSeconds, emptyLabel }: CronLaneTableP
                           {lastRun?.status ?? (row.cron.telemetryUnknown ? "unknown" : "none")}
                         </Badge>
                       </button>
-                    </td>
-                    <td className="max-w-[15rem] px-3 py-2 align-top">
+                    </TableCell>
+                    <TableCell className="max-w-[15rem] px-3 py-2 align-top">
                       <button
                         type="button"
                         onClick={() => setSelectedJob(row.job)}
@@ -265,32 +269,30 @@ export function CronLaneTable({ groups, nowSeconds, emptyLabel }: CronLaneTableP
                         <span className="block truncate text-sm font-medium text-foreground">{row.display.label}</span>
                         <span className="block truncate font-mono text-[11px] text-muted-foreground">{row.job}</span>
                       </button>
-                    </td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top text-muted-foreground">
                       <div>{row.display.triggerMode === "isolated" ? "isolated" : "shared"}</div>
                       <div className="font-mono tabular-nums">{row.display.schedule ?? "—"}</div>
                       <div>every {formatInterval(row.cron.expectedIntervalSec)}</div>
-                    </td>
-                    <td className="px-3 py-2 align-top font-mono tabular-nums text-foreground">{formatLastRun(row, nowSeconds)}</td>
-                    <td className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">{formatLastGood(row, nowSeconds)}</td>
-                    <td className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-foreground">{formatLastRun(row, nowSeconds)}</TableCell>
+                    <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">{formatLastGood(row, nowSeconds)}</TableCell>
+                    <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
                       {lastRun ? formatLatency(lastRun.durationMs) : "—"}
-                    </td>
-                    <td className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
                       {lastRun?.itemCount ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top text-muted-foreground">
                       {row.errorStreak > 0 ? <div>errors {row.errorStreak}</div> : null}
                       {row.skippedStreak > 0 ? <div>leases {row.skippedStreak}</div> : null}
                       {row.errorStreak === 0 && row.skippedStreak === 0 ? <div>clear</div> : null}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </TableBody>
+      </TableFrame>
       {selectedRow ? <CronDetailPanel row={selectedRow} nowSeconds={nowSeconds} /> : null}
     </div>
   );

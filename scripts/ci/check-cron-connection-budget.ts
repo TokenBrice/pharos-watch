@@ -70,7 +70,7 @@ export function evaluateCronConnectionBudget(input: {
   const budget = input.budget ?? CRON_CONNECTION_BUDGET;
   const entries = input.entries ?? CRON_CONNECTION_BUDGET_ENTRIES;
   const schedules = input.schedules ?? CRON_SCHEDULES;
-  const slotPlans = input.slotPlans ?? SCHEDULED_SLOT_PLANS;
+  const slotPlans: Readonly<Record<string, ScheduledSlotPlanForCheck>> = input.slotPlans ?? SCHEDULED_SLOT_PLANS;
 
   const entriesByJob = new Map<string, CronConnectionBudgetEntryForCheck[]>();
   for (const def of entries) {

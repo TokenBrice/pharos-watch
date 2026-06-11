@@ -233,8 +233,8 @@ export async function recordDeferredTail(
   let cursorTailState: LiveReserveCursorTailState | null = null;
   let cursorRecordedAt: number | null = null;
   let cursorTailCompletedAt: number | null = null;
-  let cursorTailFailedAt: number | null = null;
-  let cursorTailError: string | null = null;
+  const cursorTailFailedAt: number | null = null;
+  const cursorTailError: string | null = null;
   if (cursorBaseState) {
     const completedAt = Math.floor(Date.now() / 1000);
     await writeLiveReserveCursorState(

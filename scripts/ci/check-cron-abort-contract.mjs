@@ -165,7 +165,7 @@ function parameterSignalNames(node, sourceFile) {
       if (name === "signal" || /\bAbortSignal\b/.test(typeText)) {
         names.add(name);
       }
-      if (new RegExp(`\\b${name}\\.signal\\b`).test(bodyText)) {
+      if (bodyText.includes(`${name}.signal`)) {
         names.add(`${name}.signal`);
       }
       continue;

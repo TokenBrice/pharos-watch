@@ -7,6 +7,7 @@ import {
 import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type {
   ApiKeySummaryItem,
   CreateKeyState,
@@ -211,31 +212,34 @@ export function ApiKeyTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/60 bg-background/35">
-      <div className="overflow-x-auto">
-        <table className="min-w-[68rem] w-full border-collapse text-left text-xs">
-          <thead className="border-b border-border/70 bg-muted/30 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Key</th>
-              <th className="px-3 py-2 font-medium">Owner</th>
-              <th className="px-3 py-2 font-medium">Tier</th>
-              <th className="px-3 py-2 font-medium">Traffic</th>
-              <th className="px-3 py-2 font-medium">Limit</th>
-              <th className="px-3 py-2 font-medium">Expiry</th>
-              <th className="px-3 py-2 font-medium">Last used</th>
-              <th className="px-3 py-2 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/55">
+    <TableFrame
+      tableId="api-keys"
+      chrome="bare"
+      className="overflow-hidden rounded-lg border border-border/60 bg-background/35"
+      tableClassName="min-w-[68rem] border-collapse text-left text-xs"
+    >
+      <TableHeader className="border-b border-border/70 bg-muted/30 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        <TableRow rowIntent="static">
+          <TableHead className="px-3 py-2 font-medium">Status</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Key</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Owner</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Tier</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Traffic</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Limit</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Expiry</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Last used</TableHead>
+          <TableHead className="px-3 py-2 font-medium">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody className="divide-y divide-border/55">
             {keys.map((key) => {
               const keyStatus = getApiKeyStatus(key, nowSeconds);
               const expiringSoon = isApiKeyExpiringSoon(key, nowSeconds);
               const isBusy = busyKeyId === key.id;
               const isEditing = editingKeyId === key.id;
               return (
-                <tr key={key.id} className={isEditing ? "bg-primary/8" : "hover:bg-muted/25"}>
-                  <td className="px-3 py-2 align-top">
+                <TableRow key={key.id} className={isEditing ? "bg-primary/8" : "hover:bg-muted/25"}>
+                  <TableCell className="px-3 py-2 align-top">
                     <div className="flex flex-wrap gap-1.5">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(keyStatus)}`}>
                         {keyStatus}
@@ -251,21 +255,21 @@ export function ApiKeyTable({
                         </span>
                       ) : null}
                     </div>
-                  </td>
-                  <td className="max-w-[15rem] px-3 py-2 align-top">
+                  </TableCell>
+                  <TableCell className="max-w-[15rem] px-3 py-2 align-top">
                     <div className="truncate text-sm font-medium text-foreground">{key.name}</div>
                     <div className="truncate font-mono text-[11px] text-muted-foreground">{key.maskedToken}</div>
-                  </td>
-                  <td className="px-3 py-2 align-top text-muted-foreground">{key.ownerEmail ?? "—"}</td>
-                  <td className="px-3 py-2 align-top font-mono text-muted-foreground">{key.tier}</td>
-                  <td className="px-3 py-2 align-top font-mono text-muted-foreground">{key.trafficClass}</td>
-                  <td className="px-3 py-2 align-top font-mono tabular-nums text-foreground">{key.rateLimitPerMinute}/min</td>
-                  <td className="max-w-[16rem] px-3 py-2 align-top text-muted-foreground">{formatExpirySummary(key, nowSeconds)}</td>
-                  <td className="max-w-[14rem] px-3 py-2 align-top text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="px-3 py-2 align-top text-muted-foreground">{key.ownerEmail ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-2 align-top font-mono text-muted-foreground">{key.tier}</TableCell>
+                  <TableCell className="px-3 py-2 align-top font-mono text-muted-foreground">{key.trafficClass}</TableCell>
+                  <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-foreground">{key.rateLimitPerMinute}/min</TableCell>
+                  <TableCell className="max-w-[16rem] px-3 py-2 align-top text-muted-foreground">{formatExpirySummary(key, nowSeconds)}</TableCell>
+                  <TableCell className="max-w-[14rem] px-3 py-2 align-top text-muted-foreground">
                     <div>{key.lastUsedAt ? new Date(key.lastUsedAt * 1000).toLocaleString() : "never"}</div>
                     <div className="truncate font-mono text-[11px]">{key.lastUsedRoute ?? "no route"}</div>
-                  </td>
-                  <td className="px-3 py-2 align-top">
+                  </TableCell>
+                  <TableCell className="px-3 py-2 align-top">
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant={isEditing ? "default" : "outline"} disabled={isBusy} onClick={() => onEdit(key.id)}>
                         {isEditing ? "Editing" : "Edit"}
@@ -277,14 +281,12 @@ export function ApiKeyTable({
                         Rotate
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </TableBody>
+    </TableFrame>
   );
 }
 
