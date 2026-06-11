@@ -101,6 +101,45 @@ export function StressTestPanel({
             affected.
           </p>
         </button>
+
+        {/* Collapsed preview — top-3 systemic risks */}
+        {!isOpen && stressTest.systemicRisks.length > 0 && (() => {
+          const top3 = stressTest.systemicRisks.slice(0, 3);
+          const totalAtRisk = top3.reduce((sum, r) => sum + r.dependentSupplyAtRisk, 0);
+          return (
+            <div className="mt-3 space-y-2.5">
+              <p className="text-xs text-muted-foreground">
+                <span className="pharos-numeric font-semibold text-foreground">{formatCurrency(totalAtRisk)}</span>{" "}
+                in downstream supply depends on {top3.length === 1 ? "this coin" : `just ${top3.length} coins`} — click to simulate a failure.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {top3.map((risk, i) => (
+                  <div
+                    key={risk.coinId}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                      i === 0 ? "bg-rose-500/10 border border-rose-500/20" : "bg-muted/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
+                        i === 0 ? "bg-rose-500 text-white" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                    <StablecoinLogo src={logos?.[risk.coinId]} name={risk.symbol} size={16} />
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold block truncate">{risk.symbol}</span>
+                      <span className="text-muted-foreground pharos-numeric">{formatCurrency(risk.dependentSupplyAtRisk)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </CardHeader>
 
       {isOpen && (

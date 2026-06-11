@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StressTestPanel } from "@/components/stress-test-panel";
-import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
-import { SafetyInspectionBoard } from "./inspection-board";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { useNearViewport } from "@/hooks/use-near-viewport";
@@ -20,7 +18,6 @@ import {
   buildCoreSettlementProfiles,
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
-  buildSafetyInspectionBoard,
   buildSafetyMcapMap,
   buildSafetyStablecoinMap,
   filterAndSortReportCards,
@@ -29,7 +26,6 @@ import {
   type SortKey,
 } from "./view-model";
 import {
-  CoreSettlementStrip,
   SafetyCardsGrid,
   SafetyControlsPanel,
   SafetyEmptyState,
@@ -102,21 +98,11 @@ export function ReportCardsClient() {
     () => (reportCards ? buildSafetyHeadlineStats(reportCards, mcapMap) : []),
     [reportCards, mcapMap],
   );
-  const inspectionModel = useMemo(
-    () => buildSafetyInspectionBoard(reportCards, mcapMap),
-    [reportCards, mcapMap],
-  );
-
   const { replaceParams } = useUrlFilters();
 
   const handleSortChange = useCallback((value: SortKey) => {
     setSortKey(value);
     setSortDirection("desc");
-  }, []);
-
-  const handleInspectionSortChange = useCallback((value: SortKey) => {
-    setSortKey(value);
-    setSortDirection("asc");
   }, []);
 
   useEffect(() => {
@@ -147,13 +133,7 @@ export function ReportCardsClient() {
   const gradeCounts = useMemo(() => buildSafetyGradeCounts(reportCards), [reportCards]);
   const totalCards = useMemo(() => Object.values(gradeCounts).reduce((sum, value) => sum + value, 0), [gradeCounts]);
 
-  const [simulatorOpen, setSimulatorOpen] = useState(true);
-  const simulatorRef = useRef<HTMLDivElement>(null);
-
-  const handleOpenSimulator = useCallback(() => {
-    setSimulatorOpen(true);
-    simulatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
 
   const filteredCards = useMemo(
     () => filterAndSortReportCards(displayCards, {
@@ -214,23 +194,6 @@ export function ReportCardsClient() {
 
       <SafetyHeadlineStats stats={headlineStats} />
 
-      {reportCards && (
-        <CoreSettlementStrip
-          cards={reportCards}
-          profiles={coreSettlementProfiles}
-          logos={logos}
-        />
-      )}
-
-      {inspectionModel.totalMarketCapUsd > 0 && (
-        <SafetyInspectionBoard
-          model={inspectionModel}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onSortChange={handleInspectionSortChange}
-        />
-      )}
-
       <SafetyLandscapeCard
         gradeCounts={gradeCounts}
         totalCards={totalCards}
@@ -238,23 +201,13 @@ export function ReportCardsClient() {
         onFilterChange={setGradeFilter}
       />
 
-      {!isSimulating && stressTest.systemicRisks.length > 0 && (
-        <SystemicRiskHeadline
-          risks={stressTest.systemicRisks}
-          logos={logos}
-          onOpenSimulator={handleOpenSimulator}
-        />
-      )}
-
-      <div ref={simulatorRef}>
-        <StressTestPanel
-          stressTest={stressTest}
-          mcapMap={mcapMap}
-          logos={logos}
-          isOpen={simulatorOpen}
-          onOpenChange={setSimulatorOpen}
-        />
-      </div>
+      <StressTestPanel
+        stressTest={stressTest}
+        mcapMap={mcapMap}
+        logos={logos}
+        isOpen={simulatorOpen}
+        onOpenChange={setSimulatorOpen}
+      />
 
       <SafetyControlsPanel
         gradeFilter={gradeFilter}
