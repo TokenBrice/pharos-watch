@@ -460,9 +460,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/monthly-yield-audit.ts` - runMonthlyYieldAuditSlot
 - `worker/src/handlers/scheduled/preflight-skip.ts` - logSkippedCronRun
 - `worker/src/handlers/scheduled/quarter-hourly.ts` - runQuarterHourlySlot
-- `worker/src/handlers/scheduled/run-best-effort-job.ts` - runBestEffortScheduledJob
+- `worker/src/handlers/scheduled/run-best-effort-job.ts` - BestEffortScheduledJobOutcome, runBestEffortScheduledJob, runBestEffortScheduledJobWithOutcome
 - `worker/src/handlers/scheduled/run-circuit-gated-job.ts` - runCircuitGatedLeasedScheduledJob
 - `worker/src/handlers/scheduled/slot-groups.ts` - ScheduledSlotGroup, ScheduledSlotGroupDefinition, ScheduledSlotGroupMode, ScheduledSlotParallelSerialGroup, ScheduledSlotTask, ScheduledSlotTaskChain
+- `worker/src/handlers/scheduled/slot-summary.ts` - ScheduledSlotJobOutcome, ScheduledSlotJobSummary, ScheduledSlotResultStatus, ScheduledSlotSummary, buildScheduledSlotSummary, getScheduledSlotResultStatus
 - `worker/src/handlers/scheduled/status-self-check.ts` - runStatusSelfCheckSlot
 - `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runTwoHourlyDexDiscoverySlot
 - `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runHalfHourlyMintBurnCriticalSlot
@@ -615,7 +616,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 312 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 313 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -655,7 +656,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/authoritative-price-sources/erc4626-nav.ts` - erc4626NavProvider
 - `worker/src/lib/authoritative-price-sources/helpers.ts` - CurrentPriceOverride, ERC4626_NAV_MAX_RATIO, ERC4626_NAV_MIN_RATIO, ETHEREUM_CHAIN, Erc4626NavVaultConfig, HistoricalBlockPriceResolver
 - `worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts` - idleCdoTrancheProvider
-- `worker/src/lib/authoritative-price-sources/index.ts` - fetchAuthoritativeHistoricalPriceSeries, fetchAuthoritativeLivePriceOverrides
+- `worker/src/lib/authoritative-price-sources/index.ts` - AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS, AuthoritativeLivePriceOverrideOptions, AuthoritativeLivePriceOverrideStats, createAuthoritativeLivePriceOverrideStats, fetchAuthoritativeHistoricalPriceSeries, fetchAuthoritativeLivePriceOverrides
 - `worker/src/lib/authoritative-price-sources/infinifi-iusd.ts` - iusdInfinifiProvider
 - `worker/src/lib/authoritative-price-sources/inherited-tracked.ts` - inheritedTrackedPriceProvider
 - `worker/src/lib/authoritative-price-sources/preview-redeem.ts` - previewRedeemProvider
@@ -679,7 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 219 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 221 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -695,8 +696,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
+- `scripts/__tests__/check-cron-console-usage.test.ts`
 - `scripts/__tests__/check-env-contract.test.ts` - After, Env
 - `scripts/__tests__/check-glossary-coverage.test.ts`
+- `scripts/__tests__/check-provider-resilience.test.ts` - run
 - `scripts/__tests__/check-redemption-backstops.test.ts`
 - `scripts/__tests__/check-reserve-fixture-freshness.test.ts`
 - `scripts/__tests__/check-selector-banned-phrases.test.ts` - keys
@@ -741,6 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/supply-helper-usage.test.ts`
 - `scripts/__tests__/sync-depeg-events.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
-- `scripts/__tests__/validate-ci-parity.test.ts`
-- `scripts/__tests__/vitest-ci-args.test.ts`
-- ... 165 more files omitted; use `rg --files scripts` for the full list.
+- ... 170 more files omitted; use `rg --files scripts` for the full list.
