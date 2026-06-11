@@ -219,13 +219,13 @@ function dedupeCauses(causes: StatusCause[]): StatusCause[] {
     });
 }
 
-export function getBlockerCauses(causes: StatusResponse["causes"]): StatusCause[] {
+function getBlockerCauses(causes: StatusResponse["causes"]): StatusCause[] {
   return dedupeCauses(
     [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity !== "info"),
   );
 }
 
-export function getWatchCauses(causes: StatusResponse["causes"]): StatusCause[] {
+function getWatchCauses(causes: StatusResponse["causes"]): StatusCause[] {
   return dedupeCauses(
     [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity === "info"),
   );

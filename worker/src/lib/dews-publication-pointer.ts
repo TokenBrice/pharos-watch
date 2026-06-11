@@ -1,6 +1,6 @@
 import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 
-export const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
+const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
 const DEWS_PUBLICATION_POINTER_STATUS = "published";
 
@@ -18,7 +18,7 @@ function buildDewsPublicationPointerPayload(updatedAt: number): DewsPublicationP
   };
 }
 
-export function parseDewsPublishedGeneration(
+function parseDewsPublishedGeneration(
   cached: { value: string; updatedAt: number } | null,
   nowSec: number,
 ): number | null {

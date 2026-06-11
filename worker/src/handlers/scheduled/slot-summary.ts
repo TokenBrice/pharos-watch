@@ -1,7 +1,6 @@
 import type { CronResult } from "../../lib/cron-logger";
 
 export type ScheduledSlotJobOutcome = "ok" | "degraded" | "error" | "skipped";
-export type ScheduledSlotResultStatus = "ok" | "degraded" | "error";
 
 export interface ScheduledSlotJobSummary {
   job: string;
@@ -99,11 +98,4 @@ export function mergeScheduledSlotSummaries(
   const budgetOnlyJobs =
     summaries.reduce((sum, summary) => sum + summary.budgetOnlyJobs, 0) + (options.budgetOnlyJobs ?? 0);
   return buildScheduledSlotSummary(jobs, { budgetOnlyJobs });
-}
-
-export function getScheduledSlotResultStatus(summary: ScheduledSlotSummary | null | void): ScheduledSlotResultStatus {
-  if (!summary) return "ok";
-  if (summary.jobsErrored > 0) return "error";
-  if (summary.jobsDegraded > 0 || summary.jobsSkipped > 0) return "degraded";
-  return "ok";
 }

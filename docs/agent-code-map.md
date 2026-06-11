@@ -290,7 +290,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 371 more files omitted; use `rg --files src/components` for the full list.
+- ... 370 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -460,10 +460,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/monthly-yield-audit.ts` - runMonthlyYieldAuditSlot
 - `worker/src/handlers/scheduled/preflight-skip.ts` - logSkippedCronRun
 - `worker/src/handlers/scheduled/quarter-hourly.ts` - runQuarterHourlySlot
-- `worker/src/handlers/scheduled/run-best-effort-job.ts` - BestEffortScheduledJobOutcome, runBestEffortScheduledJob, runBestEffortScheduledJobWithOutcome
+- `worker/src/handlers/scheduled/run-best-effort-job.ts` - BestEffortScheduledJobOutcome, runBestEffortScheduledJobWithOutcome
 - `worker/src/handlers/scheduled/run-circuit-gated-job.ts` - runCircuitGatedLeasedScheduledJob
 - `worker/src/handlers/scheduled/slot-groups.ts` - ScheduledSlotGroup, ScheduledSlotGroupDefinition, ScheduledSlotGroupMode, ScheduledSlotParallelSerialGroup, ScheduledSlotTask, ScheduledSlotTaskChain
-- `worker/src/handlers/scheduled/slot-summary.ts` - ScheduledSlotJobOutcome, ScheduledSlotJobSummary, ScheduledSlotResultStatus, ScheduledSlotSummary, buildScheduledSlotSummary, getScheduledSlotResultStatus
+- `worker/src/handlers/scheduled/slot-summary.ts` - ScheduledSlotJobOutcome, ScheduledSlotJobSummary, ScheduledSlotSummary, buildScheduledSlotSummary, mergeScheduledSlotSummaries, summarizeCronResult
 - `worker/src/handlers/scheduled/status-self-check.ts` - runStatusSelfCheckSlot
 - `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runTwoHourlyDexDiscoverySlot
 - `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runHalfHourlyMintBurnCriticalSlot

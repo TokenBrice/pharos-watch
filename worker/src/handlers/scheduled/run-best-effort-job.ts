@@ -39,13 +39,3 @@ export async function runBestEffortScheduledJobWithOutcome(
     };
   }
 }
-
-export async function runBestEffortScheduledJob(
-  runtime: ScheduledRuntimeContext,
-  slotLabel: string,
-  job: string,
-  fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
-  options: RunBestEffortScheduledJobOptions = {},
-): Promise<CronResult | null> {
-  return (await runBestEffortScheduledJobWithOutcome(runtime, slotLabel, job, fn, options)).result;
-}
