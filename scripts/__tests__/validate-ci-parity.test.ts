@@ -447,6 +447,7 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).toContain("npx --no-install wrangler versions upload");
     expect(uploadWorkerJob).toContain("entitlements.not_available \\\\[code: 10007\\\\]");
     expect(uploadWorkerJob).toContain("version_upload_unavailable=true");
+    expect(uploadWorkerJob).toContain("reduced rollback safety");
 
     const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
     expect(deployWorkerJob).toContain(
@@ -455,6 +456,8 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("Wait for validation gate");
     expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
     expect(deployWorkerJob).toContain("Capture previous worker trigger config for rollback");
+    expect(deployWorkerJob).toContain("Require previous worker version for automatic rollback");
+    expect(deployWorkerJob).toContain("Worker rollback is not armed");
     expect(deployWorkerJob).toContain("Apply production D1 migrations");
     expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
     expect(deployWorkerJob).toContain("needs.upload-worker-version.outputs.version_upload_unavailable != 'true'");
@@ -468,8 +471,11 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("cd worker && npx --no-install wrangler deploy");
     expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
+    expect(deployWorkerJob).toContain("id: worker-only-live-smokes");
+    expect(deployWorkerJob).toContain("continue-on-error: true");
     expect(deployWorkerJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
     expect(deployWorkerJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
+    expect(deployWorkerJob).toContain("steps.worker-only-live-smokes.outcome == 'failure'");
     expect(deployWorkerJob).not.toContain("--mode live --skip-overflow");
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");

@@ -121,6 +121,8 @@ jobs:
                 echo ""
                 echo "Cloudflare returned \`entitlements.not_available [code: 10007]\` for \`wrangler versions upload\`."
                 echo "The deploy-worker job will use the validated legacy \`wrangler deploy\` fallback after the validation and migration gates."
+                echo ""
+                echo "This fallback has reduced rollback safety: the workflow cannot preview-smoke and later re-promote an immutable Worker Version, so any post-deploy failure requires operator-led Worker rollback from Cloudflare deployment history."
               } >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
@@ -192,6 +194,20 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
             echo "Could not read worker/wrangler.toml at ${DEPLOY_BASE_SHA}; trigger rollback restoration will be skipped."
           fi
+      - name: Require previous worker version for automatic rollback
+        if: >-
+          ${{
+            needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
+            && needs.upload-worker-version.outputs.previous_version_id == ''
+          }}
+        run: |
+          {
+            echo "## Worker rollback is not armed"
+            echo ""
+            echo "Worker Versions upload is available, but the workflow could not capture a current production Worker version before promotion."
+            echo "Stopping before production D1 mutation or Worker promotion so a broken deploy cannot be left live without an automatic rollback target."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Smoke uploaded preview worker
@@ -231,44 +247,15 @@ jobs:
           SMOKE_API_RETRY_COUNT: "3"
           SMOKE_API_RETRY_DELAY_MS: "5000"
           SMOKE_API_TIMEOUT_MS: "15000"
-      - name: Roll back production worker to previous stable version
-        if: >-
-          ${{
-            (
-              steps.sync-worker-triggers.outcome == 'failure'
-              || steps.production-smoke-api.outcome == 'failure'
-            )
-            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
-            && needs.upload-worker-version.outputs.previous_version_id != ''
-          }}
-        env:
-          PREVIOUS_WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.previous_version_id }}
-        run: >-
-          cd worker
-          && npx --no-install wrangler rollback "${PREVIOUS_WORKER_VERSION_ID}"
-          --message "Auto rollback after Worker deploy post-check failure for ${GITHUB_SHA}"
-          --yes
-      - name: Restore worker triggers after rollback
-        if: >-
-          ${{
-            (
-              steps.sync-worker-triggers.outcome == 'failure'
-              || steps.production-smoke-api.outcome == 'failure'
-            )
-            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
-            && needs.upload-worker-version.outputs.previous_version_id != ''
-            && steps.previous-worker-trigger-config.outputs.available == 'true'
-          }}
-        run: cd worker && npx --no-install wrangler triggers deploy --config .rollback-wrangler.toml
-      - name: Fail after worker deploy post-check failure
-        if: >-
-          ${{
-            steps.sync-worker-triggers.outcome == 'failure'
-            || steps.production-smoke-api.outcome == 'failure'
-          }}
-        run: exit 1
       - name: Run worker-only live smokes
-        if: ${{ needs.detect-changes.outputs.pages_changed != 'true' }}
+        if: >-
+          ${{
+            needs.detect-changes.outputs.pages_changed != 'true'
+            && steps.sync-worker-triggers.outcome == 'success'
+            && steps.production-smoke-api.outcome == 'success'
+          }}
+        id: worker-only-live-smokes
+        continue-on-error: true
         run: |
           set +e
 
@@ -299,6 +286,45 @@ jobs:
           SMOKE_OPS_SCOPE: "canary"
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
+      - name: Roll back production worker to previous stable version
+        if: >-
+          ${{
+            (
+              steps.sync-worker-triggers.outcome == 'failure'
+              || steps.production-smoke-api.outcome == 'failure'
+              || steps.worker-only-live-smokes.outcome == 'failure'
+            )
+            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
+            && needs.upload-worker-version.outputs.previous_version_id != ''
+          }}
+        env:
+          PREVIOUS_WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.previous_version_id }}
+        run: >-
+          cd worker
+          && npx --no-install wrangler rollback "${PREVIOUS_WORKER_VERSION_ID}"
+          --message "Auto rollback after Worker deploy post-check failure for ${GITHUB_SHA}"
+          --yes
+      - name: Restore worker triggers after rollback
+        if: >-
+          ${{
+            (
+              steps.sync-worker-triggers.outcome == 'failure'
+              || steps.production-smoke-api.outcome == 'failure'
+              || steps.worker-only-live-smokes.outcome == 'failure'
+            )
+            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
+            && needs.upload-worker-version.outputs.previous_version_id != ''
+            && steps.previous-worker-trigger-config.outputs.available == 'true'
+          }}
+        run: cd worker && npx --no-install wrangler triggers deploy --config .rollback-wrangler.toml
+      - name: Fail after worker deploy post-check failure
+        if: >-
+          ${{
+            steps.sync-worker-triggers.outcome == 'failure'
+            || steps.production-smoke-api.outcome == 'failure'
+            || steps.worker-only-live-smokes.outcome == 'failure'
+          }}
+        run: exit 1
 
   pages-release:
     needs:
