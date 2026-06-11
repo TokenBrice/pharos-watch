@@ -203,6 +203,7 @@ describe("validate-ci parity", () => {
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
+      "npm run check:provider-resilience",
       "npm run lint",
       "npm run lint:typed",
       "npm run typecheck",

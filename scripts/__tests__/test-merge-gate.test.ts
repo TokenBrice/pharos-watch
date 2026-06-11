@@ -493,6 +493,7 @@ describe("validate:prebuild surface filtering", () => {
 
     expect(commands).toContain("npm run audit:deps");
     expect(commands).toContain("npm run audit:pricing-providers");
+    expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:dependency-coverage");
     expect(commands).toContain("npm run check:generated-artifacts");
     expect(commands).toContain("npm run check:world-map");
@@ -505,6 +506,7 @@ describe("validate:prebuild surface filtering", () => {
 
     expect(commands).toContain("npm run audit:deps");
     expect(commands).toContain("npm run audit:pricing-providers");
+    expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:dependency-coverage");
     expect(commands).toContain("npm run check:migrations");
     expect(commands).toContain("npm run check:sql-safety");

@@ -165,6 +165,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-stablecoin-per-coin-asset.ts --check` via `npm run check:stablecoin-data` when the stablecoin catalog guard validates generated per-coin source assets
 - `check:world-map` via `validate:prebuild` to fail if `public/maps/world-countries.svg` drifts from `scripts/maintenance/build-world-map-svg.ts`
 - `check:generated-artifacts` via `validate:prebuild` to fail if any generated artifact in `scripts/lib/automation-registry.mjs` drifts, including sitemap dates, docs metadata, depeg search data, Cemetery exports, homepage bootstrap payload shape, Postman exports, OpenAPI, `/llms.txt`, the stablecoin prevalidated registry, mechanism/editorial/case-study OG assets, and the generated block in `docs/api-reference.md`
+- `check:provider-resilience` via `validate:prebuild` to fail when a registered external-provider surface loses timeout, response-body, circuit, or test coverage, or when a new production Worker file adds raw `fetch(...)` without a registry entry
 - `check:agent-doc-sync` via `validate:prebuild` to fail if top-level agent guidance files drift out of sync
 - `check:agent-skill-symlinks` via `validate:prebuild` to fail broken skill symlinks and require waivers for external skill links
 - `check-seo-static.mjs` via `npm run seo:check`

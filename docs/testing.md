@@ -61,6 +61,7 @@ CI shape:
 Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
+- Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
 - GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.

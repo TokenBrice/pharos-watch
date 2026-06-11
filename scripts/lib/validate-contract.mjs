@@ -3,6 +3,7 @@ import { VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY } from "./automation-registry
 export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:deps",
   "npm run audit:pricing-providers",
+  "npm run check:provider-resilience",
   "npm run lint",
   "npm run lint:typed",
   "npm run typecheck",

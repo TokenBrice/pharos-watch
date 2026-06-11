@@ -16,6 +16,14 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     deployImpact: "full",
     paths: ["scripts/maintenance/audit-pricing-provider-config.ts"],
   },
+  {
+    command: "npm run check:provider-resilience",
+    deployImpact: "full",
+    paths: [
+      "scripts/ci/check-provider-resilience.mjs",
+      "scripts/lib/provider-resilience-registry.mjs",
+    ],
+  },
   { command: "npm run lint", deployImpact: "validation-only", paths: [] },
   { command: "npm run lint:typed", deployImpact: "validation-only", paths: [] },
   { command: "npm run typecheck", deployImpact: "validation-only", paths: [] },
