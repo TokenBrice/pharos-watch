@@ -184,7 +184,7 @@ describe("address price providers", () => {
   });
 
   it("does not continue DexScreener address batches after an upstream refusal", async () => {
-    const fetchMock = vi.fn(async () => new Response("error code: 1015", { status: 429 }));
+    const fetchMock = vi.fn(async () => new Response("forbidden", { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await runDexScreenerAddressProvider(
@@ -199,7 +199,7 @@ describe("address price providers", () => {
     expect(result.diagnostics).toMatchObject([
       {
         source: "dexscreener-address",
-        status: 429,
+        status: 403,
         success: false,
         rejectionReasonCounts: { "non-ok": 1 },
       },

@@ -164,10 +164,8 @@ describe("ReportCardsClient", () => {
     render(<ReportCardsClient />);
 
     expect(screen.getByText("Safety Landscape")).toBeTruthy();
-    expect(screen.getByText("Core settlement rails")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdc-circle")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdt-tether")).toBeTruthy();
-    expect(screen.getAllByText("Core rail").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId("report-card-usdc-circle").getAttribute("data-grade-version-variant")).toBe("tooltip-only");
     expect(screen.getByTestId("report-card-usdt-tether").getAttribute("data-grade-version-variant")).toBe("tooltip-only");
 

@@ -47,6 +47,10 @@ const validKey = {
   rateLimitPerMinute: 60,
 };
 
+function parseWarnEvents(warn: { mock: { calls: unknown[][] } }): Record<string, unknown>[] {
+  return warn.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
+}
+
 function makeEnv() {
   return {
     CORS_ORIGIN: "https://pharos.watch",
@@ -173,13 +177,16 @@ describe("evaluateAccessGate", () => {
     expect(result.response).toBeNull();
     expect(apiKeyMocks.recordApiKeyRateLimitDependencyFailure).toHaveBeenCalled();
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
-    expect(warn).toHaveBeenCalledWith(
-      "[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:",
-      expect.objectContaining({
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
+      event: "api_key_rate_limit_dependency_unavailable_fallback",
+      message: "API key rate-limit dependency unavailable; using isolate-local fallback limiter",
+      route: "public-api-auth",
+      requestLane: "public-api",
+      metadata: expect.objectContaining({
         consecutiveFailures: 1,
         circuitOpened: false,
       }),
-    );
+    }));
     warn.mockRestore();
   });
 
@@ -202,9 +209,12 @@ describe("evaluateAccessGate", () => {
     expect(result.response).toBeNull();
     expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
-    expect(warn).toHaveBeenCalledWith(
-      "[public-api-auth] API key rate-limit dependency circuit open; using isolate-local fallback limiter",
-    );
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
+      event: "api_key_rate_limit_circuit_open_fallback",
+      message: "API key rate-limit dependency circuit open; using isolate-local fallback limiter",
+      route: "public-api-auth",
+      requestLane: "public-api",
+    }));
     warn.mockRestore();
   });
 
@@ -227,9 +237,12 @@ describe("evaluateAccessGate", () => {
     expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
     expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(
-      "[public-api-auth] API key rate-limit dependency circuit open; failing closed",
-    );
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({
+      event: "api_key_rate_limit_circuit_open_fail_closed",
+      message: "API key rate-limit dependency circuit open; failing closed",
+      route: "public-api-auth",
+      requestLane: "public-api",
+    }));
     warn.mockRestore();
   });
 

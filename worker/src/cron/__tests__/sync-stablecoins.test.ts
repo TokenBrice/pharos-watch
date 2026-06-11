@@ -306,6 +306,17 @@ vi.mock("../confirm-pending-depegs", () => ({
 }));
 
 vi.mock("../../lib/authoritative-price-sources", () => ({
+  createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 30_000) => ({
+    budgetMs,
+    candidateCount: 0,
+    attemptedCount: 0,
+    successCount: 0,
+    failedCount: 0,
+    emptyCount: 0,
+    skippedCircuitOpen: 0,
+    skippedBudget: 0,
+    timedOut: false,
+  })),
   fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
 }));
 
