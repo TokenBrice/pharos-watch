@@ -514,7 +514,9 @@ async function persistDexLiquidityScoreState(
   }
 
   const persistence = (await runWithOverloadRetry(() =>
-    persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec),
+    persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec, ctx.signal),
+    3,
+    ctx.signal,
   )) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
@@ -534,16 +536,16 @@ async function persistDexLiquidityScoreState(
     retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
     sourceCoverageCompleteByStablecoin,
     minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
-  });
-  await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec, sourceState.validationReferences);
+  }, ctx.signal);
+  await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec, sourceState.validationReferences, ctx.signal);
 
-  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults)) ?? {
+  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults, ctx.signal)) ?? {
     snapshotRowsWritten: 0,
     skipped: false,
     writeFailed: false,
   };
 
-  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap);
+  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, ctx.signal);
 
   return {
     persistence,

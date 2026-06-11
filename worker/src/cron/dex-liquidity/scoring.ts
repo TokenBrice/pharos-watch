@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -272,9 +273,12 @@ export async function computeStablecoinScores(
 export async function computeDepthStability(
   db: D1Database,
   preloadedTvlStabilityMap?: Map<string, number>,
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
+    throwIfAborted(signal);
     const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
+    throwIfAborted(signal);
 
     const stabilityStmts: D1PreparedStatement[] = [];
     stabilityStmts.push(
@@ -286,10 +290,11 @@ export async function computeDepthStability(
       );
     }
     if (stabilityStmts.length > 0) {
-      await batchExecute(db, stabilityStmts);
+      await batchExecute(db, stabilityStmts, { signal });
       console.log(`[dex-liquidity] Updated depth stability for ${tvlStabilityMap.size} coins`);
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] Depth stability computation failed:", err);
   }
 }
@@ -300,12 +305,15 @@ export async function computeDexPrices(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   nowSec: number,
   references?: PriceValidationReferences,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throwIfAborted(signal);
   const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
   const existingRows = await db
     .prepare("SELECT stablecoin_id FROM dex_prices")
     .all<{ stablecoin_id: string }>();
   const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
+  throwIfAborted(signal);
 
   if (priceObservations.size === 0) {
     if (existingIds.size === 0) return;
@@ -313,7 +321,7 @@ export async function computeDexPrices(
     const retireStmts = Array.from(existingIds, (stablecoinId) =>
       db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId)
     );
-    await batchExecute(db, retireStmts);
+    await batchExecute(db, retireStmts, { signal });
     console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
     return;
   }
@@ -334,6 +342,7 @@ export async function computeDexPrices(
   let collapsedDuplicateGroups = 0;
   let collapsedDuplicateObservations = 0;
   for (const [id, observations] of priceObservations) {
+    throwIfAborted(signal);
     if (observations.length === 0) continue;
     observedIds.add(id);
 
@@ -445,6 +454,7 @@ export async function computeDexPrices(
 
   let retiredCount = 0;
   for (const existingId of existingIds) {
+    throwIfAborted(signal);
     if (observedIds.has(existingId)) continue;
     priceStmts.push(
       db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(existingId)
@@ -453,7 +463,7 @@ export async function computeDexPrices(
   }
 
   if (priceStmts.length > 0) {
-    await batchExecute(db, priceStmts);
+    await batchExecute(db, priceStmts, { signal });
     console.log(
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
       (collapsedDuplicateGroups > 0

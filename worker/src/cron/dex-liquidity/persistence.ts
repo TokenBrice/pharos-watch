@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -84,6 +85,7 @@ export async function persistScores(
   scoreResults: Map<string, FullScoreResult>,
   globalAgg: GlobalAgg,
   nowSec: number,
+  signal?: AbortSignal,
 ): Promise<PersistScoresResult> {
   const stmts: D1PreparedStatement[] = [];
   let placeholderCount = 0;
@@ -216,11 +218,13 @@ export async function persistScores(
   try {
     const tables = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
     for (const table of tables) {
+      throwIfAborted(signal);
       if (!DEX_LIQUIDITY_TABLES.has(table)) throw new Error(`Invalid DEX liquidity table: ${table}`);
       const existingRows = await db
         // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
         .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
         .all<{ stablecoin_id: string }>();
+      throwIfAborted(signal);
       const tableIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
       const pruneIds = computeDexPruneSet(tableIds);
       for (const id of pruneIds) {
@@ -232,12 +236,14 @@ export async function persistScores(
       }
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     orphanCleanupFailed = true;
     console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
   }
 
   // D1 batch limit — chunk
-  await batchExecute(db, stmts);
+  await batchExecute(db, stmts, { signal });
+  throwIfAborted(signal);
   await writeFreshnessSentinel(db, "dex-liquidity", nowSec);
 
   console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${placeholderCount} zero, 1 global)`);
@@ -252,10 +258,12 @@ export async function persistScores(
 export async function writeHistoricalSnapshots(
   db: D1Database,
   scoreMap: Map<string, FullScoreResult>,
+  signal?: AbortSignal,
 ): Promise<HistoricalSnapshotWriteResult> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
   const expectedRowCount = ACTIVE_STABLECOINS.length;
   try {
+    throwIfAborted(signal);
     const existing = await db
       .prepare(
         `SELECT
@@ -269,6 +277,7 @@ export async function writeHistoricalSnapshots(
     const existingCount = existing?.cnt ?? 0;
     const existingScored = existing?.scored ?? 0;
     const incomingScored = scoreMap.size;
+    throwIfAborted(signal);
 
     // Keep repairing today's snapshot until coverage and scored-coin count are at least
     // as good as the current run (avoids locking in a degraded first post-midnight run).
@@ -318,7 +327,7 @@ export async function writeHistoricalSnapshots(
         );
       }
     }
-    await batchExecute(db, snapStmts);
+    await batchExecute(db, snapStmts, { signal });
     console.log(
       `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapStmts.length}/${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
@@ -328,6 +337,7 @@ export async function writeHistoricalSnapshots(
       writeFailed: false,
     };
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] Daily snapshot failed:", err);
     return {
       snapshotRowsWritten: 0,

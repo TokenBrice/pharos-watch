@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
@@ -226,6 +227,7 @@ export async function publishDexPriceChallengerSnapshots(
     sourceCoverageCompleteByStablecoin: Map<string, boolean>;
     minPoolTvlUsd: number;
   },
+  signal?: AbortSignal,
 ): Promise<{
   publishedStablecoins: number;
   skippedStablecoins: number;
@@ -245,6 +247,7 @@ export async function publishDexPriceChallengerSnapshots(
   let skippedStablecoins = 0;
 
   for (const meta of ACTIVE_STABLECOINS) {
+    throwIfAborted(signal);
     const stablecoinId = meta.id;
     const rows = selectDexPriceChallengerRowsFromPools(
       stablecoinId,
@@ -272,7 +275,7 @@ export async function publishDexPriceChallengerSnapshots(
   }
 
   if (statements.length > 0) {
-    await batchExecute(db, statements);
+    await batchExecute(db, statements, { signal });
   }
 
   return {

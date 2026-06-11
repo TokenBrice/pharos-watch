@@ -18,14 +18,24 @@ interface PreparedStatementWithMeta extends D1PreparedStatement {
   boundValues: unknown[];
 }
 
-function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; historyError?: unknown } = {}): D1Database {
+interface DexPersistenceMockDb extends D1Database {
+  getHistory(): Array<{ sql: string; binds: unknown[] }>;
+}
+
+function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; historyError?: unknown } = {}): DexPersistenceMockDb {
+  const history: Array<{ sql: string; binds: unknown[] }> = [];
+
   function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
     return {
       sql,
       boundValues,
       bind: (...args: unknown[]) => createStatement(sql, args),
-      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+      all: async <T>() => {
+        history.push({ sql, binds: [...boundValues] });
+        return { results: [] as T[], success: true, meta: {} };
+      },
       first: async <T>() => {
+        history.push({ sql, binds: [...boundValues] });
         if (sql.includes("FROM dex_liquidity_history")) {
           if (options.historyError != null) {
             throw (options.historyError instanceof Error ? options.historyError : new Error(String(options.historyError)));
@@ -34,7 +44,10 @@ function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; 
         }
         return null as T | null;
       },
-      run: async () => ({ success: true, meta: { changes: 1 } }),
+      run: async () => {
+        history.push({ sql, binds: [...boundValues] });
+        return { success: true, meta: { changes: 1 } };
+      },
     } as unknown as PreparedStatementWithMeta;
   }
 
@@ -43,7 +56,8 @@ function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; 
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
+  } as unknown as DexPersistenceMockDb;
 }
 
 function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
@@ -260,6 +274,40 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
+  });
+
+  it("does not publish freshness when the signal aborts after score batch writes", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb();
+    const controller = new AbortController();
+    const abortError = new Error("cron timed out");
+
+    vi.mocked(batchExecute).mockImplementationOnce(async (_db, _stmts, options) => {
+      expect(options).toMatchObject({ signal: controller.signal });
+      controller.abort(abortError);
+      return 1;
+    });
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+        controller.signal,
+      ),
+    ).rejects.toThrow("cron timed out");
+
+    expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
   });
 
   it("skips historical snapshot writes when today's snapshot is already complete enough", async () => {

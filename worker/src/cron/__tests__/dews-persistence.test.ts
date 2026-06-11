@@ -75,6 +75,39 @@ describe("persistDewsResults", () => {
     expect(history.some((entry) => entry.binds.includes("freshness:dews"))).toBe(false);
   });
 
+  it("does not publish freshness when the signal aborts after current-row writes", async () => {
+    const db = mockD1();
+    const originalBatch = db.batch.bind(db);
+    const controller = new AbortController();
+    const abortError = new Error("cron timed out");
+    let batchCalls = 0;
+
+    db.batch = async <T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> => {
+      const result = await originalBatch<T>(statements);
+      batchCalls++;
+      if (batchCalls === 1) {
+        controller.abort(abortError);
+      }
+      return result;
+    };
+
+    await expect(
+      persistDewsResults({
+        db,
+        results: [buildDewsRow("usdt-tether")],
+        eligibleIds: new Set(["usdt-tether"]),
+        publishFreshnessSentinel: true,
+        nowSec: 1_800_000_000,
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow("cron timed out");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-current-upsert"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-latest-upsert"))).toBe(false);
+    expect(history.some((entry) => entry.binds.includes("freshness:dews"))).toBe(false);
+  });
+
   it("skips the freshness sentinel when no DEWS rows were written", async () => {
     const db = mockD1();
 

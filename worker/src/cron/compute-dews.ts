@@ -190,6 +190,7 @@ export async function computeAndStoreDEWS(
       noCurrentSupplyIds,
       publishFreshnessSentinel: freshnessSentinelPublished,
       nowSec,
+      signal,
     })
   );
   await reportDewsProgress(reportProgress, "persistence-complete", { rowsComputed: results.length, rowsWritten: results.length, validationFailures });
