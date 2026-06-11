@@ -1,5 +1,5 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { chunkArray } from "./collections";
+import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
 import { buildInClause } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 import {
@@ -22,7 +22,7 @@ import {
   type ReserveSyncDeferredRecord,
 } from "./live-reserves-store-statements";
 
-const LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE = 900;
+const LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
 
 export interface LiveReserveArtifactCleanupResult {
   syncStateDeleted: number;

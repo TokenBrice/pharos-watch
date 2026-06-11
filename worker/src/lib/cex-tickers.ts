@@ -14,6 +14,7 @@ import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { sleepWithSignal, throwIfAborted } from "./abort";
+import { mapWithConcurrency } from "./concurrency";
 import {
   endpointLabel,
   errorClassFor,
@@ -25,6 +26,7 @@ import type { FetcherOutcome } from "./fetcher-result";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
+const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
 const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
@@ -364,8 +366,10 @@ export async function fetchCoinbasePrices(
   let transportFailures = 0;
   let transportAttempts = 0;
 
-  await Promise.all(
-    requestedProducts.map(async (product) => {
+  await mapWithConcurrency(
+    requestedProducts,
+    COINBASE_PRODUCT_FETCH_CONCURRENCY,
+    async (product) => {
       transportAttempts++;
       try {
         const response = await fetchWithRetry(
@@ -400,7 +404,7 @@ export async function fetchCoinbasePrices(
         console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
         transportFailures++;
       }
-    }),
+    },
   );
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {

@@ -341,6 +341,28 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.prices.has("DAI")).toBe(false);
   });
 
+  it("keeps Coinbase product fetches serial inside the primary-provider budget", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const fetchMock = vi.fn(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight--;
+      return new Response(JSON.stringify({ price: "1.0000", time: "2026-06-11T12:00:00.000Z" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const outcome = await fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "HONEY"]);
+
+    expect(outcome.kind).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(maxInFlight).toBe(1);
+  });
+
   it("parses a real Coinbase USDT-USD ticker response (fixture)", async () => {
     // Fixture captured from https://api.exchange.coinbase.com/products/USDT-USD/ticker
     // Verifies our parser survives the live response shape (bid/ask present;

@@ -1687,21 +1687,30 @@ describe("syncFxRates", () => {
     expect(recordedRecord.lastFailureAt).toBeGreaterThan(0);
   });
 
-  it("fires both secondary FX mirror fetches concurrently", async () => {
+  it("fires all secondary FX mirror fetches concurrently", async () => {
     vi.useRealTimers();
     const callStartedAt: Record<string, number> = {};
+    let inFlight = 0;
+    let maxInFlight = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api")) {
-        callStartedAt.jsdelivr = performance.now();
+      if (
+        url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")
+        || (
+          url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@")
+          && !url.includes("@latest")
+        )
+        || url.includes("latest.currency-api.pages.dev")
+      ) {
+        const endpoint = url.includes("latest.currency-api.pages.dev")
+          ? "pagesDev"
+          : url.includes("@latest")
+            ? "jsdelivrLatest"
+            : "jsdelivrVersioned";
+        callStartedAt[endpoint] = performance.now();
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
         await new Promise((resolve) => setTimeout(resolve, 50));
-        return new Response(
-          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }),
-          { status: 200 },
-        );
-      }
-      if (url.includes("latest.currency-api.pages.dev")) {
-        callStartedAt.pagesDev = performance.now();
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        inFlight--;
         return new Response(
           JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }),
           { status: 200 },
@@ -1712,9 +1721,12 @@ describe("syncFxRates", () => {
 
     await loadSecondaryCurrencyCandidate();
 
-    expect(callStartedAt.jsdelivr).toBeDefined();
+    expect(callStartedAt.jsdelivrLatest).toBeDefined();
+    expect(callStartedAt.jsdelivrVersioned).toBeDefined();
     expect(callStartedAt.pagesDev).toBeDefined();
-    expect(Math.abs(callStartedAt.jsdelivr - callStartedAt.pagesDev)).toBeLessThan(20);
+    expect(maxInFlight).toBe(3);
+    expect(Math.abs(callStartedAt.jsdelivrLatest - callStartedAt.pagesDev)).toBeLessThan(20);
+    expect(Math.abs(callStartedAt.jsdelivrLatest - callStartedAt.jsdelivrVersioned)).toBeLessThan(20);
   });
 
   it("uses the date-pinned jsdelivr package when @latest is behind", async () => {

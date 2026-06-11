@@ -193,7 +193,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 1800, // Trigger fires every 15 min alongside sync-stablecoins, but internal cooldown gates actual writes to every 30 min.
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 2, // Frankfurter/secondary sequential, gold + silver in parallel, Chainlink overlay sequential
+    maxConnections: 3, // Secondary FX races three mirrors; metals run at <=2 and overlays are sequential.
     connectionGroup: "quarter-hourly-chain",
   },
   {
