@@ -14,11 +14,9 @@ import {
   findNonEmptyLegacyStablecoinShards,
   formatLegacyShardEntriesIssue,
   GENERATED_PER_COIN_ASSET_FILE,
-  LEGACY_STABLECOIN_ASSET_FILES,
   loadGeneratedPerCoinCoins,
   loadLegacyStablecoinEntries,
   loadPerCoinStablecoinEntries,
-  PER_COIN_SOURCE_DIR,
   STABLECOIN_DATA_DIR,
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
@@ -367,7 +365,6 @@ function getLogoRegistryIssues(): string[] {
 let canonicalOrder: string[] = [];
 let legacyEntries: StablecoinSourceEntry[] = [];
 let perCoinEntries: StablecoinSourceEntry[] = [];
-let generatedPerCoinCoins: StablecoinMeta[] = [];
 
 canonicalOrder = readCanonicalOrder();
 
@@ -384,7 +381,7 @@ try {
 }
 
 try {
-  generatedPerCoinCoins = loadGeneratedPerCoinCoins();
+  loadGeneratedPerCoinCoins();
 } catch (error) {
   reportError(error instanceof Error ? error.message : String(error));
 }
