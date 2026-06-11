@@ -18,6 +18,11 @@ import {
   type BlacklistStatus,
 } from "@shared/lib/report-cards";
 import { isRedemptionEligibleForLiquidity } from "@shared/lib/report-card-peg-liquidity";
+import {
+  computeMintAuthorityScore,
+  stablecoinToMintAuthorityScoringInput,
+  type MintAuthorityParentResolver,
+} from "@shared/lib/mint-authority-scoring";
 import type {
   StablecoinMeta,
   GovernanceType,
@@ -44,7 +49,10 @@ export interface ComputeCardInput {
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
   overallScores: Map<string, number>;
+  /** Parent PRE-blend decentralization scores (wrapper inheritance input). */
   decentralizationScores: Map<string, number>;
+  /** Parent final (post-MAS-blend) decentralization scores (wrapper ceiling). */
+  blendedDecentralizationScores: Map<string, number>;
   blacklistStatus: BlacklistStatus;
   liveReserveMap: Map<string, ReserveSlice[]>;
   dependencies: DependencyWeight[];
@@ -140,6 +148,16 @@ function resolveWrappedAssetDependency(
   return wrapperDependencies[0];
 }
 
+// Safety Score v8: per-coin Mint Authority Score for the penalty-only
+// decentralization blend. Resolved against the full tracked registry so
+// wrapped/variant coins inherit through their parents.
+const mintAuthorityParentResolver: MintAuthorityParentResolver = (id) =>
+  stablecoinToMintAuthorityScoringInput(ACTIVE_META_BY_ID.get(id));
+
+function resolveMintAuthorityBlendScore(meta: StablecoinMeta): number | null {
+  return computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(meta), mintAuthorityParentResolver).score;
+}
+
 function computeReportCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
@@ -180,10 +198,18 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
+  const mintAuthorityScore = resolveMintAuthorityBlendScore(meta);
   const wrappedAssetDependency = resolveWrappedAssetDependency(meta, dependencies);
+  // Inheritance reads the parent's PRE-blend score so each coin's
+  // mint-authority drag applies exactly once; the parent's final blended
+  // score is only a ceiling (a wrapper never out-scores its blended parent).
   const wrappedAssetDecentralizationScore =
     wrappedAssetDependency != null
       ? (decentralizationScores.get(wrappedAssetDependency.id) ?? null)
+      : null;
+  const wrappedAssetBlendedDecentralizationScore =
+    wrappedAssetDependency != null
+      ? (input.blendedDecentralizationScores.get(wrappedAssetDependency.id) ?? null)
       : null;
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
@@ -197,6 +223,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
       wrappedAssetDecentralizationScore,
       wrappedAssetId: wrappedAssetDependency?.id ?? null,
       variantKind: wrappedAssetDependency?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
+      mintAuthorityScore,
+      wrappedAssetBlendedDecentralizationScore,
     }),
     dependencyRisk: scoreDependencyRisk({
       governance: meta.flags.governance as GovernanceType,
@@ -237,6 +265,7 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
+    mintAuthorityScore,
     dependencies,
     variantParentId: meta.variantOf ?? null,
     variantKind: meta.variantKind ?? null,
@@ -298,6 +327,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
   const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS], { dependenciesById });
   const overallScores = new Map<string, number>();
   const decentralizationScores = new Map<string, number>();
+  const blendedDecentralizationScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
 
   for (const meta of sortedMetas) {
@@ -310,6 +340,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       bluechipMap: input.bluechipMap,
       overallScores,
       decentralizationScores,
+      blendedDecentralizationScores,
       blacklistStatus: input.resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap: input.liveReserveMap,
       dependencies: dependenciesById.get(meta.id) ?? [],
@@ -320,7 +351,19 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       overallScores.set(card.id, card.overallScore);
     }
     if (card.dimensions.decentralization.score !== null) {
-      decentralizationScores.set(card.id, card.dimensions.decentralization.score);
+      blendedDecentralizationScores.set(card.id, card.dimensions.decentralization.score);
+    }
+    // Children inherit the PRE-blend score (mint-authority drag applies once
+    // per coin), so recompute the dimension without the blend for the map.
+    const wrappedDep = resolveWrappedAssetDependency(meta, dependenciesById.get(meta.id) ?? []);
+    const preBlend = scoreDecentralization(meta.flags.governance as GovernanceType, meta, {
+      wrappedAssetDecentralizationScore:
+        wrappedDep != null ? (decentralizationScores.get(wrappedDep.id) ?? null) : null,
+      wrappedAssetId: wrappedDep?.id ?? null,
+      variantKind: wrappedDep?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
+    }).score;
+    if (preBlend !== null) {
+      decentralizationScores.set(meta.id, preBlend);
     }
   }
 

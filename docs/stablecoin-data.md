@@ -45,7 +45,7 @@ The client, prevalidated runtime, and legacy redirect projections are also gener
 
 ## Mint Authority Review
 
-Mint Authority review is a curated metadata track for answering whether durable stablecoin supply can be created by privileged parties, governance modules, bridge routes, proxy/cap admins, backend signers, or only by user/protocol mechanics. The metadata now feeds the standalone Mint Authority Score in `shared/lib/mint-authority-scoring.ts`. Missing or unresolved review data returns `NR`; it does not mean safe.
+Mint Authority review is a curated metadata track for answering whether durable stablecoin supply can be created by privileged parties, governance modules, bridge routes, proxy/cap admins, backend signers, or only by user/protocol mechanics. The metadata feeds the Mint Authority Score in `shared/lib/mint-authority-scoring.ts`, which since Safety Score v8.0 also drags the Decentralization report-card dimension through a penalty-only blend. Missing or unresolved review data returns `NR`; it does not mean safe and never penalizes any score.
 
 The detail page consumes a compact presentation summary when available: mint path, authority posture, confidence, summary, primary controls, incident metadata, reviewed date, source links, and score components. Homepage, screener, and coverage projections consume the lighter `mintAuthoritySummary` fields needed for score and bucket display. This data must not be treated as a Safety Score input, report-card raw input, selector exclusion, or report-card ranking sort until a separate Safety Score methodology change ships.
 

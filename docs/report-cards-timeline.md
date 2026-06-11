@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.291 (2026-02-25 → 2026-06-06). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.0 (2026-02-25 → 2026-06-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.0 — Mint Authority Score enters Decentralization (2026-06-11)
+
+The Mint Authority Score becomes a Safety Score input. The Decentralization dimension now applies a penalty-only blend — `decentralization = min(current, 0.65 x current + 0.35 x MAS)` — after the governance baseline, wrapper inheritance, and the chain-infrastructure penalty. A weak privileged-mint path drags the dimension down; a strong one never lifts it. Coins without a rated MAS are unchanged, and there is no separate confidence gate (the MAS confidence caps already encode evidence quality). Wrappers inherit the parent's pre-blend score so the drag applies once per coin, capped at the parent's blended score. 111 of 368 scoreable active coins move down, none up; the biggest drops are mint-incident and unbounded-mint protocols (DOLA, reUSD, MIM, USDe, crvUSD), while USDT, USDC, LUSD, and BOLD are unchanged. Raw inputs expose the blended `mintAuthorityScore`.
 
 ## v7.291 — Degraded-input history guard (2026-06-06)
 

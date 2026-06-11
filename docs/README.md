@@ -214,7 +214,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [dews.md](./dews.md) - DEWS formula, sub-signals, bands, and API contract
 - [depeg-resolver.md](./depeg-resolver.md) - Depeg Duration Resolver (DDR): two-stage will-it-repeg / expected-duration outlook, verdict tiers, and API contract
 - [dex-liquidity.md](./dex-liquidity.md) - liquidity score algorithm, discovery pipeline, and DEX price cross-validation
-- [mint-authority-scoring.md](./mint-authority-scoring.md) - standalone Mint Authority Score formula, caps, bands, inheritance, and public surfaces
+- [mint-authority-scoring.md](./mint-authority-scoring.md) - Mint Authority Score formula, caps, bands, inheritance, public surfaces, and the v8.0 Decentralization blend
 - [stability-index.md](./stability-index.md) - PSI formula, bands, storage, and API surface
 - [report-cards.md](./report-cards.md) - report-card scoring, portfolio analyzer, and stress test
 - [redemption-backstops.md](./redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers

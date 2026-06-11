@@ -59,7 +59,7 @@ export default function MethodologyPage() {
             },
             {
               question: "What is the Mint Authority Score?",
-              answer: "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family (30%), weakest mint-capable controller (40%), quantitative bounds (15%), and reviewed authority posture (15%), then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. Missing or unresolved review data is NR, and the score does not feed Safety Score or report-card grades.",
+              answer: "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family (30%), weakest mint-capable controller (40%), quantitative bounds (15%), and reviewed authority posture (15%), then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. Missing or unresolved review data is NR and never penalizes. Since Safety Score v8.0 the score feeds the Decentralization report-card dimension through a penalty-only blend.",
             },
             {
               question: "How does Pharos confirm depegs and maintain DEWS history?",

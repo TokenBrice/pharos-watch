@@ -41,6 +41,11 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
 };
 
 export interface ScoreDecentralizationOptions {
+  /**
+   * Parent's PRE-blend decentralization score. Wrapper inheritance works on
+   * pre-blend values so each coin's mint-authority drag applies exactly once
+   * (the wrapper's own MAS already folds the parent's mint risk).
+   */
   wrappedAssetDecentralizationScore?: number | null;
   wrappedAssetId?: string | null;
   variantKind?: VariantKind | null;
@@ -50,6 +55,12 @@ export interface ScoreDecentralizationOptions {
    * (review missing or unresolved) leaves the dimension unchanged.
    */
   mintAuthorityScore?: number | null;
+  /**
+   * Parent's final (post-blend) decentralization score, used as a ceiling for
+   * inherited wrappers so a wrapper with an unrated MAS can never out-score
+   * its blended parent.
+   */
+  wrappedAssetBlendedDecentralizationScore?: number | null;
 }
 
 export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
@@ -119,6 +130,13 @@ export function scoreDecentralization(
       mintAuthorityDrag = blended - score;
       score = blended;
     }
+  }
+  if (
+    inheritedWrapperScore != null &&
+    typeof options.wrappedAssetBlendedDecentralizationScore === "number" &&
+    Number.isFinite(options.wrappedAssetBlendedDecentralizationScore)
+  ) {
+    score = Math.min(score, Math.max(0, Math.round(options.wrappedAssetBlendedDecentralizationScore)));
   }
 
   const governanceScore = inheritedWrapperScore ?? GOVERNANCE_QUALITY_SCORE[quality];

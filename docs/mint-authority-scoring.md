@@ -1,10 +1,10 @@
 # Mint Authority Score
 
-Standalone 0-100 methodology for reviewed stablecoin mint-authority risk.
+0-100 methodology for reviewed stablecoin mint-authority risk. Since Safety Score v8.0 it also feeds the Decentralization dimension through a penalty-only blend.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.0`
+- **Current methodology version:** `v1.1`
 - **Runtime/version source:** `shared/lib/methodology-versions/mint-authority.ts`
 - **Scoring source:** `shared/lib/mint-authority-scoring.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
@@ -13,7 +13,7 @@ Standalone 0-100 methodology for reviewed stablecoin mint-authority risk.
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-The score is intentionally separate from Safety Score. It does not change report-card dimensions, selector exclusions, homepage default ranking, or Safety Score grades. Any future use inside Resilience, Decentralization, Dependency Risk, or overall grades requires a separate Safety Score methodology/version change.
+Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied after wrapper inheritance and the chain-infrastructure penalty; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
 
 ## Inputs
 
@@ -85,6 +85,7 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 - Stablecoin detail pages show the score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data exists.
 - The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes status, score, and band.
 - `/coverage/` counts curated review breadth by route bucket and also exposes score-band breakdown chips.
+- Safety Score report cards: the Decentralization dimension applies the penalty-only blend (v8.0) and shows a `Mint authority` detail row when the drag binds; raw inputs expose `mintAuthorityScore`.
 
 ## Maintenance Checklist
 

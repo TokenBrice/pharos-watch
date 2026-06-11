@@ -6,12 +6,12 @@ The stablecoin registry currently contains 401 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.291`
+- **Current methodology version:** `v8.0`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.291)
+## Overall Grade (v8.0)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.291 keeps the v7.29 scoring formula and fxSAVE live redemption-capacity rules. The behavior change is persistence-side: stale or degraded report-card inputs are surfaced in cache metadata, and the daily grade-history writer suppresses durable seed/transition rows while those degraded inputs are active.
+Current-version note: v8.0 makes the Mint Authority Score a Safety Score input through a penalty-only Decentralization blend: `decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied after the governance baseline, wrapper inheritance, and the chain-infrastructure penalty. A weak privileged-mint path can drag the dimension down; a strong one never lifts it, and coins without a rated Mint Authority Score are unchanged. The v7.29 liquidity/redemption rules and the v7.291 degraded-input history guard carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -32,9 +32,9 @@ Any future use of yield source-risk that affects Safety Score, Resilience, Depen
 
 ## Mint Authority Boundary
 
-Mint Authority review now produces a standalone Mint Authority Score (`v1.0`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and incident caps. Detail pages may show the score, band, component breakdown, primary controls, source links, and incident callouts when compact review data exists; pages without reviewed data omit the section or show `NR` where aggregate surfaces require a value. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
+Mint Authority review produces the Mint Authority Score (MAS methodology `v1.1`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and time-decayed incident caps. Detail pages may show the score, band, component breakdown, primary controls, source links, and incident callouts when compact review data exists; pages without reviewed data omit the section or show `NR` where aggregate surfaces require a value. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
 
-This boundary is strict: Mint Authority Score does not affect Safety Score, raw report-card inputs, selector exclusions, portfolio/report-card rankings, or any of the four report-card dimensions. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate Safety Score methodology/version change and timeline entry.
+As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** dimension through a penalty-only blend (see Decentralization Details) and is exposed in report-card raw inputs as `mintAuthorityScore`. The remaining boundary is still strict: the score does not create selector exclusions, does not feed Resilience, Liquidity, Peg Stability, or Dependency Risk, and does not change any default ranking outside what the Decentralization dimension propagates. A missing or unresolved review (`NR`) never penalizes any Safety Score surface. Any further expansion of mint-authority data into other dimensions requires a new Safety Score methodology/version change and timeline entry.
 
 ## Dimensions
 
@@ -44,7 +44,7 @@ This boundary is strict: Mint Authority Score does not affect Safety Score, raw 
 | -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                       |
 | **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                    |
-| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based penalty from combined chain infrastructure score |
+| **Decentralization** | 15%    | Governance quality + chain infrastructure + mint authority    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based penalty from combined chain infrastructure score, then the penalty-only Mint Authority blend (v8.0) |
 | **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                    |
 
 ### Peg Stability (multiplier)
@@ -231,7 +231,7 @@ Data sources: `collateralQuality`, `custodyModel` optional fields on `Stablecoin
 
 ### Decentralization Details
 
-Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
+Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains and, as of v8.0, a penalty-only Mint Authority blend. The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
 
 **Governance Quality Tiers:**
 
@@ -248,7 +248,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 
 **Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
 
-**Wrapper inheritance:** When a `wrapper` asset has a single resolvable tracked wrapped asset, Decentralization inherits the wrapped asset's already-computed Decentralization score and applies the wrapper-kind haircut used by Dependency Risk ceilings: legacy and savings wrappers `−3`, strategy-vault and risk-absorption variants `−5`, and bond-maturity variants `−8`. Parent-linked examples: yBOLD and sBOLD inherit from BOLD; sfrxUSD inherits from frxUSD. Wrappers without a resolvable tracked parent keep the conservative fallback score of 10.
+**Wrapper inheritance:** When a `wrapper` asset has a single resolvable tracked wrapped asset, Decentralization inherits the wrapped asset's **pre-blend** Decentralization score and applies the wrapper-kind haircut used by Dependency Risk ceilings: legacy and savings wrappers `−3`, strategy-vault and risk-absorption variants `−5`, and bond-maturity variants `−8`. Parent-linked examples: yBOLD and sBOLD inherit from BOLD; sfrxUSD inherits from frxUSD. Wrappers without a resolvable tracked parent keep the conservative fallback score of 10.
 
 **Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance — immutable-code, wrapper, and centralized issuers are exempt):
 
@@ -261,6 +261,8 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | 0–19                 | −60     |
 
 `immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because resolvable wrappers inherit the wrapped asset's chain-adjusted Decentralization score, while unresolved wrappers keep a conservative fallback. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
+
+**Mint Authority blend (v8.0):** as the final stage, a rated Mint Authority Score applies a penalty-only blend: `score = min(score, round(score x 0.65 + MAS x 0.35))` (`MAS_BLEND_WEIGHT = 0.35` in `shared/lib/report-card-governance.ts`). The blend can only drag the dimension down — privileged-mint risk undermines a decentralization claim, but a clean mint topology never makes a centralized issuer decentralized. Coins without a rated MAS (`NR`) are unchanged, and there is no separate confidence gate because the MAS confidence caps (verified 100 / probable 90 / manual-review 85) already encode evidence quality. Wrappers inherit the parent's **pre-blend** score so the drag applies exactly once per coin (the wrapper's own MAS already folds the parent's mint risk), and a wrapper is additionally capped at its parent's final blended score. When the drag binds, the report card shows a `Mint authority` detail row with the MAS, band, and delta.
 
 #### Chain Infrastructure: Two-Axis Scoring
 

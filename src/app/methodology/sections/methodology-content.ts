@@ -68,7 +68,7 @@ export const MINT_AUTHORITY_SCORE_SECTION_CONTENT = defineMethodologySectionCont
   markdownParagraphs: [
     "Mint Authority Score is a standalone 0-100 methodology for reviewed stablecoin mint-authority risk. It measures how durable supply can be created, authorized, expanded, or routed by privileged mint paths.",
     "The score blends route family, weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence.",
-    "Missing or unresolved review data returns NR. The score is visible on detail pages, the homepage table, the screener, and coverage breakdowns, but it does not feed Safety Score, report-card dimensions, selector exclusions, or default rankings.",
+    "Missing or unresolved review data returns NR and never penalizes. The score is visible on detail pages, the homepage table, the screener, and coverage breakdowns, and since Safety Score v8.0 it feeds the Decentralization dimension through a penalty-only blend; it still does not create selector exclusions or default-ranking changes beyond what Decentralization propagates.",
   ],
 });
 

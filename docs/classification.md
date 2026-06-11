@@ -74,9 +74,9 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 
 ### Mint Authority Taxonomy
 
-Mint Authority is a reviewed mint-control taxonomy and standalone score input, not a Safety Score dimension. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Missing data means the stablecoin detail page omits the Mint Authority section until a review is curated, and score-oriented aggregate surfaces show `NR`.
+Mint Authority is a reviewed mint-control taxonomy and score input; since Safety Score v8.0 the score drags the Decentralization dimension through a penalty-only blend, though it is not a dimension of its own. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Missing data means the stablecoin detail page omits the Mint Authority section until a review is curated, and score-oriented aggregate surfaces show `NR`.
 
-Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into display/filter labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`) and may show the standalone Mint Authority Score/band. They still do not feed Safety Score inputs, report-card raw inputs, or report-card ranking methodology.
+Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into display/filter labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`) and may show the standalone Mint Authority Score/band. The display buckets themselves do not feed report-card methodology; the underlying Mint Authority Score feeds only the Decentralization blend (v8.0).
 
 Mint path labels:
 

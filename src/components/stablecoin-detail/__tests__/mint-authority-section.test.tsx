@@ -100,8 +100,8 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Standalone score");
-    expect(html).toContain("Not a Safety Score input");
+    expect(html).toContain("Feeds Decentralization");
+    expect(html).toContain("Penalty-only Safety Score input (v8.0)");
     expect(html).toContain("Scoring breakdown");
     expect(html).toContain("Controller");
     expect(html).toContain("40%");

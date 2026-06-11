@@ -101,6 +101,8 @@ const RawDimensionInputsSchema = z.object({
   custodyModel: CustodyModelWireSchema,
   governanceTier: GovernanceTypeSchema,
   governanceQuality: GovernanceQualitySchema,
+  /** Mint Authority Score input to the v8 decentralization blend; absent on pre-v8 cached snapshots. */
+  mintAuthorityScore: z.number().nullable().optional(),
   dependencies: z.array(DependencyWeightSchema),
   variantParentId: z.string().nullable().optional(),
   variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),

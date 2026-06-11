@@ -64,7 +64,7 @@ export function SafetyScoresDimensionDetails() {
         <p>
           Base score from governance quality tier, then a chain-risk penalty for protocols on less decentralized
           chains &mdash; governance decentralization is undermined when the underlying chain has centralisation
-          concerns:
+          concerns &mdash; and finally a penalty-only Mint Authority blend (v8.0):
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>
@@ -90,9 +90,18 @@ export function SafetyScoresDimensionDetails() {
           </li>
         </ul>
         <p className="text-xs">
-          Resolvable wrappers use the wrapped asset&apos;s already chain-adjusted Decentralization score: savings wrappers
+          Resolvable wrappers use the wrapped asset&apos;s chain-adjusted, pre-blend Decentralization score: savings wrappers
           subtract 3, strategy-vault and risk-absorption wrappers subtract 5, and bond-maturity wrappers subtract 8.
           For example, yBOLD and sBOLD inherit from BOLD, while sfrxUSD inherits from frxUSD.
+        </p>
+        <p className="font-medium text-foreground mt-2">Mint Authority blend (v8.0):</p>
+        <p>
+          A rated Mint Authority Score applies as the final stage:{" "}
+          <span className="pharos-numeric">min(score, round(score &times; 0.65 + MAS &times; 0.35))</span>. The blend
+          only drags the dimension down &mdash; a weak privileged-mint path undermines a decentralization claim, while
+          a strong one never lifts it. Coins without a rated Mint Authority Score are unchanged, wrappers take the
+          drag once on their inherited pre-blend score (capped at the parent&apos;s blended score), and a{" "}
+          <span className="text-foreground">Mint authority</span> detail row appears when the drag binds.
         </p>
         <p className="font-medium text-foreground mt-2">
           Chain-risk penalty (DAO and multisig governance &mdash; exempt for immutable-code, wrapper,

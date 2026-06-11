@@ -166,8 +166,8 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
         {score ? (
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
             <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
-            <DetailBadge>Standalone score</DetailBadge>
-            <span className="text-xs text-muted-foreground">Not a Safety Score input</span>
+            <DetailBadge>Feeds Decentralization</DetailBadge>
+            <span className="text-xs text-muted-foreground">Penalty-only Safety Score input (v8.0)</span>
           </div>
         ) : null}
 

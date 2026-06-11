@@ -26,6 +26,7 @@ export function createReportCardRawInputs(
     custodyModel: "onchain",
     governanceTier: "centralized",
     governanceQuality: "single-entity",
+    mintAuthorityScore: null,
     dependencies: [],
     variantParentId: null,
     variantKind: null,

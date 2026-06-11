@@ -126,6 +126,24 @@ describe("scoreDecentralization mint-authority blend (v8, pending activation)", 
     expect(result.detail).toContain("Mint authority: 25/100 (Exposed)");
   });
 
+  it("caps an inherited wrapper at the parent's blended score when the wrapper MAS is unrated", () => {
+    // Parent pre-blend 75, blended 56 (its own MAS drag). Wrapper inherits
+    // 75 - 5 = 70 but has no rated MAS: without the ceiling it would
+    // out-score its dragged parent; the ceiling holds it at 56.
+    const meta = {
+      ...makeMeta("ethereum", "single-chain", "wrapper"),
+      variantOf: "parent-coin",
+      variantKind: "strategy-vault",
+    };
+    const result = scoreDecentralization("centralized-dependent", meta as never, {
+      wrappedAssetId: "parent-coin",
+      wrappedAssetDecentralizationScore: 75,
+      wrappedAssetBlendedDecentralizationScore: 56,
+      variantKind: "strategy-vault",
+    });
+    expect(result.score).toBe(56);
+  });
+
   it("applies the blend after the chain penalty", () => {
     // dao-governance (85) - 25 (mature-alt-l1) = 60, MAS 30:
     // blended = round(60*0.65 + 30*0.35) = 50 (rounding: 39 + 10.5 = 49.5 -> 50)

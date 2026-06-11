@@ -256,7 +256,7 @@
       "name": "mint-authority-score",
       "sources": ["shared/lib/mint-authority-scoring.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
       "docs": ["docs/mint-authority-scoring.md", "docs/stablecoin-data.md", "docs/stablecoin-detail-page.md", "docs/homepage.md", "docs/coverage-page.md", "docs/report-cards.md", "docs/methodology-page.md", "docs/classification.md"],
-      "notes": ["Standalone Mint Authority Score; it does not feed Safety Score or report-card dimensions."]
+      "notes": ["Mint Authority Score; feeds the Decentralization dimension via a penalty-only blend as of Safety Score v8.0."]
     },
     {
       "name": "pages-functions-hosting",
