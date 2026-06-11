@@ -15,14 +15,6 @@
     "reviewAfter": "2026-08-26",
     "nextAction": "Split query-state orchestration, row projection, and comparison sections into focused helpers in the next compare-page cleanup pass."
   },
-  "src/app/pharoswatchbot/app/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Mini App shell colocates session/bridge state, optimistic mutation flow, and all four tab panels in one client component; it entered the top-N when yield-history-chart was refactored below it and the 2026-06-10 tab keyboard-navigation a11y fix added handlers. Defer decomposition to a focused Mini App pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-10",
-    "reviewAfter": "2026-09-10",
-    "nextAction": "Split tab panel bodies out of the shell component before adding more views."
-  },
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
@@ -54,14 +46,6 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
-  },
-  "src/components/yield-history-chart.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Re-entered the candidate set after the 2026-06-11 yield copy/intro trim dropped src/app/yield/client.tsx below threshold; the chart still owns one large render function (series shaping, tooltip, axis config) at maxFunctionLines=366. Split tooltip and series derivation into focused helpers in the next yield UI cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-11",
-    "reviewAfter": "2026-09-11",
-    "nextAction": "Extract tooltip rendering and series shaping from the main chart render function."
   },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
@@ -166,6 +150,14 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "worker/src/cron/sync-yield-data.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield sync now exceeds the hotspot candidate threshold after progress/reporting and source-resolution changes in the current infrastructure branch. Keep it explicitly waived for this release gate; a focused follow-up should split orchestration, progress telemetry, and source-family handling.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-12",
+    "reviewAfter": "2026-09-12",
+    "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
   },
   "worker/src/lib/depeg-resolver-incident-store.ts": {
     "disposition": "queued-p4",

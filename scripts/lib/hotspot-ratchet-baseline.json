@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 176,
-    "maxFunctionLines": 154,
+    "fileLines": 178,
+    "maxFunctionLines": 156,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -264,9 +264,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 1327,
+    "fileLines": 1310,
     "maxFunctionLines": 197,
-    "branchCount": 79,
+    "branchCount": 78,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -288,8 +288,8 @@
     "notes": "The self-serve API key route is now a stable export facade over public, admin, state, notification, and response modules. Keep route behavior in the adjacent modules instead of regrowing this barrel."
   },
   "worker/src/api/api-key-requests/admin.ts": {
-    "fileLines": 216,
-    "maxFunctionLines": 41,
+    "fileLines": 230,
+    "maxFunctionLines": 54,
     "branchCount": 6,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -324,9 +324,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 202,
-    "maxFunctionLines": 179,
-    "branchCount": 17,
+    "fileLines": 348,
+    "maxFunctionLines": 324,
+    "branchCount": 18,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -336,9 +336,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 528,
-    "maxFunctionLines": 371,
-    "branchCount": 21,
+    "fileLines": 796,
+    "maxFunctionLines": 599,
+    "branchCount": 22,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -348,8 +348,8 @@
     "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 466,
-    "maxFunctionLines": 168,
+    "fileLines": 477,
+    "maxFunctionLines": 173,
     "branchCount": 43,
     "disposition": "deferred",
     "targetBudget": {
@@ -360,8 +360,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 597,
-    "maxFunctionLines": 91,
+    "fileLines": 815,
+    "maxFunctionLines": 165,
     "branchCount": 20,
     "disposition": "stabilized",
     "targetBudget": {
@@ -372,8 +372,8 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
-    "fileLines": 606,
-    "maxFunctionLines": 362,
+    "fileLines": 613,
+    "maxFunctionLines": 368,
     "branchCount": 41,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -420,8 +420,8 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 409,
-    "maxFunctionLines": 118,
+    "fileLines": 440,
+    "maxFunctionLines": 137,
     "branchCount": 22,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -432,8 +432,8 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 233,
-    "maxFunctionLines": 157,
+    "fileLines": 245,
+    "maxFunctionLines": 169,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
