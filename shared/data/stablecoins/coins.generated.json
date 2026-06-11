@@ -1732,7 +1732,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://cache.accountable.capital/dashboard/apyx"
+          "url": "https://api.accountable.apyx.fi/dashboard"
         }
       },
       "params": {
@@ -1741,6 +1741,8 @@
           "STRC": "high",
           "Cash & Equivalents": "very-low",
           "SATA": "high",
+          "Protocol Owned Liquidity": "high",
+          "Inventory": "high",
           "Other": "high"
         },
         "renameMap": {
