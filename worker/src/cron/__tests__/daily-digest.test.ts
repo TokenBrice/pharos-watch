@@ -3,6 +3,7 @@ import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -509,6 +510,35 @@ describe("generateDailyDigest", () => {
     const userPrompt = anthropicBody.messages[0].content;
     expect(userPrompt).not.toContain("Distribution: median");
     expect(userPrompt).not.toMatch(/\d+ above B/);
+  });
+
+  it("reports digest preflight and skipped progress when Anthropic is not configured", async () => {
+    const db = mockD1(makeBaseTables());
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    const result = await generateDailyDigest(db, null, null, false, null, undefined, reportProgress);
+
+    expect(result.metadata).toBe("skipped: no API key");
+    expect(progressUpdates.find((update) => update.stage === "preflight")).toMatchObject({
+      metadata: {
+        providerFamily: "digest",
+        phase: "preflight",
+        countTotals: {
+          forceRun: 0,
+          configuredDeliveryChannels: 0,
+        },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "skipped")).toMatchObject({
+      metadata: {
+        providerFamily: "anthropic",
+        phase: "skipped",
+        skipped: "missing-api-key",
+      },
+    });
   });
 
   it("repairs malformed code-block JSON with one corrective retry", async () => {

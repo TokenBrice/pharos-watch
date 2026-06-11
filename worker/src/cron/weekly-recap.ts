@@ -7,7 +7,7 @@ import {
   getDepegMarketImpactScore,
   isCriticalDepegRisk,
 } from "@shared/lib/digest-risk";
-import { type CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -18,6 +18,7 @@ import {
   requestDigestCopy,
   runDigestChannelDelivery,
 } from "./digest/platform";
+import { reportDigestProgress } from "./digest/progress";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
@@ -868,14 +869,48 @@ export async function generateWeeklyRecap(
   anthropicApiKey: string | null,
   telegramCreds: TelegramCreds | null = null,
   signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
+  await reportDigestProgress(reportProgress, {
+    stage: "preflight",
+    message: "Checking weekly recap prerequisites",
+    providerFamily: "digest",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        configuredDeliveryChannels: Number(Boolean(telegramCreds)),
+      },
+    },
+  });
   if (!anthropicApiKey) {
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping weekly recap because Anthropic credentials are missing",
+      providerFamily: "anthropic",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "missing-api-key",
+      },
+    });
     return { metadata: "skipped: no API key" };
   }
 
   // Check if today is Monday (UTC)
   const now = new Date();
   if (now.getUTCDay() !== 1) {
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping weekly recap outside Monday UTC",
+      providerFamily: "digest",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "not-monday",
+        utcDay: now.getUTCDay(),
+      },
+    });
     return { metadata: "skipped: not Monday" };
   }
 
@@ -896,8 +931,29 @@ export async function generateWeeklyRecap(
   if (existing) {
     const existingMeta = parseWeeklyDigestMeta(existing.digest_meta, existing.generated_at);
     if (!shouldRetryExistingWeeklyTelegram(existingMeta)) {
+      await reportDigestProgress(reportProgress, {
+        stage: "skipped",
+        message: "Skipping weekly recap because this week already exists",
+        providerFamily: "digest",
+        itemsDone: 0,
+        itemsTotal: 1,
+        metadata: {
+          skipped: "weekly-recap-exists",
+          existingGeneratedAt: existing.generated_at,
+        },
+      });
       return { metadata: "skipped: weekly recap already exists" };
     }
+    await reportDigestProgress(reportProgress, {
+      stage: "telegram-delivery-retry",
+      message: "Retrying weekly recap Telegram delivery",
+      providerFamily: "telegram-api",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        existingGeneratedAt: existing.generated_at,
+      },
+    });
     const retryStatus = await deliverWeeklyDigestToTelegram({
       db,
       telegramCreds,
@@ -911,6 +967,16 @@ export async function generateWeeklyRecap(
     await updateWeeklyTelegramDeliveryMeta(db, existing, {
       nowSec: Math.floor(Date.now() / 1000),
       telegramStatus: retryStatus,
+    });
+    await reportDigestProgress(reportProgress, {
+      stage: "complete",
+      message: "Completed weekly recap Telegram retry",
+      providerFamily: "telegram-api",
+      itemsDone: 1,
+      itemsTotal: 1,
+      metadata: {
+        telegramStatus: retryStatus,
+      },
     });
     return {
       itemCount: 0,
@@ -933,6 +999,18 @@ export async function generateWeeklyRecap(
       rawText: entry.rawText,
     }));
 
+  await reportDigestProgress(reportProgress, {
+    stage: "input-collection",
+    message: "Collecting weekly recap source digests",
+    providerFamily: "pharos-d1",
+    itemsDone: 0,
+    itemsTotal: 15,
+    metadata: {
+      countTotals: {
+        recentWeeklyMeta: recentWeeklyMeta.length,
+      },
+    },
+  });
   // 15-day cutoff + LIMIT 15 captures current + prior weeks for WoW
   // deltas and bounds the result set deterministically even if the dedup
   // guard ever drifts.
@@ -966,17 +1044,72 @@ export async function generateWeeklyRecap(
   const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
   const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
   const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
+  await reportDigestProgress(reportProgress, {
+    stage: "input-collected",
+    message: "Collected weekly recap source digests",
+    providerFamily: "pharos-d1",
+    itemsDone: allRows.length,
+    itemsTotal: 15,
+    metadata: {
+      countTotals: {
+        totalDailyRows: allRows.length,
+        currentWeekRows: currentRows.length,
+        priorWeekRows: priorRows.length,
+        recentWeeklyMeta: recentWeeklyMeta.length,
+      },
+      cursor: {
+        weekBoundary,
+      },
+    },
+  });
 
   if (currentRows.length < 5) {
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping weekly recap because current-week coverage is incomplete",
+      providerFamily: "pharos-d1",
+      itemsDone: currentRows.length,
+      itemsTotal: 5,
+      metadata: {
+        skipped: "insufficient-current-week-digests",
+        countTotals: {
+          currentWeekRows: currentRows.length,
+          requiredCurrentWeekRows: 5,
+        },
+      },
+    });
     return { metadata: `skipped: only ${currentRows.length} daily digests available in current week (need 5+)` };
   }
 
   const weeklyData = buildWeeklyInputData(currentRows, priorRows);
   if (!weeklyData) {
+    await reportDigestProgress(reportProgress, {
+      stage: "input-unavailable",
+      message: "Failed to build weekly recap input data",
+      providerFamily: "pharos-d1",
+      itemsDone: currentRows.length,
+      itemsTotal: currentRows.length,
+    });
     return { metadata: "skipped: failed to build weekly input data" };
   }
 
   const userPrompt = buildWeeklyPrompt(weeklyData, recentWeeklyMeta);
+  await reportDigestProgress(reportProgress, {
+    stage: "llm-generation",
+    message: "Requesting weekly recap copy from Anthropic",
+    providerFamily: "anthropic",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        promptChars: userPrompt.length,
+        currentWeekRows: currentRows.length,
+        priorWeekRows: priorRows.length,
+        weeklyRiskSignals: weeklyData.weeklySignals.riskLeaderboard.length,
+        maxTokens: 64000,
+      },
+    },
+  });
 
   const digestCopy = await requestDigestCopy({
     db,
@@ -1005,8 +1138,33 @@ export async function generateWeeklyRecap(
     },
   });
   if (digestCopy.kind === "circuit-open") {
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping weekly recap because Anthropic circuit is open",
+      providerFamily: "anthropic",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "anthropic-circuit-open",
+      },
+    });
     return { metadata: "skipped: anthropic circuit open" };
   }
+  await reportDigestProgress(reportProgress, {
+    stage: "llm-generation-complete",
+    message: "Received weekly recap copy from Anthropic",
+    providerFamily: "anthropic",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        textChars: digestCopy.digestText.length,
+        extendedChars: digestCopy.digestExtended.length,
+        qualityIssues: digestCopy.qualityIssues.length,
+      },
+      blockingQualityIssues: digestCopy.hasBlockingQualityIssues,
+    },
+  });
 
   const initialDigestMeta = encodeWeeklyDigestMeta(digestCopy.digestMeta, {
     generatedAt: nowSec,
@@ -1022,6 +1180,19 @@ export async function generateWeeklyRecap(
   });
 
   // Store
+  await reportDigestProgress(reportProgress, {
+    stage: "persistence",
+    message: "Persisting weekly recap row",
+    providerFamily: "d1",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      cursor: {
+        weekStart: weeklyData.weekStartDate,
+        weekEnd: weeklyData.weekEndDate,
+      },
+    },
+  });
   await insertDigestRecord({
     db,
     generatedAt: nowSec,
@@ -1034,6 +1205,16 @@ export async function generateWeeklyRecap(
 
   // Post to Telegram
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  await reportDigestProgress(reportProgress, {
+    stage: "telegram-delivery",
+    message: "Delivering weekly recap to Telegram",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      qualityGateStatus,
+    },
+  });
   const telegramStatus = qualityGateStatus ?? await deliverWeeklyDigestToTelegram({
     db,
     telegramCreds,
@@ -1055,6 +1236,22 @@ export async function generateWeeklyRecap(
     ? `, quality: ${digestCopy.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
     : "";
 
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Completed weekly recap generation",
+    providerFamily: "digest",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        textChars: digestCopy.digestText.length,
+        extendedChars: digestCopy.digestExtended.length,
+        qualityIssues: digestCopy.qualityIssues.length,
+      },
+      telegramStatus,
+      usedRawTextFallback: digestCopy.usedRawTextFallback,
+    },
+  });
   return {
     itemCount: 1,
     ...(digestCopy.usedRawTextFallback || digestCopy.qualityIssues.length > 0 ? { status: "degraded" as const } : {}),

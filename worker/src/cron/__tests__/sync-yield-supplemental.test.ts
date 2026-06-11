@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 const emptyTelemetry = {
   targetCount: 0,
@@ -121,6 +122,36 @@ describe("syncYieldSupplemental", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+  });
+
+  it("reports supplemental source-family and empty-snapshot progress metadata", async () => {
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), reportProgress);
+
+    expect(result.status).toBe("degraded");
+    expect(progressUpdates.find((update) => update.stage === "source-family-fetch")).toMatchObject({
+      metadata: {
+        providerFamily: "yield-supplemental",
+        phase: "source-family-fetch",
+        providerFamilies: expect.arrayContaining(["aaveV3", "compoundV3"]),
+        countTotals: { sourceFamilies: expect.any(Number) },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "empty-snapshot")).toMatchObject({
+      metadata: {
+        providerFamily: "yield-supplemental",
+        phase: "empty-snapshot",
+        fallbackMode: "empty-snapshot",
+        countTotals: {
+          rawSupplementalCandidates: 0,
+          rowsDropped: 0,
+        },
+      },
+    });
   });
 
   it("keeps distinct same-chain Aave candidates by using asset-scoped source keys", async () => {

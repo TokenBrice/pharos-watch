@@ -1,4 +1,4 @@
-import { type CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
@@ -8,6 +8,7 @@ import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices 
 import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
+import { reportDigestProgress } from "./digest/progress";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
@@ -27,9 +28,33 @@ export async function generateDailyDigest(
   force = false,
   telegramCreds: TelegramCreds | null = null,
   signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
+  await reportDigestProgress(reportProgress, {
+    stage: "preflight",
+    message: "Checking daily digest generation prerequisites",
+    providerFamily: "digest",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        forceRun: force ? 1 : 0,
+        configuredDeliveryChannels: Number(Boolean(twitterCreds)) + Number(Boolean(telegramCreds)),
+      },
+    },
+  });
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
+    await reportDigestProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping daily digest because Anthropic credentials are missing",
+      providerFamily: "anthropic",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "missing-api-key",
+      },
+    });
     return { metadata: "skipped: no API key" };
   }
 
@@ -47,6 +72,17 @@ export async function generateDailyDigest(
       console.log(
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
+      await reportDigestProgress(reportProgress, {
+        stage: "skipped",
+        message: "Skipping daily digest because a recent digest exists",
+        providerFamily: "digest",
+        itemsDone: 0,
+        itemsTotal: 1,
+        metadata: {
+          skipped: "recent-digest",
+          ageSec,
+        },
+      });
       return { metadata: "skipped: recent digest exists" };
     }
     if (isBroken) {
@@ -54,9 +90,26 @@ export async function generateDailyDigest(
     }
   }
 
+  await reportDigestProgress(reportProgress, {
+    stage: "input-collection",
+    message: "Collecting daily digest market context",
+    providerFamily: "pharos-d1",
+    itemsDone: 0,
+    itemsTotal: 1,
+  });
   const digestInput = await buildDailyDigestInput(db);
   const { inputData, degradedReasons, recentMeta, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
+    await reportDigestProgress(reportProgress, {
+      stage: "input-unavailable",
+      message: "Daily digest stablecoins cache is unavailable",
+      providerFamily: "pharos-d1",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        stablecoinsCacheReason,
+      },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -69,6 +122,25 @@ export async function generateDailyDigest(
   }
   const userPromptContent = buildUserPrompt(inputData, recentMeta);
   const leadRequirements = buildCriticalDailyLeadRequirements(inputData);
+  await reportDigestProgress(reportProgress, {
+    stage: "input-collected",
+    message: "Collected daily digest context",
+    providerFamily: "pharos-d1",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        recentDigestMeta: recentMeta.length,
+        activeDepegs: llmSignals.activeDepegCount,
+        topDepegs: llmSignals.topDepegs.length,
+        resolvedDepegs: llmSignals.resolvedDepegs.length,
+        yieldAnomalies: llmSignals.yieldAnomalies.length,
+        liquidityShifts: llmSignals.liquidityShifts.length,
+        degradedReasons: degradedReasons.length,
+      },
+      leadRequirementCount: leadRequirements?.length ?? 0,
+    },
+  });
 
   logDailyDigestLlmCall({
     activeDepegCount: llmSignals.activeDepegCount,
@@ -78,6 +150,19 @@ export async function generateDailyDigest(
     liquidityShifts: llmSignals.liquidityShifts,
     recentMeta,
     degradedReasons,
+  });
+  await reportDigestProgress(reportProgress, {
+    stage: "llm-generation",
+    message: "Requesting daily digest copy from Anthropic",
+    providerFamily: "anthropic",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        promptChars: userPromptContent.length,
+        maxTokens: 64000,
+      },
+    },
   });
   const digestCopy = await requestDigestCopy({
     db,
@@ -101,9 +186,31 @@ export async function generateDailyDigest(
   if (digestCopy.kind === "circuit-open") {
     throw new Error("Anthropic circuit open — skipping LLM call");
   }
+  await reportDigestProgress(reportProgress, {
+    stage: "llm-generation-complete",
+    message: "Received daily digest copy from Anthropic",
+    providerFamily: "anthropic",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        textChars: digestCopy.digestText.length,
+        extendedChars: digestCopy.digestExtended.length,
+        qualityIssues: digestCopy.qualityIssues.length,
+      },
+      blockingQualityIssues: digestCopy.hasBlockingQualityIssues,
+    },
+  });
 
   const storedInputData = attachDigestEditorialAudit({ inputData, digestMeta: digestCopy.digestMeta, qualityIssues: digestCopy.qualityIssues, leadRequirements });
   const now = Math.floor(Date.now() / 1000);
+  await reportDigestProgress(reportProgress, {
+    stage: "persistence",
+    message: "Persisting daily digest row",
+    providerFamily: "d1",
+    itemsDone: 0,
+    itemsTotal: 1,
+  });
   await insertDigestRecord({
     db,
     generatedAt: now,
@@ -121,6 +228,16 @@ export async function generateDailyDigest(
 
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
 
+  await reportDigestProgress(reportProgress, {
+    stage: "twitter-delivery",
+    message: "Delivering daily digest to Twitter/X",
+    providerFamily: "twitter-api",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      qualityGateStatus,
+    },
+  });
   const tweetStatus = qualityGateStatus ?? await runDigestChannelDelivery({
     db,
     circuitSource: CIRCUIT_SOURCE.TWITTER_API,
@@ -133,6 +250,17 @@ export async function generateDailyDigest(
     },
   });
 
+  await reportDigestProgress(reportProgress, {
+    stage: "telegram-delivery",
+    message: "Delivering daily digest to Telegram",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: 1,
+    metadata: {
+      qualityGateStatus,
+      twitterStatus: tweetStatus,
+    },
+  });
   const telegramStatus = qualityGateStatus ?? await runDigestChannelDelivery({
     db,
     circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
@@ -192,6 +320,24 @@ export async function generateDailyDigest(
     ? `, quality: ${digestCopy.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
     : "";
 
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Completed daily digest generation",
+    providerFamily: "digest",
+    itemsDone: 1,
+    itemsTotal: 1,
+    metadata: {
+      countTotals: {
+        editionNumber,
+        textChars: digestCopy.digestText.length,
+        extendedChars: digestCopy.digestExtended.length,
+        degradedReasons: degradedReasons.length,
+        qualityIssues: digestCopy.qualityIssues.length,
+      },
+      twitterStatus: tweetStatus,
+      telegramStatus,
+    },
+  });
   console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
   return {
     itemCount: 1,

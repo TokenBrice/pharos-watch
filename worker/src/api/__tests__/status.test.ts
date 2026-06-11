@@ -1651,24 +1651,30 @@ describe("handleStatus", () => {
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
       { match: "stress_signals", rows: [], first: { age: 300 } },
-      { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "ok", 30)] },
+      { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 30)] },
       {
         match: "cron_leases",
-        rows: [{ job: "sync-blacklist", lease_owner: "lease-123", lease_until: now + 600 }],
+        rows: [{ job: "dispatch-telegram-alerts", lease_owner: "lease-123", lease_until: now + 600 }],
       },
       {
         match: "cron_run_progress",
         rows: [
           {
-            job: "sync-blacklist",
+            job: "dispatch-telegram-alerts",
             started_at: now - 120,
             updated_at: now - 10,
-            stage: "scan-config",
+            stage: "pending-drain",
             items_done: 2,
             items_total: 7,
-            message: "Scanning USDC on Ethereum",
+            message: "Draining due Telegram pending rows",
             lease_owner: "lease-123",
-            metadata: JSON.stringify({ budgetUsed: 18, budgetLimit: 900 }),
+            metadata: JSON.stringify({
+              providerFamily: "telegram-api",
+              phase: "pending-drain",
+              countTotals: { pendingAttempted: 2, pendingTotal: 7 },
+              cursor: { queue: "telegram_pending_alerts" },
+              deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
+            }),
           },
         ],
       },
@@ -1684,15 +1690,30 @@ describe("handleStatus", () => {
     const body = (await res.json()) as {
       crons: Record<
         string,
-        { inFlight?: { stage?: string; stale: boolean; itemsDone?: number; itemsTotal?: number } | null }
+        {
+          inFlight?: {
+            stage?: string;
+            stale: boolean;
+            itemsDone?: number;
+            itemsTotal?: number;
+            metadata?: Record<string, unknown>;
+          } | null;
+        }
       >;
     };
 
-    expect(body.crons["sync-blacklist"]?.inFlight).toMatchObject({
-      stage: "scan-config",
+    expect(body.crons["dispatch-telegram-alerts"]?.inFlight).toMatchObject({
+      stage: "pending-drain",
       stale: false,
       itemsDone: 2,
       itemsTotal: 7,
+      metadata: {
+        providerFamily: "telegram-api",
+        phase: "pending-drain",
+        countTotals: { pendingAttempted: 2, pendingTotal: 7 },
+        cursor: { queue: "telegram_pending_alerts" },
+        deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
+      },
     });
   });
 

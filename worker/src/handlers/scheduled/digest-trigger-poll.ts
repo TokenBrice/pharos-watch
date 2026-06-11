@@ -65,7 +65,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   let caught: unknown = null;
 
   try {
-    result = await runtime.runLeasedCron("daily-digest", (signal) =>
+    result = await runtime.runLeasedCron("daily-digest", (signal, reportProgress) =>
       generateDailyDigest(
         runtime.db,
         runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -73,6 +73,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         true,
         buildTelegramCreds(runtime.env),
         signal,
+        reportProgress,
       ),
     );
   } catch (err) {

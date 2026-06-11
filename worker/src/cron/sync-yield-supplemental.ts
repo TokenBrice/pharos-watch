@@ -1,6 +1,7 @@
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { setCacheIfNewer } from "../lib/db-cache";
-import type { CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { reportCronProgress } from "../lib/cron-progress";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import {
   buildYieldSupplementalSourcesCache,
@@ -57,8 +58,40 @@ export async function syncYieldSupplemental(
   db: D1Database,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
+  const reportSupplementalProgress = async (
+    stage: string,
+    message: string,
+    options: {
+      itemsDone?: number;
+      itemsTotal?: number;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ) => {
+    await reportCronProgress(reportProgress, {
+      stage,
+      message,
+      itemsDone: options.itemsDone,
+      itemsTotal: options.itemsTotal ?? SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      metadata: {
+        providerFamily: "yield-supplemental",
+        phase: stage,
+        providerFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+        ...options.metadata,
+      },
+    });
+  };
+
+  await reportSupplementalProgress("source-family-fetch", "Fetching supplemental yield source families", {
+    itemsDone: 0,
+    metadata: {
+      countTotals: {
+        sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      },
+    },
+  });
   const {
     candidates,
     familyResults,
@@ -70,10 +103,41 @@ export async function syncYieldSupplemental(
     signal,
     chainRpcs,
   });
+  await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
+    itemsDone: familyResults.length,
+    metadata: {
+      countTotals: {
+        sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        rawSupplementalCandidates: candidates.length,
+        successfulFamilies: familyResults.filter((family) => family.status === "ok").length,
+      },
+      sourceFamilyCounts,
+    },
+  });
 
   const rawCandidateCount = candidates.length;
+  await reportSupplementalProgress("dedupe", "Deduplicating supplemental yield candidates", {
+    itemsDone: rawCandidateCount,
+    itemsTotal: rawCandidateCount,
+    metadata: {
+      countTotals: {
+        rawSupplementalCandidates: rawCandidateCount,
+      },
+    },
+  });
   const { candidates: dedupedCandidates, droppedCount } = dedupeCandidates(candidates);
   if (dedupedCandidates.length === 0) {
+    await reportSupplementalProgress("empty-snapshot", "Supplemental yield source families produced no candidates", {
+      itemsDone: 0,
+      itemsTotal: rawCandidateCount,
+      metadata: {
+        countTotals: {
+          rawSupplementalCandidates: rawCandidateCount,
+          rowsDropped: droppedCount,
+        },
+        fallbackMode: "empty-snapshot",
+      },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -95,6 +159,17 @@ export async function syncYieldSupplemental(
     };
   }
 
+  await reportSupplementalProgress("aggregate-cache-write", "Publishing aggregate supplemental yield cache", {
+    itemsDone: 0,
+    itemsTotal: dedupedCandidates.length,
+    metadata: {
+      countTotals: {
+        rawSupplementalCandidates: rawCandidateCount,
+        dedupedSupplementalCandidates: dedupedCandidates.length,
+        rowsDropped: droppedCount,
+      },
+    },
+  });
   const cacheResult = await setCacheIfNewer(
     db,
     YIELD_SUPPLEMENTAL_CACHE_KEY,
@@ -110,6 +185,19 @@ export async function syncYieldSupplemental(
 
   for (const family of familyResults) {
     if (family.status !== "ok") continue;
+    await reportSupplementalProgress("family-cache-write", `Publishing ${family.key} supplemental yield cache`, {
+      itemsDone: Object.values(familyCacheResults).filter((status) => status !== "empty").length,
+      metadata: {
+        providerFamily: `yield-supplemental:${family.key}`,
+        cursor: {
+          family: family.key,
+        },
+        countTotals: {
+          familyCandidates: family.candidates.length,
+          sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        },
+      },
+    });
     const { candidates: dedupedFamilyCandidates } = dedupeCandidates(family.candidates);
     const familyCacheResult = await setCacheIfNewer(
       db,
@@ -120,6 +208,20 @@ export async function syncYieldSupplemental(
     );
     familyCacheResults[family.key] = familyCacheResult.written ? "published" : "skipped-newer";
   }
+  await reportSupplementalProgress("complete", "Published supplemental yield source caches", {
+    itemsDone: cacheResult.written ? dedupedCandidates.length : 0,
+    itemsTotal: dedupedCandidates.length,
+    metadata: {
+      countTotals: {
+        rawSupplementalCandidates: rawCandidateCount,
+        dedupedSupplementalCandidates: dedupedCandidates.length,
+        rowsWritten: cacheResult.written ? dedupedCandidates.length : 0,
+        rowsDropped: droppedCount,
+      },
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      familyCacheResults,
+    },
+  });
 
   return {
     itemCount: cacheResult.written ? dedupedCandidates.length : 0,

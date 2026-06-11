@@ -36,7 +36,7 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
           tasks: [
             {
               job: "daily-digest",
-              run: (signal) =>
+              run: (signal, reportProgress) =>
                 generateDailyDigest(
                   runtime.db,
                   runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -44,16 +44,18 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
                   false,
                   buildTelegramCreds(runtime.env),
                   signal,
+                  reportProgress,
                 ),
             },
             {
               job: "weekly-recap",
-              run: (signal) =>
+              run: (signal, reportProgress) =>
                 generateWeeklyRecap(
                   runtime.db,
                   runtime.env.ANTHROPIC_API_KEY ?? null,
                   buildTelegramCreds(runtime.env),
                   signal,
+                  reportProgress,
                 ),
             },
           ],

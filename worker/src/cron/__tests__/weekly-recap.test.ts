@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -216,6 +217,34 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).toContain("plumbing");
     expect(weeklySystem).toContain("week-over-week");
     expect(weeklySystem).toContain("arc");
+  });
+
+  it("reports weekly recap preflight and skipped progress when Anthropic is not configured", async () => {
+    const db = mockD1([]);
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    const result = await generateWeeklyRecap(db, null, null, undefined, reportProgress);
+
+    expect(result.metadata).toBe("skipped: no API key");
+    expect(progressUpdates.find((update) => update.stage === "preflight")).toMatchObject({
+      metadata: {
+        providerFamily: "digest",
+        phase: "preflight",
+        countTotals: {
+          configuredDeliveryChannels: 0,
+        },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "skipped")).toMatchObject({
+      metadata: {
+        providerFamily: "anthropic",
+        phase: "skipped",
+        skipped: "missing-api-key",
+      },
+    });
   });
 
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {

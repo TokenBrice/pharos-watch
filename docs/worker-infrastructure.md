@@ -479,6 +479,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, current/previous coverage-class distribution, and persistence diagnostics (`generationId`, expected/candidate/current generation row counts, `placeholderRowsWritten`, orphan-row cleanup status, historical snapshot write status). The scorer writes candidate rows to `dex_liquidity_run_rows`, validates that the active-asset rows plus the `__global__` row are complete, and only then mirrors the generation into the public `dex_liquidity` table and marks the generation published. `/status` surfaces the coverage slice through the Liquidity Health card, while the raw cron metadata keeps the persistence diagnostics available for operator debugging.
 
+While the run is leased, `cron_run_progress` now exposes DEX stage summaries for source loading, subgraph enrichment, protocol-native direct API fetches, pool processing, scoring, and persistence. Each stage carries `providerFamily`, `phase`, and relevant `countTotals` / fallback-source metadata so `/api/status` can show where a long DEX run is spending time without adding D1 table scans.
+
 ### Trigger 8: `16,46 * * * *` (stablecoin charts — dedicated, every 30 min)
 
 | Job                      | Function                 | File                                        | Documentation    |
@@ -515,6 +517,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated hourly trigger for the core publisher. The job consumes cached DEX pools plus the cached supplemental yield snapshot, keeps deterministic on-chain reads to a single in-flight lane, and is allowed a larger app-level timeout because it no longer shares the half-hourly slot.
 
+`sync-yield-data` reports in-flight progress for preflight, state loading, source resolution, evaluation, coverage-guard decisions, and publication. Progress metadata includes the provider family (`yield`, `yield-source-cache`, or `yield-publication`), phase, tracked-yield count totals, supplemental fallback mode, degradation reasons, and cache/published-generation state.
+
 ### Trigger 12: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
 
 | Job                       | Function                  | File                                         | Documentation                                 |
@@ -522,6 +526,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `sync-yield-supplemental` | `syncYieldSupplemental()` | `worker/src/cron/sync-yield-supplemental.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
 **Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3, Royco Dawn). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
+
+`sync-yield-supplemental` reports source-family fetch, dedupe, aggregate-cache, per-family cache, and completion stages. Per-family cache stages include a `cursor.family` value plus source-family count totals, keeping optional-yield stalls diagnosable from `/api/status` while still relying on the same cache writes the job already performs.
 
 ### Trigger 13: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
@@ -536,13 +542,17 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue. The same cache row carries optional compact `explain` snapshots for safety-alert `Reason:` lines; the worker test suite enforces the current serialized-size budget.
 
+`dispatch-telegram-alerts` now reports circuit-check, source-loading, snapshot-seed, event-detection, pending-drain, fanout-load, delivery, and completion stages. The metadata includes provider families, event/pending count totals, cursor state for the pending queue, and a `deferredTail` summary (`total`, `due`, `deferred`, `expired`, `nearTtl`, oldest pending age, estimated drain time) sourced from the existing pending-capacity reads.
+
 ### Trigger 14: `*/5 * * * *` (manual digest trigger poll)
 
 | Job surface | Function | File | Documentation |
 | ----------- | -------- | ---- | ------------- |
 | `daily-digest` lease consumer | `runDigestTriggerPollSlot()` | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
 
-This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job. `npm run check:cron-connections` still models it as the budget-only `digest-trigger-poll` entry with the same one-connection peak used by the daily digest chain.
+This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal, reportProgress)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job. `npm run check:cron-connections` still models it as the budget-only `digest-trigger-poll` entry with the same one-connection peak used by the daily digest chain.
+
+Forced digest runs inherit the `daily-digest` progress stream, including preflight, input collection, Anthropic generation, persistence, and delivery stages.
 
 ### Trigger 15: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -566,6 +576,8 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 | `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 
 **Connection budget:** `sync-bluechip` (3 parallel batch connections) and `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest) use <=4 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` runs Monday-only and returns immediately on other days. Reliability is failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, or `weekly-recap` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+
+`daily-digest` and `weekly-recap` report digest-specific in-flight stages for preflight, input collection, Anthropic generation, persistence, Telegram/Twitter delivery, skips, and completion. Metadata includes provider family, phase, prompt/input counts, quality issue counts, delivery status, and weekly cursor boundaries where relevant.
 
 ### Trigger 17: `10 8 * * *` (daily at 08:10 UTC — coverage discovery)
 
@@ -708,6 +720,12 @@ All leased jobs emit wrapper-owned progress milestones. Current producers with c
 - `sync-mint-burn`
 - `sync-mint-burn-extended`
 - `sync-dex-discovery`
+- `sync-dex-liquidity`
+- `sync-yield-data`
+- `sync-yield-supplemental`
+- `daily-digest`
+- `weekly-recap`
+- `dispatch-telegram-alerts`
 
 ### Per-Job Cron Timeouts
 

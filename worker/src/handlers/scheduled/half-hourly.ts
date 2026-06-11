@@ -20,13 +20,14 @@ function buildHalfHourlySlotGroups(runtime: ScheduledRuntimeContext): ScheduledS
       tasks: [
         {
           job: "sync-dex-liquidity",
-          run: (signal) =>
+          run: (signal, reportProgress) =>
             syncDexLiquidity(
               runtime.db,
               runtime.env.GRAPH_API_KEY ?? null,
               signal,
               runtime.coingeckoApiKey,
               runtime.chainRpcs,
+              reportProgress,
             ),
         },
       ],

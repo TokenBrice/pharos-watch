@@ -11,7 +11,8 @@ function buildYieldSupplementalSlotGroups(runtime: ScheduledRuntimeContext): Sch
         {
           job: "sync-yield-supplemental",
           errorMessage: "[cron] sync-yield-supplemental failed in multi-hour yield slot:",
-          run: (signal) => syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs),
+          run: (signal, reportProgress) =>
+            syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress),
         },
       ],
     },

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
 
 function makeDirectApiResult() {
@@ -348,6 +349,38 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+  });
+
+  it("reports high-SLO stage metadata during source and scoring phases", async () => {
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    await syncDexLiquidity(db, "graph-key", undefined, undefined, undefined, reportProgress);
+
+    const directApiFetch = progressUpdates.find((update) => update.stage === "direct-api-fetch");
+    const scoringComplete = progressUpdates.find((update) => update.stage === "scoring-complete");
+
+    expect(directApiFetch).toMatchObject({
+      stage: "direct-api-fetch",
+      metadata: {
+        providerFamily: "protocol-native-dex",
+        phase: "direct-api-fetch",
+        providerFamilies: expect.arrayContaining(["fluid", "balancer"]),
+        countTotals: { sourceFamilies: expect.any(Number) },
+      },
+    });
+    expect(scoringComplete).toMatchObject({
+      stage: "scoring-complete",
+      metadata: {
+        providerFamily: "internal",
+        phase: "scoring-complete",
+        countTotals: {
+          scoreRows: expect.any(Number),
+        },
+      },
+    });
   });
 
   it("keeps the run ok when an optional direct API source is unavailable but coverage stays intact", async () => {

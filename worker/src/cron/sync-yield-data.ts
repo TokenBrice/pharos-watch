@@ -2,8 +2,9 @@
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getCache } from "../lib/db-cache";
+import { reportCronProgress } from "../lib/cron-progress";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import {
@@ -49,6 +50,7 @@ export async function syncYieldData(
   chainRpcs?: Map<string, ChainRpcConfig>,
   coingeckoApiKey?: string | null,
   etherscanApiKey?: string | null,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
@@ -59,6 +61,38 @@ export async function syncYieldData(
       .map((coin) => coin.id)
       .filter((id) => !yieldCoinIdSet.has(id)),
   );
+  const progressTotal = yieldCoins.length + opportunityCoinIdSet.size;
+  const reportYieldProgress = async (
+    stage: string,
+    message: string,
+    providerFamily: string,
+    options: {
+      itemsDone?: number;
+      itemsTotal?: number;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ) => {
+    await reportCronProgress(reportProgress, {
+      stage,
+      message,
+      itemsDone: options.itemsDone,
+      itemsTotal: options.itemsTotal ?? progressTotal,
+      metadata: {
+        providerFamily,
+        phase: stage,
+        countTotals: {
+          yieldBearingCoins: yieldCoins.length,
+          opportunityCoins: opportunityCoinIdSet.size,
+          totalTrackedForYield: progressTotal,
+        },
+        ...options.metadata,
+      },
+    });
+  };
+
+  await reportYieldProgress("preflight", "Preparing yield publication inputs", "yield", {
+    itemsDone: 0,
+  });
 
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
@@ -68,6 +102,15 @@ export async function syncYieldData(
     await getCache(db, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY),
   );
   if (writerPause) {
+    await reportYieldProgress("writer-paused", "Yield publication is paused by operator", "yield", {
+      itemsDone: 0,
+      metadata: {
+        writerPaused: true,
+        pauseReason: writerPause.reason,
+        pauseOperator: writerPause.operator,
+        pausedAt: writerPause.pausedAt,
+      },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -85,6 +128,12 @@ export async function syncYieldData(
     console.warn("[sync-yield-data] Failed to repair published yield generation before history load:", error);
   });
 
+  await reportYieldProgress("state-loading", "Loading yield source state and safety snapshots", "yield-source-cache", {
+    itemsDone: 0,
+    metadata: {
+      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates", "risk-free-rates", "safety-scores"],
+    },
+  });
   const {
     dlPools,
     dlPoolsMeta,
@@ -115,6 +164,28 @@ export async function syncYieldData(
     etherscanApiKey,
   });
   const riskFreeRate = riskFreeRateMeta.rate;
+  await reportYieldProgress("state-loaded", "Loaded yield source state", "yield-source-cache", {
+    itemsDone: dlPools.length + supplementalCandidates.length + onChainRates.size,
+    metadata: {
+      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates", "risk-free-rates", "safety-scores"],
+      countTotals: {
+        yieldBearingCoins: yieldCoins.length,
+        opportunityCoins: opportunityCoinIdSet.size,
+        totalTrackedForYield: progressTotal,
+        dlPools: dlPools.length,
+        supplementalCandidates: supplementalCandidates.length,
+        supplementalSourceCount: supplementalMeta.sourceCount,
+        onChainRatesResolved: onChainRates.size,
+        onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
+        safetyScoresComputed: safetySnapshot.coveredCount,
+        safetyScoresExpected: safetySnapshot.trackedCount,
+      },
+      supplementalMode: supplementalMeta.mode,
+      supplementalFallbackMode: supplementalMeta.fallbackMode,
+      onChainCooldownActive,
+      onChainCooldownRemainingSec,
+    },
+  });
 
   if (safetySnapshotDegraded) {
     console.warn(
@@ -123,6 +194,20 @@ export async function syncYieldData(
     );
   }
 
+  await reportYieldProgress("source-resolution", "Resolving yield source candidates", "yield", {
+    itemsDone: 0,
+    metadata: {
+      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates"],
+      countTotals: {
+        yieldBearingCoins: yieldCoins.length,
+        opportunityCoins: opportunityCoinIdSet.size,
+        totalTrackedForYield: progressTotal,
+        dlPools: dlPools.length,
+        supplementalCandidates: supplementalCandidates.length,
+        onChainRatesResolved: onChainRates.size,
+      },
+    },
+  });
   const { resolved, tier1PrevRates, envelopeRejections } = await resolveYieldSources({
     db,
     startSec,
@@ -145,6 +230,18 @@ export async function syncYieldData(
       .map((entry) => entry.id),
   );
   const resolvedIds = [...new Set(resolvedWithYield.map((entry) => entry.id))];
+  await reportYieldProgress("source-resolution-complete", "Resolved yield source candidates", "yield", {
+    itemsDone: resolvedWithYield.length,
+    metadata: {
+      providerFamilies: ["defillama-yields", "yield-supplemental", "on-chain-rates"],
+      countTotals: {
+        resolvedSources: resolvedWithYield.length,
+        resolvedCoins: resolvedIds.length,
+        resolvedYieldBearingCoins: resolvedYieldBearingIds.size,
+        envelopeRejections: envelopeRejections.length,
+      },
+    },
+  });
   const resolvedCountByCoin = new Map<string, number>();
   for (const entry of resolvedWithYield) {
     resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);
@@ -164,6 +261,15 @@ export async function syncYieldData(
     sourceSwitchCount30dByCoin,
   } = buildYieldHistoryEvaluationInputs(historySnapshots);
 
+  await reportYieldProgress("evaluation", "Evaluating best yield sources and source risk", "yield", {
+    itemsDone: 0,
+    metadata: {
+      countTotals: {
+        resolvedSources: resolvedWithYield.length,
+        resolvedCoins: resolvedIds.length,
+      },
+    },
+  });
   const {
     evaluatedSources,
     bestSourceKeyByCoin,
@@ -190,6 +296,18 @@ export async function syncYieldData(
     stablecoinSupplyById,
     dlPoolsMeta,
   });
+  await reportYieldProgress("evaluation-complete", "Completed yield source evaluation", "yield", {
+    itemsDone: evaluatedSources.length,
+    metadata: {
+      countTotals: {
+        evaluatedSources: evaluatedSources.length,
+        bestSourceCoins: bestSourceKeyByCoin.size,
+        rowsRejected,
+        divergenceFlags,
+        sourceSwitches,
+      },
+    },
+  });
 
   const {
     maskedAllDeterministicFailure,
@@ -215,6 +333,16 @@ export async function syncYieldData(
     expectedYieldBearingCount: yieldCoins.length,
   });
   if (trackedCoverageGuard) {
+    await reportYieldProgress("coverage-guard", "Yield tracked coverage guard deferred publication", "yield", {
+      itemsDone: resolvedYieldBearingIds.size,
+      metadata: {
+        guard: "tracked-coverage",
+        countTotals: {
+          resolvedYieldBearingCoins: resolvedYieldBearingIds.size,
+          expectedYieldBearingCoins: yieldCoins.length,
+        },
+      },
+    });
     return trackedCoverageGuard;
   }
 
@@ -244,6 +372,15 @@ export async function syncYieldData(
     opportunityCoinIdSet,
   });
   if (publishedCoverageGuard.result) {
+    await reportYieldProgress("coverage-guard", "Yield published coverage guard deferred publication", "yield-publication", {
+      itemsDone: previewRankingsPayload.rankings.length,
+      metadata: {
+        guard: "published-coverage",
+        countTotals: {
+          previewRankings: previewRankingsPayload.rankings.length,
+        },
+      },
+    });
     return publishedCoverageGuard.result;
   }
   const {
@@ -265,6 +402,17 @@ export async function syncYieldData(
     onChainSkippedDueToCooldown,
     onChainAlternativeCoverageMissingIds,
   });
+  await reportYieldProgress("publication", "Publishing yield rankings generation", "yield-publication", {
+    itemsDone: 0,
+    itemsTotal: previewRankingsPayload.rankings.length,
+    metadata: {
+      countTotals: {
+        previewRankings: previewRankingsPayload.rankings.length,
+        evaluatedSources: evaluatedSources.length,
+      },
+      degradationReasons,
+    },
+  });
   const publicationResult = await publishYieldCoordinatorResults({
     db,
     signal,
@@ -281,12 +429,34 @@ export async function syncYieldData(
     sourceSwitches,
   });
   if (!publicationResult.ok) {
+    await reportYieldProgress("publication-blocked", "Yield publication was blocked", "yield-publication", {
+      itemsDone: 0,
+      itemsTotal: previewRankingsPayload.rankings.length,
+      metadata: {
+        countTotals: {
+          previewRankings: previewRankingsPayload.rankings.length,
+        },
+      },
+    });
     return publicationResult.result;
   }
 
   console.log(
     `[sync-yield-data] Updated ${publicationResult.updatedCount} source rows (${yieldCoins.length} yield-bearing + auto-discovered)`,
   );
+  await reportYieldProgress("publication-complete", "Published yield rankings generation", "yield-publication", {
+    itemsDone: publicationResult.updatedCount,
+    itemsTotal: previewRankingsPayload.rankings.length,
+    metadata: {
+      countTotals: {
+        rowsWritten: publicationResult.updatedCount,
+        publishedRankingCount: currentPublishedRankingCount,
+        previousPublishedRankingCount,
+      },
+      degradationReasons: publicationResult.degradationReasons,
+      cacheWriteSkipped: publicationResult.cacheWriteSkipped,
+    },
+  });
   const status = publicationResult.degradationReasons.length > 0 ? "degraded" : "ok";
   return {
     itemCount: publicationResult.updatedCount,

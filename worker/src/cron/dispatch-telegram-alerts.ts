@@ -1,6 +1,8 @@
 import { throwIfAborted } from "../lib/abort";
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../lib/db-cache";
+import type { CronProgressReporter } from "../lib/cron-logger";
+import { reportCronProgress } from "../lib/cron-progress";
 
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -74,6 +76,44 @@ type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
 export interface TelegramDispatchSharedState {
   pendingCapacitySnapshot?: PendingCapacitySnapshot;
   safetySourceAssessment?: AlertSafetySourceAssessment;
+}
+
+async function reportTelegramDispatchProgress(
+  reportProgress: CronProgressReporter | undefined,
+  update: {
+    stage: string;
+    message: string;
+    providerFamily?: string;
+    itemsDone?: number;
+    itemsTotal?: number;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await reportCronProgress(reportProgress, {
+    stage: update.stage,
+    message: update.message,
+    itemsDone: update.itemsDone,
+    itemsTotal: update.itemsTotal,
+    metadata: {
+      providerFamily: update.providerFamily ?? "telegram-dispatch",
+      phase: update.stage,
+      ...update.metadata,
+    },
+  });
+}
+
+function pendingTailState(snapshot: PendingCapacitySnapshot | null | undefined): Record<string, unknown> | null {
+  if (!snapshot) return null;
+  return {
+    total: snapshot.total,
+    active: snapshot.active,
+    due: snapshot.due,
+    deferred: snapshot.deferred,
+    expired: snapshot.expired,
+    nearTtl: snapshot.nearTtl,
+    oldestPendingAgeSec: snapshot.oldestPendingAgeSec,
+    estimatedDrainTimeSec: snapshot.estimatedDrainTimeSec,
+  };
 }
 
 function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
@@ -159,9 +199,27 @@ export async function dispatchTelegramAlerts(
   botToken: string,
   signal?: AbortSignal,
   sharedState?: TelegramDispatchSharedState,
+  reportProgress?: CronProgressReporter,
 ): Promise<{ itemCount: number; metadata: string }> {
+  await reportTelegramDispatchProgress(reportProgress, {
+    stage: "circuit-check",
+    message: "Checking Telegram API circuit",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: 1,
+  });
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "skipped",
+      message: "Skipping Telegram dispatch because the API circuit is open",
+      providerFamily: "telegram-api",
+      itemsDone: 0,
+      itemsTotal: 1,
+      metadata: {
+        skipped: "circuit-open",
+      },
+    });
     return { itemCount: 0, metadata: JSON.stringify({ skipped: "circuit-open" }) };
   }
 
@@ -170,6 +228,16 @@ export async function dispatchTelegramAlerts(
   try {
     throwIfAborted(signal);
 
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "source-loading",
+      message: "Loading Telegram alert source snapshots",
+      providerFamily: "telegram-dispatch",
+      itemsDone: 0,
+      itemsTotal: 4,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch"],
+      },
+    });
     const sourceData = await loadDispatchSourceData(db);
     const { chatsWithActiveSnooze } = sourceData;
 
@@ -188,8 +256,39 @@ export async function dispatchTelegramAlerts(
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "source-loaded",
+      message: "Loaded Telegram alert source snapshots",
+      providerFamily: "telegram-dispatch",
+      itemsDone: 4,
+      itemsTotal: 4,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        countTotals: {
+          dewsRows: sourceData.dewsRows.length,
+          activeDepegRows: sourceData.activeDepegRows.length,
+          safetyRows: sourceData.safetyRows.length,
+          chatsWithActiveSnooze,
+        },
+        safetyAlertSourceState: safetySourceAssessment.state,
+        safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
+        deferredTail: pendingTailState(pendingCapacityBefore),
+      },
+    });
 
     if (mustSeedSnapshots) {
+      await reportTelegramDispatchProgress(reportProgress, {
+        stage: "snapshot-seed",
+        message: "Seeding Telegram alert snapshots",
+        providerFamily: "d1",
+        itemsDone: 0,
+        itemsTotal: 4,
+        metadata: {
+          safetySnapshotNeedsSeed,
+          suppressedSafetyChangesAtSeed,
+          deferredTail: pendingTailState(pendingCapacityBefore),
+        },
+      });
       await writeSnapshots(db, currentSnapshots);
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
       const result = emptyResult(true, chatsWithActiveSnooze);
@@ -202,9 +301,30 @@ export async function dispatchTelegramAlerts(
       result.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
       result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
       assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
+      await reportTelegramDispatchProgress(reportProgress, {
+        stage: "complete",
+        message: "Seeded Telegram alert snapshots without fanout",
+        providerFamily: "telegram-dispatch",
+        itemsDone: 4,
+        itemsTotal: 4,
+        metadata: {
+          snapshotSeeded: true,
+          deferredTail: pendingTailState(pendingCapacityBefore),
+        },
+      });
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "event-detection",
+      message: "Detecting Telegram alert events",
+      providerFamily: "telegram-dispatch",
+      itemsDone: 0,
+      itemsTotal: 4,
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch"],
+      },
+    });
     const {
       dewsChanges,
       depegTriggered,
@@ -218,6 +338,32 @@ export async function dispatchTelegramAlerts(
       safetyIds,
       launchIds,
     } = await buildTelegramDispatchEvents(db, sourceData, snapshotState, getSymbol, signal);
+    const eventCount =
+      dewsChanges.length +
+      depegTriggered.length +
+      depegResolved.length +
+      depegWorsening.length +
+      safetyChanges.length +
+      launchPromoted.length;
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "event-detection-complete",
+      message: "Completed Telegram alert event detection",
+      providerFamily: "telegram-dispatch",
+      itemsDone: eventCount,
+      itemsTotal: Math.max(eventCount, 1),
+      metadata: {
+        providerFamilies: ["dews", "depeg", "safety", "launch"],
+        countTotals: {
+          dews: dewsChanges.length,
+          depegTriggered: depegTriggered.length,
+          depegResolved: depegResolved.length,
+          depegWorsening: depegWorsening.length,
+          safety: safetyChanges.length,
+          launch: launchPromoted.length,
+          suppressedMethodologyChanges,
+        },
+      },
+    });
 
     const hasEvents = hasDetectedTelegramEvents({
       dewsChanges,
@@ -233,6 +379,17 @@ export async function dispatchTelegramAlerts(
       !safetySnapshotNeedsSeed;
 
     if (canUseEventlessFastPath) {
+      await reportTelegramDispatchProgress(reportProgress, {
+        stage: "pending-drain",
+        message: "Draining due Telegram pending rows on eventless run",
+        providerFamily: "telegram-api",
+        itemsDone: 0,
+        itemsTotal: Math.max(pendingCapacityBefore.due, 1),
+        metadata: {
+          eventlessFastPath: true,
+          deferredTail: pendingTailState(pendingCapacityBefore),
+        },
+      });
       const drainResult = pendingCapacityBefore.due > 0
         ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
         : emptyDrainResult();
@@ -283,10 +440,42 @@ export async function dispatchTelegramAlerts(
         result.blockedUsersCleanedUp > 0 ||
         result.pendingAttempted === 0;
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
+      await reportTelegramDispatchProgress(reportProgress, {
+        stage: "complete",
+        message: "Completed eventless Telegram dispatch",
+        providerFamily: "telegram-dispatch",
+        itemsDone: drainResult.attempted,
+        itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
+        metadata: {
+          eventlessFastPath: true,
+          countTotals: {
+            pendingAttempted: drainResult.attempted,
+            pendingSent: drainResult.sent,
+            pendingDeferred: drainResult.deferred,
+            pendingDropped: drainResult.dropped,
+          },
+          deferredTail: pendingTailState(pendingCapacityAfter),
+        },
+      });
 
       return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
     }
 
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "fanout-load",
+      message: "Loading Telegram fanout subscriber inputs",
+      providerFamily: "telegram-dispatch",
+      itemsDone: 0,
+      itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length, 1),
+      metadata: {
+        countTotals: {
+          dewsIds: dewsIds.length,
+          depegIds: depegIds.length,
+          safetyIds: safetyIds.length,
+          launchIds: launchIds.length,
+        },
+      },
+    });
     const fanoutQueryStartedAtMs = Date.now();
     const {
       directDewsSubs,
@@ -404,9 +593,43 @@ export async function dispatchTelegramAlerts(
     const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
     const freshCandidateChats = subscriberQueue.length;
     const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "fanout-built",
+      message: "Built Telegram subscriber fanout queue",
+      providerFamily: "telegram-dispatch",
+      itemsDone: freshCandidateCount,
+      itemsTotal: Math.max(freshCandidateCount, 1),
+      metadata: {
+        countTotals: {
+          freshCandidateChats,
+          freshCandidateCount,
+          presetQueryFailures,
+          presetResolutionFailures,
+        },
+        cursor: {
+          fanoutQueryMs,
+          fanoutBuildMs,
+        },
+        perAlertTypeTargets,
+        deferredTail: pendingTailState(pendingCapacityBefore),
+      },
+    });
     const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
 
     const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "pending-drain",
+      message: "Draining Telegram pending queue before fresh sends",
+      providerFamily: "telegram-api",
+      itemsDone: 0,
+      itemsTotal: Math.max(pendingCapacityBefore.due, 1),
+      metadata: {
+        cursor: {
+          maxPriority: drainOnlyRiskPriority,
+        },
+        deferredTail: pendingTailState(pendingCapacityBefore),
+      },
+    });
     const drainResult = await drainPendingQueue(
       db,
       botToken,
@@ -420,6 +643,26 @@ export async function dispatchTelegramAlerts(
       readTelegramGlobalBackoff(db, nowSec),
     ]);
 
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "delivery",
+      message: "Sending Telegram subscriber alerts",
+      providerFamily: "telegram-api",
+      itemsDone: drainResult.attempted,
+      itemsTotal: Math.max(drainResult.attempted + freshCandidateCount, 1),
+      metadata: {
+        countTotals: {
+          pendingAttempted: drainResult.attempted,
+          pendingSent: drainResult.sent,
+          freshCandidateChats,
+          freshCandidateCount,
+        },
+        cursor: {
+          globalBackoffUntil,
+          chatsInBackoff: chatsInBackoff.size,
+        },
+        deferredTail: pendingTailState(pendingCapacityBefore),
+      },
+    });
     const {
       subscribersNotified,
       freshSent,
@@ -518,6 +761,31 @@ export async function dispatchTelegramAlerts(
       result.messagesSent > 0 || result.blockedUsersCleanedUp > 0 || attemptedMessages === 0;
     const systemicFreshFailure = recordSystemicFreshFailure(result);
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect && !systemicFreshFailure);
+    await reportTelegramDispatchProgress(reportProgress, {
+      stage: "complete",
+      message: "Completed Telegram subscriber dispatch",
+      providerFamily: "telegram-dispatch",
+      itemsDone: result.messagesSent,
+      itemsTotal: Math.max(result.pendingAttempted + result.freshAttempted, 1),
+      metadata: {
+        countTotals: {
+          messagesSent: result.messagesSent,
+          subscribersNotified,
+          freshAttempted,
+          freshSent,
+          freshRetryQueued,
+          freshOverflow,
+          pendingAttempted: drainResult.attempted,
+          pendingDrained: drainResult.sent,
+          pendingEnqueued,
+          pendingDeferred: drainResult.deferred,
+          pendingDropped: drainResult.dropped,
+        },
+        cappedAtLimit,
+        systemicFreshFailure,
+        deferredTail: pendingTailState(pendingCapacityAfter),
+      },
+    });
 
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   } catch (error) {

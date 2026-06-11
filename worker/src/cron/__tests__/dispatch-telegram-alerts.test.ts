@@ -6,6 +6,7 @@ import {
   mockDbCache,
 } from "../../test-helpers/cron";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
@@ -327,7 +328,12 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+
+    const result = await dispatchTelegramAlerts(db, "bot-token", undefined, undefined, reportProgress);
     const metadata = JSON.parse(result.metadata) as {
       eventlessFastPath?: boolean;
       pendingTotal: number;
@@ -336,6 +342,35 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.eventlessFastPath).toBe(true);
     expect(metadata.pendingTotal).toBe(1);
     expect(result.itemCount).toBe(0);
+    expect(progressUpdates.find((update) => update.stage === "pending-drain")).toMatchObject({
+      metadata: {
+        providerFamily: "telegram-api",
+        phase: "pending-drain",
+        eventlessFastPath: true,
+        deferredTail: {
+          total: 1,
+          due: 1,
+          deferred: 0,
+          expired: 0,
+        },
+      },
+    });
+    expect(progressUpdates.find((update) => update.stage === "complete")).toMatchObject({
+      metadata: {
+        providerFamily: "telegram-dispatch",
+        phase: "complete",
+        countTotals: {
+          pendingAttempted: 0,
+          pendingSent: 0,
+          pendingDeferred: 0,
+          pendingDropped: 0,
+        },
+        deferredTail: {
+          total: 1,
+          due: 1,
+        },
+      },
+    });
     expect(db.getHistory().some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(true);
   });
 

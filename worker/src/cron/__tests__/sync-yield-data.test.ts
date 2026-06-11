@@ -190,6 +190,7 @@ import { batchExecute } from "../../lib/db";
 import { getCache, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
+import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
@@ -198,6 +199,7 @@ import * as yieldConfigModule from "../yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";
+import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
 
 // --- Helpers ---
 
@@ -391,6 +393,45 @@ describe("syncYieldData", () => {
       Math.floor(Date.now() / 1000),
       undefined,
     );
+  });
+
+  it("reports writer-pause progress metadata before returning", async () => {
+    const db = makeDb();
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY) {
+        return {
+          value: JSON.stringify({
+            reason: "history-cleanup",
+            operator: "ops",
+            pausedAt: Math.floor(Date.now() / 1000) - 60,
+          }),
+          updatedAt: Math.floor(Date.now() / 1000) - 60,
+        };
+      }
+      return null;
+    });
+
+    const result = await syncYieldData(db, undefined, undefined, undefined, undefined, reportProgress);
+    const writerPaused = progressUpdates.find((update) => update.stage === "writer-paused");
+
+    expect(result.status).toBe("degraded");
+    expect(writerPaused).toMatchObject({
+      stage: "writer-paused",
+      metadata: {
+        providerFamily: "yield",
+        phase: "writer-paused",
+        writerPaused: true,
+        countTotals: {
+          yieldBearingCoins: expect.any(Number),
+          opportunityCoins: expect.any(Number),
+          totalTrackedForYield: expect.any(Number),
+        },
+      },
+    });
   });
 
   it("publishes evaluated warning signals into the yield rankings cache", async () => {

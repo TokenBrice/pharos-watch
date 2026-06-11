@@ -54,12 +54,13 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
         {
           job: "dispatch-telegram-alerts",
           errorMessage: "[cron] dispatch-telegram-alerts failed:",
-          run: (signal) =>
+          run: (signal, reportProgress) =>
             dispatchTelegramAlerts(
               runtime.db,
               runtime.env.TELEGRAM_BOT_TOKEN!,
               signal,
               sharedTelegramState,
+              reportProgress,
             ),
         },
         {

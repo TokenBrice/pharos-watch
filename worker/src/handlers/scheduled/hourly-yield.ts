@@ -5,13 +5,14 @@ import { runSingleScheduledJob } from "./slot-groups";
 export async function runHourlyYieldSlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "hourly yield slot", {
     job: "sync-yield-data",
-    run: (signal) =>
+    run: (signal, reportProgress) =>
       syncYieldData(
         runtime.db,
         signal,
         runtime.chainRpcs,
         runtime.coingeckoApiKey,
         runtime.env.ETHERSCAN_API_KEY ?? null,
+        reportProgress,
       ),
   });
 }
