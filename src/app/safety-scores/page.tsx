@@ -71,13 +71,6 @@ export default createClientFeaturePage({
     leadParagraphs: [
       "Letter grades from A+ to F computed from live reserve feeds, transitive dependency scoring, and redemption-backstop blending — not just market-cap rankings.",
     ],
-    headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
-        Each grade weights four base dimensions — liquidity / exit capacity, resilience, decentralization, and
-        dependency risk — then applies peg stability as a multiplier and caps wrapper or mechanism dependencies against
-        upstream scores. The contagion simulator shows exactly how a major failure cascades through collateral chains.
-      </p>
-    ),
   },
   afterClient: (
     <>

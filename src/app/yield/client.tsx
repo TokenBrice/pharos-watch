@@ -201,28 +201,6 @@ export function YieldClient() {
 
   const stats = viewModel.stats;
 
-  const ledeText = useMemo(() => {
-    if (visibleRows.length === 0) return "No yield rows match this view.";
-    const { ledeFacts, topYield, medianApy } = stats;
-    const aGrade = ledeFacts.aGradeAboveBenchmark;
-    const benchmarkLabel = ledeFacts.benchmarkLabel ?? "benchmark";
-    const lowGradeCount = ledeFacts.doubleDigitInLowGrade;
-    if (aGrade !== null && lowGradeCount > 0) {
-      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps; ${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
-    }
-    if (aGrade !== null) {
-      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps.`;
-    }
-    if (lowGradeCount > 0) {
-      return `${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
-    }
-    if (topYield) {
-      const grade = topYield.safetyGrade ? ` (${topYield.safetyGrade})` : "";
-      return `Top yield ${topYield.symbol} ${formatPercent(topYield.apy)}${grade}; median APY ${formatPercent(medianApy)}.`;
-    }
-    return "No notable yield highlights in this view.";
-  }, [stats, visibleRows.length]);
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -281,7 +259,6 @@ export function YieldClient() {
 
       <div className="flex flex-col gap-6">
         <section aria-label="Yield view highlights" className="order-1 space-y-4">
-          <p className="text-base leading-relaxed text-foreground">{ledeText}</p>
           {exhibitTiles === null ? (
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-5 text-center text-sm text-muted-foreground">
               No rows match your filters

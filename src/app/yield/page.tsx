@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { YieldLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
@@ -39,44 +38,17 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-const YIELD_STATIC_SECTION = (
-  <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-    <p className="pharos-kicker">Yield Is A Risk Surface</p>
-    <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
-      <p>
-        Raw APY is only the first number. A sustainable stablecoin yield should be compared against the stablecoin
-        safety grade, the relevant fiat benchmark, source freshness, and historical volatility.
-      </p>
-      <p>
-        Use{" "}
-        <Link
-          href="/safety-scores/"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-        >
-          Safety Scores
-        </Link>{" "}
-        to understand the issuer and dependency side, then use the yield table to see whether the APY premium pays
-        enough for that risk.
-      </p>
-      <p>
-        The page separates native yield, lending opportunities, rate-derived rows, and curated sources so a protocol
-        incentive is not confused with reserve-backed income.
-      </p>
-    </div>
-  </section>
-);
-
-const YIELD_CTA = (
-  <CalloutBanner>
+const YIELD_PICKER_NOTE = (
+  <p className="text-sm text-muted-foreground">
     Building a yield shortlist? Start from the yield profile in{" "}
     <Link
       href="/screener/picker/?p=yield"
       className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
     >
       Stablecoin Picker
-    </Link>{" "}
-    and come back here to verify source freshness and PYS.
-  </CalloutBanner>
+    </Link>
+    .
+  </p>
 );
 
 export default createClientFeaturePage({
@@ -93,20 +65,11 @@ export default createClientFeaturePage({
     leadParagraphs: [
       "Yield ranked against safety and real-world benchmarks — not just raw APY.",
     ],
-    headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
-        The Pharos Yield Score (PYS) balances 30-day APY against source risk, safety grades, benchmark spread, and
-        sustainability. A 15% APY on a D-grade stablecoin or thin source evidence scores lower than 5% on an A-grade.
-        Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine
-        or just risk compensation.
-      </p>
-    ),
   },
-  beforeClient: (
+  afterClient: (
     <>
-      {YIELD_STATIC_SECTION}
-      {YIELD_CTA}
+      {YIELD_PICKER_NOTE}
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </>
   ),
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });

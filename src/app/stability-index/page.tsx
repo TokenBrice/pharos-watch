@@ -51,13 +51,6 @@ export default createClientFeaturePage({
     leadParagraphs: [
       "A VIX for stablecoins: read the market regime before you trade.",
     ],
-    headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
-        PSI combines peg deviation severity, depeg breadth, DEWS stress breadth, and market-cap trend into a single
-        0–100 score. Mega-cap depegs are weighted disproportionately using log₂ amplifiers, and chronic zombie events
-        depreciate over time so the index reflects real systemic risk, not noise.
-      </p>
-    ),
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });

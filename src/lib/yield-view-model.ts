@@ -1,4 +1,4 @@
-import { getYieldBenchmarkDisplayLabel, resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
+import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
@@ -163,12 +163,6 @@ interface YieldRowFacet {
   inWatchlist: boolean;
 }
 
-export interface YieldViewModelLedeFacts {
-  aGradeAboveBenchmark: { count: number; bps: number } | null;
-  doubleDigitInLowGrade: number;
-  benchmarkLabel: string | null;
-}
-
 export interface YieldViewModelStats {
   avgApy: number;
   medianApy: number;
@@ -181,7 +175,6 @@ export interface YieldViewModelStats {
   warningRowCount: number;
   nullSafetyCount: number;
   nullTvlCount: number;
-  ledeFacts: YieldViewModelLedeFacts;
 }
 
 export interface YieldViewModel {
@@ -836,11 +829,6 @@ function computeRowCohortPercentile(
   return { value: percentile, cohortSize: bucket.size, cohortKey: key };
 }
 
-const LEDE_HIGH_GRADE = new Set(["A+", "A"]);
-const LEDE_LOW_GRADE = new Set(["C+", "C", "C-", "D", "F", "NR"]);
-const LEDE_HIGH_GRADE_SPREAD_THRESHOLD = 1.5;
-const LEDE_DOUBLE_DIGIT_THRESHOLD = 10;
-
 function buildStats(
   rows: readonly YieldViewModelRow[],
   options: BuildYieldViewModelOptions,
@@ -859,9 +847,6 @@ function buildStats(
   let warningRowCount = 0;
   let nullSafetyCount = 0;
   let nullTvlCount = 0;
-  let aGradeAboveBenchmarkCount = 0;
-  let aGradeMinSpread = Infinity;
-  let doubleDigitInLowGrade = 0;
   const apys: number[] = [];
 
   for (const row of rows) {
@@ -881,27 +866,9 @@ function buildStats(
     if (row.warningSignals.length > 0) warningRowCount += 1;
     if (row.safetyScore === null) nullSafetyCount += 1;
     if (row.sourceTvlUsd === null) nullTvlCount += 1;
-
-    const grade = row.safetyGrade;
-    if (grade !== null && LEDE_HIGH_GRADE.has(grade)) {
-      const benchmarkRate = row.benchmarkRate ?? benchmarkFrame.referenceBenchmark?.rate ?? null;
-      if (benchmarkRate !== null) {
-        const spread = row.apy30d - benchmarkRate;
-        if (spread >= LEDE_HIGH_GRADE_SPREAD_THRESHOLD) {
-          aGradeAboveBenchmarkCount += 1;
-          if (spread < aGradeMinSpread) aGradeMinSpread = spread;
-        }
-      }
-    }
-    if (row.apy30d >= LEDE_DOUBLE_DIGIT_THRESHOLD && grade !== null && LEDE_LOW_GRADE.has(grade)) {
-      doubleDigitInLowGrade += 1;
-    }
   }
 
   const median = computeMedian(apys);
-  const ledeBenchmarkLabel = benchmarkFrame.referenceBenchmark
-    ? getYieldBenchmarkDisplayLabel(benchmarkFrame.referenceBenchmark)
-    : null;
 
   return {
     avgApy: rows.length === 0 ? 0 : tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rows.length,
@@ -911,14 +878,6 @@ function buildStats(
     warningRowCount,
     nullSafetyCount,
     nullTvlCount,
-    ledeFacts: {
-      aGradeAboveBenchmark:
-        aGradeAboveBenchmarkCount > 0
-          ? { count: aGradeAboveBenchmarkCount, bps: Math.round(aGradeMinSpread * 100) }
-          : null,
-      doubleDigitInLowGrade,
-      benchmarkLabel: ledeBenchmarkLabel,
-    },
     ...benchmarkFrame,
   };
 }

@@ -103,14 +103,8 @@ export default function FreezeWatchClient() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "Live issuer freeze, release, and wipe events across supported stablecoin contracts.",
+        "Live issuer freeze, release, and wipe events — with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
       ]}
-      headerSupplement={(
-        <p className="pharos-lead hidden sm:block">
-          Use FreezeWatch to see affected addresses, chains, timing, current frozen value, and whether each asset has
-          direct or upstream freeze exposure.
-        </p>
-      )}
     >
       {focusedCoin ? (
         <CoinCrossTrackerHatnote
@@ -139,11 +133,7 @@ export default function FreezeWatchClient() {
         />
       ) : null}
 
-      <FreezeWatchSection
-        eyebrow="Exposure"
-        title="Who can freeze value"
-        description="Market-cap exposure and current frozen value in one summary."
-      >
+      <section className="space-y-3 animate-in fade-in duration-300">
         <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
           <FreezableSupplyMeter
             buckets={blacklistStatusBuckets}
@@ -159,7 +149,7 @@ export default function FreezeWatchClient() {
             onUnfreezableSelect={() => handleStatusBucketChange("no")}
           />
         </div>
-      </FreezeWatchSection>
+      </section>
 
       {statusBucket ? (
         <div ref={drilldownRef}>

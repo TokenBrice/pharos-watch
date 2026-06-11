@@ -71,8 +71,7 @@ export default createClientFeaturePage({
       icon={<Bell className="h-4 w-4" />}
       className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
     >
-      Tired of monitoring the situation? Let Pharos do it for you: get instant Telegram alerts for depeg events and DEWS
-      threat level changes.{" "}
+      Get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
       <Link
         href="/pharoswatchbot/#bot"
         className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
