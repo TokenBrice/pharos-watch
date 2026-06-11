@@ -248,7 +248,6 @@ export function projectMintAuthoritySummary(coin) {
           const {
             authorityType,
             directMintAbility,
-            label,
             threshold,
             signerCount,
             timelockDelaySec,
@@ -258,14 +257,16 @@ export function projectMintAuthoritySummary(coin) {
           if (typeof authorityType !== "string" || typeof directMintAbility !== "string") {
             return null;
           }
+          // Cross-coin surfaces only score and classify: control labels stay on the
+          // detail-page projection, and `canRaiseCap: "unknown"` is scoring-neutral,
+          // so neither ships in this payload.
           const controlSummary = { authorityType, directMintAbility };
-          if (typeof label === "string") controlSummary.label = label;
           if (typeof threshold === "number" && Number.isFinite(threshold)) controlSummary.threshold = threshold;
           if (typeof signerCount === "number" && Number.isFinite(signerCount)) controlSummary.signerCount = signerCount;
           if (typeof timelockDelaySec === "number" && Number.isFinite(timelockDelaySec)) {
             controlSummary.timelockDelaySec = timelockDelaySec;
           }
-          if (canRaiseCap === true || canRaiseCap === false || canRaiseCap === "unknown") {
+          if (canRaiseCap === true || canRaiseCap === false) {
             controlSummary.canRaiseCap = canRaiseCap;
           }
           if (typeof modulesOrGuardsStatus === "string") {

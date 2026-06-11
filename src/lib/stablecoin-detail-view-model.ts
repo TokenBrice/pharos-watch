@@ -49,8 +49,9 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
-import { getScoreColor, pegScoreColor, scoreToColorClass } from "@/lib/severity-colors";
+import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import {
+  mintAuthorityScoreTextClassName,
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
@@ -531,16 +532,6 @@ function formatMintAuthorityScoreValue(score: number | null): string {
   return score != null ? `${score}/100` : "NR";
 }
 
-function mintAuthorityScoreTextClass(score: number | null): string {
-  return scoreToColorClass(score, [
-    { min: 80, className: "text-emerald-700 dark:text-emerald-400" },
-    { min: 65, className: "text-blue-700 dark:text-blue-400" },
-    { min: 50, className: "text-amber-700 dark:text-amber-400" },
-    { min: 35, className: "text-orange-700 dark:text-orange-400" },
-    { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
-  ]);
-}
-
 function formatMintAuthorityCap(cap: string): string {
   return MINT_AUTHORITY_CAP_LABELS[cap] ?? cap.replaceAll("-", " ");
 }
@@ -581,7 +572,7 @@ function buildMintAuthorityScoreViewModel(
       label: MINT_AUTHORITY_SCORE_COMPONENT_LABELS[key],
       scoreLabel: formatMintAuthorityScoreValue(score),
       weightLabel: MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS[key],
-      textClassName: mintAuthorityScoreTextClass(score),
+      textClassName: mintAuthorityScoreTextClassName(score),
     };
   });
 

@@ -211,7 +211,9 @@ function finalizeResult(args: {
     bandLabel: band ? MINT_AUTHORITY_SCORE_BANDS[band].label : "NR",
     components: args.components,
     weakestControl: args.weakestControl,
-    capsApplied: args.capsApplied,
+    // Inherited results carry the parent's trace; a wrapper re-applying the
+    // same cap (e.g. unbounded-cap on both) must not list it twice.
+    capsApplied: [...new Set(args.capsApplied)],
     confidenceCap: args.confidenceCap,
     inheritedFromId: args.inheritedFromId ?? null,
     unresolvedReason: null,

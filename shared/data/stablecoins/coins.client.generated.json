@@ -34,9 +34,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Old Vector LLC issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -82,15 +80,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Pareto FalconX Credit Vault share token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "none",
-          "label": "Inherited USDC (Circle) issuer mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -139,9 +134,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Anemoy / Centrifuge fund issuance authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -189,15 +182,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "ACRED Securitize DSToken issuance surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "ACRED token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -254,26 +243,20 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "AEUR Ethereum token owner and proxy-admin owner Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "AEUR BSC token owner and proxy-admin owner Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "AEUR proxy admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -340,31 +323,23 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "AID Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "AID Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "AID default-admin Safe",
           "threshold": 3,
           "signerCount": 5,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "AID additional default-admin account",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -416,15 +391,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "AlchemistV2 (whitelisted minter)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "Alchemix DAO timelocked multisig (parameter governance)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -505,8 +476,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Apyx MinterV0 signed-order mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -554,15 +523,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "apyUSD ERC-4626 wrapper",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Inherited apxUSD signed-order mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -640,15 +605,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Aster Earn asUSDF wrapper token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Inherited USDF (Astherus) MINTER_AND_BURN_ROLE mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -717,9 +679,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "AUDC Pty Ltd issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -757,17 +717,13 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "AUDF default admin / MINT_ROLE Safe",
           "threshold": 2,
           "signerCount": 5,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "AUDF additional MINT_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -806,9 +762,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Macropod issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -851,9 +805,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento AUDm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -893,9 +845,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "TAU Pty Ltd issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -975,15 +925,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "unknown",
-          "label": "AUSD EVM role-gated mint implementation",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "AUSD Solana Token-2022 mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -1046,15 +992,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Alloy CMPVault (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "Tether PermissionControl whitelist + token admin",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -1121,15 +1063,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Avant avUSD AvantMintingV2 contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "Avant Protocol operations backend (MPC + policy engine)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -1166,9 +1104,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "AnchorX Ltd issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1240,9 +1176,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Mu Digital fund issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1285,9 +1219,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Backed Assets issuance / transfer-agent authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1401,9 +1333,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Franklin Templeton transfer-agent issuance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1445,9 +1375,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Binance BFUSD product ledger",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -1512,9 +1440,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Backed Assets issuance / transfer-agent authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1558,15 +1484,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Balanced Loans contract (CDP mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Balanced DAO governance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -1617,7 +1539,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "BOLD token / registered Liquity branch minters",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -1786,9 +1707,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "BRL1 consortium issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1827,9 +1746,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Avenia issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1872,9 +1789,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento BRLm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -1924,9 +1839,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Crown issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -1963,9 +1876,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Transfero issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -2006,15 +1917,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "BTCfi CDP vault (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "parameter-only",
-          "label": "BTCfi / Bifrost protocol admin",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -2064,15 +1971,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Buck Labs LiquidityWindow mint/refund desk",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "parameter-only",
-          "label": "PolicyManager / CollateralAttestation (off-chain STRC valuation)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -2133,21 +2036,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "BucketProtocol shared object holding BUCK TreasuryCap",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "Bucket admin cap owner",
           "canRaiseCap": true
         },
         {
           "authorityType": "unknown",
-          "directMintAbility": "upgrade-only",
-          "label": "Bucket package upgrade-cap owner",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "upgrade-only"
         }
       ]
     }
@@ -2210,15 +2108,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "BUIDL implementation issueTokens surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "BUIDL token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -2268,15 +2162,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Usual bUSD0 bond-leg token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "none",
-          "label": "Inherited USD0 (Usual) issuer mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -2314,9 +2205,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Loon (CADC) issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -2366,15 +2255,11 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "CADD Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "CADD default admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -2418,9 +2303,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento CADm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -2509,20 +2392,15 @@
       "controls": [
         {
           "authorityType": "unknown",
-          "directMintAbility": "direct",
-          "label": "CASH Token-2022 mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "unknown",
-          "directMintAbility": "parameter-only",
-          "label": "CASH permanent delegate / close / confidential-transfer authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "none",
-          "label": "CASH freeze authority",
           "canRaiseCap": false
         }
       ]
@@ -2561,15 +2439,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Enosys Loans CDP contract (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "parameter-only",
-          "label": "Enosys protocol admin",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -2608,7 +2482,6 @@
         {
           "authorityType": "safe",
           "directMintAbility": "cap-limited",
-          "label": "cdxUSD active facilitator Safe",
           "threshold": 3,
           "signerCount": 9,
           "canRaiseCap": false,
@@ -2617,14 +2490,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "cdxUSD owner contract",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "parameter-only",
-          "label": "cdxUSD guardian Safe",
           "threshold": 1,
           "signerCount": 8,
           "canRaiseCap": false,
@@ -2670,9 +2541,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Etherfuse issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -2764,10 +2633,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Mento EURm token owner Safe",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -2804,9 +2671,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "ComTech Gold issuance/tokenization backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -2898,15 +2763,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Cygnus accounting oracle/rebase + reserve custodian",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "cgUSD vault owner (mint/pause admin)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -2971,15 +2832,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "CHFAU Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "CHFAU default admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -3023,10 +2880,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Mento CHFm token owner Safe",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -3068,15 +2923,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Yamato pledge contract (ETH CDP mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Yamato DAO (YMT/veYMT) governance and upgrade authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -3120,9 +2971,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Africa Stablecoin Consortium issuance backend (multi-party authorized)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -3165,9 +3014,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento COPm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -3223,14 +3070,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "crvUSD ControllerFactory",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "crvUSD ControllerFactory admin",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -3314,15 +3159,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -3419,8 +3260,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "Cap cUSD vault mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -3514,10 +3353,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Mento USDm token owner Safe",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -3566,15 +3403,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "OpenEden cUSDO wrapper token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Inherited USDO (OpenEden) MINTER_ROLE mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -3669,14 +3503,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "DaiJoin token adapter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Maker/Sky Pause Proxy governance executor",
           "timelockDelaySec": 172800,
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
@@ -3734,15 +3566,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Frankencoin-style minting module (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "can-authorize",
-          "label": "nDEPS veto governance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -3779,9 +3607,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Gold Token SA issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -3819,15 +3645,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Djed autonomous bank contract (reserve mint/burn)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "parameter-only",
-          "label": "COTI / IOG operator (oracle and parameters)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -3872,15 +3694,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Mynt MassetManager (1:1 aggregator mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "can-authorize",
-          "label": "Sovryn DAO (basket governance)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -3918,15 +3736,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Money On Chain MoC contract (rBTC mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "can-authorize",
-          "label": "Money On Chain DAO governance (Governor/Changer, proxy-upgradeable)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -4002,8 +3816,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "DOLA token operator",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4068,21 +3880,15 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Alto isolated mint markets (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Alto DUSD/USDC PSM",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Alto governance and admin executors",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -4190,15 +3996,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "AMO/SMO peg operations controller",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "dTRINITY contributor governance (pre-TGE)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4235,9 +4037,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "cap-limited",
-          "label": "Fluid Finance issuance + reserve-balance oracle",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         }
       ]
     },
@@ -4286,15 +4086,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "StandX Gateway mint/redeem contract",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
-          "label": "StandX Settler / backend + RSV Fund multisig",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4360,15 +4156,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Ebisu CDP branch contracts (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "parameter-only",
-          "label": "Ebisu protocol admin / governance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -4440,9 +4232,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Telcoin Digital Cash issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -4581,15 +4371,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "EUR0 token proxy / protocol mint route",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "upgrade-only",
-          "label": "EUR0 EIP-1967 proxy admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4649,15 +4435,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "AllUnity issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "EURAU Ethereum token proxy",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4726,15 +4508,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Ethereum EURC MasterMinter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Ethereum EURC token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -4794,15 +4572,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "SG-FORGE issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "EURCV Ethereum token proxy",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -4863,17 +4637,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Monerium issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "EURE token owner Safe",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -4950,21 +4720,16 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Banking Circle issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "EURI Ethereum token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "EURI EIP-1967 proxy admin",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5020,15 +4785,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "3A Vault contracts (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "3A DAO governance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -5087,15 +4848,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Membrane/Paxos MINTER_ROLE backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
-          "label": "Admin / proxy-owner role (UUPS upgrade authority)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -5155,17 +4912,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Schuman issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "EUROP token owner Safe",
           "threshold": 3,
           "signerCount": 4,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -5213,15 +4966,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Token Teknoloji issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "EUROT Avalanche token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -5285,16 +5034,13 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "EURQ Ethereum owner mint authority",
           "threshold": 3,
           "signerCount": 5,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "upgrade-only",
-          "label": "EURQ EIP-1967 proxy admin",
           "threshold": 3,
           "signerCount": 5,
           "modulesOrGuardsStatus": "not-applicable"
@@ -5382,16 +5128,13 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "EURR Ethereum owner mint authority",
           "threshold": 2,
           "signerCount": 2,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "upgrade-only",
-          "label": "EURR EIP-1967 proxy admin",
           "threshold": 1,
           "signerCount": 1,
           "modulesOrGuardsStatus": "not-applicable"
@@ -5451,9 +5194,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "STASIS / STSS (Malta) treasury and issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -5495,15 +5236,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Spiko daily-operator relayer (minter)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Spiko super-admin multisig",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5552,15 +5289,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "EURSPKCC token restricted mint/burn",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Spiko authority policy contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5633,16 +5366,12 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "RToken contract (permissionless basket mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "parameter-only",
-          "label": "eUSD Governor + TimelockController (basket governance)",
-          "timelockDelaySec": 604800,
-          "canRaiseCap": "unknown"
+          "timelockDelaySec": 604800
         }
       ]
     },
@@ -5713,9 +5442,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Telcoin Digital Asset Bank issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -5764,15 +5491,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "EUTBL token restricted mint/burn",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Spiko authority policy contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5857,10 +5580,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "FDUSD token owner Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -5907,15 +5628,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Felix CDP branch contracts (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "Felix admin multisig (parameters, caps, pause)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -5991,15 +5708,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Fidelity issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "FIDD Ethereum token proxy",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -6159,14 +5872,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "FPI Controller Pool",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "FPI Comptroller Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -6254,14 +5965,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "FRAX AMO Minter",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Frax Comptroller Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -6359,42 +6068,36 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "frxUSD-USDB Custodian Proxy",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "frxUSD-WTGXX Custodian Proxy",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "frxUSD-BUIDL Custodian Proxy",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "frxUSD-USDC Custodian Proxy",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "frxUSD-USTB Custodian Proxy",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Frax Comptroller Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -6445,14 +6148,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "ftUSD minter contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "ftUSD token owner / masterMinter",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -6529,15 +6229,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "FinChain issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "upgrade-only",
-          "label": "FUSD EIP-1967 proxy admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -6605,15 +6301,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Fathom CDP contracts (collateral mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Fathom (FTHM) DAO governance",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -6660,15 +6352,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "f(x) fxSAVE vault receipt token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Inherited fxUSD CDP mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -6717,15 +6406,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "f(x) Protocol vault/minter contracts",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "f(x) Protocol governance / parameter admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -6782,17 +6467,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Monerium issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "GBPe token owner Safe",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -6836,7 +6517,6 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Mento GBPm token owner / proxy admin Safe",
           "threshold": 4,
           "signerCount": 7,
           "canRaiseCap": true,
@@ -6883,15 +6563,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Spiko daily-operator relayer (minter)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Spiko super-admin multisig",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -6956,9 +6632,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Goldfish Gold / I-On Digital issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -7031,49 +6705,42 @@
         {
           "authorityType": "dao-governor",
           "directMintAbility": "can-authorize",
-          "label": "GHO token facilitator registry",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "CoreGhoDirectMinter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "FlashMinter Facilitator",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "GhoDirectFacilitator Plasma",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "GhoDirectFacilitator GSMs Mainnet",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "LidoGhoDirectMinter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "HorizonGhoDirectMinter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -7119,15 +6786,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Mento V3 borrower/minter contracts",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Mento DAO governance / stablecoin contract owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7167,15 +6830,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "GLDT swap canister (minter)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "upgrade-only",
-          "label": "Gold DAO SNS governance (canister controller)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7217,9 +6876,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Streamex Ltd issuance backend (compliance-gated)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -7258,15 +6915,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Token Teknoloji issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "GRAMG Avalanche token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7306,15 +6959,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Token Teknoloji issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "GRAMS Avalanche token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7363,13 +7012,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Gauntlet USDC Prime V1 MetaMorpho vault",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Inherited Ethereum USDC MasterMinter",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -7418,13 +7065,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Gauntlet USDC Prime Ethereum MetaMorpho V2 vault",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Inherited Ethereum USDC MasterMinter",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -7509,15 +7154,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Gate issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Gate GUSD Ethereum token proxy",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -7600,15 +7241,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "GUSD custodian contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "GUSD current implementation",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7680,21 +7317,18 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "cap-limited",
-          "label": "GYEN current minter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "GYEN owner",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "GYEN admin",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -7774,15 +7408,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Hive conversion mechanism (protocol-level mint/burn)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Hive witness consensus set (parameter governance)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -7833,16 +7463,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Hyperbeat hbUSDT vault token",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "Inherited Ethereum USDT token owner multisig",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -7884,7 +7511,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "HLiquity protocol supply key (Trove borrowing)",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -8094,15 +7720,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "HLSCOPE Securitize DSToken issuance surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "HLSCOPE token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8142,15 +7764,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "HeLa MintProposer/MintVoter quorum",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
-          "label": "HeLa Admin role",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -8220,15 +7838,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Hydration Aave-v3 fork money market (minter)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Hydration governance / parameter admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8271,15 +7885,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Bacon Protocol Pan lending/mint contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "BACON governance / licensed servicers",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -8358,15 +7968,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "HoneyFactory mint hub",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Berachain governance (collateral whitelist & rate admin)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8410,15 +8016,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Hylo collateral pool program (minter)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "Hylo program upgrade/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8456,9 +8058,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Ondo Global Markets issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -8494,9 +8094,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "PT Rupiah Token Indonesia issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -8535,15 +8133,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "PT IDRX issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "IDRX role/upgrade multisig + 24h timelock admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -8599,15 +8193,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Nest Alpha Vault minter (BoringVault Teller/Manager)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Nest / Plume Foundation vault manager",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -8668,9 +8258,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "ISC Reserve / team SPL mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -8712,14 +8300,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Inter Protocol vaults + PSM (minter contracts)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "BLD stakers + Economic Committee governance",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -8759,15 +8344,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Indigo CDP minting validators",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Indigo INDY DAO governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8871,8 +8452,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "IUSD receipt-token minter role",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -8913,8 +8492,6 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "Initia AUSD LayerZero bridge / OFT endpoint",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -8964,15 +8541,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Centrifuge pool/Hub manager (share issuance)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Anemoy / Janus Henderson issuer rail",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9013,8 +8586,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "JPYC v1 owner/minter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9053,21 +8624,17 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "JPYC regulated Ethereum proxy mint surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "JPYC minterAdmin contract",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "JPYC minterAdmin owner Safe",
           "threshold": 2,
           "signerCount": 3,
           "canRaiseCap": true,
@@ -9076,7 +8643,6 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "JPYC token owner Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -9123,10 +8689,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Mento JPYm token owner Safe",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -9224,8 +8788,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -9275,15 +8837,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Centrifuge pool/Hub manager (share issuance)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Anemoy / Janus Henderson issuer rail",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9358,15 +8916,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "JupUSD mint/redeem program (whitelisted minters)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "Ethena Labs issuance backend / reserve operator",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -9411,15 +8965,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "JUSD Frankencoin-style minter registry",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "JUICE pool-share holder veto governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9458,9 +9009,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "JUSD issuer mint/burn authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9497,9 +9046,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Kinesis issuance backend (silver allocation)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9536,9 +9083,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Kinesis issuance backend (gold allocation)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9582,9 +9127,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento KESm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -9624,9 +9167,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "KGST issuer backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -9842,8 +9383,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -9901,15 +9440,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "KRWQ issuer mint (whitelisted institutions)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "bridge",
-          "directMintAbility": "can-authorize",
-          "label": "LayerZero OFT v2 cross-chain transport",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -9983,20 +9518,17 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "LISUSD MINTER role",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "LISUSD hard-coded default admin",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "upgrade-only",
-          "label": "LISUSD EIP-1967 proxy admin",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10040,8 +9572,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10083,14 +9613,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Liquity v1 BorrowerOperations",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Liquity v1 TroveManager",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -10136,15 +9664,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "LeverUp VMMV trading-engine (minter)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "LeverUp protocol admin multisig",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10220,15 +9744,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "M0 Solana Portal",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10269,14 +9789,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "QiDao vault/minter contracts",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "QiDao governance + admin multisig",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -10321,15 +9838,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Midas mint operator (role-gated mint)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Midas DEFAULT_ADMIN_ROLE (MidasAccessControl)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10372,14 +9885,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Mezo MUSD borrower/CDP mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "MUSD token owner Safe",
           "threshold": 5,
           "signerCount": 9,
           "modulesOrGuardsStatus": "none-detected"
@@ -10387,7 +9897,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "MUSD Wormhole NTT manager",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -10433,8 +9942,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10479,8 +9986,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10523,8 +10028,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10594,10 +10097,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "MIM owner Safe",
           "threshold": 5,
           "signerCount": 10,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -10641,8 +10142,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10682,8 +10181,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Moneta Digital minter role (ERC20Mintable)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10759,7 +10256,6 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "MNEE minter validator set",
           "threshold": 3,
           "signerCount": 4,
           "modulesOrGuardsStatus": "not-applicable"
@@ -10767,13 +10263,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "MNEE token admin",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "MNEE EIP-1967 proxy admin",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -10813,14 +10307,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "defi.money market controllers (crvUSD-style minter)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "defi.money governance / admin",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -10882,9 +10373,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "CFX Labs issuance backend (SPL mint authority)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -10926,8 +10415,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -10968,20 +10455,17 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "MSUSD configured minter / stakedmsUSD",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "MSUSD Ethereum owner",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "MSUSD Sonic owner",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -11044,15 +10528,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Metronome Synth pool/minter contracts",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Metronome DAO governance / parameter admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -11100,23 +10580,18 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "msY ERC-4626-style wrapper",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "parameter-only",
-          "label": "msY owner Safe",
           "threshold": 3,
           "signerCount": 4,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Inherited MSUSD mint surface",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -11193,8 +10668,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Midas issuance manager (M_TBILL_MINT_OPERATOR_ROLE / DepositVault)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -11269,22 +10742,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -11325,8 +10792,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
-          "label": "MXNB masterMinter / issuer minter roles (Nvio/Bitso)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -11397,9 +10862,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Brale issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -11437,9 +10900,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Blox-controlled minter key",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -11488,15 +10949,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Nest Basis Vault Teller (issuance/redemption)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Nest Basis Vault Manager (strategy/admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -11557,15 +11014,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "NECT token / registered Beraborrow branch minters",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Beraborrow protocol admin / governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -11621,15 +11074,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -11685,15 +11134,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Nest Treasury Vault Teller (issuance/redemption)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Nest Treasury Vault Manager (strategy/admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -11747,15 +11192,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "NUSD StableMinter MINTER_ROLE",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "NUSD DEFAULT_ADMIN_ROLE (token admin)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -11809,8 +11250,6 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "direct",
-          "label": "Synapse bridge mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -11860,15 +11299,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Nest Wisdom Vault Teller (issuance/redemption)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Nest Wisdom Vault Manager (strategy/admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -11921,15 +11356,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Nereus NXUSD minter / CDP contracts",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Nereus governance (NRS / veNRS DAO + team multisig)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -11998,9 +11429,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "OnRe issuance/redemption programs (Solana)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -12064,14 +11493,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "OUSD Vault (user mint/redeem)"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Origin Governor / Strategist (AMO + strategy admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -12149,15 +11575,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "OUSG_InstantManager",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "OUSG token default-admin holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -12228,9 +11650,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "pathUSD TIP-20 token administrator (Tempo/Bridge)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -12268,15 +11688,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "PAXG supplyController",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "PAXG token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -12315,9 +11731,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Tradable issuance/deal-representation contracts (zkSync)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -12354,9 +11768,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Tradable issuance/deal-representation contracts (zkSync)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -12393,9 +11805,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Tradable issuance/deal-representation contracts (zkSync)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -12432,9 +11842,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Tradable issuance/deal-representation contracts (zkSync)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -12471,9 +11879,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Pleasing International issuance program (role-gated)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -12574,9 +11980,7 @@
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento PHPm token owner Timelock",
           "timelockDelaySec": 172800,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -12618,15 +12022,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "APACX PHT vault/CDP mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -12665,8 +12065,6 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "RAAC RWf(x) silo manager / security admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -12732,14 +12130,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Nucleus BoringVault Teller (predicate proxy, OFAC-gated mint)",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "BoringVault Manager / Strategist (Plume-controlled)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -12832,7 +12227,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Polymarket CollateralOnramp (wrap, admin-pausable)",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -12944,15 +12338,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "PYUSD SupplyControl contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "PYUSD SupplyControl owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -12991,9 +12381,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Stablecorp issuance backend (servicer to QCAD Digital Trust)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -13032,9 +12420,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "RIB Digital Holdings issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -13119,13 +12505,11 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "reUSD default admin and upgrader",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "reUSD default admin",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -13186,8 +12570,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -13333,8 +12715,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -13516,14 +12896,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Reservoir USDC Peg Stability Module",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "Reservoir Credit Enforcer",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -13652,9 +13029,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "RIB / Royal Coins issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -13707,9 +13082,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Multipli rwaUSDi issuance/peg module",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -13752,7 +13125,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Spiko token minter role (governed by Permission Manager)",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -13803,8 +13175,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sAID ERC-4626 wrapper",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -13861,15 +13231,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "River omni-CDP borrower-operations / OFT mint",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "RIVER governance / cross-chain OFT peer admin",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -13917,15 +13283,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "savUSD savings vault (share accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
-          "label": "Inherited avUSD issuer mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -13991,9 +13353,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Brale issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -14045,17 +13405,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sBOLD wrapper token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "parameter-only",
-          "label": "K3 sBOLD owner Safe",
           "threshold": 2,
           "signerCount": 3,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -14104,7 +13461,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "scrvUSD ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14149,17 +13505,13 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Veda/Paladin governance multisig (BoringVault role admin)",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Veda BoringVault Teller (scUSD share mint on deposit)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -14206,7 +13558,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sDAI ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14257,7 +13608,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sDOLA ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14305,15 +13655,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "dSTAKE sdUSD vault (share accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "multisig",
-          "directMintAbility": "none",
-          "label": "Inherited dUSD AMO/governed-reserve mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -14362,13 +13708,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sfrxUSD wrapper token",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Inherited Frax Comptroller Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -14420,7 +13764,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sGHO savings wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14474,15 +13817,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "ShadeLend CDP / SILK minter contract",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "ShadeDAO governance assemblies (multisig branches)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -14519,9 +13858,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Ondo Global Markets issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -14625,9 +13962,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "BitGo issuance backend (Stablecoin-as-a-Service for SoFi)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -14675,15 +14010,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "SPKCC token restricted mint/burn",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Spiko authority policy contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -14723,15 +14054,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "SoulPeg spUSD wrapper (MINTER_ROLE / BURNER_ROLE)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "SoulPeg operator (sUSDC issuance + Venus routing + MM bot)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -14778,13 +14105,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Reservoir Savings Module",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "Inherited Reservoir Credit Enforcer",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -14834,7 +14159,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "srUSDe ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14880,15 +14204,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "STAC Securitize DSToken issuance surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "STAC token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -14936,7 +14256,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "stcUSD ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -14986,7 +14305,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "steakUSDC MetaMorpho vault",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15037,7 +14355,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "steakUSDT MetaMorpho vault",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15085,7 +14402,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "stkGHO Umbrella wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15134,15 +14450,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "StoneYield stUSD deposit mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "StoneYield stUSD reward/emergency admin controls",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -15188,7 +14500,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "stUSDS ERC-4626 wrapper",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15230,15 +14541,11 @@
       "controls": [
         {
           "authorityType": "unknown",
-          "directMintAbility": "direct",
-          "label": "suiUSDe Sui TreasuryCap mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
-          "label": "Ethena economic/backing dependency",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     }
@@ -15283,15 +14590,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "HedgeCore sUSD token (MINTER_ROLE / BURNER_ROLE)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "HedgeCore operator (deposit / Venus strategy / redemption)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -15365,15 +14668,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Solayer sUSD Token-2022 mint/freeze/rate authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "unknown",
-          "directMintAbility": "upgrade-only",
-          "label": "Solayer sUSD program upgrade authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "upgrade-only"
         }
       ]
     },
@@ -15427,15 +14726,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Synthetix V3 / 420-pool minting contracts",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Synthetix governance (SIP process / DAO)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -15485,15 +14780,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sUSD1+ wrapper token",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Inherited USD1 token owner/controller",
           "timelockDelaySec": 259200,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -15546,15 +14838,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "sUSDai staking vault (share accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "Inherited USDai permissioned mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -15601,14 +14889,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Spark Savings USDC vault",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Inherited Ethereum USDC MasterMinter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -15656,14 +14941,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "sUSDD Ethereum wrapper",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Inherited USDD privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -15713,14 +14995,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Ethereum sUSDe staking wrapper",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Inherited USDe token minter contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -15770,13 +15049,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Sky Savings USDS vault",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Inherited USDS_JOIN token adapter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15825,16 +15102,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Spark Savings USDT vault",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "Inherited Ethereum USDT token owner multisig",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -15884,13 +15158,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Noon sUSN wrapper",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Inherited USN MinterHandlerV2",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -15940,22 +15212,17 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Maple syrupUSDC ERC-4626 vault token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Inherited USDC MasterMinter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Inherited USDC token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -16004,17 +15271,14 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Maple syrupUSDT ERC-4626 vault token",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "Inherited USDT (Tether) issuer mint path",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -16063,13 +15327,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Aegis sYUSD wrapper",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Inherited AegisMinting",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -16116,15 +15378,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "syzUSD ERC-4626 staking vault (share accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Inherited yzUSD permissioned mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -16189,9 +15447,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "OpenEden fund issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -16229,8 +15485,6 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -16319,20 +15573,16 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "tGLD minter (Tenbin backend signer)",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Owner multisig (DEFAULT_ADMIN_ROLE)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "Dev multisig (cap adjuster + signer manager)",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -16376,9 +15626,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Theo Network issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -16475,9 +15723,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "BiLira issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -16547,17 +15793,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "TUSD token controller",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "TUSD controller owner Safe",
           "threshold": 2,
           "signerCount": 3,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -16619,10 +15861,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "U token owner Safe",
           "threshold": 2,
           "signerCount": 4,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -16672,15 +15912,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "UKTBL token restricted mint/burn",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Spiko authority policy contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -16760,7 +15996,6 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "USAT owner-only minter",
           "threshold": 3,
           "signerCount": 5,
           "modulesOrGuardsStatus": "unknown"
@@ -16808,15 +16043,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "BIMA BorrowerOperations (Liquity-v1 fork)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "BimaCore governance / parameter admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -16962,22 +16193,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Usual DaoCollateral",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Usual SwapperEngine",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "USUAL governance / collateral admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17066,19 +16291,15 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USD1 token owner/controller",
           "timelockDelaySec": 259200,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "USD1 controller default-admin Safe",
           "threshold": 3,
           "signerCount": 6,
           "timelockDelaySec": 259200,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -17146,15 +16367,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "USD3 RToken mint/redeem (BasketHandler)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "RSR stakers / RToken Governor (Governor Anastasius)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -17193,8 +16410,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDA MINT role-gated token contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -17263,9 +16478,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Anzens issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -17315,19 +16528,16 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "USDa MINT_ROLE holder",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "USDa MINT_ROLE holder",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "USDa default/admin role holder",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17402,7 +16612,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -17473,15 +16682,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "USDai deposit/mint contract (KYC-gated deposit())",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "STRATEGY_ADMIN_ROLE (multisig)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17554,15 +16759,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -17606,15 +16807,11 @@
       "controls": [
         {
           "authorityType": "bridge",
-          "directMintAbility": "direct",
-          "label": "Blast USDYieldManager (L1 stablecoin escrow/yield manager)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "multisig",
-          "directMintAbility": "can-authorize",
-          "label": "Blast bridge operators (Blast multisig)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     },
@@ -17813,15 +17010,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Ethereum USDC MasterMinter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Ethereum USDC token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -17904,9 +17097,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "SG-FORGE issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -17946,15 +17137,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "Circle xReserve mint/redeem wrapper (USDCx 1:1 against locked USDC)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
-          "label": "Inherited Circle USDC issuer mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     }
@@ -18044,15 +17231,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDD Join token ward / direct minter",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "parameter-only",
-          "label": "USDD governance / Pause / Vat administration",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18129,17 +17312,13 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "USDe token minter contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "USDe token owner Safe",
           "threshold": 5,
           "signerCount": 10,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -18191,14 +17370,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDF token MINTER_AND_BURN_ROLE",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "can-authorize",
-          "label": "USDF owner / default-admin path",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18285,10 +17461,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "USDf default admin Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -18453,15 +17627,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDG SupplyControl contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "USDG SupplyControl owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -18530,9 +17700,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Brale issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -18610,7 +17778,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "USDGO Token-2022 mint authority and permanent delegate",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18649,15 +17816,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
-          "label": "Hermetica trader / minting backend (confirm-mint)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "can-authorize",
-          "label": "Minter whitelist (KYC/KYB gate)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -18694,15 +17857,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Hubble borrowing-market program (USDH mint authority)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Hubble governance (HBB / collateral whitelisting + program admin)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -18786,9 +17945,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Bridge (Stripe) issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -18863,22 +18020,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "M0 Solana Portal",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "USDK Token-2022 mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -18936,7 +18087,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -19008,9 +18158,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Gold Dollar issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -19091,15 +18239,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "USDM USDtb-rails representation (share accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
-          "label": "Inherited USDtb off-chain attested mint authority",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -19197,9 +18341,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Moneta / NBX issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -19275,15 +18417,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "M0 Noble Portal",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -19328,8 +18466,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -19379,15 +18515,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -19480,22 +18612,17 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "USDO default admin and minter EOA",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDOExpressV2",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USDOBurnMintTokenPool",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19565,9 +18692,7 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Ondo Global Markets issuance backend",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     },
@@ -19649,15 +18774,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "Parallelizer module (Angle Transmuter fork, diamond proxy)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Parallel DAO governor (PRL/sPRL) + guardian multisig",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -19758,15 +18879,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Paxos issuer-operated mint/redeem authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "unknown",
-          "label": "Ethereum USDP token",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -19987,14 +19104,11 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "USDQ Ethereum owner mint",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "USDQ Ethereum owner",
           "threshold": 3,
           "signerCount": 5,
           "modulesOrGuardsStatus": "unknown"
@@ -20002,7 +19116,6 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "unknown",
-          "label": "USDQ Polygon owner",
           "threshold": 2,
           "signerCount": 5,
           "modulesOrGuardsStatus": "unknown"
@@ -20063,15 +19176,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "Quill AccessManager / UUPS authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -20111,15 +19220,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "USDR Minter role (Core-gated)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Ring Protocol Core / Governor-Guardian",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -20229,19 +19334,15 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "USDR token owner",
           "threshold": 2,
           "signerCount": 2,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "upgrade-only",
-          "label": "USDR EIP-1967 proxy admin",
           "threshold": 1,
           "signerCount": 1,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -20281,15 +19382,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "RIF On Chain (MoC) mint/redeem contracts",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "MoC Governor / Changer governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -20380,14 +19477,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "USDS_JOIN token adapter",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "can-authorize",
-          "label": "Sky Pause Proxy governance executor",
           "timelockDelaySec": 172800,
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
@@ -20466,15 +19561,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 SwapFacility extension router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -20542,8 +19633,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Bridge Open Issuance mint/burn backend",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -20661,10 +19750,8 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "Ethereum USDT token owner multisig",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -20737,15 +19824,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "USDtb MINTER_BURNER_ROLE mint/burn authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "USDtb DEFAULT_ADMIN_ROLE",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -20799,8 +19882,6 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Privileged token mint/admin authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -20849,15 +19930,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "Whitelisted USDU adapters (Curve / TermMax / Morpho)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize",
-          "label": "USDU DAO / curator (adapter whitelist authority)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -20894,15 +19971,11 @@
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "Solomon direct mint/burn permission (approved participants)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "custodian",
           "directMintAbility": "none",
-          "label": "Ceffu custodian (backing collateral)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -20969,22 +20042,16 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "USDX active MINTER_ROLE EOA",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "USDX active MINTER_ROLE EOA",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "USDX default admin / upgrade admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -21022,15 +20089,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Kava x/cdp module (USDX mint)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Kava on-chain governance + Stability Committee (KAVA)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -21083,15 +20146,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "HypurrFi / Last governance (ACL admin multisig)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -21160,10 +20219,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "USDY default admin / minter Safe",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -21239,15 +20296,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Anzen issuer / Qualified Market Maker mint",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
-          "label": "SPCT permissioned collateral token (Percent-underwritten private credit)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -21323,14 +20376,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "USG token role-gated mint functions",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Tangent owner Safe",
           "threshold": 3,
           "signerCount": 4,
           "canRaiseCap": true,
@@ -21425,14 +20475,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "USN MinterHandlerV2",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "Noon admin Safe",
           "threshold": 3,
           "signerCount": 6,
           "canRaiseCap": true,
@@ -21500,7 +20548,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Nerite BorrowerOperations / CollateralRegistry (immutable Liquity-v2 fork)",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -21556,14 +20603,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "ParetoDollar collateral mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Pareto owner Safe",
           "threshold": 3,
           "signerCount": 8,
           "canRaiseCap": true,
@@ -21627,15 +20671,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "Piku Funding Manager",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "USP token owner EOA",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -21713,15 +20753,11 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Resolv SERVICE_ROLE off-chain minting signer",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
-          "label": "Admin / role-management multisig",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -21800,15 +20836,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "frxUSD-based USSD mint/redeem contract",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "custodian",
           "directMintAbility": "can-authorize",
-          "label": "Sonic Labs / Frax reserve custodian + treasury management",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -21883,15 +20915,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USTB token proxy",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "USTB token owner / ProxyAdmin owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -21941,15 +20969,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USTBL token restricted mint/burn",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Spiko authority policy contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -21988,14 +21012,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USX MSD token minter registry",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "USX token owner",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -22043,13 +21064,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "USX SPL mint and freeze authority",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "upgrade-only",
-          "label": "Solstice USX program upgrade authority",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22114,8 +21133,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22167,15 +21184,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "UTY management smart contract role holder",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "UTY DEFAULT_ADMIN_ROLE / owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -22215,17 +21228,13 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "UUSD owner Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "UUSD proxy-admin ownership chain",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22279,15 +21288,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Youves minting engine / vault contracts",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "Youves DAO contract (YOU governance) + break-glass guardian",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -22335,15 +21340,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "VBILL Securitize DSToken issuance surface",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "VBILL token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -22402,14 +21403,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "VCHF VNX token minter role",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "VNX owner/RBAC admin path",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -22452,8 +21450,6 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "vCRED token owner",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22510,14 +21506,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "VEUR VNX token minter role",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "VNX owner/RBAC admin path",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -22575,15 +21568,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "VGBP owner/minter admin EOA",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "label": "VGBP proxy admin contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22624,8 +21613,6 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -22681,14 +21668,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "VNXAU VNX token minter role",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "VNX owner/RBAC admin path",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -22728,15 +21712,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited",
-          "label": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "parameter-only",
-          "label": "Virtue Money admin (multisig)",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22776,29 +21756,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WARS admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WARS secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WARS secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WARS secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22839,29 +21811,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WBRL admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WBRL secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WBRL secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WBRL secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22901,29 +21865,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WCLP admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WCLP secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -22963,29 +21919,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WCOP admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WCOP secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23031,8 +21979,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "WEMIX Authorized Mint Access (AMA) holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present"
         }
       ]
@@ -23073,15 +22019,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "PicWe WEUSD DEFAULT_ADMIN_ROLE and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "PicWe WEUSD mint/redeem contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23123,15 +22065,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Brix issuer (institutional primary iTRY mint / NAV supply expansion)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "wiTRY staking wrapper (NAV accrual accounting)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -23177,20 +22115,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Wrapper/share accounting",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Inherited M0 MinterGateway",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Solana Wrapped M Token-2022 program",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23231,29 +22165,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WMXN admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WMXN secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23293,29 +22219,21 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "Ripio shared WPEN admin and MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "WPEN secondary DEFAULT_ADMIN_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23388,7 +22306,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "wsrUSD wrapper share accounting",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -23470,15 +22387,11 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "WTGXX Ethereum REGISTRAR_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "WTGXX default admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -23559,29 +22472,21 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WUSD Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "direct",
-          "label": "WUSD Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "WUSD Ethereum MINTER_ROLE holder",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "WUSD default admin",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -23621,14 +22526,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "XAGm MToken operator mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Matrixdock token owner",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -23674,10 +22576,8 @@
         {
           "authorityType": "safe",
           "directMintAbility": "direct",
-          "label": "XAI token owner Safe",
           "threshold": 3,
           "signerCount": 4,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
@@ -23716,21 +22616,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "XAUm MToken operator mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "XAUm receipt NFT mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "Matrixdock token owner",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -23771,17 +22666,13 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "XAUT token onlyOwner mint",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "XAUT owner legacy multisig",
           "threshold": 3,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -23824,10 +22715,8 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "Gnosis xDAI native bridge/accounting route",
           "threshold": 4,
           "signerCount": 7,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -23914,15 +22803,11 @@
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "Metal DAO (MTL) basket governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "direct",
-          "label": "XMD treasury mint/redeem contract",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -23961,15 +22846,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "XNK legacy mintable token",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "XNK owner contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24048,22 +22929,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "M0 MinterGateway backing rail",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "label": "M0 Solana Portal",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct",
-          "label": "XO Solana mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24107,14 +22982,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "XOFm StableTokenV2 mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "timelock",
           "directMintAbility": "can-authorize",
-          "label": "Mento Timelock",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -24186,14 +23058,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "XSGD token MasterMinter path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "XSGD MasterMinter Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -24202,7 +23071,6 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "StraitsX token owner Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -24211,10 +23079,8 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "StraitsX Solana mint authority",
           "threshold": 3,
           "signerCount": 10,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24253,15 +23119,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "XTDao vault/protocol mint route",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "label": "XTDao collateral-parameter governance",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24331,15 +23193,11 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "BabelFish masset (XUSD) mint/redeem aggregator contract",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         },
         {
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "label": "BabelFish FISH DAO (accepted-asset and parameter governance)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "parameter-only"
         }
       ]
     },
@@ -24411,14 +23269,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "XUSD token MasterMinter path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "XUSD MasterMinter Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -24427,7 +23282,6 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "StraitsX token owner Safe",
           "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": true,
@@ -24436,10 +23290,8 @@
         {
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "label": "StraitsX Solana mint authority",
           "threshold": 3,
           "signerCount": 10,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24491,7 +23343,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Yearn yBOLD vault share accounting",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -24576,8 +23427,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Issuer-operated mint authority",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24666,24 +23515,18 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "yoUSD admin Safe",
           "threshold": 4,
           "signerCount": 6,
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "yoUSD authority contract",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "label": "yoUSD ERC-4626 vault (share mint on deposit)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -24731,14 +23574,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "AegisMinting",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "label": "Aegis admin Safe",
           "threshold": 3,
           "signerCount": 5,
           "modulesOrGuardsStatus": "none-detected"
@@ -24791,8 +23632,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
-          "label": "YieldFi YToken share minting",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -24841,7 +23680,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "none",
-          "label": "Yearn v3 USDC vault share accounting",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -24901,15 +23739,11 @@
       "controls": [
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "label": "Yuzu issuer / eligible-investor primary mint",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "custodian",
-          "directMintAbility": "none",
-          "label": "Fordefi MPC treasury workspace (collateral operations)",
-          "canRaiseCap": "unknown"
+          "directMintAbility": "none"
         }
       ]
     },
@@ -24953,14 +23787,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "ZARm StableTokenV2 mint path",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         },
         {
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
-          "label": "Mento stable token owner",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown"
         }
@@ -25001,8 +23832,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "ZARP MINTER_ROLE token mint",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -25093,7 +23922,6 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "label": "Frankencoin minter registry",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -25159,14 +23987,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "label": "ZeUSD router",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
-          "label": "ZeUSD token owner/admin EOA",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -25205,8 +24030,6 @@
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
-          "label": "Goal3 Portal mint/redeem operator",
-          "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown"
         }
       ]
@@ -25245,7 +24068,6 @@
         {
           "authorityType": "none",
           "directMintAbility": "none",
-          "label": "Zephyr native reserve mint/redeem rules",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -25294,7 +24116,6 @@
         {
           "authorityType": "none",
           "directMintAbility": "none",
-          "label": "Zephyr ZYS share accounting",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
         }

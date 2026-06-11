@@ -118,7 +118,6 @@ describe("client registry field contract", () => {
         {
           authorityType: "safe",
           directMintAbility: "direct",
-          label: "Issuer minter",
           threshold: 2,
           signerCount: 3,
           timelockDelaySec: 86_400,
@@ -126,7 +125,7 @@ describe("client registry field contract", () => {
         },
       ],
     });
-    expect(JSON.stringify(projected)).not.toContain("Issuer minter can create supply");
+    expect(JSON.stringify(projected)).not.toContain("Issuer minter");
     expect(JSON.stringify(projected)).not.toContain("Long reviewer evidence");
     expect(JSON.stringify(projected)).not.toContain("Control-level evidence");
     expect(JSON.stringify(projected)).not.toContain("Should not ship");

@@ -49,6 +49,7 @@ export interface MintAuthorityClientSummary {
 }
 
 export interface MintAuthorityCoverageControlSummary {
+  /** Present only on the detail-page projection; the generated cross-coin payload omits labels. */
   label?: string;
   authorityType: MintAuthorityType;
   directMintAbility: MintAuthorityDirectMintAbility;

@@ -3,6 +3,7 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import {
   MINT_AUTHORITY_SCORE_BANDS,
   computeMintAuthorityScore,
+  resolveMintAuthorityScoreBand,
   type MintAuthorityParentResolver,
   type MintAuthorityScoreBand,
   type MintAuthorityScoreResult,
@@ -185,6 +186,11 @@ const MINT_AUTHORITY_SCORE_TEXT_CLASS: Record<MintAuthorityScoreFilterValue, str
   exposed: "text-red-700 dark:text-red-400",
   nr: "text-muted-foreground",
 };
+
+/** Band-toned text class for any 0-100 mint-authority score value (total or component). */
+export function mintAuthorityScoreTextClassName(score: number | null | undefined): string {
+  return MINT_AUTHORITY_SCORE_TEXT_CLASS[resolveMintAuthorityScoreBand(score ?? null) ?? "nr"];
+}
 
 export interface MintAuthorityScoreDisplay {
   result: MintAuthorityScoreResult;
