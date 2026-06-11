@@ -102,12 +102,6 @@ vi.mock("@/components/query-error-notice", () => ({
   QueryErrorNotice: ({ error }: { error?: Error | null }) => error ? <div role="alert">{error.message}</div> : null,
 }));
 
-vi.mock("@/components/systemic-risk-headline", () => ({
-  SystemicRiskHeadline: ({ onOpenSimulator }: { onOpenSimulator: () => void }) => (
-    <button onClick={onOpenSimulator}>open-simulator</button>
-  ),
-}));
-
 describe("ReportCardsClient", () => {
   beforeEach(() => {
     refetchReportCards.mockReset();
