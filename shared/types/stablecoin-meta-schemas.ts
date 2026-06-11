@@ -316,6 +316,7 @@ const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z.object
   guard: z.string().min(1).nullable().optional(),
   moduleGuard: z.string().min(1).nullable().optional(),
   fallbackHandler: z.string().min(1).nullable().optional(),
+  masterCopy: z.string().min(1).nullable().optional(),
   observedBlock: PositiveIntegerSchema.optional(),
   source: z.enum(MINT_AUTHORITY_SAFE_SOURCE_VALUES),
 }).strict().superRefine((safe, ctx) => {

@@ -195,6 +195,7 @@ export interface MintAuthoritySafeState {
   guard?: string | null;
   moduleGuard?: string | null;
   fallbackHandler?: string | null;
+  masterCopy?: string | null;
   observedBlock?: number;
   source: MintAuthoritySafeSource;
 }
