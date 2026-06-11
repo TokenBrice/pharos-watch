@@ -9,7 +9,7 @@ import type {
   StablecoinMeta,
 } from "../types/core";
 
-export const MINT_AUTHORITY_COMPONENT_WEIGHTS = {
+const MINT_AUTHORITY_COMPONENT_WEIGHTS = {
   route: 0.3,
   controller: 0.4,
   bounds: 0.15,
@@ -28,7 +28,7 @@ export const MINT_ROUTE_SCORES = {
   "bridge-or-oft-synthetic": 30,
 } as const satisfies Partial<Record<MintAuthorityMintPath, number>>;
 
-export const MINT_POSTURE_SCORES = {
+const MINT_POSTURE_SCORES = {
   "none-resolved": 100,
   "bounded-admin": 85,
   "partially-bounded-admin": 60,
@@ -36,7 +36,7 @@ export const MINT_POSTURE_SCORES = {
   "unbounded-or-compromised": 5,
 } as const satisfies Partial<Record<MintAuthorityPosture, number>>;
 
-export const MINT_CONTROLLER_BASE_SCORES = {
+const MINT_CONTROLLER_BASE_SCORES = {
   none: 100,
   timelock: 85,
   "dao-governor": 80,
@@ -54,20 +54,20 @@ export const MINT_AUTHORITY_CAPS = {
   eoa: 40,
 } as const;
 
-export const MINT_AUTHORITY_CONFIDENCE_CAPS = {
+const MINT_AUTHORITY_CONFIDENCE_CAPS = {
   verified: 100,
   probable: 90,
   "manual-review": 85,
 } as const satisfies Partial<Record<MintAuthorityConfidence, number>>;
 
-export const MINT_AUTHORITY_MINT_CAPABLE_ABILITIES = [
+const MINT_AUTHORITY_MINT_CAPABLE_ABILITIES = [
   "direct",
   "can-authorize",
   "cap-limited",
   "upgrade-only",
 ] as const satisfies readonly MintAuthorityDirectMintAbility[];
 
-export const MINT_AUTHORITY_ISSUER_CONTEXT_PATHS = [
+const MINT_AUTHORITY_ISSUER_CONTEXT_PATHS = [
   "issuer-direct-mint",
   "offchain-attested-minter",
 ] as const satisfies readonly MintAuthorityMintPath[];
@@ -157,7 +157,7 @@ export function resolveMintAuthorityScoreBand(score: number | null | undefined):
   return "exposed";
 }
 
-export function toMintAuthorityScoringInput(
+function toMintAuthorityScoringInput(
   id: string,
   profile?: MintAuthorityProfile | null,
 ): MintAuthorityScoringInput | null {

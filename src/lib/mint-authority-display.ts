@@ -197,7 +197,7 @@ export interface MintAuthorityScoreDisplay {
   detail: string;
 }
 
-export function mintAuthoritySummaryToScoringInput(
+function mintAuthoritySummaryToScoringInput(
   id: string | undefined,
   summary?: MintAuthorityCoverageSummary | null,
 ): MintAuthorityScoringInput | null {
@@ -229,7 +229,7 @@ const resolveClientParent: MintAuthorityParentResolver = (id) => {
   return mintAuthoritySummaryToScoringInput(id, parent?.mintAuthoritySummary);
 };
 
-export function computeMintAuthoritySummaryScore(
+function computeMintAuthoritySummaryScore(
   id: string | undefined,
   summary?: MintAuthorityCoverageSummary | null,
 ): MintAuthorityScoreResult {
