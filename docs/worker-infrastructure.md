@@ -2,7 +2,7 @@
 
 Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 40 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
-Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
+Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
 
 **Deployed at:** `api.pharos.watch` (public integration API), `site-api.pharos.watch` (website-internal data lane), and `ops-api.pharos.watch` (operator lane; pair with Cloudflare Access before use)
 
@@ -551,7 +551,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** snapshot jobs are D1-only (0 external connections). `snapshot-public-dataset` runs after the safety-grade and PSI daily snapshots and freshness-gates its report-card and PSI inputs before writing the immutable dated public snapshot row. `fetch-tbill-rate` (ECB/FRED/Treasury/SIX and central-bank benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
+**Connection budget:** snapshot jobs are D1-only (0 external connections). `snapshot-supply` and `snapshot-public-dataset` receive the scheduled slot start as a stablecoins-cache freshness floor, so the 08:00 fallback cannot write from the previous 07:45 quarter-hourly cache while the fresh 08:00 `sync-stablecoins` run is still publishing. `snapshot-public-dataset` runs after the safety-grade and PSI daily snapshots and freshness-gates its report-card and PSI inputs before writing the immutable dated public snapshot row. `fetch-tbill-rate` (ECB/FRED/Treasury/SIX and central-bank benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
 ### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — digest and Bluechip fetchers)
 

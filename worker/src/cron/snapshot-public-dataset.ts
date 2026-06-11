@@ -76,6 +76,11 @@ interface ExistingSnapshotRow {
   created_at: number;
 }
 
+interface SnapshotPublicDatasetOptions {
+  minStablecoinsCacheUpdatedAtSec?: number | null;
+  freshnessGateLabel?: string;
+}
+
 function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
@@ -120,7 +125,28 @@ async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promi
     .first<ExistingSnapshotRow>();
 }
 
-export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+function buildStablecoinsCacheBeforeSlotResult(
+  cacheUpdatedAt: number,
+  requiredUpdatedAt: number,
+  freshnessGateLabel?: string,
+): CronResult {
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: JSON.stringify({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt,
+      requiredUpdatedAt,
+      freshnessGateLabel,
+    }),
+  };
+}
+
+export async function snapshotPublicDataset(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SnapshotPublicDatasetOptions = {},
+): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDate = isoDateUtc(new Date(nowSec * 1000));
@@ -154,6 +180,16 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
         cacheKind: stablecoinsCache.kind,
       }),
     };
+  }
+  if (
+    options.minStablecoinsCacheUpdatedAtSec != null
+    && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
+  ) {
+    return buildStablecoinsCacheBeforeSlotResult(
+      stablecoinsCache.updatedAt,
+      options.minStablecoinsCacheUpdatedAtSec,
+      options.freshnessGateLabel,
+    );
   }
 
   // --- 2. Report-card cache (required and freshness-gated) ---

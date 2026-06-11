@@ -134,6 +134,34 @@ describe("snapshotPublicDataset", () => {
     expect(insert).toBeUndefined();
   });
 
+  it("degrades before immutable insert when the stablecoins cache predates the scheduled slot", async () => {
+    const staleForSlotUpdatedAt = NOW_SEC - 15 * 60;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: staleForSlotUpdatedAt },
+        ],
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: NOW_SEC,
+      freshnessGateLabel: "daily0800Utc",
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt: staleForSlotUpdatedAt,
+      requiredUpdatedAt: NOW_SEC,
+      freshnessGateLabel: "daily0800Utc",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
+  });
+
   it("skips without recomputing when today's immutable snapshot already exists", async () => {
     const db = mockD1([
       {

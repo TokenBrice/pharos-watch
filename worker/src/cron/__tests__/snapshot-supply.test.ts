@@ -56,6 +56,42 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
   });
 
+  it("does not consume the daily write marker when the cache predates the scheduled slot", async () => {
+    const slotStartedAt = Math.floor(Date.parse("2025-06-15T08:00:00Z") / 1000);
+    vi.setSystemTime(new Date(slotStartedAt * 1000));
+    const staleForSlotUpdatedAt = slotStartedAt - 15 * 60;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: staleForSlotUpdatedAt },
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt: staleForSlotUpdatedAt,
+      requiredUpdatedAt: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
+  });
+
   it("inserts rows for tracked assets with valid supply", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const cacheValue = JSON.stringify({

@@ -18,6 +18,11 @@ import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slo
 const SLOT_LABEL = "daily 08:00 slot";
 
 function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroupDefinition[] {
+  const stablecoinsCacheFreshnessGate = {
+    minStablecoinsCacheUpdatedAtSec: runtime.slotStartedAt,
+    freshnessGateLabel: "daily0800Utc",
+  };
+
   return [
     {
       mode: "parallel-serial",
@@ -28,7 +33,7 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
           tasks: [
             {
               job: "snapshot-supply",
-              run: (signal) => snapshotSupply(runtime.db, signal),
+              run: (signal) => snapshotSupply(runtime.db, signal, stablecoinsCacheFreshnessGate),
             },
           ],
         },
@@ -45,7 +50,7 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
             },
             {
               job: "snapshot-public-dataset",
-              run: (signal) => snapshotPublicDataset(runtime.db, signal),
+              run: (signal) => snapshotPublicDataset(runtime.db, signal, stablecoinsCacheFreshnessGate),
             },
           ],
         },

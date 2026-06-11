@@ -12,7 +12,7 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
 
 - **Primary schedule:** chained after each `*/15 * * * *` `sync-stablecoins` run (same-day upsert path after a safe stablecoins-cache write)
 - **Safety-net fallback:** `0 8 * * *` (daily at 08:00 UTC)
-- **Function:** `snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult>`
+- **Function:** `snapshotSupply(db: D1Database, signal?: AbortSignal, options?: SnapshotSupplyOptions): Promise<CronResult>`
 - **File:** `worker/src/cron/snapshot-supply.ts`
 - **Registration:** declared in `worker/wrangler.toml`; executed from both `worker/src/handlers/scheduled/quarter-hourly.ts` and `worker/src/handlers/scheduled/daily-0800.ts`
 
@@ -20,11 +20,11 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
 
 ## Algorithm
 
-1. Fetch the cached "stablecoins" payload from the D1 cache table
-2. Verify cache freshness:
+1. Fetch, parse, and validate the cached "stablecoins" payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
+2. For the 08:00 UTC safety-net fallback, require the `stablecoins` cache row to have `updated_at >= slotStartedAt`; if it still reflects the previous 07:45 quarter-hourly run, return `status: "degraded"` with `reason: "stablecoins_cache_before_slot"` and do not consume the daily write marker
+3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
-3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 371 entries: 369 active tracked + 2 shadow)
 5. Check the once-per-UTC-date guard before building write statements:
    - read cache key `snapshot-supply:last-write`

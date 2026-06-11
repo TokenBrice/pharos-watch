@@ -586,6 +586,8 @@ describe("worker.scheduled", () => {
 
   it("continues sync-usds-status when fetch-tbill-rate throws in the daily 08:00 slot", async () => {
     cronMocks.fetchTbillRate.mockRejectedValueOnce(new Error("tbill failed"));
+    const scheduledTime = Date.parse("2026-05-16T08:00:00Z");
+    const slotStartedAt = Math.floor(scheduledTime / 1000);
 
     const { ctx, waits } = makeCtx();
     const env = {
@@ -595,7 +597,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "0 8 * * *" } as ScheduledEvent,
+      { cron: "0 8 * * *", scheduledTime } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -607,6 +609,22 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotPublicDataset).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSupply).toHaveBeenCalledWith(
+      env.DB,
+      expect.any(AbortSignal),
+      {
+        minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+        freshnessGateLabel: "daily0800Utc",
+      },
+    );
+    expect(cronMocks.snapshotPublicDataset).toHaveBeenCalledWith(
+      env.DB,
+      expect.any(AbortSignal),
+      {
+        minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+        freshnessGateLabel: "daily0800Utc",
+      },
+    );
     expect(cronMocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(
       cronMocks.snapshotPsiDaily.mock.invocationCallOrder[0],
     );

@@ -7,7 +7,33 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { setCache } from "../lib/db-cache";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
-export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+interface SnapshotSupplyOptions {
+  minStablecoinsCacheUpdatedAtSec?: number | null;
+  freshnessGateLabel?: string;
+}
+
+function buildStablecoinsCacheBeforeSlotResult(
+  cacheUpdatedAt: number,
+  requiredUpdatedAt: number,
+  freshnessGateLabel?: string,
+): CronResult {
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: JSON.stringify({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt,
+      requiredUpdatedAt,
+      freshnessGateLabel,
+    }),
+  };
+}
+
+export async function snapshotSupply(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SnapshotSupplyOptions = {},
+): Promise<CronResult> {
   throwIfAborted(signal);
 
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
@@ -19,6 +45,16 @@ export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Prom
       itemCount: 0,
       metadata: JSON.stringify({ reason: stablecoinsCache.reason }),
     };
+  }
+  if (
+    options.minStablecoinsCacheUpdatedAtSec != null
+    && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
+  ) {
+    return buildStablecoinsCacheBeforeSlotResult(
+      stablecoinsCache.updatedAt,
+      options.minStablecoinsCacheUpdatedAtSec,
+      options.freshnessGateLabel,
+    );
   }
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
