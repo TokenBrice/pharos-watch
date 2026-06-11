@@ -16,6 +16,12 @@ import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import type { ScheduledRuntimeContext } from "./context";
 import type { CronResult } from "../../lib/cron-logger";
+import {
+  buildScheduledSlotSummary,
+  summarizeCronResult,
+  summarizeSkippedScheduledJob,
+  summarizeThrownScheduledJob,
+} from "./slot-summary";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 
@@ -36,9 +42,13 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
   }
 }
 
-export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext): Promise<void> {
+export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
-  if (!pending) return;
+  if (!pending) {
+    return buildScheduledSlotSummary([
+      summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request"),
+    ], { budgetOnlyJobs: 1 });
+  }
 
   const payload = parseForceRunPayload(pending.value);
   if (!payload) {
@@ -46,7 +56,9 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       `[digest-trigger-poll] Malformed force-run payload, clearing: ${pending.value.slice(0, 200)}`,
     );
     await deleteCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
-    return;
+    return buildScheduledSlotSummary([
+      summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
+    ], { budgetOnlyJobs: 1 });
   }
 
   let result: CronResult | void = undefined;
@@ -118,4 +130,9 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   // Do not re-throw: logCronRun (inside runLeasedCron) already wrote the
   // error row to cron_runs. Swallowing matches the five-minute-telegram slot
   // pattern and keeps the scheduled slot fence clean.
+  return buildScheduledSlotSummary([
+    caught
+      ? summarizeThrownScheduledJob("daily-digest", caught)
+      : summarizeCronResult("daily-digest", result as CronResult | null | undefined),
+  ], { budgetOnlyJobs: 1 });
 }

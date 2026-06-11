@@ -25,6 +25,11 @@ import {
   runScheduledSlotGroups,
   type ScheduledSlotGroup,
 } from "./slot-groups";
+import {
+  buildScheduledSlotSummary,
+  mergeScheduledSlotSummaries,
+  summarizeSkippedScheduledJob,
+} from "./slot-summary";
 
 function logReconciliationSuccess(
   action: string,
@@ -84,10 +89,16 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
   ];
 }
 
-export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
+export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram scheduled lane";
     const groups = buildTelegramSlotGroups(runtime);
+    const skippedJobs = [
+      summarizeSkippedScheduledJob("telegram-registration-reconciliation", "missing-telegram-bot-token"),
+      ...flattenScheduledSlotGroupTasks(groups).map((task) =>
+        summarizeSkippedScheduledJob(task.job, "missing-telegram-bot-token")
+      ),
+    ];
     for (const task of flattenScheduledSlotGroupTasks(groups)) {
       await logSkippedCronRun(runtime, {
         job: task.job,
@@ -95,7 +106,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         message,
       });
     }
-    return;
+    return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 1 });
   }
 
   try {
@@ -164,5 +175,6 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     });
   }
 
-  await runScheduledSlotGroups(runtime, "five-minute telegram slot", buildTelegramSlotGroups(runtime));
+  const summary = await runScheduledSlotGroups(runtime, "five-minute telegram slot", buildTelegramSlotGroups(runtime));
+  return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 1 });
 }

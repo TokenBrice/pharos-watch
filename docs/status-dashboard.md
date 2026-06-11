@@ -133,6 +133,7 @@ The active frontend operator mode is now:
   - daily snapshot / digest / coverage-discovery jobs
   - Rows show state, operator-friendly label, raw job id, trigger, last run, last good run, duration, item count, and error/skip streaks
   - A selected-row detail panel owns full metadata, error text, in-flight progress, and recent run dots so long metadata does not stretch the default scan view
+  - Slot execution metadata includes compact child outcome counts (`jobsRun`, `jobsSkipped`, `jobsDegraded`, `jobsErrored`, `budgetOnlyJobs`) so a best-effort slot can surface degraded/error children without hiding later jobs that still ran
   - When a leased job is still running, rows and the detail panel surface `running` / `running-stale` state from `crons[*].inFlight`
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` and clamped in the row/details split

@@ -34,6 +34,6 @@ function buildHalfHourlySlotGroups(runtime: ScheduledRuntimeContext): ScheduledS
   ];
 }
 
-export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(runtime, "half-hour dex slot", buildHalfHourlySlotGroups(runtime));
+export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(runtime, "half-hour dex slot", buildHalfHourlySlotGroups(runtime));
 }

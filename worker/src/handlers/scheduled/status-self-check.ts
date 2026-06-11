@@ -37,8 +37,8 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
   ];
 }
 
-export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(
+export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(
     runtime,
     "isolated status self-check slot",
     buildStatusSelfCheckSlotGroups(runtime),

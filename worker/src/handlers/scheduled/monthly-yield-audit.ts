@@ -18,8 +18,8 @@ function buildMonthlyYieldAuditSlotGroups(runtime: ScheduledRuntimeContext): Sch
   ];
 }
 
-export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(
+export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(
     runtime,
     "monthly yield audit slot",
     buildMonthlyYieldAuditSlotGroups(runtime),

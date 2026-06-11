@@ -3,6 +3,11 @@ import { syncMintBurn, type MintBurnLane } from "../../cron/sync-mint-burn";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runCircuitGatedLeasedScheduledJob } from "./run-circuit-gated-job";
+import {
+  buildScheduledSlotSummary,
+  summarizeCronResult,
+  summarizeSkippedScheduledJob,
+} from "./slot-summary";
 
 interface MintBurnSlotOptions {
   lane: MintBurnLane;
@@ -14,8 +19,8 @@ interface MintBurnSlotOptions {
 export async function runMintBurnSlot(
   runtime: ScheduledRuntimeContext,
   options: MintBurnSlotOptions,
-): Promise<void> {
-  await runCircuitGatedLeasedScheduledJob(runtime, {
+) {
+  const result = await runCircuitGatedLeasedScheduledJob(runtime, {
     circuitSource: CIRCUIT_SOURCE.ALCHEMY,
     outcomeLabel: "Alchemy",
     skipMessage: options.skipMessage,
@@ -33,4 +38,9 @@ export async function runMintBurnSlot(
       ? async (settledRuntime, result) => options.onSettledSuccess?.(settledRuntime, result)
       : undefined,
   });
+  return buildScheduledSlotSummary([
+    result === null
+      ? summarizeSkippedScheduledJob(options.jobName, "circuit-open")
+      : summarizeCronResult(options.jobName, result),
+  ]);
 }

@@ -18,8 +18,8 @@ function buildYieldSupplementalSlotGroups(runtime: ScheduledRuntimeContext): Sch
   ];
 }
 
-export async function runYieldSupplementalSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(
+export async function runYieldSupplementalSlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(
     runtime,
     "multi-hour yield slot",
     buildYieldSupplementalSlotGroups(runtime),

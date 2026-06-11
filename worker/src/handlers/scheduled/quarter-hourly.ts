@@ -16,10 +16,16 @@ import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
 import { publishReportCardCache } from "../../cron/publish-report-card-cache";
 import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
+import {
+  buildScheduledSlotSummary,
+  summarizeSkippedScheduledJob,
+  type ScheduledSlotJobSummary,
+} from "./slot-summary";
 
-export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runBestEffortScheduledJob(runtime, "quarter-hour slot", "sync-fx-rates", (signal) =>
+export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
+  const outcomes: ScheduledSlotJobSummary[] = [];
+  outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "sync-fx-rates", (signal) =>
     syncFxRates(
       runtime.db,
       signal,
@@ -28,9 +34,9 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       runtime.env.DRPC_API_KEY ?? null,
       runtime.env.ETHERSCAN_API_KEY ?? null,
     ),
-  );
+  )).summary);
 
-  const stablecoinsResult = await runBestEffortScheduledJob(
+  const stablecoinsOutcome = await runBestEffortScheduledJobWithOutcome(
     runtime,
     "quarter-hour slot",
     "sync-stablecoins",
@@ -52,6 +58,8 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       },
     ),
   );
+  outcomes.push(stablecoinsOutcome.summary);
+  const stablecoinsResult = stablecoinsOutcome.result;
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
   const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
   if (stablecoinsResult && !stablecoinsCacheSafe) {
@@ -59,20 +67,26 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   }
 
   if (stablecoinsCacheSafe) {
-    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
+    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal))).summary);
+  } else {
+    outcomes.push(summarizeSkippedScheduledJob("snapshot-supply", "stablecoins-cache-unsafe"));
   }
 
   if (stablecoinsCacheSafe) {
-    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
+    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal))).summary);
+  } else {
+    outcomes.push(summarizeSkippedScheduledJob("snapshot-chain-supply", "stablecoins-cache-unsafe"));
   }
 
   if (stablecoinsCacheSafe) {
-    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "publish-report-card-cache", (signal) =>
+    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "publish-report-card-cache", (signal) =>
       publishReportCardCache(runtime.db, signal),
-    );
+    )).summary);
+  } else {
+    outcomes.push(summarizeSkippedScheduledJob("publish-report-card-cache", "stablecoins-cache-unsafe"));
   }
 
-  await runBestEffortScheduledJob(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
+  outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
     computeDepegResolver({
       db: runtime.db,
       signal,
@@ -81,7 +95,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       depegPipelineHealthy: stablecoinsCapabilities.depegPipeline,
       syncCapabilities: stablecoinsCapabilities,
     }),
-  );
+  )).summary);
 
   try {
     const cached = await getCache(runtime.db, "stablecoins");
@@ -94,4 +108,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   } catch {
     // Non-blocking.
   }
+
+  return buildScheduledSlotSummary(outcomes);
 }

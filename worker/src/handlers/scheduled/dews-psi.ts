@@ -37,6 +37,6 @@ function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlot
   ];
 }
 
-export async function runDewsPsiSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(runtime, "dews-psi slot", buildDewsPsiSlotGroups(runtime));
+export async function runDewsPsiSlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(runtime, "dews-psi slot", buildDewsPsiSlotGroups(runtime));
 }

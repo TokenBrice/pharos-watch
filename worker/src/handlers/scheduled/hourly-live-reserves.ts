@@ -97,8 +97,8 @@ function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): Scheduled
   ];
 }
 
-export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(
+export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext) {
+  const summary = await runScheduledSlotGroups(
     runtime,
     "four-hourly reserve sync slot",
     buildReserveSyncSlotGroups(runtime),
@@ -168,4 +168,6 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   } catch (e) {
     console.error("[live-reserves] Persistent-stale overview failed:", e);
   }
+
+  return summary;
 }

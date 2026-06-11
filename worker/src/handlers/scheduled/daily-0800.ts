@@ -73,6 +73,6 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
   ];
 }
 
-export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(runtime, SLOT_LABEL, buildDaily0800SlotGroups(runtime));
+export async function runDaily0800Slot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(runtime, SLOT_LABEL, buildDaily0800SlotGroups(runtime));
 }

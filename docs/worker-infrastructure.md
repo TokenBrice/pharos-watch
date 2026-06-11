@@ -401,7 +401,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 This worker declares 19 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
 
-Cron expressions are source-owned in `worker/wrangler.toml`. The canonical schedule-key mapping, status-tracked jobs, and connection-budget metadata live in `shared/lib/cron-jobs.ts`; dispatch chains live in `shared/lib/scheduled-runner-registry.ts`. Run `npm run check:cron-sync` and `npm run check:cron-connections` after schedule or job-chain changes.
+Cron expressions are source-owned in `worker/wrangler.toml`. The canonical schedule-key mapping, status-tracked jobs, and connection-budget metadata live in `shared/lib/cron-jobs.ts`; dispatch chains live in `shared/lib/scheduled-runner-registry.ts`. `runScheduledSlotWithFence()` stores compact child-job summaries in `cron_slot_executions.metadata` (`jobsRun`, `jobsSkipped`, `jobsDegraded`, `jobsErrored`, `budgetOnlyJobs`, and per-job outcomes) and marks the slot `degraded` or `error` when children skip/degrade/fail even if best-effort execution lets later jobs continue. Run `npm run check:cron-sync` and `npm run check:cron-connections` after schedule or job-chain changes.
 
 ### Trigger 1: `*/15 * * * *` (every 15 minutes)
 

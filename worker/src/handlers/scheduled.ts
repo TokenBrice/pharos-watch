@@ -3,8 +3,9 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shar
 import type { Env } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
+import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
 
-type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
+type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<ScheduledSlotSummary | void> | ScheduledSlotSummary | void;
 type SlotRunnerLoader = () => Promise<SlotRunner>;
 
 export const SLOT_RUNNER_LOADER_BY_KEY = {

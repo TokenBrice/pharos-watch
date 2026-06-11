@@ -10,8 +10,8 @@ import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
-export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runSingleScheduledJob(runtime, "half-hour charts slot", {
+export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) {
+  return runSingleScheduledJob(runtime, "half-hour charts slot", {
     job: "sync-stablecoin-charts",
     run: (signal) => syncStablecoinCharts(runtime.db, signal),
   });

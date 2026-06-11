@@ -2,8 +2,8 @@ import { syncYieldData } from "../../cron/sync-yield-data";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
-export async function runHourlyYieldSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runSingleScheduledJob(runtime, "hourly yield slot", {
+export async function runHourlyYieldSlot(runtime: ScheduledRuntimeContext) {
+  return runSingleScheduledJob(runtime, "hourly yield slot", {
     job: "sync-yield-data",
     run: (signal) =>
       syncYieldData(

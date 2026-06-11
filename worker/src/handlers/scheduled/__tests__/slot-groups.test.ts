@@ -44,7 +44,7 @@ describe("scheduled slot groups", () => {
       return result;
     }) as ScheduledRuntimeContext["runLeasedCron"];
 
-    await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
       {
         mode: "parallel-serial",
         label: "chains",
@@ -68,6 +68,47 @@ describe("scheduled slot groups", () => {
 
     expect(order.indexOf("end:a")).toBeLessThan(order.indexOf("start:b"));
     expect(order.indexOf("start:c")).toBeLessThan(order.indexOf("start:b"));
+    expect(summary).toMatchObject({
+      jobsRun: 3,
+      jobsSkipped: 0,
+      jobsDegraded: 0,
+      jobsErrored: 0,
+      budgetOnlyJobs: 0,
+    });
+    expect(summary.jobs.map((job) => job.job)).toEqual(["a", "b", "c"]);
+  });
+
+  it("summarizes degraded and failed best-effort child jobs", async () => {
+    const runLeasedCron = vi.fn(async (job: string, fn) => {
+      if (job === "failed") {
+        throw new Error("boom");
+      }
+      return fn(new AbortController().signal, async () => {});
+    }) as ScheduledRuntimeContext["runLeasedCron"];
+
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
+      {
+        mode: "serial",
+        label: "serial",
+        tasks: [
+          { job: "ok", run: async () => ({ status: "ok" }) },
+          { job: "degraded", run: async () => ({ status: "degraded" }) },
+          { job: "failed", run: async () => ({ status: "ok" }) },
+        ],
+      },
+    ]);
+
+    expect(summary).toMatchObject({
+      jobsRun: 1,
+      jobsSkipped: 0,
+      jobsDegraded: 1,
+      jobsErrored: 1,
+    });
+    expect(summary.jobs.map((job) => [job.job, job.outcome])).toEqual([
+      ["ok", "ok"],
+      ["degraded", "degraded"],
+      ["failed", "error"],
+    ]);
   });
 
   it("flattens mixed group shapes for preflight accounting", () => {

@@ -21,8 +21,8 @@ async function publishHotAggregateCachesAfterLoggedRun(
   }
 }
 
-export async function runHalfHourlyMintBurnCriticalSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runMintBurnSlot(runtime, {
+export async function runHalfHourlyMintBurnCriticalSlot(runtime: ScheduledRuntimeContext) {
+  return runMintBurnSlot(runtime, {
     lane: "critical",
     jobName: "sync-mint-burn",
     skipMessage: "[cron] Alchemy circuit open - skipping mint/burn sync",

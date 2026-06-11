@@ -32,11 +32,15 @@ type SlotExecutionRow = {
   metadata: string | null;
 };
 
+interface TestLeaseDb extends D1Database {
+  getSlot: (slotKey: string, slotStartedAt: number) => SlotExecutionRow | undefined;
+}
+
 function makeSlotMapKey(slotKey: string, slotStartedAt: number): string {
   return `${slotKey}:${slotStartedAt}`;
 }
 
-function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] }): D1Database {
+function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] }): TestLeaseDb {
   const leases = new Map<string, LeaseRow>();
   const slots = new Map<string, SlotExecutionRow>();
 
@@ -261,7 +265,8 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
     batch: async () => [],
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+    getSlot: (slotKey: string, slotStartedAt: number) => slots.get(makeSlotMapKey(slotKey, slotStartedAt)),
+  } as unknown as TestLeaseDb;
 }
 
 describe("cron lease primitives", () => {
@@ -677,5 +682,37 @@ describe("runScheduledSlotWithFence", () => {
       { slotStartedAt: staleSlotStartedAt, owner: "owner-c", staleAfterSec: 1200 },
     );
     expect(staleRetry.status).toBe("skipped_duplicate");
+  });
+
+  it("stores child job summaries and degraded slot status", async () => {
+    const slotStartedAt = Math.floor(Date.now() / 1000);
+    const db = makeLeaseDb();
+
+    const summary = {
+      jobsRun: 1,
+      jobsSkipped: 1,
+      jobsDegraded: 1,
+      jobsErrored: 0,
+      budgetOnlyJobs: 0,
+      jobs: [
+        { job: "ok-job", outcome: "ok" },
+        { job: "skipped-job", outcome: "skipped", reason: "lease-locked" },
+        { job: "degraded-job", outcome: "degraded", status: "degraded" },
+      ],
+    };
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "daily0800Utc",
+      async () => summary,
+      { slotStartedAt, owner: "owner-summary" },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.resultStatus).toBe("degraded");
+    expect(result.metadata).toEqual(summary);
+    const slot = db.getSlot("daily0800Utc", slotStartedAt);
+    expect(slot?.result_status).toBe("degraded");
+    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toEqual(summary);
   });
 });

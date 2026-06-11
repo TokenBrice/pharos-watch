@@ -141,9 +141,11 @@ export interface ScheduledSlotExecutionOptions {
 
 export interface ScheduledSlotExecutionResult {
   status: "ok" | "skipped_duplicate" | "skipped_running";
+  resultStatus?: "ok" | "degraded" | "error";
   slotKey: string;
   slotStartedAt: number;
   owner: string;
+  metadata?: unknown;
 }
 
 export class CronLeaseLostError extends Error {
@@ -358,7 +360,7 @@ async function finishScheduledSlotExecution(
   slotKey: string,
   slotStartedAt: number,
   owner: string,
-  resultStatus: "ok" | "error",
+  resultStatus: "ok" | "degraded" | "error",
   metadata: string | null,
 ): Promise<void> {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -383,7 +385,7 @@ async function finishScheduledSlotExecution(
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
-  fn: () => Promise<void>,
+  fn: () => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
   opts: ScheduledSlotExecutionOptions,
 ): Promise<ScheduledSlotExecutionResult> {
   const owner = opts.owner ?? createLeaseOwner(slotKey);
@@ -415,13 +417,28 @@ export async function runScheduledSlotWithFence(
   }, heartbeatSec * 1000);
 
   try {
-    await fn();
-    await finishScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, "ok", null);
+    const metadata = await fn();
+    const resultStatus =
+      metadata && metadata.jobsErrored > 0
+        ? "error"
+        : metadata && (metadata.jobsDegraded > 0 || metadata.jobsSkipped > 0)
+          ? "degraded"
+          : "ok";
+    await finishScheduledSlotExecution(
+      db,
+      slotKey,
+      opts.slotStartedAt,
+      owner,
+      resultStatus,
+      metadata ? JSON.stringify(metadata) : null,
+    );
     return {
       status: "ok",
+      resultStatus,
       slotKey,
       slotStartedAt: opts.slotStartedAt,
       owner,
+      metadata,
     };
   } catch (err) {
     await finishScheduledSlotExecution(
