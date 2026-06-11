@@ -56,7 +56,7 @@ Caps apply after the weighted raw score:
 
 | Cap | Limit | Trigger |
 | --- | ----- | ------- |
-| Incident cap | 10 | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. |
+| Incident cap | 10 / 15 / 20 | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. The limit decays purely with the age of the most recent incident: under 2 years = 10, 2-4 years = 15, 4+ years = 20 (v1.1). Unparseable dates stay at 10. Always below the unbounded cap. |
 | Unbounded cap | 25 | Unbounded or compromised posture without a recorded incident. |
 | EOA cap | 40 | Non-issuer-context EOA can directly mint or authorize minting without MPC/HSM key-custody attestation. |
 | Confidence cap | 100 / 90 / 85 | Verified = 100, probable = 90, manual-review = 85. Unknown confidence returns `NR`. |

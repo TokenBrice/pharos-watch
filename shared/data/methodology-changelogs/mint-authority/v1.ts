@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_AUTHORITY_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.1",
+    title: "Time-based incident-cap decay",
+    date: "2026-06-11",
+    effectiveAt: 1781200800,
+    summary:
+      "The hard incident cap on unbounded-or-compromised profiles now decays with the age of the most recent recorded mint incident: under 2 years caps at 10, 2-4 years at 15, and 4+ years at 20, always below the no-incident unbounded cap of 25.",
+    impact: [
+      "Decay is purely time-based on the most recent `mintIncidents` date; unparseable or missing dates stay at the strictest tier (10)",
+      "Recent exploits (USR 2026, reUSD 2025) keep the 10 cap; MIM's 2024 incident moves to 15 and DOLA's 2022 incident to 20",
+      "The unbounded posture cap (25), EOA cap (40), and confidence caps are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.0",
     title: "Initial Mint Authority Score release",
     date: "2026-06-11",

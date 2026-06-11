@@ -150,22 +150,44 @@ describe("Mint Authority Score", () => {
   });
 
   it("applies incident, unbounded, and confidence caps with traces", () => {
-    const incident = score({
-      authorityPosture: "unbounded-or-compromised",
-      mintIncidents: [
-        {
-          date: "2026-03-22",
-          summary: "Unauthorized mint route exploited.",
-          sources: [{ label: "Incident", url: "https://example.com/incident" }],
-        },
-      ],
-    });
-    expect(incident.score).toBe(10);
-    expect(incident.capsApplied).toContain("incident-cap");
-
     const unbounded = score({ authorityPosture: "unbounded-or-compromised" });
     expect(unbounded.score).toBe(25);
     expect(unbounded.capsApplied).toContain("unbounded-cap");
+
+    // v1.1: purely time-based incident-cap decay against a fixed clock.
+    const NOW = Date.parse("2026-06-11T00:00:00Z");
+    const incidentAt = (date: string) =>
+      computeMintAuthorityScore(
+        input({
+          authorityPosture: "unbounded-or-compromised",
+          mintIncidents: [{ date, summary: "Exploit.", sources: [{ label: "S", url: "https://example.com/s" }] }],
+        }),
+        undefined,
+        0,
+        new Set(),
+        NOW,
+      );
+    const recent = incidentAt("2026-03-22");
+    expect(recent.score).toBe(10); // < 2y
+    expect(recent.capsApplied).toContain("incident-cap");
+    expect(incidentAt("2024-01-30").score).toBe(15); // 2-4y
+    expect(incidentAt("2022-04-02").score).toBe(20); // >= 4y, still below unbounded 25
+    expect(incidentAt("not-a-date").score).toBe(10); // unparseable stays strictest
+    // multiple incidents: the most recent one governs the tier
+    const multi = computeMintAuthorityScore(
+      input({
+        authorityPosture: "unbounded-or-compromised",
+        mintIncidents: [
+          { date: "2022-04-02", summary: "Old.", sources: [{ label: "S", url: "https://example.com/a" }] },
+          { date: "2026-03-22", summary: "New.", sources: [{ label: "S", url: "https://example.com/b" }] },
+        ],
+      }),
+      undefined,
+      0,
+      new Set(),
+      NOW,
+    );
+    expect(multi.score).toBe(10);
 
     const manual = computeMintAuthorityScore(input({
       mintPath: "immutable-user-collateralized",

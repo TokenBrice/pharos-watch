@@ -2,7 +2,7 @@ import { MINT_AUTHORITY_V1 } from "../../data/methodology-changelogs/mint-author
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./base";
 
 const mintAuthority = createMethodologyVersion({
-  currentVersion: "1.0",
+  currentVersion: "1.1",
   changelogPath: "/methodology/#mint-authority-score",
   changelog: [...MINT_AUTHORITY_V1],
 });

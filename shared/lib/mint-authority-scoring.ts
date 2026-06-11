@@ -49,10 +49,42 @@ const MINT_CONTROLLER_BASE_SCORES = {
 } as const satisfies Record<Exclude<MintAuthorityType, "safe" | "multisig">, number>;
 
 export const MINT_AUTHORITY_CAPS = {
-  incident: 10,
+  /** Most recent recorded mint incident is under 2 years old. */
+  incidentRecent: 10,
+  /** Most recent incident is 2-4 years old. */
+  incidentAging: 15,
+  /** Most recent incident is 4+ years old; still below the no-incident unbounded cap. */
+  incidentDated: 20,
   unbounded: 25,
   eoa: 40,
 } as const;
+
+/** Incident-age decay tier boundaries (years since the most recent incident). */
+export const MINT_AUTHORITY_INCIDENT_DECAY_YEARS = { aging: 2, dated: 4 } as const;
+
+const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+
+/**
+ * Purely time-based incident-cap decay (methodology v1.1): the cap relaxes with
+ * the age of the most recent recorded incident but never reaches the
+ * no-incident unbounded cap. Unparseable or missing dates stay at the
+ * strictest tier.
+ */
+export function resolveIncidentCap(
+  incidents: NonNullable<MintAuthorityProfile["mintIncidents"]>,
+  nowMs: number,
+): number {
+  let latestMs = Number.NEGATIVE_INFINITY;
+  for (const incident of incidents) {
+    const parsed = Date.parse(`${incident.date}T00:00:00Z`);
+    if (Number.isFinite(parsed) && parsed > latestMs) latestMs = parsed;
+  }
+  if (!Number.isFinite(latestMs)) return MINT_AUTHORITY_CAPS.incidentRecent;
+  const ageYears = (nowMs - latestMs) / YEAR_MS;
+  if (ageYears >= MINT_AUTHORITY_INCIDENT_DECAY_YEARS.dated) return MINT_AUTHORITY_CAPS.incidentDated;
+  if (ageYears >= MINT_AUTHORITY_INCIDENT_DECAY_YEARS.aging) return MINT_AUTHORITY_CAPS.incidentAging;
+  return MINT_AUTHORITY_CAPS.incidentRecent;
+}
 
 const MINT_AUTHORITY_CONFIDENCE_CAPS = {
   verified: 100,
@@ -354,12 +386,13 @@ function applyCaps(
   input: MintAuthorityScoringInput,
   confidenceCap: number,
   capsApplied: MintAuthorityCapKind[],
+  nowMs: number,
 ): number {
   let cappedScore = score;
 
   if (input.authorityPosture === "unbounded-or-compromised") {
     if (input.mintIncidents && input.mintIncidents.length > 0) {
-      cappedScore = Math.min(cappedScore, MINT_AUTHORITY_CAPS.incident);
+      cappedScore = Math.min(cappedScore, resolveIncidentCap(input.mintIncidents, nowMs));
       capsApplied.push("incident-cap");
     } else {
       cappedScore = Math.min(cappedScore, MINT_AUTHORITY_CAPS.unbounded);
@@ -385,6 +418,7 @@ function computeInheritedScore(
   resolveParent: MintAuthorityParentResolver | undefined,
   depth: number,
   seenIds: ReadonlySet<string>,
+  nowMs: number,
 ): MintAuthorityScoreResult {
   const inheritedFromId = input.inheritedFrom ?? null;
   if (!inheritedFromId) return nullResult("missing-parent", inheritedFromId);
@@ -402,6 +436,7 @@ function computeInheritedScore(
     resolveParent,
     depth + 1,
     nextSeen,
+    nowMs,
   );
   if (parentResult.score == null) {
     return nullResult(
@@ -419,7 +454,7 @@ function computeInheritedScore(
       ? parentResult.score
       : Math.min(parentResult.score, Math.round(parentResult.score * 0.6 + weakestWrapperControl.score * 0.4));
   const capsApplied = [...parentResult.capsApplied];
-  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied);
+  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, nowMs);
 
   return finalizeResult({
     score: cappedScore,
@@ -440,6 +475,8 @@ export function computeMintAuthorityScore(
   resolveParent?: MintAuthorityParentResolver,
   depth = 0,
   seenIds: ReadonlySet<string> = new Set(),
+  // Incident-cap decay reference time; injectable for deterministic tests.
+  nowMs: number = Date.now(),
 ): MintAuthorityScoreResult {
   if (!input) return nullResult("not-reviewed");
   if (input.id && seenIds.has(input.id)) return nullResult("inheritance-cycle");
@@ -448,7 +485,7 @@ export function computeMintAuthorityScore(
   if (input.confidence === "unknown") return nullResult("unknown-confidence");
 
   if (input.mintPath === "wrapped-or-variant-inherited") {
-    return computeInheritedScore(input, resolveParent, depth, seenIds);
+    return computeInheritedScore(input, resolveParent, depth, seenIds, nowMs);
   }
 
   const route = MINT_ROUTE_SCORES[input.mintPath];
@@ -470,7 +507,7 @@ export function computeMintAuthorityScore(
       posture * MINT_AUTHORITY_COMPONENT_WEIGHTS.posture,
   );
   const capsApplied: MintAuthorityCapKind[] = [];
-  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied);
+  const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, nowMs);
 
   return finalizeResult({
     score: cappedScore,

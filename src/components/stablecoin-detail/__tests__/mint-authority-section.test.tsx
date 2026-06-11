@@ -122,7 +122,7 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket capacity limits minting");
     expect(html).toContain("Aave GHO facilitators");
     expect(html).toContain("https://example.com/gho-facilitators");
-    expect(html).toContain("Methodology v1.0");
+    expect(html).toContain("Methodology v1.1");
     expect(html).toContain("Reviewed 2026-05-12");
   });
 
