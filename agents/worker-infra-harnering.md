@@ -31,6 +31,7 @@ Scope: Cloudflare Worker cron/scheduled infrastructure, D1 persistence, provider
 - [x] Priority 1.6 follow-up: keep DEX publication generations published across post-publish overload retries. Commit: `4e9bc4a8a fix(worker): preserve DEX publication on retry`.
 - [x] Priority 1.8: make status transitions and probe runs retry-idempotent under D1 overload. Commit: `2aebf1fd3 fix(worker): make status writes retry idempotent`.
 - [x] Priority 2.10-2.13: restore provider circuit coverage, protocol-redeem breaker/budgeting, and 429 cooldown handling. Commit: `563f05393 fix(worker): harden provider circuit recovery`.
+- [x] Priority 4.22: standardize structured logging outside cron. Commit: `1e3ef94ec fix(worker): standardize route structured logging`.
 - [x] Priority 5.24: add provider resilience registry checks. Commit: `c00f9978b ci(worker): add provider resilience registry check`.
 
 ## Executive Readout
@@ -503,7 +504,7 @@ Validation:
 
 ### 22. Standardize structured logging outside cron
 
-Committed: `fix(worker): standardize route structured logging`.
+Committed: `1e3ef94ec fix(worker): standardize route structured logging`.
 
 - [x] Introduce a small structured logger for HTTP, status, and admin routes.
 - [x] Expand console guardrails from cron-only baseline counts to structured-log shape checks.
