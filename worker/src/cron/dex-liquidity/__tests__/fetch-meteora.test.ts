@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchMeteoraPools } from "../fetch-meteora";
 
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -12,13 +12,16 @@ function textResponse(body: string, status = 200): Response {
 }
 
 describe("fetchMeteoraPools", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", mockFetch);
+  });
+
   afterEach(() => {
     mockFetch.mockReset();
-    vi.resetModules();
+    vi.unstubAllGlobals();
   });
 
   it("normalizes Meteora pools into direct-api pools", async () => {
-    const { fetchMeteoraPools } = await import("../fetch-meteora");
     mockFetch
       .mockResolvedValueOnce(jsonResponse({
         data: [{
@@ -53,7 +56,6 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("returns a degraded result when Meteora returns invalid JSON", async () => {
-    const { fetchMeteoraPools } = await import("../fetch-meteora");
     mockFetch.mockResolvedValueOnce(textResponse("{bad-json"));
 
     const result = await fetchMeteoraPools();
@@ -65,7 +67,6 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("returns a degraded result when Meteora returns a null root", async () => {
-    const { fetchMeteoraPools } = await import("../fetch-meteora");
     mockFetch.mockResolvedValueOnce(textResponse("null"));
 
     const result = await fetchMeteoraPools();
@@ -77,7 +78,6 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("skips malformed Meteora rows while preserving valid rows from the same page", async () => {
-    const { fetchMeteoraPools } = await import("../fetch-meteora");
     mockFetch.mockResolvedValueOnce(jsonResponse({
       data: [
         {
@@ -113,7 +113,6 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("uses current_price and ignores imbalanced reserve ratio on DLMM pools", async () => {
-    const { fetchMeteoraPools } = await import("../fetch-meteora");
     // Real fixture: SOL/USDC pool with reserve ratio 13.02 vs current_price 84.93
     mockFetch
       .mockResolvedValueOnce(jsonResponse({
