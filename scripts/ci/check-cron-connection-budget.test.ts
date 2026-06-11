@@ -10,7 +10,87 @@ describe("check-cron-connection-budget", () => {
 
     expect(syncStablecoins?.maxConnections).toBe(4);
     expect(quarterHourly?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
+    expect(quarterHourly?.chains).toEqual([
+      {
+        chainKey: "chain-1",
+        jobs: [
+          "sync-fx-rates",
+          "sync-stablecoins",
+          "snapshot-supply",
+          "snapshot-chain-supply",
+          "publish-report-card-cache",
+          "compute-depeg-resolver",
+        ],
+        peak: 4,
+      },
+    ]);
     expect(quarterHourly?.totalConnections).toBe(4);
+    expect(report.failed).toBe(false);
+  });
+
+  it("sums independent parallel chains even when they share a connection group", () => {
+    const report = evaluateCronConnectionBudget({
+      budget: {
+        maxPerTrigger: 6,
+        failAt: 6,
+        fullForNewFetchHeavyWorkAt: 5,
+      },
+      entries: [
+        {
+          job: "chain-a",
+          maxConnections: 4,
+          connectionGroup: "shared-chain",
+          scheduleKey: "testParallel",
+          statusTracked: true,
+        },
+        {
+          job: "chain-b",
+          maxConnections: 3,
+          connectionGroup: "shared-chain",
+          scheduleKey: "testParallel",
+          statusTracked: true,
+        },
+      ],
+      schedules: { testParallel: "* * * * *" },
+      slotPlans: {
+        testParallel: {
+          jobChains: [["chain-a"], ["chain-b"]],
+        },
+      },
+    });
+
+    expect(report.triggerReports[0]?.groups.get("shared-chain")?.peak).toBe(4);
+    expect(report.triggerReports[0]?.parallelConnections).toBe(7);
+    expect(report.triggerReports[0]?.totalConnections).toBe(7);
+    expect(report.failed).toBe(true);
+  });
+
+  it("uses the max peak inside a serial chain", () => {
+    const report = evaluateCronConnectionBudget({
+      entries: [
+        {
+          job: "first",
+          maxConnections: 4,
+          scheduleKey: "testSerial",
+          statusTracked: true,
+        },
+        {
+          job: "second",
+          maxConnections: 3,
+          scheduleKey: "testSerial",
+          statusTracked: true,
+        },
+      ],
+      schedules: { testSerial: "* * * * *" },
+      slotPlans: {
+        testSerial: {
+          jobChains: [["first", "second"]],
+        },
+      },
+    });
+
+    expect(report.triggerReports[0]?.parallelConnections).toBe(4);
+    expect(report.triggerReports[0]?.totalConnections).toBe(4);
     expect(report.failed).toBe(false);
   });
 });
