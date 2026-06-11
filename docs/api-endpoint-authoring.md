@@ -1,6 +1,6 @@
 # API Endpoint Authoring
 
-Use this checklist when adding or changing a Worker API endpoint. The route registry is intentionally centralized; do not hand-roll endpoint metadata in local components or scripts.
+Use this checklist when adding or changing a Worker API endpoint. The route registry is intentionally centralized; do not hand-roll endpoint metadata in local components or scripts. Treat `docs/api-reference.md` as exhaustive contract output: read and edit the affected endpoint section instead of loading or rewriting the whole file when the change is narrow.
 
 ## Source Of Truth
 
@@ -16,7 +16,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Dynamic route bindings | `worker/src/routes/dynamic-routes.ts` |
 | Frontend API helpers | `src/hooks/api-hooks.ts`, `src/hooks/use-api-query.ts`, `src/lib/api.ts` |
 | Frontend API query registry | `src/lib/api-query-registry.ts` — Canonical descriptor table consumed by `src/hooks/api-hooks.ts` |
-| Public contract | `docs/api-reference.md` |
+| Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 
 ## Implementation Checklist

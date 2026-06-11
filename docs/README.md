@@ -8,19 +8,17 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [../README.md](../README.md) - repo overview, local setup, deployment summary
 - [agent-task-router.md](./agent-task-router.md) - agent-first task routing from user intent to docs, files, checks, and gotchas
 - [agent-code-map.md](./agent-code-map.md) - generated compact code entrypoint/export map for fast discovery
-- [api-reference.md](./api-reference.md) - exact HTTP routes, query params, headers, and response contracts
-- [architecture.md](./architecture.md) - curated file tree, API inventory, and SEO surface
-- [worker-infrastructure.md](./worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior, and status endpoints
-- [deployment-process.md](./deployment-process.md) - local merge gate, worktree flow, and CI deploy sequence
-- [testing.md](./testing.md) - test commands, CI gates, coverage thresholds, and helpers
+- [architecture.md](./architecture.md) - curated architecture, route model, and ownership map
+- [api-endpoint-authoring.md](./api-endpoint-authoring.md) - compact API endpoint change checklist before reading the full API reference
+- [worker-and-api-limits.md](./worker-and-api-limits.md) - compact Worker/API limits before reading deep runtime docs
 - [pharos-urn.md](./pharos-urn.md) - public citation/URN contract for methodology, depeg, stablecoin, and About trust surfaces
 - [process/agent-artifacts.md](./process/agent-artifacts.md) - routing for durable process docs, trackers, route-maintenance notes, and temporary artifacts
 
 ## System And Operations
 
 - [architecture.md](./architecture.md) - architecture-significant routes, file tree, and key tables
-- [api-reference.md](./api-reference.md) - public and admin API contract reference
-- [worker-infrastructure.md](./worker-infrastructure.md) - runtime model, env interface, cron orchestration, and observability
+- [api-reference.md](./api-reference.md) - public and admin API contract reference; use the affected endpoint section when possible
+- [worker-infrastructure.md](./worker-infrastructure.md) - deep runtime model, env interface, cron orchestration, and observability reference
 - [operator-origin-access.md](./operator-origin-access.md) - operator-only origin prep, Access setup runbook, and verification steps
 - [worker-and-api-limits.md](./worker-and-api-limits.md) - repo-enforced runtime budgets, throttle constants, and external-provider assumptions to re-check before shipping worker changes
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
@@ -252,7 +250,3 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - Redemption Backstop history is machine-readable in `shared/lib/methodology-versions/redemption-backstop.ts` and currently deep-links to `/methodology/#safety-scores-methodology` because redemption backstops feed Safety Score liquidity rather than a standalone public changelog route.
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
 - [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history
-
-## Reference Artifact
-
-- [documentation-map-2026-03-05.tsv](./documentation-map-2026-03-05.tsv) - legacy-named documentation surface map retained for audit support; refreshed during later audits and explicitly non-canonical

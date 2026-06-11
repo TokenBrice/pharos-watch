@@ -399,32 +399,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 This worker declares 19 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
 
-### `worker/wrangler.toml` Triggers
-
-```toml
-[triggers]
-crons = [
-  "*/15 * * * *",
-  "9,24,39,54 * * * *",
-  "3 */6 * * *",
-  "4,34 * * * *",
-  "6 */2 * * *",
-  "13,43 * * * *",
-  "10,40 * * * *",
-  "16,46 * * * *",
-  "26,56 * * * *",
-  "11 */4 * * *",
-  "20 * * * *",
-  "25 */4 * * *",
-  "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
-  "*/5 * * * *",
-  "0 8 * * *",
-  "5 8 * * *",
-  "10 8 * * *",
-  "0 6 1 * *",
-  "0 3 * * *",
-]
-```
+Cron expressions are source-owned in `worker/wrangler.toml`. The canonical schedule-key mapping, status-tracked jobs, and connection-budget metadata live in `shared/lib/cron-jobs.ts`; dispatch chains live in `shared/lib/scheduled-runner-registry.ts`. Run `npm run check:cron-sync` and `npm run check:cron-connections` after schedule or job-chain changes.
 
 ### Trigger 1: `*/15 * * * *` (every 15 minutes)
 
@@ -622,28 +597,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 `npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
 
-| Budget row | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
-| ---------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
-| 1       | `*/15 * * * *`     |       4 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained; sync-stablecoins is the peak)       |    2     |
-| 2       | `9,24,39,54 * * * *` |                       1 (status self-check probes -> staleness watchdog alert)                    |    5     |
-| 3       | `3 */6 * * *`      |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
-| 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |
-| 5       | `6 */2 * * *`      |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
-| 6       | `13,43 * * * *`    |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
-| 7       | `10,40 * * * *`    |                                        4 (DEX liquidity)                                           |    2     |
-| 8       | `16,46 * * * *`    |                                      1 (stablecoin charts)                                         |    5     |
-| 9       | `26,56 * * * *`    |                                  0 (DEWS -> PSI; both DB-only)                                     |    6     |
-| 10      | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
-| 11      | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
-| 12      | `25 */4 * * *`     |                                  3 (supplemental yield families; Beefy is the peak)                 |    3     |
-| 13      | `2,7,...,57 * * * *` |                        4 (Telegram alert dispatcher batches sends in groups of 4)                  |    2     |
-| 14      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 15      | `5 8 * * *`        |                         4 (Bluechip batch of 3 + Anthropic; digest/recap chained)                  |    2     |
-| 16      | `10 8 * * *`       |                                  1 (weekly CoinGecko discovery scan)                               |    5     |
-| 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 18      | `0 3 * * *`        |             1 (status-probe, cron-history, Telegram inactive-cleanup, Telegram retention-cleanup, mint/burn growth watchdog, and cron duration watchdog; DB-only plus one optional alert webhook at a time)  |    6     |
-
-The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry but is not represented in `CRON_JOB_DEFINITIONS` because it does not create a separate `/api/status` job row. It is represented in `CRON_CONNECTION_BUDGET_ENTRIES` as the budget-only `digest-trigger-poll` entry, so `npm run check:cron-connections` enforces its one-connection peak alongside job-bearing trigger slots.
+Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `digest-trigger-poll` and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
 
 **Policy for new jobs:**
 

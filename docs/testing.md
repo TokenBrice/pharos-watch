@@ -7,83 +7,31 @@ The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-ne
 ## Commands
 
 ```bash
-npm test              # Run all tests once (CI mode)
-npm run test:profile -- --output /tmp/pharos-vitest-profile.json # Run Vitest once and write a runtime profile summary
-npm run test:watch    # Watch mode — re-runs on file changes
-npm run lint          # ESLint across frontend + worker code
-npm run lint:typed    # Type-aware ESLint lane over worker/src (.ts + .tsx) and shared/lib; enforces no-floating-promises/no-misused-promises on async worker/D1 paths (~13s; runs in prebuild validation)
-npm run typecheck     # Type-check frontend, shared, Pages Functions, and root scripts
-npm run typecheck:worker # Type-check Worker runtime code (includes worker-bound operational scripts)
-npm run audit:deps    # Fails on high-severity npm advisories
-npm run seo:check     # Static SEO audit against built `out/` HTML
-npm run check:generated-artifacts # Verify all generated artifacts from the automation registry are current
-npm run check:cemetery-dataset # Verify generated Stablecoin Cemetery JSON/CSV exports match source data
-npm run check:agent-doc-sync # Verify AGENTS.md and CLAUDE.md stay synchronized where required
-npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports; pure cross-runtime metadata belongs in `shared/`)
-npm run check:shared-cycles # Fail on circular dependencies inside `shared/`, `worker/src`, and `src`
-npm run check:shared-types-imports # Manual guardrail for broad `@shared/types` value imports
-npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
-npm run check:hotspot-ratchet # Fail when enrolled hotspots regress or generated hotspot candidates lack explicit metadata-rich enrollment/waivers
-npm run check:site-csp-sync # Verify managed `public/_headers` CSP lines match `shared/lib/site-csp.ts`
-npm run check:cron-abort-contract # Verify leased cron jobs accept/pass AbortSignal or carry explicit waivers
-npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, and `worker/wrangler.toml` stay aligned
-npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
-npm run check:cron-console-usage # Ratchet `console.*` usage in worker cron/scheduled code against the checked-in baseline
-npm run check:client-registry-imports # Block client `src/` code from importing the full stablecoin registry (use the client registry)
-npm run check:selector-banned-phrases # Banned-phrase lint for the Stablecoin Picker/Selector editorial surface
-npm run check:script-entrypoints # Verify script entrypoints referenced in scripts/docs/package.json exist under allowed prefixes
-npm run check:doc-counts # Verify tracked/shadow/adapter/bluechip/live-enabled counts in docs match code
-npm run check:verified-doc-links # Verify all markdown links in verified docs resolve
-npm run check:doc-source-paths # Verify backtick source-path references in README.md and docs/** resolve to files/directories
-npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code and canonical version labels
-npm run check:env-contract # Verify shared env manifest, example files, and env-focused docs stay aligned
-npm run check:frozen-invariants # Verify frozen stablecoins stay out of live/public-active data surfaces
-npm run check:duplicate-exports # Detect duplicate export declarations within individual files
-npm run check:docs-api-reference # Verify generated docs API-reference block is current
-npm run check:llms-txt # Verify generated `/llms.txt` is current
-npm run check:openapi # Verify generated public OpenAPI artifact is current
-npm run check:postman # Verify generated public Postman collection/environment artifacts are current
-npm run check:world-map # Verify generated static world map SVG is current
-npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
-npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
-npm run check:dependency-coverage # Dependency-map coverage audit; enforces graph and reserve-link ratchets from scripts/lib/dependency-coverage-baseline.json
-npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
-npm run check:feature-flag-inlining # Verify configured NEXT_PUBLIC_PHAROS_* flags are build-time inlined after `npm run build`
-npm run check:phishing-signatures # Scan built `out/` HTML for inline-script patterns that match credential-harvesting phishing kits
-npm run check:classifier-sensitive-copy # Scan built `out/` HTML for wallet-drainer/phishing/browser-warning copy on classifier-sensitive routes
-npm run test:a11y    # Playwright/axe accessibility route smoke after `npm run build` (unhydrated export — the crawl state)
-npm run test:a11y:hydrated # Playwright/axe scan of the hydrated product (API-backed export server; per-route readiness waits fail loudly if data never arrives). The deploy pipeline runs it against the 4173 smoke server after the parallel pre-publish block; a standalone run boots its own server proxying the production API.
-npm run check:safe-browsing # Query Google Safe Browsing v4 for monitored URL flags (daily workflow + manual)
-npm run check:supply-helper-usage # Enforce `getCirculatingRaw()` usage for DefiLlama list-endpoint supply values
-npm run check:stale-flags # Fail when feature-flag expiresAt comments are today or earlier
-npm run check:one-liner-coverage # Verify active/pre-launch stablecoins keep one-line editorial summaries
-npm run check:mechanism-archetype-coverage # Enforce the mechanism-archetype curation coverage threshold
-npm run check:archetype-explainer-coverage # Verify every `MechanismArchetype` has a label, one-liner, content module, and `/learn/mechanisms/<slug>/` sitemap entry; see [learn-mechanisms-page.md](./learn-mechanisms-page.md)
-npm run check:attestor-tier-coverage # Enforce proof-of-reserves attestor-tier coverage for independent-audit coins
-npm run check:glossary-coverage # Verify AI-summary glossary term markers resolve
-npm run check:redemption-backstops # Validate redemption backstop configs for completeness
-npm run check:redemption-coverage-audit # Enforce ratcheted Redemption Backstop active-gap/default-gap/heuristic backlog baselines
-npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
-npm run audit:pricing-providers # Verify pricing provider configs are consistent
-npm run coverage:critical:update-baseline # Update the critical-coverage baseline snapshot
-npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
-npm test -- --coverage # Run tests with V8 coverage report
-npm run test:critical-contracts # Targeted critical endpoint contract runner
-npm run test:invariants # Critical numerical/schema invariant suite
-npm run test:noncritical # Deploy/merge-gate Vitest lane excluding tests owned by coverage:critical
-npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
-npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
-npm run validate:pages-smoke # Serve the built static export and run local Pages smoke checks
-npm run lighthouse:static # Serve the built static export and fail when mobile Lighthouse performance is below 95 using DevTools throttling
-npm run lighthouse:static -- --form-factor desktop # Desktop Lighthouse against the same production-style static export
-npm run validate:worker-smoke # Run local worker canary smoke checks after worker typecheck
-npm run check:hook-polling-window # Verify local agent hook polling windows stay within the configured budget
-npm run check:reserve-fixture-freshness # Verify retained reserve HTML fixtures stay within freshness policy
-npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints (set SMOKE_API_KEY when protected routes are enforced)
-npm run test:smoke-ops # Private ops-host and ops-api smoke checks through Cloudflare Access
-npm run test:smoke-transport # HTTP->HTTPS edge redirect smoke for api.pharos.watch and site-api.pharos.watch
-npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level UI smoke check; local mode runs the full overflow sweep, live mode runs a narrower canary unless --skip-overflow is set
-npm run test:smoke-ui:mobile -- --url http://localhost:3000 # Mobile-focused rendered smoke; strict common-control touch targets, table geometry checks, and console reporting (desktop spot pass is opt-in)
+npm test
+npm run test:watch
+npm run lint
+npm run lint:typed
+npm run typecheck
+npm run typecheck:worker
+npm run test:merge-gate
+```
+
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. Do not duplicate those inventories here.
+
+Common targeted runners:
+
+```bash
+npm run test:profile -- --output /tmp/pharos-vitest-profile.json
+npm run test:critical-contracts
+npm run test:invariants
+npm run coverage:critical
+npm run validate:pages-smoke
+npm run validate:worker-smoke
+npm run test:smoke-api -- --base-url https://api.pharos.watch
+npm run test:smoke-ops
+npm run test:smoke-transport
+npm run test:smoke-ui -- --url https://pharos.watch --mode live
+npm run test:smoke-ui:mobile -- --url http://localhost:3000
 ```
 
 Markdown variants are generated for `/methodology/`, methodology changelogs, `/changelog/`, `/digest/[date]/`, stablecoin detail pages, and `/docs/*`. Representative checked-in fixture snapshots live under `scripts/__tests__/fixtures/markdown/`. When an intentional visible copy or renderer change updates one of those covered outputs, run `npm run build` or `npx tsx scripts/maintenance/generate-markdown-exports.ts`, copy the matching `out/**/index.md` file over its fixture, and commit the fixture in the same change as the JSX or renderer edit.
@@ -94,217 +42,26 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/pharos-change-contract.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/og-refresh.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/telegram-load.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
+Workflow YAML is the source of truth. The main validation and deploy files are `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`; scheduled/advisory lanes live beside them for CodeQL, Zizmor, dependency audit, Telegram load, critical coverage ratchet, secret scan, Safe Browsing, OG refresh, and the Pharos Change Contract.
 
-For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
+For deployment/worktree operating procedure, secrets, rollback, and local merge-gate behavior, see [Deployment Process](./deployment-process.md). This file documents test ownership and runner conventions only.
 
-1. `Pull Request Checks`
-   - runs the shared `validate` gate on `pull_request` to `main`
-   - classifies the PR diff with `scripts/ci/classify-deploy-changes.mjs`, then passes `pages_changed` and `worker_changed` into the reusable workflow
-   - still runs the shared non-deploy guardrails and tests on every PR; PR Pages build/SEO follows `pages_changed`, and Worker typechecks follow the same worker deploy-surface flag used by the push deploy workflow
-   - runs a pinned gitleaks commit-range scan for pull-request secret detection
-   - uses the PR base SHA for the critical-coverage ratchet diff
-2. `Pharos Change Contract`
-   - defined in `.github/workflows/pharos-change-contract.yml`
-   - runs on pull requests to `main` and manual dispatch
-   - renders the deploy-surface and validation-contract summary from `scripts/ci/pharos-change-contract.mjs`
-   - is advisory and does not deploy or publish artifacts
-3. `validate` (runs before any deployment):
-   - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, dependency-coverage audit, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, registry-derived generated-artifact checks, env checks, duplicate/export/registry guards, CSP/header sync, unused-code/hotspot/sql/stablecoin-data checks
-   - starts `validate:prebuild` and the non-mutating leaf checks on separate runners at the same time: two non-critical Vitest shards, critical coverage, optional Worker runtime typecheck, and optional Pages build/SEO
-   - runs both `npm run test:noncritical -- --shard=N/2` shards and requires every shard before the aggregate `validate` job succeeds
-   - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
-   - runs `npm run typecheck:worker` only when `worker_changed=true`
-   - runs `npm run build` + `npm run test:a11y` + `npm run check:feature-flag-inlining` + `npm run seo:check` + Safe Browsing classifier guardrails (`check:phishing-signatures`, `check:classifier-sensitive-copy`) and built-artifact budget/drift checks in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
-   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow calls the consolidated `pages-release` workflow for Pages data sync, build, a11y, SEO, build-size/build-attribution guards, local artifact smoke, publish, and live smokes
-4. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
-   - Diffs `github.event.before...github.sha` on `push`
-   - Emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, and `pages_ui_changed`
-   - Marks worker validation work as required when the diff touches worker runtime, Worker-consumed shared runtime contracts, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, worker operational scripts, or worker-specific checks/smokes. Known Pages-only shared helpers are excluded by subpath in `scripts/lib/automation-registry.mjs`.
-   - Marks Worker promotion as required only when the diff touches deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files that the Worker can consume, or root package/lock changes to Worker-consumed packages; root package/tooling changes that only touch non-Worker packages and known Pages-only shared contract files still validate broadly without uploading/promoting a Worker version
-   - Marks Pages deploy work as required when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts
-   - Marks `pages_ui_changed=true` only for likely frontend/runtime surfaces (`src/`, `public/`, `shared/`, `functions/`, `data/`, root package/lock, `next.config.ts`) so strict mobile smoke can skip deploy-infra-only Pages diffs
-   - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
-   - Forces the full path on `workflow_dispatch`; manual production dispatch must target the `main` ref
-5. `upload-worker-version` (needs `detect-changes`):
-   - Uses the shared workspace setup and the lockfile-installed Wrangler CLI for non-mutating candidate upload, matching the later mutating deploy lane
-   - Capture the currently live production Worker version ID with `wrangler deployments status --json`
-   - Upload a candidate Worker version with `wrangler versions upload` before validation completes; this is non-mutating preparation for the promotion lane and keeps preview URL smoke available before production traffic shifts. If Cloudflare returns `entitlements.not_available [code: 10007]` for Workers Versions, the job records `version_upload_unavailable=true` and lets `deploy-worker` use the validated legacy deploy fallback instead.
-   - Skipped on Pages-only, validation-only, or non-deploy `push` events where `worker_promotion_required=false`
-6. `deploy-worker` (needs `upload-worker-version` when Worker promotion is required):
-   - Waits for the aggregate `validate / validate` job before any production D1 mutation or Worker promotion
-   - Re-runs `npm run check:migrations` on the release runner immediately before remote D1 changes
-   - Applies D1 migrations with the local worker-pinned Wrangler CLI, then runs `npm run test:smoke-api` against the uploaded preview URL before the candidate is considered promotable when Workers Versions are available
-   - Promotes the preview-smoked candidate version with `wrangler versions deploy <version-id>@100`, or runs `wrangler deploy` after validation and migrations when the account lacks Workers Versions entitlement
-   - Sync routes/domains/cron triggers with `wrangler triggers deploy`
-   - Runs deploy canary `smoke-api` checks in the same job before promotion when preview URLs are available and always after production deploy (full strict API contract coverage remains in Vitest). Automatic Worker rollback requires the Workers Versions path; the legacy fallback still fails the workflow on production smoke failure.
-   - On worker-only deploys, runs live public UI, ops, and transport smokes in parallel inside the same job
-   - Skipped on Pages-only, validation-only, or non-deploy `push` events
-7. `pages-release`:
-   - production deploy job in `.github/workflows/deploy-cloudflare.yml` that calls the consolidated `.github/workflows/pages-release.yml`
-   - runs only when `pages_changed=true`
-   - starts as soon as Pages changes are detected, in parallel with Worker candidate upload/promotion work when both surfaces changed
-   - fetches `/api/digest-archive` into `data/digests.json`, fetches confirmed depeg events into `data/depeg-events.json`, regenerates public dataset mirrors from the selected API environment, forwards `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_PHAROS_*` repo variables into `npm run build`, clears the public-dataset fetch env for the build prehook so it preserves the synced mirrors instead of re-fetching, builds with `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so local static-export smoke uses the production `/_site-data/*` browser lane, then runs `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size` (including the Cloudflare Pages 20,000-file cap), and `npm run check:build-attribution`; after the parallel pre-publish block it runs `npm run test:a11y:hydrated` against the API-backed 4173 smoke server so axe also covers the hydrated product
-   - serves the just-built `out/` export locally, proxies direct `/api/*` and `/_site-data/*` calls to the selected API base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs local pre-publish checks in parallel (`npm run seo:check`, `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`, plus strict mobile canary `npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173` when `pages_ui_changed=true`)
-   - deploy-lane local artifact `smoke-ui` uses canary overflow routes with `SMOKE_UI_OVERFLOW_WORKERS=6` to reduce critical-path runtime; broader overflow route coverage remains in wider validation/smoke lanes
-   - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production; on combined Worker + Pages deploys, also waits for `deploy-worker` and reruns local artifact `smoke-ui` against the promoted Worker before publish
-   - writes a Pages release summary with output file count, static export size, and depeg-event static page count, captures the current production Pages deployment id as a required rollback target, fails before publish when that capture is unavailable, publishes the verified local artifact with the Wrangler retry loop, and then runs live public UI, ops, and transport smokes in parallel inside the same job; the live UI smoke keeps broad overflow coverage on the exact local artifact and adds a narrow live `/depeg/` canary for the default-on DDR/DDRQ data contract
-   - rolls Pages production back to the captured previous deployment when any fatal post-publish smoke (live public UI, ops, or transport) fails
-   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step verifies the built homepage artifact does not preload GA and that the browser initializes `window.gtag` with the expected `page_view` payload; live smoke requires successful GA4 `page_view` collect delivery, while local artifact smoke also accepts an issued collect request for the configured measurement id that Chromium reports as `net::ERR_ABORTED`; once a successful live collect is observed, additional expected-measurement GA collect aborts are tolerated as browser beacon noise
-8. `smoke-ops`:
+CI shape:
 
-- Run `npm run test:smoke-ops`
-- Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
-- Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-- Runs inside `pages-release` after `deploy-pages` on Pages-including deploys, or inside `deploy-worker` on worker-only deploys
-- On Pages-including deploys, runs inside the shared parallel post-publish smoke step; ops still emits its own status so failures are visible separately from public UI and transport checks
-- Defaults to the full scope, which verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, admin samples, and safe dry-run admin paths on the operator API host
-- Production deploys set `SMOKE_OPS_SCOPE=canary`, which keeps the ops UI shell/access checks plus direct and same-origin status checks on the critical path while leaving slower deep admin probes available for manual/full smoke runs
+1. Pull requests run the reusable validate workflow through `.github/workflows/pull-request-checks.yml`. The deploy-impact classifier in `scripts/ci/classify-deploy-changes.mjs` decides whether PR validation also needs Pages build/SEO work and Worker typecheck coverage.
+2. `validate` runs the source-owned prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, non-critical Vitest shards, `coverage:critical`, optional Worker runtime typecheck, and optional Pages build/a11y/SEO/static-artifact checks.
+3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
+4. `npm run test:merge-gate` mirrors the deploy-impact validate contract locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
 
-9. `smoke-transport`:
+`npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
 
-- Run `npm run test:smoke-transport`
-- Verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` before application auth or worker logic responds
-- Runs after the same production-changing gate as `smoke-ops`
-- Fails the workflow on redirect regressions once the zone-level redirect rule is in place
+Selected specialized checks:
 
-10. `Rebuild Pages`:
-
-- defined in `.github/workflows/rebuild-pages.yml`
-- runs on the daily schedule and on manual dispatch
-- skips `validate` and Worker promotion
-- runs the shared `pages-release` wrapper workflow, whose publish phase includes `smoke-ui-live`, `smoke-ops`, and `smoke-transport`
-
-11. `OG Refresh`:
-
-- defined in `.github/workflows/og-refresh.yml`
-- runs on a weekly Monday schedule (cron `23 4 * * 1`) and on manual dispatch
-- captures checked-in static OG screenshots against production and opens or updates the `automated/og-refresh` branch when the images change
-- requires `OG_REFRESH_GITHUB_TOKEN`, a bot or PAT token that can push the refresh branch and open PRs so normal `pull_request` checks run
-
-12. `CodeQL`:
-
-- defined in `.github/workflows/codeql.yml`
-- runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
-- analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
-- uses `.github/codeql/codeql-config.yml` to exclude Vitest/test fixtures from production security scanning
-
-13. `Zizmor`:
-
-- defined in `.github/workflows/zizmor.yml`
-- runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
-- scans GitHub Actions workflows and uploads SARIF findings to GitHub Code Scanning
-- runs separately from CodeQL so workflow-security findings have their own tool identity and triage state
-
-14. `Dependency Audit`:
-
-- defined in `.github/workflows/dependency-audit.yml`
-- runs on a weekly Monday schedule and on manual dispatch
-- installs from the root lockfile and runs `npm audit --audit-level=high`
-- complements the blocking production-only `npm run audit:deps` gate by covering devDependencies too
-- owner: the maintainer driving the next production deploy or dependency update
-- response expectation:
-  - blocking `npm run audit:deps` failures are stop-ship until fixed, pinned away, or explicitly risk-accepted
-  - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
-  - do not leave a new high/critical finding unowned between audit detection and the next production deploy
-
-15. `Telegram Load Guard`:
-
-- defined in `.github/workflows/telegram-load.yml`
-- runs on a weekly Monday schedule and on manual dispatch
-- runs `npm run check:telegram-load`, including the 5,000-watcher target SLO, without touching production D1 or Telegram
-- complements the deploy validate lane without adding the synthetic load harness to every push path
-
-16. `Critical Coverage Ratchet`:
-
-- defined in `.github/workflows/critical-coverage-ratchet.yml`
-- runs on a weekly Monday schedule and on manual dispatch
-- runs `npm run coverage:critical` with `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked against the baseline, while pull request and merge-gate paths keep the faster touched-file ratchet
-- uses the same high-stakes pricing/depeg/reserve candidate completeness guard as pull request and merge-gate coverage; new candidates must be added to `CRITICAL_FILES` with a baseline or explicitly waived in `scripts/lib/critical-coverage.mjs`
-- uses the same Node 24.16.0 workspace setup as the deploy validate lane
-
-17. `Secret Scan`:
-
-- defined in `.github/workflows/secret-scan.yml`
-- runs on a weekly Monday schedule and on manual dispatch
-- checks out full git history and runs pinned `gitleaks` `8.30.0`
-- uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
-- scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
-
-18. `Safe Browsing Monitor`:
-
-- defined in `.github/workflows/safe-browsing-monitor.yml`
-- runs on a daily schedule (`17 7 * * *`) and on manual dispatch
-- queries Google Safe Browsing v4 `threatMatches:find` for `pharos.watch` and key public URLs via `npm run check:safe-browsing`
-- requires the `GOOGLE_SAFE_BROWSING_API_KEY` repository secret
-- fails the run on any flagged URL; complements the deploy-gating `check:phishing-signatures` static scan
-
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, a11y route smoke, feature-flag inlining, SEO gate, build-size/build-attribution guards, dependency-coverage drift, and Safe Browsing classifier guardrails before merge and in the consolidated Pages release path, fetches digest/depeg/public-dataset data once inside the Pages release job so the build itself is network-independent with respect to those static inputs, forwards the configured GA measurement ID and `NEXT_PUBLIC_PHAROS_*` flag values into CI builds so the static artifact matches production analytics and flag posture, forces the local static-export artifact smoke through the production `/_site-data/*` browser lane instead of the protected direct `/api/*` lane, uploads the Worker candidate early when Workers Versions are available, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted when possible, reruns local artifact `smoke-ui` after Worker promotion on combined deploys, falls back to a validation-gated `wrangler deploy` when Cloudflare rejects Workers Versions with an entitlement error, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, records a compact Pages release summary before publish, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, data-state, and `/depeg/` canary checks, keeps the scheduled Pages rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, surfaces Pages post-publish UI/ops/transport outcomes via per-smoke statuses from one parallel post-publish step, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, Telegram load simulation, all-critical coverage ratcheting, history-aware secret scanning, and Safe Browsing verdict monitoring.
-
-Current GitHub repository secrets required by the deploy path:
-
-- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for Worker/Pages deploy and rollback helpers
-- `SMOKE_API_KEY` for preview and production `smoke-api`
-- `DIGEST_API_KEY` for Pages digest sync against protected public API routes; it also acts as the fallback for depeg-event and public-dataset sync when their dedicated secrets are not set
-- `SITE_API_SHARED_SECRET` for local artifact smoke through `/_site-data/*`
-- `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` for `smoke-ops`
-
-Optional dedicated GitHub repository secrets for the deploy path:
-
-- `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` for dedicated Pages prebuild data sync credentials when those routes diverge from the digest credential; both fall back to `DIGEST_API_KEY`
-- `ACTIONS_CHECKOUT_TOKEN` for production deploy checkout fallback when GitHub rejects the default Actions token during repository fetch; absent by default, and workflows fall back to `github.token`
-
-Current GitHub repository secrets required by scheduled monitors:
-
-- `GOOGLE_SAFE_BROWSING_API_KEY` for `Safe Browsing Monitor`
-
-Current GitHub repository secrets required by scheduled artifact PRs:
-
-- `OG_REFRESH_GITHUB_TOKEN` for `OG Refresh`; use a bot or PAT token instead of `GITHUB_TOKEN` so the automated PR runs the normal pull-request validation workflows
-
-Current GitHub repository variables used by the deploy path:
-
-- `API_BASE_URL` (required)
-- `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, and `NEXT_PUBLIC_PHAROS_*` (optional)
-
-Cloudflare Access ownership split:
-
-- Pages -> `ops-api` service token lives in the Cloudflare Pages project secrets, not in GitHub
-- CI `smoke-ops` credentials live in the GitHub repository secrets listed above
-- operator session duration is owned by the Cloudflare Zero Trust Access policy for `ops.pharos.watch`, not by repo code or CI
-
-Rotation note for `smoke-ops` secrets:
-
-1. Create a replacement Access service token for `https://ops-api.pharos.watch/*`.
-2. Update both GitHub secrets together.
-3. Run the production deploy workflow or `Rebuild Pages` via `workflow_dispatch` so `smoke-ops` verifies the new pair.
-4. Revoke the old token only after the workflow passes.
-
-Rollback:
-
-1. Restore the previous GitHub secret pair.
-2. Re-run the workflow manually.
-3. Leave the replacement token active until verification succeeds.
-
-The workflows pin `actions/checkout@v6` by commit SHA, and the shared `.github/actions/setup-workspace` action pins `actions/setup-node@v6` and `actions/cache@v5` by commit SHA. The shared validate/deploy lanes run on Node 24.16.0 through that setup action, matching `package.json#engines.node` and `.nvmrc`; there is no separate LTS proof lane because Node 24 is the primary supported baseline. The reusable validate workflow starts `validate:prebuild`, non-critical Vitest shards, critical coverage, optional Worker typechecks, and optional PR Pages build/SEO as independent GitHub jobs, with an aggregate `validate` job checking every required result before production-changing jobs may mutate D1, promote Workers, or publish Pages. The local merge gate in `scripts/maintenance/test-merge-gate.mjs` uses `buildCommandPlan` to construct a per-trigger execution plan and runs build/non-critical-test/critical-coverage/typecheck groups while preserving `build -> seo:check` ordering; execution auto-enables the parallel matrix on machines with ≥12 available cores and stays serial below that, with `MERGE_GATE_PARALLEL=1`/`=0` forcing either mode (and `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1` when you need prebuild to collect all guardrail failures). Tooling caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` use a normalized Node-major restore prefix plus dependency/config hashes, while primary keys include the job, run id, and attempt so restored generated caches can be saved after builds. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share one global `concurrency` group (`production-deploy`): push/manual deploys and scheduled/manual Pages rebuilds queue behind active production runs instead of canceling post-promotion smoke or rollback work. Manual production dispatches are guarded to `refs/heads/main`.
-
-`npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It now prefers the `sqlite3` CLI when present and falls back to Node's built-in `node:sqlite`, which removes the old Node-25-first happy path while still catching schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, destructive table/column drop-or-rename patterns are rejected, and `ALTER TABLE ... ADD COLUMN ... NOT NULL` without a `DEFAULT` is rejected because the still-live worker may still insert rows before promotion. The deploy workflow also reruns this check on the release runner immediately before remote `wrangler d1 migrations apply`.
-
-`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. The default changed-file range is `origin/main...HEAD`; the repo pre-push hook overrides that for pushes to `main` with Git's exact `remote_sha...local_sha` update range, matching the deploy workflow's `github.event.before...github.sha` classifier input. When no base ref is explicitly overridden and `MERGE_GATE_NO_FETCH=1` is not set, the gate also runs a best-effort `git fetch --quiet origin main` first to keep the diff base honest; offline failures log a warning and continue. Before executing a non-dry-run command plan, the gate runs `scripts/ci/check-node-modules-fresh.mjs --strict`, which is fatal when `node_modules/` is missing, when the install snapshot is ambiguous, or when the lockfile is newer than the local install. `MERGE_GATE_DRY_RUN=1` prints the plan without requiring `node_modules/`. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it runs the shared prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, then `npm run test:noncritical` (sharded as `--shard=1/2`, `--shard=2/2` to match CI) and critical coverage. That registry is the source of truth for dependency/pricing audits, lint/typecheck (including the type-aware `lint:typed` lane that guards floating/misused promises across `worker/src/**/*.ts`/`*.tsx` and `shared/lib`), import-boundary/cycle checks, migrations, cron checks, documentation checks, the registry-derived `check:generated-artifacts` drift gate, env contracts, frozen invariants, duplicate-export and redemption-backstop guards, CSP/header sync, unused-code, hotspot-ratchet, hook polling window, shared-types import boundary, reserve-fixture freshness, SQL-safety, stablecoin data validation, and supply-helper usage. The critical coverage lane owns the critical test files, so the merge gate keeps the full deploy test surface without rerunning those files in the bare Vitest lane. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` with the production Pages static-export env contract (`NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` and public-dataset/API source env cleared), then `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, and Pages built-artifact guardrails when Pages-impacting files changed, and adds `npm run typecheck:worker` when worker-impacting files changed. After `validate:prebuild`, build/non-critical-test/critical-coverage/typecheck groups auto-enable parallel execution on machines with ≥12 available cores and run serially below that to avoid local CPU contention; `MERGE_GATE_PARALLEL=1`/`=0` forces either mode, and a failing parallel group aborts siblings and reports the failing command explicitly. The gate also injects `TZ=UTC`, `LANG=C.UTF-8`, and `CI=true` into command env to match the CI runtime; set `MERGE_GATE_NATIVE_ENV=1` when debugging TZ-specific bugs. Set `MERGE_GATE_HEAD_REF=<ref>` with `MERGE_GATE_BASE_REF=<ref>` for explicit range checks, or `MERGE_GATE_FULL_DEPLOY=1` when there is no usable base ref. For an opt-in production Pages environment rehearsal, set `MERGE_GATE_PRODUCTION_ENV=1` and export the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values before running the gate; with `NEXT_PUBLIC_GA_ID` present, the local Pages smoke expects that same measurement ID. Without the opt-in, the gate clears public production feature-flag env locally while applying the static-export build contract. `test:merge-gate` runs Pages smoke by default for Pages-impacting diffs; set `MERGE_GATE_PAGES_SMOKE=0` to skip. Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1` and defaults local worker smoke to `SMOKE_API_SCOPE=canary` unless overridden. When Pages smoke runs it includes desktop/local `smoke-ui` on the same deploy-lane canary routes with 6 overflow workers, auto-selects a free local static-export port if `127.0.0.1:4173` is occupied, and strict mobile smoke runs only when the same UI-surface matcher would set `pages_ui_changed=true`; mobile canary defaults mirror deploy except the local settle is 5000 ms (the deploy lane keeps 1500 ms on idle CI runners).
-
-`npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards the maintained shell/facade files in `scripts/lib/hotspot-ratchet-baseline.json`, including `worker/src/cron/compute-dews.ts`, and also generates current repo-wide hotspot candidates from the top file-line, max-function-line, and branch-count outliers. Every generated candidate must either be enrolled in the baseline or explicitly waived in `scripts/lib/hotspot-ratchet-waivers.json`, so newly emerged hotspots cannot drift past the guardrail unseen. The ratchet still fails fast on stale target paths, unexpected baseline entries, stale waiver entries, and incomplete waiver metadata. Each waiver must carry `owner`, `createdAt`, `reviewAfter`, and `nextAction`; each baseline entry declares a `disposition`, `targetBudget`, and implementation note so the ratchet doubles as a decomposition backlog rather than a blind ceiling list. Refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`, and update the matching waiver/backlog metadata at the same time.
-
-`npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions, `shared/lib/cron-jobs.ts`, or the scheduled-runner registry so you catch schedule/dispatch drift before pushing.
-
-`npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, indexable titles outside the 35-70 character search-snippet envelope, indexable descriptions outside the 110-180 character envelope, missing Google preview directives (`max-snippet:-1`, `max-image-preview:large`, `max-video-preview:-1`) on indexable pages, missing `og:type` on indexable pages, duplicate or missing `h1`s on indexable pages, invalid JSON-LD, indexable structured-data URLs that point under `/_site-data/`, conflicting robots directives, sitemap omissions, sitemap URLs without local static HTML artifacts, orphan pages, and indexable routes that are more than three clicks away from `/`. It also samples representative stablecoin detail and chain detail pages for crawlable static text so those routes do not regress into loading-shell-only exports.
-
-`npm run analyze:gsc-coverage -- <export-or-drilldown-path> [...]` inventories Google Search Console coverage exports for SEO triage. It accepts coverage directories, CSV files, and ZIP drilldowns, reports XLSX/XLS files as unsupported unless exported as CSV, and performs no live network checks; use the output to map GSC issue rows to URL drilldowns and decide the manual live-check queue.
-
-`npm run analyze:gsc-performance -- <export-or-drilldown-path> [...]` inventories Google Search Console performance exports for CTR triage. It accepts performance directories, CSV files, and ZIP exports, reports XLSX/XLS files as unsupported unless exported as CSV, and performs no live network checks; use `--target-ctr`, `--min-impressions`, and `--top` to rank site, family, page, and query CTR gaps before changing titles or descriptions. Standalone query exports are reported as query opportunities only and are not joined back to pages.
-
-`node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch` is an optional live/local render-budget probe for SEO work. It records per-route HTML size, visible text length, request counts, asset mix, cache headers, and observed/known transfer size; use it to investigate render budget or cacheability risks without making it part of the default CI gate.
-
-`npm run seo:live-smoke -- --url https://pharos.watch` is the post-deploy/live SEO smoke. It checks sitemap URLs for redirects, 404s, and `noindex`, verifies `/chains/` HTML is not served with immutable asset caching, verifies direct generated markdown URLs carry `X-Robots-Tag` plus canonical `Link` headers, and runs JS-disabled Playwright canaries on key pages. It is intentionally not part of the local merge gate because it targets a deployed host; use `--sitemap-limit <n>` for a shorter sampling pass.
+- Cron schedule/connection changes: `npm run check:cron-sync` and `npm run check:cron-connections`.
+- Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
+- Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
+- GSC exports: `npm run analyze:gsc-coverage -- <path>` and `npm run analyze:gsc-performance -- <path>` are offline triage helpers.
+- Optional render-budget probe: `node scripts/maintenance/audit-seo-render-budget.mjs --url https://pharos.watch`.
 
 ## Vitest Runtime Profiling
 

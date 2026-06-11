@@ -137,7 +137,7 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, and its regression fixtures live under `scripts/__tests__/fixtures/sql-safety/`.
 
-`pharos-change-contract.mjs` is the shared local agent hook engine for Codex and Claude. `SessionStart` records fingerprints for pre-existing dirty files. The current checked-in hook configs install `SessionStart` and `PreToolUse` for both agents, plus Codex `PermissionRequest` and Claude's pre-push-gate helper on Bash commands. The script still supports `PostToolUse`, `PostToolBatch`, and `Stop` modes for manual or future hook wiring, but they are not installed by the checked-in configs today. `PreToolUse` and `PermissionRequest` are intentionally narrow: they block destructive git cleanup, raw production deploys, remote D1 mutations, direct writes to env/git/build-output paths, and obvious destructive migration SQL without running heavy validation automatically. Deploy and remote-D1 guards inspect executable shell command positions, so searches and patches can still mention blocked release commands.
+`pharos-change-contract.mjs` is the shared local agent hook engine for Codex and Claude. `SessionStart` records fingerprints for pre-existing dirty files. The current checked-in hook configs install `SessionStart` and `PreToolUse` for both agents, plus Codex `PermissionRequest`. The script still supports `PostToolUse`, `PostToolBatch`, and `Stop` modes for manual or future hook wiring, but they are not installed by the checked-in configs today. `PreToolUse` and `PermissionRequest` are intentionally narrow: they block destructive git cleanup, raw production deploys, remote D1 mutations, direct writes to env/git/build-output paths, and obvious destructive migration SQL without running heavy validation automatically. Deploy and remote-D1 guards inspect executable shell command positions, so searches and patches can still mention blocked release commands.
 
 `worker/package.json` keeps `npm run deploy` as a guarded command via `scripts/ci/guard-worker-deploy.mjs` that exits with release-flow guidance. Production Worker releases prefer the CI-documented sequence: upload a Worker Version, run validation and migration checks, preview-smoke the uploaded version, promote it with `wrangler versions deploy`, and then sync triggers. When Cloudflare rejects Workers Versions with `entitlements.not_available [code: 10007]`, CI keeps the same validation and migration gates but falls back to `wrangler deploy` before trigger sync and production smoke.
 
@@ -223,211 +223,16 @@ These scripts are intentionally not CI guardrails. Keep their reports under `age
 
 ## Operational Notes
 
-### `sync-digests.ts`
+Keep this section as pointers, not a second copy of script help output. For options, run the script with `--help` when available or read the source.
 
-- Requires an explicit digest API source via `--api-url` or `DIGEST_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
-- Sends `X-API-Key` when `DIGEST_API_KEY` is set, which is required once `GET /api/digest-archive` is protected on `api.pharos.watch`.
-- Adds a one-off query parameter and no-cache request headers so Pages release builds do not reuse a stale edge-cached archive immediately after daily digest publication.
-- Accepts `--output` so CI can write digest data into an artifact path before the Pages build job runs.
-- The consolidated Pages release job runs this once before `npm run build`, writing the normalized digest JSON directly to `data/digests.json`.
-
-### `sync-depeg-events.ts`
-
-- Requires an explicit depeg-events API source via `--api-url` or `DEPEG_EVENTS_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
-- Sends `X-API-Key` when `DEPEG_EVENTS_API_KEY` is set; Pages workflows fall back to `DIGEST_API_KEY` when no dedicated depeg-events credential exists.
-- Runs before every Pages build path so static `/depeg/<event>/` pages, feeds, and dataset projections use current confirmed events.
-
-### `generate-public-datasets.ts`
-
-- Runs before every Pages release build with `PUBLIC_DATASETS_API_URL` pointed at the selected API environment. The deploy workflow defaults this to `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`, and callers can still override it via the `api_base_url` workflow input.
-- Sends `X-API-Key` when `PUBLIC_DATASETS_API_KEY` is set; Pages workflows fall back to `DIGEST_API_KEY` when no dedicated public-datasets credential exists.
-- Pages workflows clear `PUBLIC_DATASETS_API_URL`, `PUBLIC_DATASETS_API_KEY`, `PUBLIC_DATASETS_REQUIRE_API`, `SMOKE_API_BASE`, and `API_BASE_URL` on the following `npm run build` step so the prebuild hook preserves the just-synced mirrors instead of making a second live API fetch.
-- Production Pages paths set `PUBLIC_DATASETS_REQUIRE_API=1`, so missing API configuration fails closed instead of shipping stale mirrors. Local and PR validation builds without a dataset API preserve already checked-in mirrors when `--check` would pass; they fail if those mirrors are missing or below the row floors.
-- `--check` verifies that latest checked-in mirrors and Sheets variants exist, carry the expected preambles, and meet per-topic row floors. It does not re-fetch the API or prove the dated mirrors were regenerated today.
-
-### `fetch-logos.ts`
-
-- Designed to run locally (CoinGecko blocks Worker-origin access patterns).
-- Pulls DefiLlama stablecoin list, maps `gecko_id` to internal IDs, then fetches CoinGecko market data in batches.
-
-### `dev-api-proxy.mjs`
-
-- `npm run dev` starts `scripts/maintenance/dev-api-proxy.mjs` and `next dev` under a shared process supervisor for local frontend work against production-compatible site-data auth.
-- Use `npm run dev:proxy` to run only the local API proxy, or `npm run dev:next` to run only Next.js when the proxy is already running elsewhere.
-- Loads `.env.local` through `process.loadEnvFile()`, so existing shell environment values keep precedence.
-- Accepts `DEV_PROXY_UPSTREAM` and forwards `SITE_API_SHARED_SECRET` to the upstream site-data host.
-- Forwards only normalized `/api/*` paths, rejects traversal segments, and treats upstream redirects as proxy errors.
-- `DEV_PROXY_PORT` changes both the proxy process port and the `next dev` `/api/*` rewrite target when `SITE_API_SHARED_SECRET` is set.
-
-### `worker/scripts/repair-non-usd-fiat-depeg-history.ts`
-
-- Uses local D1 by default. Pass `--remote` only when intentionally reading or mutating production D1; PSI recomputation runs only for confirmed remote live repairs.
-- Dry-run is the default and compares stored `source='backfill'` rows against the current replay policy without mutating D1.
-- Live mode requires `--execute --confirm repair-non-usd-fiat-depeg-history`; production live mode also requires `--remote`.
-- Replays each target from its full historical supply or curated launch-date anchor rather than from the currently stored backfill-event window, which avoids split/merge oscillation on sparse non-USD histories.
-- `--existing-window` is the explicit fallback for timeout-prone assets: it constrains replay to the currently stored backfill window plus a 30-day pad on each side.
-- Live mode deletes and rewrites non-USD non-commodity backfill rows under canonical stablecoin IDs. Legacy per-coin alias folding has been retired; orphan rows must now already be canonical before replay.
-- Known dead orphan IDs such as `eura-angle` are purged instead of replayed back into the active depeg history surface.
-
-### `worker/scripts/yield-history-cleanup.ts`
-
-- One-shot operator tool for the six tracked savings-wrapper ownership handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `dUSD`).
-- Supports dry-run inventory, artifact export, delete, and restore paths against either a local SQLite rehearsal dataset (`--sqlite`) or Wrangler D1 (`--remote` / `--local`).
-- Remote mutation and remote restore both require `--execute --confirm yield-history-cleanup` plus an armed writer pause guard (`--arm-writer-pause`) so the hourly `sync-yield-data` publisher cannot race the cleanup window.
-- The source-selection contract is shared with the live read path and hourly purge path through `worker/src/lib/yield-history-cleanup.ts`.
-
-### `yield-pys-v8-calibration.ts`
-
-- Manual evidence tool for PYS v8 source-risk calibration; it does not change runtime data, methodology versions, or checked-in generated artifacts.
-- Run with `npm run calibrate:yield-pys-v8 -- --input <saved-yield-rankings.json> [--out agents/report.md]`.
-- Keep scratch reports under `agents/`; only move reviewed durable evidence into `docs/process/archive/`.
-
-### `register-telegram.ts`
-
-- Requires `TELEGRAM_BOT_TOKEN`; `--action webhook` and `--action all` also require `TELEGRAM_WEBHOOK_SECRET`.
-- Supports `WEBHOOK_BASE_URL` / `--webhook-base-url`; defaults to `https://api.pharos.watch`.
-- Supports `--action commands`, `--action profile`, `--action webhook`, and `--action all`.
-- Uses `shared/lib/telegram-bot-registration.ts` for command, profile, and allowed-update payloads so manual recovery matches Worker reconciliation.
-
-### `screenshot-og.mjs`
-
-- Imports Playwright from the workspace dependency, matching `smoke-ui.mjs` and avoiding a system-global Playwright path.
-- Captures fixed 1200×628 screenshots for selected routes and writes them into `public/`.
-- Targets `https://pharos.watch` by default; override with `OG_BASE_URL` (e.g. `http://127.0.0.1:3000` for local dev).
-- First tries `waitUntil: "networkidle"` with a 20 s timeout, then falls back to `waitUntil: "load"` for pages with persistent polling.
-- Invoked via `npm run og:capture`. The weekly `og-refresh` GitHub Action runs this against production and opens a PR with any diffs using `OG_REFRESH_GITHUB_TOKEN`, so the automated branch receives normal pull-request checks. See [og-images.md](./og-images.md) for the full renewal process across the six OG-image classes.
-
-### `build-og-learn-images.mjs`
-
-- Builds SVG OG cards for `/learn/mechanisms/[archetype]` pages by extracting the mechanism diagram from the desktop variant of `mechanism-diagrams.test.tsx.snap`.
-- Writes to `agents/og-learn-staging/og-learn-<slug>.svg`; the SVGs still require a separate SVG→PNG conversion before moving into `public/og-learn-<slug>.png`.
-- Re-run after a mechanism-diagram snapshot update, an archetype title change, or a new archetype slug. See [og-images.md](./og-images.md).
-
-### `build-og-editorial.mjs`
-
-- Generates the shared editorial OG PNGs (`public/og-editorial-*.png`) for About, Learn, methodology, digest, depeg, cemetery, and stablecoin-profile editorial surfaces.
-- Reads the canonical Safety Score methodology version from `shared/lib/methodology-versions/safety-score-data.ts` so the card pin matches the app.
-- Invoked by `npm run build:og-editorial`; `npm run check:og-editorial` verifies committed PNGs.
-
-### `build-og-case-studies.mjs`
-
-- Generates one PNG per `/learn/case-studies/[slug]/` route from the case-study content registry.
-- Resolves stablecoin and cemetery logos from the checked-in registries and writes staging SVGs under `agents/og-case-study-staging/`.
-- Invoked by `npm run build:og-case-studies`; `npm run check:og-case-studies` verifies committed PNGs.
-
-### `smoke-ui.mjs`
-
-- Uses the workspace Playwright package directly. Local runs use the Playwright-managed browser by default, while GitHub Actions uses the system Chrome channel unless `SMOKE_UI_BROWSER_CHANNEL` or `SMOKE_UI_BROWSER_EXECUTABLE_PATH` overrides it. Homepage data/analytics checks run once, then overflow route checks run through deterministic route chunks across `SMOKE_UI_OVERFLOW_WORKERS` browser contexts while preserving the same overflow assertions.
-- In CI deploys and the local merge gate, the browser targets a locally served `out/` export before Pages production deploy; the Pages builds set `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so browser reads on `127.0.0.1` use the production same-origin `/_site-data/*` lane. `npm run serve:static-export` runs `scripts/maintenance/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the explicitly configured `STATIC_EXPORT_SITE_API_BASE` so the smoke still exercises the live website data path against the exact built frontend artifact. Local `validate:pages-smoke` reads `.env.local`, maps `PHAROS_API_KEY` / `SITE_API_SHARED_SECRET` into the static-export proxy when the explicit `STATIC_EXPORT_*` env vars are unset, and falls back to a free localhost port when the default `127.0.0.1:4173` is occupied.
-- The production deploy workflow points the local site-data proxy at `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; callers can still target an explicit `api_base_url` when needed.
-- The consolidated Pages release workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host. Combined Worker + Pages deploys additionally rerun local artifact `smoke-ui` after Worker promotion and before Pages publish. Production deploys keep the broad route sweep on the local artifact and run a narrow live `/depeg/` canary because that route exercises the default-on DDR/DDRQ data contract. Pages deploy uses six Wrangler attempts with increasing backoff to absorb transient Cloudflare Pages asset-upload 500s.
-- Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
-- When `SMOKE_UI_EXPECT_GA_ID` is set, verifies the expected GA script, runtime `window.gtag` setup, dataLayer `page_view`, successful `gtag.js` load, and a GA4 `page_view` collect signal. Live mode requires successful collect delivery; after that success, expected-measurement GA collect `net::ERR_ABORTED` reports are treated as browser beacon noise. Local mode also accepts a Playwright `net::ERR_ABORTED` report for an issued collect URL with the configured measurement id because Chromium can abort the beacon as the local smoke context closes.
-- Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
-- Local mode runs mobile overflow checks at `390x844` on a default critical route set:
-  - `/`, `/alt-pegs/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/freezewatch/`, `/stability-index/`, `/safety-scores/`, `/api/`
-- Live mode keeps the homepage/GA checks and a narrow canary overflow route set (`/yield/`, `/alt-pegs/`, `/freezewatch/`, `/stability-index/` by default; override with `SMOKE_UI_CANARY_ROUTE`) unless `--skip-overflow` is set.
-- Overflow detection samples layout multiple times and retries once before failing, which filters transient layout jitter while still catching sustained overflow regressions.
-- Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), choose `--mode local|live`, tune overflow parallelism with `SMOKE_UI_OVERFLOW_WORKERS` (`1`-`6`; default `2` local and `1` live), or skip overflow checks with `--skip-overflow`.
-
-### `smoke-mobile-ui.mjs`
-
-- Runs the strict mobile rendered smoke used by `npm run test:smoke-ui:mobile`. The default route set covers `/`, `/stablecoins/`, `/screener/`, `/stablecoin/usdt-tether/`, `/timeline/`, `/compare/`, `/dependency-map/`, `/flows/`, `/alt-pegs/`, `/liquidity/`, `/chains/`, `/yield/`, `/freezewatch/`, `/coverage/`, `/portfolio/`, and `/cemetery/`.
-- Checks 360×740, 390×844, and 414×896 mobile viewports. The desktop spot sweep is now opt-in with `--include-desktop` (or `SMOKE_MOBILE_UI_SKIP_DESKTOP=0`).
-- Fails on HTTP/framework/blank-page errors, document-level horizontal overflow, mobile table geometry issues such as overlapped or overflowing headers/cells, and strict sub-44px common-control touch targets. Browser console errors and warnings are reported in the smoke log so runtime noise is visible during review.
-- Runs the mobile checks with bounded parallelism across browser pages (`SMOKE_MOBILE_UI_WORKERS`, default `2`, max `6`) to reduce wall time while keeping the same assertions.
-- `validate:pages-smoke` and the Pages production artifact smoke run this after the existing desktop/local `smoke-ui` pass against the served `out/` export. The deploy workflow and merge-gate can skip this mobile pass when the diff is non-UI (`PAGES_SMOKE_INCLUDE_MOBILE=0`); otherwise they run a canary profile by default (focused routes, two mobile viewports, desktop pass disabled, 3 workers; 1500 ms settle on deploy-lane CI runners, 5000 ms settle in the local merge gate because gate runs share the machine with the parallel validate matrix). The merge gate also sets desktop/local `smoke-ui` to the same deploy-lane canary route set with 6 overflow workers. Override routes with `SMOKE_MOBILE_UI_ROUTES` or `--routes`, tune viewports with `SMOKE_MOBILE_UI_VIEWPORTS` or `--viewports`, set settle time with `SMOKE_MOBILE_UI_WAIT_MS` or `--wait-ms`, and write failure screenshots with `--failure-screenshot-dir`.
-
-### `smoke-ops.mjs`
-
-- Validates the Access-protected operator UI shell plus direct operator API checks. The default `SMOKE_OPS_SCOPE=full` covers `status`, `status-history`, admin samples, and dry-run admin actions; `SMOKE_OPS_SCOPE=canary` keeps only shell/access plus direct and same-origin status checks for deploy-critical smoke.
-- Same-origin `ops.pharos.watch/api/admin/status` smoke first tries the service-token path, then replays a bootstrapped `CF_Authorization` cookie when the UI host yields one.
-- Retries up to two transient `502`/`504` gateway responses on that same-origin proxy assertion to absorb post-deploy warmup without masking persistent proxy failures.
-- Starts the independent direct ops API probes together with the ops UI shell fetch, and starts the same-origin status proxy check as soon as a UI Access cookie is available, so the smoke does not serialize unrelated network waits.
-
-### `serve-static-export.mjs`
-
-- Defaults to serving `out/` on `127.0.0.1:4173`; `validate:pages-smoke` auto-selects a free local port when that default is already in use.
-- Compresses eligible text assets with Brotli or gzip when the browser advertises support so local static-export browser checks match Cloudflare Pages text-compression behavior.
-- Serves exported `/api/` page files first, including static RSC payloads such as `/api/__next.api.txt`; other nested `/api/*` paths proxy to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
-- Proxies `GET`/`HEAD` requests under `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` when set; otherwise it falls back to `STATIC_EXPORT_API_BASE`, then the default public API origin. CI sets `STATIC_EXPORT_SITE_API_BASE` explicitly for site-data smoke, forwards `STATIC_EXPORT_SITE_API_SHARED_SECRET` as `X-Pharos-Site-Proxy-Secret` when set, and builds the artifact with `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so local-host browser reads hit this path instead of the protected direct `/api/*` lane.
-- Runs through `tsx` via `npm run serve:static-export` because the local site-data proxy imports shared TypeScript endpoint metadata at runtime.
-- Exists to keep browser smoke pre-deploy while still exercising the same API-backed UI code paths as production.
-
-### `classify-deploy-changes.mjs`
-
-- Used by the deploy and pull-request `detect-changes` jobs. On PRs, the workflow sets `DEPLOY_EVENT_NAME=push` with PR base/head SHAs so the same deploy-surface classifier controls conditional Pages build/SEO and Worker typechecks.
-- On `push`, diffs `DEPLOY_BASE_SHA...DEPLOY_HEAD_SHA` and emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, and `pages_ui_changed`.
-- `worker_changed` turns on worker validation/typecheck coverage when the diff touches worker/shared runtime, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, worker operational scripts, or worker-specific checks/smokes.
-- `worker_promotion_required` turns on Worker upload/promotion/production API smoke only for deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files that can affect the Worker, and root package/lock changes to packages consumed by the Worker bundle. Root package/tooling changes that only touch non-Worker packages and known Pages-only shared contract files can still set `worker_changed=true` for validation without shifting production Worker traffic.
-- `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts.
-- `pages_ui_changed` is a narrower frontend/runtime signal used by production deploys to run the strict mobile rendered smoke only when the diff touches likely UI surfaces (`src/`, `public/`, `shared/`, `functions/`, `data/`, root package/lock, or `next.config.ts`).
-- `deploy_required=false` lets the push workflow skip the heavy deploy path entirely for docs-only or other non-deploy diffs.
-- On `workflow_dispatch`, forces the full deploy path for safety; production dispatches must target the `main` ref.
-
-### `pharos-change-contract.mjs`
-
-- Powers repo-local Codex hooks configured in `.codex/config.toml` and the same-repo PR comment workflow in `.github/workflows/pharos-change-contract.yml`. CI and pre-push validation remain authoritative.
-- Default CLI mode reads the current dirty diff, including untracked files. Use `--staged` for staged-only review, `--base-ref` / `--head-ref` for a specific comparison, `--file <path>` for deterministic single-file checks, `--json` for machine-readable output, or `--markdown` for the GitHub PR comment body.
-- `SessionStart` injects compact Pharos routing context. If files are already changed, it includes matched task families, docs to read, likely docs to update, checks to consider, and core rules.
-- `Stop` emits Codex continuation JSON once per turn when changed files match a medium- or high-risk task family. Low-risk-only changes (doc-only edits) skip the continuation, and `PostToolUse`/`PostToolBatch` reminders apply the same risk gate. The continuation asks the agent to run relevant checks/docs updates or state why they were unnecessary or unavailable; `stop_hook_active=true` is respected to avoid loops.
-- Codex hook entries in `.codex/config.toml` use the documented nested command-handler shape with the current `features.hooks` flag. `PreToolUse`, `PermissionRequest`, and `PostToolUse` use catch-all matchers because Codex native command/apply-patch tool names differ from Claude's `Bash` / `Edit` names. The shared script still only blocks deterministic unsafe operations.
-- Codex stores per-hook trust under user/session `hooks.state`, not in project config. A new or modified project hook requires a one-time `/hooks` review in the Codex TUI before it runs.
-- The PR workflow uses `pull_request` and only comments for same-repo PRs, so it does not run untrusted fork code with a write token.
-- This script is advisory. It should steer agents toward the right Pharos docs/checks, not replace `npm run test:merge-gate`, CI, or human review.
-
-### `upsert-github-pr-comment.mjs`
-
-- Reads a rendered Markdown body from `COMMENT_FILE` and requires the stable marker `<!-- pharos-change-contract -->`.
-- Finds the most recent existing marker comment on the PR and patches it; otherwise it creates a new comment.
-- Intended for GitHub Actions only. It does not run locally unless `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, and `PR_NUMBER` are set.
-
-### `test-merge-gate.mjs`
-
-- Skips cleanly when the changed-file set is not deploy-impacting.
-- For deploy-impacting diffs, always runs the same validate core as deploy CI: dependency audit, lint, worker-boundary, blocking cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, doc link/source-path/sync checks, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, non-critical tests, and critical coverage.
-- Adds `npm run build`, `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, and the built-artifact guardrails only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
-- Adds Worker runtime typecheck only when the changed-file set is worker-impacting.
-- The deploy-impact registry gives each validation command an explicit impact classification (`full`, `pages`, `worker`, or `validation-only`) and derives deploy-impacting guardrail paths from that registry where practical; `scripts/lib/validate-contract.mjs` fails on import if a validate command lacks a classification.
-- After `npm run validate:prebuild` passes, uses `buildCommandPlan` to construct a per-trigger execution plan covering Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups. Execution **auto-enables the parallel matrix on machines with ≥12 available cores** and stays serial below that to avoid local CPU contention; `MERGE_GATE_PARALLEL=1`/`=0` forces either mode. When parallel, a failing group aborts siblings and reports the failing command explicitly. CI always runs the parallel matrix via separate runners regardless of this env var.
-- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, `MERGE_GATE_PARALLEL=1`, and `MERGE_GATE_PRODUCTION_ENV=1` for opt-in production Pages env rehearsal. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range. Pages smoke runs by default for Pages-impacting diffs; override with `MERGE_GATE_PAGES_SMOKE=0`.
-
-### `generate-agent-code-map.mjs`
-
-- Scans the repo's main runtime/tooling source roots and writes `docs/agent-code-map.md`.
-- Captures route files, top-level exports, and grouped stablecoin JSON counts as a compact discovery aid for agents.
-- Regenerate it after structural route, handler, cron, hook, or script entrypoint changes.
-- The generated map is a navigation aid only. Read the implementation before editing.
-
-### `smoke-api.mjs`
-
-- Validates `/api/health` plus either the full strict contract endpoint set (`SMOKE_API_SCOPE=full`, default) or a deploy canary subset (`SMOKE_API_SCOPE=canary`) mirrored from `shared/lib/api-endpoints/`; `src/lib/__tests__/api-endpoints.test.ts` guards strict contract drift.
-- Can target either production or a Worker preview URL via `--base-url` / `SMOKE_API_BASE`; the deploy workflow now uses it both before production promotion and after cutover.
-- Sends `X-API-Key` when `SMOKE_API_KEY` is set, which is required once protected public routes are enforced.
-- Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.
-- Supports `--scope full|canary` (`--canary`/`--full`) and matching `SMOKE_API_SCOPE` env.
-- Retries transient request failures once by default (timeouts/network errors/5xx/429/408); tune with `SMOKE_API_RETRY_COUNT` and `SMOKE_API_RETRY_DELAY_MS`. The production post-promotion workflow overrides these to a larger retry budget before rollback so custom-domain cutover warmup does not fail on the first slow health probe.
-- Per-request timeout defaults to `12000ms`; tune with `SMOKE_API_TIMEOUT_MS`.
-
-### `smoke-ops.mjs`
-
-- Uses Cloudflare Access service-token headers (`OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`) rather than the legacy single-token admin flow.
-- Defaults to `https://ops.pharos.watch/admin/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
-- Verifies the operator UI shell plus `/api/status`, `/api/status-history?limit=5`, admin samples, and safe dry-run admin paths in the default full scope. Set `SMOKE_OPS_SCOPE=canary` for shell/access plus direct and same-origin status-only smoke.
-- Full-scope blacklist backfill dry-run probes default to `USDT` on `optimism`; override them with `SMOKE_OPS_BLACKLIST_BACKFILL_STABLECOIN` and `SMOKE_OPS_BLACKLIST_BACKFILL_CHAIN_ID`.
-- Starts the independent direct ops API probes together with the ops UI shell fetch, and starts the same-origin status proxy check as soon as a UI Access cookie is available, so the smoke does not serialize unrelated network waits.
-- When the `ops.pharos.watch` flow returns a bootstrapped UI session cookie (for example `CF_Authorization`), the script reuses that browser-style session to smoke same-origin `/api/admin/status`.
-- If the service-token flow reaches the UI shell but still does not yield a bootstrapped UI session cookie, the script keeps the shell assertion and direct `ops-api` smoke but skips the same-origin proxy assertion instead of failing on a non-browser auth shape the Pages proxy cannot use.
-- If `ops.pharos.watch` only returns the interactive Cloudflare Access redirect, the script also skips the same-origin proxy assertion for the same reason.
-- If the Pages proxy remains `401 Unauthorized` even after the best-effort cookie replay, the script also records a skip instead of a failure; that CI lane can prove the direct `ops-api` auth path, but not a full browser-backed Access session on Pages Functions.
-
-### `smoke-transport.mjs`
-
-- Sends `HEAD` requests with `redirect: "manual"` to exercise the edge redirect rather than following it.
-- Defaults to `http://api.pharos.watch/api/health?smoke=transport` and `http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport`.
-- Requires `308` plus an exact `Location` match that preserves host, path, and query while upgrading only the scheme to `https`.
-- Checks both redirect hosts concurrently because the edge assertions are independent.
-- Exists specifically to keep HTTP->HTTPS redirect ownership at the Cloudflare edge layer instead of drifting into worker code.
+- `scripts/maintenance/sync-digests.ts`, `scripts/maintenance/sync-depeg-events.ts`, and `scripts/maintenance/generate-public-datasets.ts` run before Pages builds to refresh checked-in static inputs from the selected API environment.
+- `scripts/maintenance/fetch-logos.ts`, `scripts/maintenance/generate-compact-logos.mjs`, and the OG generators (`scripts/maintenance/screenshot-og.mjs`, `scripts/maintenance/build-og-learn-images.mjs`, `scripts/maintenance/build-og-editorial.mjs`, `scripts/maintenance/build-og-case-studies.mjs`) are local/artifact maintenance tools; see [og-images.md](./og-images.md) for OG renewal policy.
+- `scripts/maintenance/dev-api-proxy.mjs` backs `npm run dev` with production-compatible site-data auth. Use `npm run dev:proxy` or `npm run dev:next` to run only one side of the local supervisor.
+- `worker/scripts/repair-non-usd-fiat-depeg-history.ts` and `worker/scripts/yield-history-cleanup.ts` are operator tools. Remote mutation requires the script-specific `--execute --confirm ...` guard and should follow the relevant runbook or deployment notes.
+- `scripts/maintenance/yield-pys-v8-calibration.ts`, `scripts/maintenance/audit-dex-pricing-source-gaps.ts`, and `scripts/maintenance/backtest-depeg-resolver-lock-policy.ts` are read-only research/backtest tools; keep scratch output under `agents/`.
+- `scripts/maintenance/register-telegram.ts` owns manual Telegram Bot API command/profile/webhook recovery. Worker-side reconciliation uses `shared/lib/telegram-bot-registration.ts`.
+- `scripts/maintenance/smoke-ui.mjs`, `scripts/maintenance/smoke-mobile-ui.mjs`, `scripts/maintenance/smoke-api.mjs`, `scripts/maintenance/smoke-ops.mjs`, `scripts/maintenance/smoke-transport.mjs`, and `scripts/maintenance/serve-static-export.mjs` are the local/live smoke harnesses used by merge-gate and deploy workflows.
+- `scripts/ci/classify-deploy-changes.mjs`, `scripts/ci/pharos-change-contract.mjs`, `scripts/ci/upsert-github-pr-comment.mjs`, `scripts/maintenance/test-merge-gate.mjs`, and `scripts/maintenance/generate-agent-code-map.mjs` own deploy classification, local agent routing, PR comments, local merge-gate planning, and generated agent discovery.
 
 ## Safe Usage Guidelines
 
