@@ -40,6 +40,7 @@ interface TestDb extends D1Database {
 
 function makeDb(opts: {
   dewsUnavailable?: boolean;
+  dewsPublishedAt?: number | null;
   dewsRows?: Array<{ stablecoin_id: string; score: number; band: string; computed_at: number }>;
   depegQueryFails?: boolean;
   depegRows?: Array<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
@@ -86,19 +87,33 @@ function makeDb(opts: {
         if (opts.dewsUnavailable) {
           throw new Error("no such table: stress_signals");
         }
+        const cutoff = typeof binds[0] === "number" ? binds[0] : null;
+        const dewsRows = opts.dewsRows ?? [{
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: Math.floor(Date.now() / 1000) - 300,
+        }];
         return {
-          results: (opts.dewsRows ?? [{
-            stablecoin_id: "usdt-tether",
-            score: 72,
-            band: "WARNING",
-            computed_at: Math.floor(Date.now() / 1000) - 300,
-          }]) as T[],
+          results: (cutoff == null ? dewsRows : dewsRows.filter((row) => row.computed_at <= cutoff)) as T[],
         };
       }
       return { results: [] as T[] };
     };
 
-    const first = async <T>() => null as T | null;
+    const first = async <T>() => {
+      if (sql.includes("FROM cache WHERE key = ?") && binds[0] === "dews:published-generation" && opts.dewsPublishedAt != null) {
+        return {
+          value: JSON.stringify({
+            updatedAt: opts.dewsPublishedAt,
+            source: "compute-dews",
+            publishStatus: "published",
+          }),
+          updated_at: opts.dewsPublishedAt,
+        } as T;
+      }
+      return null as T | null;
+    };
     const run = async () => {
       runHistory.push({ sql, binds: [...binds] });
       return { success: true, meta: { changes: 1 } };
@@ -249,6 +264,40 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
     ).toBe(false);
+  });
+
+  it("ignores DEWS rows newer than the published generation when computing PSI stress breadth", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const publishedAt = nowSec - 300;
+    const db = makeDb({
+      dewsPublishedAt: publishedAt,
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 72,
+          band: "WARNING",
+          computed_at: publishedAt + 120,
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          score: 12,
+          band: "CALM",
+          computed_at: publishedAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      dewsStressBreadth: number;
+      dewsRowsRead: number;
+      dewsLatestComputedAt: number | null;
+    };
+    expect(metadata.dewsRowsRead).toBe(1);
+    expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
+    expect(metadata.dewsStressBreadth).toBe(0);
   });
 
   it("fails closed when the active depeg query is unavailable", async () => {

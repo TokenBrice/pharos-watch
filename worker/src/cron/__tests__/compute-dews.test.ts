@@ -102,6 +102,7 @@ vi.mock("../../lib/db-cache", () => ({
     updatedAt: Math.floor(Date.now() / 1000),
   })),
   setCache: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   writeFreshnessSentinel: vi.fn(async () => {}),
 }));
 
@@ -167,6 +168,8 @@ interface MakeDbOptions {
   yieldRankingsPayload?: unknown;
   signalIds?: string[];
   historyIds?: string[];
+  currentGenerationRows?: number;
+  latestGenerationRows?: number;
   onBind?: (sql: string, args: unknown[]) => void;
 }
 
@@ -272,6 +275,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           updated_at: Math.floor(Date.now() / 1000),
         } as T;
       }
+      if (sql.includes("pharos:dews:stress-current-generation-count")) {
+        return { cnt: opts.currentGenerationRows ?? 1 } as T;
+      }
+      if (sql.includes("pharos:dews:stress-latest-generation-count")) {
+        return { cnt: opts.latestGenerationRows ?? opts.currentGenerationRows ?? 1 } as T;
+      }
       if (sql.includes("stress_signal_history")) return null as T | null;
       if (sql.includes("stability_index_samples")) return null as T | null;
       return null as T | null;
@@ -361,11 +370,19 @@ describe("computeAndStoreDEWS", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
     expect(writeFreshnessSentinel).toHaveBeenCalledTimes(1);
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000));
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), undefined);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessSentinelPublished: boolean;
+      publicationPointerWritten: boolean;
+      publishedGeneration: number | null;
+      currentGenerationRows: number;
+      latestGenerationRows: number | null;
     };
     expect(metadata.freshnessSentinelPublished).toBe(true);
+    expect(metadata.publicationPointerWritten).toBe(true);
+    expect(metadata.publishedGeneration).toBe(Math.floor(Date.now() / 1000));
+    expect(metadata.currentGenerationRows).toBe(1);
+    expect(metadata.latestGenerationRows).toBe(1);
   });
 
   it("does not publish the DEWS freshness sentinel for zero-result runs", async () => {
@@ -1071,6 +1088,8 @@ describe("computeAndStoreDEWS", () => {
           timestamp: nowSec - 3 * 86400,
         },
       ],
+      currentGenerationRows: 2,
+      latestGenerationRows: 2,
     });
 
     await computeAndStoreDEWS(db);

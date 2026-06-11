@@ -12,6 +12,9 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
+  readDewsPublishedGeneration,
+} from "../lib/dews-publication-pointer";
+import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -78,22 +81,41 @@ function mergeNewestStressSignalRows(
   return [...byId.values()];
 }
 
+async function loadCompletedDewsComputedAt(db: D1Database, nowSec: number): Promise<number | null> {
+  try {
+    return await readDewsPublishedGeneration(db, nowSec);
+  } catch {
+    return null;
+  }
+}
+
 async function loadLatestStressSignalForCoin(
   db: D1Database,
   stablecoinId: string,
   nowSec: number,
 ): Promise<Omit<StressSignalRow, "stablecoin_id"> | null> {
+  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
   let latest: Omit<StressSignalRow, "stablecoin_id"> | null = null;
   try {
-    latest = await db
-      .prepare(
+    const latestStmt = db.prepare(
+      completedAt == null
+        ?
         `SELECT /* pharos:stress-signals:latest-one */
            score, band, signals_json, computed_at
          FROM stress_signals_latest
-         WHERE stablecoin_id = ?`,
-      )
-      .bind(stablecoinId)
-      .first<Omit<StressSignalRow, "stablecoin_id">>();
+         WHERE stablecoin_id = ?`
+        :
+        `SELECT /* pharos:stress-signals:latest-one */
+           score, band, signals_json, computed_at
+         FROM stress_signals_latest
+         WHERE stablecoin_id = ? AND computed_at <= ?
+         ORDER BY computed_at DESC LIMIT 1`,
+    );
+    latest = await (
+      completedAt == null
+        ? latestStmt.bind(stablecoinId)
+        : latestStmt.bind(stablecoinId, completedAt)
+    ).first<Omit<StressSignalRow, "stablecoin_id">>();
     if (latest && !isStressSignalRowStale(latest, nowSec)) {
       return latest;
     }
@@ -102,28 +124,49 @@ async function loadLatestStressSignalForCoin(
   }
 
   // Fallback keeps old-schema and stale-materialization deployments safe.
-  return await db
-    .prepare(
+  const legacyStmt = db.prepare(
+    completedAt == null
+      ?
       `SELECT /* pharos:stress-signals:legacy-latest-one */
          score, band, signals_json, computed_at
        FROM stress_signals
        WHERE stablecoin_id = ?
+       ORDER BY computed_at DESC LIMIT 1`
+      :
+      `SELECT /* pharos:stress-signals:legacy-latest-one */
+         score, band, signals_json, computed_at
+       FROM stress_signals
+       WHERE stablecoin_id = ? AND computed_at <= ?
        ORDER BY computed_at DESC LIMIT 1`,
-    )
-    .bind(stablecoinId)
-    .first<Omit<StressSignalRow, "stablecoin_id">>() ?? latest;
+  );
+  return await (
+    completedAt == null
+      ? legacyStmt.bind(stablecoinId)
+      : legacyStmt.bind(stablecoinId, completedAt)
+  ).first<Omit<StressSignalRow, "stablecoin_id">>() ?? latest;
 }
 
 async function loadLatestStressSignalRows(db: D1Database, nowSec: number): Promise<{ results: StressSignalRow[] }> {
+  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
   let latestRows: StressSignalRow[] = [];
   try {
-    const rows = await db
-      .prepare(
+    const latestStmt = db.prepare(
+      completedAt == null
+        ?
         `SELECT /* pharos:stress-signals:latest-all */
            stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest`,
-      )
-      .all<StressSignalRow>();
+         FROM stress_signals_latest`
+        :
+        `SELECT /* pharos:stress-signals:latest-all */
+           stablecoin_id, score, band, signals_json, computed_at
+         FROM stress_signals_latest
+         WHERE computed_at <= ?`,
+    );
+    const rows = await (
+      completedAt == null
+        ? latestStmt
+        : latestStmt.bind(completedAt)
+    ).all<StressSignalRow>();
     latestRows = rows.results ?? [];
   } catch {
     latestRows = [];
@@ -132,17 +175,32 @@ async function loadLatestStressSignalRows(db: D1Database, nowSec: number): Promi
   // Fallback keeps old-schema, stale-materialization, and partial latest-table
   // deployments safe. The latest table is an optimization over the canonical
   // history table, so readers merge both and keep the newest row per coin.
-  const legacyRows = await db
-    .prepare(
+  const legacyStmt = db.prepare(
+    completedAt == null
+      ?
       `SELECT /* pharos:stress-signals:legacy-latest-all */
          s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
        FROM stress_signals s
        INNER JOIN (
          SELECT stablecoin_id, MAX(computed_at) as max_at
          FROM stress_signals GROUP BY stablecoin_id
+       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
+      :
+      `SELECT /* pharos:stress-signals:legacy-latest-all */
+         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
+       FROM stress_signals s
+       INNER JOIN (
+         SELECT stablecoin_id, MAX(computed_at) as max_at
+         FROM stress_signals
+         WHERE computed_at <= ?
+         GROUP BY stablecoin_id
        ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    )
-    .all<StressSignalRow>();
+  );
+  const legacyRows = await (
+    completedAt == null
+      ? legacyStmt
+      : legacyStmt.bind(completedAt)
+  ).all<StressSignalRow>();
   const legacyResults = legacyRows.results ?? [];
   if (legacyResults.length === 0) return { results: latestRows };
   if (areLatestStressSignalRowsStale(latestRows, nowSec)) return { results: legacyResults };

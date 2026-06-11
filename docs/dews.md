@@ -173,7 +173,10 @@ Structured evidence is additive with warning-string evidence and the final Yield
 | Table                   | Pruning  | Purpose                                |
 | ----------------------- | -------- | -------------------------------------- |
 | `stress_signals`        | 7 days   | 30-minute rolling samples              |
+| `stress_signals_latest` | current  | Latest-row materialization for hot readers |
 | `stress_signal_history` | 365 days | Daily snapshots (first run of UTC day) |
+
+`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after current/latest rows have been written, retention work has completed, and generation row counts match the computed result count. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
 
 ### Cron Schedule
 
@@ -194,11 +197,12 @@ Structured evidence is additive with warning-string evidence and the final Yield
 5. Read `mint_burn_hourly` aggregates
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 7. Compute DEWS per PSI-eligible coin
-8. Batch write to `stress_signals` (only for coins where `computeDEWS()` returned a score)
-9. Retire current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
+8. Batch write to `stress_signals` and `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
+9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
 10. Daily snapshot to `stress_signal_history` (first run of UTC day)
 11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 12. Prune old data
+13. Validate row counts and advance `dews:published-generation`; healthy runs also advance `freshness:dews`
 
 ---
 
@@ -209,6 +213,8 @@ Structured evidence is additive with warning-string evidence and the final Yield
 **All coins (no params):** Returns latest DEWS for readable tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained frozen/long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Pre-launch tracked entries are excluded because the handler gates on readable tracked IDs.
 
 When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
+
+Current DEWS readers, Telegram alert snapshots, smoothing inputs, and PSI stress-breadth reads apply `computed_at <= dews:published-generation` when the pointer exists. That prevents partially written newer runs from becoming visible while still allowing retained last-valid rows from older completed generations.
 
 ```text
 {

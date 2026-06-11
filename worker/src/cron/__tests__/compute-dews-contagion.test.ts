@@ -143,6 +143,7 @@ vi.mock("../../lib/db-cache", () => ({
     } as never;
   }),
   setCache: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   writeFreshnessSentinel: vi.fn(async () => {}),
 }));
 
@@ -197,6 +198,12 @@ function makeDb(): D1Database {
     };
 
     const first = async <T>() => {
+      if (sql.includes("pharos:dews:stress-current-generation-count")) {
+        return { cnt: fixtures.length } as T;
+      }
+      if (sql.includes("pharos:dews:stress-latest-generation-count")) {
+        return { cnt: fixtures.length } as T;
+      }
       if (sql.includes("stress_signal_history")) return null as T | null;
       if (sql.includes("stability_index_samples")) {
         return psiScore === null

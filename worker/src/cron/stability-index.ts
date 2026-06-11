@@ -6,6 +6,7 @@ import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
+import { readDewsPublishedGeneration } from "../lib/dews-publication-pointer";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -116,16 +117,36 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   let dewsLatestComputedAt: number | null = null;
   let dewsRowsRead = 0;
   try {
-    const dewsRows = await db
-      .prepare(
+    let completedDewsAt: number | null = null;
+    try {
+      completedDewsAt = await readDewsPublishedGeneration(db, now);
+    } catch {
+      completedDewsAt = null;
+    }
+    const dewsStmt = db.prepare(
+      completedDewsAt == null
+        ?
         `SELECT s.stablecoin_id, s.score, s.band, s.computed_at
          FROM stress_signals s
          INNER JOIN (
            SELECT stablecoin_id, MAX(computed_at) as max_at
            FROM stress_signals GROUP BY stablecoin_id
+         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
+        :
+        `SELECT s.stablecoin_id, s.score, s.band, s.computed_at
+         FROM stress_signals s
+         INNER JOIN (
+           SELECT stablecoin_id, MAX(computed_at) as max_at
+           FROM stress_signals
+           WHERE computed_at <= ?
+           GROUP BY stablecoin_id
          ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>();
+    );
+    const dewsRows = await (
+      completedDewsAt == null
+        ? dewsStmt
+        : dewsStmt.bind(completedDewsAt)
+    ).all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>();
 
     const rows = dewsRows.results ?? [];
     dewsRowsRead = rows.length;

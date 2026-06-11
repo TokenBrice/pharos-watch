@@ -182,7 +182,14 @@ export async function computeAndStoreDEWS(
   const freshnessSentinelPublished = results.length > 0 && !degraded;
 
   await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
-  const { rowsDropped, rowsRetiredCurrent } = await runWithAbort(signal, () =>
+  const {
+    rowsDropped,
+    rowsRetiredCurrent,
+    currentGenerationRows,
+    latestGenerationRows,
+    publicationPointerWritten,
+    publishedGeneration,
+  } = await runWithAbort(signal, () =>
     persistDewsResults({
       db,
       results,
@@ -216,6 +223,10 @@ export async function computeAndStoreDEWS(
       rowsSkippedNoCurrentSupply: noCurrentSupplyIds.length, rowsRetiredCurrent,
       rowsDropped,
       freshnessSentinelPublished,
+      publicationPointerWritten,
+      publishedGeneration,
+      currentGenerationRows,
+      latestGenerationRows,
       sourceCoverage,
       sourceFailures,
       fallbackMode:

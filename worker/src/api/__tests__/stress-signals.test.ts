@@ -8,6 +8,7 @@ import {
 import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
 
 const nowSec = Math.floor(Date.now() / 1000);
+const completedDewsAt = nowSec - 60;
 
 const signalsJson = JSON.stringify({
   supply: { value: 10, available: true },
@@ -24,10 +25,29 @@ const AGGREGATE_STRESS_SIGNALS_SQL = `
   ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
 `;
 
+const AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
+  SELECT /* pharos:stress-signals:legacy-latest-all */
+    s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
+  FROM stress_signals s
+  INNER JOIN (
+    SELECT stablecoin_id, MAX(computed_at) as max_at
+    FROM stress_signals
+    WHERE computed_at <= ?
+    GROUP BY stablecoin_id
+  ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
+`;
+
 const LATEST_AGGREGATE_STRESS_SIGNALS_SQL = `
   SELECT /* pharos:stress-signals:latest-all */
     stablecoin_id, score, band, signals_json, computed_at
   FROM stress_signals_latest
+`;
+
+const LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
+  SELECT /* pharos:stress-signals:latest-all */
+    stablecoin_id, score, band, signals_json, computed_at
+  FROM stress_signals_latest
+  WHERE computed_at <= ?
 `;
 
 const LATEST_STRESS_SIGNAL_SQL = `
@@ -37,11 +57,27 @@ const LATEST_STRESS_SIGNAL_SQL = `
   WHERE stablecoin_id = ?
 `;
 
+const LATEST_STRESS_SIGNAL_CUTOFF_SQL = `
+  SELECT /* pharos:stress-signals:latest-one */
+    score, band, signals_json, computed_at
+  FROM stress_signals_latest
+  WHERE stablecoin_id = ? AND computed_at <= ?
+  ORDER BY computed_at DESC LIMIT 1
+`;
+
 const LEGACY_STRESS_SIGNAL_SQL = `
   SELECT /* pharos:stress-signals:legacy-latest-one */
     score, band, signals_json, computed_at
   FROM stress_signals
   WHERE stablecoin_id = ?
+  ORDER BY computed_at DESC LIMIT 1
+`;
+
+const LEGACY_STRESS_SIGNAL_CUTOFF_SQL = `
+  SELECT /* pharos:stress-signals:legacy-latest-one */
+    score, band, signals_json, computed_at
+  FROM stress_signals
+  WHERE stablecoin_id = ? AND computed_at <= ?
   ORDER BY computed_at DESC LIMIT 1
 `;
 
@@ -53,27 +89,72 @@ const STRESS_SIGNAL_HISTORY_SQL = `
   ORDER BY snapshot_date ASC
 `;
 
-function makeStrictAggregateDb(rows: Record<string, unknown>[]) {
-  return mockD1([{ match: AGGREGATE_STRESS_SIGNALS_SQL, rows }], { strict: true });
+const PUBLICATION_POINTER_SQL = `
+  SELECT value, updated_at FROM cache WHERE key = ?
+`;
+
+function dewsPublicationPointerMatch(updatedAt: number | null = null) {
+  return {
+    match: PUBLICATION_POINTER_SQL,
+    matchBinds: ["dews:published-generation"],
+    rows: updatedAt == null
+      ? []
+      : [{
+          key: "dews:published-generation",
+          value: JSON.stringify({ updatedAt, source: "compute-dews", publishStatus: "published" }),
+          updated_at: updatedAt,
+        }],
+    first: updatedAt == null
+      ? null
+      : {
+          key: "dews:published-generation",
+          value: JSON.stringify({ updatedAt, source: "compute-dews", publishStatus: "published" }),
+          updated_at: updatedAt,
+        },
+  };
+}
+
+function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt: number | null = null) {
+  return mockD1([
+    dewsPublicationPointerMatch(completedAt),
+    {
+      match: completedAt == null ? AGGREGATE_STRESS_SIGNALS_SQL : AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      rows,
+    },
+  ], { strict: true });
 }
 
 function makeStrictLatestAggregateDb(
   rows: Record<string, unknown>[],
   legacyRows: Record<string, unknown>[] = [],
+  completedAt: number | null = null,
 ) {
   return mockD1([
-    { match: LATEST_AGGREGATE_STRESS_SIGNALS_SQL, rows },
-    { match: AGGREGATE_STRESS_SIGNALS_SQL, rows: legacyRows },
+    dewsPublicationPointerMatch(completedAt),
+    {
+      match: completedAt == null ? LATEST_AGGREGATE_STRESS_SIGNALS_SQL : LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      rows,
+    },
+    {
+      match: completedAt == null ? AGGREGATE_STRESS_SIGNALS_SQL : AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      rows: legacyRows,
+    },
   ], { strict: true });
 }
 
 function makeStrictSingleCoinDb(
   current: Record<string, unknown> | null,
   historyRows: Record<string, unknown>[] = [],
+  completedAt: number | null = null,
 ) {
   return mockD1([
+    dewsPublicationPointerMatch(completedAt),
     {
-      match: LEGACY_STRESS_SIGNAL_SQL,
+      match: completedAt == null ? LEGACY_STRESS_SIGNAL_SQL : LEGACY_STRESS_SIGNAL_CUTOFF_SQL,
+      ...(completedAt == null ? {} : { matchBinds: ["usdt-tether", completedAt] }),
       rows: current ? [current] : [],
       first: current,
     },
@@ -87,10 +168,13 @@ function makeStrictSingleCoinDb(
 function makeStrictMaterializedSingleCoinDb(
   current: Record<string, unknown>,
   historyRows: Record<string, unknown>[] = [],
+  completedAt: number | null = null,
 ) {
   return mockD1([
+    dewsPublicationPointerMatch(completedAt),
     {
-      match: LATEST_STRESS_SIGNAL_SQL,
+      match: completedAt == null ? LATEST_STRESS_SIGNAL_SQL : LATEST_STRESS_SIGNAL_CUTOFF_SQL,
+      ...(completedAt == null ? {} : { matchBinds: ["usdt-tether", completedAt] }),
       rows: [current],
       first: current,
     },
@@ -203,6 +287,47 @@ describe("handleStressSignals contract tests", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
+  it("aggregate mode ignores newer rows that have not advanced the published DEWS generation", async () => {
+    const db = makeStrictLatestAggregateDb(
+      [],
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 12,
+          band: "CALM",
+          signals_json: signalsJson,
+          computed_at: completedDewsAt,
+        },
+      ],
+      completedDewsAt,
+    );
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      computedCount: number;
+      signals: Record<string, { score: number; computedAt: number }>;
+    };
+    expect(body.computedCount).toBe(1);
+    expect(body.signals["usdt-tether"]).toMatchObject({
+      score: 12,
+      computedAt: completedDewsAt,
+    });
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("FROM stress_signals_latest") &&
+      entry.sql.includes("computed_at <= ?") &&
+      entry.binds[0] === completedDewsAt
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("FROM stress_signals") &&
+      entry.sql.includes("computed_at <= ?") &&
+      entry.binds[0] === completedDewsAt
+    )).toBe(true);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
   it("single-coin mode returns shape matching StressSignalDetailResponseSchema", async () => {
     const db = makeStrictSingleCoinDb(
       {
@@ -240,6 +365,43 @@ describe("handleStressSignals contract tests", () => {
     expect(body.current).toHaveProperty("methodologyVersion");
     expect(body.current).toHaveProperty("ageClassification");
     expect(body.history[0]).toHaveProperty("methodologyVersion");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("single-coin mode ignores materialized rows newer than the published DEWS generation", async () => {
+    const db = makeStrictSingleCoinDb(
+      {
+        score: 21,
+        band: "CALM",
+        signals_json: signalsJson,
+        computed_at: completedDewsAt,
+      },
+      [],
+      completedDewsAt,
+    );
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: { score: number; computedAt: number } | null;
+      currentStatus: string;
+    };
+    expect(body.current).toMatchObject({
+      score: 21,
+      computedAt: completedDewsAt,
+    });
+    expect(body.currentStatus).toBe("ok");
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("FROM stress_signals_latest") &&
+      entry.sql.includes("computed_at <= ?") &&
+      entry.binds[0] === "usdt-tether" &&
+      entry.binds[1] === completedDewsAt
+    )).toBe(true);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 

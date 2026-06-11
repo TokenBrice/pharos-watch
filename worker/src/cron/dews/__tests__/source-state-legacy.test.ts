@@ -29,14 +29,29 @@ function mockDbWithPrevRows(
     band: string;
     computed_at: number;
   }> = [],
+  publishedGeneration: number | null = null,
 ): D1Database {
-  const stmt = (sql: string) => {
+  const pointerRow = publishedGeneration == null
+    ? null
+    : {
+        value: JSON.stringify({
+          updatedAt: publishedGeneration,
+          source: "compute-dews",
+          publishStatus: "published",
+        }),
+        updated_at: publishedGeneration,
+      };
+  const filterByCutoff = <T extends { computed_at: number }>(rows: T[], binds: unknown[]): T[] => {
+    const cutoff = typeof binds[0] === "number" ? binds[0] : null;
+    return cutoff == null ? rows : rows.filter((row) => row.computed_at <= cutoff);
+  };
+  const stmt = (sql: string, binds: unknown[] = []) => {
     const all = async <T>() => {
       if (sql.includes("FROM stress_signals_latest")) {
-        return { results: latestRows as unknown as T[] };
+        return { results: filterByCutoff(latestRows, binds) as unknown as T[] };
       }
       if (sql.includes("FROM stress_signals s")) {
-        return { results: prevRows as unknown as T[] };
+        return { results: filterByCutoff(prevRows, binds) as unknown as T[] };
       }
       if (sql.includes("FROM blacklist_events")) {
         return { results: blacklistRows as unknown as T[] };
@@ -44,12 +59,16 @@ function mockDbWithPrevRows(
       return { results: [] as T[] };
     };
     const first = async <T>() => {
-      if (sql.includes("FROM cache WHERE key = ?")) return (rankingsCache ?? null) as T | null;
+      if (sql.includes("FROM cache WHERE key = ?")) {
+        if (binds[0] === "dews:published-generation") return pointerRow as T | null;
+        if (binds[0] === "yield-rankings") return (rankingsCache ?? null) as T | null;
+        return null as T | null;
+      }
       return null as T | null;
     };
     const run = async () => ({ success: true, meta: { changes: 0 } });
     return {
-      bind: () => ({ all, first, run }),
+      bind: (...args: unknown[]) => stmt(sql, args),
       all,
       first,
       run,
@@ -170,6 +189,43 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
 
     expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 8, available: true });
     expect(sourceState.prevSignals.get("usdc-circle")?.signals.supply).toEqual({ value: 3, available: true });
+  });
+
+  it("ignores previous stress rows newer than the published DEWS generation", async () => {
+    const publishedAt = nowSec - 600;
+    const latestPayload = { signals: { supply: { value: 8, available: true } } };
+    const legacyPayload = { signals: { supply: { value: 3, available: true } } };
+    const db = mockDbWithPrevRows(
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: JSON.stringify(legacyPayload),
+          band: "CALM",
+          computed_at: publishedAt,
+        },
+      ],
+      undefined,
+      [],
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: JSON.stringify(latestPayload),
+          band: "WARNING",
+          computed_at: publishedAt + 300,
+        },
+      ],
+      publishedAt,
+    );
+
+    const sourceState = await loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending: false,
+      registerSourceFailure: () => {},
+      registerMalformedPersistedInput: () => {},
+    });
+
+    expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 3, available: true });
   });
 
   it("hydrates structured yield source-risk and rank attribution from rankings cache", async () => {

@@ -35,6 +35,7 @@ import {
   normalizeYieldSourceRisk,
 } from "./legacy-bridge";
 import { resolveBootstrapAllowed } from "./fallback";
+import { readDewsPublishedGeneration } from "../../../lib/dews-publication-pointer";
 
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
@@ -96,31 +97,62 @@ function mergeNewestPreviousStressSignalRows(
 }
 
 async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
+  let completedAt: number | null = null;
+  try {
+    completedAt = await readDewsPublishedGeneration(ctx.db, ctx.nowSec);
+  } catch {
+    completedAt = null;
+  }
   let latestRows: PreviousStressSignalRow[] = [];
   try {
-    const rows = await ctx.db
-      .prepare(
+    const latestStmt = ctx.db.prepare(
+      completedAt == null
+        ?
         `SELECT /* pharos:dews:previous-stress-latest */
            stablecoin_id, signals_json, band, computed_at
-         FROM stress_signals_latest`,
-      )
-      .all<PreviousStressSignalRow>();
+         FROM stress_signals_latest`
+        :
+        `SELECT /* pharos:dews:previous-stress-latest */
+           stablecoin_id, signals_json, band, computed_at
+         FROM stress_signals_latest
+         WHERE computed_at <= ?`,
+    );
+    const rows = await (
+      completedAt == null
+        ? latestStmt
+        : latestStmt.bind(completedAt)
+    ).all<PreviousStressSignalRow>();
     latestRows = rows.results ?? [];
   } catch {
     latestRows = [];
   }
 
-  const legacyRows = await ctx.db
-    .prepare(
+  const legacyStmt = ctx.db.prepare(
+    completedAt == null
+      ?
       `SELECT /* pharos:dews:previous-stress-legacy */
          s.stablecoin_id, s.signals_json, s.band, s.computed_at
        FROM stress_signals s
        INNER JOIN (
          SELECT stablecoin_id, MAX(computed_at) as max_at
          FROM stress_signals GROUP BY stablecoin_id
+       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
+      :
+      `SELECT /* pharos:dews:previous-stress-legacy */
+         s.stablecoin_id, s.signals_json, s.band, s.computed_at
+       FROM stress_signals s
+       INNER JOIN (
+         SELECT stablecoin_id, MAX(computed_at) as max_at
+         FROM stress_signals
+         WHERE computed_at <= ?
+         GROUP BY stablecoin_id
        ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    )
-    .all<PreviousStressSignalRow>();
+  );
+  const legacyRows = await (
+    completedAt == null
+      ? legacyStmt
+      : legacyStmt.bind(completedAt)
+  ).all<PreviousStressSignalRow>();
   const legacyResults = legacyRows.results ?? [];
   if (legacyResults.length === 0) return latestRows;
   if (arePreviousStressSignalRowsStale(latestRows, ctx.nowSec)) return legacyResults;

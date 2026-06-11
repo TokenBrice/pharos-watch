@@ -12,6 +12,9 @@ import {
 } from "../lib/alert-safety-source-cache";
 import { getCache } from "../lib/db-cache";
 import {
+  readDewsPublishedGeneration,
+} from "../lib/dews-publication-pointer";
+import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,
   buildDewsAlertableSnapshot,
@@ -56,32 +59,66 @@ function mergeNewestDewsRows(legacyRows: DewsLatestRow[], latestRows: DewsLatest
   return [...byId.values()];
 }
 
-async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
+async function loadCompletedDewsComputedAt(db: D1Database, nowSec: number): Promise<number | null> {
+  try {
+    return await readDewsPublishedGeneration(db, nowSec);
+  } catch {
+    return null;
+  }
+}
+
+export async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
+  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
   let latestRows: DewsLatestRow[] = [];
   try {
-    const rows = await db
-      .prepare(
+    const latestStmt = db.prepare(
+      completedAt == null
+        ?
         `SELECT /* pharos:telegram-dispatch:dews-latest */
            stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest`,
-      )
-      .all<DewsLatestRow>();
+         FROM stress_signals_latest`
+        :
+        `SELECT /* pharos:telegram-dispatch:dews-latest */
+           stablecoin_id, score, band, signals_json, computed_at
+         FROM stress_signals_latest
+         WHERE computed_at <= ?`,
+    );
+    const rows = await (
+      completedAt == null
+        ? latestStmt
+        : latestStmt.bind(completedAt)
+    ).all<DewsLatestRow>();
     latestRows = rows.results ?? [];
   } catch {
     latestRows = [];
   }
 
-  const legacyRows = await db
-    .prepare(
+  const legacyStmt = db.prepare(
+    completedAt == null
+      ?
+      `SELECT /* pharos:telegram-dispatch:dews-legacy */
+         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
+         FROM stress_signals s
+       INNER JOIN (
+         SELECT stablecoin_id, MAX(computed_at) AS max_at
+           FROM stress_signals GROUP BY stablecoin_id
+      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
+      :
       `SELECT /* pharos:telegram-dispatch:dews-legacy */
          s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
          FROM stress_signals s
          INNER JOIN (
            SELECT stablecoin_id, MAX(computed_at) AS max_at
-             FROM stress_signals GROUP BY stablecoin_id
+             FROM stress_signals
+            WHERE computed_at <= ?
+            GROUP BY stablecoin_id
       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    )
-    .all<DewsLatestRow>();
+  );
+  const legacyRows = await (
+    completedAt == null
+      ? legacyStmt
+      : legacyStmt.bind(completedAt)
+  ).all<DewsLatestRow>();
   const legacyResults = legacyRows.results ?? [];
   if (legacyResults.length === 0) return latestRows;
   if (areDewsLatestRowsStale(latestRows, nowSec)) return legacyResults;

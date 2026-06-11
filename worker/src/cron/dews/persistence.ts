@@ -5,6 +5,7 @@ import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { writeDewsPublishedGeneration } from "../../lib/dews-publication-pointer";
 import type { DewsComputedRow } from "./contracts";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
@@ -193,6 +194,34 @@ async function upsertLatestStressSignalRows(
   }
 }
 
+async function countStressSignalRowsForGeneration(
+  db: D1Database,
+  table: "stress_signals" | "stress_signals_latest",
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  try {
+    const row = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          table === "stress_signals"
+            ? "SELECT /* pharos:dews:stress-current-generation-count */ COUNT(*) as cnt FROM stress_signals WHERE computed_at = ?"
+            : "SELECT /* pharos:dews:stress-latest-generation-count */ COUNT(*) as cnt FROM stress_signals_latest WHERE computed_at = ?",
+        )
+        .bind(nowSec)
+        .first<{ cnt: number }>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
+    return row?.cnt ?? 0;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    if (table === "stress_signals_latest" && isMissingStressLatestTableError(error)) return null;
+    throw error;
+  }
+}
+
 export async function persistDewsResults(params: {
   db: D1Database;
   results: DewsComputedRow[];
@@ -201,7 +230,14 @@ export async function persistDewsResults(params: {
   publishFreshnessSentinel: boolean;
   nowSec: number;
   signal?: AbortSignal;
-}): Promise<{ rowsDropped: number; rowsRetiredCurrent: number }> {
+}): Promise<{
+  rowsDropped: number;
+  rowsRetiredCurrent: number;
+  currentGenerationRows: number;
+  latestGenerationRows: number | null;
+  publicationPointerWritten: boolean;
+  publishedGeneration: number | null;
+}> {
   throwIfAborted(params.signal);
   if (params.results.length > 0) {
     const stmts = params.results.map((result) =>
@@ -299,10 +335,50 @@ export async function persistDewsResults(params: {
   );
   rowsDropped += oldHistory.meta?.changes ?? 0;
 
+  let currentGenerationRows = 0;
+  let latestGenerationRows: number | null = null;
+  let publicationPointerWritten = false;
+  let publishedGeneration: number | null = null;
+  if (params.results.length > 0) {
+    currentGenerationRows = await countStressSignalRowsForGeneration(
+      params.db,
+      "stress_signals",
+      params.nowSec,
+      params.signal,
+    ) ?? 0;
+    latestGenerationRows = await countStressSignalRowsForGeneration(
+      params.db,
+      "stress_signals_latest",
+      params.nowSec,
+      params.signal,
+    );
+    const expectedRows = params.results.length;
+    if (currentGenerationRows !== expectedRows) {
+      throw new Error(
+        `DEWS publication incomplete: stress_signals has ${currentGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
+      );
+    }
+    if (latestGenerationRows != null && latestGenerationRows !== expectedRows) {
+      throw new Error(
+        `DEWS publication incomplete: stress_signals_latest has ${latestGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
+      );
+    }
+    const pointerWrite = await writeDewsPublishedGeneration(params.db, params.nowSec, params.signal);
+    publicationPointerWritten = pointerWrite.written;
+    publishedGeneration = pointerWrite.written ? params.nowSec : null;
+  }
+
   if (params.publishFreshnessSentinel && params.results.length > 0) {
     throwIfAborted(params.signal);
     await writeFreshnessSentinel(params.db, "dews", params.nowSec, params.signal);
   }
 
-  return { rowsDropped, rowsRetiredCurrent };
+  return {
+    rowsDropped,
+    rowsRetiredCurrent,
+    currentGenerationRows,
+    latestGenerationRows,
+    publicationPointerWritten,
+    publishedGeneration,
+  };
 }
