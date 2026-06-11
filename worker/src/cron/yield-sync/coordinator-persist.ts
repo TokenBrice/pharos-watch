@@ -15,6 +15,7 @@ import {
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
 function getD1FailureReason(prefix: string, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -68,6 +69,7 @@ export function buildPreviewYieldRankingsArtifacts(params: {
 
 export async function publishYieldCoordinatorResults(params: {
   db: D1Database;
+  signal?: AbortSignal;
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
   evaluatedSources: EvaluatedYieldSource[];
   bestSourceKeyByCoin: Map<string, string>;
@@ -90,6 +92,7 @@ export async function publishYieldCoordinatorResults(params: {
       casSkipped: boolean;
     }
 > {
+  throwIfAborted(params.signal);
   const generationId = buildYieldPublicationGenerationId(params.startSec);
   const stagedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
     generationId,
@@ -106,6 +109,7 @@ export async function publishYieldCoordinatorResults(params: {
     divergenceFlags: params.divergenceFlags,
     sourceSwitches: params.sourceSwitches,
   });
+  throwIfAborted(params.signal);
 
   const previewPublishability = await validateYieldRankingsPayloadForPublish(params.db, stagedRankingsPayload);
   if (!previewPublishability.ok) {
@@ -141,7 +145,9 @@ export async function publishYieldCoordinatorResults(params: {
   });
   let publicationWrite: Awaited<ReturnType<typeof persistEvaluatedYieldSources>>;
   try {
+    throwIfAborted(params.signal);
     publicationWrite = await persistEvaluatedYieldSources(params.db, {
+      signal: params.signal,
       evaluatedSources: params.evaluatedSources,
       bestSourceKeyByCoin: params.bestSourceKeyByCoin,
       startSec: params.startSec,
@@ -151,6 +157,7 @@ export async function publishYieldCoordinatorResults(params: {
       rankingsPayload: publishedRankingsPayload,
     });
   } catch (error) {
+    rethrowIfAborted(error, params.signal);
     const reason = getD1FailureReason("yield-publication-transaction-failed", error);
     params.degradationReasons.push(reason);
     await finalizeYieldPublicationGeneration(params.db, {
@@ -200,9 +207,11 @@ export async function publishYieldCoordinatorResults(params: {
   }
 
   updatedCount = publicationWrite.updatedCount;
+  throwIfAborted(params.signal);
   try {
-    await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
+    await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
   } catch (error) {
+    rethrowIfAborted(error, params.signal);
     const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
     params.degradationReasons.push(reason);
     await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
@@ -210,6 +219,7 @@ export async function publishYieldCoordinatorResults(params: {
     });
   }
 
+  throwIfAborted(params.signal);
   await pruneYieldTables(params.db, params.startSec, {
     allowDestructiveCleanup: params.degradationReasons.length === 0,
   });

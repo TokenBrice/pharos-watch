@@ -251,6 +251,7 @@ export async function validateYieldRankingsPayloadForPublish(
 export async function persistEvaluatedYieldSources(
   db: D1Database,
   input: {
+    signal?: AbortSignal;
     evaluatedSources: EvaluatedYieldSource[];
     bestSourceKeyByCoin: Map<string, string>;
     startSec: number;
@@ -420,6 +421,7 @@ export async function persistEvaluatedYieldSources(
   }
 
   const cacheWrite = await publishYieldRowsAtomically(db, {
+    signal: input.signal,
     rankingsPayload: input.rankingsPayload,
     startSec: input.startSec,
     generationId: input.generationId,

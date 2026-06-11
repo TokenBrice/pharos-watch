@@ -389,6 +389,7 @@ describe("syncYieldData", () => {
       db,
       "yield-data",
       Math.floor(Date.now() / 1000),
+      undefined,
     );
   });
 

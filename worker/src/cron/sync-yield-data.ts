@@ -267,6 +267,7 @@ export async function syncYieldData(
   });
   const publicationResult = await publishYieldCoordinatorResults({
     db,
+    signal,
     previewRankingsPayload,
     evaluatedSources,
     bestSourceKeyByCoin,

@@ -565,7 +565,7 @@ describe("publishYieldCoordinatorResults", () => {
 
   function makePublicationDb(
     cacheWriteChanges: number,
-    options?: { cacheWriteError?: Error; finalizeError?: Error },
+    options?: { cacheWriteError?: Error; finalizeError?: Error; finalizeDelayMs?: number },
   ) {
     return mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
@@ -580,7 +580,12 @@ describe("publishYieldCoordinatorResults", () => {
         runMeta: { changes: cacheWriteChanges },
         throwError: options?.cacheWriteError,
       },
-      { match: "UPDATE yield_publication_generations", rows: [], throwError: options?.finalizeError },
+      {
+        match: "UPDATE yield_publication_generations",
+        rows: [],
+        throwError: options?.finalizeError,
+        delayMs: options?.finalizeDelayMs,
+      },
       { match: "UPDATE yield_data SET publication_state", rows: [] },
       { match: "UPDATE yield_history SET publication_state", rows: [] },
       { match: "DELETE FROM yield_history", rows: [] },
@@ -591,6 +596,7 @@ describe("publishYieldCoordinatorResults", () => {
 
   function makePublishParams(overrides: {
     db: D1Database;
+    signal?: AbortSignal;
     previewRankingsPayload?: ReturnType<typeof buildPayloadWithObservedAt>;
     evaluatedSources?: EvaluatedYieldSource[];
     bestSourceKeyByCoin?: Map<string, string>;
@@ -600,6 +606,7 @@ describe("publishYieldCoordinatorResults", () => {
     const evaluatedSources = overrides.evaluatedSources ?? [source];
     return {
       db: overrides.db,
+      signal: overrides.signal,
       previewRankingsPayload: overrides.previewRankingsPayload ?? buildPayloadWithObservedAt(startSec),
       evaluatedSources,
       bestSourceKeyByCoin: overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
@@ -787,6 +794,20 @@ describe("publishYieldCoordinatorResults", () => {
     });
     expect(history.some((entry) => entry.sql.includes("SET state = 'published'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?"))).toBe(false);
+  });
+
+  it("does not publish the freshness sentinel when the cron signal aborts after row publication", async () => {
+    const db = makePublicationDb(1, { finalizeDelayMs: 20 });
+    const controller = new AbortController();
+
+    const resultPromise = publishYieldCoordinatorResults(makePublishParams({ db, signal: controller.signal }));
+    setTimeout(() => controller.abort(new Error("cron timeout")), 0);
+
+    await expect(resultPromise).rejects.toThrow("cron timeout");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("pharos:yield-sync:history-retention-delete"))).toBe(false);
   });
 
   it("emits a bounded public decisionLedger on the published rankings payload and persists alternatives + retention reason", async () => {

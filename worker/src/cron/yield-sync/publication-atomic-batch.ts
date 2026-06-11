@@ -4,6 +4,7 @@ import type { CacheWriteResult } from "../../lib/db-cache";
 export async function publishYieldRowsAtomically(
   db: D1Database,
   input: {
+    signal?: AbortSignal;
     rankingsPayload: unknown;
     startSec: number;
     generationId: string;
@@ -151,6 +152,8 @@ export async function publishYieldRowsAtomically(
         )
         .bind(input.startSec, input.generationId, input.startSec),
     ]),
+    3,
+    input.signal,
   );
 
   return Number(results[0]?.meta?.changes ?? 0) > 0
