@@ -21,6 +21,10 @@ import {
   REDEMPTION_BACKSTOP_VERSION_LABEL,
 } from "@shared/lib/redemption-backstop-version";
 import {
+  MINT_AUTHORITY_METHODOLOGY_PATH,
+  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/mint-authority-version";
+import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/depeg-resolver";
@@ -53,6 +57,7 @@ export type MethodologyContextKey =
   | "dependencyRisk"
   | "redemptionBackstop"
   | "effectiveExit"
+  | "mintAuthorityScore"
   | "activeDepegs"
   | "coinsAtPeg"
   | "medianDeviation"
@@ -201,6 +206,15 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
       "The route score is first capped by route family and current capacity, then the effective-exit model applies freshness gates, the model-confidence discount, and the independent-route diversification bonus before comparing against DEX liquidity.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+  },
+  mintAuthorityScore: {
+    title: "Mint Authority Score",
+    summary:
+      "Standalone 0-100 score for the risk that privileged routes can create durable, unbacked stablecoin supply.",
+    detail:
+      "Higher is better. The model scores route type, weakest mint-capable controller, quantitative bounds, and reviewer posture, then applies incident, unbounded, EOA, and confidence caps. It is not a Safety Score input.",
+    methodologyPath: MINT_AUTHORITY_METHODOLOGY_PATH,
+    versionLabel: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
   },
   activeDepegs: {
     title: "Active Depegs",

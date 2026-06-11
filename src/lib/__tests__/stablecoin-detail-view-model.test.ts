@@ -153,6 +153,66 @@ describe("stablecoin detail view-model builder", () => {
       securitySetupLabel: "Safe, 2/3 threshold",
       thresholdLabel: "2/3 threshold",
       modulesOrGuardsLabel: "No modules or guards detected",
+      custodyLabel: null,
+    });
+    expect(viewModel.score).toMatchObject({
+      score: 54,
+      bandLabel: "Managed",
+      rawScoreLabel: "54/100",
+      weakestControlLabel: "Issuer Safe",
+      weakestControlScoreLabel: "55/100",
+    });
+  });
+
+  it("labels single-key mint authority custody and exposes EOA caps", () => {
+    const viewModel = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "concentrated-admin",
+        confidence: "verified",
+        summary: "Minting is controlled by a single operator key.",
+        controls: [
+          {
+            chain: "ethereum",
+            address: "0x123400000000000000000000000000000000abcd",
+            label: "Operator key",
+            role: "direct-minter",
+            authorityType: "eoa",
+            directMintAbility: "direct",
+          },
+        ],
+      },
+    } as never);
+
+    expect(viewModel.controls[0]).toMatchObject({
+      securitySetupLabel: "Externally owned account",
+      custodyLabel: "Single-key address - custody unverifiable",
+    });
+    expect(viewModel.score).toMatchObject({
+      score: 31,
+      weakestControlLabel: "Operator key",
+      weakestControlCustodyLabel: "Single-key address - custody unverifiable",
+      capsApplied: ["EOA cap <= 40"],
+    });
+  });
+
+  it("applies mint-incident caps from compact client metadata", () => {
+    const coin = TRACKED_META_BY_ID.get("usr-resolv");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin!));
+
+    expect(viewModel.reviewedAt).toBe("2026-05-25");
+    expect(viewModel.mintIncident).toMatchObject({
+      date: "2026-03-22",
+      summary: expect.stringContaining("80M unbacked USR"),
+    });
+    expect(viewModel.score).toMatchObject({
+      score: 10,
+      bandLabel: "Exposed",
+      rawScoreLabel: "32/100",
+      weakestControlLabel: "Resolv SERVICE_ROLE off-chain minting signer",
+      capsApplied: ["Incident cap <= 10"],
     });
   });
 

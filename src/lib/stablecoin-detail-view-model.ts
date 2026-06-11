@@ -49,7 +49,11 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
-import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { getScoreColor, pegScoreColor, scoreToColorClass } from "@/lib/severity-colors";
+import {
+  resolveMintAuthorityScoreDisplay,
+  type MintAuthorityScoreDisplay,
+} from "@/lib/mint-authority-display";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
@@ -187,6 +191,38 @@ export interface MintAuthorityDetailControlViewModel {
   timelockLabel: string | null;
   capDescription: string | null;
   modulesOrGuardsLabel: string | null;
+  custodyLabel: string | null;
+}
+
+export interface MintAuthorityDetailScoreComponentViewModel {
+  key: "route" | "controller" | "bounds" | "posture";
+  label: string;
+  scoreLabel: string;
+  weightLabel: string;
+  textClassName: string;
+}
+
+export interface MintAuthorityDetailIncidentViewModel {
+  date: string;
+  summary: string;
+}
+
+export interface MintAuthorityDetailScoreViewModel {
+  score: number | null;
+  scoreLabel: string;
+  compactLabel: string;
+  bandLabel: string;
+  badgeClassName: string;
+  textClassName: string;
+  detail: string;
+  components: MintAuthorityDetailScoreComponentViewModel[];
+  rawScoreLabel: string | null;
+  confidenceCapLabel: string | null;
+  weakestControlLabel: string | null;
+  weakestControlScoreLabel: string | null;
+  weakestControlCustodyLabel: string | null;
+  capsApplied: string[];
+  unresolvedReasonLabel: string | null;
 }
 
 export interface MintAuthorityDetailViewModel {
@@ -203,6 +239,9 @@ export interface MintAuthorityDetailViewModel {
   inheritedFrom: string | null;
   controls: MintAuthorityDetailControlViewModel[];
   sources: MintAuthorityDetailSourceViewModel[];
+  score: MintAuthorityDetailScoreViewModel | null;
+  reviewedAt: string | null;
+  mintIncident: MintAuthorityDetailIncidentViewModel | null;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -231,6 +270,9 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   inheritedFrom: null,
   controls: [],
   sources: [],
+  score: null,
+  reviewedAt: null,
+  mintIncident: null,
 };
 
 const MINT_PATH_LABELS: Record<string, string> = {
@@ -339,6 +381,56 @@ const MODULES_OR_GUARDS_LABELS: Record<string, string> = {
 
 const MODULES_OR_GUARDS_AUTHORITY_TYPES = new Set(["safe", "multisig", "unknown"]);
 
+const MINT_AUTHORITY_SCORE_COMPONENT_KEYS = ["route", "controller", "bounds", "posture"] as const;
+
+const MINT_AUTHORITY_SCORE_COMPONENT_LABELS: Record<
+  MintAuthorityDetailScoreComponentViewModel["key"],
+  string
+> = {
+  route: "Route",
+  controller: "Controller",
+  bounds: "Bounds",
+  posture: "Posture",
+};
+
+const MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS: Record<
+  MintAuthorityDetailScoreComponentViewModel["key"],
+  string
+> = {
+  route: "30%",
+  controller: "40%",
+  bounds: "15%",
+  posture: "15%",
+};
+
+const MINT_AUTHORITY_CAP_LABELS: Record<string, string> = {
+  "incident-cap": "Incident cap <= 10",
+  "unbounded-cap": "Unbounded cap <= 25",
+  "eoa-cap": "EOA cap <= 40",
+  "confidence-cap": "Confidence cap",
+};
+
+const MINT_AUTHORITY_UNRESOLVED_REASON_LABELS: Record<string, string> = {
+  "not-reviewed": "Not reviewed",
+  "unknown-mint-path": "Unknown mint path",
+  "unknown-posture": "Unknown posture",
+  "unknown-confidence": "Unknown confidence",
+  "missing-parent": "Missing inherited parent",
+  "parent-resolver-missing": "Parent resolver unavailable",
+  "inheritance-depth-limit": "Inheritance depth limit",
+  "inheritance-cycle": "Inheritance cycle",
+  "parent-not-found": "Parent not found",
+  "parent-not-scoreable": "Parent not scoreable",
+  "unscored-route": "Unscored mint route",
+  "unscored-posture": "Unscored posture",
+};
+
+const MINT_AUTHORITY_WEAKEST_CUSTODY_LABELS: Record<string, string> = {
+  "single-key address - custody unverifiable": "Single-key address - custody unverifiable",
+  "single-key address - MPC-attested": "Single-key address - MPC-attested",
+  "single-key address - HSM-attested": "Single-key address - HSM-attested",
+};
+
 function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
   const pegCurrency = coin.flags.pegCurrency;
   return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
@@ -435,6 +527,85 @@ function formatModulesOrGuardsLabel(authorityType: unknown, modulesOrGuardsStatu
   return labelFromMap(modulesOrGuardsStatusKey, MODULES_OR_GUARDS_LABELS);
 }
 
+function formatMintAuthorityScoreValue(score: number | null): string {
+  return score != null ? `${score}/100` : "NR";
+}
+
+function mintAuthorityScoreTextClass(score: number | null): string {
+  return scoreToColorClass(score, [
+    { min: 80, className: "text-emerald-700 dark:text-emerald-400" },
+    { min: 65, className: "text-blue-700 dark:text-blue-400" },
+    { min: 50, className: "text-amber-700 dark:text-amber-400" },
+    { min: 35, className: "text-orange-700 dark:text-orange-400" },
+    { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+  ]);
+}
+
+function formatMintAuthorityCap(cap: string): string {
+  return MINT_AUTHORITY_CAP_LABELS[cap] ?? cap.replaceAll("-", " ");
+}
+
+function formatMintAuthorityUnresolvedReason(reason: string | null): string | null {
+  if (!reason) return null;
+  return MINT_AUTHORITY_UNRESOLVED_REASON_LABELS[reason] ?? reason.replaceAll("-", " ");
+}
+
+function formatMintAuthorityCustodyAttestation(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  const kind = stringValue(value.kind);
+  if (kind === "mpc") return "MPC-attested custody";
+  if (kind === "hsm") return "HSM-attested custody";
+  return null;
+}
+
+function formatMintAuthorityWeakestCustodyLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return MINT_AUTHORITY_WEAKEST_CUSTODY_LABELS[value] ?? value;
+}
+
+function readMintIncident(value: unknown): MintAuthorityDetailIncidentViewModel | null {
+  if (!isRecord(value)) return null;
+  const date = stringValue(value.date);
+  const summary = stringValue(value.summary);
+  return date && summary ? { date, summary } : null;
+}
+
+function buildMintAuthorityScoreViewModel(
+  display: MintAuthorityScoreDisplay,
+): MintAuthorityDetailScoreViewModel {
+  const result = display.result;
+  const components = MINT_AUTHORITY_SCORE_COMPONENT_KEYS.map((key) => {
+    const score = result.components[key];
+    return {
+      key,
+      label: MINT_AUTHORITY_SCORE_COMPONENT_LABELS[key],
+      scoreLabel: formatMintAuthorityScoreValue(score),
+      weightLabel: MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS[key],
+      textClassName: mintAuthorityScoreTextClass(score),
+    };
+  });
+
+  return {
+    score: result.score,
+    scoreLabel: display.scoreLabel,
+    compactLabel: display.compactLabel,
+    bandLabel: display.bandLabel,
+    badgeClassName: display.badgeClassName,
+    textClassName: display.textClassName,
+    detail: display.detail,
+    components,
+    rawScoreLabel: result.rawScore != null ? formatMintAuthorityScoreValue(result.rawScore) : null,
+    confidenceCapLabel: result.confidenceCap != null ? `<= ${result.confidenceCap}` : null,
+    weakestControlLabel: result.weakestControl?.label ?? null,
+    weakestControlScoreLabel: result.weakestControl
+      ? formatMintAuthorityScoreValue(result.weakestControl.score)
+      : null,
+    weakestControlCustodyLabel: formatMintAuthorityWeakestCustodyLabel(result.weakestControl?.custodyLabel),
+    capsApplied: result.capsApplied.map(formatMintAuthorityCap),
+    unresolvedReasonLabel: formatMintAuthorityUnresolvedReason(result.unresolvedReason),
+  };
+}
+
 function buildMintAuthorityControlViewModel(
   control: UnknownRecord,
   index: number,
@@ -448,6 +619,8 @@ function buildMintAuthorityControlViewModel(
   const signerCount = numberValue(control.signerCount) ?? (Array.isArray(safe?.owners) ? safe.owners.length : null);
   const thresholdLabel = formatThreshold(threshold, signerCount);
   const authorityTypeLabel = labelFromMap(control.authorityType, AUTHORITY_TYPE_LABELS);
+  const authorityTypeKey = stringValue(control.authorityType);
+  const custodyAttestationLabel = formatMintAuthorityCustodyAttestation(control.keyCustodyAttestation);
   const locationLabel =
     [chain, address ? shortenAddress(address) : null].filter(Boolean).join(" / ") || "No address published";
   const addressUrl = address
@@ -467,6 +640,11 @@ function buildMintAuthorityControlViewModel(
     timelockLabel: formatTimelock(numberValue(control.timelockDelaySec)),
     capDescription: stringValue(control.capDescription),
     modulesOrGuardsLabel: formatModulesOrGuardsLabel(control.authorityType, control.modulesOrGuardsStatus),
+    custodyLabel: custodyAttestationLabel
+      ? custodyAttestationLabel
+      : authorityTypeKey === "eoa"
+        ? "Single-key address - custody unverifiable"
+        : null,
   };
 }
 
@@ -492,6 +670,9 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
         .map(buildMintAuthorityControlViewModel)
         .filter((control): control is MintAuthorityDetailControlViewModel => control !== null)
     : [];
+  const score = buildMintAuthorityScoreViewModel(
+    resolveMintAuthorityScoreDisplay(coin.id, coin.mintAuthoritySummary),
+  );
 
   return {
     status: "reviewed",
@@ -506,6 +687,9 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     inheritedFrom: stringValue(candidate.inheritedFrom),
     controls,
     sources: dedupedSources,
+    score,
+    reviewedAt: stringValue(candidate.reviewedAt) ?? stringValue(review?.reviewedAt),
+    mintIncident: readMintIncident(candidate.mintIncident),
   };
 }
 

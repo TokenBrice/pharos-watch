@@ -1,4 +1,13 @@
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import {
+  MINT_AUTHORITY_SCORE_BANDS,
+  computeMintAuthorityScore,
+  type MintAuthorityParentResolver,
+  type MintAuthorityScoreBand,
+  type MintAuthorityScoreResult,
+  type MintAuthorityScoringInput,
+} from "@shared/lib/mint-authority-scoring";
 
 export type MintAuthorityStatusKind =
   | "no-privileged-mint"
@@ -10,6 +19,7 @@ export type MintAuthorityStatusKind =
   | "unknown";
 
 type MintAuthorityTone = "emerald" | "sky" | "amber" | "violet" | "slate";
+export type MintAuthorityScoreFilterValue = MintAuthorityScoreBand | "nr";
 
 interface MintAuthorityStatusConfig {
   kind: MintAuthorityStatusKind;
@@ -33,6 +43,15 @@ export const MINT_AUTHORITY_STATUS_VALUES = [
 ] as const satisfies readonly MintAuthorityStatusKind[];
 
 export const MINT_AUTHORITY_FILTER_VALUES = MINT_AUTHORITY_STATUS_VALUES;
+
+export const MINT_AUTHORITY_SCORE_FILTER_VALUES = [
+  "hardened",
+  "governed",
+  "managed",
+  "concentrated",
+  "exposed",
+  "nr",
+] as const satisfies readonly MintAuthorityScoreFilterValue[];
 
 export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintAuthorityStatusConfig> = {
   "no-privileged-mint": {
@@ -118,6 +137,129 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
     badgeClassName: "border-border/60 bg-muted/20 text-muted-foreground",
   },
 };
+
+export const MINT_AUTHORITY_SCORE_FILTER_CONFIG: Record<
+  MintAuthorityScoreFilterValue,
+  { label: string; detail: string }
+> = {
+  hardened: {
+    label: MINT_AUTHORITY_SCORE_BANDS.hardened.label,
+    detail: "Mint Authority Score is 80 or higher.",
+  },
+  governed: {
+    label: MINT_AUTHORITY_SCORE_BANDS.governed.label,
+    detail: "Mint Authority Score is 65 to 79.",
+  },
+  managed: {
+    label: MINT_AUTHORITY_SCORE_BANDS.managed.label,
+    detail: "Mint Authority Score is 50 to 64.",
+  },
+  concentrated: {
+    label: MINT_AUTHORITY_SCORE_BANDS.concentrated.label,
+    detail: "Mint Authority Score is 35 to 49.",
+  },
+  exposed: {
+    label: MINT_AUTHORITY_SCORE_BANDS.exposed.label,
+    detail: "Mint Authority Score is below 35.",
+  },
+  nr: {
+    label: "NR",
+    detail: "Mint Authority Score is not rated because the review is missing, unknown, or unresolved.",
+  },
+};
+
+const MINT_AUTHORITY_SCORE_BADGE_CLASS: Record<MintAuthorityScoreFilterValue, string> = {
+  hardened: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  governed: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  managed: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  concentrated: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  exposed: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  nr: "border-border/60 bg-muted/30 text-muted-foreground",
+};
+
+const MINT_AUTHORITY_SCORE_TEXT_CLASS: Record<MintAuthorityScoreFilterValue, string> = {
+  hardened: "text-emerald-700 dark:text-emerald-400",
+  governed: "text-blue-700 dark:text-blue-400",
+  managed: "text-amber-700 dark:text-amber-400",
+  concentrated: "text-orange-700 dark:text-orange-400",
+  exposed: "text-red-700 dark:text-red-400",
+  nr: "text-muted-foreground",
+};
+
+export interface MintAuthorityScoreDisplay {
+  result: MintAuthorityScoreResult;
+  scoreLabel: string;
+  compactLabel: string;
+  bandKey: MintAuthorityScoreFilterValue;
+  bandLabel: string;
+  badgeClassName: string;
+  textClassName: string;
+  detail: string;
+}
+
+export function mintAuthoritySummaryToScoringInput(
+  id: string | undefined,
+  summary?: MintAuthorityCoverageSummary | null,
+): MintAuthorityScoringInput | null {
+  if (!summary) return null;
+
+  return {
+    id,
+    mintPath: summary.mintPath,
+    authorityPosture: summary.authorityPosture,
+    confidence: summary.confidence,
+    inheritedFrom: summary.inheritedFrom,
+    mintIncident: summary.mintIncident,
+    controls: summary.controls?.map((control) => ({
+      label: control.label,
+      authorityType: control.authorityType,
+      directMintAbility: control.directMintAbility,
+      threshold: control.threshold,
+      signerCount: control.signerCount,
+      timelockDelaySec: control.timelockDelaySec,
+      canRaiseCap: control.canRaiseCap,
+      modulesOrGuardsStatus: control.modulesOrGuardsStatus,
+      keyCustodyAttestation: control.keyCustodyAttestation,
+    })),
+  };
+}
+
+const resolveClientParent: MintAuthorityParentResolver = (id) => {
+  const parent = CLIENT_TRACKED_META_BY_ID.get(id);
+  return mintAuthoritySummaryToScoringInput(id, parent?.mintAuthoritySummary);
+};
+
+export function computeMintAuthoritySummaryScore(
+  id: string | undefined,
+  summary?: MintAuthorityCoverageSummary | null,
+): MintAuthorityScoreResult {
+  return computeMintAuthorityScore(mintAuthoritySummaryToScoringInput(id, summary), resolveClientParent);
+}
+
+export function resolveMintAuthorityScoreDisplay(
+  id: string | undefined,
+  summary?: MintAuthorityCoverageSummary | null,
+): MintAuthorityScoreDisplay {
+  const result = computeMintAuthoritySummaryScore(id, summary);
+  const bandKey = result.band ?? "nr";
+  const scoreLabel = result.score != null ? `${result.score}/100` : "NR";
+  const compactLabel = result.score != null ? `${result.score} ${result.bandLabel}` : "NR";
+  const detail =
+    result.score != null
+      ? `Mint Authority Score: ${scoreLabel} (${result.bandLabel}). Higher scores mean fewer or better-bounded privileged mint paths.`
+      : "Mint Authority Score is not rated because the review is missing, unknown, or unresolved.";
+
+  return {
+    result,
+    scoreLabel,
+    compactLabel,
+    bandKey,
+    bandLabel: result.bandLabel,
+    badgeClassName: MINT_AUTHORITY_SCORE_BADGE_CLASS[bandKey],
+    textClassName: MINT_AUTHORITY_SCORE_TEXT_CLASS[bandKey],
+    detail,
+  };
+}
 
 function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
   return (summary.controls ?? []).some(

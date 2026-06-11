@@ -1,12 +1,15 @@
 "use client";
 
-import { CircleCheck, CircleDashed, ExternalLink } from "lucide-react";
+import { ChevronDown, CircleCheck, CircleDashed, ExternalLink, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type {
   MintAuthorityDetailControlViewModel,
+  MintAuthorityDetailScoreViewModel,
   MintAuthorityDetailViewModel,
   MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-view-model";
@@ -75,6 +78,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
         <ControlMeta label="Mint" value={control.directMintAbilityLabel} />
         <ControlMeta label="Setup" value={setupValue} />
+        <ControlMeta label="Custody" value={control.custodyLabel} />
         <ControlMeta label="Delay" value={control.timelockLabel} />
         <ControlMeta label="Safe modules/guard" value={control.modulesOrGuardsLabel} />
       </div>
@@ -83,9 +87,57 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
   );
 }
 
+function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScoreViewModel }) {
+  const controlSummary = [score.weakestControlLabel, score.weakestControlScoreLabel, score.weakestControlCustodyLabel]
+    .filter(Boolean)
+    .join(" / ");
+
+  return (
+    <details className="group">
+      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9">
+        <span className="underline decoration-dashed underline-offset-2">Scoring breakdown</span>
+        <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+        {score.components.map((component) => (
+          <div key={component.key} className="rounded-lg border border-border/60 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-foreground">{component.label}</span>
+              <span className="text-[10px] uppercase tracking-[0.12em]">{component.weightLabel}</span>
+            </div>
+            <p className={cn("mt-1 pharos-numeric text-sm", component.textClassName)}>{component.scoreLabel}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+        <div className="rounded-lg border border-border/60 px-3 py-2">
+          <span className="font-medium text-foreground">Raw score</span>{" "}
+          <span className="pharos-numeric">{score.rawScoreLabel ?? "NR"}</span>
+          {score.confidenceCapLabel ? <span className="ml-2">Confidence cap {score.confidenceCapLabel}</span> : null}
+        </div>
+        <div className="rounded-lg border border-border/60 px-3 py-2">
+          <span className="font-medium text-foreground">Caps</span>{" "}
+          {score.capsApplied.length > 0 ? score.capsApplied.join(", ") : "No caps applied"}
+        </div>
+        {controlSummary ? (
+          <div className="rounded-lg border border-border/60 px-3 py-2 sm:col-span-2">
+            <span className="font-medium text-foreground">Weakest mint-capable control</span> {controlSummary}
+          </div>
+        ) : null}
+        {score.unresolvedReasonLabel ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-300 sm:col-span-2">
+            Not rated: {score.unresolvedReasonLabel}
+          </div>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetailViewModel | null }) {
   const isReviewed = profile?.status === "reviewed";
   if (!isReviewed || !profile) return null;
+  const score = profile.score;
 
   return (
     <Card
@@ -94,11 +146,31 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
     >
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <DetailSectionTitle>Mint Authority</DetailSectionTitle>
-          <DetailBadge className="bg-background/60">descriptive, not scored</DetailBadge>
+          <DetailSectionTitle>
+            <MethodologyLabel topic="mintAuthorityScore">Mint Authority</MethodologyLabel>
+          </DetailSectionTitle>
+          {score ? (
+            <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only">
+              <Badge
+                variant="outline"
+                className={cn("px-2.5 py-1 pharos-numeric text-lg", score.badgeClassName)}
+                title={score.detail}
+              >
+                {score.scoreLabel}
+              </Badge>
+            </ScoreBadgeWrapper>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {score ? (
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+            <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
+            <DetailBadge>Standalone score</DetailBadge>
+            <span className="text-xs text-muted-foreground">Not a Safety Score input</span>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-1.5">
           <DetailBadge>{profile.mintPathLabel}</DetailBadge>
           <DetailBadge>
@@ -116,6 +188,20 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
+
+        {profile.mintIncident ? (
+          <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+            <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Mint incident {profile.mintIncident.date}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
+                {profile.mintIncident.summary}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
 
         {profile.controls.length > 0 ? (
           <div className="space-y-2">
@@ -151,6 +237,11 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
             </div>
           </div>
         ) : null}
+
+        <MethodologyCardActions
+          topic="mintAuthorityScore"
+          trailing={profile.reviewedAt ? `Reviewed ${profile.reviewedAt}` : undefined}
+        />
       </CardContent>
     </Card>
   );
