@@ -8,6 +8,7 @@ const nowSec = Math.floor(Date.now() / 1000);
 function makePegSummaryDb(
   assets: ReturnType<typeof makeAsset>[] = [],
   fxFallbackRates?: Record<string, number>,
+  depegRows: ReturnType<typeof makeDepegEventRow>[] = [],
 ) {
   const cacheValue = JSON.stringify({ peggedAssets: assets, ...(fxFallbackRates ? { fxFallbackRates } : {}) });
   return mockD1([
@@ -16,7 +17,7 @@ function makePegSummaryDb(
       rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
       first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
     },
-    { match: "depeg_events", rows: [] },
+    { match: "depeg_events", rows: depegRows },
     { match: "dex_prices", rows: [] },
     { match: "supply_history", rows: [] },
   ]);
@@ -380,7 +381,7 @@ describe("handlePegSummary", () => {
     });
   });
 
-  it("includes navToken coins with null deviation fields", async () => {
+  it("includes navToken coins with peg signals withheld", async () => {
     const db = makePegSummaryDb([
       makeAsset({
         id: "fpi-frax",
@@ -391,10 +392,64 @@ describe("handlePegSummary", () => {
       }),
     ]);
     const res = await handlePegSummary(db);
-    const data = (await res.json()) as { coins: Array<{ id: string; currentDeviationBps: number | null }> };
+    const data = (await res.json()) as {
+      coins: Array<{
+        id: string;
+        currentDeviationBps: number | null;
+        pegScore: number | null;
+        activeDepeg: boolean;
+        eventCount: number;
+        worstDeviationBps: number | null;
+        trackingSpanDays: number;
+      }>;
+    };
     const fpi = data.coins.find((c) => c.id === "fpi-frax");
-    expect(fpi).toBeDefined();
-    expect(fpi!.currentDeviationBps).toBeNull();
+    expect(fpi).toMatchObject({
+      currentDeviationBps: null,
+      pegScore: null,
+      activeDepeg: false,
+      eventCount: 0,
+      worstDeviationBps: null,
+      trackingSpanDays: 0,
+    });
+  });
+
+  it("excludes navToken depeg rows from summary event counters", async () => {
+    const db = makePegSummaryDb(
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT" }),
+        makeAsset({
+          id: "fpi-frax",
+          name: "Frax Price Index",
+          symbol: "FPI",
+          pegType: "peggedVAR",
+          price: 1.12,
+        }),
+      ],
+      undefined,
+      [
+        makeDepegEventRow({
+          stablecoin_id: "fpi-frax",
+          symbol: "FPI",
+          peg_type: "peggedVAR",
+          direction: "above",
+          peak_deviation_bps: 1200,
+          started_at: nowSec,
+          source: "live",
+        }),
+      ],
+    );
+
+    const res = await handlePegSummary(db);
+    const data = (await res.json()) as {
+      summary: { activeDepegCount: number; depegEventsToday: number; depegEventsYesterday: number };
+    };
+
+    expect(data.summary).toMatchObject({
+      activeDepegCount: 0,
+      depegEventsToday: 0,
+      depegEventsYesterday: 0,
+    });
   });
 
   it("counts only coins with a live deviation in the summary denominator", async () => {

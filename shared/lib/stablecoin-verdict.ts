@@ -39,6 +39,7 @@ export interface VerdictInputs {
   mechanismArchetype: MechanismArchetype | undefined;
   governance: StablecoinFlags["governance"];
   yieldBearing: boolean;
+  navToken?: boolean;
   activeDepeg: boolean;
 }
 
@@ -85,12 +86,19 @@ export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdic
   if (
     inputs.activeDepeg
     || (inputs.dewsBand !== null && DISTRESSED_BANDS.has(inputs.dewsBand))
-    || (grade !== null && DISTRESSED_GRADES.has(grade))
   ) {
     return buildVerdict("distressed");
   }
 
   const archetype = inputs.mechanismArchetype;
+  if (inputs.navToken === true && inputs.yieldBearing) {
+    return buildVerdict("yield-bearing-hybrid");
+  }
+
+  if (grade !== null && DISTRESSED_GRADES.has(grade)) {
+    return buildVerdict("distressed");
+  }
+
   if (inputs.yieldBearing && archetype !== undefined && YIELD_HYBRID_ARCHETYPES.has(archetype)) {
     return buildVerdict("yield-bearing-hybrid");
   }

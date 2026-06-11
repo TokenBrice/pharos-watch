@@ -145,6 +145,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     depegEventsToday = 0;
     depegEventsYesterday = 0;
     for (const event of pegAnalytics.allEvents) {
+      if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
       if (event.startedAt >= todayStartSec) depegEventsToday += 1;
       else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
     }
@@ -262,7 +263,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       currentDeviationBps: currentBps,
       pegReferenceUnavailable: pegData.pegReferenceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
-      pegScore: pegData.pegScore,
+      pegScore: isNavToken ? null : pegData.pegScore,
       priceSource: asset?.priceSource,
       priceConfidence: asset?.priceConfidence ?? null,
       priceObservedAt: asset?.priceObservedAt ?? null,
@@ -272,14 +273,14 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       consensusSources: asset?.consensusSources,
       agreeSources: asset?.agreeSources,
       primaryTrust,
-      pegPct: pegData.pegPct,
-      severityScore: pegData.severityScore,
-      spreadPenalty: pegData.spreadPenalty,
-      eventCount: pegData.eventCount,
-      worstDeviationBps: pegData.worstDeviationBps,
+      pegPct: isNavToken ? 100 : pegData.pegPct,
+      severityScore: isNavToken ? 100 : pegData.severityScore,
+      spreadPenalty: isNavToken ? 0 : pegData.spreadPenalty,
+      eventCount: isNavToken ? 0 : pegData.eventCount,
+      worstDeviationBps: isNavToken ? null : pegData.worstDeviationBps,
       activeDepeg: isNavToken ? false : pegData.activeDepeg,
-      lastEventAt: pegData.lastEventAt,
-      trackingSpanDays: pegData.trackingSpanDays,
+      lastEventAt: isNavToken ? null : pegData.lastEventAt,
+      trackingSpanDays: isNavToken ? 0 : pegData.trackingSpanDays,
       methodologyVersion,
       dexPriceCheck: dexPriceCheck ?? undefined,
     });

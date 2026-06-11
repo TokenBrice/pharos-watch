@@ -1266,12 +1266,13 @@ export function buildStablecoinDetailViewModel({
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
     reportCardGrade: reportCard?.overallGrade ?? null,
-    pegScore: pegPrice.pegScoreResult?.pegScore ?? null,
+    pegScore: isNavToken ? null : pegPrice.pegScoreResult?.pegScore ?? null,
     dewsBand: stressBand,
     mechanismArchetype: coin.mechanismArchetype,
     governance: coin.flags.governance,
     yieldBearing: coin.flags.yieldBearing ?? false,
-    activeDepeg: pegPrice.pegScoreResult?.activeDepeg === true,
+    navToken: isNavToken,
+    activeDepeg: !isNavToken && pegPrice.pegScoreResult?.activeDepeg === true,
   });
 
   return {

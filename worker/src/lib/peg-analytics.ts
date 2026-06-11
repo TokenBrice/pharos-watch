@@ -35,6 +35,24 @@ function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData &
   return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
 }
 
+function buildNavPegScoreResult(): ReturnType<typeof computePegScore> {
+  return {
+    pegScore: null,
+    pegPct: 100,
+    severityScore: 100,
+    spreadPenalty: 0,
+    eventCount: 0,
+    scoredEventCount: 0,
+    excludedEventCount: 0,
+    lowConfidenceEventCount: 0,
+    qualityAdjusted: false,
+    worstDeviationBps: null,
+    activeDepeg: false,
+    lastEventAt: null,
+    trackingSpanDays: 0,
+  };
+}
+
 function buildPriceFirstSeenObservations(
   assets: readonly StablecoinData[],
   fallbackObservedAtSec: number,
@@ -106,7 +124,7 @@ export async function derivePegAnalyticsSnapshot(
 
     let currentDeviationBps: number | null = null;
     let pegReferenceUnavailable = false;
-    if (asset && hasUsableCurrentPrice(asset)) {
+    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
       if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
         // Same authority gate as the depeg detection engine: a thin non-USD
         // peer median without a live FX fallback is self-referential (a lone
@@ -133,7 +151,9 @@ export async function derivePegAnalyticsSnapshot(
 
     const trackingAnchorSec = parseLaunchDateSec(meta.launchDate) ?? firstSeenMap.get(meta.id) ?? null;
     const trackingStart = coinTrackingStart(events, trackingFallbackStart, trackingAnchorSec);
-    const scoreResult = computePegScore(events, trackingStart, nowSec);
+    const scoreResult = meta.flags.navToken
+      ? buildNavPegScoreResult()
+      : computePegScore(events, trackingStart, nowSec);
 
     pegDataById.set(meta.id, {
       id: meta.id,

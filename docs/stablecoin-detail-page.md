@@ -122,6 +122,8 @@ On `lg+` the hero's right column renders `HeroSignalsRail` — a four-pill stack
 
 Hero tertiary metric chips below the identity block are live signals only: on `<lg` a 2x2 grid of `DEWS`, `Peg`, `Liq`, `30d Excess` with optional `1Y vs USD` beneath; on `lg+` just `30d Excess` and optional `1Y vs USD` (DEWS/Peg/Liquidity live in the signals rail). The former `Freezable` and `Chains` chips moved into the hero passport strip below.
 
+NAV tokens are displayed as NAV in the hero Peg rail and do not consume their own peg-score, active-depeg, deviation, or depeg-event fields for verdict labeling. A NAV token with weak Safety Score inputs should remain a yield/NAV instrument in the hero verdict unless an explicit non-NAV distress signal such as DEWS WARNING/DANGER is present; pure NAV rows also omit the Record passport item and `DepegHistory`.
+
 ### Hero passport strip
 
 `HeroPassportStrip` (June 2026, mythos item 23) docks at the bottom of the `HeroCard` behind a hairline `border-t` and renders the dossier's verification facts as identity-document fields — field name in small letters above, value in mono all-caps below, no pill chrome and no jump icon. Items come from `passportItems` on the hero view model (`buildHeroPassportItems` in `stablecoin-detail-passport.ts`), scanned in two fixed clusters — *how the token works*: Mechanism, Redeemability, Minting, Freeze, Record, Chains; then *who stands behind it*: Jurisdiction, MiCA, GENIUS, Attestor, Issued:

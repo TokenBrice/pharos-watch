@@ -340,6 +340,73 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasYieldSection).toBe(false);
   });
 
+  it("keeps NAV tokens out of peg-distressed verdicts", () => {
+    const coin = TRACKED_META_BY_ID.get("mhyper-midas");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: {
+          id: "mhyper-midas",
+          coin: coin!,
+        },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1.1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "mhyper-midas",
+                  name: "Midas mHYPER",
+                  symbol: "mHYPER",
+                  pegType: "peggedUSD",
+                  price: 1.1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          pegSummary: {
+            data: {
+              summary: {} as never,
+              coins: [
+                {
+                  id: "mhyper-midas",
+                  symbol: "mHYPER",
+                  pegScore: 35,
+                  pegPct: 80,
+                  eventCount: 1,
+                  currentDeviationBps: 1000,
+                  activeDepeg: true,
+                  trackingSpanDays: 365,
+                },
+              ],
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          reportCards: {
+            data: {
+              cards: [{ id: "mhyper-midas", overallGrade: "F", overallScore: 35, dimensions: {} }],
+              dependencyGraph: { nodes: [], edges: [] },
+            } as never,
+            dataUpdatedAt: 1,
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(viewModel.isNavToken).toBe(true);
+    expect(viewModel.verdict).toEqual({
+      archetype: "yield-bearing-hybrid",
+      label: "Yield-Bearing Hybrid",
+    });
+  });
+
   it("wires the selected redemption backstop and stale-query state", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

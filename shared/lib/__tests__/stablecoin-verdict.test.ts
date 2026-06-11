@@ -80,6 +80,29 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     },
   );
 
+  it("returns yield-bearing-hybrid for NAV tokens before grade-only distress", () => {
+    const archetype = archetypeOf({
+      navToken: true,
+      yieldBearing: true,
+      mechanismArchetype: undefined,
+      reportCardGrade: "F",
+      pegScore: null,
+      activeDepeg: false,
+    });
+    expect(archetype).toBe("yield-bearing-hybrid");
+  });
+
+  it("still returns distressed for NAV tokens with an explicit active depeg signal", () => {
+    const archetype = archetypeOf({
+      navToken: true,
+      yieldBearing: true,
+      reportCardGrade: "F",
+      pegScore: null,
+      activeDepeg: true,
+    });
+    expect(archetype).toBe("distressed");
+  });
+
   it("returns yield-bearing-hybrid when yieldBearing && synthetic-delta-neutral", () => {
     const archetype = archetypeOf({
       yieldBearing: true,

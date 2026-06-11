@@ -110,6 +110,50 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
   });
 
+  it("includes NAV tokens as peg-ineligible rows when requested", async () => {
+    db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "NAV",
+            started_at: 1_700_000_000,
+            ended_at: null,
+            direction: "above",
+            peak_deviation_bps: 2500,
+            source: "primary",
+          },
+        ],
+      },
+    ]);
+
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdc-circle",
+          symbol: "NAV",
+          name: "NAV Stable",
+          pegType: "peggedUSD",
+          price: 1.25,
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+      includeNavTokens: true,
+    });
+
+    const nav = snapshot.pegDataById.get("usdc-circle");
+    expect(nav).toMatchObject({
+      currentDeviationBps: null,
+      pegScore: null,
+      eventCount: 0,
+      worstDeviationBps: null,
+      activeDepeg: false,
+      trackingSpanDays: 0,
+    });
+  });
+
   it("uses current priced assets as first-seen observations for PegScore anchoring", async () => {
     await derivePegAnalyticsSnapshot(db, {
       peggedAssets: [
