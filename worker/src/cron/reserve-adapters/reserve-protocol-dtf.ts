@@ -2,6 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
+import { throwIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -354,6 +355,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const componentMetadata: Array<Record<string, unknown>> = [];
 
   for (const entry of quoteEntries) {
+    throwIfAborted(signal);
     const [rawDecimals, rawAsset] = await Promise.all([
       fetchOnchainUint256({ ...callBase, contract: entry.address, data: DECIMALS_SELECTOR }),
       fetchOnchainRawCall({

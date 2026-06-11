@@ -36,6 +36,7 @@ import {
   TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID,
 } from "./tracked-optional-source-registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { throwIfAborted } from "../../lib/abort";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 
 function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
@@ -308,6 +309,7 @@ export async function resolveTrackedYieldSources(params: {
 
     const trackedOptionalEntries = TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.get(id) ?? [];
     for (const entry of trackedOptionalEntries) {
+      throwIfAborted(params.signal);
       if (resolved.some((resolvedEntry) => resolvedEntry.id === id && resolvedEntry.yield?.sourceKey === entry.sourceKey)) {
         continue;
       }
@@ -331,6 +333,7 @@ export async function resolveTrackedYieldSources(params: {
   }
 
   for (const entry of STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY) {
+    throwIfAborted(params.signal);
     const matchingTrackedEntry = TRACKED_META_BY_ID.get(entry.stablecoinId);
     if (!matchingTrackedEntry) continue;
     if (resolved.some((resolvedEntry) => resolvedEntry.id === entry.stablecoinId && resolvedEntry.yield?.sourceKey === entry.sourceKey)) {

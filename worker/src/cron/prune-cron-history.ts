@@ -18,6 +18,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       .prepare("DELETE FROM cron_runs WHERE started_at < ?")
       .bind(now - SECONDS.ONE_WEEK)
       .run(),
+    3,
+    signal,
   );
   throwIfAborted(signal);
   const cronRunsDeleted = cronRunsResult.meta?.changes ?? 0;
@@ -27,6 +29,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
       .bind(now - SLOT_EXECUTION_RETENTION_SEC)
       .run(),
+    3,
+    signal,
   );
   throwIfAborted(signal);
   const slotExecutionsDeleted = slotResult.meta?.changes ?? 0;

@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "./chain-registry";
+import { throwIfAborted } from "./abort";
 import { parseChainlinkLatestRoundData } from "./chainlink-round-data";
 import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
@@ -132,6 +133,7 @@ async function fetchChainlinkDrpcHex(
   ].filter((value): value is DrpcRpcTarget => value != null);
 
   for (const target of targets) {
+    throwIfAborted(signal);
     const result = await fetchJsonRpcHexAtUrl(
       target.url,
       "eth_call",
@@ -232,6 +234,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   const perFeedOutcomes: Record<string, ChainlinkFeedOutcome> = {};
 
   for (const feed of CHAINLINK_REFERENCE_FEEDS) {
+    throwIfAborted(signal);
     let succeeded = false;
     try {
       const decimals = await fetchFeedDecimals(feed, signal, chainRpcs, drpcApiKey, etherscanApiKey);

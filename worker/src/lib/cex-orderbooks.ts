@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/pricing-provider-config";
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
+import { throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 
 const CEX_ORDERBOOK_TIMEOUT_MS = 7_500;
@@ -124,6 +125,7 @@ export async function fetchBinanceOrderbookDepths(signal?: AbortSignal): Promise
   const rows: CexOrderbookDepth[] = [];
   const markets = BINANCE_MARKETS.filter((market) => MAJOR_SYMBOLS.has(market.symbol));
   for (const market of markets) {
+    throwIfAborted(signal);
     const payload = await fetchJson(
       `https://api.binance.com/api/v3/depth?symbol=${market.pair}&limit=1000`,
       signal,
@@ -145,6 +147,7 @@ export async function fetchCoinbaseOrderbookDepths(signal?: AbortSignal): Promis
   const rows: CexOrderbookDepth[] = [];
   const products = COINBASE_PRODUCTS.filter((product) => MAJOR_SYMBOLS.has(product.symbol));
   for (const product of products) {
+    throwIfAborted(signal);
     const payload = await fetchJson(
       `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/book?level=2`,
       signal,
@@ -166,6 +169,7 @@ export async function fetchKrakenOrderbookDepths(signal?: AbortSignal): Promise<
   const rows: CexOrderbookDepth[] = [];
   const markets = KRAKEN_MARKETS.filter((market) => MAJOR_SYMBOLS.has(market.symbol));
   for (const market of markets) {
+    throwIfAborted(signal);
     const payload = await fetchJson(
       `https://api.kraken.com/0/public/Depth?pair=${market.requestPair}&count=500`,
       signal,

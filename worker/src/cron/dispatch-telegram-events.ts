@@ -167,6 +167,7 @@ export async function buildTelegramDispatchEvents(
       recovery_price: number | null;
     }> = [];
     for (const idChunk of chunkArray(resolvedCandidateIds)) {
+      throwIfAborted(signal);
       const inClause = buildInClause(idChunk);
       const chunkRows = await db
         .prepare(

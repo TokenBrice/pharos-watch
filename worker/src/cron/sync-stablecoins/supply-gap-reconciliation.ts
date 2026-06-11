@@ -6,6 +6,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { throwIfAborted } from "../../lib/abort";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
@@ -451,6 +452,7 @@ export async function reconcileTrackedSupplyGaps(
   const byReason = createEmptyReasonCounts();
 
   for (const candidate of candidates) {
+    throwIfAborted(signal);
     const marketCaps = candidate.kind === "zero-supply-collapse"
       ? await fetchRecentDefiLlamaMarketCaps(candidate.llamaId, candidate.pegKey, signal)
       : await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);

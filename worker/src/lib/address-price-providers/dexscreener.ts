@@ -1,5 +1,6 @@
 import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
 import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
+import { throwIfAborted } from "../abort";
 import {
   chunk,
   fetchProviderJson,
@@ -96,7 +97,9 @@ export async function runDexScreenerAddressProvider(
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
+    throwIfAborted(signal);
     for (const batch of chunk(chainTargets, 30)) {
+      throwIfAborted(signal);
       if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       attemptedRequests += 1;
       const url = `https://api.dexscreener.com/tokens/v1/${providerChainId}/${batch.map((target) => target.address).join(",")}`;

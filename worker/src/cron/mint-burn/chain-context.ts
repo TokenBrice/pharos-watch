@@ -1,4 +1,5 @@
 import { buildAlchemyUrl, getAlchemyBlockNumber } from "../../lib/alchemy-logs";
+import { throwIfAborted } from "../../lib/abort";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 
@@ -17,6 +18,7 @@ export async function loadMintBurnChainContexts(input: {
 }): Promise<Map<string, MintBurnChainContext>> {
   const chainContexts = new Map<string, MintBurnChainContext>();
   for (const chainId of [...new Set(input.configs.map((config) => config.chain.chainId))]) {
+    throwIfAborted(input.signal);
     const alchemyUrl = buildAlchemyUrl(chainId, input.apiKey);
     if (!alchemyUrl) {
       throw new Error(`Failed to build ${chainId} Alchemy URL`);

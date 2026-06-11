@@ -1,4 +1,5 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
@@ -143,10 +144,12 @@ export async function fetchPancakeSwapPools(
   const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
 
   for (const { chain, subgraphId } of Object.values(PANCAKESWAP_V3_SUBGRAPHS)) {
+    throwIfAborted(signal);
     const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
     try {
       let chainPoolCount = 0;
       for (let page = 0; page < MAX_PAGES; page++) {
+        throwIfAborted(signal);
         const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(page * PAGE_SIZE), signal);
         const pagePools = data.pools ?? [];
         if (pagePools.length === 0) break;
@@ -155,6 +158,7 @@ export async function fetchPancakeSwapPools(
         const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
         let failedHourDataBatches = 0;
         for (let batchIndex = 0; batchIndex < hourDataPoolIdBatches.length; batchIndex++) {
+          throwIfAborted(signal);
           const poolIdBatch = hourDataPoolIdBatches[batchIndex]!;
           try {
             const hourData = await fetchSubgraphJson<{ poolHourDatas?: PoolHourData[] }>(

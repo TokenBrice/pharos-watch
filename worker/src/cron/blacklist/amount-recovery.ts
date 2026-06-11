@@ -683,7 +683,7 @@ export async function backfillAmounts(
   }
 
   if (stmts.length > 0) {
-    await batchExecute(db, stmts);
+    await batchExecute(db, stmts, { signal });
     console.log(`[sync-blacklist] Backfilled amounts for ${stmts.length} events`);
   }
 
@@ -791,7 +791,7 @@ export async function backfillTronFromLedger(
       .bind(balance.amount_native, balance.amount_usd, attemptedAt, eventId),
   );
 
-  const updated = await batchExecute(db, stmts);
+  const updated = await batchExecute(db, stmts, { signal: options.signal });
 
   return { updated };
 }

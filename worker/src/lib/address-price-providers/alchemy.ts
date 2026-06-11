@@ -4,6 +4,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
+import { throwIfAborted } from "../abort";
 import {
   chunk,
   emptyProviderResult,
@@ -41,6 +42,7 @@ export async function runAlchemyAddressProvider(
   let attemptedRequests = 0;
 
   for (const batch of buildAlchemyBatches(targets)) {
+    throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     attemptedRequests += 1;
     const url = `https://api.g.alchemy.com/prices/v1/${encodeURIComponent(apiKey)}/tokens/by-address`;

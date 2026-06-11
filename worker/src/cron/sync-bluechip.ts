@@ -210,7 +210,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     };
   }
 
-  const cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
+  const cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec, signal);
   console.log(
     cacheResult.written
       ? `[bluechip] Cache updated with ${Object.keys(ratingsMap).length} ratings (${freshCount} fresh)`

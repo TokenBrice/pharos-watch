@@ -2,6 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
+import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import {
@@ -208,6 +209,7 @@ export async function fetchResupplyPairsReserves(
 
   const snapshots: ResupplyPairSnapshot[] = [];
   for (const pair of params.pairs) {
+    throwIfAborted(signal);
     const pairAddress = parseConfiguredAddress(pair.address, `configured pair ${pair.key}`);
     const [rawUnderlying, rawAccounting] = await Promise.all([
       fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: UNDERLYING_SELECTOR }),

@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "file": "worker/src/lib/cron-lease.ts",
+    "lineIncludes": "releaseCronLease(db, job, owner)",
+    "reason": "Lease release is wrapper cleanup and must still run after the job signal aborts."
+  },
+  {
+    "file": "worker/src/lib/cron-logger.ts",
+    "lineIncludes": "await runWithOverloadRetry(() =>",
+    "reason": "Terminal cron_run logging is wrapper cleanup and must still run after the job signal aborts."
+  }
+]

@@ -9,6 +9,7 @@ import {
 } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../constants";
+import { throwIfAborted } from "../abort";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
 import {
   buildBlockedProviderDiagnostic,
@@ -311,6 +312,7 @@ export async function collectAddressPriceProviderQuotes(params: {
   const deadlineMs = Date.now() + ADDRESS_PROVIDER_RUN_BUDGET_MS;
 
   for (const provider of params.providers) {
+    throwIfAborted(params.signal);
     const targets = params.targetsByProvider.get(provider) ?? [];
     if (targets.length === 0) {
       providerOutcomes.set(provider, "success");

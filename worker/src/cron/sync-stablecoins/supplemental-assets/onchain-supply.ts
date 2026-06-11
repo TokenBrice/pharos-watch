@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import { throwIfAborted } from "../../../lib/abort";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
@@ -214,6 +215,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   let totalMcap = 0;
   const chainCirculating: Record<string, number> = {};
   for (const curated of curatedContracts) {
+    throwIfAborted(signal);
     const supplyContract = meta.contracts?.find((entry) => entry.chain === curated.chain);
     if (!supplyContract || !isSupportedOnChainSupplyContract(supplyContract)) {
       console.warn(`[fiat-cg] ${meta.symbol}: configured aggregate supply chain ${curated.chain} is missing or unsupported`);

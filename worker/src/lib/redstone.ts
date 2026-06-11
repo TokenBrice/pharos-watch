@@ -2,7 +2,7 @@ import {
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
-import { sleepWithSignal } from "./abort";
+import { sleepWithSignal, throwIfAborted } from "./abort";
 import { fetchWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
@@ -196,6 +196,7 @@ export async function fetchRedstonePrices(
     const missingSymbols: string[] = [];
 
     for (let i = 0; i < requestedSymbols.length; i += REDSTONE_BATCH_SIZE) {
+      throwIfAborted(signal);
       const batch = requestedSymbols.slice(i, i + REDSTONE_BATCH_SIZE);
       transportAttempts++;
       const { results: batchResults, transportOk } = await fetchRedstoneBatch(batch, signal);

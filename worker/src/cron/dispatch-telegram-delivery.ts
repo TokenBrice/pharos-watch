@@ -15,6 +15,7 @@ import {
   type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
+import { throwIfAborted } from "../lib/abort";
 import type { BatchMessage } from "../lib/telegram";
 
 interface DeliverTelegramSubscriberQueueOptions {
@@ -157,6 +158,7 @@ export async function deliverTelegramSubscriberQueue({
   }
 
   for (const deferred of deferredPerChat) {
+    throwIfAborted(signal);
     if (blockedChats.has(deferred.chatId)) continue;
     const deferredMessages = filterTerminalMessages(expandSubscriberChunks([deferred], blockedChats));
     if (deferredMessages.length === 0) continue;
@@ -201,6 +203,7 @@ export async function deliverTelegramSubscriberQueue({
     }
   }
   for (const group of retryEnqueueGroups.values()) {
+    throwIfAborted(signal);
     await enqueuePendingAlerts(db, group.messages, nowSec, group.options);
   }
   await setTelegramGlobalBackoff(db, globalRateLimitNotBeforeAt);

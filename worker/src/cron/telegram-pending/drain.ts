@@ -1,4 +1,5 @@
 import { buildInClause, chunkArray, batchExecute } from "../../lib/db";
+import { throwIfAborted } from "../../lib/abort";
 import { sendToChat } from "../../lib/telegram";
 import { SNOOZE_REPLY_MARKUP } from "../../lib/telegram-alerts";
 import {
@@ -380,6 +381,7 @@ export async function drainPendingQueue(
     );
 
     for (const result of results) {
+      throwIfAborted(signal);
       attempted++;
       const pendingRow = pendingById.get(result.id);
       const pushTargetStatus = (

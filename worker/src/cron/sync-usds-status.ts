@@ -138,7 +138,7 @@ export async function syncUsdsStatus(
 
   let cacheResult: CacheWriteResult;
   try {
-    cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
+    cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec, signal);
   } catch (err) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
     console.error("[sync-usds-status] Cache write failed:", err);

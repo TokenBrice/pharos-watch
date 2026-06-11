@@ -82,7 +82,7 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
 
   if (stmts.length > 0) {
     try {
-      await batchExecute(db, stmts);
+      await batchExecute(db, stmts, { signal });
       await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
     } catch (err) {
       recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });

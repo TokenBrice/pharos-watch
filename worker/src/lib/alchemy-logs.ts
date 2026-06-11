@@ -2,6 +2,7 @@ import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
+import { throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
@@ -436,6 +437,7 @@ export async function resolveBlockTimestamps(
     const maxAgeSec = persistentCache.maxAgeSec ?? DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC;
     const cutoff = nowSec - maxAgeSec;
     for (let i = 0; i < unresolved.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
+      throwIfAborted(options?.signal);
       const batchBlocks = unresolved.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK);
       const blockInClause = buildInClause(batchBlocks);
       const rows = await persistentCache.db
@@ -460,6 +462,7 @@ export async function resolveBlockTimestamps(
   const freshResolvedForCache = new Map<number, number>();
   let batchErrors = 0;
   for (let i = 0; i < unresolved.length; i += TIMESTAMP_BATCH_SIZE) {
+    throwIfAborted(options?.signal);
     if (budgetExhausted(budget)) break;
     budget.count++;
 

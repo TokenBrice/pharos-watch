@@ -6,6 +6,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { throwIfAborted } from "../../lib/abort";
 import {
   applyJsonParseFailureDiagnostic,
   applyNonOkProviderDiagnostic,
@@ -125,6 +126,7 @@ export async function runJupiterPass(
   };
 
   for (let index = 0; index < candidates.length; index += JUPITER_MAX_IDS_PER_REQUEST) {
+    throwIfAborted(signal);
     const batch = candidates.slice(index, index + JUPITER_MAX_IDS_PER_REQUEST);
     const ids = batch.map((entry) => entry.mint);
 

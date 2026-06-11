@@ -1,5 +1,6 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
@@ -192,6 +193,7 @@ function createReserveAdapterRunner(args: {
         index: number;
       }> = [];
       for (const fb of config.inputs.fallbacks ?? []) {
+        throwIfAborted(args.signal);
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
           const fallbackResult = await runAdapterAttempt(

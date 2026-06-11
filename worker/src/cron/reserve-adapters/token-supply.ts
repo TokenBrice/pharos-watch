@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
+import { throwIfAborted } from "../../lib/abort";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry } from "./request";
 import { requireOnchainInput } from "./input-guards";
@@ -38,6 +39,7 @@ async function fetchSolanaTokenSupplyRaw(
   let lastError: unknown = null;
 
   for (const rpcUrl of SOLANA_RPC_URLS) {
+    throwIfAborted(signal);
     try {
       const body = await fetchJsonPostWithRetry<SolanaTokenSupplyResponse>(
         rpcUrl,

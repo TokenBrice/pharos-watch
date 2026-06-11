@@ -182,7 +182,7 @@ export async function fillMissingSupplyHistory(
   const historyRows = await runWithOverloadRetry(() => db
     .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE snapshot_date IN (?, ?, ?)")
     .bind(date1d, date7d, date30d)
-    .all<SupplyHistoryRow>());
+    .all<SupplyHistoryRow>(), 3, signal);
 
   if ((historyRows.results ?? []).length === 0) {
     return 0;

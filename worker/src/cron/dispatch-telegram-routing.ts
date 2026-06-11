@@ -12,6 +12,7 @@ import {
   handleBlockedChat,
   resetChatOnSuccess,
 } from "./telegram-pending-queue";
+import { throwIfAborted } from "../lib/abort";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import type {
   PerAlertTypeDelivery,
@@ -296,6 +297,7 @@ export async function deliverFreshAlerts(
   const chatsResetThisRun = new Set<string>();
 
   for (let index = 0; index < sendResults.length; index += 1) {
+    throwIfAborted(signal);
     const result = sendResults[index];
     const sendPlan = sendList[index];
     if (!result || !sendPlan) continue;

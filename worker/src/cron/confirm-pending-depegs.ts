@@ -172,7 +172,7 @@ export async function confirmPendingDepegs(
 
   if (stmts.length > 0) {
     throwIfAborted(signal);
-    await batchExecute(db, stmts);
+    await batchExecute(db, stmts, { signal });
     console.log(`[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
   }
 

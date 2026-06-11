@@ -10,6 +10,7 @@ import {
 } from "../evm-rpc";
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
+import { throwIfAborted } from "../abort";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { isReplaySafePriceSource } from "../pricing-source-policy";
@@ -365,6 +366,7 @@ export async function collectHistoricalBlockPrices(
   const prices: HistoricalPricePoint[] = [];
 
   for (const timestamp of requestedTimestamps) {
+    throwIfAborted(context.signal);
     const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(ETHEREUM_CHAIN, timestamp, blockSearchCache, {
       signal: context.signal,
       extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),

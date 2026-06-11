@@ -140,7 +140,7 @@ export async function snapshotSafetyGradeHistory(
   }
 
   if (stmts.length > 0) {
-    await batchExecute(db, stmts);
+    await batchExecute(db, stmts, { signal });
   }
   const cacheResult = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt, {
     liquidityStale: snapshot.liquidityStale,

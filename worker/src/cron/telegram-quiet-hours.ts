@@ -108,6 +108,8 @@ export async function cleanExpiredDisambiguations(
       .prepare("DELETE FROM telegram_pending_disambiguation WHERE expires_at < ?")
       .bind(cutoffSec)
       .run(),
+    3,
+    signal,
   );
   const disambiguationRowsCleaned = result.meta?.changes ?? 0;
   return createCronResult({

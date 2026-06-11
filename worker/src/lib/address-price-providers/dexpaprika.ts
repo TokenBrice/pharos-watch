@@ -1,4 +1,5 @@
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
+import { throwIfAborted } from "../abort";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   fetchProviderJson,
@@ -25,6 +26,7 @@ export async function runDexPaprikaAddressProvider(
   const cappedTargets = Math.max(0, targets.length - DEXPAPRIKA_MAX_REQUESTS);
 
   for (const target of targets.slice(0, DEXPAPRIKA_MAX_REQUESTS)) {
+    throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     attemptedRequests += 1;
     const url = `https://api.dexpaprika.com/networks/${target.providerChainId}/tokens/${target.address}`;

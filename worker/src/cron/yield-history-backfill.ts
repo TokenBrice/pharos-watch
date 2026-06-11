@@ -100,6 +100,6 @@ async function _backfillYieldHistory(
         row.warning_signals,
       ),
   );
-  await batchExecute(db, stmts, D1_BATCH_SIZE);
+  await batchExecute(db, stmts, { chunkSize: D1_BATCH_SIZE, signal });
   return { inserted: rows.length, skipped: body.data.length - rows.length };
 }

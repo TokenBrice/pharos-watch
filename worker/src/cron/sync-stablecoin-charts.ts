@@ -174,6 +174,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => config.id);
     const overlayRows: SupplyHistoryChartRow[] = [];
     for (const idChunk of chunkArray(supplementalIds, SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE)) {
+      throwIfAborted(signal);
       const supplementalIn = buildInClause(idChunk);
       supplementalHistoryChunks++;
       supplementalHistoryMaxBindCount = Math.max(supplementalHistoryMaxBindCount, supplementalIn.binds.length);
@@ -211,7 +212,13 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     };
   }
 
-  const cacheResult = await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
+  const cacheResult = await setCacheIfNewer(
+    db,
+    "stablecoin-charts",
+    JSON.stringify(downsampled),
+    syncStartSec,
+    signal,
+  );
   let lastWriteAdvanced = false;
   let canonicalReadbackUpdatedAt: number | null = null;
   if (cacheResult.written) {

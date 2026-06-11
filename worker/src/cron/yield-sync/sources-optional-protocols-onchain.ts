@@ -4,6 +4,7 @@ import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { throwIfAborted } from "../../lib/abort";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import type { ResolvedYield } from "./types";
 
@@ -105,6 +106,7 @@ export async function fetchBprotocolLqtyOnlySource(
     );
 
     for (const rpcUrl of rpcUrls) {
+      throwIfAborted(signal);
       const lusdDeposits = await fetchEthCallUint256(
         rpcUrl,
         "ethereum",
@@ -186,6 +188,7 @@ export async function fetchCurveScrvusdCurrentRateSource(
     );
 
     for (const rpcUrl of rpcUrls) {
+      throwIfAborted(signal);
       const totalAssetsRaw = await fetchEthCallUint256(
         rpcUrl,
         "ethereum",

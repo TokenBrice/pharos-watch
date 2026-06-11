@@ -1196,6 +1196,7 @@ export async function fetchTbillRate(
 
   const resolvedProviders: ResolvedBenchmarkProvider[] = [];
   for (const key of BENCHMARK_PROVIDER_ORDER) {
+    throwIfAborted(signal);
     resolvedProviders.push(
       key === "MXN"
         ? await resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal })

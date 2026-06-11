@@ -8,6 +8,7 @@ import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@share
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
+import { throwIfAborted } from "../../lib/abort";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -311,6 +312,7 @@ async function fetchLlammaMarketDescriptors(signal: AbortSignal, ctx?: AdapterCo
 
   const descriptors: LlammaMarketDescriptor[] = [];
   for (let marketId = 0; marketId < marketCount; marketId += 1) {
+    throwIfAborted(signal);
     const [collateralAddress, controllerAddress, ammAddress] = await Promise.all([
       readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "collaterals", signal, ctx, [
         BigInt(marketId),
@@ -470,6 +472,7 @@ async function fetchYieldBasisMarketPositions(
 
   const positions: YieldBasisMarketPosition[] = [];
   for (let marketId = 0; marketId < marketCount; marketId += 1) {
+    throwIfAborted(signal);
     const market = (await readEthereumContract(YIELD_BASIS_FACTORY, YIELD_BASIS_FACTORY_ABI, "markets", signal, ctx, [
       BigInt(marketId),
     ])) as readonly [string, string, string, string, string, string, string];

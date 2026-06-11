@@ -100,6 +100,7 @@ export async function syncYieldSupplemental(
     YIELD_SUPPLEMENTAL_CACHE_KEY,
     buildYieldSupplementalSourcesCache(dedupedCandidates, startSec),
     startSec,
+    signal,
   );
   const familyCacheResults: Record<SupplementalSourceFamilyKey, "published" | "skipped-newer" | "empty"> =
     Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
@@ -115,6 +116,7 @@ export async function syncYieldSupplemental(
       getYieldSupplementalFamilyCacheKey(family.key),
       buildYieldSupplementalSourcesCache(dedupedFamilyCandidates, startSec),
       startSec,
+      signal,
     );
     familyCacheResults[family.key] = familyCacheResult.written ? "published" : "skipped-newer";
   }

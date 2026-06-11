@@ -4,6 +4,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
+import { throwIfAborted } from "../abort";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
@@ -36,7 +37,9 @@ export async function runMoralisAddressProvider(
   let attemptedRequests = 0;
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
+    throwIfAborted(signal);
     for (const batch of chunk(chainTargets, MORALIS_ADDRESS_BATCH_SIZE)) {
+      throwIfAborted(signal);
       if (attemptedRequests >= MORALIS_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       attemptedRequests += 1;
       const url = `https://deep-index.moralis.io/api/v2.2/erc20/prices?chain=${encodeURIComponent(providerChainId)}`;

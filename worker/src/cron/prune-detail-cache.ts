@@ -25,6 +25,8 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
       .prepare("SELECT key, updated_at FROM cache WHERE key LIKE ?")
       .bind(`${DETAIL_KEY_PREFIX}%`)
       .all<{ key: string; updated_at: number }>(),
+    3,
+    signal,
   );
   throwIfAborted(signal);
 
@@ -46,6 +48,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
     await batchExecute(
       db,
       doomedKeys.map((key) => db.prepare("DELETE FROM cache WHERE key = ?").bind(key)),
+      { signal },
     );
   }
 
