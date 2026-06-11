@@ -55,13 +55,13 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
   },
-  "src/app/yield/client.tsx": {
+  "src/components/yield-history-chart.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass.",
+    "notes": "Re-entered the candidate set after the 2026-06-11 yield copy/intro trim dropped src/app/yield/client.tsx below threshold; the chart still owns one large render function (series shaping, tooltip, axis config) at maxFunctionLines=366. Split tooltip and series derivation into focused helpers in the next yield UI cleanup pass.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+    "createdAt": "2026-06-11",
+    "reviewAfter": "2026-09-11",
+    "nextAction": "Extract tooltip rendering and series shaping from the main chart render function."
   },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
