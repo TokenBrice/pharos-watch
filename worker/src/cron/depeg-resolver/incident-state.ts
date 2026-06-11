@@ -174,6 +174,11 @@ export async function recordSystemHealthDeferrals(input: {
   for (const row of input.activeRows) {
     const incident = input.incidentsByEventId.get(row.id) ?? fallbackIncidentForEvent(row);
     if (!incident.policyUniverseIncluded || input.nowSec < incident.eligibleAt) continue;
+    // Sealed incidents (frozen/no_call/publication_*) must not receive deferral
+    // writes: the D1 sealed lock-state trigger forbids any policy-metadata change.
+    if (incident.lockState?.lastState && incident.lockState.lastState !== "pending_lock" && incident.lockState.lastState !== "lock_deferred") {
+      continue;
+    }
     const backstopDelaySec = Math.max(0, incident.eligibleAt - incident.startedAt);
     await input.stores.recordLockDeferral(input.db, {
       incidentKey: incident.incidentKey,

@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { ensureCanonicalIncidentsForEvents } from "../incident-state";
+import { describe, expect, it, vi } from "vitest";
+import { ensureCanonicalIncidentsForEvents, recordSystemHealthDeferrals } from "../incident-state";
 import type { DdrEventDbRow } from "../types";
-import type { DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
 function makeEventRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
   return {
@@ -87,5 +87,76 @@ describe("ensureCanonicalIncidentsForEvents", () => {
 
     expect(quarantined).toEqual([]);
     expect(byEventId.has(7)).toBe(true);
+  });
+});
+
+describe("recordSystemHealthDeferrals", () => {
+  function makeIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
+    return {
+      incidentKey: "ddr2:test-incident-1",
+      eventId: 1,
+      currentEventId: 1,
+      stablecoinId: "usdt-tether",
+      pegCurrency: "USD",
+      direction: "below",
+      startedAt: 1_750_000_000,
+      eligibleAt: 1_750_000_000,
+      policyUniverseIncluded: true,
+      confirmedAt: null,
+      lockState: null,
+      ...overrides,
+    };
+  }
+
+  it("skips incidents whose lock state is already sealed or in publication flow", async () => {
+    const sealedStates = ["frozen", "no_call", "publication_retry_pending", "publication_failed", "published"] as const;
+    const events = [
+      makeEventRow({ id: 1 }),
+      ...sealedStates.map((_, index) => makeEventRow({ id: 2 + index })),
+      makeEventRow({ id: 10 }),
+    ];
+    const incidentsByEventId = new Map<number, DdrCanonicalIncident>([
+      [1, makeIncident()],
+      ...sealedStates.map((lastState, index): [number, DdrCanonicalIncident] => [
+        2 + index,
+        makeIncident({
+          incidentKey: `ddr2:test-incident-${2 + index}`,
+          eventId: 2 + index,
+          currentEventId: 2 + index,
+          lockState: { eligibleAt: 1_750_000_000, deferralCount: 0, lastDeferralReason: null, lastState },
+        }),
+      ]),
+      [
+        10,
+        makeIncident({
+          incidentKey: "ddr2:test-incident-10",
+          eventId: 10,
+          currentEventId: 10,
+          lockState: { eligibleAt: 1_750_000_000, deferralCount: 1, lastDeferralReason: null, lastState: "lock_deferred" },
+        }),
+      ],
+    ]);
+    const recordLockDeferral = vi.fn(async () => undefined);
+    const stores = { recordLockDeferral } as unknown as DdrV2StoreContracts;
+
+    const count = await recordSystemHealthDeferrals({
+      stores,
+      db: {} as D1Database,
+      incidentsByEventId,
+      activeRows: events,
+      nowSec: 1_750_100_000,
+      ddrRunId: "run-3",
+      runAt: 1_750_100_000,
+      syncCapabilities: {},
+      reason: "stablecoins-cache-unsafe",
+    });
+
+    // Only the never-locked and lock_deferred incidents get a deferral write;
+    // sealed/publication-flow incidents are immutable per the D1 lock-state trigger.
+    expect(count).toBe(2);
+    const deferredKeys = recordLockDeferral.mock.calls.map(
+      (call) => (call as unknown as [unknown, { incidentKey: string }])[1].incidentKey,
+    );
+    expect(deferredKeys).toEqual(["ddr2:test-incident-1", "ddr2:test-incident-10"]);
   });
 });
