@@ -202,7 +202,7 @@ describe("stablecoin detail view-model builder", () => {
 
     const viewModel = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin!));
 
-    expect(viewModel.reviewedAt).toBe("2026-05-25");
+    expect(viewModel.reviewedAt).toBe("2026-06-11");
     expect(viewModel.mintIncidents).toHaveLength(1);
     expect(viewModel.mintIncidents[0]).toMatchObject({
       date: "2026-03-22",
