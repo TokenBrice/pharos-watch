@@ -7,7 +7,7 @@
  * report to the cache for operator review.
  */
 
-import type { CronResult } from "../lib/cron-logger";
+import { logCronEvent, type CronResult } from "../lib/cron-logger";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -15,6 +15,7 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
   AUTO_LENDING_POOL_MAP,
+  AUTO_LENDING_SAFETY_BYPASS_IDS,
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
@@ -26,8 +27,11 @@ import {
   getRequiredLendingOpportunityTvlUsd,
 } from "./yield-sync/resolve-helpers";
 import {
+  MIN_SAFETY_SCORE_FOR_YIELD,
   MIN_LENDING_POOL_APY,
 } from "../lib/constants";
+import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
 import {
   YIELD_ADAPTER_LIFECYCLE,
   type YieldAdapterLifecycleEntry,
@@ -245,6 +249,11 @@ export interface StaleAutoLendingOverride {
   tvlUsd: number | null;
   apy: number | null;
   requiredMinTvlUsd: number | null;
+}
+
+interface IdentifyStaleAutoLendingOverrideOptions {
+  stablecoinSupplyById?: Map<string, number>;
+  safetyScores?: Map<string, { score: number }>;
 }
 
 export interface CoverageGapPool {
@@ -695,9 +704,34 @@ export function identifyCoverageGaps(
   };
 }
 
-export function identifyStaleAutoLendingOverrides(dlPools: DlPool[]): StaleAutoLendingOverride[] {
+async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<Map<string, number>> {
+  const stablecoinsCache = await getCache(db, "stablecoins");
+  if (!stablecoinsCache?.value) return new Map();
+
+  try {
+    return buildStablecoinSupplyMapFromCacheValue(stablecoinsCache.value);
+  } catch (error) {
+    await logCronEvent(db, {
+      job: "yield-coverage-audit",
+      eventType: "stablecoins-cache-parse-failed",
+      severity: "warning",
+      message: "Failed to parse stablecoins cache for lending size gates; falling back to absolute TVL floors.",
+      metadata: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    return new Map();
+  }
+}
+
+export function identifyStaleAutoLendingOverrides(
+  dlPools: DlPool[],
+  options: IdentifyStaleAutoLendingOverrideOptions = {},
+): StaleAutoLendingOverride[] {
   const poolById = new Map(dlPools.map((pool) => [pool.pool, pool] as const));
   const staleOverrides: StaleAutoLendingOverride[] = [];
+  const stablecoinSupplyById = options.stablecoinSupplyById ?? new Map();
+  const safetyScores = options.safetyScores;
 
   for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
     const pool = poolById.get(poolId);
@@ -719,9 +753,14 @@ export function identifyStaleAutoLendingOverrides(dlPools: DlPool[]): StaleAutoL
     const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
       stablecoinId,
       poolChain: pool.chain,
-      stablecoinSupplyById: new Map(),
+      stablecoinSupplyById,
     });
     const reasons: string[] = [];
+    if (safetyScores) {
+      const safetyScore = safetyScores.get(stablecoinId)?.score ?? 0;
+      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
+      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) reasons.push("below-safety-score");
+    }
     if (pool.exposure !== "single") reasons.push("non-single-exposure");
     if (!pool.stablecoin) reasons.push("not-stablecoin");
     if (!LENDING_PROTOCOL_ALLOWLIST.has(pool.project)) reasons.push("project-not-allowlisted");
@@ -784,7 +823,15 @@ export async function runYieldCoverageAudit(
     LENDING_PROTOCOL_ALLOWLIST,
     protocolCategoryLookup.categoriesByProject,
   );
-  const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools);
+  const stablecoinSupplyById = await loadStablecoinSupplyMapForAudit(db);
+  const safetySnapshot = await computeSafetyScoresSnapshot(db, {
+    includeNavTokens: true,
+    outputMode: "map",
+  });
+  const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
+    stablecoinSupplyById,
+    safetyScores: safetySnapshot.scores,
+  });
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => !manifestById.has(coin.id))

@@ -339,6 +339,70 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("applies the same supply-relative TVL floor as hourly auto-lending publication", () => {
+    const stale = identifyStaleAutoLendingOverrides(
+      [
+        {
+          pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
+          chain: "Flare",
+          project: "clearpool-lending",
+          symbol: "USDX",
+          tvlUsd: 500_000,
+          apy: 5,
+          apyBase: 5,
+          apyReward: null,
+          apyMean30d: 5,
+          stablecoin: true,
+          exposure: "single",
+          underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
+        },
+      ],
+      {
+        stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000_000]]),
+      },
+    );
+
+    expect(stale).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdx-hex-trust",
+        requiredMinTvlUsd: 1_000_000,
+        reasons: expect.arrayContaining(["below-tvl-floor"]),
+      }),
+    );
+  });
+
+  it("flags deterministic auto-lending overrides that no longer pass the safety gate", () => {
+    const stale = identifyStaleAutoLendingOverrides(
+      [
+        {
+          pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
+          chain: "Ethereum",
+          project: "aave-v3",
+          symbol: "DLLR",
+          tvlUsd: 2_000_000,
+          apy: 5,
+          apyBase: 5,
+          apyReward: null,
+          apyMean30d: 5,
+          stablecoin: true,
+          exposure: "single",
+          underlyingTokens: null,
+        },
+      ],
+      {
+        stablecoinSupplyById: new Map([["dllr-sovryn", 1_000_000]]),
+        safetyScores: new Map([["dllr-sovryn", { score: 49 }]]),
+      },
+    );
+
+    expect(stale).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "dllr-sovryn",
+        reasons: expect.arrayContaining(["below-safety-score"]),
+      }),
+    );
+  });
+
   it("builds a transient operator queue from headline gaps and recommendation candidates", () => {
     const dlPools: DlPool[] = [
       { pool: "susde-native", chain: "Ethereum", project: "ethena", symbol: "sUSDe", tvlUsd: 50_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },

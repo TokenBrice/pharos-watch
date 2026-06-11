@@ -1,4 +1,3 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import {
@@ -18,6 +17,7 @@ import {
   type DeterministicOnChainHealthState,
 } from "./cache";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
+import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
 import {
   getSupplementalCandidateFamily,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
@@ -61,29 +61,6 @@ export interface YieldSyncLoadedState {
   safetyScores: Map<string, { score: number; grade: string }>;
   safetyCoverageRatio: number;
   safetySnapshotDegraded: boolean;
-}
-
-function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
-  const parsed = JSON.parse(value) as unknown;
-  const rawAssets =
-    Array.isArray(parsed)
-      ? parsed
-      : (parsed && typeof parsed === "object" && Array.isArray((parsed as { peggedAssets?: unknown }).peggedAssets)
-        ? (parsed as { peggedAssets: unknown[] }).peggedAssets
-        : []);
-  const supplyById = new Map<string, number>();
-
-  for (const asset of rawAssets) {
-    if (!asset || typeof asset !== "object") continue;
-    const id = (asset as { id?: unknown }).id;
-    if (typeof id !== "string" || id.length === 0) continue;
-    const supplyUsd = getCirculatingRaw(asset as Parameters<typeof getCirculatingRaw>[0]);
-    if (supplyUsd > 0) {
-      supplyById.set(id, supplyUsd);
-    }
-  }
-
-  return supplyById;
 }
 
 async function loadYieldSupplementalCandidates(

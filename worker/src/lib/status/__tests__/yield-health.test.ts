@@ -220,6 +220,67 @@ describe("loadYieldHealthSummary", () => {
     });
   });
 
+  it("reads ranking deltas from coverage-regression guard metadata", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            updatedAt: NOW - 300,
+            rankings: [{ id: "usdc-circle" }, { id: "usdt-tether" }],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 1,
+                coveredCount: 2,
+                trackedCount: 2,
+                reason: null,
+              },
+              benchmark: {
+                fetchedAt: NOW - 3600,
+                ageSeconds: 3600,
+                source: "tbill-cache",
+                isFallback: false,
+                fallbackMode: null,
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: JSON.stringify({
+            manifestMissingCount: 0,
+            yieldBearingMissingFromRankingsCount: 0,
+            unmatchedHighTvlPoolCount: 0,
+            missingProtocolCount: 0,
+            nativeExactPoolRecommendationCount: 0,
+            sourceFamilyAdapterRecommendationCount: 0,
+            lendingAllowlistRecommendationCount: 0,
+            staleAutoLendingOverrideCount: 0,
+          }),
+        },
+      ]),
+      NOW,
+      {
+        "sync-yield-data": cron("degraded", 120, {
+          reason: "published-ranking-coverage-regression",
+          previousPublishedRankingCount: 11,
+          currentPublishedRankingCount: 2,
+          publishedRankingCountDelta: -9,
+        }),
+      },
+    );
+
+    expect(summary.previousRankingCount).toBe(11);
+    expect(summary.rankingCountDelta).toBe(-9);
+  });
+
   it("reports source-risk field coverage and null rates across best and alternate rows", async () => {
     const summary = await loadYieldHealthSummary(
       makeDb([

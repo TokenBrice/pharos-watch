@@ -165,6 +165,26 @@ function buildComparisonAnchorFreshnessSummary(
   };
 }
 
+function getSyncYieldDataMetadata(crons: Record<string, CronStatus>): Record<string, unknown> | null {
+  return getObject(crons["sync-yield-data"]?.lastRun?.metadata);
+}
+
+function getSyncYieldRankingDeltaMetadata(crons: Record<string, CronStatus>): {
+  previousRankingCount: number | null;
+  rankingCountDelta: number | null;
+} {
+  const metadata = getSyncYieldDataMetadata(crons);
+  const sourceCoverage = getObject(metadata?.sourceCoverage);
+  return {
+    previousRankingCount:
+      getNumber(sourceCoverage?.previousPublishedRankingCount)
+      ?? getNumber(metadata?.previousPublishedRankingCount),
+    rankingCountDelta:
+      getNumber(sourceCoverage?.publishedRankingCountDelta)
+      ?? getNumber(metadata?.publishedRankingCountDelta),
+  };
+}
+
 function getQueueAction(value: unknown): YieldCoverageAuditQueueAction {
   return COVERAGE_AUDIT_QUEUE_ACTIONS.includes(value as YieldCoverageAuditQueueAction)
     ? value as YieldCoverageAuditQueueAction
@@ -594,9 +614,7 @@ export async function loadYieldHealthSummary(
     : freshnessStatus(rankingAgeSec, YIELD_RANKING_MAX_AGE_SEC, { missingIs: "stale" });
   const rankings = Array.isArray(rankingsPayload?.rankings) ? rankingsPayload.rankings : null;
   const sourceRiskCoverage = buildSourceRiskCoverage(rankings);
-  const syncSourceCoverage = getObject(crons["sync-yield-data"]?.lastRun?.metadata?.sourceCoverage);
-  const previousRankingCount = getNumber(syncSourceCoverage?.previousPublishedRankingCount);
-  const rankingCountDelta = getNumber(syncSourceCoverage?.publishedRankingCountDelta);
+  const { previousRankingCount, rankingCountDelta } = getSyncYieldRankingDeltaMetadata(crons);
 
   const provenance = getObject(rankingsPayload?.provenance);
   const safetySnapshot = getObject(provenance?.safetySnapshot);
