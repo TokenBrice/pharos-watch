@@ -139,6 +139,44 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
+  it("parses day-first numeric report dates from PDF filenames before upload-path months", () => {
+    const html = `
+      <a href="https://issuer.example/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf">
+        Download as .pdf
+      </a>
+      <a href="https://issuer.example/wp-content/uploads/2025/07/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+      reportDate: "2026-03-31",
+      reportDateLabel: "March 31, 2026",
+      reportDatePrecision: "day",
+      reportDateSource: "href",
+    });
+  });
+
+  it("normalizes two-digit years in day-first numeric PDF filenames", () => {
+    const html = `
+      <a href="/reports/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2025, 5, 30) / 1000,
+      reportDate: "2025-06-30",
+      reportDateLabel: "June 30, 2025",
+      reportDatePrecision: "day",
+    });
+  });
+
   it("discovers dated PDFs in gated Webflow data attributes", () => {
     const html = `
       <button
@@ -202,6 +240,16 @@ describe("fetchAttestationPdfIndexReserves", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://issuer.example/transparency/index.html",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Origin: "https://issuer.example",
+          Referer: "https://issuer.example/transparency/index.html",
+          "Accept-Language": "en-US,en;q=0.9",
+        }),
+      }),
+    );
     expect(result.slices).toEqual(CONFIGURED_PARAMS.slices);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,

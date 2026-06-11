@@ -312,7 +312,7 @@ describe("mento adapter", () => {
             Promise.resolve(SAMPLE_PAYLOAD),
           ],
           [
-            "text-get:https://reserve.mento.org/:12000",
+            "text-get:https://reserve.mento.org/:12000:null",
             Promise.resolve(
               String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
             ),

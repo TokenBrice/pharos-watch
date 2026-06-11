@@ -13,6 +13,7 @@ import {
   verifiedFreshnessMetadata,
   isReserveRisk,
 } from "./helpers";
+import { buildBrowserHeaders } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const ADAPTER_NAME = "attestation-pdf-index";
@@ -239,6 +240,14 @@ const DAY_DATE_PARSERS: readonly DateParserEntry[] = [
     month: 2,
     day: 3,
   },
+  // DD-MM-YYYY / DD_MM_YY and variants common in PDF filenames.
+  {
+    kind: "day",
+    regex: /(?<![A-Za-z0-9])(0?[1-9]|[12]\d|3[01])[-_./\s](0?[1-9]|1[0-2])[-_./\s]((?:19|20)?\d{2})(?![A-Za-z0-9])/gi,
+    year: 3,
+    month: 2,
+    day: 1,
+  },
   // Month DD, YYYY
   {
     kind: "day",
@@ -306,7 +315,8 @@ function parseAllDates(
       const monthRaw = match[entry.month] ?? "";
       const monthIndex = entry.monthIsName ? monthIndexFromLabel(monthRaw) : Number(monthRaw) - 1;
       if (monthIndex == null || Number.isNaN(monthIndex)) continue;
-      const year = Number(match[entry.year]);
+      const yearRaw = match[entry.year] ?? "";
+      const year = yearRaw.length === 2 ? 2000 + Number(yearRaw) : Number(yearRaw);
       const candidate =
         entry.kind === "day"
           ? buildDayDate(year, monthIndex, Number(match[entry.day]), source)
@@ -427,6 +437,13 @@ export async function fetchAttestationPdfIndexReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
-  const html = await fetchPrimaryHtmlInput(config, ADAPTER_NAME, signal, ctx);
+  const html = await fetchPrimaryHtmlInput(
+    config,
+    ADAPTER_NAME,
+    signal,
+    ctx,
+    15_000,
+    { headers: buildBrowserHeaders(new URL(input.url).origin, input.url) },
+  );
   return adaptAttestationPdfIndex(html, readParams(config), { indexUrl: input.url });
 }

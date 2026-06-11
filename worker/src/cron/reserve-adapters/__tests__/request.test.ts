@@ -113,6 +113,38 @@ describe("adapter request cache", () => {
     expect(text).toBe(JSON.stringify({ ok: true }));
   });
 
+  it("keeps same-URL text GETs separate when headers differ", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string> | undefined;
+      return new Response(headers?.Referer ?? "none", {
+        headers: { "content-type": "text/plain" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    const first = await fetchTextWithRetry(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: { Referer: "https://issuer.example/a" } },
+    );
+    const second = await fetchTextWithRetry(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: { Referer: "https://issuer.example/b" } },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first).toBe("https://issuer.example/a");
+    expect(second).toBe("https://issuer.example/b");
+  });
+
   it("keys JSON POST cache entries by serialized body", async () => {
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => new Response(
       JSON.stringify({ body: init?.body ?? null }),

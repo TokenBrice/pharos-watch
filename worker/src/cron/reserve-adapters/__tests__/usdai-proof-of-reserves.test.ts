@@ -373,11 +373,11 @@ describe("usdai-proof-of-reserves adapter", () => {
       {
         requestCache: new Map([
           [
-            "text-get:https://example.com/usdai/proof-of-reserves?chainId=42161:12000",
+            "text-get:https://example.com/usdai/proof-of-reserves?chainId=42161:12000:null",
             Promise.resolve(SAMPLE_RAW_PAYLOAD),
           ],
           [
-            "text-get:https://app.usd.ai/reserves:12000",
+            "text-get:https://app.usd.ai/reserves:12000:null",
             Promise.resolve(
               '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"},'
               + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"}]}',

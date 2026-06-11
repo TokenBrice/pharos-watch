@@ -30,6 +30,10 @@ interface JsonRetryOptions {
   headers?: HeadersInit;
 }
 
+interface TextRetryOptions {
+  headers?: HeadersInit;
+}
+
 function summarizeResponseBody(raw: string, limit = 120): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
 }
@@ -156,15 +160,19 @@ export async function fetchTextWithRetry(
   signal: AbortSignal,
   timeoutMs = 10_000,
   ctx?: AdapterContext,
+  options?: TextRetryOptions,
 ): Promise<string> {
   return getCachedRequest(
-    `text-get:${url}:${timeoutMs}`,
+    `text-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
     async () => runAdapterIo(ctx, `text-get:${url}`, async () => {
       const res = await fetchWithRetry(
         url,
         {
           signal,
-          headers: { "User-Agent": ADAPTER_USER_AGENT },
+          headers: {
+            "User-Agent": ADAPTER_USER_AGENT,
+            ...(options?.headers ?? {}),
+          },
         },
         2,
         { timeoutMs },
@@ -188,7 +196,8 @@ export async function fetchPrimaryHtmlInput(
   signal: AbortSignal,
   ctx?: AdapterContext,
   timeoutMs = 15_000,
+  options?: TextRetryOptions,
 ): Promise<string> {
   const input = requireHtmlInput(config.inputs.primary, adapterName);
-  return fetchTextWithRetry(input.url, signal, timeoutMs, ctx);
+  return fetchTextWithRetry(input.url, signal, timeoutMs, ctx, options);
 }
