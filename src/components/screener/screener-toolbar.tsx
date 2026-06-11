@@ -15,7 +15,10 @@ import {
 } from "@/app/screener/screener-filters";
 import {
   MINT_AUTHORITY_FILTER_VALUES,
+  MINT_AUTHORITY_SCORE_FILTER_CONFIG,
+  MINT_AUTHORITY_SCORE_FILTER_VALUES,
   MINT_AUTHORITY_STATUS_CONFIG,
+  type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusKind,
 } from "@/lib/mint-authority-display";
 import {
@@ -73,6 +76,7 @@ export function ScreenerToolbar({
   const justEnteredMechanisms = useJustEntered(filters.mechanisms);
   const justEnteredBlacklistable = useJustEntered(filters.blacklistable);
   const justEnteredMintAuthority = useJustEntered(filters.mintAuthority);
+  const justEnteredMintAuthorityScores = useJustEntered(filters.mintAuthorityScores);
   const justEnteredLifecycle = useJustEntered(filters.lifecycle);
   const justEnteredPegs = useJustEntered(filters.pegs);
 
@@ -101,7 +105,7 @@ export function ScreenerToolbar({
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
         <div className="space-y-2">
           <span className="pharos-kicker" id={`${groupId}-safety-grades`}>
             Safety Grade
@@ -134,6 +138,15 @@ export function ScreenerToolbar({
           minValue={filters.dewsMin}
           onMinChange={(v) => update("dewsMin", v)}
           defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
+        />
+        <ThresholdField
+          label="Mint Authority Score"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.mintAuthorityScoreMin}
+          onMinChange={(v) => update("mintAuthorityScoreMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.mintAuthorityScoreMin}
         />
         <ThresholdField
           label="Supply (USD)"
@@ -296,30 +309,58 @@ export function ScreenerToolbar({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <span className="pharos-kicker" id={`${groupId}-mint-authority`}>
-          Mint Authority
-        </span>
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={filters.mintAuthority as string[]}
-          onValueChange={(v) => update("mintAuthority", v as MintAuthorityStatusKind[])}
-          aria-labelledby={`${groupId}-mint-authority`}
-        >
-          {MINT_AUTHORITY_FILTER_VALUES.map((statusKind) => (
-            <ToggleGroupItem
-              key={statusKind}
-              value={statusKind}
-              className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMintAuthority.has(statusKind) ? "pharos-chip-animate-in" : ""}`}
-              title={MINT_AUTHORITY_STATUS_CONFIG[statusKind].detail}
-            >
-              {MINT_AUTHORITY_STATUS_CONFIG[statusKind].label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-mint-authority`}>
+            Mint Authority Route
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.mintAuthority as string[]}
+            onValueChange={(v) => update("mintAuthority", v as MintAuthorityStatusKind[])}
+            aria-labelledby={`${groupId}-mint-authority`}
+          >
+            {MINT_AUTHORITY_FILTER_VALUES.map((statusKind) => (
+              <ToggleGroupItem
+                key={statusKind}
+                value={statusKind}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMintAuthority.has(statusKind) ? "pharos-chip-animate-in" : ""}`}
+                title={MINT_AUTHORITY_STATUS_CONFIG[statusKind].detail}
+              >
+                {MINT_AUTHORITY_STATUS_CONFIG[statusKind].label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-mint-authority-score`}>
+            Mint Authority Score
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.mintAuthorityScores as string[]}
+            onValueChange={(v) => update("mintAuthorityScores", v as MintAuthorityScoreFilterValue[])}
+            aria-labelledby={`${groupId}-mint-authority-score`}
+          >
+            {MINT_AUTHORITY_SCORE_FILTER_VALUES.map((scoreKind) => (
+              <ToggleGroupItem
+                key={scoreKind}
+                value={scoreKind}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMintAuthorityScores.has(scoreKind) ? "pharos-chip-animate-in" : ""}`}
+                title={MINT_AUTHORITY_SCORE_FILTER_CONFIG[scoreKind].detail}
+              >
+                {MINT_AUTHORITY_SCORE_FILTER_CONFIG[scoreKind].label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, mint authority, and lifecycle.`;
+const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, and lifecycle.`;
 
 export const metadata = buildPageMetadata({
   title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener filters the tracked stablecoin universe by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, mint authority, and lifecycle. Share the URL to share the exact filter state.",
+      "The Screener filters the tracked stablecoin universe by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",
@@ -47,9 +47,9 @@ const SCREENER_SUPPORT_SECTION = (
         <div className="space-y-2">
           <p className="pharos-kicker">Reading the Filters</p>
           <p>
-            Numeric thresholds narrow the candidate set on DEWS stress, the five Safety Score sub-dimensions,
-            and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism archetype,
-            mint-authority bucket, peg, and lifecycle.
+            Numeric thresholds narrow the candidate set on DEWS stress, Mint Authority Score, the five Safety Score
+            sub-dimensions, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
+            archetype, mint-authority route and score band, peg, and lifecycle.
           </p>
           <p>
             Cross-reference results against the{" "}
@@ -98,8 +98,8 @@ export default createClientFeaturePage({
     path: "/screener/",
     title: "Pharos Screener",
     leadParagraphs: [
-      "Filter the tracked stablecoin universe by Safety Grade, safety dimensions, DEWS, supply, type, mechanism, peg, mint authority, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
-      "Mint Authority filters are descriptive review buckets for who can create or route durable supply; they do not change Safety Scores.",
+      "Filter the tracked stablecoin universe by Safety Grade, safety dimensions, DEWS, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
+      "Mint Authority Score is a standalone privileged-mint risk score; route buckets still show who can create or route durable supply, and neither changes Safety Scores.",
     ],
   },
   afterClient: (

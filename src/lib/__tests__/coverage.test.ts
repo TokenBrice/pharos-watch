@@ -479,6 +479,12 @@ describe("coverage helpers", () => {
       "bridge-mint",
       "inherited-authority",
       "unknown",
+      "score-hardened",
+      "score-governed",
+      "score-managed",
+      "score-concentrated",
+      "score-exposed",
+      "score-nr",
     ]) {
       expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.mintAuthority?.[key]).toBeDefined();
     }
@@ -641,6 +647,9 @@ describe("coverage helpers", () => {
       count: 1,
     });
     expect(summary.breakdown).toContainEqual({ key: "unknown", label: "unknown", count: 1 });
+    expect(rows[0].statuses.mintAuthority).toMatchObject({ score: 39, scoreBand: "concentrated" });
+    expect(summary.breakdown).toContainEqual({ key: "score-concentrated", label: "Concentrated", count: 1 });
+    expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 1 });
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {

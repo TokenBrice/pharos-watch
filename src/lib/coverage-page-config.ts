@@ -446,6 +446,35 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       chip: COVERAGE_GAP_CHIP_CLASS,
       bar: COVERAGE_GAP_BAR_CLASS,
     },
+    "score-hardened": {
+      chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "score-governed": {
+      chip: "border-blue-500/26 bg-blue-500/10 text-blue-800 dark:text-blue-200",
+      bar: "bg-blue-400/85",
+      barText: "text-slate-950",
+    },
+    "score-managed": {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    "score-concentrated": {
+      chip: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
+      bar: "bg-orange-400/85",
+      barText: "text-slate-950",
+    },
+    "score-exposed": {
+      chip: "border-red-500/35 bg-red-500/12 text-red-800 dark:text-red-200",
+      bar: "bg-red-400/85",
+      barText: "text-slate-950",
+    },
+    "score-nr": {
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
+    },
   },
 };
 

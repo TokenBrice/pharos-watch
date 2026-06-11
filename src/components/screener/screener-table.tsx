@@ -20,7 +20,7 @@ import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
-import { MINT_AUTHORITY_STATUS_CONFIG, type MintAuthorityStatusKind } from "@/lib/mint-authority-display";
+import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
@@ -80,9 +80,10 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   },
   {
     id: "mintAuthority",
-    label: "Mint Auth",
+    label: "Mint Score",
+    sortKey: "mintAuthorityScore",
     className: "text-center",
-    title: "Curated descriptive mint-authority review. Not part of Safety Score.",
+    title: "Mint Authority Score (0-100). Standalone score; not part of Safety Score.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
@@ -106,6 +107,7 @@ const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
   { key: "pegScore", label: "Peg" },
   { key: "dewsScore", label: "DEWS" },
   { key: "liquidityScore", label: "Liquidity" },
+  { key: "mintAuthorityScore", label: "Mint Score" },
 ];
 
 function subscribeHydratedLayout(onStoreChange: () => void): () => void {
@@ -297,14 +299,14 @@ function ScoreValue({ value }: { value: number | null }) {
   );
 }
 
-function MintAuthorityBadge({ kind }: { kind: MintAuthorityStatusKind }) {
-  const status = MINT_AUTHORITY_STATUS_CONFIG[kind];
+function MintAuthorityScoreBadge({ row }: { row: ScreenerRow }) {
+  const status = MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority];
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${status.badgeClassName}`}
-      title={status.detail}
+      className={`inline-flex items-center rounded-full border px-2 py-1 pharos-numeric text-xs font-medium ${row.mintAuthorityScoreBadgeClassName}`}
+      title={`${row.mintAuthorityScoreDetail} Review bucket: ${status.spokenLabel}.`}
     >
-      {status.label}
+      {row.mintAuthorityScoreLabel}
     </span>
   );
 }
@@ -379,7 +381,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
           Liq <ScoreValue value={row.liquidityScore} />
         </span>
-        <MintAuthorityBadge kind={row.mintAuthority} />
+        <MintAuthorityScoreBadge row={row} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -398,7 +400,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
           <p className="text-muted-foreground">Mint authority</p>
           <p className="mt-0.5 font-medium text-foreground">
-            {MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
+            {row.mintAuthorityScoreLabel} / {MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
           </p>
         </div>
       </div>
@@ -469,7 +471,7 @@ function ScreenerRow({
         )}
       </TableCell>
       <TableCell className="text-center">
-        <MintAuthorityBadge kind={row.mintAuthority} />
+        <MintAuthorityScoreBadge row={row} />
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}

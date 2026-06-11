@@ -34,9 +34,14 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
-import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
+import {
+  MINT_AUTHORITY_SCORE_FILTER_CONFIG,
+  MINT_AUTHORITY_STATUS_CONFIG,
+  resolveMintAuthorityScoreDisplay,
+} from "@/lib/mint-authority-display";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-authority-version";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
@@ -67,6 +72,11 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   {
     header: "mint_authority",
     accessor: (row) => MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel,
+  },
+  { header: "mint_authority_score", accessor: (row) => row.mintAuthorityScore ?? "" },
+  {
+    header: "mint_authority_score_band",
+    accessor: (row) => MINT_AUTHORITY_SCORE_FILTER_CONFIG[row.mintAuthorityScoreBand].label,
   },
 ];
 
@@ -240,6 +250,7 @@ export function ScreenerClient() {
       const lifecycle = meta.status ?? "active";
       const safety = reportById.get(meta.id) ?? null;
       const pegCoin = pegById.get(meta.id);
+      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(meta.id, meta.mintAuthoritySummary);
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -261,6 +272,12 @@ export function ScreenerClient() {
         safetyDependencyRiskScore: safety?.dependencyRisk ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
+        mintAuthorityScore: mintAuthorityScore.result.score,
+        mintAuthorityScoreBand: mintAuthorityScore.bandKey,
+        mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,
+        mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,
+        mintAuthorityScoreBadgeClassName: mintAuthorityScore.badgeClassName,
+        mintAuthorityScoreDetail: mintAuthorityScore.detail,
         pegDeviationSeries: buildPegDeviationSeries(pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });
@@ -367,7 +384,7 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
-            methodologyLabel={`safety-score ${SAFETY_SCORE_VERSION_LABEL}`}
+            methodologyLabel={`safety-score ${SAFETY_SCORE_VERSION_LABEL}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
             triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
             disabled={scoreFilterDataLoading}
           />

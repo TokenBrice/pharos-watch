@@ -37,6 +37,12 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     safetyDependencyRiskScore: 82,
     blacklistable: "yes",
     mintAuthority: "issuer-or-backend-mint",
+    mintAuthorityScore: 70,
+    mintAuthorityScoreBand: "governed",
+    mintAuthorityScoreLabel: "70/100",
+    mintAuthorityScoreBandLabel: "Governed",
+    mintAuthorityScoreBadgeClassName: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    mintAuthorityScoreDetail: "Mint Authority Score: 70/100 (Governed).",
     ...overrides,
   };
 }
@@ -81,6 +87,12 @@ describe("applyFilters", () => {
       lifecycle: "pre-launch",
       safetyGrade: null,
       safetyScore: null,
+      mintAuthorityScore: null,
+      mintAuthorityScoreBand: "nr",
+      mintAuthorityScoreLabel: "NR",
+      mintAuthorityScoreBandLabel: "NR",
+      mintAuthorityScoreBadgeClassName: "border-border/60 bg-muted/30 text-muted-foreground",
+      mintAuthorityScoreDetail: "Mint Authority Score is not rated.",
     }),
   ];
 
@@ -164,6 +176,26 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id)).toEqual(["newcoin"]);
   });
 
+  it("filters by Mint Authority Score minimum", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 };
+    const result = applyFilters([
+      makeRow({ id: "low-mint-score", mintAuthorityScore: 40, mintAuthorityScoreBand: "concentrated" }),
+      makeRow({ id: "high-mint-score", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
+      makeRow({ id: "unrated-mint-score", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+    ], filters);
+    expect(result.map((r) => r.id)).toEqual(["high-mint-score"]);
+  });
+
+  it("filters by Mint Authority Score band", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["exposed", "nr"] };
+    const result = applyFilters([
+      makeRow({ id: "governed", mintAuthorityScoreBand: "governed" }),
+      makeRow({ id: "exposed", mintAuthorityScore: 10, mintAuthorityScoreBand: "exposed" }),
+      makeRow({ id: "nr", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+    ], filters);
+    expect(result.map((r) => r.id).sort()).toEqual(["exposed", "nr"]);
+  });
+
   it("retains unrated rows when score range is at defaults", () => {
     const filters: ScreenerFilters = {
       ...SCREENER_FILTER_DEFAULTS,
@@ -189,6 +221,8 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, supplyMin: 1 })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["multisig-mint"] })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] })).toBe(true);
   });
 
   it("counts active range groups once and selected pills individually", () => {
@@ -217,6 +251,19 @@ describe("sortScreenerRows", () => {
       "high",
       "mid",
       "low",
+    ]);
+  });
+
+  it("sorts by Mint Authority Score with unrated rows last", () => {
+    const mintRows = [
+      makeRow({ id: "nr", symbol: "NR", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+      makeRow({ id: "hardened", symbol: "HARD", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
+      makeRow({ id: "managed", symbol: "MAN", mintAuthorityScore: 55, mintAuthorityScoreBand: "managed" }),
+    ];
+    expect(sortScreenerRows(mintRows, "mintAuthorityScore", "desc").map((row) => row.id)).toEqual([
+      "hardened",
+      "managed",
+      "nr",
     ]);
   });
 
@@ -280,6 +327,8 @@ describe("SCREENER_URL_SCHEMA codec", () => {
       types: ["centralized", "decentralized"],
       mechanisms: ["cdp", "fiat-cash"],
       pegs: ["USD", "EUR"],
+      mintAuthorityScoreMin: 65,
+      mintAuthorityScores: ["hardened", "governed"],
     };
     const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
     expect(encoded).toContain("dewsMin=20");
@@ -287,6 +336,8 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(encoded).toContain("safetyGrades=A%2CB%2B");
     expect(encoded).toContain("types=centralized%2Cdecentralized");
     expect(encoded).toContain("mechanisms=cdp%2Cfiat-cash");
+    expect(encoded).toContain("mintAuthorityScoreMin=65");
+    expect(encoded).toContain("mintAuthorityScores=hardened%2Cgoverned");
     const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
     expect(decoded.dewsMin).toBe(20);
     expect(decoded.dewsMax).toBe(40);
@@ -294,6 +345,8 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.types).toEqual(["centralized", "decentralized"]);
     expect(decoded.mechanisms).toEqual(["cdp", "fiat-cash"]);
     expect(decoded.pegs).toEqual(["USD", "EUR"]);
+    expect(decoded.mintAuthorityScoreMin).toBe(65);
+    expect(decoded.mintAuthorityScores).toEqual(["hardened", "governed"]);
   });
 
   it("omits defaults from the encoded URL", () => {
@@ -441,6 +494,17 @@ describe("SCREENER_URL_SCHEMA — mint authority round-trip", () => {
       SCREENER_URL_SCHEMA,
     );
     expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint"]);
+  });
+
+  it("encodes and decodes Mint Authority Score bands", () => {
+    const filters: ScreenerFilters = {
+      ...SCREENER_FILTER_DEFAULTS,
+      mintAuthorityScores: ["hardened", "nr"],
+    };
+    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
+    expect(encoded).toContain("mintAuthorityScores=hardened%2Cnr");
+    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
+    expect(decoded.mintAuthorityScores).toEqual(["hardened", "nr"]);
   });
 });
 

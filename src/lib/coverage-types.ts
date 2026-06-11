@@ -25,6 +25,8 @@ export interface CoverageStatus {
   sourceCount?: number;
   sourceNames?: string[];
   priceConfidence?: string;
+  score?: number | null;
+  scoreBand?: string;
 }
 
 export interface CoverageFeatureDefinition {

@@ -30,6 +30,12 @@ const row: ScreenerRow = {
   safetyDependencyRiskScore: 70,
   blacklistable: "yes",
   mintAuthority: "issuer-or-backend-mint",
+  mintAuthorityScore: 42,
+  mintAuthorityScoreBand: "concentrated",
+  mintAuthorityScoreLabel: "42/100",
+  mintAuthorityScoreBandLabel: "Concentrated",
+  mintAuthorityScoreBadgeClassName: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  mintAuthorityScoreDetail: "Mint Authority Score: 42/100 (Concentrated).",
 };
 
 const rowWithSeries: ScreenerRow = {
@@ -108,6 +114,7 @@ describe("ScreenerTable mobile cards", () => {
     expect(screen.getAllByText(/Peg/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/DEWS/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("42/100").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Supply" }));
 
@@ -133,6 +140,8 @@ describe("ScreenerTable desktop table", () => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
     });
     expect(screen.queryByText("Sort Results")).toBeNull();
+    expect(screen.getByText("Mint Score")).toBeTruthy();
+    expect(screen.getByText("42/100")).toBeTruthy();
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {

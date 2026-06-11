@@ -199,6 +199,9 @@ function readableScreenerFilterChips(filters: Record<string, unknown>): Array<{ 
     dewsMax: "DEWS max",
     types: "Type",
     blacklistable: "Blacklistable",
+    mintAuthority: "Mint authority route",
+    mintAuthorityScoreMin: "Mint Authority Score min",
+    mintAuthorityScores: "Mint Authority Score bands",
     mechanisms: "Mechanism",
   };
   return Object.entries(filters).map(([key, value]) => {

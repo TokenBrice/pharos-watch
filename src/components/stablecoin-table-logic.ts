@@ -1,7 +1,7 @@
 import { downloadCsv } from "@/lib/csv-export";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
-import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
+import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import {
   GRADE_FILTER_TAGS,
@@ -28,7 +28,8 @@ export type StablecoinTableSortKey =
   | "liquidity"
   | "grade"
   | "peg"
-  | "blacklistable";
+  | "blacklistable"
+  | "mintAuthority";
 
 interface SortState {
   key: StablecoinTableSortKey;
@@ -48,6 +49,7 @@ const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
   grade: "grade",
   peg: "peg",
   blacklistable: "blacklistable",
+  mintAuthority: "mintAuthority",
 };
 
 export function prioritizePinnedStablecoins(
@@ -195,6 +197,10 @@ export function sortStablecoins({
       if (status === "possible" || status === "inherited") return 1;
       return 0;
     },
+    mintAuthority: (r) => {
+      const meta = metaById.get(r.id);
+      return resolveMintAuthorityScoreDisplay(r.id, meta?.mintAuthoritySummary).result.score;
+    },
     peg: (r) => {
       const meta = metaById.get(r.id);
       if (meta?.flags.navToken) return null;
@@ -249,10 +255,24 @@ export function exportStablecoinsCsv(
         },
       },
       {
-        header: "Mint Authority",
+        header: "Mint Authority Status",
         accessor: (row) => {
           const meta = TRACKED_META_BY_ID.get(row.id);
           return resolveMintAuthorityStatus(meta?.mintAuthoritySummary).spokenLabel;
+        },
+      },
+      {
+        header: "Mint Authority Score",
+        accessor: (row) => {
+          const meta = TRACKED_META_BY_ID.get(row.id);
+          return resolveMintAuthorityScoreDisplay(row.id, meta?.mintAuthoritySummary).result.score ?? null;
+        },
+      },
+      {
+        header: "Mint Authority Band",
+        accessor: (row) => {
+          const meta = TRACKED_META_BY_ID.get(row.id);
+          return resolveMintAuthorityScoreDisplay(row.id, meta?.mintAuthoritySummary).bandLabel;
         },
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },

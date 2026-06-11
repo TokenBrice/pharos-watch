@@ -8,30 +8,40 @@ import {
   type CoverageLegendItem,
 } from "./shared";
 import {
+  MINT_AUTHORITY_SCORE_FILTER_CONFIG,
+  MINT_AUTHORITY_SCORE_FILTER_VALUES,
   MINT_AUTHORITY_STATUS_CONFIG,
   MINT_AUTHORITY_STATUS_VALUES,
+  resolveMintAuthorityScoreDisplay,
   resolveMintAuthorityStatus,
   type MintAuthorityStatusKind,
 } from "@/lib/mint-authority-display";
 
 function resolveMintAuthority(summary?: MintAuthorityCoverageSummary | null): CoverageStatus {
   const status = resolveMintAuthorityStatus(summary);
-  return createStatus(
-    status.kind,
-    status.label,
-    status.tone,
-    status.available,
-    status.coverageSortRank,
-    status.detail,
-    status.spokenLabel,
-  );
+  const score = resolveMintAuthorityScoreDisplay(undefined, summary);
+  return {
+    ...createStatus(
+      status.kind,
+      status.label,
+      status.tone,
+      status.available,
+      status.coverageSortRank,
+      status.detail,
+      status.spokenLabel,
+    ),
+    score: score.result.score,
+    scoreBand: score.bandKey,
+  };
 }
 
 function formatMintAuthority(
-  _rows: readonly CoverageRow[],
+  rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
   const get = createBreakdownCounter(breakdownMap);
+  const scoreBandCount = (band: string) =>
+    rows.filter((row) => row.statuses.mintAuthority.scoreBand === band).length;
   return [
     breakdownItem("no-privileged-mint", "no privileged", get("no-privileged-mint")),
     breakdownItem("governed-mint", "governed", get("governed-mint")),
@@ -40,6 +50,9 @@ function formatMintAuthority(
     breakdownItem("bridge-mint", "bridge", get("bridge-mint")),
     breakdownItem("inherited-authority", "inherited", get("inherited-authority")),
     breakdownItem("unknown", "unknown", get("unknown")),
+    ...MINT_AUTHORITY_SCORE_FILTER_VALUES.map((band) =>
+      breakdownItem(`score-${band}`, MINT_AUTHORITY_SCORE_FILTER_CONFIG[band].label, scoreBandCount(band)),
+    ),
   ];
 }
 

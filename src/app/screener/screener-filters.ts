@@ -15,7 +15,9 @@
 import { createTableComparator } from "@/lib/table-comparator";
 import {
   MINT_AUTHORITY_FILTER_VALUES,
+  MINT_AUTHORITY_SCORE_FILTER_VALUES,
   resolveMintAuthorityStatusKind,
+  type MintAuthorityScoreFilterValue,
   type MintAuthorityStatusKind,
 } from "@/lib/mint-authority-display";
 import type { UrlStateSchema } from "@/lib/url-state";
@@ -55,6 +57,8 @@ export interface ScreenerFilters {
   lifecycle: readonly StablecoinStatus[];
   blacklistable: readonly BlacklistableValue[];
   mintAuthority: readonly MintAuthorityStatusKind[];
+  mintAuthorityScoreMin: number;
+  mintAuthorityScores: readonly MintAuthorityScoreFilterValue[];
 }
 
 /** Default scalar ranges. A value at the bound counts as "no filter". */
@@ -75,6 +79,8 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   lifecycle: [],
   blacklistable: [],
   mintAuthority: [],
+  mintAuthorityScoreMin: 0,
+  mintAuthorityScores: [],
 };
 
 /**
@@ -169,6 +175,17 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.mintAuthority,
     allowedValues: MINT_AUTHORITY_FILTER_VALUES,
   },
+  mintAuthorityScoreMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.mintAuthorityScoreMin,
+    min: 0,
+    max: 100,
+  },
+  mintAuthorityScores: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.mintAuthorityScores,
+    allowedValues: MINT_AUTHORITY_SCORE_FILTER_VALUES,
+  },
 };
 
 export interface ScreenerRow {
@@ -204,6 +221,14 @@ export interface ScreenerRow {
   blacklistable: BlacklistableValue | null;
   /** Curated mint-authority review bucket. "unknown" = no compact review. */
   mintAuthority: MintAuthorityStatusKind;
+  /** Standalone Mint Authority Score (0-100). null = not rated. */
+  mintAuthorityScore: number | null;
+  /** Score band bucket, or "nr" when unrated. */
+  mintAuthorityScoreBand: MintAuthorityScoreFilterValue;
+  mintAuthorityScoreLabel: string;
+  mintAuthorityScoreBandLabel: string;
+  mintAuthorityScoreBadgeClassName: string;
+  mintAuthorityScoreDetail: string;
   /** Compact peg-deviation samples for the desktop 30d peg sparkline. */
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
@@ -216,7 +241,8 @@ export type ScreenerSortKey =
   | "pegScore"
   | "dewsScore"
   | "liquidityScore"
-  | "safetyScore";
+  | "safetyScore"
+  | "mintAuthorityScore";
 
 export type ScreenerSortDirection = "asc" | "desc";
 
@@ -227,6 +253,7 @@ const compareScreenerRows = createTableComparator<ScreenerSortKey, ScreenerRow>(
   dewsScore: (row) => row.dewsScore,
   liquidityScore: (row) => row.liquidityScore,
   safetyScore: (row) => row.safetyScore,
+  mintAuthorityScore: (row) => row.mintAuthorityScore,
 });
 
 export function sortScreenerRows(
@@ -306,6 +333,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const lifecycleSet = filters.lifecycle.length > 0 ? new Set(filters.lifecycle) : null;
   const blacklistableSet = filters.blacklistable.length > 0 ? new Set(filters.blacklistable) : null;
   const mintAuthoritySet = filters.mintAuthority.length > 0 ? new Set(filters.mintAuthority) : null;
+  const mintAuthorityScoreSet = filters.mintAuthorityScores.length > 0 ? new Set(filters.mintAuthorityScores) : null;
 
   return rows.filter((row) => {
     if (!passesRange(row.dewsScore, filters.dewsMin, filters.dewsMax, dewsActive)) return false;
@@ -328,6 +356,8 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
       if (!row.blacklistable || !blacklistableSet.has(row.blacklistable)) return false;
     }
     if (mintAuthoritySet && !mintAuthoritySet.has(row.mintAuthority)) return false;
+    if (!passesMinimum(row.mintAuthorityScore, filters.mintAuthorityScoreMin)) return false;
+    if (mintAuthorityScoreSet && !mintAuthorityScoreSet.has(row.mintAuthorityScoreBand)) return false;
     return true;
   });
 }
@@ -421,11 +451,15 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   if (filters.safetyDependencyRiskMin > 0) {
     count += 1;
   }
+  if (filters.mintAuthorityScoreMin > 0) {
+    count += 1;
+  }
   count += filters.types.length;
   count += filters.mechanisms.length;
   count += filters.pegs.length;
   count += filters.lifecycle.length;
   count += filters.blacklistable.length;
   count += filters.mintAuthority.length;
+  count += filters.mintAuthorityScores.length;
   return count;
 }
