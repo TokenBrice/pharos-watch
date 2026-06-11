@@ -211,6 +211,15 @@ export interface MintAuthorityRouteChecks {
   unsupportedReason?: string;
 }
 
+export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm"] as const;
+export type MintAuthorityKeyCustodyAttestationKind =
+  (typeof MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES)[number];
+
+export interface MintAuthorityKeyCustodyAttestation {
+  kind: MintAuthorityKeyCustodyAttestationKind;
+  sources: StablecoinLink[];
+}
+
 export interface MintAuthorityControl {
   chain?: string;
   address?: string;
@@ -226,6 +235,7 @@ export interface MintAuthorityControl {
   modulesOrGuardsStatus?: MintAuthorityModulesOrGuardsStatus;
   safe?: MintAuthoritySafeState;
   routeChecks?: MintAuthorityRouteChecks;
+  keyCustodyAttestation?: MintAuthorityKeyCustodyAttestation;
   bypassSurfaces?: string[];
   sources?: StablecoinLink[];
   evidence?: string;
@@ -246,6 +256,11 @@ export interface MintAuthorityProfile {
   confidence: MintAuthorityConfidence;
   summary: string;
   inheritedFrom?: string;
+  mintIncident?: {
+    date: string;
+    summary: string;
+    sources: StablecoinLink[];
+  };
   controls?: MintAuthorityControl[];
   review: MintAuthorityReview;
 }

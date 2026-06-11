@@ -19,6 +19,10 @@ function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["canRaiseCap"] | null {
+  return value === true || value === false || value === "unknown" ? value : null;
+}
+
 function appendSources(target: MintAuthorityClientSourceSummary[], sources: unknown, seenUrls: Set<string>) {
   if (!Array.isArray(sources)) return;
 
@@ -30,6 +34,29 @@ function appendSources(target: MintAuthorityClientSourceSummary[], sources: unkn
     seenUrls.add(url);
     target.push({ label, url });
   }
+}
+
+function buildKeyCustodyAttestation(
+  value: unknown,
+): MintAuthorityClientControlSummary["keyCustodyAttestation"] | undefined {
+  if (!isRecord(value)) return undefined;
+  const kind = stringValue(value.kind);
+  if (kind !== "mpc" && kind !== "hsm") return undefined;
+  const sources: MintAuthorityClientSourceSummary[] = [];
+  appendSources(sources, value.sources, new Set());
+  if (sources.length === 0) return undefined;
+  return { kind, sources };
+}
+
+function buildMintIncident(value: unknown): MintAuthorityClientSummary["mintIncident"] | undefined {
+  if (!isRecord(value)) return undefined;
+  const date = stringValue(value.date);
+  const summary = stringValue(value.summary);
+  if (!date || !summary) return undefined;
+  const sources: MintAuthorityClientSourceSummary[] = [];
+  appendSources(sources, value.sources, new Set());
+  if (sources.length === 0) return undefined;
+  return { date, summary, sources };
 }
 
 function buildControlSummary(value: unknown): MintAuthorityClientControlSummary | null {
@@ -54,7 +81,9 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   const signerCount = numberValue(value.signerCount);
   const timelockDelaySec = numberValue(value.timelockDelaySec);
   const capDescription = stringValue(value.capDescription);
+  const canRaiseCap = canRaiseCapValue(value.canRaiseCap);
   const modulesOrGuardsStatus = stringValue(value.modulesOrGuardsStatus);
+  const keyCustodyAttestation = buildKeyCustodyAttestation(value.keyCustodyAttestation);
 
   if (chain) summary.chain = chain;
   if (address) summary.address = address;
@@ -62,9 +91,11 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   if (signerCount != null) summary.signerCount = signerCount;
   if (timelockDelaySec != null) summary.timelockDelaySec = timelockDelaySec;
   if (capDescription) summary.capDescription = capDescription;
+  if (canRaiseCap != null) summary.canRaiseCap = canRaiseCap;
   if (modulesOrGuardsStatus) {
     summary.modulesOrGuardsStatus = modulesOrGuardsStatus as MintAuthorityClientControlSummary["modulesOrGuardsStatus"];
   }
+  if (keyCustodyAttestation) summary.keyCustodyAttestation = keyCustodyAttestation;
 
   return summary;
 }
@@ -88,6 +119,8 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
 
   const inheritedFrom = stringValue(profile.inheritedFrom);
   if (inheritedFrom) summary.inheritedFrom = inheritedFrom;
+  const mintIncident = buildMintIncident(profile.mintIncident);
+  if (mintIncident) summary.mintIncident = mintIncident;
 
   const controls = Array.isArray(profile.controls)
     ? profile.controls
@@ -100,9 +133,15 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   const seenUrls = new Set<string>();
   const review = isRecord(profile.review) ? profile.review : null;
   appendSources(sources, review?.sources, seenUrls);
+  const reviewedAt = stringValue(review?.reviewedAt);
+  if (reviewedAt) summary.reviewedAt = reviewedAt;
+  appendSources(sources, mintIncident?.sources, seenUrls);
   appendSources(sources, profile.sources, seenUrls);
   for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
-    if (isRecord(control)) appendSources(sources, control.sources, seenUrls);
+    if (!isRecord(control)) continue;
+    appendSources(sources, control.sources, seenUrls);
+    const custodyAttestation = isRecord(control.keyCustodyAttestation) ? control.keyCustodyAttestation : null;
+    appendSources(sources, custodyAttestation?.sources, seenUrls);
   }
   if (sources.length > 0) summary.sources = sources;
 

@@ -188,27 +188,94 @@ function projectLinks(links) {
     .filter((link) => link !== null);
 }
 
+function projectKeyCustodyAttestation(value) {
+  if (!isPlainObject(value)) {
+    return undefined;
+  }
+
+  const { kind } = value;
+  if (kind !== "mpc" && kind !== "hsm") {
+    return undefined;
+  }
+
+  const sources = projectLinks(value.sources);
+  if (!sources || sources.length === 0) {
+    return undefined;
+  }
+
+  return { kind, sources };
+}
+
+function projectMintIncident(value) {
+  if (!isPlainObject(value)) {
+    return undefined;
+  }
+
+  const { date, summary } = value;
+  const sources = projectLinks(value.sources);
+  if (typeof date !== "string" || typeof summary !== "string" || !sources || sources.length === 0) {
+    return undefined;
+  }
+
+  return { date, summary, sources };
+}
+
 export function projectMintAuthoritySummary(coin) {
   const profile = coin?.mintAuthority;
   if (!isPlainObject(profile)) {
     return undefined;
   }
 
-  const { mintPath, authorityPosture } = profile;
-  if (typeof mintPath !== "string" || typeof authorityPosture !== "string") {
+  const { mintPath, authorityPosture, confidence, inheritedFrom } = profile;
+  if (typeof mintPath !== "string" || typeof authorityPosture !== "string" || typeof confidence !== "string") {
     return undefined;
   }
 
-  const summary = { mintPath, authorityPosture };
+  const summary = { mintPath, authorityPosture, confidence };
+  if (typeof inheritedFrom === "string") {
+    summary.inheritedFrom = inheritedFrom;
+  }
+
+  const mintIncident = projectMintIncident(profile.mintIncident);
+  if (mintIncident) {
+    summary.mintIncident = mintIncident;
+  }
+
   const controls = Array.isArray(profile.controls)
     ? profile.controls
         .filter(isPlainObject)
         .map((control) => {
-          const { authorityType, directMintAbility } = control;
+          const {
+            authorityType,
+            directMintAbility,
+            label,
+            threshold,
+            signerCount,
+            timelockDelaySec,
+            canRaiseCap,
+            modulesOrGuardsStatus,
+          } = control;
           if (typeof authorityType !== "string" || typeof directMintAbility !== "string") {
             return null;
           }
-          return { authorityType, directMintAbility };
+          const controlSummary = { authorityType, directMintAbility };
+          if (typeof label === "string") controlSummary.label = label;
+          if (typeof threshold === "number" && Number.isFinite(threshold)) controlSummary.threshold = threshold;
+          if (typeof signerCount === "number" && Number.isFinite(signerCount)) controlSummary.signerCount = signerCount;
+          if (typeof timelockDelaySec === "number" && Number.isFinite(timelockDelaySec)) {
+            controlSummary.timelockDelaySec = timelockDelaySec;
+          }
+          if (canRaiseCap === true || canRaiseCap === false || canRaiseCap === "unknown") {
+            controlSummary.canRaiseCap = canRaiseCap;
+          }
+          if (typeof modulesOrGuardsStatus === "string") {
+            controlSummary.modulesOrGuardsStatus = modulesOrGuardsStatus;
+          }
+          const keyCustodyAttestation = projectKeyCustodyAttestation(control.keyCustodyAttestation);
+          if (keyCustodyAttestation) {
+            controlSummary.keyCustodyAttestation = keyCustodyAttestation;
+          }
+          return controlSummary;
         })
         .filter((control) => control !== null)
     : [];

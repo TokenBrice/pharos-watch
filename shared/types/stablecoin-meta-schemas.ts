@@ -51,6 +51,7 @@ import {
   MINT_AUTHORITY_CONFIDENCE_VALUES,
   MINT_AUTHORITY_CONTROL_ROLE_VALUES,
   MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
+  MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES,
   MINT_AUTHORITY_MINT_PATH_VALUES,
   MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
   MINT_AUTHORITY_POSTURE_VALUES,
@@ -339,6 +340,13 @@ const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks> = z.ob
   unsupportedReason: z.string().min(1).optional(),
 }).strict();
 
+const MintAuthorityKeyCustodyAttestationSchema: z.ZodType<
+  NonNullable<MintAuthorityControl["keyCustodyAttestation"]>
+> = z.object({
+  kind: z.enum(MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES),
+  sources: z.array(StablecoinLinkSchema).min(1),
+}).strict();
+
 const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z.object({
   chain: z.string().min(1).optional(),
   address: z.string().min(1).optional(),
@@ -354,6 +362,7 @@ const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z.object({
   modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
   safe: MintAuthoritySafeStateSchema.optional(),
   routeChecks: MintAuthorityRouteChecksSchema.optional(),
+  keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
   bypassSurfaces: z.array(z.string().min(1)).optional(),
   sources: z.array(StablecoinLinkSchema).min(1).optional(),
   evidence: z.string().min(12).optional(),
@@ -410,12 +419,19 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z.object({
   });
 });
 
+const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["mintIncident"]>> = z.object({
+  date: ReviewDateSchema,
+  summary: z.string().min(12),
+  sources: z.array(StablecoinLinkSchema).min(1),
+}).strict();
+
 export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z.object({
   mintPath: z.enum(MINT_AUTHORITY_MINT_PATH_VALUES),
   authorityPosture: z.enum(MINT_AUTHORITY_POSTURE_VALUES),
   confidence: z.enum(MINT_AUTHORITY_CONFIDENCE_VALUES),
   summary: z.string().min(12),
   inheritedFrom: z.string().min(1).optional(),
+  mintIncident: MintAuthorityIncidentSchema.optional(),
   controls: z.array(MintAuthorityControlSchema).optional(),
   review: MintAuthorityReviewSchema,
 }).strict().superRefine((profile, ctx) => {

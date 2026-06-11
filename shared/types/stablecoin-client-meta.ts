@@ -5,6 +5,7 @@ import type {
   MintAuthorityDirectMintAbility,
   MintAuthorityMintPath,
   MintAuthorityPosture,
+  MintAuthorityProfile,
   MintAuthorityType,
   StablecoinLink,
   StablecoinMeta,
@@ -30,7 +31,9 @@ export interface MintAuthorityClientControlSummary {
   signerCount?: number;
   timelockDelaySec?: number;
   capDescription?: string;
+  canRaiseCap?: MintAuthorityControl["canRaiseCap"];
   modulesOrGuardsStatus?: MintAuthorityControl["modulesOrGuardsStatus"];
+  keyCustodyAttestation?: MintAuthorityControl["keyCustodyAttestation"];
 }
 
 export interface MintAuthorityClientSummary {
@@ -39,18 +42,30 @@ export interface MintAuthorityClientSummary {
   confidence: MintAuthorityConfidence;
   summary: string;
   inheritedFrom?: string;
+  mintIncident?: MintAuthorityProfile["mintIncident"];
   controls?: MintAuthorityClientControlSummary[];
   sources?: StablecoinLink[];
+  reviewedAt?: string;
 }
 
 export interface MintAuthorityCoverageControlSummary {
+  label?: string;
   authorityType: MintAuthorityType;
   directMintAbility: MintAuthorityDirectMintAbility;
+  threshold?: number;
+  signerCount?: number;
+  timelockDelaySec?: number;
+  canRaiseCap?: MintAuthorityControl["canRaiseCap"];
+  modulesOrGuardsStatus?: MintAuthorityControl["modulesOrGuardsStatus"];
+  keyCustodyAttestation?: MintAuthorityControl["keyCustodyAttestation"];
 }
 
 export interface MintAuthorityCoverageSummary {
   mintPath: MintAuthorityMintPath;
   authorityPosture: MintAuthorityPosture;
+  confidence: MintAuthorityConfidence;
+  inheritedFrom?: string;
+  mintIncident?: MintAuthorityProfile["mintIncident"];
   controls?: MintAuthorityCoverageControlSummary[];
 }
 
