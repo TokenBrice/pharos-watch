@@ -5,7 +5,7 @@
   "baseDocs": [
     "docs/agent-task-router.md",
     "docs/architecture.md",
-    "docs/testing.md"
+    "matched docs/testing.md section"
   ],
   "coreRules": [
     "Prefer the smallest root-cause fix; avoid unrelated refactors.",
@@ -30,7 +30,7 @@
       "id": "pricing-pipeline",
       "label": "Pricing pipeline or source roster",
       "risk": "high",
-      "docsToRead": ["docs/pricing-pipeline.md", "docs/data-pipeline.md", "docs/pricing-pipeline-timeline.md"],
+      "docsToRead": ["matched docs/pricing-pipeline.md section", "matched docs/data-pipeline.md section", "docs/pricing-pipeline-timeline.md latest entries"],
       "docsLikelyRequired": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md when adding a data source"],
       "checks": ["npm run audit:pricing-providers", "focused pricing/depeg tests"],
       "hardRules": ["Consume or cancel failed fetch bodies before opening more Worker fetches.", "Do not multiply DefiLlama list-endpoint supply by price."],
@@ -96,7 +96,7 @@
       "id": "methodology-scoring",
       "label": "Methodology or scoring change",
       "risk": "high",
-      "docsToRead": ["docs/methodology-page.md", "specific methodology doc", "matching timeline doc"],
+      "docsToRead": ["docs/methodology-page.md", "specific methodology doc", "matching timeline doc latest entries (older in -archive.md)"],
       "docsLikelyRequired": ["runtime methodology doc", "timeline doc", "src/app/methodology/sections/* when methodology UI changes"],
       "checks": ["focused scoring tests", "npm run check:doc-sync"],
       "hardRules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
@@ -118,7 +118,7 @@
       "id": "validation-ci-policy",
       "label": "Validation, CI, or repo policy",
       "risk": "medium",
-      "docsToRead": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
+      "docsToRead": ["matched docs/testing.md section", "matched docs/deployment-process.md section", "matched docs/scripts.md section"],
       "docsLikelyRequired": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
       "checks": ["changed script's focused test", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when deploy classification changes"],
       "hardRules": ["Keep deploy-surface classification and local merge-gate behavior aligned."],

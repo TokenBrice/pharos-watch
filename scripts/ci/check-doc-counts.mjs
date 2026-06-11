@@ -162,9 +162,9 @@ const cemeteryCount = DEAD_STABLECOINS.length;
 // buildDefunctReportCards emits stub F-cards for both DEAD_STABLECOINS and FROZEN_STABLECOINS.
 const reportCardSnapshotCount = activeCount + cemeteryCount + frozenCount;
 
-console.log(
-  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${psiActiveTrackedCount} active tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${blacklistContractCounts.configCount} blacklist contract configs / ${blacklistContractCounts.chainCount} chains / ${blacklistContractCounts.stablecoinCount} tracked symbols, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
-);
+// Printed only on failure: success output stays one line so agent sessions
+// running this via merge-gate/doc tasks don't re-read 30 lines per run.
+const authoritativeCounts = `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${psiActiveTrackedCount} active tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${blacklistContractCounts.configCount} blacklist contract configs / ${blacklistContractCounts.chainCount} chains / ${blacklistContractCounts.stablecoinCount} tracked symbols, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`;
 
 // --- Check primary docs for stale counts ---
 
@@ -349,12 +349,11 @@ for (const { file, pattern, expected, label } of CHECKS) {
       `  FAIL  ${file}: found ${found} ${label}, expected ${expected}`,
     );
     failures++;
-  } else {
-    console.log(`  OK    ${file}: ${found} ${label}`);
   }
 }
 
 if (failures > 0) {
+  console.error(authoritativeCounts);
   console.error(
     `\n${failures} check(s) failed. Update docs to match source:` +
     `\n  CANONICAL_ORDER=${trackedCount}, SHADOW=${shadowCount}, PSI=${psiCount}` +
@@ -363,4 +362,4 @@ if (failures > 0) {
   process.exit(1);
 }
 
-console.log("\nAll doc counts are in sync.");
+console.log(`Doc counts: all ${CHECKS.length} checks in sync.`);

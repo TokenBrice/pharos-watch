@@ -1,5 +1,7 @@
 # Deployment Process
 
+> **Agent navigation** — ~41 KB; Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Optional Worktree Flow · Repo Pre-Push Hook · What `test:merge-gate` Does · Yield History Cleanup Windows · CI Deploy Sequence · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+
 ## Purpose
 
 This document defines the production deploy flow and the required local gate before pushing production-impacting work.

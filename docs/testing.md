@@ -1,5 +1,7 @@
 # Testing & Linting
 
+> **Agent navigation** — ~43 KB; Grep the heading you need instead of reading wholesale: Overview · Commands · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
+
 ## Overview
 
 The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite runs in CI on pull requests to `main`, while push/manual production deploys reuse the same validate workflow with deploy-surface-aware conditionals.

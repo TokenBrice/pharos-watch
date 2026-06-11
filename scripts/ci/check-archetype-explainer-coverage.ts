@@ -150,12 +150,10 @@ function runCli(): void {
     findingsByArchetype.set(finding.archetype, bucket);
   }
 
-  // Per-archetype pass/fail line.
+  // Per-archetype detail prints only on failure; success stays summary-only.
   for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
     const messages = findingsByArchetype.get(archetype) ?? [];
-    if (messages.length === 0) {
-      process.stdout.write(`  ${archetype}: OK\n`);
-    } else {
+    if (messages.length > 0) {
       process.stderr.write(`  ${archetype}: FAIL\n`);
       for (const message of messages) {
         process.stderr.write(`    - ${message}\n`);

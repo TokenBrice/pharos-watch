@@ -4,6 +4,8 @@ Canonical reference for Pharos live-price selection, fallback enrichment, and so
 
 For supply fallback behavior and broader cache/integrity guardrails, see [data-pipeline.md](./data-pipeline.md).
 
+> **Agent navigation** — ~72 KB; Grep the heading you need instead of reading wholesale: Overview · Versioning · Primary Consensus · Provider-Specific Normalization · Authoritative Overrides · Fallback Enrichment · Confidence Model · Update Rules · File Index.
+
 ---
 
 ## Overview

@@ -56,7 +56,6 @@ function readCanonicalOrder(): string[] {
       JSON.parse(readFileSync(path, "utf8")) as unknown,
     );
     if (result.success) {
-      process.stdout.write(`${path}: ${result.data.length} entries OK\n`);
       return result.data;
     }
 
@@ -374,25 +373,18 @@ canonicalOrder = readCanonicalOrder();
 
 try {
   legacyEntries = loadLegacyStablecoinEntries();
-  for (const file of LEGACY_STABLECOIN_ASSET_FILES) {
-    const relativePath = `${STABLECOIN_DATA_DIR}/${file}`;
-    const count = legacyEntries.filter((entry) => entry.file === relativePath).length;
-    process.stdout.write(`${relativePath}: ${count} entries OK\n`);
-  }
 } catch (error) {
   reportError(error instanceof Error ? error.message : String(error));
 }
 
 try {
   perCoinEntries = loadPerCoinStablecoinEntries();
-  process.stdout.write(`${PER_COIN_SOURCE_DIR}: ${perCoinEntries.length} entries OK\n`);
 } catch (error) {
   reportError(error instanceof Error ? error.message : String(error));
 }
 
 try {
   generatedPerCoinCoins = loadGeneratedPerCoinCoins();
-  process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: ${generatedPerCoinCoins.length} entries OK\n`);
 } catch (error) {
   reportError(error instanceof Error ? error.message : String(error));
 }

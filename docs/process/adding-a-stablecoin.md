@@ -6,6 +6,8 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 
 > Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, and history-backfill branches.
 
+> **Agent navigation** — ~57 KB; Grep the phase you need instead of reading wholesale: Source Of Truth · Guardrails · Phase 0 Decide What You Are Adding · Phase 1 Eligibility · Phase 2 Research Packet · Phase 3 Classification · Phase 3.5 Editorial Coverage Gate · Phase 4 Edit The Registry · Phase 5 Downstream Coverage Branches · Phase 6 Static Assets And Editorial Copy · Phase 7 Validate · Phase 8 Merge, Push, Deploy, Backfill · Phase 9 Post-Deploy Verification · Quick Reference.
+
 ---
 
 ## Source Of Truth

@@ -118,11 +118,8 @@ function printReport(report: CronConnectionBudgetReport): void {
       }
       continue;
     }
-
-    const headroomFull = trigger.totalConnections >= CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
-    console.log(
-      `${headroomFull ? "HEADROOM FULL" : "OK"}: "${trigger.scheduleKey}" — ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections (${pluralize(trigger.groups.size, "group")}, ${pluralize(trigger.jobs.length, "budget entry")})`,
-    );
+    // Per-trigger success lines are intentionally silent; headroom-full
+    // triggers are detailed in the dedicated section below.
   }
 
   if (report.failed) {
