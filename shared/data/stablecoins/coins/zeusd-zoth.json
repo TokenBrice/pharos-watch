@@ -77,6 +77,20 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE/ADMIN_ROLE on the token and can set the router and authorize upgrades.",
+    "mintIncident": {
+      "date": "2025-03-01",
+      "summary": "Zoth's mintWithStable collateral-accounting flaw let an attacker manipulate swap output/LTV validation, mint ZeUSD without sufficient backing, and drain about $285K.",
+      "sources": [
+        {
+          "label": "Verichains - Zoth ZeUSD exploit analysis",
+          "url": "https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic"
+        },
+        {
+          "label": "SolidityScan - Zoth hack analysis",
+          "url": "https://blog.solidityscan.com/zoth-hack-analysis-80ba3ac5076b/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

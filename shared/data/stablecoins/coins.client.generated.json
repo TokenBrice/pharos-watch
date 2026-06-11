@@ -5360,6 +5360,24 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2026-05-24",
+        "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "sources": [
+          {
+            "label": "StablR official incident notice",
+            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "CoinDesk - StablR unbacked-token mint",
+            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+          },
+          {
+            "label": "Webacy - StablR exploit monitoring",
+            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "multisig",
@@ -11886,6 +11904,20 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2022-09-06",
+        "summary": "A flash-loan manipulation of the AVAX/USDC JLP collateral price let an attacker borrow far more NXUSD than justified by collateral, creating about $500K of NXUSD bad debt.",
+        "sources": [
+          {
+            "label": "Nereus Finance flash-loan analysis",
+            "url": "https://faraz.faith/2022-11-19-nereus-finance-flashloan-attack-analysis/"
+          },
+          {
+            "label": "Financial Express - Nereus NXUSD bad debt",
+            "url": "https://www.financialexpress.com/business/blockchain-avalanche-flash-loan-exploit-sees-371000-in-usdc-stolen-2659238/"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "contract",
@@ -12015,6 +12047,20 @@
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2020-11-17",
+        "summary": "Origin Dollar's VaultCore mint logic was exploited through missing validation and reentrancy checks, inflating OUSD supply and draining about $7.7M from the vault.",
+        "sources": [
+          {
+            "label": "PeckShield - OUSD root-cause analysis",
+            "url": "https://peckshield.medium.com/origin-dollar-incident-root-cause-analysis-f27e11988c90"
+          },
+          {
+            "label": "Origin Protocol - OUSD attack postmortem",
+            "url": "https://blog.originprotocol.com/what-weve-changed-since-the-ousd-attack-5894f2bd77cf"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "contract",
@@ -12876,6 +12922,24 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2025-10-15",
+        "summary": "During a Paxos internal transfer, a technical error minted about $300T PYUSD before Paxos burned the excess and reissued the intended $300M amount.",
+        "sources": [
+          {
+            "label": "Halborn - Paxos PYUSD incident",
+            "url": "https://www.halborn.com/blog/post/explained-the-paxos-pyusd-incident-october-2025"
+          },
+          {
+            "label": "PYMNTS - Paxos excess PYUSD mint",
+            "url": "https://www.pymnts.com/cryptocurrency/2025/paxos-accidentally-mints-300-trillion-excess-paypal-stablecoin/"
+          },
+          {
+            "label": "Paxos statement on X",
+            "url": "https://x.com/Paxos/status/1978565015943950411"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "contract",
@@ -20143,6 +20207,24 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2026-05-24",
+        "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "sources": [
+          {
+            "label": "StablR official incident notice",
+            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "CoinDesk - StablR unbacked-token mint",
+            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+          },
+          {
+            "label": "Webacy - StablR exploit monitoring",
+            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "multisig",
@@ -20561,6 +20643,20 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
+      "mintIncident": {
+        "date": "2019-07-13",
+        "summary": "During an Omni-to-Tron chain swap, Tether accidentally minted 5B USDT instead of the intended 50M, then burned the excess supply to restore the intended issuance.",
+        "sources": [
+          {
+            "label": "CoinDesk - Tether accidental USDT mint",
+            "url": "https://www.coindesk.com/markets/2019/07/16/tether-accidentally-minted-5-billion-of-its-stablecoins-then-deleted-them"
+          },
+          {
+            "label": "The Paypers - Tether 5B USDT mint and burn",
+            "url": "https://thepaypers.com/payments/news/tether-minted-5-bln-usdt-by-mistake-immediately-burned-them"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "multisig",
@@ -25045,6 +25141,20 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
+      "mintIncident": {
+        "date": "2025-03-01",
+        "summary": "Zoth's mintWithStable collateral-accounting flaw let an attacker manipulate swap output/LTV validation, mint ZeUSD without sufficient backing, and drain about $285K.",
+        "sources": [
+          {
+            "label": "Verichains - Zoth ZeUSD exploit analysis",
+            "url": "https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic"
+          },
+          {
+            "label": "SolidityScan - Zoth hack analysis",
+            "url": "https://blog.solidityscan.com/zoth-hack-analysis-80ba3ac5076b/"
+          }
+        ]
+      },
       "controls": [
         {
           "authorityType": "contract",

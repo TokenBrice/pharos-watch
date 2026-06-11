@@ -115,6 +115,20 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "OUSD is minted 1:1 when users deposit USDC into the Origin OUSD Vault, but the protocol also runs a Curve AMO that pre-mints OUSD into protocol-owned liquidity and deploys USDC into Morpho/Curve strategies under privileged owner/Governor/Strategist roles.",
+    "mintIncident": {
+      "date": "2020-11-17",
+      "summary": "Origin Dollar's VaultCore mint logic was exploited through missing validation and reentrancy checks, inflating OUSD supply and draining about $7.7M from the vault.",
+      "sources": [
+        {
+          "label": "PeckShield - OUSD root-cause analysis",
+          "url": "https://peckshield.medium.com/origin-dollar-incident-root-cause-analysis-f27e11988c90"
+        },
+        {
+          "label": "Origin Protocol - OUSD attack postmortem",
+          "url": "https://blog.originprotocol.com/what-weve-changed-since-the-ousd-attack-5894f2bd77cf"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "OUSD Vault (user mint/redeem)",

@@ -173,6 +173,24 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "PYUSD is issuer-minted by Paxos-operated infrastructure; the Ethereum token delegates supply control to a dedicated SupplyControl contract.",
+    "mintIncident": {
+      "date": "2025-10-15",
+      "summary": "During a Paxos internal transfer, a technical error minted about $300T PYUSD before Paxos burned the excess and reissued the intended $300M amount.",
+      "sources": [
+        {
+          "label": "Halborn - Paxos PYUSD incident",
+          "url": "https://www.halborn.com/blog/post/explained-the-paxos-pyusd-incident-october-2025"
+        },
+        {
+          "label": "PYMNTS - Paxos excess PYUSD mint",
+          "url": "https://www.pymnts.com/cryptocurrency/2025/paxos-accidentally-mints-300-trillion-excess-paypal-stablecoin/"
+        },
+        {
+          "label": "Paxos statement on X",
+          "url": "https://x.com/Paxos/status/1978565015943950411"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
