@@ -264,9 +264,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 1143,
+    "fileLines": 1327,
     "maxFunctionLines": 197,
-    "branchCount": 66,
+    "branchCount": 79,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -480,7 +480,7 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-config.ts": {
-    "fileLines": 62,
+    "fileLines": 65,
     "maxFunctionLines": 1,
     "branchCount": 0,
     "disposition": "deferred",

@@ -97,6 +97,9 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   Curvance: "https://app.curvance.com/",
   Scallop: "https://app.scallop.io/",
   Tydro: "https://tydro.com/",
+  // Wave 3 — 2026-06-11 audit queue follow-up
+  BiFi: "https://bifi.finance/",
+  "Fraxlend v1": "https://app.frax.finance/fraxlend",
   // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
   "Hydration Omnipool": "https://hydration.net/",
 };

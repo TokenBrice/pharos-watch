@@ -228,6 +228,7 @@ vi.mock("../yield-config", () => ({
   }>,
   AUTO_LENDING_POOL_MAP: { "u-united-stables": "pool-u-venus" },
   AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
+  isAutoLendingCollisionBlockedForStablecoin: () => false,
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({

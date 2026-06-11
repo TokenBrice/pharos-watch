@@ -132,6 +132,7 @@ vi.mock("../yield-config", () => ({
     "lusd-liquity": "pool-lusd-aave",
   },
   AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
+  isAutoLendingCollisionBlockedForStablecoin: () => false,
 }));
 
 // Stub report-cards (used for safety score computation)

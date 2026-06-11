@@ -159,14 +159,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split provider adapters, fallback decisioning, and persistence into focused helpers."
   },
-  "worker/src/cron/sync-fx-rates-helpers.ts": {
-    "disposition": "queued-p4",
-    "notes": "FX sync helpers remain a large rate-state module and surfaced as a repo-wide hotspot candidate during this release gate. The current pass only removed duplicated realtime-overlay write logic; keep the structural split for a dedicated FX sync cleanup.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-06",
-    "reviewAfter": "2026-09-06",
-    "nextAction": "Split realtime overlay/source-metadata application and rate-state validation into narrower helpers behind the existing FxSyncRunState API."
-  },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
@@ -198,5 +190,13 @@
     "createdAt": "2026-06-06",
     "reviewAfter": "2026-09-06",
     "nextAction": "Split adapter row parsing and projection helpers behind the existing live metadata API."
+  },
+  "worker/src/cron/yield-coverage-audit.ts": {
+    "disposition": "queued-p4",
+    "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-11",
+    "reviewAfter": "2026-09-11",
+    "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
   }
 }

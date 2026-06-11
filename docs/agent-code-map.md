@@ -375,7 +375,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 240 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 242 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
