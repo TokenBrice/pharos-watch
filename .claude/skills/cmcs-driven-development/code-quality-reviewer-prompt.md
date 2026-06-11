@@ -1,1 +1,0 @@
-../../../../cmcs/skill/code-quality-reviewer-prompt.md

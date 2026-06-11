@@ -26,13 +26,16 @@ Do not create new committed planning-archive material. Temporary investigation o
 
 ## Agent Skills (`.claude/skills/` vs `.codex/skills/`)
 
-Both Claude Code and OpenAI Codex load skills from their own per-tool directory (`.claude/skills/<name>/` and `.codex/skills/<name>/`). Ten skills currently exist on both surfaces and have historically drifted.
+Project-local skill directories should contain Pharos-specific workflows only. Keep generic design, browser, vendor, or personal workflow skills in the user's global agent config instead of this repository.
 
-The reconciliation convention:
+The shared Pharos convention:
 
-- **Byte-identical symlinked pairs** (currently `annotations-refresh`, `stablecoin-addition-orchestrator`, and `stablecoin-runtime-price-marketcap-gate`): the `.claude/skills/<name>/SKILL.md` file is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`. Edit the codex copy; both surfaces pick up the change automatically.
-- **Asymmetric pairs** (currently `coingecko-id-verif`, `contract-enrich`, `contract-populate`, `mica-research`, `reserve-research`, `resilience-classify`, and `stablecoin-info-fetch`): kept as independent files. Most claude-side copies ship a monolithic `SKILL.md` with all mappings, scripts, and references inlined; `coingecko-id-verif` is the current exception and keeps its Claude manifest at `.claude/skills/coingecko-id-verif/skill.md` next to `.claude/skills/coingecko-id-verif/verify.py`. The codex-side ships a slim `SKILL.md` plus `agents/openai.yaml`, `references/*.md`, and `scripts/*` that resolve via `$CODEX_HOME/...` paths. Cross-symlinking would break runtime path semantics in one direction and strip authoritative inline content in the other. When updating one of these skills, mirror the substantive change in the other; do not assume one side is canonical.
+- `.codex/skills/<name>/SKILL.md` is canonical for workflows that must exist on both Codex and Claude.
+- `.claude/skills/<name>/SKILL.md` is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`.
+- Canonical shared skill bodies must use repo-relative paths such as `.codex/skills/<name>/references/...` or normal repo source paths. Do not use `$CODEX_HOME` paths in a skill that Claude symlinks.
 
-When adding a new skill that needs to live on both surfaces, prefer authoring it codex-style (slim SKILL.md + supporting subdirectories) and symlinking the claude SKILL.md to the codex one. If a Claude agent needs inline content because it cannot resolve external references, keep the two files separate and call out the convention here.
+Shared symlinked skills currently include `annotations-refresh`, `coingecko-id-verif`, `contract-enrich`, `contract-populate`, `genius-research`, `mica-research`, `reserve-research`, `resilience-classify`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch`, and `stablecoin-runtime-price-marketcap-gate`.
 
-`npm run check:agent-skill-symlinks` validates that skill symlinks are not broken. Symlinks that point outside this repository must be listed in `scripts/lib/agent-skill-symlink-waivers.json` with an owner, reason, and review date; the current external CMCS links are local workflow tooling and are intentionally waived there.
+Claude-only Pharos skills currently include `ai-summaries-refresh`, `changelog-collect`, `funding-update`, `pre-launch-update`, and `write-ai-summaries`. If one becomes useful for Codex too, add a canonical `.codex/skills/<name>/SKILL.md` and replace the Claude copy with a symlink.
+
+`npm run check:agent-skill-symlinks` validates that skill symlinks are not broken. Symlinks that point outside this repository must be listed in `scripts/lib/agent-skill-symlink-waivers.json` with an owner, reason, and review date.

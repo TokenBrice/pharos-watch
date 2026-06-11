@@ -9,7 +9,7 @@ Use this skill for two-phase enrichment: find contract gaps from DefiLlama first
 
 ## Read First
 
-- Load [references/chain-mappings.md](references/chain-mappings.md) for thresholds, DL chain-name mapping, and CoinGecko platform mapping.
+- Load `.codex/skills/contract-enrich/references/chain-mappings.md` for thresholds, DL chain-name mapping, and CoinGecko platform mapping.
 - DefiLlama's list endpoint already returns circulating values in USD. Do not multiply list values by price.
 - Read tracked metadata from `shared/data/stablecoins/coins/*.json` or `shared/data/stablecoins/coins.generated.json`; the runtime stablecoin re-export is not a metadata edit target. Unknown chains are reported and skipped unless the user starts a separate chain-support task.
 - Use the same verification bar as `contract-populate` before writing any address.

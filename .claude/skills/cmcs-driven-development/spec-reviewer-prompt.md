@@ -1,1 +1,0 @@
-../../../../cmcs/skill/spec-reviewer-prompt.md

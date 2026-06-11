@@ -1,1 +1,0 @@
-../../../../cmcs/skill/SKILL.md

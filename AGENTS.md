@@ -3,84 +3,35 @@
 Analytics dashboard tracking 401 stablecoins (+2 shadow assets for PSI). Static Next.js 16 export to Cloudflare Pages. API: Cloudflare Worker + D1.
 
 Live: https://pharos.watch
-Local dev-server (maintained): http://localhost:3000/
+Local dev-server: http://localhost:3000/
 
-**Note**: This file is mirrored to both `CLAUDE.md` and `AGENTS.md`. Durable guidance lives in `/docs/process/` and `/docs/`. Changes to rules, gotchas, or repo map must be mirrored in both files (or moved to `docs/process/agent-artifacts.md` + referenced here).
+This file is mirrored to `CLAUDE.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
 
-## Methodology
+## Start Here
 
-- State assumptions before non-trivial work; ask when ambiguity blocks a safe choice.
-- Prefer the simplest root-cause fix. Do not add features, abstractions, fallback paths, or configurability that were not requested.
-- Make surgical changes. Match existing style, avoid unrelated refactors, and remove only unused code created by your change.
-- For non-trivial work, define success criteria, make a short plan, and re-plan if the approach stops making sense.
-- Verify before claiming completion with the relevant build, type-check, lint, and tests.
-- Surface tradeoffs or simpler alternatives when they change the implementation choice.
-
-## Operating Rules
-
-- Put durable agent/process guidance in `/docs/`; use `docs/process/agent-artifacts.md` for artifact routing. `/agents/` is gitignored local scratch space for temporary plans, audits, research, screenshots, and handoff notes only.
+- For non-trivial edits, classify the task with `docs/agent-task-router.md`, read only the matched docs, then inspect source entrypoints and local imports.
+- Follow scoped `AGENTS.md` files under `src/`, `shared/`, `functions/`, `worker/`, and `shared/data/stablecoins/` when editing there.
 - Treat `/docs/` and `README.md` as the verified documentation corpus.
-- Preserve existing product and design system patterns unless explicitly asked for a redesign.
-- Start non-trivial edits with `docs/agent-task-router.md`; it is the primary routing guide for choosing the smallest relevant doc and source context. Read only the docs listed for the matched task family, then follow local imports as needed.
-- For design work, read `docs/design-context.md`, `docs/design-language.md`, and `docs/design-tokens.md`.
-- For methodology work, read the specific methodology doc plus its timeline doc.
-- Update matching docs for behavior, API, pipeline, methodology, or data-source changes.
-- If you add a data source, update the about page.
-- If you change pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, or Chain Health, update `/methodology` and the relevant changelog/timeline doc.
-- Methodology versions must increase numerically, not semver-style. After v5.9, use v5.91 for a minor update or v6.0 for a major update, not v5.10.
-- You are logged into wrangler; use it for debugging when useful.
-- Do not create branch, worktree, or PR unless explicitly asked to; default to working, committing and pushing on main.
+- Use `/agents/` only for ignored scratch notes, research, screenshots, and handoffs.
 
-## Repo Map
+## Working Rules
 
-```text
-src/app/         - routes/pages
-src/components/  - app components (`ui/` = shadcn primitives; do not edit)
-src/hooks/       - TanStack Query hooks + shared state hooks
-src/lib/         - frontend-only utilities
-functions/       - Cloudflare Pages Functions
-shared/lib/      - runtime-neutral shared logic
-worker/src/api/  - Worker API handlers
-worker/src/cron/ - Worker cron jobs
-worker/src/lib/  - Worker runtime/auth/cache/helpers/constants
-```
+- State assumptions for non-trivial work; ask only when ambiguity blocks a safe choice.
+- Prefer the smallest root-cause fix. Match existing style and avoid unrelated refactors.
+- Preserve existing product and design-system patterns unless explicitly asked for a redesign.
+- Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.
+- Methodology changes update `/methodology` plus the relevant timeline/changelog doc. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
+- Do not create a branch, worktree, or PR unless explicitly asked. Before pushing, run `npm run test:merge-gate`.
 
-## Commands
-
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run typecheck
-npm test
-npm run test:watch
-cd worker && npx tsc --noEmit
-cd worker && npx wrangler dev
-```
-
-## Pre-Push Validation
-
-Before pushing, run:
-
-```bash
-npm run test:merge-gate
-```
-
-Fix failures locally before pushing. The merge gate skips cleanly for non-deploy-impacting diffs and adds Pages build/SEO or worker type-check coverage for deploy-impacting diffs.
-
-## Web Fetching
-
-- Prefer API endpoints over scraping for CoinGecko, Etherscan, DefiLlama, and similar data sources.
-
-## High-Value Gotchas
+## Hard Rules
 
 - Tailwind classes must be static strings.
-- Classification labels and colors live in `shared/lib/classification.ts`; do not redefine them locally.
+- Classification labels/colors live in `shared/lib/classification.ts`.
 - Use `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` values are already USD-denominated.
-- Do not multiply DefiLlama list-endpoint supply values by price. The detail endpoint differs for non-USD pegs.
-- Do not add manual/on-chain/CMC/DEX supply overrides. Primary supply is DefiLlama, with the existing fallback path only.
-- `@shared/*` maps to `shared/*`; use `@shared/lib/...` for shared runtime logic and `@shared/types...` for shared type/schema modules. Avoid relative cross-boundary imports.
-- Root TS config excludes `worker/` to avoid D1 type conflicts. Shared runtime-neutral logic belongs in `shared/lib/`.
-- Hook timing rule: cron-backed hooks should normally use `staleTime = producer interval`, `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
-- Worker cron jobs share Cloudflare's per-trigger 6-connection pool across all `ctx.waitUntil()` work; consume response bodies before opening more fetches.
-- Standard deploy applies D1 migrations before the new Worker is live. New migrations must stay backward-compatible; destructive cleanup needs a separate coordinated rollout.
+- Do not multiply DefiLlama list-endpoint supply values by price.
+- Do not add manual/on-chain/CMC/DEX supply overrides.
+- Use `@shared/lib/...` and `@shared/types...` for shared runtime imports; avoid relative cross-boundary imports.
+- Root TS config excludes `worker/`; runtime-neutral shared logic belongs in `shared/lib/`.
+- Cron-backed hooks normally use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.
+- Worker cron jobs share Cloudflare's per-trigger 6-connection pool; consume response bodies before opening more fetches.
+- D1 migrations run before the new Worker is live; destructive cleanup needs a separate coordinated rollout.

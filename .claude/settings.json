@@ -18,10 +18,6 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/ci/pharos-change-contract.mjs --hook=pre-tool-use"
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-push-gate.sh"
           }
         ]
       },

@@ -1,1 +1,0 @@
-../../../../cmcs/skill/ticket-template.md

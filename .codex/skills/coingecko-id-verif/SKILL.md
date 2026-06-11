@@ -13,9 +13,9 @@ Use the bundled verifier before editing `geckoId` by hand. When an Ethereum cont
 2. Use the verifier:
 
 ```bash
-python3 "$CODEX_HOME/skills/coingecko-id-verif/scripts/verify.py" --coin usdt-tether
-python3 "$CODEX_HOME/skills/coingecko-id-verif/scripts/verify.py" --scan
-python3 "$CODEX_HOME/skills/coingecko-id-verif/scripts/verify.py" --all
+python3 .codex/skills/coingecko-id-verif/scripts/verify.py --coin usdt-tether
+python3 .codex/skills/coingecko-id-verif/scripts/verify.py --scan
+python3 .codex/skills/coingecko-id-verif/scripts/verify.py --all
 ```
 
 3. Interpret verdicts:

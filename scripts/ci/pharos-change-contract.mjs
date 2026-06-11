@@ -704,6 +704,22 @@ function commandInvokesGitResetHard(command) {
   return false;
 }
 
+function commandInvokesGitPushNoVerify(command) {
+  for (const invocation of getShellCommandInvocations(command)) {
+    if (invocation.name !== "git") continue;
+    const { tokens } = invocation;
+    let cursor = 1;
+    if (tokens[cursor] === "-C") {
+      cursor += 2;
+    }
+    if (tokens[cursor] !== "push") continue;
+    if (tokens.slice(cursor + 1).some((token) => token === "--no-verify" || token.startsWith("--no-verify="))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function commandInvokesRemoteD1Mutation(command) {
   return getShellCommandInvocations(command).some((invocation) => {
     if (invocation.name !== "wrangler" || invocationHasHelpFlag(invocation.tokens)) return false;
@@ -772,6 +788,10 @@ function findCommandViolation(command) {
 
   if (commandInvokesGitCleanForceDelete(command)) {
     return "Destructive `git clean -fd` style cleanup is blocked. Preserve untracked user/worktree changes.";
+  }
+
+  if (commandInvokesGitPushNoVerify(command)) {
+    return "`git push --no-verify` is blocked. The tracked pre-push merge gate must run before pushing.";
   }
 
   if (commandInvokesRawProductionDeploy(command)) {

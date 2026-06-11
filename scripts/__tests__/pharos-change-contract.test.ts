@@ -50,8 +50,8 @@ describe("classifyChangedFiles", () => {
     expect(contract.hardRules).toContain("Cron jobs share Cloudflare's per-trigger 6-connection pool.");
   });
 
-  it("routes repo-local Codex config changes to agent process guidance", () => {
-    const contract = classifyChangedFiles([".codex/config.toml", "scripts/ci/pharos-change-contract.mjs"]);
+  it("routes repo-local agent config changes to agent process guidance", () => {
+    const contract = classifyChangedFiles([".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.mjs"]);
 
     expect(contract.families.map((family) => family.id)).toContain("agent-hooks-process");
     expect(contract.docsToRead).toContain("docs/process/agent-artifacts.md");
@@ -242,6 +242,22 @@ describe("hard-block hook outputs", () => {
       },
     });
     expect(output.reason).toContain("git reset --hard");
+  });
+
+  it("blocks git pushes that bypass the merge gate", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "git push --no-verify origin main",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("pre-push merge gate");
   });
 
   it("blocks raw production deploy commands", () => {
@@ -474,12 +490,12 @@ describe("repo Codex hook config", () => {
 });
 
 describe("repo Claude hook config", () => {
-  it("wires only SessionStart, the PreToolUse guards, and the pre-push gate", () => {
+  it("wires only SessionStart and the PreToolUse guards", () => {
     const config = JSON.parse(readFileSync(resolve(process.cwd(), ".claude/settings.json"), "utf8"));
 
     expect(config.hooks.SessionStart[0].hooks[0].command).toContain("--hook=session-start");
     expect(config.hooks.PreToolUse[0].hooks[0].command).toContain("--hook=pre-tool-use");
-    expect(config.hooks.PreToolUse[0].hooks[1].command).toContain(".claude/hooks/pre-push-gate.sh");
+    expect(config.hooks.PreToolUse[0].hooks).toHaveLength(1);
     expect(config.hooks.PreToolUse[1].hooks[0].command).toContain("--hook=pre-tool-use");
 
     expect(config.hooks.UserPromptSubmit).toBeUndefined();

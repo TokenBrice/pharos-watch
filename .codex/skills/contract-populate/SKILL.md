@@ -11,7 +11,7 @@ Populate missing contract addresses from CoinGecko without overwriting curated d
 
 - Read the current coin entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`) plus `shared/lib/chains/index.ts`.
 - Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`.
-- Load [references/chain-mappings.md](references/chain-mappings.md) when translating CoinGecko platform names or deciding which platforms to skip.
+- Load `.codex/skills/contract-populate/references/chain-mappings.md` when translating CoinGecko platform names or deciding which platforms to skip.
 - If `geckoId` is missing or suspect, use `coingecko-id-verif` or `stablecoin-info-fetch` first.
 
 ## Workflow
