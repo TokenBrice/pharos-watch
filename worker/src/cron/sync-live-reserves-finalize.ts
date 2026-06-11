@@ -15,7 +15,11 @@ import {
   CONFIGURED_COINS,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
-import { persistLiveReserveCursorState } from "./sync-live-reserves-run-state";
+import {
+  persistLiveReserveCursorState,
+  type LiveReserveCursorTailState,
+  type LoadedLiveReserveCursorState,
+} from "./sync-live-reserves-run-state";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
 
 export interface ReserveSyncAttemptFailureGroup {
@@ -26,6 +30,7 @@ export interface ReserveSyncAttemptFailureGroup {
 
 export interface FinalizeReserveSyncRunArgs {
   db: D1Database;
+  signal?: AbortSignal;
   total: number;
   runStartedAt: number;
   reportProgress?: CronProgressReporter;
@@ -39,6 +44,13 @@ export interface FinalizeReserveSyncRunArgs {
   breakerOutcomes: ReadonlyMap<string, boolean>;
   deferredCoins: number;
   nextCursorStablecoinId: string | null;
+  cursorTailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  cursorTailError: string | null;
+  runBudgetTruncationCount: number;
+  loadedCursorState: LoadedLiveReserveCursorState | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
 }
@@ -69,6 +81,7 @@ async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promi
       args.db,
       args.deferredCoins,
       args.nextCursorStablecoinId,
+      args.signal,
     );
     return { cursorPersistFailed: false, cursorPersistError: null };
   } catch (error) {
@@ -214,6 +227,17 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       runBudgetTruncated: args.deferredCoins > 0,
       deferredCoins: args.deferredCoins,
       nextCursorStablecoinId: args.nextCursorStablecoinId,
+      deferredAt: args.cursorRecordedAt,
+      cursorTailState: args.cursorTailState,
+      cursorTailError: args.cursorTailError,
+      cursorRecordedAt: args.cursorRecordedAt,
+      cursorTailCompletedAt: args.cursorTailCompletedAt,
+      cursorTailFailedAt: args.cursorTailFailedAt,
+      runBudgetTruncationCount: args.runBudgetTruncationCount,
+      loadedCursorNextStablecoinId: args.loadedCursorState?.nextStablecoinId ?? null,
+      loadedCursorTailState: args.loadedCursorState?.tailState ?? null,
+      loadedCursorDeferredAt: args.loadedCursorState?.deferredAt ?? null,
+      loadedCursorTruncationCount: args.loadedCursorState?.runBudgetTruncationCount ?? 0,
       budgetMs: args.budgetConfig.runBudgetMs,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,

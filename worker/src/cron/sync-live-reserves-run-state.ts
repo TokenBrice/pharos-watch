@@ -1,5 +1,7 @@
-import { deleteCache, getCache } from "../lib/db-cache";
+import { getCache } from "../lib/db-cache";
 import { batchExecute } from "../lib/db";
+import { throwIfAborted } from "../lib/abort";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
 import { rotateFromCursor } from "./shared/cursor-rotation";
 import {
@@ -10,17 +12,42 @@ import { logCronEvent } from "../lib/cron-logger";
 
 const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
+export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
+
 interface LiveReserveCursorState {
   nextStablecoinId: string | null;
   deferredCount: number;
   deferredAt: number;
   reason: "run-budget-exhausted";
-  tailState?: "recording" | "incomplete" | "complete";
+  tailState?: LiveReserveCursorTailState;
   cursorRecordedAt?: number;
   tailCompletedAt?: number;
   tailFailedAt?: number;
   tailError?: string;
   runBudgetTruncationCount?: number;
+}
+
+export interface LoadedLiveReserveCursorState {
+  nextStablecoinId: string | null;
+  deferredCount: number;
+  deferredAt: number;
+  tailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  tailCompletedAt: number | null;
+  tailFailedAt: number | null;
+  tailError: string | null;
+  runBudgetTruncationCount: number;
+}
+
+export interface RecordDeferredTailResult {
+  deferredCoins: number;
+  nextCursorStablecoinId: string | null;
+  cursorTailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  cursorTailError: string | null;
+  runBudgetTruncationCount: number;
 }
 
 export function rotateConfiguredCoins(
@@ -30,17 +57,7 @@ export function rotateConfiguredCoins(
   return rotateFromCursor(configuredCoins, nextStablecoinId, (coin) => coin.id).items;
 }
 
-export async function loadLiveReserveCursorState(db: D1Database): Promise<{
-  nextStablecoinId: string | null;
-  deferredCount: number;
-  deferredAt: number;
-  tailState: "recording" | "incomplete" | "complete" | null;
-  cursorRecordedAt: number | null;
-  tailCompletedAt: number | null;
-  tailFailedAt: number | null;
-  tailError: string | null;
-  runBudgetTruncationCount: number;
-} | null> {
+export async function loadLiveReserveCursorState(db: D1Database): Promise<LoadedLiveReserveCursorState | null> {
   const cached = await getCache(db, RESERVE_SYNC_CURSOR_CACHE_KEY);
   if (!cached) return null;
   try {
@@ -74,17 +91,34 @@ async function writeLiveReserveCursorState(
   db: D1Database,
   state: LiveReserveCursorState,
   updatedAt: number,
+  signal?: AbortSignal,
 ): Promise<void> {
-  await db
-    .prepare(
-      "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-    )
-    .bind(
-      RESERVE_SYNC_CURSOR_CACHE_KEY,
-      JSON.stringify(state),
-      updatedAt,
-    )
-    .run();
+  throwIfAborted(signal);
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+      )
+      .bind(
+        RESERVE_SYNC_CURSOR_CACHE_KEY,
+        JSON.stringify(state),
+        updatedAt,
+      )
+      .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+}
+
+async function deleteLiveReserveCursorState(db: D1Database, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+  await runWithOverloadRetry(() =>
+    db.prepare("DELETE FROM cache WHERE key = ?").bind(RESERVE_SYNC_CURSOR_CACHE_KEY).run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
 }
 
 export async function recordDeferredTail(
@@ -92,10 +126,12 @@ export async function recordDeferredTail(
   remainingCoins: readonly ConfiguredCoin[],
   breakerKeys: Set<string>,
   attemptedAt: number,
-): Promise<{ deferredCoins: number; nextCursorStablecoinId: string | null }> {
+  signal?: AbortSignal,
+): Promise<RecordDeferredTailResult> {
+  throwIfAborted(signal);
   const deferredCoins = remainingCoins.length;
   const nextCursorStablecoinId = remainingCoins[0]?.id ?? null;
-  let previousCursorState: Awaited<ReturnType<typeof loadLiveReserveCursorState>> = null;
+  let previousCursorState: LoadedLiveReserveCursorState | null = null;
   try {
     previousCursorState = await loadLiveReserveCursorState(db);
   } catch (error) {
@@ -136,6 +172,7 @@ export async function recordDeferredTail(
         tailState: "recording",
       },
       attemptedAt,
+      signal,
     );
   }
 
@@ -168,20 +205,22 @@ export async function recordDeferredTail(
 
   if (statements.length > 0) {
     try {
-      await batchExecute(db, statements);
+      await batchExecute(db, statements, { signal });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (cursorBaseState) {
+        const failedAt = Math.floor(Date.now() / 1000);
         try {
           await writeLiveReserveCursorState(
             db,
             {
               ...cursorBaseState,
               tailState: "incomplete",
-              tailFailedAt: Math.floor(Date.now() / 1000),
+              tailFailedAt: failedAt,
               tailError: message,
             },
-            Math.floor(Date.now() / 1000),
+            failedAt,
+            signal,
           );
         } catch (cursorError) {
           console.warn("[sync-live-reserves] Failed to mark deferred cursor incomplete:", cursorError);
@@ -191,21 +230,37 @@ export async function recordDeferredTail(
     }
   }
 
+  let cursorTailState: LiveReserveCursorTailState | null = null;
+  let cursorRecordedAt: number | null = null;
+  let cursorTailCompletedAt: number | null = null;
+  let cursorTailFailedAt: number | null = null;
+  let cursorTailError: string | null = null;
   if (cursorBaseState) {
+    const completedAt = Math.floor(Date.now() / 1000);
     await writeLiveReserveCursorState(
       db,
       {
         ...cursorBaseState,
         tailState: "complete",
-        tailCompletedAt: Math.floor(Date.now() / 1000),
+        tailCompletedAt: completedAt,
       },
-      Math.floor(Date.now() / 1000),
+      completedAt,
+      signal,
     );
+    cursorTailState = "complete";
+    cursorRecordedAt = cursorBaseState.cursorRecordedAt;
+    cursorTailCompletedAt = completedAt;
   }
 
   return {
     deferredCoins,
     nextCursorStablecoinId,
+    cursorTailState,
+    cursorRecordedAt,
+    cursorTailCompletedAt,
+    cursorTailFailedAt,
+    cursorTailError,
+    runBudgetTruncationCount,
   };
 }
 
@@ -213,10 +268,11 @@ export async function persistLiveReserveCursorState(
   db: D1Database,
   deferredCoins: number,
   nextCursorStablecoinId: string | null,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (deferredCoins > 0 && nextCursorStablecoinId) {
     return;
   }
 
-  await deleteCache(db, RESERVE_SYNC_CURSOR_CACHE_KEY);
+  await deleteLiveReserveCursorState(db, signal);
 }

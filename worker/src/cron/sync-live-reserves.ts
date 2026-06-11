@@ -22,6 +22,8 @@ import {
   loadLiveReserveCursorState,
   recordDeferredTail,
   rotateConfiguredCoins,
+  type LiveReserveCursorTailState,
+  type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
 import {
   resolveLiveReserveSyncBudgetConfig,
@@ -39,6 +41,12 @@ interface ReserveCoinQueueResult {
   breakerOutcomes: Map<string, boolean>;
   deferredCoins: number;
   nextCursorStablecoinId: string | null;
+  cursorTailState: LiveReserveCursorTailState | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  cursorTailError: string | null;
+  runBudgetTruncationCount: number;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
 }
 
@@ -239,6 +247,12 @@ async function runReserveCoinQueue(args: {
   let skipped = 0;
   let deferredCoins = 0;
   let nextCursorStablecoinId: string | null = null;
+  let cursorTailState: LiveReserveCursorTailState | null = null;
+  let cursorRecordedAt: number | null = null;
+  let cursorTailCompletedAt: number | null = null;
+  let cursorTailFailedAt: number | null = null;
+  let cursorTailError: string | null = null;
+  let runBudgetTruncationCount = 0;
   const warningMessages: string[] = [];
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
@@ -260,9 +274,16 @@ async function runReserveCoinQueue(args: {
         args.orderedCoins.slice(index),
         breakerKeys,
         Math.floor(Date.now() / 1000),
+        args.signal,
       );
       deferredCoins = deferred.deferredCoins;
       nextCursorStablecoinId = deferred.nextCursorStablecoinId;
+      cursorTailState = deferred.cursorTailState;
+      cursorRecordedAt = deferred.cursorRecordedAt;
+      cursorTailCompletedAt = deferred.cursorTailCompletedAt;
+      cursorTailFailedAt = deferred.cursorTailFailedAt;
+      cursorTailError = deferred.cursorTailError;
+      runBudgetTruncationCount = deferred.runBudgetTruncationCount;
       skipped += deferredCoins;
       break;
     }
@@ -335,6 +356,12 @@ async function runReserveCoinQueue(args: {
     breakerOutcomes,
     deferredCoins,
     nextCursorStablecoinId,
+    cursorTailState,
+    cursorRecordedAt,
+    cursorTailCompletedAt,
+    cursorTailFailedAt,
+    cursorTailError,
+    runBudgetTruncationCount,
     attemptFailureSummaries,
   };
 }
@@ -349,7 +376,7 @@ export async function syncLiveReserves(
   const runStartedAt = Math.floor(Date.now() / 1000);
   const runStartedMs = Date.now();
   const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
-  const cursorState = await loadLiveReserveCursorState(db);
+  const cursorState: LoadedLiveReserveCursorState | null = await loadLiveReserveCursorState(db);
   // Cursor rotation semantics over the evidence-class-ordered queue: a
   // cursored run rotates the full ordered queue to start at the first coin
   // deferred by the previous run, processes that deferred tail first, then
@@ -399,10 +426,12 @@ export async function syncLiveReserves(
 
   return finalizeReserveSyncRun({
     db,
+    signal,
     total,
     runStartedAt,
     reportProgress,
     budgetConfig,
+    loadedCursorState: cursorState,
     ...queueResult,
   });
 }

@@ -274,6 +274,8 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
   const runBudgetTruncated = readBoolean(metadata.runBudgetTruncated);
   const deferredCoins = readNumber(metadata.deferredCoins);
   const nextCursorStablecoinId = readString(metadata.nextCursorStablecoinId);
+  const cursorTailState = readString(metadata.cursorTailState);
+  const runBudgetTruncationCount = readNumber(metadata.runBudgetTruncationCount);
   const coinsWithWarnings = readArray(metadata.coinsWithWarnings)?.length ?? 0;
   const breakerKeys = formatStringList(metadata.breakerKeys);
   const artifactCleanup = readRecord(metadata.artifactCleanup);
@@ -295,6 +297,9 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
       : null,
     runBudgetTruncated
       ? `run budget truncated; deferred ${deferredCoins ?? 0}${nextCursorStablecoinId ? `, resumes at ${nextCursorStablecoinId}` : ""}`
+      : null,
+    cursorTailState
+      ? `cursor tail ${cursorTailState}${runBudgetTruncationCount != null && runBudgetTruncationCount > 0 ? `, truncations ${runBudgetTruncationCount}` : ""}`
       : null,
     artifactCleanupDeletedTotal > 0
       ? `artifact cleanup deleted sync ${artifactSyncStateDeleted ?? 0}, composition ${artifactCompositionDeleted ?? 0}, breakers ${artifactBreakerCacheDeleted ?? 0}`

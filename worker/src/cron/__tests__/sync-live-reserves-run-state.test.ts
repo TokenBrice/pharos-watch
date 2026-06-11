@@ -61,6 +61,12 @@ describe("recordDeferredTail", () => {
     expect(result).toEqual({
       deferredCoins: 61,
       nextCursorStablecoinId: "coin-0",
+      cursorTailState: "complete",
+      cursorRecordedAt: 1_700_000_000,
+      cursorTailCompletedAt: expect.any(Number),
+      cursorTailFailedAt: null,
+      cursorTailError: null,
+      runBudgetTruncationCount: 1,
     });
     expect(batchSizes).toEqual([100, 22]);
   });
@@ -101,6 +107,68 @@ describe("recordDeferredTail", () => {
       tailState: "complete",
     });
     expect(typeof parseCursorWrite(cursorWrites[1])?.tailCompletedAt).toBe("number");
+  });
+
+  it("retries cursor cache writes on transient D1 overload", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    let cursorWriteAttempts = 0;
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          sql,
+          binds,
+          run: async () => {
+            if (
+              sql.includes("INSERT OR REPLACE INTO cache")
+              && binds[0] === "live-reserves:run-cursor"
+              && cursorWriteAttempts === 0
+            ) {
+              cursorWriteAttempts++;
+              throw new Error("D1 DB is overloaded");
+            }
+            cursorWriteAttempts += sql.includes("INSERT OR REPLACE INTO cache") && binds[0] === "live-reserves:run-cursor"
+              ? 1
+              : 0;
+            history.push({ sql, binds });
+            return { success: true, meta: { changes: 1 } };
+          },
+          first: async () => {
+            history.push({ sql, binds });
+            return null;
+          },
+        }),
+      }),
+      batch: async (statements: D1PreparedStatement[]) => {
+        for (const statement of statements as unknown as Array<{ sql: string; binds: unknown[] }>) {
+          history.push({ sql: statement.sql, binds: statement.binds });
+        }
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const result = await recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000);
+
+    expect(result.cursorTailState).toBe("complete");
+    expect(cursorWriteAttempts).toBe(3);
+    const cursorWrites = history.filter((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "live-reserves:run-cursor"
+    ));
+    expect(cursorWrites).toHaveLength(2);
+  });
+
+  it("does not write a deferred cursor when the signal is already aborted", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = makeBatchRecordingDb([], history);
+    const controller = new AbortController();
+    controller.abort(new Error("cron timed out"));
+
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000, controller.signal))
+      .rejects.toThrow("cron timed out");
+
+    expect(history.some((entry) => entry.binds[0] === "live-reserves:run-cursor")).toBe(false);
   });
 
   it("records a durable event when previous cursor state cannot be read", async () => {

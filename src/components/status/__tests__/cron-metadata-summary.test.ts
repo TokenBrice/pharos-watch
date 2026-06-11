@@ -85,4 +85,21 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("artifact cleanup deleted sync 2, composition 1, breakers 3");
     expect(summary).toContain("artifact cleanup warnings 1");
   });
+
+  it("surfaces live-reserve cursor tail state", () => {
+    const summary = summarizeCronMetadata("sync-live-reserves", {
+      synced: 10,
+      failed: 0,
+      skipped: 3,
+      total: 13,
+      runBudgetTruncated: true,
+      deferredCoins: 3,
+      nextCursorStablecoinId: "usdc-circle",
+      cursorTailState: "complete",
+      runBudgetTruncationCount: 2,
+    });
+
+    expect(summary).toContain("run budget truncated; deferred 3, resumes at usdc-circle");
+    expect(summary).toContain("cursor tail complete, truncations 2");
+  });
 });

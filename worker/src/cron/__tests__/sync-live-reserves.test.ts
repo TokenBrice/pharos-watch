@@ -526,6 +526,10 @@ describe("syncLiveReserves", () => {
     const firstRunMetadata = JSON.parse(firstRun?.metadata ?? "{}") as {
       deferredCoins?: number;
       nextCursorStablecoinId?: string | null;
+      cursorTailState?: string | null;
+      cursorRecordedAt?: number | null;
+      cursorTailCompletedAt?: number | null;
+      runBudgetTruncationCount?: number;
     };
     const cursorWrites = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "live-reserves:run-cursor"
@@ -534,7 +538,11 @@ describe("syncLiveReserves", () => {
     expect(firstRunMetadata).toMatchObject({
       deferredCoins: configuredCoinCount - 1,
       nextCursorStablecoinId: configuredIds[1],
+      cursorTailState: "complete",
+      runBudgetTruncationCount: 1,
     });
+    expect(typeof firstRunMetadata.cursorRecordedAt).toBe("number");
+    expect(typeof firstRunMetadata.cursorTailCompletedAt).toBe("number");
     expect(cursorWrites).toHaveLength(2);
     expect(JSON.parse(cursorWrites[0]?.binds[1] as string)).toMatchObject({
       nextStablecoinId: configuredIds[1],

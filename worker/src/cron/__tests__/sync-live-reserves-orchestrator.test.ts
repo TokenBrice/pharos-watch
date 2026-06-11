@@ -49,6 +49,10 @@ interface RunMetadata {
   runBudgetTruncated?: boolean;
   deferredCoins?: number;
   nextCursorStablecoinId?: string | null;
+  cursorTailState?: string | null;
+  cursorRecordedAt?: number | null;
+  cursorTailCompletedAt?: number | null;
+  runBudgetTruncationCount?: number;
 }
 
 function mockAdapterRegistry(
@@ -163,6 +167,10 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(metadata.runBudgetTruncated).toBe(true);
     expect(metadata.synced).toBeGreaterThanOrEqual(1);
     expect(metadata.deferredCoins).toBeGreaterThan(0);
+    expect(metadata.cursorTailState).toBe("complete");
+    expect(metadata.runBudgetTruncationCount).toBe(1);
+    expect(typeof metadata.cursorRecordedAt).toBe("number");
+    expect(typeof metadata.cursorTailCompletedAt).toBe("number");
     expect((metadata.synced ?? 0) + (metadata.failed ?? 0) + (metadata.skipped ?? 0)).toBe(CONFIGURED_COIN_COUNT);
     expect(typeof metadata.nextCursorStablecoinId).toBe("string");
 
