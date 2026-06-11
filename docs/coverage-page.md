@@ -55,13 +55,13 @@ Status semantics are intentionally user-facing:
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
 - `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
 - `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
-- `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`
+- `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`, with optional score-band breakdowns
 
 ### Mint Authority Coverage
 
-Mint Authority coverage counts curated review breadth, not safety quality. `Unknown` means no compact mint-authority review is available; stablecoin detail pages omit the Mint Authority section until reviewed data exists.
+Mint Authority coverage counts curated review breadth first, then appends standalone score-band breakdowns for reviewed rows. `Unknown` means no compact mint-authority review is available; stablecoin detail pages omit the Mint Authority section until reviewed data exists, while score-oriented aggregate surfaces treat the row as `NR`.
 
-Authority posture bands belong in detail text/tooltips only; do not add posture buckets to the coverage headline, risk ranking, or default sort.
+Authority posture bands belong in detail text/tooltips only; do not add posture buckets to the coverage headline, risk ranking, or default sort. Score-band chips use `Hardened`, `Governed`, `Managed`, `Concentrated`, `Exposed`, and `NR`.
 
 ---
 
@@ -80,7 +80,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                                                          | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                                                                                                                                                       |
 | `Freezable Status`    | `getResolvedBlacklistStatus(coin.id, reportCard)` from `src/lib/blacklist-status.ts`, combining static metadata and `reportCard.rawInputs.canBeBlacklisted`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket | Resolved freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Upstream`, `Possible`, and `No` are resolved status states and all count as available coverage.                                                                                                                                                       |
 | `Dependency Map`      | `useReportCards().data.cards[].rawInputs.dependencies` plus `useReportCards().data.dependencyGraph.edges`                                                                                                                                                  | `buildDependencyCoverageFacts(...)` filters graph edges to live report-card IDs and classifies each coin as both dependent/upstream, dependent-only, upstream-only, resolved with no tracked dependency, or an unmapped gap when dependency evidence exists but no live edge remains. The coverage page does not fall back to the static graph when report-card data is unavailable; it emits `Data n/a`. |
-| `Mint Authority`      | `coin.mintAuthoritySummary` from the slim client registry projection                                                                                                                                                                                       | Structural coverage of curated mint-authority reviews. Reviewed statuses count as available; `Unknown` does not. The column is descriptive and does not consume Safety Score raw inputs.                                                                                                                                                                                                                  |
+| `Mint Authority`      | `coin.mintAuthoritySummary` from the slim client registry projection plus `shared/lib/mint-authority-scoring.ts`                                                                                                                                           | Structural coverage of curated mint-authority reviews. Reviewed statuses count as available; `Unknown` does not. The row also exposes the standalone Mint Authority Score band where scoreable. It does not consume Safety Score raw inputs.                                                                                                                                                               |
 
 Additional page-level sources:
 
@@ -123,7 +123,7 @@ Breakdowns are intentionally dense and should stay short:
 - Flows: `full / partial / lagging / bootstrapping / data n/a`
 - Price: `tracked / price-only`
 - Freezable status: `live / yes / upstream / possible / no`
-- Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown`
+- Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown / score-hardened / score-governed / score-managed / score-concentrated / score-exposed / score-nr`
 
 #### Source count enrichment
 

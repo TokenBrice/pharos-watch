@@ -248,6 +248,9 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `mintAuthority.controls[].authorityType` | `safe` \| `multisig` \| `eoa` \| `timelock` \| `dao-governor` \| `contract` \| `issuer-backend` \| `bridge` \| `custodian` \| `none` \| `unknown` |
 | `mintAuthority.controls[].directMintAbility` | `direct` \| `cap-limited` \| `can-authorize` \| `upgrade-only` \| `parameter-only` \| `none` \| `unknown` |
 | `mintAuthority.controls[].modulesOrGuardsStatus` | `none-detected` \| `present` \| `unknown` \| `not-applicable`                                                        |
+| `mintAuthority.controls[].canRaiseCap` | `true` \| `false` \| `unknown`                                                                                           |
+| `mintAuthority.controls[].keyCustodyAttestation.kind` | `mpc` \| `hsm`                                                                                              |
+| `mintAuthority.mintIncident`  | `{ date, summary, sources[] }` for privileged-mint or unbacked-supply incidents                                           |
 | `launchPhase`                  | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon`                                                                |
 
 ### Classification rules that are easy to get wrong
@@ -256,7 +259,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
-- `mintAuthority` is descriptive. It does not change Safety Score, report-card raw inputs, selector exclusions, or rankings. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review.
+- `mintAuthority` is curated metadata that feeds the standalone Mint Authority Score. It does not change Safety Score, report-card raw inputs, selector exclusions, or report-card rankings. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
@@ -574,7 +577,7 @@ Current practice:
 
 ### 5f. Mint Authority review
 
-Mint Authority review is descriptive, not scored. It should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
+Mint Authority review feeds the standalone Mint Authority Score and should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
 
 For new high-value active additions and pre-launch promotions, record either a reviewed `mintAuthority` profile or an intentional gap. High-value means top-60 canonical rank, market cap ≥ $50M, or an obvious issuer/operator mint control. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
 
@@ -585,6 +588,8 @@ When authoring `mintAuthority`, verify:
 - privileged paths such as `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, `bridge-or-oft-synthetic`, and `m0-permissioned-minter` include at least one `controls[]` entry unless confidence is `unknown`.
 - each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
 - Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
+- EOA mint-capable controls should include `keyCustodyAttestation` when MPC/HSM custody is publicly evidenced; otherwise non-issuer-context EOA direct/can-authorize paths are capped by the score methodology.
+- Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncident` with source links.
 - direct chain reads, proxy/admin reads, cap/facilitator registries, bridge route checks, and Safe state include observed block or source notes when they are part of the evidence.
 - wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
 - `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
@@ -794,7 +799,7 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 - [ ] If `yieldConfig` or yield runtime config was added, the asset appears correctly on `/yield/` or in the detail yield section after the next yield sync
 - [ ] If a redemption backstop was added, `GET /api/redemption-backstops` includes the coin after the next four-hour reserve/redemption lane
 - [ ] If mint/burn coverage was added, the coin appears in `/api/mint-burn-flows` / `/api/mint-burn-events` after the next lane run
-- [ ] If `mintAuthority` was added, the detail page shows the Mint Authority section and `/coverage/`, the homepage table, and `/screener/` reflect the expected bucket
+- [ ] If `mintAuthority` was added, the detail page shows the Mint Authority section and `/coverage/`, the homepage table, and `/screener/` reflect the expected bucket, score, and band
 - [ ] If the asset is live and backfillable, the market-cap chart is no longer empty after Phase 8
 
 ---

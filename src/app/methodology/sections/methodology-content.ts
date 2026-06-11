@@ -62,6 +62,16 @@ export const SAFETY_SCORES_SECTION_CONTENT = defineMethodologySectionContent({
   ],
 });
 
+export const MINT_AUTHORITY_SCORE_SECTION_CONTENT = defineMethodologySectionContent({
+  id: "mint-authority-score",
+  title: "Mint Authority Score",
+  markdownParagraphs: [
+    "Mint Authority Score is a standalone 0-100 methodology for reviewed stablecoin mint-authority risk. It measures how durable supply can be created, authorized, expanded, or routed by privileged mint paths.",
+    "The score blends route family, weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence.",
+    "Missing or unresolved review data returns NR. The score is visible on detail pages, the homepage table, the screener, and coverage breakdowns, but it does not feed Safety Score, report-card dimensions, selector exclusions, or default rankings.",
+  ],
+});
+
 export const INFRASTRUCTURE_SECTION_CONTENT = defineMethodologySectionContent({
   id: "infrastructure-methodology",
   title: "Infrastructure Tagging",
@@ -159,6 +169,7 @@ export const METHODOLOGY_INDEX_SECTION_CONTENT = [
   PRICING_PIPELINE_SECTION_CONTENT,
   STABILITY_INDEX_SECTION_CONTENT,
   SAFETY_SCORES_SECTION_CONTENT,
+  MINT_AUTHORITY_SCORE_SECTION_CONTENT,
   INFRASTRUCTURE_SECTION_CONTENT,
   LIQUIDITY_SECTION_CONTENT,
   MINT_BURN_FLOW_SECTION_CONTENT,

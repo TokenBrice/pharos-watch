@@ -23,6 +23,8 @@ describe("MethodologyPage", () => {
     expect(html).toContain("Reader mode keeps summaries up front.");
     expect(html).toContain("Pricing Pipeline");
     expect(html).toContain("Safety Scores");
+    expect(html).toContain("Mint Authority Score");
+    expect(html).toContain("not a Safety Score or report-card input");
     expect(html).toContain("Reader");
     expect(html).toContain("Analyst");
     expect(html).toContain("same-direction corroboration");

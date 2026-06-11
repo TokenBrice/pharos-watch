@@ -142,6 +142,12 @@ Hero tertiary metric chips below the identity block are live signals only: on `<
 
 Values are authored-short and never CSS-truncated; on `<lg` the row is a snap-scroll carousel with a right-edge fade, on `lg+` it wraps with fields distributed edge-to-edge (`justify-between` when ≥6 facts resolve; sparse strips stay start-aligned) and a tighter `gap-x-4` floor so the max-field set holds one line at ≥1400px viewports. Hash entries intercept the click and re-align with the same retry cadence as `LongformScrollspyNav` (160/480/960/1800 ms) because deep targets sit below lazy sections whose height settles after the jump starts; targets carry `scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6` for sticky-chrome clearance. The strip absorbed the former identity-zone `MechanismChip` and `FreezablePill` and the tertiary `Chains` pill, so each fact has exactly one hero home; the strip hides entirely if fewer than three facts resolve.
 
+### Mint Authority section
+
+`MintAuthoritySection` renders in the Context zone when compact review data is present. It shows the standalone Mint Authority Score and band, methodology badge, reviewed mint path, authority posture, confidence, reviewed date, weakest controller, component breakdown, caps, primary controls, key-custody labels, source links, and `mintIncident` callout when available.
+
+The score is computed from `shared/lib/mint-authority-scoring.ts` through the detail view model and `src/lib/mint-authority-display.ts`. It is not a Safety Score input, report-card raw input, selector exclusion, or report-card ranking sort.
+
 ### Classification taxonomy pills
 
 Below the identity block, the classification line uses `buildGovernanceTaxonomyUrl(coin.flags.governance)`, `buildBackingTaxonomyUrl(coin.flags.backing)`, and `buildPegLandingUrl(coin.flags.pegCurrency)` (which resolves to `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` or null). Default flags render as inline sentence links; non-default flags (decentralized governance, algorithmic backing, non-USD peg) render as separate focus-ringed taxonomy pills. No handwritten slugs.

@@ -146,7 +146,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
-| `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [report-cards.md](./report-cards.md) |
+| `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [mint-authority-scoring.md](./mint-authority-scoring.md), [report-cards.md](./report-cards.md) |
 | `/screener/picker/`                             | [screener-picker-page.md](./screener-picker-page.md)                                                                                                  |
 | `/sitemap-tree/`                                | [architecture.md](./architecture.md)                                                                                                                  |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
@@ -214,6 +214,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [dews.md](./dews.md) - DEWS formula, sub-signals, bands, and API contract
 - [depeg-resolver.md](./depeg-resolver.md) - Depeg Duration Resolver (DDR): two-stage will-it-repeg / expected-duration outlook, verdict tiers, and API contract
 - [dex-liquidity.md](./dex-liquidity.md) - liquidity score algorithm, discovery pipeline, and DEX price cross-validation
+- [mint-authority-scoring.md](./mint-authority-scoring.md) - standalone Mint Authority Score formula, caps, bands, inheritance, and public surfaces
 - [stability-index.md](./stability-index.md) - PSI formula, bands, storage, and API surface
 - [report-cards.md](./report-cards.md) - report-card scoring, portfolio analyzer, and stress test
 - [redemption-backstops.md](./redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
@@ -248,5 +249,6 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) - pricing pipeline methodology version history
 - [report-cards-timeline.md](./report-cards-timeline.md) - report-card scoring version history
 - Redemption Backstop history is machine-readable in `shared/lib/methodology-versions/redemption-backstop.ts` and currently deep-links to `/methodology/#safety-scores-methodology` because redemption backstops feed Safety Score liquidity rather than a standalone public changelog route.
+- Mint Authority Score history is machine-readable in `shared/lib/methodology-versions/mint-authority.ts` and currently deep-links to `/methodology/#mint-authority-score` rather than a standalone public changelog route.
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
 - [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history

@@ -23,7 +23,7 @@ import { EDITORIAL_BODY_STYLE } from "@/lib/digest";
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
   description:
-    "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
+    "Full methodology behind Pharos safety grades, mint authority scores, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
@@ -58,6 +58,10 @@ export default function MethodologyPage() {
               answer: "The liquidity score evaluates how easily a stablecoin can be exited through DEX markets. It combines TVL depth (30%), 24-hour volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). TVL depth uses effective TVL relative to market cap, volume uses a log-scale volume/TVL ratio, pool quality measures mechanism and balance-health retention, durability blends TVL stability, volume consistency, maturity, and organic fees, and pair diversity counts distinct retained pools.",
             },
             {
+              question: "What is the Mint Authority Score?",
+              answer: "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family (30%), weakest mint-capable controller (40%), quantitative bounds (15%), and reviewed authority posture (15%), then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. Missing or unresolved review data is NR, and the score does not feed Safety Score or report-card grades.",
+            },
+            {
               question: "How does Pharos confirm depegs and maintain DEWS history?",
               answer: "Pending depegs require same-direction corroboration before promotion. Pharos treats opposite-side secondary evidence as contradiction, not support, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
             },
@@ -81,12 +85,12 @@ export default function MethodologyPage() {
             additionalType: "https://schema.org/TechArticle",
             headline: "Methodology: How Pharos Grades Stablecoins",
             description:
-              "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests.",
+              "Full methodology behind Pharos safety grades, mint authority scores, peg scores, liquidity scores, and contagion stress tests.",
             author: { "@id": `${SITE_URL}#person-tokenbrice` },
             publisher: { "@id": `${SITE_URL}#organization` },
             image: `${SITE_URL}/og-editorial-methodology.png`,
             mainEntityOfPage: `${SITE_URL}/methodology/`,
-            keywords: ["stablecoin methodology", "safety score", "PegScore", "DEWS", "PSI", "liquidity score"],
+            keywords: ["stablecoin methodology", "safety score", "mint authority score", "PegScore", "DEWS", "PSI", "liquidity score"],
           }),
         }}
       />
@@ -105,8 +109,8 @@ export default function MethodologyPage() {
             <div className="space-y-2">
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.4rem]">Methodology</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                How Pharos grades stablecoins: transparent scoring across safety, peg stability, liquidity, yield, and
-                contagion risk. Treat this page like a reference manual, not a marketing explainer. All scoring
+                How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint authority,
+                liquidity, yield, and contagion risk. Treat this page like a reference manual, not a marketing explainer. All scoring
                 methodologies operate over the active subset of tracked stablecoins; pre-launch and frozen coins are
                 excluded from new computations and live aggregates.
               </p>

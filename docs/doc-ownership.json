@@ -248,9 +248,15 @@
     },
     {
       "name": "methodology",
-      "sources": ["shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
-      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/depeg-resolver.md", "docs/depeg-resolver-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health.md", "docs/chain-health-timeline.md"],
+      "sources": ["shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/mint-authority-scoring.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
+      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/depeg-resolver.md", "docs/depeg-resolver-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/mint-authority-scoring.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health.md", "docs/chain-health-timeline.md"],
       "notes": ["Also update the relevant timeline doc for versioned methodology changes."]
+    },
+    {
+      "name": "mint-authority-score",
+      "sources": ["shared/lib/mint-authority-scoring.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
+      "docs": ["docs/mint-authority-scoring.md", "docs/stablecoin-data.md", "docs/stablecoin-detail-page.md", "docs/homepage.md", "docs/coverage-page.md", "docs/report-cards.md", "docs/methodology-page.md", "docs/classification.md"],
+      "notes": ["Standalone Mint Authority Score; it does not feed Safety Score or report-card dimensions."]
     },
     {
       "name": "pages-functions-hosting",

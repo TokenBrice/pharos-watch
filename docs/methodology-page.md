@@ -18,7 +18,7 @@
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
-- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
+- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`. Mint Authority Score currently uses a machine-readable changelog and the `/methodology/#mint-authority-score` anchor rather than a separate changelog route.
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` further splitting into `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
@@ -32,6 +32,7 @@
 | Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
 | Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score-data.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
+| Mint Authority Score  | `shared/lib/mint-authority-scoring.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/mint-authority-version.ts`, `shared/data/stablecoins/coins/*.json`                                                                          |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/liquidity-score-version.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
@@ -73,6 +74,13 @@ If the Chain Health methodology changes, also update:
 3. `docs/api-reference.md` (`GET /api/chains`)
 4. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
 
+If the Mint Authority Score methodology changes, also update:
+
+1. `docs/mint-authority-scoring.md`
+2. `docs/stablecoin-data.md`
+3. `docs/stablecoin-detail-page.md`
+4. `docs/homepage.md`, `docs/coverage-page.md`, and screener-facing docs when cross-coin display/filter/export semantics change
+
 If the pricing pipeline's source roster or live-price selection semantics change, also update:
 
 1. `docs/pricing-pipeline.md`
@@ -91,7 +99,7 @@ For the safety-score changelog specifically, update both:
 
 `src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
 
-Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, PSI) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
+Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, PSI, Mint Authority Score) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
 
 ### Blacklist tracker {#blacklist-tracker}
 
@@ -136,6 +144,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
 - **Safety score base weights / peg multiplier:** `shared/lib/report-cards.ts`
+- **Mint Authority Score weights / caps / inheritance:** `shared/lib/mint-authority-scoring.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`
 - **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
@@ -144,6 +153,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 
 ## Changelog
 
+- **v3.13** (2026-06-11): Added the Mint Authority Score section, source mapping, update contract, and methodology-context references for the standalone v1.0 score.
 - **v3.12** (2026-05-15): Documented the new `#blacklist-tracker`, `#bluechip`, and `#proof-of-reserves` methodology-context sub-anchors used by the May 2026 detail-page work, plus the surfacing fields (`oneLiner`, `mechanismArchetype`, `attestorTier`, `cadence`) now carried on `StablecoinMeta`.
 - **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.
 - **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.

@@ -11,6 +11,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
   { id: "stability-index-methodology", label: "Stability Index" },
   { id: "safety-scores-methodology", label: "Safety Scores" },
+  { id: "mint-authority-score", label: "Mint Authority Score" },
   { id: "infrastructure-methodology", label: "Infrastructure" },
   { id: "liquidity-methodology", label: "Liquidity Score" },
   { id: "mint-burn-flow-methodology", label: "Mint/Burn Flow" },

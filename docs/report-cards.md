@@ -32,7 +32,9 @@ Any future use of yield source-risk that affects Safety Score, Resilience, Depen
 
 ## Mint Authority Boundary
 
-Mint Authority review is descriptive and not scored in the current methodology. Detail pages may show reviewed mint path, authority posture, confidence, primary controls, and source links when compact review data exists; pages without reviewed data omit the section. The homepage table and `/screener/` may display or filter the same compact review buckets so users can inspect who can create or route durable supply. None of those fields affect Safety Score, raw report-card inputs, selector exclusions, or rankings. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate methodology/version change and timeline entry.
+Mint Authority review now produces a standalone Mint Authority Score (`v1.0`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and incident caps. Detail pages may show the score, band, component breakdown, primary controls, source links, and incident callouts when compact review data exists; pages without reviewed data omit the section or show `NR` where aggregate surfaces require a value. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
+
+This boundary is strict: Mint Authority Score does not affect Safety Score, raw report-card inputs, selector exclusions, portfolio/report-card rankings, or any of the four report-card dimensions. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate Safety Score methodology/version change and timeline entry.
 
 ## Dimensions
 
