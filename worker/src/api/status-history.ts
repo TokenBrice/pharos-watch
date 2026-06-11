@@ -11,6 +11,7 @@ import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { computeReserveCompositionOverview } from "../lib/live-reserves-store";
 import { emptyReserveComposition } from "../lib/status/derived-data";
 import { deriveReserveCompositionStatus } from "../lib/status/evaluation-state";
+import { logWorkerEvent } from "../lib/structured-log";
 
 export function handleStatusHistory(
   db: D1Database,
@@ -42,7 +43,15 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       computeReserveCompositionOverview(db, now)
         .then((overview) => ({ ok: true as const, overview }))
         .catch((error) => {
-          console.warn("[status-history] Reserve composition overview unavailable:", error);
+          logWorkerEvent({
+            scope: "admin",
+            level: "warn",
+            event: "status_history_reserve_composition_unavailable",
+            route: "status-history",
+            source: "reserve_composition",
+            message: "Reserve composition overview unavailable",
+            error,
+          });
           return { ok: false as const };
         }),
     ]);

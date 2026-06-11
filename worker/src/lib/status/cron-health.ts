@@ -1,6 +1,7 @@
 import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import type { CronInFlight, CronRun, CronStatus } from "@shared/types/status";
 import { buildInClause } from "../db";
+import { logWorkerEvent } from "../structured-log";
 
 export interface CronHealthSnapshot {
   crons: Record<string, CronStatus>;
@@ -125,7 +126,15 @@ export async function loadCronHealth(
     cronRows = { results };
   } catch (err) {
     cronHistoryQueryFailed = true;
-    console.error("[status] Failed to query cron history:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "cron_history_query_failed",
+      route: "status",
+      source: "cron_runs",
+      message: "Failed to query cron history",
+      error: err,
+    });
   }
 
   let cronProgressByJob = new Map<string, CronInFlight>();
@@ -155,7 +164,15 @@ export async function loadCronHealth(
     );
   } catch (err) {
     cronLeaseQueryFailed = true;
-    console.warn("[status] cron_leases unavailable:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_leases_unavailable",
+      route: "status",
+      source: "cron_leases",
+      message: "Cron leases unavailable",
+      error: err,
+    });
   }
 
   try {
@@ -206,7 +223,15 @@ export async function loadCronHealth(
     );
   } catch (err) {
     cronProgressQueryFailed = true;
-    console.warn("[status] cron_run_progress unavailable:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_run_progress_unavailable",
+      route: "status",
+      source: "cron_run_progress",
+      message: "Cron run progress unavailable",
+      error: err,
+    });
   }
 
   const cronByJob = new Map<string, CronRun[]>();

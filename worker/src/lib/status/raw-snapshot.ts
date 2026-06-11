@@ -3,6 +3,7 @@ import {
   STATUS_SYSTEM_FRESHNESS_SEC,
   type StatusLevel,
 } from "../status-reliability-shared";
+import { logWorkerEvent } from "../structured-log";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
@@ -162,7 +163,15 @@ export async function writeStatusRawSnapshot(
       .run();
     return (result.meta.changes ?? 0) > 0;
   } catch (error) {
-    console.warn("[status] Failed to persist raw status snapshot:", error);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "raw_status_snapshot_persist_failed",
+      route: "status",
+      source: STATUS_RAW_SNAPSHOT_CACHE_KEY,
+      message: "Failed to persist raw status snapshot",
+      error,
+    });
     return false;
   }
 }

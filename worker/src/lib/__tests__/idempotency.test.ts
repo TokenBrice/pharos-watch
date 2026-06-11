@@ -344,12 +344,22 @@ describe("runIdempotentAdminAction", () => {
     expect(history.filter((entry) =>
       entry.sql.includes("DELETE FROM admin_idempotency_keys")
       && entry.sql.includes("request_hash = ?")).length).toBeGreaterThanOrEqual(2);
-    expect(warnSpy.mock.calls[0]?.[0]).toBe(
-      "[idempotency] cleanup after execution error failed; attempting terminal failure replay:",
-    );
-    expect(errorSpy.mock.calls[0]?.[0]).toBe(
-      "[idempotency] failed to persist terminal failure replay after execution error:",
-    );
+    expect(JSON.parse(warnSpy.mock.calls[0]?.[0] as string)).toMatchObject({
+      scope: "admin",
+      level: "warn",
+      event: "idempotency_execution_cleanup_failed",
+      route: "backfill-depegs",
+      source: "admin_idempotency_keys",
+      errorMessage: "pending cleanup delete failed",
+    });
+    expect(JSON.parse(errorSpy.mock.calls[0]?.[0] as string)).toMatchObject({
+      scope: "admin",
+      level: "error",
+      event: "idempotency_terminal_failure_replay_persist_failed",
+      route: "backfill-depegs",
+      source: "admin_idempotency_keys",
+      errorMessage: "failure-state update failed",
+    });
     expect(db.getRecord("backfill-depegs", "abc-final-cleanup")).toBeUndefined();
 
     const retry = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);

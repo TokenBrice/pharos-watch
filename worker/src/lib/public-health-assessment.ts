@@ -22,6 +22,7 @@ import {
 } from "./circuit-breaker";
 import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
+import { logWorkerEvent } from "./structured-log";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -115,7 +116,14 @@ async function checkDbHealth(
     await db.prepare("SELECT 1").first();
     return { dbHealthy: true, warning: null };
   } catch (err) {
-    console.error(`[${logPrefix}] DB health sentinel failed:`, err);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "db_health_sentinel_failed",
+      route: logPrefix,
+      message: "DB health sentinel failed",
+      error: err,
+    });
     return {
       dbHealthy: false,
       warning: "db-unhealthy",
@@ -182,7 +190,15 @@ async function loadMintBurnHealth(
       mintBurnBootstrap: latestRun?.status == null && latestSuccessfulSyncAt == null,
     };
   } catch (err) {
-    console.error("[health] Mint/burn health query failed:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "mint_burn_health_query_failed",
+      route: "health",
+      job: MINT_BURN_CRON_JOB,
+      message: "Mint/burn health query failed",
+      error: err,
+    });
     return {
       mintBurn: { ...EMPTY_MINT_BURN_HEALTH },
       mintBurnImpactStatus: "degraded",
@@ -251,14 +267,30 @@ export async function assessPublicHealth(
     })
       .then((metrics) => ({ metrics, error: null as string | null }))
       .catch((err) => {
-        console.error(`[${logPrefix}] Failed to query blacklist counts:`, err);
+        logWorkerEvent({
+          scope: "status",
+          level: "error",
+          event: "blacklist_counts_query_failed",
+          route: logPrefix,
+          source: "blacklist-gaps",
+          message: "Failed to query blacklist counts",
+          error: err,
+        });
         return { metrics: null, error: publicHealthErrorMessage("blacklist") };
       }),
     loadMintBurnHealth(db, now),
     getCircuitStates(db)
       .then((circuits) => ({ circuits: completeCircuitStates(circuits), error: null as string | null }))
       .catch((err) => {
-        console.error(`[${logPrefix}] Failed to query circuit states:`, err);
+        logWorkerEvent({
+          scope: "status",
+          level: "error",
+          event: "circuit_states_query_failed",
+          route: logPrefix,
+          source: "circuit-breaker",
+          message: "Failed to query circuit states",
+          error: err,
+        });
         return { circuits: {}, error: publicHealthErrorMessage("circuit") };
       }),
   ]);

@@ -1,5 +1,6 @@
 import { addFreshnessHeaders } from "./api-freshness";
 import { CACHE_PROFILES } from "./constants";
+import { logWorkerEvent } from "./structured-log";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
 
@@ -18,7 +19,14 @@ export function withErrorHandler<T extends unknown[]>(endpoint: string, handler:
     try {
       return await handler(...args);
     } catch (err) {
-      console.error(`[api] Error in ${endpoint}:`, err);
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "api_handler_error",
+        route: endpoint,
+        message: "API handler error",
+        error: err,
+      });
       return errorResponse(500, "Internal Server Error");
     }
   };

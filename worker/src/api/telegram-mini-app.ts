@@ -15,6 +15,7 @@ import { acquireTelegramCommandCooldown } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
+import { logWorkerEvent } from "../lib/structured-log";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
@@ -62,7 +63,15 @@ function miniAppErrorHandler<T extends unknown[]>(endpoint: string, handler: Min
     try {
       return await handler(...args);
     } catch (err) {
-      console.error(`[api] Error in ${endpoint}:`, err);
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "telegram_mini_app_handler_error",
+        route: endpoint,
+        source: "telegram-mini-app",
+        message: "Telegram Mini App handler error",
+        error: err,
+      });
       return miniAppError(500, "internal", "Internal Server Error");
     }
   };

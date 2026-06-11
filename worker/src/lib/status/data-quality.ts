@@ -13,6 +13,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
+import { logWorkerEvent } from "../structured-log";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
 
@@ -77,7 +78,18 @@ export async function getDataQuality(
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   const sourceFailures: StatusResponse["dataQuality"]["sourceFailures"] = [];
   if (stablecoinsCacheResult.kind !== "ok") {
-    console.warn(`[status] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason})`);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "stablecoins_cache_unavailable",
+      route: "status",
+      source: "stablecoins-cache",
+      message: "Stablecoins cache unavailable",
+      metadata: {
+        kind: stablecoinsCacheResult.kind,
+        reason: stablecoinsCacheResult.reason,
+      },
+    });
     recordDataQualityFailure(sourceFailures, "stablecoins-cache", stablecoinsCacheResult.reason);
   }
   const stablecoinAssets = hasUsableStablecoinsPayload(stablecoinsCacheResult)
@@ -125,7 +137,15 @@ export async function getDataQuality(
   } catch (e) {
     blacklistGapStatus = "failed";
     recordDataQualityFailure(sourceFailures, "blacklist-gaps", e);
-    console.error("[status] Failed to query blacklist gaps:", e);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "blacklist_gaps_query_failed",
+      route: "status",
+      source: "blacklist-gaps",
+      message: "Failed to query blacklist gaps",
+      error: e,
+    });
   }
 
   let activeDepegs = 0;
@@ -138,7 +158,15 @@ export async function getDataQuality(
   } catch (e) {
     activeDepegStatus = "failed";
     recordDataQualityFailure(sourceFailures, "active-depegs", e);
-    console.error("[status] Failed to query active depegs:", e);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "active_depegs_query_failed",
+      route: "status",
+      source: "depeg_events",
+      message: "Failed to query active depegs",
+      error: e,
+    });
   }
 
   let staleOnchainSupply = 0;
@@ -169,7 +197,15 @@ export async function getDataQuality(
   } catch (e) {
     onchainSupplyQueryStatus = "failed";
     recordDataQualityFailure(sourceFailures, "onchain-supply", e);
-    console.error("[status] Failed to query stale on-chain supply:", e);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "onchain_supply_monitor_query_failed",
+      route: "status",
+      source: "onchain_supply",
+      message: "Failed to query on-chain supply monitor state",
+      error: e,
+    });
   }
 
   if (onchainSupplyMonitoring === "active") {
@@ -191,7 +227,15 @@ export async function getDataQuality(
     } catch (e) {
       onchainSupplyQueryStatus = "failed";
       recordDataQualityFailure(sourceFailures, "onchain-supply", e);
-      console.error("[status] Failed to query stale on-chain supply:", e);
+      logWorkerEvent({
+        scope: "status",
+        level: "error",
+        event: "stale_onchain_supply_query_failed",
+        route: "status",
+        source: "onchain_supply",
+        message: "Failed to query stale on-chain supply",
+        error: e,
+      });
     }
 
     try {
@@ -218,7 +262,15 @@ export async function getDataQuality(
     } catch (e) {
       onchainSupplyQueryStatus = "failed";
       recordDataQualityFailure(sourceFailures, "onchain-supply", e);
-      console.error("[status] Failed to check on-chain supply divergences:", e);
+      logWorkerEvent({
+        scope: "status",
+        level: "error",
+        event: "onchain_supply_divergence_query_failed",
+        route: "status",
+        source: "onchain_supply",
+        message: "Failed to check on-chain supply divergences",
+        error: e,
+      });
     }
   }
 

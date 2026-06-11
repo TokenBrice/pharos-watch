@@ -15,6 +15,7 @@ import type {
   ApiKeyRequestDb,
 } from "./types";
 import { parseJsonStringArray } from "./serialization";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export async function parseAdminMutationBody(request: Request): Promise<{ reason: string | null } | Response> {
   const body = await parseOptionalRequestJsonObject(request);
@@ -210,6 +211,19 @@ export async function recordRequestAdminAction(
     )
     .run()
     .catch((error) => {
-      console.error("[api-key-requests] failed to record request admin action:", error);
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "api_key_request_admin_audit_write_failed",
+        route: "api-key-requests-admin",
+        source: "admin_action_audit",
+        message: "Failed to record API key request admin action",
+        error,
+        metadata: {
+          action: input.action,
+          resultStatus: input.resultStatus,
+          claimStatus: input.claimStatus,
+        },
+      });
     });
 }

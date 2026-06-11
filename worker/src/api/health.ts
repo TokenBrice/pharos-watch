@@ -6,6 +6,7 @@ import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { CACHE_PROFILES } from "../lib/constants";
+import { logWorkerEvent } from "../lib/structured-log";
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -29,7 +30,14 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         try {
           dispatchMeta = parseTelegramDispatchCronMetadata(JSON.parse(lastDispatch.metadata));
         } catch (error) {
-          console.warn("[health] telegram dispatch metadata unavailable:", error);
+          logWorkerEvent({
+            scope: "status",
+            level: "warn",
+            event: "telegram_dispatch_metadata_unavailable",
+            route: "health",
+            message: "Telegram dispatch metadata unavailable",
+            error,
+          });
         }
       }
       telegramSummary = {
@@ -48,7 +56,14 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         );
       }
     } catch (error) {
-      console.warn("[health] telegram summary unavailable:", error);
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "telegram_summary_unavailable",
+        route: "health",
+        message: "Telegram summary unavailable",
+        error,
+      });
       // Telegram tables may not be migrated yet, or the summary queries may be
       // temporarily unavailable. Keep the endpoint healthy and return null.
     }

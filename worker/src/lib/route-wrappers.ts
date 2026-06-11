@@ -1,6 +1,7 @@
 import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
 import { errorResponse, jsonResponse, noStoreResponse, withErrorHandler } from "./api-utils";
+import { logWorkerEvent } from "./structured-log";
 import type { JsonResponseOptions } from "./api-response";
 
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
@@ -128,7 +129,14 @@ export async function runTrustedAdminMutation(handler: () => Promise<Response>):
     return await handler();
   } catch (error) {
     const name = error instanceof Error ? error.name : "UnknownError";
-    console.error(`[admin-mutation] uncaught ${name}:`, error);
+    logWorkerEvent({
+      scope: "admin",
+      level: "error",
+      event: "admin_mutation_uncaught",
+      message: "Admin mutation failed",
+      error,
+      metadata: { errorName: name },
+    });
     return jsonResponse({ error: name, message: "Admin mutation failed" }, { status: 503, noStore: true });
   }
 }

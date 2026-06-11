@@ -1,6 +1,7 @@
 import { errorResponse, withResponseHeaders } from "./api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sha256Hex } from "./hash";
+import { logWorkerEvent } from "./structured-log";
 
 interface IdempotencyRecord {
   request_hash: string;
@@ -94,7 +95,15 @@ export async function runIdempotentAdminAction(
         .bind(action, key, PENDING_RESPONSE_STATUS)
         .run()
         .catch((e) => {
-          console.warn("[idempotency] cleanup after key-reuse failed:", e);
+          logWorkerEvent({
+            scope: "admin",
+            level: "warn",
+            event: "idempotency_key_reuse_cleanup_failed",
+            route: action,
+            source: "admin_idempotency_keys",
+            message: "Idempotency cleanup after key reuse failed",
+            error: e,
+          });
         });
     }
     return errorResponse(409, "Idempotency key reuse with different request payload");
@@ -134,10 +143,15 @@ export async function runIdempotentAdminAction(
         .run();
       pendingReservationCleared = (cleanupResult.meta?.changes ?? 0) > 0;
     } catch (cleanupError) {
-      console.warn(
-        "[idempotency] cleanup after execution error failed; attempting terminal failure replay:",
-        cleanupError,
-      );
+      logWorkerEvent({
+        scope: "admin",
+        level: "warn",
+        event: "idempotency_execution_cleanup_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Idempotency cleanup after execution error failed; attempting terminal failure replay",
+        error: cleanupError,
+      });
     }
 
     if (pendingReservationCleared) {
@@ -145,7 +159,15 @@ export async function runIdempotentAdminAction(
     }
 
     const remaining = await loadIdempotencyRecord(db, action, key).catch((loadError) => {
-      console.error("[idempotency] failed to reload reservation after execution error:", loadError);
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "idempotency_reservation_reload_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Failed to reload idempotency reservation after execution error",
+        error: loadError,
+      });
       return null;
     });
 
@@ -167,10 +189,15 @@ export async function runIdempotentAdminAction(
         return withIdempotencyHeaders(buildStoredFailureResponse(failureBody), key, false);
       }
     } catch (failureUpdateError) {
-      console.error(
-        "[idempotency] failed to persist terminal failure replay after execution error:",
-        failureUpdateError,
-      );
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "idempotency_terminal_failure_replay_persist_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Failed to persist terminal failure replay after execution error",
+        error: failureUpdateError,
+      });
     }
 
     try {
@@ -183,12 +210,25 @@ export async function runIdempotentAdminAction(
         throw err;
       }
     } catch (finalCleanupError) {
-      console.error("[idempotency] final cleanup after execution error failed:", finalCleanupError);
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "idempotency_final_cleanup_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Final idempotency cleanup after execution error failed",
+        error: finalCleanupError,
+      });
     }
 
-    console.error(
-      "[idempotency] reservation state after execution error could not be confirmed; propagating original error",
-    );
+    logWorkerEvent({
+      scope: "admin",
+      level: "error",
+      event: "idempotency_reservation_state_unconfirmed",
+      route: action,
+      source: "admin_idempotency_keys",
+      message: "Idempotency reservation state after execution error could not be confirmed; propagating original error",
+    });
     throw err;
   }
   const responseBody = await response.clone().text();
@@ -206,7 +246,15 @@ export async function runIdempotentAdminAction(
     .bind(now - 7 * DAY_SECONDS)
     .run()
     .catch((e) => {
-      console.warn("[idempotency] TTL prune failed:", e);
+      logWorkerEvent({
+        scope: "admin",
+        level: "warn",
+        event: "idempotency_ttl_prune_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Idempotency TTL prune failed",
+        error: e,
+      });
     });
 
   return withIdempotencyHeaders(response, key, false);

@@ -10,6 +10,7 @@ import {
   type FeedbackEnv,
   type PreparedFeedbackSubmission,
 } from "./types";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
 
@@ -52,12 +53,28 @@ export async function prepareFeedbackSubmission(
   }
 
   if (!env.FEEDBACK_IP_SALT) {
-    console.error("[feedback] FEEDBACK_IP_SALT secret not configured");
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "feedback_config_missing",
+      route: "feedback",
+      source: "env",
+      message: "Feedback IP salt secret not configured",
+      metadata: { configKey: "FEEDBACK_IP_SALT" },
+    });
     return errorResponse(503, "Service misconfigured");
   }
 
   if (!env.GITHUB_PAT) {
-    console.error("[feedback] GITHUB_PAT secret not configured");
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "feedback_config_missing",
+      route: "feedback",
+      source: "env",
+      message: "Feedback GitHub token secret not configured",
+      metadata: { configKey: "GITHUB_PAT" },
+    });
     return errorResponse(503, "Feedback service temporarily unavailable");
   }
 
@@ -71,7 +88,15 @@ export async function prepareFeedbackSubmission(
       FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
     );
   } catch (error) {
-    console.error("[feedback] rate-limit dependency unavailable:", safeErrorMessage(error));
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "feedback_rate_limit_dependency_unavailable",
+      route: "feedback",
+      source: "feedback_rate_limit",
+      message: "Feedback rate-limit dependency unavailable",
+      error: safeErrorMessage(error),
+    });
     return errorResponse(
       503,
       "Feedback service temporarily unavailable. Please try again.",

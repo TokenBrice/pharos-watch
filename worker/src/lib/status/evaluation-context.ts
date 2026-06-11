@@ -14,6 +14,7 @@ import {
   type OnchainDataQualityAssessment,
 } from "./onchain-data-quality";
 import { getStatusSectionMessage } from "./section-errors";
+import { logWorkerEvent } from "../structured-log";
 
 export interface SupplementalStatusSections {
   sectionErrors: StatusResponse["sectionErrors"];
@@ -32,7 +33,15 @@ export async function loadSupplementalStatusSections(
   try {
     telegramBot = await getTelegramBotStats(db, now);
   } catch (err) {
-    console.warn("[status] Telegram bot stats unavailable:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "telegram_bot_stats_unavailable",
+      route: "status",
+      source: "telegram",
+      message: "Telegram bot stats unavailable",
+      error: err,
+    });
     sectionErrors.telegramBot = {
       code: "telegram_bot_stats_query_failed",
       message: getStatusSectionMessage("telegramBot"),
@@ -56,7 +65,15 @@ export async function loadSupplementalStatusSections(
     };
   } catch (err) {
     reserveCompositionQueryFailed = true;
-    console.warn("[status] Reserve composition overview unavailable:", err);
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "reserve_composition_overview_unavailable",
+      route: "status",
+      source: "reserve_composition",
+      message: "Reserve composition overview unavailable",
+      error: err,
+    });
     sectionErrors.reserveComposition = {
       code: "reserve_composition_query_failed",
       message: getStatusSectionMessage("reserveComposition"),

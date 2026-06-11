@@ -11,6 +11,7 @@ import {
   ROUTER_STATIC_PATHS,
   getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
+import { logWorkerEvent } from "./lib/structured-log";
 import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
 
 export interface ResolvedRoute {
@@ -72,7 +73,14 @@ async function handleRouteWithErrorBoundary(
   try {
     response = await routeMatch.handle(routeCtx);
   } catch (err) {
-    console.error(`[router] Error in ${getRouteErrorLabel(routeMatch, path)}:`, err);
+    logWorkerEvent({
+      scope: "http",
+      level: "error",
+      event: "route_handler_error",
+      route: getRouteErrorLabel(routeMatch, path),
+      message: "Route handler error",
+      error: err,
+    });
     response = errorResponse(500, "Internal Server Error");
   }
 

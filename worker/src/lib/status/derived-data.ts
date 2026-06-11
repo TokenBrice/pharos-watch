@@ -10,6 +10,7 @@ import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
 import { emptyReserveCompositionOverview } from "../live-reserves-store";
+import { logWorkerEvent } from "../structured-log";
 export { getTelegramBotStats } from "./telegram-bot-stats";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
@@ -95,7 +96,16 @@ async function getLastTableUpdate(
       .first<{ latest: number | null }>();
     return row?.latest ?? null;
   } catch (err) {
-    console.error(`[status] Failed dataset freshness query for ${target.table}:`, err);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "dataset_table_freshness_query_failed",
+      route: "status",
+      source: target.table,
+      message: "Failed dataset freshness query",
+      error: err,
+      metadata: { column: target.column },
+    });
     return null;
   }
 }
@@ -115,7 +125,15 @@ async function getLastSuccessfulCronRun(db: D1Database, jobs: readonly string[])
       .first<{ latest: number | null }>();
     return row?.latest ?? null;
   } catch (err) {
-    console.error(`[status] Failed dataset freshness query for cron jobs ${jobs.join(", ")}:`, err);
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "dataset_cron_freshness_query_failed",
+      route: "status",
+      message: "Failed dataset freshness query for cron jobs",
+      error: err,
+      metadata: { jobs },
+    });
     return null;
   }
 }

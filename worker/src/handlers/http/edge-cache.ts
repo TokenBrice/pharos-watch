@@ -1,4 +1,5 @@
 import { isCacheableGetRequest } from "./cache-eligibility";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 interface EdgeCacheContext {
   cacheKey: Request;
@@ -33,7 +34,14 @@ export function writeEdgeCache(
   }
   execCtx.waitUntil(
     caches.default.put(context.cacheKey, response.clone()).catch((err) => {
-      console.warn("[edge-cache] Failed to write response:", err);
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "edge_cache_write_failed",
+        route: new URL(context.cacheKey.url).pathname,
+        message: "Edge cache write failed",
+        error: err,
+      });
     }),
   );
 }

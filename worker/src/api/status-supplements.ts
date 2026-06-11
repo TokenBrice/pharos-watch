@@ -38,6 +38,7 @@ import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 import { loadYieldHealthSummary } from "../lib/status/yield-health";
+import { logWorkerEvent } from "../lib/structured-log";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
@@ -53,6 +54,23 @@ const SECTION_ERROR_MESSAGES: Record<string, string> = {
 function sectionError(code: string, message?: string): StatusSectionError {
   const safeMessage = message ?? SECTION_ERROR_MESSAGES[code] ?? "Section unavailable.";
   return { code, message: safeMessage };
+}
+
+function logStatusSupplementWarning(
+  event: string,
+  message: string,
+  error: unknown,
+  metadata?: Record<string, unknown>,
+): void {
+  logWorkerEvent({
+    scope: "status",
+    level: "warn",
+    event,
+    route: "status",
+    message,
+    error,
+    ...(metadata ? { metadata } : {}),
+  });
 }
 
 export interface StatusSupplements {
@@ -123,7 +141,15 @@ async function fetchCoinGeckoUsdPrices(
     try {
       payload = await response.json();
     } catch {
-      console.warn("[status-supplements] CoinGecko price response parse failed — skipping batch");
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "coingecko_price_response_parse_failed",
+        route: "status",
+        provider: "coingecko",
+        message: "CoinGecko price response parse failed; skipping batch",
+        metadata: { batchSize: batch.length },
+      });
       continue;
     }
     if (!payload || typeof payload !== "object") continue;
@@ -223,7 +249,11 @@ export async function loadStatusSupplements(
     ).all<DiscoveryCandidateRow>();
     discoveryCandidates = (discRows.results ?? []).map((row) => mapDiscoveryCandidateRow(row, now));
   } catch (err) {
-    console.warn("[status] Discovery candidates query failed:", err);
+    logStatusSupplementWarning(
+      "discovery_candidates_query_failed",
+      "Discovery candidates query failed",
+      err,
+    );
     sectionErrors.discoveryCandidates = sectionError(
       "discovery_candidates_query_failed",
     );
@@ -252,7 +282,11 @@ export async function loadStatusSupplements(
       };
     }
   } catch (err) {
-    console.warn("[status] Liquidity health extraction failed:", err);
+    logStatusSupplementWarning(
+      "liquidity_health_extraction_failed",
+      "Liquidity health extraction failed",
+      err,
+    );
     sectionErrors.liquidityHealth = sectionError(
       "liquidity_health_extraction_failed",
     );
@@ -262,7 +296,11 @@ export async function loadStatusSupplements(
   try {
     yieldHealth = await loadYieldHealthSummary(db, now, crons);
   } catch (err) {
-    console.warn("[status] Yield health summary failed:", err);
+    logStatusSupplementWarning(
+      "yield_health_summary_failed",
+      "Yield health summary failed",
+      err,
+    );
     sectionErrors.yieldHealth = sectionError(
       "yield_health_summary_failed",
       "Yield health summary unavailable.",
@@ -286,7 +324,11 @@ export async function loadStatusSupplements(
           };
         }
       } catch (err) {
-        console.warn("[status] Price source depth distribution unavailable:", err);
+        logStatusSupplementWarning(
+          "price_source_depth_distribution_unavailable",
+          "Price source depth distribution unavailable",
+          err,
+        );
       }
     }
     if (Array.isArray(metadata?.providerDiagnostics)) {
@@ -299,7 +341,11 @@ export async function loadStatusSupplements(
       gtProbe = rawGtProbe;
     }
   } catch (err) {
-    console.warn("[status] Price source health extraction failed:", err);
+    logStatusSupplementWarning(
+      "price_source_health_extraction_failed",
+      "Price source health extraction failed",
+      err,
+    );
     sectionErrors.priceSourceHealth = sectionError(
       "price_source_health_extraction_failed",
     );
@@ -310,7 +356,15 @@ export async function loadStatusSupplements(
     try {
       coingeckoPriceDiff = await loadCoinGeckoPriceDiff(db, now, coingeckoApiKey);
     } catch (err) {
-      console.warn("[status] CoinGecko price diff query failed:", err);
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "coingecko_price_diff_query_failed",
+        route: "status",
+        provider: "coingecko",
+        message: "CoinGecko price diff query failed",
+        error: err,
+      });
       sectionErrors.coingeckoPriceDiff = sectionError(
         "coingecko_price_diff_query_failed",
       );
@@ -331,7 +385,12 @@ export async function loadStatusSupplements(
       );
     }
   } catch (err) {
-    console.warn("[status] D1 usage loader failed:", err);
+    logStatusSupplementWarning(
+      "d1_usage_loader_failed",
+      "D1 usage loader failed",
+      err,
+      { source: "cloudflare-d1-status" },
+    );
     sectionErrors.d1Usage = sectionError(
       "d1_usage_query_failed",
     );
@@ -341,14 +400,23 @@ export async function loadStatusSupplements(
   try {
     cacheBlobSizes = await getCacheBlobSizes(db);
   } catch (err) {
-    console.warn("[status] Cache blob sizes query failed:", err);
+    logStatusSupplementWarning(
+      "cache_blob_sizes_query_failed",
+      "Cache blob sizes query failed",
+      err,
+      { source: "cache" },
+    );
   }
 
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
     mintBurnReconciliation = await getMintBurnReconciliation(db, now);
   } catch (err) {
-    console.warn("[status] Mint/burn reconciliation query failed:", err);
+    logStatusSupplementWarning(
+      "mint_burn_reconciliation_query_failed",
+      "Mint/burn reconciliation query failed",
+      err,
+    );
     sectionErrors.mintBurnReconciliation = sectionError(
       "mint_burn_reconciliation_query_failed",
     );
@@ -367,7 +435,12 @@ export async function loadStatusSupplements(
     driftEntries.sort((a, b) => b.delta - a.delta);
     if (driftEntries.length > 0) reserveDrift = driftEntries;
   } catch (err) {
-    console.warn("[status] Reserve drift computation failed:", err);
+    logStatusSupplementWarning(
+      "reserve_drift_computation_failed",
+      "Reserve drift computation failed",
+      err,
+      { source: "live-reserves" },
+    );
     sectionErrors.reserveDrift = sectionError(
       "reserve_drift_computation_failed",
     );
@@ -391,7 +464,11 @@ export async function loadStatusSupplements(
     }
     if (warnings.length > 0) classificationWarnings = warnings;
   } catch (err) {
-    console.warn("[status] Classification warnings computation failed:", err);
+    logStatusSupplementWarning(
+      "classification_warnings_computation_failed",
+      "Classification warnings computation failed",
+      err,
+    );
     sectionErrors.classificationWarnings = sectionError(
       "classification_warnings_computation_failed",
     );

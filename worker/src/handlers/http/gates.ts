@@ -26,6 +26,7 @@ import {
 } from "../../lib/auth";
 import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
+import { logWorkerEvent } from "../../lib/structured-log";
 import {
   isCacheableGetRequest,
   isProtectedPublicApiCacheableGetRequest,
@@ -58,7 +59,14 @@ export function warnWorkerEnvIssuesOnce(env: Env): void {
   for (const issue of validateWorkerEnvContract(env)) {
     if (LOGGED_ENV_ISSUES.has(issue.code)) continue;
     LOGGED_ENV_ISSUES.add(issue.code);
-    console.error(`[env] ${issue.message}`);
+    logWorkerEvent({
+      scope: "http",
+      level: "error",
+      event: "env_contract_issue",
+      source: "env",
+      message: issue.message,
+      metadata: { code: issue.code },
+    });
   }
 }
 
@@ -160,13 +168,27 @@ export async function evaluateAccessGate(
   let rateLimitResponse: Response | null;
   if (isApiKeyRateLimitDependencyCircuitOpen()) {
     if (canUseIsolateFallbackRateLimit) {
-      console.warn("[public-api-auth] API key rate-limit dependency circuit open; using isolate-local fallback limiter");
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "api_key_rate_limit_circuit_open_fallback",
+        route: "public-api-auth",
+        requestLane: "public-api",
+        message: "API key rate-limit dependency circuit open; using isolate-local fallback limiter",
+      });
       rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
         apiKeyAuth.key.id,
         isolateFallbackRateLimit,
       );
     } else {
-      console.warn("[public-api-auth] API key rate-limit dependency circuit open; failing closed");
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "api_key_rate_limit_circuit_open_fail_closed",
+        route: "public-api-auth",
+        requestLane: "public-api",
+        message: "API key rate-limit dependency circuit open; failing closed",
+      });
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
     }
   } else {
@@ -180,21 +202,34 @@ export async function evaluateAccessGate(
     } catch (err) {
       const circuit = recordApiKeyRateLimitDependencyFailure();
       if (canUseIsolateFallbackRateLimit) {
-        console.warn(
-          "[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:",
-          {
+        logWorkerEvent({
+          scope: "http",
+          level: "warn",
+          event: "api_key_rate_limit_dependency_unavailable_fallback",
+          route: "public-api-auth",
+          requestLane: "public-api",
+          message: "API key rate-limit dependency unavailable; using isolate-local fallback limiter",
+          error: err,
+          metadata: {
             consecutiveFailures: circuit.consecutiveFailures,
             circuitOpened: circuit.opened,
             openUntilMs: circuit.openUntilMs || null,
-            error: err,
           },
-        );
+        });
         rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
           apiKeyAuth.key.id,
           isolateFallbackRateLimit,
         );
       } else {
-        console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
+        logWorkerEvent({
+          scope: "http",
+          level: "warn",
+          event: "api_key_rate_limit_dependency_unavailable_fail_closed",
+          route: "public-api-auth",
+          requestLane: "public-api",
+          message: "API key rate-limit dependency unavailable",
+          error: err,
+        });
         return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
       }
     }
@@ -205,7 +240,15 @@ export async function evaluateAccessGate(
   try {
     await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
   } catch (err) {
-    console.warn("[public-api-auth] Failed to record API key usage:", err);
+    logWorkerEvent({
+      scope: "http",
+      level: "warn",
+      event: "api_key_usage_record_failed",
+      route: url.pathname,
+      requestLane: "public-api",
+      message: "Failed to record API key usage",
+      error: err,
+    });
   }
   return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
 }
