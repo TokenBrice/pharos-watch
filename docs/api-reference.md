@@ -3631,7 +3631,35 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "sampleCount": 22,
     "passCount": 22,
     "failCount": 0,
-    "p95LatencyMs": 301
+    "p95LatencyMs": 301,
+    "internal": {
+      "status": "healthy",
+      "sampleCount": 19,
+      "passCount": 19,
+      "failCount": 0,
+      "p95LatencyMs": 92,
+      "origins": ["https://api.pharos.watch"]
+    },
+    "external": {
+      "status": "healthy",
+      "sampleCount": 3,
+      "passCount": 3,
+      "failCount": 0,
+      "p95LatencyMs": 301,
+      "origins": [
+        "https://api.pharos.watch",
+        "https://site-api.pharos.watch",
+        "https://ops-api.pharos.watch"
+      ]
+    },
+    "internalExternalDiscrepancy": {
+      "hasDivergence": false,
+      "severityDelta": 0,
+      "internalStatus": "healthy",
+      "externalStatus": "healthy",
+      "reason": "in-sync",
+      "details": null
+    }
   },
   "discrepancy": {
     "hasDivergence": false,
@@ -4005,6 +4033,8 @@ The same cron metadata also exposes the live safety-alert source contract:
 When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `publish-report-card-cache` writes a fresh generation-valid source snapshot and the Telegram lane reseeds its own prior-snapshot cache.
 
 `crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run.
+
+`probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` are optional because legacy `status_probe_runs` rows did not persist split-plane details. New rows compare router-dispatched internal self-checks against explicit production-domain HTTP canaries for public API, site API, and ops API routes. Probe-failure and status-divergence alerts include that internal/external comparison.
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 

@@ -229,7 +229,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // Sequential self-URL probes (loopback or external)
+    maxConnections: 1, // Sequential internal/external status probes
     connectionGroup: "status-self-check-chain",
   },
   {

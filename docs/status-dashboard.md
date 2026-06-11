@@ -430,24 +430,29 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 `status-self-check` runs on its own isolated `9,24,39,54 * * * *` lane and:
 
-1. Probes critical public reads and selected admin read endpoints using a hybrid strategy:
-   - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising handler routing and dependency hydration. These internal probes bypass the Worker HTTP access gate, public rate-limit gate, and edge-cache path.
-   - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
-   - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
+1. Probes critical public reads and selected admin read endpoints in two explicit planes:
+   - internal self-check probes use router-dispatched `GET` requests when a Worker `ExecutionContext` is available. They exercise handler routing and dependency hydration for app/router isolation, but bypass the Worker HTTP access gate, public rate-limit gate, custom-domain routing, and edge-cache path. If the cron is invoked without `ExecutionContext`, the same self-check set falls back to real HTTPS probes against `SELF_URL`.
+   - external production probes always use real HTTPS `fetch()` calls through the production custom domains with a 10s timeout per endpoint: `https://api.pharos.watch/api/health`, `https://site-api.pharos.watch/api/health` when `SITE_API_SHARED_SECRET` is configured, and `https://ops-api.pharos.watch/api/status-history?limit=1`.
+   - the ops API canary expects Cloudflare Access/admin gating to block the unauthenticated request (`302` or `403`); a successful open response is treated as `ops-api-access-gate-open-or-unreachable`.
+   - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency. External timings reflect the production edge path.
    - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport. `/api/status` is not probed by this synthetic endpoint loop; it is evaluated separately through `evaluateStatusAndPersist()`.
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
-5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks).
+5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks). Alert bodies include the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions.
 
 The cron metadata now includes:
 
 - `probeMode` / `probeBaseUrl`
+- `probePlanes.internal` / `probePlanes.external`, each with status, counts, p95 latency, and observed origins
+- `internalExternalDiscrepancy`, with `reason` values such as `in-sync`, `external-worse`, and `internal-worse`
 - Bootstrap misses are persisted in `status_probe_runs.details.bootstrapMisses`; they are not returned as a top-level cron metadata field.
 - `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
+
+`GET /api/status` returns the latest persisted aggregate in `probe`. New rows include optional `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` fields read from `status_probe_runs.details_json`; legacy rows omit those optional fields.
 
 `status_discrepancy_state` persists both divergence and probe-failure alert state:
 `consecutive_divergent`, `last_divergent_at`, `last_alert_at`,

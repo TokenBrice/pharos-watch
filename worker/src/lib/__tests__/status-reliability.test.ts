@@ -310,6 +310,34 @@ describe("status-reliability", () => {
       passCount: 6,
       failCount: 2,
       p95LatencyMs: 450,
+      details: {
+        planes: {
+          internal: {
+            status: "healthy",
+            sampleCount: 5,
+            passCount: 5,
+            failCount: 0,
+            p95LatencyMs: 120,
+            origins: ["https://api.pharos.watch"],
+          },
+          external: {
+            status: "degraded",
+            sampleCount: 3,
+            passCount: 1,
+            failCount: 2,
+            p95LatencyMs: 450,
+            origins: ["https://api.pharos.watch", "https://site-api.pharos.watch", "https://ops-api.pharos.watch"],
+          },
+        },
+        internalExternalDiscrepancy: {
+          hasDivergence: true,
+          severityDelta: 1,
+          internalStatus: "healthy",
+          externalStatus: "degraded",
+          reason: "external-worse",
+          details: "internal=healthy, external=degraded, delta=1",
+        },
+      },
     })).resolves.toBe(true);
 
     expect(await getLatestStatusProbe(db)).toEqual({
@@ -319,6 +347,30 @@ describe("status-reliability", () => {
       passCount: 6,
       failCount: 2,
       p95LatencyMs: 450,
+      internal: {
+        status: "healthy",
+        sampleCount: 5,
+        passCount: 5,
+        failCount: 0,
+        p95LatencyMs: 120,
+        origins: ["https://api.pharos.watch"],
+      },
+      external: {
+        status: "degraded",
+        sampleCount: 3,
+        passCount: 1,
+        failCount: 2,
+        p95LatencyMs: 450,
+        origins: ["https://api.pharos.watch", "https://site-api.pharos.watch", "https://ops-api.pharos.watch"],
+      },
+      internalExternalDiscrepancy: {
+        hasDivergence: true,
+        severityDelta: 1,
+        internalStatus: "healthy",
+        externalStatus: "degraded",
+        reason: "external-worse",
+        details: "internal=healthy, external=degraded, delta=1",
+      },
     });
   });
 

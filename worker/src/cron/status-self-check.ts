@@ -1,11 +1,18 @@
 import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import {
+  API_ORIGIN,
+  OPS_API_ORIGIN,
+  SITE_API_ORIGIN,
+  resolveOrigin,
+} from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
+import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import type { StatusProbeComparison, StatusProbePlaneSummary } from "@shared/types/status";
 import { evaluateStatusAndPersist } from "../lib/status-evaluation";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { route } from "../router";
@@ -23,6 +30,10 @@ import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 
 interface ProbeResult {
   path: string;
+  label: string;
+  plane: "internal" | "external";
+  lane: "self-check" | "public-api" | "site-api" | "ops-api";
+  origin: string;
   status: number;
   latencyMs: number;
   ok: boolean;
@@ -36,6 +47,16 @@ interface ProbeLatencySummary {
   medianMs: number;
   p95Ms: number;
   maxMs: number;
+}
+
+interface ExternalProductionProbeTarget {
+  label: string;
+  lane: ProbeResult["lane"];
+  origin: string;
+  path: string;
+  headers?: Record<string, string>;
+  expectedStatuses?: readonly number[];
+  expectedFailureMessage?: string;
 }
 
 const PUBLIC_PROBE_PATHS = getProbePaths("public");
@@ -54,6 +75,7 @@ export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
   STATUS_SELF_CHECK_INTERVAL_SEC * STATUS_DEEP_PROBE_ROTATION_BUCKETS;
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
+const OPS_API_ACCESS_GATE_EXPECTED_STATUSES = [302, 403] as const;
 const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
   "/api/usds-status": "sync-usds-status",
   "/api/bluechip-ratings": "sync-bluechip",
@@ -64,6 +86,8 @@ const PROBE_STATUS_SEVERITY: Record<StatusLevel, number> = {
   degraded: 1,
   stale: 2,
 };
+
+const UNKNOWN_PROBE_SEVERITY = -1;
 
 export async function isBootstrapCacheMiss(
   db: D1Database,
@@ -109,8 +133,73 @@ function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
   };
 }
 
-function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
+function summarizeProbePlane(probes: ProbeResult[]): StatusProbePlaneSummary | null {
+  if (probes.length === 0) return null;
+  const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
+  const passCount = connectivityProbes.filter((probe) => probe.ok).length;
+  const failCount = connectivityProbes.length - passCount;
+  const latencySummary = buildLatencySummary(connectivityProbes);
+  const semanticProbeStatus = probes.reduce<StatusLevel>(
+    (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
+    "healthy",
+  );
+  return {
+    status: maxProbeStatus(
+      classifyProbeStatus(connectivityProbes.length, failCount, latencySummary.p95Ms),
+      semanticProbeStatus,
+    ),
+    sampleCount: probes.length,
+    passCount,
+    failCount,
+    p95LatencyMs: latencySummary.p95Ms,
+    origins: [...new Set(probes.map((probe) => probe.origin))],
+  };
+}
+
+function probeSummarySeverity(summary: StatusProbePlaneSummary | null): number {
+  if (!summary || summary.status === "unknown") return UNKNOWN_PROBE_SEVERITY;
+  return PROBE_STATUS_SEVERITY[summary.status];
+}
+
+function buildInternalExternalDiscrepancy(
+  internal: StatusProbePlaneSummary | null,
+  external: StatusProbePlaneSummary | null,
+): StatusProbeComparison {
+  const internalStatus = internal?.status ?? "unknown";
+  const externalStatus = external?.status ?? "unknown";
+  const internalSeverity = probeSummarySeverity(internal);
+  const externalSeverity = probeSummarySeverity(external);
+  const severityDelta = externalSeverity - internalSeverity;
+  const reason: StatusProbeComparison["reason"] = !internal
+    ? "internal-missing"
+    : !external
+      ? "external-missing"
+      : severityDelta > 0
+        ? "external-worse"
+        : severityDelta < 0
+          ? "internal-worse"
+          : "in-sync";
+  const hasDivergence = internal != null && external != null && severityDelta !== 0;
+
+  return {
+    hasDivergence,
+    severityDelta,
+    internalStatus,
+    externalStatus,
+    reason,
+    details: hasDivergence ? `internal=${internalStatus}, external=${externalStatus}, delta=${severityDelta}` : null,
+  };
+}
+
+function getSlowestProbes(
+  probes: ProbeResult[],
+  limit = 3,
+): Array<{
   path: string;
+  label: string;
+  plane: ProbeResult["plane"];
+  lane: ProbeResult["lane"];
+  origin: string;
   status: number;
   latencyMs: number;
   error: string | null;
@@ -120,6 +209,10 @@ function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
     .slice(0, limit)
     .map((probe) => ({
       path: probe.path,
+      label: probe.label,
+      plane: probe.plane,
+      lane: probe.lane,
+      origin: probe.origin,
       status: probe.status,
       latencyMs: probe.latencyMs,
       error: probe.error ?? null,
@@ -185,10 +278,6 @@ function resolveProbeBaseUrl(selfUrl?: string): URL {
   }
 }
 
-function shouldUseInternalProbe(probeBaseUrl: URL, ctx?: ExecutionContext): boolean {
-  return !!ctx && probeBaseUrl.origin === DEFAULT_SELF_URL;
-}
-
 async function evaluateProbeResponse(
   path: string,
   response: Response,
@@ -230,6 +319,10 @@ async function evaluateProbeResponse(
 
 function buildProbeResult(config: {
   path: string;
+  label?: string;
+  plane: ProbeResult["plane"];
+  lane: ProbeResult["lane"];
+  origin: string;
   startedAt: number;
   status: number;
   ok: boolean;
@@ -239,6 +332,10 @@ function buildProbeResult(config: {
 }): ProbeResult {
   return {
     path: config.path,
+    label: config.label ?? config.path,
+    plane: config.plane,
+    lane: config.lane,
+    origin: config.origin,
     status: config.status,
     latencyMs: Math.max(0, Date.now() - config.startedAt),
     ok: config.ok,
@@ -251,6 +348,14 @@ function buildProbeResult(config: {
 async function probePathExternally(
   path: string,
   probeBaseUrl: URL,
+  config: {
+    label?: string;
+    plane: ProbeResult["plane"];
+    lane: ProbeResult["lane"];
+    expectedStatuses?: readonly number[];
+    expectedFailureMessage?: string;
+    headers?: HeadersInit;
+  },
   signal?: AbortSignal,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
@@ -264,12 +369,33 @@ async function probePathExternally(
     const url = new URL(path, probeBaseUrl);
     const res = await fetch(url.toString(), {
       method: "GET",
+      headers: config.headers,
+      redirect: "manual",
       signal: timeout.signal,
     });
     const status = res.status;
+    if (config.expectedStatuses) {
+      const ok = config.expectedStatuses.includes(status);
+      await cancelResponseBodyQuietly(res);
+      return buildProbeResult({
+        path,
+        label: config.label,
+        plane: config.plane,
+        lane: config.lane,
+        origin: probeBaseUrl.origin,
+        startedAt,
+        status,
+        ok,
+        error: ok ? undefined : (config.expectedFailureMessage ?? `unexpected-status-${status}`),
+      });
+    }
     const semantic = await evaluateProbeResponse(path, res);
     return buildProbeResult({
       path,
+      label: config.label,
+      plane: config.plane,
+      lane: config.lane,
+      origin: probeBaseUrl.origin,
       startedAt,
       status,
       ok: semantic.ok,
@@ -279,6 +405,10 @@ async function probePathExternally(
   } catch (error) {
     return buildProbeResult({
       path,
+      label: config.label,
+      plane: config.plane,
+      lane: config.lane,
+      origin: probeBaseUrl.origin,
       startedAt,
       status: 0,
       ok: false,
@@ -319,6 +449,9 @@ async function probePathInternally(
     if (!response) {
       return buildProbeResult({
         path,
+        plane: "internal",
+        lane: "self-check",
+        origin: probeBaseUrl.origin,
         startedAt,
         status: 404,
         ok: false,
@@ -331,6 +464,9 @@ async function probePathInternally(
       await cancelResponseBodyQuietly(response);
       return buildProbeResult({
         path,
+        plane: "internal",
+        lane: "self-check",
+        origin: probeBaseUrl.origin,
         startedAt,
         status,
         ok: true,
@@ -341,6 +477,9 @@ async function probePathInternally(
     const semantic = await evaluateProbeResponse(path, response);
     return buildProbeResult({
       path,
+      plane: "internal",
+      lane: "self-check",
+      origin: probeBaseUrl.origin,
       startedAt,
       status,
       ok: semantic.ok,
@@ -350,12 +489,76 @@ async function probePathInternally(
   } catch (error) {
     return buildProbeResult({
       path,
+      plane: "internal",
+      lane: "self-check",
+      origin: probeBaseUrl.origin,
       startedAt,
       status: 0,
       ok: false,
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+function buildExternalProductionProbeTargets(siteApiSharedSecret?: string | null): ExternalProductionProbeTarget[] {
+  const targets: ExternalProductionProbeTarget[] = [
+    {
+      label: "public-api-health",
+      lane: "public-api",
+      origin: API_ORIGIN,
+      path: HEALTH_PROBE_PATH,
+    },
+  ];
+
+  const siteSecret = siteApiSharedSecret?.trim();
+  if (siteSecret) {
+    targets.push({
+      label: "site-api-health",
+      lane: "site-api",
+      origin: SITE_API_ORIGIN,
+      path: HEALTH_PROBE_PATH,
+      headers: {
+        [SITE_DATA_PROXY_SECRET_HEADER]: siteSecret,
+      },
+    });
+  }
+
+  targets.push({
+    label: "ops-api-access-gate",
+    lane: "ops-api",
+    origin: OPS_API_ORIGIN,
+    path: "/api/status-history?limit=1",
+    expectedStatuses: OPS_API_ACCESS_GATE_EXPECTED_STATUSES,
+    expectedFailureMessage: "ops-api-access-gate-open-or-unreachable",
+  });
+
+  return targets;
+}
+
+async function runExternalProductionProbes(
+  siteApiSharedSecret: string | null | undefined,
+  signal?: AbortSignal,
+): Promise<ProbeResult[]> {
+  const probes: ProbeResult[] = [];
+  for (const target of buildExternalProductionProbeTargets(siteApiSharedSecret)) {
+    if (signal?.aborted) break;
+    probes.push(
+      await probePathExternally(
+        target.path,
+        new URL(target.origin),
+        {
+          label: target.label,
+          plane: "external",
+          lane: target.lane,
+          headers: target.headers,
+          expectedStatuses: target.expectedStatuses,
+          expectedFailureMessage: target.expectedFailureMessage,
+        },
+        signal,
+      ),
+    );
+  }
+  return probes;
 }
 
 export async function runStatusSelfCheck(
@@ -365,20 +568,34 @@ export async function runStatusSelfCheck(
   ctx?: ExecutionContext,
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
   alertWebhookUrl?: string | null,
+  siteApiSharedSecret?: string | null,
 ): Promise<CronResult> {
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
-  const probeMode = shouldUseInternalProbe(probeBaseUrl, ctx) ? "internal-router" : "external-http";
+  const probeMode = ctx ? "internal-router" : "external-http";
   const now = Math.floor(Date.now() / 1000);
   const probeSelection = selectStatusProbePathsForRun(now);
-  const probes: ProbeResult[] = [];
+  const internalProbes: ProbeResult[] = [];
   for (const path of probeSelection.paths) {
     if (signal?.aborted) break;
-    probes.push(
-      (ctx && ADMIN_PROBE_PATHS.includes(path)) || (probeMode === "internal-router" && ctx && path !== HEALTH_PROBE_PATH)
-        ? await probePathInternally(db, path, probeBaseUrl, ctx!, mintBurnFreshnessConfig)
-        : await probePathExternally(path, probeBaseUrl, signal)
+    internalProbes.push(
+      ctx
+        ? await probePathInternally(db, path, probeBaseUrl, ctx, mintBurnFreshnessConfig)
+        : await probePathExternally(
+            path,
+            probeBaseUrl,
+            {
+              plane: "internal",
+              lane: "self-check",
+            },
+            signal,
+          ),
     );
   }
+  const externalProbes = await runExternalProductionProbes(siteApiSharedSecret, signal);
+  const probes: ProbeResult[] = [...internalProbes, ...externalProbes];
+  const internalSummary = summarizeProbePlane(internalProbes);
+  const externalSummary = summarizeProbePlane(externalProbes);
+  const internalExternalDiscrepancy = buildInternalExternalDiscrepancy(internalSummary, externalSummary);
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
@@ -386,12 +603,12 @@ export async function runStatusSelfCheck(
   const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
   const passCount = connectivityProbes.filter((probe) => probe.ok).length;
   const failCount = connectivityProbes.length - passCount;
-  const hasProbeFailure = failCount > 0;
+  const hasProbeFailure = failCount > 0 || internalExternalDiscrepancy.hasDivergence;
   const latencySummary = buildLatencySummary(connectivityProbes);
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
   const semanticProbeStatus = probes.reduce<StatusLevel>(
-    (worst, probe) => probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst,
+    (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
     "healthy",
   );
   const probeStatus = maxProbeStatus(
@@ -411,6 +628,10 @@ export async function runStatusSelfCheck(
         .slice(0, 10)
         .map((probe) => ({
           path: probe.path,
+          label: probe.label,
+          plane: probe.plane,
+          lane: probe.lane,
+          origin: probe.origin,
           status: probe.status,
           latencyMs: probe.latencyMs,
           error: probe.error ?? null,
@@ -422,6 +643,11 @@ export async function runStatusSelfCheck(
       })),
       latencySummary,
       slowestProbes,
+      planes: {
+        internal: internalSummary,
+        external: externalSummary,
+      },
+      internalExternalDiscrepancy,
       probeRotation: {
         bucket: probeSelection.rotationBucket,
         bucketCount: probeSelection.rotationBucketCount,
@@ -490,6 +716,9 @@ export async function runStatusSelfCheck(
       discrepancyState.lastProbeAlertAt == null ||
       now - discrepancyState.lastProbeAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
     );
+  const probeComparisonAlertSegment =
+    `internal=${internalExternalDiscrepancy.internalStatus}, external=${internalExternalDiscrepancy.externalStatus}, ` +
+    `comparison=${internalExternalDiscrepancy.reason}, comparisonDelta=${internalExternalDiscrepancy.severityDelta}`;
 
   let discrepancyAlertSent = false;
   if (shouldDiscrepancyAlert) {
@@ -497,7 +726,8 @@ export async function runStatusSelfCheck(
       alertWebhookUrl ?? null,
       "Status divergence detected",
       `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
-      `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}`,
+      `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}, ` +
+      probeComparisonAlertSegment,
     );
     if (discrepancyAlertSent) {
       await markDiscrepancyAlertSent(db, now);
@@ -509,7 +739,8 @@ export async function runStatusSelfCheck(
     probeFailureAlertSent = await sendAlert(
       alertWebhookUrl ?? null,
       "Status probe failures detected",
-      `probe=${probeStatus}, failures=${failCount}/${sampleCount}, streak=${discrepancyState.consecutiveProbeFailures}`,
+      `probe=${probeStatus}, failures=${failCount}/${sampleCount}, ` +
+      `streak=${discrepancyState.consecutiveProbeFailures}, ${probeComparisonAlertSegment}`,
     );
     if (probeFailureAlertSent) {
       await markProbeFailureAlertSent(db, now);
@@ -534,6 +765,11 @@ export async function runStatusSelfCheck(
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
+      probePlanes: {
+        internal: internalSummary,
+        external: externalSummary,
+      },
+      internalExternalDiscrepancy,
       slowestProbes,
       probeRotation: {
         bucket: probeSelection.rotationBucket,

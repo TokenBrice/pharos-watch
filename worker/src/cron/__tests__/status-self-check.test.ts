@@ -10,15 +10,18 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
   } else if (input instanceof URL) {
     rawUrl = input.toString();
   } else if (
-    input
-    && typeof input === "object"
-    && "url" in input
-    && typeof (input as { url: unknown }).url === "string"
+    input &&
+    typeof input === "object" &&
+    "url" in input &&
+    typeof (input as { url: unknown }).url === "string"
   ) {
     rawUrl = (input as { url: string }).url;
   }
 
   const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+  if (url.hostname === "ops-api.pharos.watch") {
+    return new Response("Forbidden", { status: 403 });
+  }
   if (url.pathname === "/api/health") {
     return new Response(JSON.stringify({ status: healthStatus }), {
       status: 200,
@@ -47,17 +50,15 @@ const evaluateStatusAndPersistMock = vi.fn(async () => ({
   effectiveStatus: "stale",
   persistenceSucceeded: true,
 }));
-const buildDiscrepancyMock = vi.fn(
-  (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-    hasDivergence: true,
-    severityDelta: 1,
-    statusSeverity: 2,
-    probeSeverity: 1,
-    details: "forced-divergence",
-    probeAgeSeconds: 0,
-    consecutiveDivergent: streak,
-  }),
-);
+const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+  hasDivergence: true,
+  severityDelta: 1,
+  statusSeverity: 2,
+  probeSeverity: 1,
+  details: "forced-divergence",
+  probeAgeSeconds: 0,
+  consecutiveDivergent: streak,
+}));
 
 vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../lib/status-evaluation", () => ({
@@ -105,17 +106,15 @@ describe("runStatusSelfCheck", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input));
     routeMock.mockImplementation(async ({ url }: { url: URL }) => buildProbeResponse(url));
-    buildDiscrepancyMock.mockImplementation(
-      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-        hasDivergence: true,
-        severityDelta: 1,
-        statusSeverity: 2,
-        probeSeverity: 1,
-        details: "forced-divergence",
-        probeAgeSeconds: 0,
-        consecutiveDivergent: streak,
-      }),
-    );
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: true,
+      severityDelta: 1,
+      statusSeverity: 2,
+      probeSeverity: 1,
+      details: "forced-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
     evaluateStatusAndPersistMock.mockResolvedValue({
       raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
       effectiveStatus: "stale",
@@ -181,6 +180,11 @@ describe("runStatusSelfCheck", () => {
       latencySummary?: { p95Ms?: number; medianMs?: number; maxMs?: number; minMs?: number };
       slowestProbes?: Array<{ path?: string; latencyMs?: number; status?: number }>;
       probeRotation?: { fullSweepWindowSec?: number; selectedDeepProbeCount?: number };
+      probePlanes?: {
+        internal?: { sampleCount?: number };
+        external?: { sampleCount?: number };
+      };
+      internalExternalDiscrepancy?: { reason?: string };
     };
 
     expect(metadata.latencySummary?.p95Ms).toBe(metadata.p95LatencyMs);
@@ -188,9 +192,12 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.latencySummary?.maxMs).toBeTypeOf("number");
     expect(metadata.latencySummary?.minMs).toBeTypeOf("number");
     expect(Array.isArray(metadata.slowestProbes)).toBe(true);
-    expect(metadata.slowestProbes).toHaveLength(2);
+    expect(metadata.slowestProbes).toHaveLength(3);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.path === "string")).toBe(true);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.latencyMs === "number")).toBe(true);
+    expect(metadata.probePlanes?.internal?.sampleCount).toBeGreaterThan(0);
+    expect(metadata.probePlanes?.external?.sampleCount).toBeGreaterThan(0);
+    expect(metadata.internalExternalDiscrepancy?.reason).toBe("in-sync");
     expect(metadata.probeRotation?.fullSweepWindowSec).toBe(900);
     expect(metadata.probeRotation?.selectedDeepProbeCount).toBe(1);
   });
@@ -214,13 +221,7 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("keeps health every run and rotates deeper probe buckets", () => {
-    const selectedAtStart = selectStatusProbePathsForRun(0, [
-      "/api/health",
-      "/api/a",
-      "/api/b",
-      "/api/c",
-      "/api/d",
-    ]);
+    const selectedAtStart = selectStatusProbePathsForRun(0, ["/api/health", "/api/a", "/api/b", "/api/c", "/api/d"]);
     const selectedNextBucket = selectStatusProbePathsForRun(900, [
       "/api/health",
       "/api/a",
@@ -240,26 +241,22 @@ describe("runStatusSelfCheck", () => {
     expect(selectedNextBucket.paths[0]).toBe("/api/health");
     expect(selectedThirdBucket.paths[0]).toBe("/api/health");
     expect(selectedAtStart.fullSweepWindowSec).toBe(STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC);
-    expect([
-      ...selectedAtStart.paths,
-      ...selectedNextBucket.paths,
-      ...selectedThirdBucket.paths,
-    ]).toEqual(expect.arrayContaining(["/api/a", "/api/b", "/api/c", "/api/d"]));
+    expect([...selectedAtStart.paths, ...selectedNextBucket.paths, ...selectedThirdBucket.paths]).toEqual(
+      expect.arrayContaining(["/api/a", "/api/b", "/api/c", "/api/d"]),
+    );
   });
 
   it("downgrades the probe aggregate when /api/health reports degraded in a 200 response", async () => {
     fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input, "degraded"));
-    buildDiscrepancyMock.mockImplementation(
-      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-        hasDivergence: false,
-        severityDelta: 0,
-        statusSeverity: 1,
-        probeSeverity: 1,
-        details: "no-divergence",
-        probeAgeSeconds: 0,
-        consecutiveDivergent: streak,
-      }),
-    );
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 1,
+      probeSeverity: 1,
+      details: "no-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
     evaluateStatusAndPersistMock.mockResolvedValueOnce({
       raw: { rawOverallStatus: "degraded", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
       effectiveStatus: "degraded",
@@ -275,9 +272,9 @@ describe("runStatusSelfCheck", () => {
 
     const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
-      writeStatusProbeRunMock.mock.calls.length - 1
-    ] as unknown[] | undefined;
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
+      | unknown[]
+      | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as {
       status?: string;
       failCount?: number;
@@ -310,17 +307,15 @@ describe("runStatusSelfCheck", () => {
       effectiveStatus: "healthy",
       persistenceSucceeded: true,
     });
-    buildDiscrepancyMock.mockImplementationOnce(
-      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-        hasDivergence: false,
-        severityDelta: 0,
-        statusSeverity: 0,
-        probeSeverity: 0,
-        details: "no-divergence",
-        probeAgeSeconds: 0,
-        consecutiveDivergent: streak,
-      }),
-    );
+    buildDiscrepancyMock.mockImplementationOnce((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 0,
+      probeSeverity: 0,
+      details: "no-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
       lastAlertAt: null,
@@ -348,17 +343,15 @@ describe("runStatusSelfCheck", () => {
     fetchMock
       .mockResolvedValueOnce(new Response("{}", { status: 503 }))
       .mockResolvedValueOnce(new Response("{}", { status: 200 }));
-    buildDiscrepancyMock.mockImplementation(
-      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-        hasDivergence: false,
-        severityDelta: 0,
-        statusSeverity: 1,
-        probeSeverity: 1,
-        details: "no-divergence",
-        probeAgeSeconds: 0,
-        consecutiveDivergent: streak,
-      }),
-    );
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 1,
+      probeSeverity: 1,
+      details: "no-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
       lastAlertAt: null,
@@ -391,12 +384,7 @@ describe("runStatusSelfCheck", () => {
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
 
-    const result = await runStatusSelfCheck(
-      {} as D1Database,
-      "https://api.pharos.watch",
-      undefined,
-      ctx,
-    );
+    const result = await runStatusSelfCheck({} as D1Database, "https://api.pharos.watch", undefined, ctx);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(routeMock).toHaveBeenCalled();
@@ -405,10 +393,131 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probeBaseUrl).toBe("https://api.pharos.watch");
   });
 
+  it("probes production public, site-api, and ops-api lanes externally", async () => {
+    const ctx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "https://api.pharos.watch",
+      undefined,
+      ctx,
+      undefined,
+      null,
+      "site-secret",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      probePlanes?: { external?: { origins?: string[]; sampleCount?: number } };
+    };
+    const fetchUrls = fetchMock.mock.calls.map((call) => String(call[0]));
+    const siteCall = fetchMock.mock.calls.find((call) => String(call[0]).startsWith("https://site-api.pharos.watch/"));
+    const siteInit = siteCall?.[1] as RequestInit | undefined;
+
+    expect(fetchUrls).toEqual(
+      expect.arrayContaining([
+        "https://api.pharos.watch/api/health",
+        "https://site-api.pharos.watch/api/health",
+        "https://ops-api.pharos.watch/api/status-history?limit=1",
+      ]),
+    );
+    expect(new Headers(siteInit?.headers).get("X-Pharos-Site-Proxy-Secret")).toBe("site-secret");
+    expect(metadata.probePlanes?.external?.sampleCount).toBe(3);
+    expect(metadata.probePlanes?.external?.origins).toEqual(
+      expect.arrayContaining([
+        "https://api.pharos.watch",
+        "https://site-api.pharos.watch",
+        "https://ops-api.pharos.watch",
+      ]),
+    );
+  });
+
+  it("surfaces internal-vs-external discrepancies in details and alerts", async () => {
+    const ctx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+    fetchMock.mockImplementation(async (input: unknown) => {
+      let rawUrl = "https://api.pharos.watch";
+      if (typeof input === "string") {
+        rawUrl = input;
+      } else if (input instanceof URL) {
+        rawUrl = input.toString();
+      } else if (
+        input &&
+        typeof input === "object" &&
+        "url" in input &&
+        typeof (input as { url: unknown }).url === "string"
+      ) {
+        rawUrl = (input as { url: string }).url;
+      }
+      const url = new URL(rawUrl);
+      if (
+        (url.hostname === "api.pharos.watch" || url.hostname === "site-api.pharos.watch") &&
+        url.pathname === "/api/health"
+      ) {
+        return new Response("{}", { status: 503 });
+      }
+      return buildProbeResponse(input);
+    });
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 1,
+      probeSeverity: 1,
+      details: "no-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 3,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: true,
+    });
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "https://api.pharos.watch",
+      undefined,
+      ctx,
+      undefined,
+      null,
+      "site-secret",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      internalExternalDiscrepancy?: { reason?: string; hasDivergence?: boolean };
+      probeFailureAlertAttempted?: boolean;
+    };
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
+      | unknown[]
+      | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as {
+      details?: {
+        internalExternalDiscrepancy?: { reason?: string; hasDivergence?: boolean };
+      };
+    };
+
+    expect(metadata.internalExternalDiscrepancy).toMatchObject({
+      hasDivergence: true,
+      reason: "external-worse",
+    });
+    expect(latestProbeWrite.details?.internalExternalDiscrepancy).toMatchObject({
+      hasDivergence: true,
+      reason: "external-worse",
+    });
+    expect(metadata.probeFailureAlertAttempted).toBe(true);
+    expect(sendAlertMock).toHaveBeenCalledWith(
+      null,
+      "Status probe failures detected",
+      expect.stringContaining("comparison=external-worse"),
+    );
+  });
+
   it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {
-    const freshDb = mockD1([
-      { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } },
-    ]);
+    const freshDb = mockD1([{ match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } }]);
     const establishedDb = mockD1([
       { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 2 } },
     ]);
@@ -439,17 +548,15 @@ describe("health probe semantic classification", () => {
       lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
-    buildDiscrepancyMock.mockImplementation(
-      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
-        hasDivergence: false,
-        severityDelta: 0,
-        statusSeverity: 0,
-        probeSeverity: 0,
-        details: "no-divergence",
-        probeAgeSeconds: 0,
-        consecutiveDivergent: streak,
-      }),
-    );
+    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 0,
+      probeSeverity: 0,
+      details: "no-divergence",
+      probeAgeSeconds: 0,
+      consecutiveDivergent: streak,
+    }));
   });
 
   function buildHealthResponseWithBody(body: unknown): Response {
@@ -467,14 +574,17 @@ describe("health probe semantic classification", () => {
       } else if (input instanceof URL) {
         rawUrl = input.toString();
       } else if (
-        input
-        && typeof input === "object"
-        && "url" in input
-        && typeof (input as { url: unknown }).url === "string"
+        input &&
+        typeof input === "object" &&
+        "url" in input &&
+        typeof (input as { url: unknown }).url === "string"
       ) {
         rawUrl = (input as { url: string }).url;
       }
       const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+      if (url.hostname === "ops-api.pharos.watch") {
+        return new Response("Forbidden", { status: 403 });
+      }
       if (url.pathname === "/api/health") {
         return buildHealthResponseWithBody(body);
       }
@@ -487,9 +597,9 @@ describe("health probe semantic classification", () => {
 
     await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
 
-    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
-      writeStatusProbeRunMock.mock.calls.length - 1
-    ] as unknown[] | undefined;
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
+      | unknown[]
+      | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
     expect(latestProbeWrite.status).toBe("stale");
   });
@@ -499,9 +609,9 @@ describe("health probe semantic classification", () => {
 
     await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
 
-    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
-      writeStatusProbeRunMock.mock.calls.length - 1
-    ] as unknown[] | undefined;
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
+      | unknown[]
+      | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
     expect(latestProbeWrite.status).toBe("stale");
   });
@@ -509,10 +619,7 @@ describe("health probe semantic classification", () => {
   it("forces overall probeStatus to at least stale when health endpoint semantically broken", async () => {
     mockHealthBody("not-json");
 
-    const result = await runStatusSelfCheck(
-      {} as D1Database,
-      "https://staging.api.pharos.watch",
-    );
+    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.probeStatus).not.toBe("healthy");
     expect(metadata.probeStatus).toBe("stale");

@@ -123,6 +123,34 @@ export interface StatusProbeSummary {
   failCount: number;
   bootstrapMissCount?: number;
   p95LatencyMs: number | null;
+  internal?: StatusProbePlaneSummary | null;
+  external?: StatusProbePlaneSummary | null;
+  internalExternalDiscrepancy?: StatusProbeComparison | null;
+}
+
+export interface StatusProbePlaneSummary {
+  status: "healthy" | "degraded" | "stale" | "unknown";
+  sampleCount: number;
+  passCount: number;
+  failCount: number;
+  p95LatencyMs: number | null;
+  origins: string[];
+}
+
+export type StatusProbeComparisonReason =
+  | "in-sync"
+  | "internal-missing"
+  | "external-missing"
+  | "external-worse"
+  | "internal-worse";
+
+export interface StatusProbeComparison {
+  hasDivergence: boolean;
+  severityDelta: number;
+  internalStatus: StatusProbePlaneSummary["status"];
+  externalStatus: StatusProbePlaneSummary["status"];
+  reason: StatusProbeComparisonReason;
+  details: string | null;
 }
 
 export type StatusDiscrepancyReason = "in-sync" | "probe-stale" | "probe-disagrees" | "probe-missing";
@@ -873,6 +901,39 @@ const StatusProbeSummarySchema = z.object({
   failCount: z.number(),
   bootstrapMissCount: z.number().optional(),
   p95LatencyMs: z.number().nullable(),
+  internal: z
+    .object({
+      status: z.enum(["healthy", "degraded", "stale", "unknown"]),
+      sampleCount: z.number(),
+      passCount: z.number(),
+      failCount: z.number(),
+      p95LatencyMs: z.number().nullable(),
+      origins: z.array(z.string()),
+    })
+    .nullable()
+    .optional(),
+  external: z
+    .object({
+      status: z.enum(["healthy", "degraded", "stale", "unknown"]),
+      sampleCount: z.number(),
+      passCount: z.number(),
+      failCount: z.number(),
+      p95LatencyMs: z.number().nullable(),
+      origins: z.array(z.string()),
+    })
+    .nullable()
+    .optional(),
+  internalExternalDiscrepancy: z
+    .object({
+      hasDivergence: z.boolean(),
+      severityDelta: z.number(),
+      internalStatus: z.enum(["healthy", "degraded", "stale", "unknown"]),
+      externalStatus: z.enum(["healthy", "degraded", "stale", "unknown"]),
+      reason: z.enum(["in-sync", "internal-missing", "external-missing", "external-worse", "internal-worse"]),
+      details: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const StatusDiscrepancySchema = z.object({

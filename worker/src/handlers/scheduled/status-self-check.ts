@@ -20,6 +20,7 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               runtime.ctx,
               runtime.mintBurnFreshnessConfig,
               runtime.alertWebhookUrl,
+              runtime.env.SITE_API_SHARED_SECRET,
             ),
         },
         {

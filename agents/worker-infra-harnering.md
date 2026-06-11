@@ -447,9 +447,9 @@ Validation:
 
 ### 19. Split internal and external status probes
 
-- [ ] Keep internal self-check probes for app/router isolation.
-- [ ] Add explicit external HTTP probes through the production custom domain for representative public, site API, and ops API routes.
-- [ ] Surface internal-vs-external discrepancies in `/api/status` and Telegram/operator alerts.
+- [x] Keep internal self-check probes for app/router isolation.
+- [x] Add explicit external HTTP probes through the production custom domain for representative public, site API, and ops API routes.
+- [x] Surface internal-vs-external discrepancies in `/api/status` and Telegram/operator alerts.
 
 Impact: detects custom-domain, Access, routing, cache, and edge regressions that internal routing cannot see.
 
@@ -462,6 +462,7 @@ Evidence:
 Validation:
 
 - Tests cover internal success plus external failure as a degraded operator status.
+- Focused status self-check, status reliability, discrepancy view, cron connection, and doc-source-path checks passed; worker type-check is currently blocked by concurrent digest edits outside this item.
 
 ### 20. Harden Worker deploy rollback coverage
 
