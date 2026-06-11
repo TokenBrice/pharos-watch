@@ -90,18 +90,25 @@
       }
     ],
     "review": {
-      "evidence": "Money On Chain docs describe a permissionless rBTC CDP minting DOC with no holder-balance freeze, but a DAO-governed, proxy-upgradeable contract suite (Governor/Changer), giving an indirect admin surface rather than full immutability.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Rootstock block 8935202: DOC token 0xe700691d owner() = MoC main proxy 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038 (confirmed as a contract). The MoC proxy at 0x6acb83bb uses a custom governor storage slot (0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3) which returned MoC Governor 0x36d1dc7b41a18c2455ad7c3844a3c711712f6f14 (confirmed as a contract). The MoC Governor is the MoC Foundation BitVoting contract (custom off-chain signature governance), not a token-DAO. No EIP-1967 proxy admin on DOC token itself (slot = zero). Governance chain confirmed on-chain: DOC token → MoC main proxy → MoC Foundation BitVoting Governor. The Governor controls proxy upgrades via the MoC Changer pattern, an indirect mint surface.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Money On Chain main concepts docs",
           "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        },
+        {
+          "label": "Rootstock explorer: DOC token",
+          "url": "https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        },
+        {
+          "label": "Rootstock explorer: MoC Governor",
+          "url": "https://rootstock.blockscout.com/address/0x36d1dc7b41a18c2455ad7c3844a3c711712f6f14"
         }
       ],
-      "sourceFreeRationale": "CDP mechanism and DAO/proxy governance confirmed from MoC docs and prior Pharos blacklistability review; on-chain Governor/ProxyAdmin owner and changer authority not independently read this pass.",
       "unresolvedQuestions": [
-        "Resolve the on-chain MoC Governor/ProxyAdmin owner and upgrade-authorization threshold on Rootstock."
+        "MoC Governor 0x36d1dc is a Foundation BitVoting contract (custom off-chain proposal mechanism, not token-DAO); the number of Foundation keyholders/threshold cannot be confirmed on-chain from public RPC alone."
       ]
     }
   },

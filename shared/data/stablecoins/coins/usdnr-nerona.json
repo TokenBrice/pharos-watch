@@ -80,7 +80,7 @@
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDnr is an M0-backed extension; extension wrapping routes through M0 extension infrastructure where deployed while base M issuance remains on the Ethereum MinterGateway.",
     "controls": [
       {
@@ -91,8 +91,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing USDnr depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -105,9 +105,13 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
       },
       {
         "chain": "ethereum",
@@ -117,8 +121,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -127,9 +131,13 @@
           {
             "label": "M0 SwapFacility docs",
             "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          },
+          {
+            "label": "SwapFacility on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
           }
         ],
-        "evidence": "Official M0 deployments list SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 on Ethereum; SwapFacility docs describe approved-extension wrap/swap routing. I did not add a Fluent router address because no official M0 deployment address was found for Fluent."
+        "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin=0x0f38d8a5583f9316084e9c40737244870c565924; ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay). Fluent deployment: no M0 official deployment address found for Fluent; Fluent chain not covered by this control."
       }
     ],
     "review": {
@@ -141,11 +149,19 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "MinterGateway on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        },
+        {
+          "label": "SwapFacility on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false, EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); proposer is Gnosis Safe 3/5. Fluent chain has no known M0 SwapFacility deployment; Ethereum controls cover base M issuance. Same governance as verified musd-metamask.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "rwa",

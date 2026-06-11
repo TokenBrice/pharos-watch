@@ -91,9 +91,9 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdo-openeden",
-    "summary": "cUSDO is OpenEden's non-rebasing savings-passthrough wrapper of USDO; shares are minted when USDO is wrapped and do not create base USDO supply, so its mint authority is inherited from USDO (usdo-openeden).",
+    "summary": "cUSDO is OpenEden's non-rebasing savings-passthrough wrapper of USDO; shares are minted when USDO is wrapped and do not create base USDO supply, so its mint authority is inherited from USDO (usdo-openeden). Wrapper upgrade and admin roles are held by a single issuer EOA.",
     "controls": [
       {
         "chain": "ethereum",
@@ -105,7 +105,34 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "cUSDO shares are minted/burned by the OpenEden ERC-4626-style wrapper against USDO wrap/unwrap; this share accounting cannot create or destroy base USDO supply.",
-        "evidence": "Savings-passthrough wrapper: wrapping USDO mints cUSDO whose redeemable USDO per token grows via NAV appreciation; minting only follows USDO deposits and does not expand the parent USDO supply."
+        "sources": [
+          {
+            "label": "OpenEden cUSDO token docs",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "Ethereum cUSDO contract",
+            "url": "https://etherscan.io/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0"
+          }
+        ],
+        "evidence": "At Ethereum block 25295216: asset() returned 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe (USDO, correct). ERC1967 proxy with implementation=0xB9413a34f68072a362B6a58F46c6AF36C4e5d890 (confirmed via Blockscout); proxy admin slot=0x0 (no transparent proxy admin — self-administered UUPS). UPGRADER_ROLE=0x88aa71... confirmed via upgradeTo() revert data."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "label": "OpenEden cUSDO upgrade admin EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum cUSDO contract",
+            "url": "https://etherscan.io/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0"
+          }
+        ],
+        "evidence": "At Ethereum block 25295216: eth_getCode returned no bytecode (EOA). hasRole(UPGRADER_ROLE, 0x5eaff7af...) = true. hasRole(DEFAULT_ADMIN_ROLE, 0x5eaff7af...) = true (confirmed via RoleGranted log scan at block 21012409). Same EOA holds both DEFAULT_ADMIN and UPGRADER roles on cUSDO."
       },
       {
         "label": "Inherited USDO (OpenEden) MINTER_ROLE mint path",
@@ -118,16 +145,19 @@
       }
     ],
     "review": {
-      "evidence": "cUSDO (variantOf usdo-openeden, variantKind savings-passthrough) is a non-rebasing wrapper whose shares track wrapped USDO; base mint authority is the inherited USDO permissioned-minter path (concentrated-admin) and is mirrored here.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "cUSDO (variantOf usdo-openeden, variantKind savings-passthrough) is a non-rebasing wrapper. At Ethereum block 25295216: asset()=USDO confirmed; proxy admin slot=0x0 (UUPS self-administered); UPGRADER_ROLE and DEFAULT_ADMIN_ROLE both held by EOA 0x5eaff7af80488033bc845709806d5fae5291eb88, confirmed via hasRole reads and RoleGranted log scan (grants at blocks 21012409 and 21012420). Concentrated EOA admin consistent with OpenEden issuer-controlled model.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "OpenEden cUSDO token docs",
           "url": "https://docs.openeden.com/usdo/cusdo-token"
+        },
+        {
+          "label": "Ethereum cUSDO contract",
+          "url": "https://etherscan.io/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0"
         }
-      ],
-      "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usdo-openeden, savings-passthrough, wrapper reserve); posture mirrors the USDO parent mint authority."
+      ]
     }
   },
   "liveReservesConfig": {

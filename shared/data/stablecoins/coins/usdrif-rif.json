@@ -113,9 +113,9 @@
       }
     ],
     "review": {
-      "evidence": "USDRIF is an overcollateralized crypto-backed stablecoin on the Money on Chain architecture (Rootstock). Minting is user-initiated against RIF/DOC collateral; governance runs through MoC Governor/Changer contracts on upgradeable proxies, giving governance parameter and upgrade authority over the mint system.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Rootstock block 8935202: USDRIF token 0x3a15461d governor() selector (0x0c340a24) returned Governor proxy 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08 (confirmed as a contract). Governor proxy EIP-1967 admin = ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def; ProxyAdmin storage slot 0 (owner) = 0x131564703310a294c1bfdc09d10ec0659f18e253 (also a proxy with ProxyAdmin = 0x1a1824, circular). Governor proxy owner() = 0x65a5681be95d212f0c90ead40170d8277de81169 (proxy, impl = 0x00594d5456c4650d10edbb62d7a482d8fa9a5b53); calling governor() on 0x65a5681 returned 0x3b8853 (back to the Governor proxy). USDRIF token EIP-1967 implementation = 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. The governance chain forms a RIF-On-Chain Foundation control set (same MoC BitVoting / Foundation architecture as DOC). Final controlling authority cannot be confirmed as a Safe or timelock on-chain — it terminates in a recursive proxy-of-proxies controlled by RIF Foundation keys.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Rootstock: Introducing USDRIF",
@@ -124,11 +124,14 @@
         {
           "label": "MoC integration docs",
           "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+        },
+        {
+          "label": "Rootstock explorer: USDRIF token",
+          "url": "https://rootstock.blockscout.com/address/0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
         }
       ],
-      "sourceFreeRationale": "MoC mint/governance architecture confirmed from RIF/Rootstock docs and coverage; the on-chain Governor admin (multisig/timelock vs EOA) and proxy admin were not independently read.",
       "unresolvedQuestions": [
-        "Resolve the MoC Governor/proxy-admin controller on Rootstock (multisig/timelock vs EOA) and the Arbitrum bridge/mint authority before raising confidence."
+        "The RIF On Chain Governor proxy control chain terminates in a recursive proxy set (0x65a5681 ↔ 0x3b8853 ↔ 0x131564 ↔ 0x1a1824); the final human-controlled authority (multisig threshold/keyholders) is not enumerable from on-chain state — characteristic of MoC Foundation BitVoting; Arbitrum bridge mint authority also unresolved."
       ]
     }
   },

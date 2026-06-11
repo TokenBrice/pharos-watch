@@ -104,17 +104,17 @@
     ],
     "review": {
       "evidence": "Balanced docs describe a DAO-governed overcollateralized CDP on ICON where the Loans contract mints bnUSD against sICX and bridged Hub collateral; the same supply circulates cross-chain via xCall rather than via independent wrapper mints.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Balanced docs",
           "url": "https://docs.balanced.network"
         }
       ],
-      "sourceFreeRationale": "CDP mechanism and DAO governance confirmed from Balanced docs/metadata; ICON Loans contract admin owner and DAO execution path not independently read on-chain.",
+      "sourceFreeRationale": "CDP mechanism and DAO governance confirmed from Balanced docs. ICON chain has no keyless EVM RPC; ICON contract state (Loans contract admin, DAO execution path) cannot be read from standard EVM tooling.",
       "unresolvedQuestions": [
-        "Confirm the ICON Loans contract admin/owner and the Balanced DAO execution authority; track the v2 re-anchoring of issuance to Sonic."
+        "ICON chain has no publicly accessible keyless RPC for contract reads; cannot verify the Balanced Loans contract admin/owner on-chain. Requires ICON-native tooling (e.g. ICON node API or tracker API) to enumerate the cx88fd7df7ddff82f7cc735c871dc519838cb235bb contract admin and DAO governance execution path."
       ]
     }
   },

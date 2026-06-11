@@ -123,7 +123,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 25295316
         },
         "sources": [
           {
@@ -165,7 +166,8 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain"
+          "source": "onchain",
+          "observedBlock": 25295316
         },
         "sources": [
           {

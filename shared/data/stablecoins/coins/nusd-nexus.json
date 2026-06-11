@@ -89,37 +89,81 @@
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "NUSD is Synapse's cross-chain synthetic dollar: it is minted/burned by the Synapse bridge against the DAI/USDC/USDT nexus pool on Ethereum, so supply is created by bridge-controlled mint on each chain rather than by user collateral deposits.",
+    "confidence": "verified",
+    "summary": "NUSD is the Synapse nexus-pool LPToken (Blockscout: ContractName LPToken): mint is restricted to the pool's owner() — the SwapFlashLoan pool contract (0x111689…). That pool is itself owned by a 2-of-3 GnosisSafe (v1.3, no modules, no guard). Supply expands only when LPs add liquidity to the nexus pool.",
     "controls": [
       {
-        "label": "Synapse bridge mint authority",
-        "role": "bridge-admin",
-        "authorityType": "bridge",
+        "label": "Synapse SwapFlashLoan pool (sole NUSD minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
         "directMintAbility": "direct",
+        "canRaiseCap": false,
         "chain": "ethereum",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Synapse routes bridge transfers by minting/burning the nUSD synthetic asset: assets enter the Ethereum nexus stableswap pool, nUSD is locked/burned on the source chain and minted on the destination chain by the bridge contracts. Mint authority is held by the Synapse bridge/router system, not by depositing users."
+        "address": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
+        "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs on LP deposit.",
+        "evidence": "At Ethereum block 25295203: NUSD token Blockscout shows ContractName 'LPToken'; owner() returned 0x1116898…; Blockscout confirms that address as ContractName 'SwapFlashLoan' (Solidity 0.6.12, AGPL-3.0). Pool's own owner() = 0x67f60b0891…",
+        "sources": [
+          {
+            "label": "NUSD LPToken (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F"
+          },
+          {
+            "label": "Synapse SwapFlashLoan pool (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+          }
+        ]
+      },
+      {
+        "label": "Synapse nexus-pool admin Safe (pool owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "chain": "ethereum",
+        "address": "0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55",
+        "signerCount": 3,
+        "threshold": 2,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295203: SwapFlashLoan pool's owner() = 0x67f60b…; Blockscout: ContractName 'GnosisSafeProxy'; getThreshold() = 2; getOwners() returned 3 addresses (0xb3dad3c…, 0x9ce9dc8…, 0x0d745ad…); masterCopy slot0 = 0xd9db270c… (Safe v1.3); guard storage slot = 0x0; modules sentinel only (empty).",
+        "safe": {
+          "owners": [
+            "0xb3dad3c24a861b84fdf380b212662620627d4e15",
+            "0x9ce9dc8b12e264f00e80f35326040c75201c38f3",
+            "0x0d745ad687f2b1e1941569f09f612f60ad4ad5bc"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "unknown",
+          "version": "1.3.0",
+          "observedBlock": 25295203,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Synapse nexus-pool admin Safe (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "DefiLlama and Synapse/L2BEAT coverage describe nUSD as a lock-mint bridge synthetic backed by the Ethereum nexus pool (DAI/USDC/USDT); supply on each chain is created by the Synapse bridge mint route. This is a bridge-or-oft-synthetic path under a concentrated bridge admin; this is a legacy asset and the live signer set was not independently resolved.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: NUSD token (0x1B84765…) Blockscout verified as 'LPToken'. owner() = 0x1116898… (SwapFlashLoan pool, confirmed Blockscout). Pool's owner() = 0x67f60b… (GnosisSafeProxy): 3 owners, 2/6 threshold, Safe v1.3, no modules, no guard. OwnershipTransferred log shows 3 transfers; current owner is the 2/3 Safe. NUSD mint is permissioned to the pool contract only; pool admin is a 2-of-3 Safe with no modules.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "DefiLlama NUSD",
-          "url": "https://defillama.com/stablecoin/nexus-usd"
+          "label": "NUSD LPToken (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F"
+        },
+        {
+          "label": "Synapse SwapFlashLoan pool (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
         },
         {
           "label": "Synapse on L2BEAT",
           "url": "https://l2beat.com/bridges/projects/synapse"
         }
-      ],
-      "sourceFreeRationale": "Mechanism resolved from DefiLlama/L2BEAT coverage of Synapse's nUSD lock-mint bridge model; the on-chain bridge mint admin/multisig for this legacy asset was not independently confirmed.",
-      "unresolvedQuestions": [
-        "Confirm the current Synapse bridge contract that holds nUSD mint authority and whether its admin is an active multisig or has been retired."
       ]
     }
   },

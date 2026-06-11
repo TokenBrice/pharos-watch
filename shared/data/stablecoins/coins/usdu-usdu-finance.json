@@ -102,22 +102,26 @@
       }
     ],
     "review": {
-      "evidence": "USDU Finance transparency and docs describe a restricted mint model where only DAO-approved adapter contracts (Curve, TermMax, Morpho) mint/burn USDU and users cannot mint directly; the adapter whitelist is set by the DAO/curator. USDU Core was audited by BlockBite (July 2025).",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: USDU token verified as 'Stablecoin' contract on Blockscout with curator/guardian/module model. curator() returned 0x9fe66037… (ERC1967Proxy → DAO implementation contract). guardian() returned zero address (no guardian set). Token owner() reverted (no Ownable). ABI shows mintModule(address,uint256) / burnModule(address,uint256) — only whitelisted modules can mint/burn. The specific set of approved modules was not enumerable from ABI; module(address) takes an address argument and no enumeration function was found. Curator is a DAO contract (upgradeable proxy); its internal governance (token holders, timelock) was not fully resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "USDU token (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+        },
+        {
+          "label": "USDU curator DAO proxy (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x9fe66037c44236c87d9ac8345f489b4413fdff06"
+        },
         {
           "label": "USDU transparency",
           "url": "https://usdu.finance/transparency/"
-        },
-        {
-          "label": "USDU docs",
-          "url": "https://usdu.gitbook.io/docs/"
         }
       ],
-      "sourceFreeRationale": "Adapter-only mint and DAO-curated whitelist taken from USDU's transparency/docs surfaces; the specific DAO/curator and adapter contract addresses and any timelock were not independently read on-chain.",
       "unresolvedQuestions": [
-        "Resolve the on-chain DAO/curator address (EOA, multisig, or governor) and the adapter MINTER_ROLE grants and any timelock."
+        "Enumerate the current approved modules (adapter contracts) that hold mintModule rights — no on-chain enumeration function found; requires event log scan or docs cross-check.",
+        "Resolve internal governance of the DAO curator (0x9fe66037): token-based voting, multisig, or EOA admin."
       ]
     }
   },

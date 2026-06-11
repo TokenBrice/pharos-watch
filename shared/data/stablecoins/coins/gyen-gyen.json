@@ -149,7 +149,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "GYEN uses GMO Trust's role-based fiat-token contract: a minter mints within capacity, while owner/admin roles can change privileged accounts and parameters.",
     "controls": [
       {
@@ -172,7 +172,7 @@
             "url": "https://support.stablecoin.z.com/hc/en-us/articles/360053460793-What-are-the-contract-addresses-for-GYEN-and-ZUSD"
           }
         ],
-        "evidence": "minter() returned this address at Ethereum block 25166592; code read returned no contract bytecode. GMO Trust source describes minter as the role that mints tokens."
+        "evidence": "minter() (selector 0x4ffed66c) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). GMO Trust source describes minter as the role that mints tokens within capacity."
       },
       {
         "chain": "ethereum",
@@ -183,7 +183,7 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "owner() returned this address at Ethereum block 25166592; code read returned no contract bytecode. GMO Trust source says owner performs admin and minterAdmin assignments."
+        "evidence": "owner() (selector 0x8da5cb5b) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). GMO Trust source says owner performs admin and minterAdmin assignments."
       },
       {
         "chain": "ethereum",
@@ -194,7 +194,79 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "admin() returned this address at Ethereum block 25166592; code read returned no contract bytecode."
+        "evidence": "admin() (selector 0xf851a440) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1e412adeac1e3a213d43a968b938ac046f506de3",
+        "label": "GYEN minterAdmin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "minterAdmin() (selector 0xa754d48f) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe73b7624652782238cbb7a590a95ded50df2fc40",
+        "label": "GYEN pauser",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "pauser() (selector 0x9fd0506d) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x72fe98091d3acbb31558c9f1be32071496ee90cf",
+        "label": "GYEN prohibiter",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "prohibiter() (selector 0xdd75049b) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x42757e2da169d5155addca53b6d2fa463e76cf6e",
+        "label": "GYEN wiper",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "wiper() (selector 0xdcb413c8) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb95ab58084a131197da608e4a28511c4c8bd410a",
+        "label": "GYEN capper",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "capper() (selector 0x50a6aaf4) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Capper can raise the minter's capacity limit."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe5e877ad41b61958265dc9bce2b00554c313a973",
+        "label": "GYEN EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GYEN Ethereum contract",
+            "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
+          }
+        ],
+        "evidence": "EIP-1967 admin slot (0xb531...) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Implementation at 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1 confirmed."
       }
     ],
     "review": {
@@ -206,14 +278,17 @@
         {
           "label": "GMO Trust GYEN announcement",
           "url": "https://www.gmo.jp/en/news/article/809/"
+        },
+        {
+          "label": "GYEN Ethereum contract on Etherscan",
+          "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
         }
       ],
-      "evidence": "GMO Trust source documents owner/admin/minter/capper roles and cap-limited minting. Ethereum reads identify current owner, admin, and minter addresses; implementation and proxy-admin coverage remains unresolved.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve current capper, minterAdmin, pauser, prohibiter, and wiper role addresses before full role coverage.",
-        "Review Solana and Stellar issuance controls separately."
+        "Solana SPL mint authority and Stellar issuance controls not verified in this pass."
       ]
     }
   },

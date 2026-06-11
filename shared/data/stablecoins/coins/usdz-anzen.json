@@ -172,33 +172,72 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDz is minted 1:1 against Anzen's permissioned SPCT private-credit collateral token; direct mint/redeem access is gated to KYC/KYB-approved Qualified Market Makers (retail users only trade USDz on AMMs), so issuance is controlled by Anzen and a closed set of authorized minters.",
+    "confidence": "verified",
+    "summary": "USDz is minted when SPCT holders call deposit() or depositBySPCT() on the USDz contract; the contract is permissioned via AccessControl roles. DEFAULT_ADMIN is a 6-owner 2/6 GnosisSafe (Safe v1.3, no modules, no guard). POOL_MANAGER_ROLE is held by a separate GnosisSafeProxy (0x604e831…). Earlier admin addresses (0x3def017, 0x20b15ee) had both DEFAULT_ADMIN and POOL_MANAGER_ROLE revoked.",
     "controls": [
       {
-        "label": "Anzen issuer / Qualified Market Maker mint",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "label": "Anzen DEFAULT_ADMIN Safe (upgrade/role authority)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "chain": "ethereum",
-        "canRaiseCap": "unknown",
-        "evidence": "Anzen docs state USDz is minted 1:1 by depositing the permissioned SPCT token and that direct mint/redeem is restricted to KYC/KYB-approved Qualified Market Makers; ordinary users only buy/sell USDz on AMMs."
+        "address": "0xc88729a8f57cd88fda7f94478985e5df108fd679",
+        "signerCount": 6,
+        "threshold": 2,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295203, owner() on USDz token returned 0xc88729a8…; hasRole(DEFAULT_ADMIN, 0xc88729a8…) = true; getOwners() returned 6 addresses; getThreshold() = 2; masterCopy slot0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe v1.3); guard storage slot = 0x0; getModulesPaginated returned empty array (count 0).",
+        "safe": {
+          "owners": [
+            "0x21ae1055c747cc59051327b5f334ea0899fe90f2",
+            "0x82e09977ced7de0f93548d89c227d2e1bf8f3337",
+            "0x68f5549648ec500056319474f88a71619eea57d0",
+            "0x380c2798660b9289279db77f1b5821fd7542456c",
+            "0xeb3056aa1c395e78cacf19b9747583949c14b574",
+            "0xbbee3d18c8ea290ff6f7e05fc7ce7bb0f81d34a8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "unknown",
+          "version": "1.3.0",
+          "observedBlock": 25295203,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "USDz token (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+          }
+        ]
       },
       {
-        "label": "SPCT permissioned collateral token (Percent-underwritten private credit)",
-        "role": "custodian",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
+        "label": "SPCT deposit mint (user-callable, SPCT-gated)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
         "chain": "ethereum",
-        "canRaiseCap": "unknown",
-        "evidence": "SPCT is a permissioned token representing Percent-underwritten U.S. private credit RWAs; it is the collateral deposited to mint USDz and is issuer/admin-controlled, not user-mintable."
+        "address": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+        "capDescription": "deposit() and depositBySPCT() are callable by any holder of the permissioned SPCT token; mint supply is bounded by SPCT availability (issuer-controlled RWA).",
+        "evidence": "Blockscout ABI shows deposit(uint256) and depositBySPCT(uint256) on the USDz contract with no role guard visible in the ABI — supply expansion is bounded by SPCT access, which is issuer-controlled.",
+        "sources": [
+          {
+            "label": "Anzen USDz overview",
+            "url": "https://docs.anzen.finance/usdz-101/overview"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Anzen documentation describes USDz minting as 1:1 against the permissioned SPCT private-credit collateral token, with direct mint/redeem limited to KYC/KYB-approved Qualified Market Makers and contracts audited by Zellic/PeckShield/Halborn; no permissionless user mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: USDz Ethereum contract (0xa469b7ee) confirmed as 'USDz' on Blockscout with AccessControl roles. owner() = 0xc88729a8… (GnosisSafeProxy); hasRole(DEFAULT_ADMIN, 0xc88729a8…) = true. Safe: 6 owners, 2/6 threshold, Safe v1.3, no modules, no guard. POOL_MANAGER_ROLE (0x6077685…) held by 0x604e831… (GnosisSafeProxy, 344 bytes). Earlier admin addresses (0x3def017 EOA and 0x20b15ee contract) had both roles revoked. Mint path: deposit()/depositBySPCT() functions on token contract, gated by SPCT availability.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "USDz token (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+        },
         {
           "label": "Anzen USDz overview",
           "url": "https://docs.anzen.finance/usdz-101/overview"
@@ -207,10 +246,6 @@
           "label": "How to mint USDz",
           "url": "https://docs.anzen.finance/overview/anzen-protocol/getting-started/how-to-mint-usdz"
         }
-      ],
-      "sourceFreeRationale": "Permissioned SPCT-collateral mint and Qualified-Market-Maker gating taken from Anzen docs; the on-chain minter role holders / admin owner across the five deployments were not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain mint/admin owner of the USDz token and SPCT contract and the set of authorized Qualified Market Maker minters."
       ]
     }
   },

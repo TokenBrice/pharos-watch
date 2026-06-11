@@ -140,8 +140,8 @@
     ],
     "review": {
       "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
     "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
     "sources": [
       {
@@ -154,7 +154,7 @@
       }
     ],
       "unresolvedQuestions": [
-        "Resolve the syzUSD vault admin/upgrade controls across Plasma and Monad deployments."
+        "Plasma deployment 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6: transparent proxy confirmed (admin slot = ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0; ProxyAdmin owner = 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d, Safe masterCopy=0x29fcb43, no modules). HOWEVER vault owner() = EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 (code=0x). Per brief, an EOA owner is verifiable as authorityType:eoa — but this is a wrapper with a separate upgrade admin (the 4/5 Safe). Promote when the EOA role is clarified (operational vs upgrade) or if the project confirms EOA is an MPC/HSM wallet."
       ]
     }
   }

@@ -58,7 +58,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk with a 4/7 bridge validator threshold and 8/15 governance owner threshold.",
     "inheritedFrom": "usds-sky",
     "controls": [
@@ -68,14 +68,14 @@
         "role": "bridge-admin",
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
-        "threshold": 4,
-        "signerCount": 7,
+        "threshold": 8,
+        "signerCount": 15,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "Official Gnosis bridge routes lock or account for upstream USDS/DAI backing native xDAI.",
           "trustedPeerOrRemote": "Official bridge route with current validator threshold resolved as 4-of-7.",
-          "pausersAdminsUpgraders": "Bridge governance owner threshold resolved as 8-of-15; individual owner custody and module details were not decoded in this pass."
+          "pausersAdminsUpgraders": "At Ethereum block 25295194, ForeignBridge (0x4aa42145) proxyOwner() returned 0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6; Safe API confirmed this is an 8/15 Safe (v1.3.0, modules=[], guard=0x0)."
         },
         "sources": [
           {
@@ -85,9 +85,13 @@
           {
             "label": "Sky USDS Chainlog",
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Safe API - Gnosis Bridge Owner Safe",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6/"
           }
         ],
-        "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure. Follow-up bridge reads resolved a 4/7 validator threshold and 8/15 governance owner threshold."
+        "evidence": "At Ethereum block 25295194, ForeignBridge (0x4aa42145) proxyOwner() returned 0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6. Safe API confirmed 8/15 threshold, 15 owners, modules=[], guard=0x0, version 1.3.0."
       }
     ],
     "review": {
@@ -101,12 +105,9 @@
           "url": "https://chainlog.sky.money/api/mainnet/active.json"
         }
       ],
-      "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk. Follow-up bridge review resolved a 4/7 validator threshold and 8/15 governance owner threshold.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Decode current Gnosis bridge owner addresses, custody layer, modules, and upgrade/pause contracts before adding Safe/module details."
-      ]
+      "evidence": "At Ethereum block 25295194: ForeignBridge (0x4aa42145) proxyOwner()=0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6. Safe API confirmed 8/15 threshold, 15 owners, modules=[], guard=0x0, version 1.3.0. Bridge admin threshold corrected from 4/7 (validator threshold) to 8/15 (governance Safe). xDAI inherits upstream USDS mint authority; bridge route risk is captured by the bridge-admin control.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "established-alt-l1",

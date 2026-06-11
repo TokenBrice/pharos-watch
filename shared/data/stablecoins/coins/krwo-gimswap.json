@@ -68,35 +68,54 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "KRWO has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "confidence": "verified",
+    "summary": "KRWO is a non-upgradeable Ownable ERC-20 (not a FiatToken) on both BSC and Klaytn/Kaia. On BSC the owner is EOA 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; on Klaytn the owner is a distinct EOA 0xbe025edc4499c0e50a2c14655ba360a840f47c39. No multisig or timelock; single-EOA custody on each chain warrants unbounded-or-compromised posture.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "label": "KRWO owner (BSC) — EOA",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
-            "label": "BscScan contract source",
-            "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+            "label": "BscScan contract",
+            "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
           }
         ],
-        "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "At BSC block 103,631,986, owner() returned 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; eth_getCode returned 0x (EOA). EIP-1967 proxy slots are zero — non-upgradeable. masterMinter() reverts; contract is a simple Ownable ERC-20, not FiatToken."
+      },
+      {
+        "label": "KRWO owner (Klaytn/Kaia) — EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Kaiascan contract",
+            "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
+          }
+        ],
+        "evidence": "At Klaytn/Kaia block 218,849,661, owner() returned 0xbe025edc4499c0e50a2c14655ba360a840f47c39; eth_getCode returned 0x (EOA). Non-upgradeable. masterMinter() reverts — same simple Ownable pattern as BSC."
       }
     ],
     "review": {
+      "evidence": "At BSC block 103,631,986 and Klaytn block 218,849,661: both KRWO deployments are non-upgradeable Ownable ERC-20s. BSC owner is EOA 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; Klaytn owner is EOA 0xbe025edc4499c0e50a2c14655ba360a840f47c39. masterMinter() reverts on both — prior 'FiatToken' characterization was inaccurate. Single-EOA ownership on both chains with no multisig or timelock; posture remains unbounded-or-compromised.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "BscScan contract source",
-          "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+          "label": "BscScan contract",
+          "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
+        },
+        {
+          "label": "Kaiascan contract",
+          "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
         }
-      ],
-      "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      ]
     }
   },
   "chainTier": "established-alt-l1",

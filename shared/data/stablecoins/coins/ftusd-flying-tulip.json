@@ -91,7 +91,7 @@
             "url": "https://etherscan.io/address/0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
           }
         ],
-        "evidence": "minter() returned this address at Ethereum block 25166592; Flying Tulip docs describe 1:1 mint/redeem against USDC/USDT through on-chain contracts."
+        "evidence": "minter() returned this address at Ethereum block 25166592; Flying Tulip docs describe 1:1 mint/redeem against USDC/USDT through on-chain contracts. At block 25295183: eth_getCode returned 76 bytes (small contract, not an EOA); owner() on the minter contract returned 0x1118e1c057211306a40a4d7006c040dbfe1370cb (the 3/5 Safe that is also masterMinter), confirming the Safe controls the minter contract."
       },
       {
         "chain": "ethereum",
@@ -116,6 +116,7 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25295183,
           "source": "safe-api"
         },
         "sources": [
@@ -124,7 +125,7 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
           }
         ],
-        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard."
+        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard. The minter contract (0x56c5892b...) is also owned by this Safe (confirmed at block 25295183)."
       }
     ],
     "review": {
@@ -134,12 +135,11 @@
           "url": "https://docs.flyingtulip.com/"
         }
       ],
-      "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter plus a 3/5 Safe owner/masterMinter.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code and owner() returns the 3/5 Safe (0x1118e1c0...), confirming the Safe controls the entire Ethereum mint surface (direct minter + masterMinter + token owner). Sonic deployment uses same contract address but separate chain state — not verified in this pass.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Verify the source and security setup of 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
-        "Review the Sonic deployment separately."
+        "Sonic deployment (0xf7d85ec4e7710f71992752eac2111312e73e9c9c on Sonic) not verified in this pass."
       ]
     }
   },

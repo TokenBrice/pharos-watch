@@ -74,21 +74,49 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "AA_FalconXUSDC is a Pareto FalconX Credit Vault strategy-vault share over USDC; vault shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "summary": "AA_FalconXUSDC is an IdleCDOTranche token whose shares are minted exclusively by the IdleCDO contract (0x433d5b175148da32ffe1e1a37a939e1b7e79be4d) against USDC deposits. The CDO is a TransparentUpgradeableProxy; upgrades require 24h OZ Timelock (0xda86e15d0cda3a05db930b248d7a2f775e575a44). CDO owner is Idle Finance Safe 8/3. Tranche tokens cannot be minted independently of CDO deposits. Base USDC supply is inherited from Circle.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
-        "label": "Pareto FalconX Credit Vault share token",
+        "label": "AA_FalconXUSDC IdleCDOTranche token (deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Vault shares are minted/burned by the Pareto credit-vault contract against USDC deposits and redemptions; this share accounting cannot create or destroy base USDC supply.",
-        "evidence": "Strategy-vault receipt token: AA_FalconXUSDC shares represent a claim on the underlying USDC routed to FalconX credit lines; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Tranche shares minted only by the IdleCDO contract (0x433d5b175148da32ffe1e1a37a939e1b7e79be4d) upon USDC deposit; no privileged mint role outside deposit.",
+        "sources": [
+          {
+            "label": "Pareto docs - credit vaults",
+            "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+          },
+          {
+            "label": "Ethereum Blockscout - IdleCDOTranche",
+            "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+          }
+        ],
+        "evidence": "At Ethereum block 25295212, eth_call minter() on 0xc26a6fa2c37b38e549a4a1807543801db684f99c returned 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d (IdleCDO). Blockscout confirms contractName=IdleCDOTranche. Slot0-8 show no independent owner or mint key."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+        "label": "IdleCDO (TransparentProxy) — controls tranche minting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The IdleCDO proxy mints/burns tranche tokens on deposit/redemption. Upgradeable via ProxyAdmin (0x9438904abc7d8944a6e2a89671fef51c629af351) controlled by 24h OZ Timelock (0xda86e15d0cda3a05db930b248d7a2f775e575a44). CDO owner = Idle Finance Safe 8/3 (0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814).",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout - IdleCDO",
+            "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+          }
+        ],
+        "evidence": "At Ethereum block 25295212: eth_getStorageAt EIP-1967 proxy_admin slot returned 0x9438904abc7d8944a6e2a89671fef51c629af351 (ProxyAdmin); impl slot returned 0x8016e6f35a4b32a5ea4c3919418039c7daffccaf. owner() = 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814 (Idle Finance Safe 8/3, v1.3.0). ProxyAdmin owner = OZ Timelock 0xda86e15d with minDelay=86400s (24h, confirmed slot2=0x15180)."
       },
       {
         "label": "Inherited USDC (Circle) issuer mint path",
@@ -96,21 +124,34 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "none",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Pareto docs - credit vaults",
+            "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+          }
+        ],
+        "evidence": "Underlying USDC supply is issuer-minted by Circle; this wrapper holds USDC and inherits that base mint authority."
       }
     ],
     "review": {
-      "evidence": "AA_FalconXUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Pareto credit-vault share token whose supply tracks deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "AA_FalconXUSDC is an IdleCDOTranche (confirmed Blockscout). Shares minted only by IdleCDO (0x433d5b175...) on USDC deposit. CDO is TransparentUpgradeableProxy; ProxyAdmin (0x9438904...) owned by OZ Timelock (0xda86e15d..., 24h minDelay confirmed). CDO owner = Idle Finance Safe 8/3 v1.3.0 (0xfb3bd022...). All reads at Ethereum block 25295212.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Pareto docs - credit vaults",
           "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+        },
+        {
+          "label": "Ethereum Blockscout - IdleCDOTranche",
+          "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+        },
+        {
+          "label": "Ethereum Blockscout - IdleCDO proxy",
+          "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
         }
-      ],
-      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
+      ]
     }
   },
   "notices": [

@@ -237,18 +237,31 @@
         "evidence": "Parallel docs describe the Parallelizer as an authorized fork of Angle's Transmuter using a diamond-proxy pattern; USDp is minted/burned at oracle value against the governed basket with adaptive fees and per-asset exposure caps."
       },
       {
-        "label": "Parallel DAO governor (PRL/sPRL) + guardian multisig",
+        "label": "Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
         "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "evidence": "Parallel docs describe the governor role (onchain governance / multisig) holding upgrade and parameter rights and a guardian multisig that can freeze assets; sPRL stakers vote on accepted collateral, fees, and exposure limits per stablecoin."
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295271: hasRole(ADMIN_ROLE=0, 0x25Fc7ffa8f9da3582a36633d04804F0004706F9b)=true confirmed on ParallelAccessManager. Safe 0x25Fc7ffa getOwners() returned 8 addresses, getThreshold()=5, getModulesPaginated(sentinel,10)=[] (no modules), guard slot=0x0 (no guard). The ADMIN_ROLE holder can grant/revoke minter role 110 which controls who can call mint(address,uint256) on USDp token.",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+          },
+          {
+            "label": "Parallel team Safe (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Parallel Protocol documentation and the parallel-parallelizer GitHub describe USDp as minted/burned through a licensed Angle Transmuter fork (Parallelizer) against a DAO-governed overcollateralized basket, with a governor (onchain/multisig) and guardian multisig; on-chain governor/guardian addresses were not independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295271: USDp token (0x9b3a8f7c, ERC1967Proxy→TokenP impl) authority()=ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a. hasRole(ADMIN_ROLE=0, 0x25Fc7ffa8f9da3582a36633d04804F0004706F9b)=true; Safe 0x25Fc7ffa has 8 owners and threshold 5, no modules, no guard. SafemodulesPaginated confirmed no modules. getTargetFunctionRole(USDp, mint=0x40c10f19)=110 (minter role requires roleId 110). Parallelizer diamond address not separately confirmed on-chain (no Blockscout match for Parallelizer).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Parallelizer module docs",
@@ -257,11 +270,18 @@
         {
           "label": "parallel-parallelizer (GitHub)",
           "url": "https://github.com/parallel-protocol/parallel-parallelizer"
+        },
+        {
+          "label": "ParallelAccessManager (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
         }
       ],
       "unresolvedQuestions": [
-        "Confirm the on-chain governor and guardian addresses (and multisig thresholds) on the Parallelizer diamond across deployments.",
-        "Confirm whether the governor is currently an onchain governance contract or a team multisig."
+        "Confirm the Parallelizer diamond proxy address on Ethereum and verify it holds minter role 110 in ParallelAccessManager; confirm whether the governor is exclusively the team Safe or whether a DAO governor contract also participates."
       ]
     }
   },

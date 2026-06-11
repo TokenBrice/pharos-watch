@@ -49,8 +49,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "DUSD is minted in Alto mint markets against posted collateral subject to per-market debt ceilings, with a capped USDC PSM that can mint/burn DUSD 1:1 before fees. ALTO staking grants governance power and fee sharing, while live admin executors still need direct on-chain role review.",
+    "confidence": "verified",
+    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay, self-administered). The timelock's proposer/executor is a 3-of-5 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). All deployer roles were revoked on-chain. Token minting requires onlyOwner (= timelock). Mint markets and PSM are contract-gated with per-market ceilings.",
     "controls": [
       {
         "label": "Alto isolated mint markets (collateral mint)",
@@ -58,7 +58,7 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
-        "capDescription": "Mint bounded by per-market debt ceilings and collateral risk parameters.",
+        "capDescription": "Mint bounded by per-market debt ceilings and collateral risk parameters; markets must be in allowedMinter mapping.",
         "canRaiseCap": "unknown",
         "sources": [
           {
@@ -66,7 +66,7 @@
             "url": "https://docs.alto.money/alto-protocol/dusd"
           }
         ],
-        "evidence": "Alto docs distinguish borrow markets from mint markets and state that mint markets create new DUSD against posted collateral, capped by market-level debt ceilings."
+        "evidence": "DUSD contract source (AltoOwnable2Step + Pausable + OFT) confirms mint() is gated by allowedMinter[msg.sender] and per-minter ceiling; setMinterStatus/setMinterCeiling require onlyOwner (= timelock). Market-level mint caps enforced on-chain."
       },
       {
         "label": "Alto DUSD/USDC PSM",
@@ -82,44 +82,81 @@
             "url": "https://docs.alto.money/alto-protocol/psm"
           }
         ],
-        "evidence": "Alto PSM docs state that USDC->DUSD swaps mint new DUSD, DUSD->USDC swaps burn DUSD, and the PSM refuses swaps above the configured 5,000,000 USDC capacity."
+        "evidence": "PSM must be in allowedMinter mapping; subject to same ceiling enforcement as other minters."
       },
       {
-        "label": "Alto governance and admin executors",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "label": "AltoTimelockController (DUSD owner)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
         "canRaiseCap": "unknown",
+        "evidence": "At Ethereum block 25295203: DUSD.owner() = 0xfae841679dc1a93d225ecc827e4bbf3e8d703f86 (AltoTimelockController, confirmed via Blockscout source). Timelock getMinDelay() = 3600s (1 hour). Timelock has DEFAULT_ADMIN_ROLE for itself. Deployer (0xba5ed2b...) had all roles revoked (RoleRevoked events confirmed on-chain). Current proposer/executor: Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0).",
         "sources": [
           {
-            "label": "Alto staking and governance docs",
-            "url": "https://docs.alto.money/alto-protocol/staking"
+            "label": "AltoTimelockController on Etherscan",
+            "url": "https://etherscan.io/address/0xfae841679dc1a93d225ecc827e4bbf3e8d703f86"
           }
-        ],
-        "evidence": "Alto docs describe ALTO staking as the governance-power mechanism, but the live Owner/Pauser/Freezer execution path was not independently read on-chain."
+        ]
+      },
+      {
+        "label": "Alto governance Safe (proposer/executor on timelock)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "chain": "ethereum",
+        "address": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": "unknown",
+        "safe": {
+          "owners": [
+            "0x91faf08dfca10d2cc69a134e389b6bf28afd5913",
+            "0x55a13d96752fd2bb94bfdd92d4d7279f127411ec",
+            "0xb56243c4444d718b45688009da8326e6fc532ca0",
+            "0x4bdadba493226a63cf8039885a74b17612196e10",
+            "0xdd4226988ba92d8600b50727769382646d7249b1"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.x",
+          "observedBlock": 25295203,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295203: 0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0 confirmed as GnosisSafe via Blockscout; getOwners() = 5 addresses; getThreshold() = 3; no modules detected. RoleGranted logs confirm this Safe holds PROPOSER_ROLE and EXECUTOR_ROLE on the timelock (granted by timelock itself, not deployer).",
+        "sources": [
+          {
+            "label": "Alto Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Alto docs describe DUSD mint markets that create new DUSD against collateral subject to debt ceilings and a capped PSM that mints/burns DUSD against USDC; docs also describe ALTO staking governance, but not enough live role data to assert direct ALTO-token-holder control of admin execution.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: DUSD token owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1hr min delay, self-admin). DUSD source confirms mint() gated by allowedMinter mapping; setMinterStatus onlyOwner. Timelock proposer/executor = Alto Safe (0xc49bf619..., 5 owners, threshold 3, no modules); RoleGranted/RoleRevoked logs confirm deployer roles fully revoked, Safe granted roles by timelock.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Alto DUSD docs",
           "url": "https://docs.alto.money/alto-protocol/dusd"
         },
         {
-          "label": "Alto PSM docs",
-          "url": "https://docs.alto.money/alto-protocol/psm"
+          "label": "DUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b"
         },
         {
-          "label": "Alto staking and governance docs",
-          "url": "https://docs.alto.money/alto-protocol/staking"
+          "label": "AltoTimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0xfae841679dc1a93d225ecc827e4bbf3e8d703f86"
+        },
+        {
+          "label": "Alto Safe on Etherscan",
+          "url": "https://etherscan.io/address/0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0"
         }
-      ],
-      "sourceFreeRationale": "Market/PSM mechanism and ALTO governance confirmed from Alto docs; on-chain market admin owner and governance execution path not independently read on-chain.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain Alto market admin/owner, PSM owner/cap admin, and Owner/Pauser/Freezer or governance execution authorities on Ethereum."
       ]
     }
   },

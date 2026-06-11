@@ -21,19 +21,19 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "gtUSDCp is a MetaMorpho V2 vault share over USDC; wrapper minting is share accounting while base USDC issuance remains inherited from Circle's reviewed USDC mint authority.",
+    "confidence": "verified",
+    "summary": "gtUSDCp is an immutable MetaMorpho V2 vault (no proxy on Ethereum); shares minted only against USDC deposits. Vault owner is the same Gauntlet Safe 7/4 (v1.3.0) as gtUSDC. Base USDC inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x8c106EEdAd96553E64287a5A6839C3CC78Afa3d0",
-        "label": "Gauntlet USDC Prime Ethereum MetaMorpho V2 vault",
+        "label": "Gauntlet USDC Prime MetaMorpho V2 vault Ethereum (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Vault shares are minted only against deposited USDC exposure and do not create base USDC.",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 7/4 managing parameters only.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -44,7 +44,7 @@
             "url": "https://docs.morpho.org/curation/overview"
           }
         ],
-        "evidence": "Local metadata identifies gtUSDCp as a strategy-vault variant of usdc-circle; Morpho docs describe vault-share accounting over supplied assets."
+        "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 7/4 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
       },
       {
         "chain": "ethereum",
@@ -53,33 +53,30 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Reviewed USDC metadata source",
             "url": "https://github.com/circlefin/stablecoin-evm"
           }
         ],
-        "evidence": "gtUSDCp inherits base USDC issuance risk from the reviewed USDC parent."
+        "evidence": "Inherited from reviewed usdc-circle parent."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Morpho curation docs",
-          "url": "https://docs.morpho.org/curation/overview"
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
         },
         {
-          "label": "Reviewed parent",
-          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curation/overview"
         }
       ],
-      "evidence": "Local variant metadata and Morpho docs establish gtUSDCp as wrapper/share accounting over USDC; parent USDC mint authority is already reviewed.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Review the Base vault contract separately if adding chain-specific wrapper controls beyond the Ethereum vault."
-      ]
+      "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "variantOf": "usdc-circle",

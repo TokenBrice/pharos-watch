@@ -140,19 +140,30 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "avusd-avant",
-    "summary": "savUSD is Avant's staked wrapper of avUSD; shares are minted only by staking avUSD into the savings vault, so it inherits avUSD's issuer-direct mint authority rather than creating new avUSD supply.",
+    "summary": "savUSD (StakedAvUSDV2) is Avant's staked wrapper of avUSD; shares are minted only via deposit() — no privileged mint function. Not upgradeable (proxiableUUID reverts, no EIP-1967 slots). DEFAULT_ADMIN = EOA 0xd4d23209... confirmed on Avalanche and Ethereum deployments.",
     "controls": [
       {
-        "label": "savUSD savings vault (share accounting)",
+        "label": "savUSD savings vault (StakedAvUSDV2, non-upgradeable)",
         "role": "wrapper",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "none",
         "chain": "avalanche",
         "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
-        "canRaiseCap": "unknown",
-        "evidence": "savUSD shares are minted when avUSD is staked into Avant's savings vault (expected asset 0x24de8771bc5ddb3362db529fc3358f2df3a0e346) and burned on exit; share price compounds with strategy yield. The wrapper cannot create base avUSD supply."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Avant Protocol docs",
+            "url": "https://docs.avantprotocol.com/"
+          },
+          {
+            "label": "savUSD Avalanche contract",
+            "url": "https://snowtrace.io/address/0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+          }
+        ],
+        "evidence": "At Avalanche block 87752599: owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb; hasRole(DEFAULT_ADMIN_ROLE, owner) = true; proxiableUUID() reverts; EIP-1967 proxy admin and impl slots = zero (not an upgradeable proxy). StakedAvUSDV2 ABI (Routescan verified): deposit-only minting, no privileged mint(). Ethereum deployment 0xb8d89678... confirms same EOA owner. Deployer eth_getCode = 0x (EOA). No upgrade surface exists on the wrapper."
       },
       {
         "label": "Inherited avUSD issuer mint authority",
@@ -164,13 +175,23 @@
       }
     ],
     "review": {
-      "evidence": "savUSD (variantOf avusd-avant, variantKind strategy-vault) is an ERC-4626 staked wrapper over avUSD across Avalanche, Ethereum, Linea, Plasma, Berachain, and BSC. It inherits avUSD's issuer-direct mint path and concentrated-admin posture; the wrapper only mints/burns shares against avUSD deposits.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Classified as the staked variant of avusd-avant per coin metadata; posture mirrored from the parent avUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
-      "unresolvedQuestions": [
-        "Resolve the savUSD vault admin/upgrade controls across its multi-chain deployments."
-      ]
+      "sources": [
+        {
+          "label": "Avant Protocol docs",
+          "url": "https://docs.avantprotocol.com/"
+        },
+        {
+          "label": "savUSD Avalanche contract",
+          "url": "https://snowtrace.io/address/0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        },
+        {
+          "label": "savUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
+        }
+      ],
+      "evidence": "At Avalanche block 87752599 and Ethereum block 25295219: savUSD (StakedAvUSDV2) is not upgradeable on any deployment. DEFAULT_ADMIN = EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb confirmed on Avalanche and Ethereum. Minting is deposit-only (ERC-4626 share accounting). Wrapper mint surface fully confirmed; parent avUSD mint path tracked separately.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2024-11-15"

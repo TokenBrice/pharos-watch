@@ -113,10 +113,10 @@
         }
       ],
       "evidence": "Local variant metadata ties sUSD1+ to reviewed USD1 authority; the child wrapper creates strategy shares, not base USD1 supply.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Verify BSC wrapper owner/admin before upgrading confidence above manual-review."
+        "BSC UUPS proxy at 0x4f2760b32720f013e900dc92f65480137391199b has impl 0xaafe784a51f119d38e57717fd8a00f844bd86f13 with OZ5 owner slot=0x0 and no accessible owner()/DEFAULT_ADMIN_ROLE. BSCScan/Blockscout return no verified source for the impl (48824 bytes). Cannot confirm who controls _authorizeUpgrade. Need Lorenzo team disclosure or impl source verification to promote."
       ]
     }
   },

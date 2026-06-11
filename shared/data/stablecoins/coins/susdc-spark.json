@@ -112,11 +112,12 @@
           "url": "https://docs.spark.fi"
         }
       ],
-      "evidence": "spUSDC is a savings wrapper over reviewed USDC. Wrapper share minting is collateralized by deposited USDC and does not create base USDC supply.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295159: ETH vault (0x28b3a8fb...) has EIP-1967 impl slot = 0x1b992302652a92611dcd5090d1cb388c6377f455 (UUPS proxy). Proxy admin slot = 0x0 (no external ProxyAdmin; UUPS upgrade controlled by DEFAULT_ADMIN). DEFAULT_ADMIN_ROLE member[0] = 0x3300f198988e4c9c63f75df86de36421f06af8c4 (Blockscout: SubProxy — Sky/MakerDAO governance routing contract). SubProxy responds to no standard owner/Safe/Timelock queries. At Avalanche block 87752284: impl slot = 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 (also UUPS). DEFAULT_ADMIN_ROLE member[0] = 0x7566debc906c17338524a414343fa61bca26a843 (8113 bytes of code, unidentifiable via Safe API, Blockscout Avax, or standard multisig selectors). Upgrade surface exists on both chains but final admin type cannot be confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Verify Spark vault admin/upgrade owner and Avalanche deployment controls before upgrading confidence."
+        "ETH DEFAULT_ADMIN is SubProxy (0x3300f198988e4c9c63f75df86de36421f06af8c4, Sky governance router): confirm the ultimate signer set and timelock delay behind the SubProxy (requires Spark address registry or Sky governance docs).",
+        "Avalanche DEFAULT_ADMIN (0x7566debc906c17338524a414343fa61bca26a843, 8113 bytes): contract type unidentifiable via getOwners()/Safe API/getThreshold() — verify via Avalanche Snowtrace or Spark address registry before promoting."
       ]
     }
   },

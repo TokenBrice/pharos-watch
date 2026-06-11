@@ -73,30 +73,48 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "sYUSD is Aegis's yield-bearing wrapper over YUSD. Wrapper share minting is backed by deposited YUSD and inherits the reviewed YUSD AegisMinting plus 3/5 Safe authority for base supply.",
+    "confidence": "verified",
+    "summary": "sYUSD is Aegis's yield-bearing ERC-4626 wrapper over YUSD. Both Ethereum and BSC deployments are transparent proxies controlled via ProxyAdmin → 3/5 Safe (same Safe address on both chains, v1.4.1, no modules, no guard). Shares minted only by depositing YUSD; base YUSD mint authority is inherited from reviewed yusd-aegis controls.",
     "inheritedFrom": "yusd-aegis",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
-        "label": "Aegis sYUSD wrapper",
+        "label": "Aegis sYUSD Ethereum transparent proxy",
         "role": "wrapper",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Yield-bearing wrapper over deposited YUSD; does not mint base YUSD.",
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xa09a1319ace58b466d71377b958248265420cf6c",
+            "0x9bd53dda93630ba2856cbbd376e3ed04d3d23d21",
+            "0x0b241d2f1a060feae6968f7ced3221d4ab29d865",
+            "0x89caffdd8f3ca008aaeaa69ba85332ca85d18d3e",
+            "0x7eff43566b8c7491a39f81e3bf9e4d9b2d212787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25295176,
+          "source": "onchain"
+        },
+        "capDescription": "Transparent proxy; EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9; ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8 (3/5).",
         "sources": [
+          {
+            "label": "sYUSD Ethereum proxy (Etherscan)",
+            "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+          },
           {
             "label": "Aegis sYUSD docs",
             "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
-          },
-          {
-            "label": "Aegis smart contracts",
-            "url": "https://docs.aegis.im/smart-contracts"
           }
         ],
-        "evidence": "Local metadata marks sYUSD as `variantOf: yusd-aegis` and `variantKind: savings-passthrough`."
+        "evidence": "At Ethereum block 25295176: EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9 (2144 bytes); ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8. Safe getOwners()=5 owners, getThreshold()=3. masterCopy=0x41675c (v1.4.1). getModulesPaginated sentinel only (no modules). Guard keccak slot=0x0. BSC deployment 0x24db057b19241eefb9b522e8627c293ed8f93af2: admin slot = ProxyAdmin 0x87696e700eb66a4c807731f68ad33d9dba2036a8; ProxyAdmin owner() = same Safe 0x4fe78ef... (BSC masterCopy=0x29fcb43, v1.4.1, same 5 owners, threshold=3, no modules)."
       },
       {
         "chain": "ethereum",
@@ -113,26 +131,27 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
           }
         ],
-        "evidence": "Inherited from reviewed `yusd-aegis` mintAuthority."
+        "evidence": "Inherited from reviewed yusd-aegis mintAuthority."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Aegis docs",
-          "url": "https://docs.aegis.im/"
+          "label": "sYUSD Ethereum proxy (Etherscan)",
+          "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
         },
         {
           "label": "Aegis sYUSD docs",
           "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "AegisMinting Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
         }
       ],
-      "evidence": "sYUSD is a yield-bearing wrapper over reviewed YUSD. Wrapper share minting is separate from base YUSD issuance.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify Ethereum and BSC sYUSD wrapper admin/upgrade controls before upgrading confidence."
-      ]
+      "evidence": "Wrapper surface verified at Ethereum block 25295176 and BSC block 103632491: both deployments are transparent proxies controlled by same 3/5 Safe (v1.4.1, no modules, no guard) via per-chain ProxyAdmins. Base YUSD mint authority reviewed under yusd-aegis.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

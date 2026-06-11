@@ -54,36 +54,79 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "USDN has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "USDN uses non-enumerable OZ AccessControl. The SMARDEX USDN vault contract (0x656cb8c…) holds both MINTER_ROLE and REBASER_ROLE. The vault's owner() is a 2-of-3 Gnosis Safe v1.3.0 (0x1e3e1128…) on Ethereum with no modules and no guard.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "label": "SMARDEX USDN vault (MINTER_ROLE + REBASER_ROLE holder)",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
+        "chain": "ethereum",
+        "address": "0x656cb8c6d154aad29d8771384089be5b5141f01a",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Sourcify Usdn.sol",
-            "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+          },
+          {
+            "label": "USDN token on Etherscan",
+            "url": "https://etherscan.io/address/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2"
           }
         ],
-        "evidence": "USDN has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "At Ethereum block 25295183, hasRole(MINTER_ROLE, 0x656cb8c6d154aad29d8771384089be5b5141f01a) returned true; hasRole(REBASER_ROLE, same) returned true. Vault implementation at 0x271df5517a4daacb7cab988aa64d23debda4c498 (177-byte proxy). USDN constructor takes (minter, rebaser) args — both passed as address(0) at deployment (creation bytecode confirmed), then roles are set separately via the vault. Usdn.sol mint() and mintShares() require MINTER_ROLE."
+      },
+      {
+        "label": "SMARDEX governance Safe (2-of-3) — vault owner",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "chain": "ethereum",
+        "address": "0x1e3e1128f6bc2264a19d7a065982696d356879c5",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x02162ea0848fc4b88645797d133f3df0f0230b74",
+            "0x0112f99eaa68444592c442f21852f5f921214692",
+            "0x356bbf41c0c38280d49c3b495fbfe8939240be1c"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25295207,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "USDN vault on Etherscan",
+            "url": "https://etherscan.io/address/0x656cb8c6d154aad29d8771384089be5b5141f01a"
+          }
+        ],
+        "evidence": "At Ethereum block 25295207, owner() on the USDN vault (0x656cb8c…) returned 0x1e3e1128f6bc2264a19d7a065982696d356879c5. getOwners() returned 3 signers; threshold() = 2. masterCopy slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe v1.3.0). getModulesPaginated returned empty; guard slot 0x4a20…c4c7 = 0x0."
       }
     ],
     "review": {
       "sources": [
         {
           "label": "Sourcify Usdn.sol",
-          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+        },
+        {
+          "label": "USDN vault on Etherscan",
+          "url": "https://etherscan.io/address/0x656cb8c6d154aad29d8771384089be5b5141f01a"
         }
       ],
-      "evidence": "USDN has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295183/25295207: hasRole(MINTER_ROLE, vault 0x656cb8c…) = true; hasRole(REBASER_ROLE, vault) = true. Vault owner() = 0x1e3e1128… (2-of-3 Gnosis Safe v1.3.0 on Ethereum). Usdn.sol: non-enumerable OZ AccessControl; constructor sets roles at deployment; no supply cap; MINTER_ROLE required for mint() and mintShares().",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

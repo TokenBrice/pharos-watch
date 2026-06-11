@@ -21,14 +21,14 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "stcUSD is an ERC-4626 wrapper over Cap cUSD; wrapper minting is deposit/share accounting while durable cUSD mint authority is inherited from reviewed Cap vault controls.",
+    "confidence": "verified",
+    "summary": "stcUSD is an ERC-4626 UUPS wrapper over Cap cUSD. Wrapper minting is deposit/share accounting with no privileged mint path; upgrade authority routes through Cap's AccessControl → 24-hour TimelockController (0 proposers/executors = fully renounced). Wrapper is effectively immutable; durable cUSD mint authority is inherited from reviewed Cap vault controls.",
     "inheritedFrom": "cusd-cap",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
-        "label": "stcUSD ERC-4626 wrapper",
+        "label": "stcUSD ERC-4626 UUPS wrapper",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
@@ -36,15 +36,19 @@
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "stcUSD token",
+            "label": "stcUSD token (Etherscan)",
             "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#readContract"
+          },
+          {
+            "label": "StakedCap implementation (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
           },
           {
             "label": "Cap stcUSD mechanics",
             "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
           }
         ],
-        "evidence": "Ethereum RPC `asset()` returned Cap cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC; parent cUSD has reviewed mintAuthority."
+        "evidence": "At Ethereum block 25295205, EIP-1967 impl slot returned 0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 (StakedCap, OZ5 UUPS v5.0.0); no EIP-1967 admin slot (UUPS). Cap.storage.Access slot 0xb413d65c... returned AccessControl proxy 0x7731129a10d51e18cde607c5c115f26503d2c683, whose DEFAULT_ADMIN_ROLE member[0] is TimelockController 0xd8236031d8279d82e615af2bfab5fc0127a329ab. TimelockController minDelay=86400s (24h); PROPOSER_ROLE count=0, EXECUTOR_ROLE count=0, DEFAULT_ADMIN_ROLE count=0 — fully renounced. Upgrade path irreversibly locked. asset() returned cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC."
       }
     ],
     "review": {
@@ -52,11 +56,23 @@
         {
           "label": "Cap stcUSD mechanics",
           "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+        },
+        {
+          "label": "StakedCap implementation (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+        },
+        {
+          "label": "Cap AccessControl (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x7731129a10d51e18cde607c5c115f26503d2c683"
+        },
+        {
+          "label": "Cap TimelockController (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xd8236031d8279d82e615af2bfab5fc0127a329ab"
         }
       ],
-      "evidence": "On-chain asset read confirms stcUSD wraps cUSD; durable mint authority inherits from reviewed parent cUSD.",
-      "reviewer": "Codex mint-authority full-gap batch-4",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Wrapper surface verified at Ethereum block 25295205: UUPS proxy with OZ5 AccessControl gated upgrades; TimelockController admin is fully renounced (0 proposers/executors/admins, 24h delay). Wrapper is immutable. asset() confirmed cUSD 0xcCcc...; parent cUSD mint authority reviewed separately.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "variantOf": "cusd-cap",

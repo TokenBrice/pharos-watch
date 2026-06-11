@@ -106,7 +106,8 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 25295316
         },
         "sources": [
           {
@@ -128,11 +129,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
         }
       ],
-      "evidence": "USG source and docs support a CDP/peg-keeper mint path controlled by owner-managed role mappings.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "evidence": "USG uses a custom ControlTower pattern with point-in-time storage mappings (isMinter, isIRProducer, isPegKeeper) that do not emit enumerable AccessControl events. At Ethereum block 25296185, ControlTower() returned 0xF3f7669dcEED2f985815011C19eD68F667267215 and owner() returned 0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca (Safe). ControlTower storage slot 1 returned minter 0x536d4e9c0944de2ac6657d610aa99fa5e97ce493 (deployed contract). Safe confirmed 3/4 threshold with 4 known signers.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate current isMinter, isIRProducer, and isPegKeeper addresses from events before final production edit."
+        "isIRProducer and isPegKeeper addresses cannot be enumerated from events (custom ControlTower uses non-enumerable storage mappings, no AccessControl events). Direct storage-slot reads at each known address key are required to confirm the full minter set; cannot promote to verified without this."
       ]
     }
   },

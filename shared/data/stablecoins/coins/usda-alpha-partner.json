@@ -100,18 +100,17 @@
       }
     ],
     "review": {
-      "evidence": "BscScan verified-source for the USDA token shows a role-gated mint() (MINT role) plus role-based blacklist and tax administration with no supply cap; project docs do not describe collateral/redemption mechanics, so the on-chain role-gated mint is the established authority path.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "USDA contract exists on BSC (17,339-byte bytecode confirmed at block 103633267; ~87M tokens minted per storage slot 0x2). BscScan-verified contract source shows a role-gated mint() restricted to the MINT role (keccak256('MINT') = 0xfdf81848…). Contract is NOT verified on Sourcify. No RoleGranted/RoleRevoked events found via eth_getLogs (non-enumerable AccessControl). getRoleMemberCount reverts (non-enumerable). Cannot determine which address(es) hold the MINT role or ADMIN_ROLE without knowing candidate addresses.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "USDA contract (BscScan)",
           "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee"
         }
       ],
-      "sourceFreeRationale": "Role-gated mint confirmed from the verified BscScan contract; the specific role-holder address/operator identity was not resolved and the collateral/backing process is undocumented in project materials.",
       "unresolvedQuestions": [
-        "Resolve which address(es) hold the MINT role and the role admin, and whether any off-chain reserve actually backs issued supply."
+        "Resolve which address(es) hold the MINT role (keccak256('MINT') = 0xfdf81848136595c31bb5f76217767372bc4bf906663038eb38381131ea27ecba) and the DEFAULT_ADMIN_ROLE. Non-enumerable AccessControl; no RoleGranted events emitted; requires knowing candidate addresses to call hasRole()."
       ]
     }
   },

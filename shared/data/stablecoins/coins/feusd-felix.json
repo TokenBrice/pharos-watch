@@ -64,8 +64,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates; Felix is a licensed, security-enhanced fork retaining multisig admin controls, per-asset and global mint caps, and an emergency pause.",
+    "confidence": "verified",
+    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin contract (0xf42fdd95, itself a UUPS proxy). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
     "controls": [
       {
         "label": "Felix CDP branch contracts (collateral mint)",
@@ -74,31 +74,54 @@
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
         "capDescription": "Per-asset and global feUSD mint caps plus block-level mint/redemption caps; bounded by per-trove collateral ratio with $1-of-collateral redemption.",
-        "canRaiseCap": "unknown",
-        "evidence": "feUSD is minted by depositing HYPE/LSTs/UBTC to open troves at user-set interest rates, with per-asset and global mint caps enforced by the protocol."
+        "canRaiseCap": true,
+        "evidence": "At HyperEVM block 37553335: feUSD token (0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70) is an EIP-1967 proxy (implementation slot = 0x444322c3c54908fa5a7842a4f3ff085ec67f2598, proxy admin slot = 0x44a600c031dbdf652500f4a6d84b168056f13692). ProxyAdmin confirmed by getProxyImplementation returning the implementation address."
       },
       {
-        "label": "Felix admin multisig (parameters, caps, pause)",
+        "label": "Felix admin multisig (ultimate upgrade and parameter authority)",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
-        "evidence": "Felix is a security-enhanced Liquity-v2 fork with multisig-held admin rights, adjustable parameters, mint caps, and an emergency pause; ownership is not renounced (progressive-decentralization roadmap), so immutable classification is not asserted."
+        "chain": "hyperevm",
+        "address": "0x699090e73c4077ef2af42773b31788c6564f079c",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "safe": {
+          "owners": [
+            "0x389e3d1c46595af7335f8c6d3e403ce2e8a9cf8a",
+            "0x9ed2cdcaae0d3dec193be247b1a529191551be1a",
+            "0x2f999ebfba09fbaf39cac62be4e7dabe33cc9ac3",
+            "0xf37898233e4f5bfca4c666f2d3e3314b7c29b760",
+            "0xa79c3a4cc52ff9d3eb40ddc5e921bdde2a11f760",
+            "0xbe08be07cddbb2dd51df4cbf07a0451fcb4fa9e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "version": "1.3.0",
+          "observedBlock": 37553335,
+          "source": "onchain"
+        },
+        "evidence": "Admin chain traced at HyperEVM block 37553335: feUSD ProxyAdmin (0x44a600c0) owner() = 0xf42fdd95 (UUPS proxy → impl 0xd2fe30); 0xf42f owns the Felix AddressesRegistry (0x9de1e57049) per owner() call. The ProxyAdmin of 0xf42f (0xdf1293b4) owner() = 0x699090e73c4077ef2af42773b31788c6564f079c. That Safe: getOwners() = 6 addresses, slot3=6 (ownerCount), slot4=3 (threshold), masterCopy at slot0=0xfb1bffc9d739b8d520daf37df666da4c687191ea (VERSION=1.3.0), getModules()=empty, guard slot=0x0."
       }
     ],
     "review": {
-      "evidence": "Felix is a licensed Liquity-v2 fork on Hyperliquid; coverage and the coin's blacklistability review confirm it retains multisig admin controls, mint caps, and emergency pause rather than full immutability, so the admin surface is bounded but present.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Felix docs",
           "url": "https://usefelix.gitbook.io/docs"
+        },
+        {
+          "label": "feUSD token on HyperEVM",
+          "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
         }
-      ],
-      "sourceFreeRationale": "Liquity-v2-fork mechanism and admin/pause/caps confirmed from Felix materials; exact admin multisig signers, threshold, and Safe internals not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve the Felix admin multisig signers/threshold and the on-chain pause/cap authority on HyperEVM."]
+      ]
     }
   },
   "chainTier": "unproven",

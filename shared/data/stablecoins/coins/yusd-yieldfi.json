@@ -147,11 +147,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
         }
       ],
-      "evidence": "YieldFi yUSD should be modeled as wrapper/strategy-vault share minting over reviewed USDC, with separate manager/admin control risk.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295175: vault proxy admin (0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, OZ ProxyAdmin) is owned by YieldFiTimelockController (0x8e31efda4453494a84fa6168d53eb1418c0b4ac4) with 1-day minDelay (86400 seconds). The timelock has 0 holders for all roles (PROPOSER, EXECUTOR, DEFAULT_ADMIN) — upgrade path is frozen; vault implementation cannot be changed. Administrator proxy (0x10472...) and Manager proxy (0x03ACc...) ProxyAdmins are also owned by the same timelock. Runtime minting (mintYToken/burnYToken) flows through the Manager contract (TransparentUpgradeableProxy, impl: Manager), which is operated as an issuer-backend by YieldFi — not confirmable from chain state.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve YieldFi admin/proxy-admin signer setup before adding threshold details."
+        "YieldFiTimelockController (0x8e31...) has 0 proposers/executors/admin — confirm this is intentional (permanently frozen upgrade path) and not a deployment misconfiguration. Runtime minting via Manager contract (issuer-backend) cannot be confirmed on-chain."
       ]
     }
   },

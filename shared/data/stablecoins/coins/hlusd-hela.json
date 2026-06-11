@@ -73,14 +73,14 @@
       }
     ],
     "review": {
-      "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved. HeLa chain uses a non-standard EVM-compatible runtime not accessible via standard publicnode/ankr RPC endpoints.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         { "label": "HLUSD governance", "url": "https://docs.helalabs.com/hlusd/stablecoin-governance" }
       ],
       "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
-      "unresolvedQuestions": ["Resolve the HLUSD mint authority/admin on HeLa's native chain once that chain is modeled before raising confidence."]
+      "unresolvedQuestions": ["HLUSD's native HeLa chain has no accessible public RPC via standard providers (publicnode/ankr); mint role holder addresses (MintProposer, MintVoter, Admin) cannot be verified until the chain is modeled or a public RPC endpoint is documented."]
     }
   },
   "chainTier": "unproven",

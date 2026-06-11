@@ -89,26 +89,50 @@
         "evidence": "APACX docs describe PHT as a MakerDAO MCD-style stablecoin minted from collateralized vaults, while the beta guide describes current PHT minted using apcxUSDT collateral backed 1:1 by a reserve address."
       },
       {
-        "label": "Privileged token mint/admin authority",
+        "label": "DaiJoin adapter (sole warded minter on PHT ETH)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "DaiJoin.exit() mints PHT permissionlessly when a user withdraws collateral-backed credit from the Vat; supply is bounded by the Vat's per-ilk debt ceilings set by Vat wards.",
+        "sources": [
+          {
+            "label": "PHT token (Ethereum) - Blockscout",
+            "url": "https://eth.blockscout.com/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077"
+          },
+          {
+            "label": "DaiJoin adapter (Ethereum) - Blockscout",
+            "url": "https://eth.blockscout.com/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
+          }
+        ],
+        "evidence": "At Ethereum block 25295271: PHT token (dai.sol fork, AGPL-3.0) wards(DaiJoin 0x4bd328FD071b03e157d0a89dE199d9E005D71057)=1 (warded). All other checked addresses returned 0: deployer 0x813da81, Vat 0xEE0CDe42, vault contracts 0x59A904af/0x881bA6, EOA 0x76dB01fC. DaiJoin.exit() calls dai.mint(usr, wad) permissionlessly based on Vat internal state. Vat (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c, live=1) is the CDP engine. DaiJoin.dai()=0xBe370Ad (confirmed PHT token)."
+      },
+      {
+        "label": "Vat CDP engine admin (debt ceiling / risk param control)",
         "role": "minter-admin",
         "authorityType": "unknown",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
-            "label": "Etherscan contract source",
-            "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+            "label": "Vat CDP engine (Ethereum) - Blockscout",
+            "url": "https://eth.blockscout.com/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
           }
         ],
-        "evidence": "PHT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "At Ethereum block 25295271: Vat (vat.sol fork, live=1) controls debt ceilings and risk params via its wards system. Warded address on Vat not located — checked deployer script 0x75CEcF4C, deployer EOA 0x76dB01fC, vault contracts 0x59A904af/0x881bA6, DaiJoin 0x4bd328FD; all returned 0. Vat deployer was contract 0x75CEcF4C (deployed by 0x76dB01fC APACX EOA). If no one is warded, Vat risk params are effectively immutable, but this cannot be positively confirmed."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+          "label": "PHT token (Ethereum) - Blockscout",
+          "url": "https://eth.blockscout.com/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077"
+        },
+        {
+          "label": "DaiJoin adapter (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
         },
         {
           "label": "PHT overview",
@@ -119,11 +143,11 @@
           "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
         }
       ],
-      "evidence": "APACX docs describe a MakerDAO MCD-style PHT CDP system and beta apcxUSDT collateral minting; Etherscan token-source evidence still indicates privileged mint/admin authority requiring threshold and cap review.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295271: PHT ETH is a genuine MakerDAO-style CDP (dai.sol + vat.sol + join.sol). The ONLY warded minter on the PHT DSToken is DaiJoin 0x4bd328FD071b03e157d0a89dE199d9E005D71057 (verified wards=1). DaiJoin.exit() mints PHT permissionlessly against Vat internal state. Polygon OFT (PhtOFTUpgradeable) owned by EOA 0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5. Tron not verified. Vat admin (whoever holds ward on Vat) could raise debt ceilings but warded address was not located.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve the live Ethereum/Polygon/Tron admin and exact CDP/vault contract authority before lowering the unbounded admin posture."
+        "Identify the warded address on the Vat CDP engine (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c) to confirm who controls debt ceilings and risk parameters; confirm Tron PHT mint authority."
       ]
     }
   },

@@ -50,25 +50,44 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "vCRED source shows onlyOwner mint authority; live Hemi owner() reads resolve the direct minter to an EOA.",
+    "confidence": "verified",
+    "summary": "vCRED mint() is onlyOwner; the onchain owner is a Gnosis Safe v1.4.1+L2 (1-of-2 multisig) with no modules and no guard.",
     "controls": [
       {
         "chain": "hemi",
         "address": "0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be",
-        "label": "vCRED token owner",
+        "label": "vCRED token owner (Gnosis Safe 1-of-2)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "safe",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 1,
+        "signerCount": 2,
+        "safe": {
+          "owners": [
+            "0x29Aa2eD8712072e918632259780E587698Ef58df",
+            "0x8b01d375e274213c860eF6ac013DBDd5286CD816"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 4610504,
+          "source": "safe-api"
+        },
         "sources": [
           {
             "label": "Hemi contract source",
             "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+          },
+          {
+            "label": "Safe API Hemi",
+            "url": "https://api.safe.global/tx-service/hemi/api/v1/safes/0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be/"
           }
         ],
-        "evidence": "Hemi verified source shows mint() is onlyOwner; live owner() reads resolve the owner/direct minter to this EOA."
+        "evidence": "At Hemi block 4610504, owner() on 0x71881974e96152643c74a8e0214b877cfb2a0aa1 returned 0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be. eth_getCode at that address returned non-empty bytecode confirming a contract (not an EOA). Safe API (hemi slug) returned threshold=1, owners=[0x29Aa2eD..., 0x8b01d375...], modules=[], guard=0x0, version=1.4.1+L2. getModules() RPC call returned empty array; guard slot=0x0 confirmed no guard."
       }
     ],
     "review": {
@@ -76,11 +95,15 @@
         {
           "label": "Hemi contract source",
           "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+        },
+        {
+          "label": "Safe API Hemi",
+          "url": "https://api.safe.global/tx-service/hemi/api/v1/safes/0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be/"
         }
       ],
-      "evidence": "vCRED verified source shows owner-gated mint authority, and Hemi RPC resolves owner() to 0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-25"
+      "evidence": "At Hemi block 4610504: owner() = 0x3eDEEF (contract, not EOA); Safe API confirmed 1-of-2 Safe v1.4.1+L2, no modules, no guard. Corrected authorityType from eoa to safe with full Safe snapshot.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "unproven",

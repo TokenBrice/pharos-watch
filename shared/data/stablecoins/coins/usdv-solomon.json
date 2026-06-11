@@ -133,17 +133,17 @@
     ],
     "review": {
       "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants. Solana RPC resolves live mint authority to 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa and null freeze authority.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Solomon docs - introduction",
           "url": "https://docs.solomonlabs.org/introduction"
         }
       ],
-      "sourceFreeRationale": "Mechanism resolved from Solomon docs and project coverage (permissioned mint, Ceffu custody, Squads multisig admin); the live Squads signer set/threshold and Solana mint authority were not independently read.",
+      "sourceFreeRationale": "Mint authority 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa confirmed on-chain: it is a PDA owned by program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax (NOT a Squads v4 multisig — discriminator e4c452a5... does not match Squads v4 Multisig anchor disc). Program D4AiKFxj's upgrade authority is CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY (plain System-Program-owned keypair = EOA-equivalent, confirmed at slot 425792161). Identity of program D4AiKFxj not fully resolved.",
       "unresolvedQuestions": [
-        "Decode whether the live Solana mint authority is a Squads multisig, PDA, or other signer model."
+        "Program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax owns the mint authority PDA 7XAdHs5Q. Identify this program (Solscan or program IDL lookup) to confirm it is Solomon's own minting program. The upgrade authority CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY is an EOA keypair (confirmed at slot 425792161). Once program identity is confirmed, update authorityType on the mint authority control from 'unknown' to 'contract' and verify."
       ]
     }
   }

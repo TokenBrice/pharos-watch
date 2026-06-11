@@ -77,8 +77,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "lvUSD is minted inside LeverUp's Virtual Market Making Vault (VMMV) trading engine on Monad when traders open positions against USDC/MON collateral; minting is controlled by the protocol's trading-engine contracts under a project multisig rather than a permissionless or renounced system.",
+    "confidence": "verified",
+    "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open positions; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
     "controls": [
       {
         "chain": "monad",
@@ -95,27 +95,42 @@
         "chain": "monad",
         "label": "LeverUp protocol admin multisig",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "A LeverUp project multisig administers the managed liquidity layer and trading engine on a new chain; specific signer set, threshold, and pause/upgrade powers are unresolved.",
-        "evidence": "lvUSD metadata flags governance as a multisig over a managed perpetuals liquidity layer on Monad; the docs do not prove a renounced or permissionless minter, leaving admin control unresolved."
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 80607552,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "LeverUp lvUSD docs",
+            "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+          }
+        ],
+        "evidence": "Monad block 80607552: lvUSD owner() = 0x135951... (EIP-1967 proxy), impl = 0x1d4bcd..., whose owner chain leads to 0xf9bd99... — a GnosisSafe proxy (masterCopy slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, Solidity 0.7.6 singleton). getOwners() returned 5 addresses; getThreshold = 3; getModulesPaginated returned 0 modules."
       }
     ],
     "review": {
-      "evidence": "LeverUp documentation describes lvUSD as an engine-minted liquidity-layer stablecoin auto-issued against USDC/MON collateral inside the VMMV; the project is managed by a multisig on Monad and does not document a renounced or permissionless mint authority.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Monad block 80607552: lvUSD mint reverts with 'only issuer'; issuer() = owner() = 0x135951... (proxy chain terminating at a 3/5 GnosisSafe 0xf9bd99...). Safe has 3-of-5 threshold, 5 owners, 0 modules. Token not upgradeable (EIP-1967 admin slot = 0). Confirmed: concentrated EOA/Safe-controlled issuer with no modules or bypass.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "LeverUp lvUSD docs",
           "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+        },
+        {
+          "label": "Monad lvUSD contract",
+          "url": "https://monadexplorer.com/address/0xfd44b35139ae53fff7d8f2a9869c503d987f00d1"
         }
-      ],
-      "sourceFreeRationale": "Engine-mint mechanism confirmed from LeverUp docs; the controlling multisig's signer set, threshold, and upgrade/pause powers were not independently resolved on-chain.",
-      "unresolvedQuestions": [
-        "Resolve the LeverUp admin multisig (signers, threshold) and the trading-engine/token upgrade and pause authority before raising confidence."
       ]
     }
   }

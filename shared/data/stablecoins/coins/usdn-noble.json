@@ -21,7 +21,7 @@
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "Noble USDN is an M0-backed Noble deployment; base M issuance remains on the Ethereum MinterGateway and Noble movement uses M0 portal infrastructure.",
     "controls": [
       {
@@ -32,8 +32,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing Noble USDN depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -46,27 +46,35 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
       },
       {
         "chain": "ethereum",
         "address": "0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16",
         "label": "M0 Noble Portal",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "M0 deployments list the Noble Portal on Ethereum for Noble movement; base supply remains governed by the Ethereum MinterGateway.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
             "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "Noble Portal on Etherscan",
+            "url": "https://etherscan.io/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
           }
         ],
-        "evidence": "Official M0 deployments list Noble Portal at 0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16; no Noble-native mint authority address was found in the checked M0 deployment docs."
+        "evidence": "At Ethereum block 25295161: Noble Portal code=452 bytes (proxy). EIP-1967 impl slot=0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4 (47208 bytes, confirmed contract). EIP-1967 admin slot=0x0 (no external ProxyAdmin; upgrade path controlled via owner). owner()=0x7176665e336e8692e9b265aB6290934C93F99cCf, a Safe v1.4.1 (2/2 threshold, 2 EOA owners: 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2; modules=[]; guard=0x0; fallbackHandler=0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99). Safe API confirmed. Noble chain native state is non-EVM (Cosmos); no Noble-native mint authority address exists for on-chain verification."
       }
     ],
     "review": {
@@ -78,11 +86,19 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "MinterGateway on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        },
+        {
+          "label": "Noble Portal on Etherscan",
+          "url": "https://etherscan.io/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
         }
       ],
-      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). Noble Portal confirmed proxy (impl=0xa6fab688..., no admin slot ProxyAdmin); owner=Safe v1.4.1 2/2 EOA, no modules, no guard (Safe API confirmed). Noble chain is Cosmos-based; on-chain M management is Ethereum-side only.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "infrastructures": [

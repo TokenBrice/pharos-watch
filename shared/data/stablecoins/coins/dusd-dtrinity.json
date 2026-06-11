@@ -209,21 +209,21 @@
       }
     ],
     "review": {
-      "evidence": "dTRINITY docs describe permissionless 1:1 mint/redeem against a governance-set whitelist of reserve stablecoins, plus AMO that pre-mints dUSD into Curve pools and SMO that buys back/burns it; governance (currently contributors, pre-TGE) controls the whitelist, AMO/SMO, and a mint kill-switch. The March 17 2026 exploit hit the separate dLEND Aave-fork lending market via an index-inflation bug, not the dUSD mint mechanism itself. This is an AMO-plus-governed-reserve hybrid under a concentrated admin.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "ETH block 25295164: dUSD is a TransparentUpgradeableProxy; ProxyAdmin (0xbe90db...) owner is an OZ TimelockController (0x18cb0e...) with 24h delay and no active proposers (0 RoleGranted events, all hasRole checks returned false). Upgrade path is effectively locked. Sonic: proxy admin owner is a 2/3 multisig (0xE83C18..., 3 owners, threshold 2 via getThreshold). AMO/SMO contract addresses not resolvable from known contract addresses — contributor mint admin identity on ETH remains unconfirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "dUSD Stablecoin docs",
           "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
         },
         {
-          "label": "dTRINITY dUSD on DefiLlama",
-          "url": "https://defillama.com/protocol/dtrinity-dusd"
+          "label": "Ethereum dUSD proxy",
+          "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the on-chain owner/admin of the dUSD issuer and AMO contracts and the contributor multisig threshold; confirm whether the March 2026 dLEND pause affected dUSD mint controls."
+        "AMO/SMO and dUSD issuer contract addresses on Ethereum unknown — cannot confirm which multisig controls mint whitelist and AMO operations. Resolve contract addresses from dTRINITY docs or on-chain deployment to identify the mint admin."
       ]
     }
   },

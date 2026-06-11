@@ -94,18 +94,17 @@
     ],
     "review": {
       "evidence": "Initia documentation and coverage describe iUSD as a single-chain wrapper minted against Agora AUSD bridged via LayerZero; the upstream AUSD is a VanEck/State Street T-bill-backed fiat token, and iUSD supply derives from the bridge route rather than a local CDP or issuer mint.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Initia docs",
           "url": "https://docs.initia.xyz"
         }
       ],
-      "sourceFreeRationale": "Bridge-wrapper (LayerZero AUSD) classification confirmed from Initia materials and coverage; the specific Initia OFT/bridge endpoint contract, its admin, and DVN config were not independently read on-chain.",
+      "sourceFreeRationale": "Bridge-wrapper (LayerZero AUSD) classification confirmed from Initia materials and coverage; on-chain reads confirmed iUSD is an Initia Move managed_coin at 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e with ManagingRefs (mint_ref/burn_ref/transfer_ref) stored at that address. ObjectCore.owner = 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a, but that object's own ObjectCore.owner = 0x0 (null/framework address) with no modules. The human controller of the mint_ref chain cannot be confirmed without tracing the full object ownership graph.",
       "unresolvedQuestions": [
-        "Resolve the Initia AUSD LayerZero endpoint/OFT contract, its mint admin, and bridge security (DVN/peer) configuration before raising confidence.",
-        "Confirm whether the route is a lockbox adapter or mint-and-burn adapter and identify the controlling authority."
+        "Trace the full Initia Move object ownership chain: 0x6c69733 ObjectCore.owner = 0xfd6a07; 0xfd6a07 ObjectCore.owner = 0x0 (null). Identify who actually controls 0xfd6a07 (the object holding iUSD ManagingRefs) — likely the Initia LayerZero OFT bridge deployer. Read 0xfd6a07 module list and resources to find the LayerZero OFT admin or bridge admin."
       ]
     }
   }

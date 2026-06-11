@@ -168,12 +168,23 @@
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": "unknown",
         "safe": {
+          "owners": [
+            "0x7585051EE497FE9072266779BCCDCA182fc353D7",
+            "0xb12e2C44CB2c8c18bB80c5A9714c04c30091AA51",
+            "0x3b8645aEEd35f6016114a94A961EdfC8C5058af4",
+            "0x2442438D7C4850866D41b226A835D43E2C1D1B86",
+            "0xD42EC163464da30A6116499254816c9B8Da9f87B",
+            "0xdEDAC74E6A7b5112b3D78518C858db3091a05390"
+          ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 47201583,
           "source": "safe-api"
         },
-        "evidence": "Safe API resolved this Base Safe as 4-of-6 with no enabled modules and zero guard; it owns/controls the yoUSD authority surface for strategy and protocol management."
+        "evidence": "Safe API confirmed Base Safe 4-of-6 (threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd07..., version 1.4.1+L2) at Base block 47201583. This Safe holds PROPOSER_ROLE on the 2-day TimelockController (0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48) which owns the ProxyAdmin (0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073) that controls the yoUSD vault upgrades."
       },
       {
         "label": "yoUSD authority contract",
@@ -198,9 +209,9 @@
       }
     ],
     "review": {
-      "evidence": "YO Protocol docs and the coin's own collateral note describe yoUSD as an ERC-4626 yoVault on Base accepting USDC deposits, rebalanced across 50+ whitelisted DeFi strategies ranked by Exponential.fi. Follow-up Base checks resolved the admin Safe as 0x67b6F699F1c8040414032a3C2C88a54db144FCd2 (4-of-6, no modules, zero guard), the authority contract as 0x9524e25079b1b04D904865704783A5aA0202d44D, and the vault wrapper as 0x0000000f2eB9f69274678c76222B35eEc7588a65.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D confirmed as the operational vault/strategy permission layer owned by the Safe.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "YO Protocol docs",
@@ -209,10 +220,14 @@
         {
           "label": "yoUSD vault",
           "url": "https://app.yo.xyz/vault/base/0x0000000f2eB9f69274678c76222B35eEc7588a65"
+        },
+        {
+          "label": "yoUSD vault contract",
+          "url": "https://basescan.org/address/0x0000000f2eB9f69274678c76222B35eEc7588a65"
         }
       ],
       "unresolvedQuestions": [
-        "Resolve the current yoGateway and strategy-allocation admin paths beyond the vault authority contract."
+        "The authority contract (0x9524e25079b1b04D904865704783A5aA0202d44D) internal role structure was not enumerated — confirm whether it holds any additional minting roles beyond strategy/protocol whitelisting, or whether minting is entirely deposit-driven with no privileged mint call."
       ]
     }
   },

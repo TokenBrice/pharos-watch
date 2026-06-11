@@ -54,39 +54,42 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "BtcUSD is minted from Liquity-v1-style CDP vaults when users overcollateralize with BTC variants (WBTC, BTCB, cbBTC, native BTC); the BTCfi/Bifrost team administers the deployment and tunes vault parameters.",
+    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on the Bifrost network. The Base bridge token has 2 owners: a contract (0x26fce52a..., not a Safe) and an EOA (0xf98e8601...). The native BtcUSD CDP on Bifrost cannot be verified: no publicly accessible keyless EVM-compatible RPC exists for the Bifrost chain.",
     "controls": [
       {
-        "label": "BTCfi CDP vault (collateral mint)",
+        "label": "BTCfi CDP vault on Bifrost (collateral mint — unverifiable)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Mint bounded by the per-vault overcollateralization ratio against BTC-variant collateral, with liquidation below the minimum ratio.",
         "canRaiseCap": "unknown",
-        "evidence": "BtcUSD is minted by depositing BTC variants into overcollateralized Liquity-v1-style CDP vaults with liquidation mechanisms, per BTCfi materials."
+        "evidence": "Native BtcUSD is minted on the Bifrost chain via Liquity-v1-style CDP vaults; chain state is not accessible via keyless EVM RPC from this environment."
       },
       {
-        "label": "BTCfi / Bifrost protocol admin",
+        "label": "BtcUSD Base bridge owners (EOA + unverified contract)",
         "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "evidence": "The BTCfi (Bifrost Network) team administers the deployment and configures accepted collateral and vault parameters; classified centralized-dependent in coin metadata."
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Base block 47201995, get_owners() on ERC20_Bridged token (0xe4b20925...) returned 2 owners: 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (unverified contract, not a Safe) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA). The proxy admin (EIP-1967, 0x55506bcc...) is an unverified contract. These bridge token owners can mint the bridged BtcUSD on Base directly."
       }
     ],
     "review": {
-      "evidence": "BTCfi docs describe an overcollateralized BTC-backed CDP minting BtcUSD via Liquity-v1-style vaults on Bifrost/Base; the project is operator-administered with no independent on-chain renouncement confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Base block 47201995: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy (EIP-1967 admin=0x55506bcc..., impl=0x6e9070...) wrapping an ERC20_Bridged Vyper contract. get_owners() returned 2 owners (one contract, one EOA). Bifrost network (the canonical issuance chain) has no accessible keyless EVM RPC; the CDP vault admin on Bifrost cannot be verified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "BTCfi docs",
           "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+        },
+        {
+          "label": "BtcUSD Base token on Blockscout",
+          "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
         }
       ],
-      "sourceFreeRationale": "CDP mechanism confirmed from BTCfi/Bifrost materials; on-chain vault admin owner and any renouncement not independently resolved, so immutable classification is not asserted.",
       "unresolvedQuestions": [
-        "Resolve the on-chain BtcUSD minter/vault admin and whether owner() is renounced before raising confidence."
+        "Bifrost chain has no accessible keyless EVM RPC; cannot verify the native BtcUSD CDP vault admin or whether ownership is renounced on Bifrost. Additionally, the Base bridge token proxy admin (0x55506bcc...) is unverified and its ownership chain is not confirmed (slot-0 interpretation unclear)."
       ]
     }
   },

@@ -97,13 +97,13 @@
     ],
     "review": {
       "evidence": "Hermetica's technical docs describe a backend-attested mint: request-mint deposits BTC, an off-chain trader establishes the BTC short hedge, and confirm-mint then issues USDh; redemption mirrors this via confirm-redeem. Mint is gated by both whitelisting and the issuer's off-chain confirmation, consistent with an offchain-attested-minter under a concentrated operator.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         { "label": "Hermetica mint mechanism", "url": "https://docs.hermetica.fi/usdh/how-it-works/mint" },
         { "label": "Hermetica minting contract (Stacks)", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain Stacks principal(s) authorized as trader/whitelist admin and any upgrade authority on the usdh-token-v1 contract before raising confidence."]
+      "unresolvedQuestions": ["The usdh-token-v1 contract on Stacks delegates all admin/minting authorization to hq-v1 (check-is-minting-contract, check-is-protocol). hq-v1 maintains a minting-contracts map (active principals who can confirm-mint). The current hq-v1 owner principal was returned as Clarity bytes 0x05 14 6fdf77f03a1ace4bf29f8090067a98c65000e1e2 but could not be fully decoded without base58/c32check library. Resolve: (1) Stacks principal of hq-v1 current owner, (2) enumerate active entries in the minting-contracts map to identify the confirm-mint operator address(es)."]
     }
   }
 }

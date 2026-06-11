@@ -122,8 +122,8 @@
     ],
     "review": {
       "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Hydration HOLLAR launch (Polkadot newsroom)",
@@ -134,9 +134,9 @@
           "url": "https://docs.hydration.net/quick_start/hollar/"
         }
       ],
-      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs; the appchain pallet/governance admin authority was not independently read on-chain.",
+      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. On-chain read attempted via Hydration EVM RPC (https://rpc.nice.hydration.cloud, block 0x14fb62 ≈ 1,375,074): HOLLAR token at 0x531a654d1696ed52e7275a8cede955e82620f99a returned code length 2 (minimal EVM shim), no proxy admin slot populated, and owner() returned empty — indicating the EVM address is a pallet-backed precompile rather than a standard upgradeable EVM contract. The Hydration parachain uses Substrate runtime governance (OpenGov / Hydration council) to control the pallet parameters, not a directly readable EVM admin key.",
       "unresolvedQuestions": [
-        "Resolve the Hydration on-chain governance/admin authority over the HOLLAR money market and HSM parameters before raising confidence."
+        "The HOLLAR token is a Substrate pallet-backed precompile: the EVM address is a thin shim with no upgradeable proxy admin. Governance over the HOLLAR money market and HSM lives in Hydration's Substrate OpenGov runtime, which cannot be verified via EVM eth_call. Confirm via Hydration's Substrate governance pallets or parachain runtime before raising confidence."
       ]
     }
   }

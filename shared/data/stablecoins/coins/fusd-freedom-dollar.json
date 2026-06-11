@@ -59,10 +59,10 @@
     "summary": "FUSD is issued as a Zano Confidential Asset and is described by the project as an autonomous, over-collateralized ZANO-backed mint with no admin keys, but Zano is a privacy chain with no EVM smart contracts, so the mint authority and any admin surface cannot be independently inspected.",
     "review": {
       "evidence": "Project materials describe FUSD as a permissionless, over-collateralized stablecoin minted by depositing ZANO into an autonomous protocol, with no central issuer or admin keys. Because Zano enforces confidential transactions and uses native Confidential Assets rather than auditable EVM contracts, the mint authority and any privileged control cannot be verified on-chain, so the mint path is left unknown.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Mechanism description comes from Freedom Dollar project materials; the underlying Zano privacy chain provides no auditable contract surface to confirm or refute the autonomous, admin-keyless mint claim.",
-      "unresolvedQuestions": ["Determine whether the Zano fUSD Confidential Asset mint is truly autonomous/admin-keyless and whether any party can alter the collateral parameters or issuance."]
+      "unresolvedQuestions": ["Zano is a privacy-chain using Confidential Assets with no auditable EVM contract surface; the FUSD mint authority and admin-keyless claim cannot be verified remotely. Resolution requires Zano-native tooling or direct issuer disclosure of collateral contract parameters."]
     }
   }
 }

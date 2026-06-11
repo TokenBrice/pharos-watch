@@ -89,12 +89,12 @@
       {
         "chain": "ethereum",
         "address": "0x3c89Cd1884E7bEf73Ca3eF08d2Ef6ec338fD8e49",
-        "label": "EUR0 token proxy / protocol mint route",
+        "label": "EUR0 token (TransparentUpgradeableProxy → Eur0 impl)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Usual EUR0 docs",
@@ -105,18 +105,24 @@
             "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
           }
         ],
-        "evidence": "Official docs describe EUR0 mint/redeem against eligible euro collateral. Ethereum reads at block 25166591 resolved implementation 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d and proxy admin 0xd0fae00123a2e778c078c2691c6cb81a9db08577."
+        "evidence": "At block 25295183: EIP-1967 impl slot = 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d (Eur0). mint(address,uint256) requires EUR0_MINT role via RegistryAccess.onlyMatchingRole(EUR0_MINT). Current RegistryAccess at storage slot 0xb6bec7bc... = 0x65771978ff9238162a41c77384c9f55c1ec9e9ab."
       },
       {
         "chain": "ethereum",
         "address": "0xd0faE00123a2E778c078c2691C6cB81a9DB08577",
-        "label": "EUR0 EIP-1967 proxy admin",
+        "label": "EUR0 ProxyAdmin (owned by Usual 8/15 Safe)",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166591; signer setup was not verified."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EUR0 token",
+            "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+          }
+        ],
+        "evidence": "At block 25295183: EIP-1967 admin slot = 0xd0faE00123... (ProxyAdmin contract); ProxyAdmin.owner() = 0x68BFFB0fCd08aa9967297A63e5Dee4767F44cAe1 (8/15 Safe confirmed via Blockscout ContractName=SafeProxy and getOwners()=15 addresses). Same 8/15 signers control RegistryAccess.owner() at 0xE89e6931c803fFdeA19E98F88979967CF211CA76 (no modules)."
       }
     ],
     "review": {
@@ -124,13 +130,17 @@
         {
           "label": "Usual EUR0 docs",
           "url": "https://tech.usual.money/overview/features/eur0"
+        },
+        {
+          "label": "Ethereum EUR0 token",
+          "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
         }
       ],
-      "evidence": "Usual documentation identifies EUR0 as a collateral-backed protocol stablecoin with primary-market mint/redeem routes; Ethereum proxy reads identify the current implementation/admin path.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295183: EUR0 proxy admin chain = ProxyAdmin (0xd0faE00123...) → 8/15 Usual Safe (0x68BFFB0f..., 15 owners read via getOwners()). RegistryAccess (0x65771978...) controls EUR0_MINT role; its owner is a separate 8/15 Usual Safe (0xE89e6931...) with the same 15 signers. EUR0_MINT role holder(s) cannot be enumerated (RegistryAccess uses non-enumerable AccessControl; no RoleGranted events emitted post-deployment).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Enumerate the current EUR0 mint/redeem contract roles and identify whether proxy admin is a Safe, multisig, timelock, or EOA."
+        "EUR0_MINT role holder(s) on RegistryAccess (0x65771978ff9238162a41c77384c9f55c1ec9e9ab) cannot be enumerated without scanning constructor arguments or off-chain indexing — the direct minter contract address is unknown, blocking full verification."
       ]
     }
   },

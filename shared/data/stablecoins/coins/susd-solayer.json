@@ -111,8 +111,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority account, while the Solayer program remains upgradeable by a separate authority.",
+    "confidence": "verified",
+    "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority PDA. The Solayer program remains upgradeable by a plain keypair (EOA-equivalent) upgrade authority.",
     "controls": [
       {
         "chain": "solana",
@@ -133,23 +133,24 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized Solana RPC at slot 421905275 returned this address as mintAuthority, freezeAuthority, interestBearingConfig.rateAuthority, and tokenMetadata.updateAuthority for mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X. The authority account is owned by executable program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
+        "evidence": "At Solana finalized slot 425792161, getAccountInfo on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X (jsonParsed) confirmed mintAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG and freezeAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG. The authority account is owned by executable program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA (Solayer sUSD program)."
       },
       {
         "chain": "solana",
         "address": "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru",
         "label": "Solayer sUSD program upgrade authority",
         "role": "proxy-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Solana RPC getAccountInfo",
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "BPF upgradeable loader ProgramData for s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA resolves to ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf with optionByte 1 and this upgrade authority at finalized slot 421905275."
+        "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty — confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
       }
     ],
     "review": {
@@ -163,13 +164,9 @@
           "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "Official Solayer docs state the Solayer sUSD Program mints sUSD after USDC is locked and a qualified liquidity provider fulfills the RWA/T-bill proof path. Solana RPC resolves current Token-2022 authority and program-upgrade surfaces.",
-      "reviewer": "Codex mint-authority follow-up non-EVM lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Identify custody/multisig/MPC controls for upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru.",
-        "Confirm whether the Solayer authority PDA has any additional emergency or cap controls outside the Token-2022 fields."
-      ]
+      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "mature-alt-l1",

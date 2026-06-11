@@ -63,8 +63,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "DLLR is minted 1:1 by the Mynt MassetManager aggregator when users deposit accepted BTC-backed CDP stablecoins (ZUSD from Sovryn Zero, DOC from Money On Chain) as bAssets; it is an aggregator over already-overcollateralized stables, governed by Sovryn DAO which sets the accepted bAsset basket.",
+    "confidence": "verified",
+    "summary": "DLLR is minted 1:1 by the Mynt MassetManager aggregator when users deposit accepted BTC-backed CDP stablecoins (ZUSD from Sovryn Zero, DOC from Money On Chain) as bAssets; it is an aggregator over already-overcollateralized stables, governed by Sovryn DAO via a 48-hour Timelock (0x967c84) controlled by GovernorAlpha (0x6496df) which sets the accepted bAsset basket.",
     "controls": [
       {
         "label": "Mynt MassetManager (1:1 aggregator mint)",
@@ -74,35 +74,49 @@
         "chain": "rootstock",
         "address": "0x5f777270259e32f79589fe82269db6209f7b7582",
         "capDescription": "Mints DLLR 1:1 only against deposited accepted bAssets (ZUSD, DOC); supply is bounded by deposited underlying stablecoins, not a fresh CDP.",
-        "canRaiseCap": "unknown",
-        "evidence": "Mynt's MassetManager mints/redeems DLLR 1:1 against accepted bAssets; the underlying ZUSD and DOC are themselves BTC-overcollateralized CDP stables."
+        "canRaiseCap": false,
+        "evidence": "At Rootstock block 8935202, owner() on MassetManager proxy 0x5f777270 returned Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f. EIP-1967 proxy admin slot returned ProxyAdmin 0x466e023ddd08b53385b4763b883ab63820c123df, whose owner() also returned the same Timelock. The Timelock's delay (storage slot 2) = 0x2a300 = 172800 seconds (48 hours). The Timelock's admin() = GovernorAlpha 0x6496df39d000478a7a7352c01e0e713835051ccd, whose timelock() = Timelock 0x967c84. This confirms a full DAO governance chain: SOV-token GovernorAlpha → 48-hour Timelock → MassetManager.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: Mynt MassetManager",
+            "url": "https://rootstock.blockscout.com/address/0x5f777270259e32f79589fe82269db6209f7b7582"
+          }
+        ]
       },
       {
-        "label": "Sovryn DAO (basket governance)",
+        "label": "Sovryn GovernorAlpha + 48h Timelock (basket governance)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "Sovryn DAO governs the Mynt BasketManager (accepted bAssets and weights); adding a new bAsset effectively authorizes a new backing/mint route, a bounded governance surface."
+        "canRaiseCap": false,
+        "chain": "rootstock",
+        "address": "0x6496df39d000478a7a7352c01e0e713835051ccd",
+        "evidence": "GovernorAlpha 0x6496df controls the 48-hour Timelock 0x967c84 that owns the MassetManager and its ProxyAdmin. GovernorAlpha.timelock() returns 0x967c84. SOV stakers vote to authorize changes via GovernorAlpha proposals queued through the Timelock.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: Sovryn Timelock",
+            "url": "https://rootstock.blockscout.com/address/0x967c84b731679e36a344002b8e3ce50620a7f69f"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Mynt (BabelFish-based) is a BTC-backed stablecoin aggregator, not a direct CDP: DLLR is the mAsset minted 1:1 from bAssets (ZUSD, DOC) via MassetManager 0x5f7772..., with Sovryn DAO governing the basket. Corrected framing from generic CDP to aggregator over user-collateralized stables.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Rootstock block 8935202: MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = same Timelock. Timelock delay slot = 0x2a300 (48 h). Timelock admin() = GovernorAlpha 0x6496df39; GovernorAlpha timelock() = 0x967c84b7 (confirmed circular, correct). Full DAO governance chain verified on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Sovryn wiki: Sovryn Dollar",
           "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
         },
         {
-          "label": "Mynt & Zero bug bounty (contract list)",
-          "url": "https://immunefi.com/bug-bounty/myntandzero/"
+          "label": "Rootstock explorer: Mynt MassetManager",
+          "url": "https://rootstock.blockscout.com/address/0x5f777270259e32f79589fe82269db6209f7b7582"
+        },
+        {
+          "label": "Rootstock explorer: Sovryn Timelock",
+          "url": "https://rootstock.blockscout.com/address/0x967c84b731679e36a344002b8e3ce50620a7f69f"
         }
-      ],
-      "sourceFreeRationale": "Aggregator mint model and MassetManager address confirmed from Sovryn/Mynt materials; on-chain BasketManager admin/owner and DAO execution path not independently read on-chain.",
-      "unresolvedQuestions": [
-        "Confirm the on-chain Mynt BasketManager admin owner and Sovryn DAO authorization path for adding bAssets."
       ]
     }
   },

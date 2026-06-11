@@ -109,17 +109,17 @@
     ],
     "review": {
       "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister that mints against locked GLD NFTs at a fixed gold ratio; there is no centralized off-chain issuer minter, but the SNS DAO can upgrade the canisters.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Gold DAO key canisters",
           "url": "https://docs.gold-dao.org/other/key-canisters"
         }
       ],
-      "sourceFreeRationale": "Mint and SNS-governance model confirmed from Gold DAO docs; specific canister principal IDs and live SNS controller state not independently verified.",
+      "sourceFreeRationale": "Mint and SNS-governance model confirmed from Gold DAO docs. The canonical GLDT issuance is on the Internet Computer Protocol (ICP) as canister 6c7su-kiaaa-aaaar-qaira-cai. ICP canisters cannot be queried via EVM-compatible keyless RPC; standard tooling (publicnode, Blockscout) does not support ICP canister state reads.",
       "unresolvedQuestions": [
-        "Confirm the live SNS controller/governance canister state for the GLDT swap and ledger canisters before raising confidence."
+        "ICP chain has no accessible EVM-compatible keyless RPC; confirming live SNS controller state, GLDT swap canister principal, and ledger canister minting rights requires ICP-native tooling (dfx CLI or ic-agent querying the NNS/SNS canister at canister ID 6c7su-kiaaa-aaaar-qaira-cai). EVM bridge contracts on Ethereum/Base/Arbitrum are the bridged representations; native issuance verification is blocked."
       ]
     }
   },

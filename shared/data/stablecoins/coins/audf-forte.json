@@ -44,7 +44,8 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 25295316
         },
         "sources": [
           {

@@ -117,7 +117,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
     "controls": [
@@ -129,9 +129,9 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "capDescription": "syrupUSDC shares are minted/burned by the Maple ERC-4626 vault against USDC deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDC supply.",
-        "evidence": "Strategy-vault receipt: syrupUSDC shares represent a claim on USDC lent as overcollateralized institutional loans; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
+        "evidence": "At Ethereum block 25295167: asset() returned USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48. EIP-1967 impl slot = 0x0 and admin slot = 0x0 (not upgradeable). No proxy admin or module surface detected. Wrapper share accounting only."
       },
       {
         "chain": "ethereum",
@@ -169,9 +169,9 @@
       }
     ],
     "review": {
-      "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; live USDC parent reads resolve the inherited MasterMinter and token owner controls.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295167: syrupUSDC asset() = USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 confirmed; EIP-1967 impl slot = 0x0, admin slot = 0x0 (not upgradeable, no proxy admin surface). Wrapper is a non-upgradeable ERC-4626 vault; durable mint authority inherits from reviewed parent USDC (usdc-circle).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Maple Finance",

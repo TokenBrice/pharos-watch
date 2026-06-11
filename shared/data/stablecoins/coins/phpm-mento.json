@@ -58,48 +58,59 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "PHPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+    "confidence": "verified",
+    "summary": "PHPm is minted CDP-style on Celo via immutable BorrowerOperations; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
     "controls": [
       {
         "chain": "celo",
+        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
+        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "PHPm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
+        "sources": [
+          {
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero — immutable, no upgrade path."
+      },
+      {
+        "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento PHPm token owner Timelock",
+        "label": "Mento Timelock (PHPm token owner)",
         "role": "timelock",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
-          },
-          {
-            "label": "Mento V3 docs",
-            "url": "https://docs.mento.org/mento-v3"
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        "evidence": "At Celo block 69291577, PHPm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036...) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor)."
       }
     ],
     "review": {
+      "evidence": "At Celo block 69291577: PHPm owner() = Mento Timelock 0x890DB...; getMinDelay() = 172800s; MentoGovernor is sole PROPOSER; BorrowerOperations confirmed immutable. All addressable mint surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",
           "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
         },
         {
-          "label": "Mento V3 docs",
-          "url": "https://docs.mento.org/mento-v3"
+          "label": "Mento V3 deployments",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
         }
-      ],
-      "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
       ]
     }
   },

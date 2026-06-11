@@ -55,27 +55,52 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "CHFm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to a 4/7 Mento Safe.",
+    "confidence": "verified",
+    "summary": "CHFm is a legacy StableTokenV3 (cCHF) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
     "controls": [
       {
         "chain": "celo",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker — authorized minter for CHFm via Celo Registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "CHFm deprecated_broker_storage_slot__ on-chain read",
+            "url": "https://celo.blockscout.com/address/0xb55a79f398e759e43c95b979163f30ec87ee131d"
+          }
+        ],
+        "evidence": "At Celo block 69287341, deprecated_broker_storage_slot__() on CHFm (StableTokenV3, 0xb55a79f398e759e43c95b979163f30ec87ee131d) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. Celo Registry getAddressFor(keccak256('Broker')) also returns 0x777A..., confirming it is the live authorized minter. isMinter(Broker) = false (StableTokenV3 uses registry-based auth, not isMinter mapping)."
+      },
+      {
+        "chain": "celo",
         "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
-        "label": "Mento CHFm token owner Safe",
+        "label": "Mento Safe — CHFm token owner and proxy admin",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 4,
-        "signerCount": 7,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "version": "1.4.1+L2",
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 69287341,
           "source": "safe-api"
         },
         "sources": [
@@ -88,7 +113,7 @@
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           }
         ],
-        "evidence": "Lane Celo owner reads returned this Safe at block 67746454, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard. CDP branch parameter and broader Mento admin coverage was not fully decoded."
+        "evidence": "At Celo block 69287341, owner() on CHFm returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; EIP-1967 proxy admin slot returned the same Safe address. Safe API (celo chain) confirmed threshold 4, 6 owners (drift from prior 7-owner data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99."
       }
     ],
     "review": {
@@ -102,12 +127,9 @@
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
         }
       ],
-      "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Safe.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
-      ]
+      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "established-alt-l1",

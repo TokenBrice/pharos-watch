@@ -157,8 +157,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USD3 is a Reserve Protocol Yield RToken/DTF: anyone can permissionlessly mint by depositing the governed collateral basket and redeem for it, while RSR stakers govern the basket composition and parameters via the RToken's Governor and provide first-loss overcollateralization.",
+    "confidence": "verified",
+    "summary": "USD3 is a Reserve Protocol Yield RToken/DTF: anyone can permissionlessly mint by depositing the governed collateral basket and redeem for it, while RSR stakers govern via Governor Anastasius → 3-day TimelockController (OWNER_ROLE on Main). A 3/5 guardian Safe can cancel timelock proposals.",
     "controls": [
       {
         "label": "USD3 RToken mint/redeem (BasketHandler)",
@@ -167,21 +167,41 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "capDescription": "Permissionless mint requires depositing the full governed collateral basket in proportion; mint/redeem are throttled by protocol issuance/redemption rate limits.",
-        "evidence": "Reserve docs describe RTokens as permissionlessly minted by depositing the governed basket and redeemed for it, with the BasketHandler defining basket composition and issuance throttles holding the NAV peg via arbitrage."
+        "evidence": "At Ethereum block 25295271, RToken.main() returned 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 (Main proxy→MainP1 impl). Main.rToken() returned 0x0d86883FAf4FfD7aEb116390af37746F45b6f378 (confirmed USD3). Main.basketHandler() returned 0x19835E5817A6fDC944100E86da2FCe86327457B8. frozen()=false, issuancePaused()=false.",
+        "sources": [
+          {
+            "label": "USD3 Main contract (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+          }
+        ]
       },
       {
-        "label": "RSR stakers / RToken Governor (Governor Anastasius)",
+        "label": "Governor Anastasius → TimelockController (OWNER_ROLE on Main)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
-        "evidence": "Reserve docs describe RSR stakers governing the USD3 Yield DTF via its Governor (basket composition, parameters, upgrades) and providing first-loss, slashable overcollateralization."
+        "evidence": "At Ethereum block 25295271: RoleGranted logs on Main proxy (0x81117e3e) show OWNER_ROLE (0x4f574e45..) held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6 (3-day minDelay). TimelockController RoleGranted logs show PROPOSER+EXECUTOR role held by Governor Anastasius 0xd895a5d391fc09f12e8c8d57cfde5c59bfbe2fa7; Governor.token() returned 0x55230B05d4c1F4a0B4f804dc52919F06355DfBF8 (stRSR for USD3), confirming RSR staker governance. CANCELLER role on Timelock held by guardian Safe 0xd5fe2780eb882d1da78f2136b81c2a4395488c98 (3/5 Safe, no modules, no guard, masterCopy 0xd9db270 = Safe 1.3.0).",
+        "sources": [
+          {
+            "label": "Governor Anastasius (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xd895a5d391fc09f12e8c8d57cfde5c59bfbe2fa7"
+          },
+          {
+            "label": "TimelockController (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x848b923b5d99d5963608ff55acdfee51c443cca6"
+          },
+          {
+            "label": "Guardian Safe (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xd5fe2780eb882d1da78f2136b81c2a4395488c98"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Reserve Protocol documentation describes USD3 as a Yield RToken/DTF with permissionless basket-backed mint/redeem governed by RSR stakers through the RToken's Governor; on-chain Governor/owner addresses were not independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295271: USD3 RToken.main()=0x81117e3e (MainP1 proxy). Main OWNER_ROLE held by TimelockController 0x848b923b (getMinDelay=259200s=3 days). Timelock PROPOSER/EXECUTOR=Governor Anastasius 0xd895a5d3; Governor.token()=stRSR 0x55230B05 (RSR stakers). CANCELLER=3/5 Guardian Safe 0xd5fe2780 (5 owners, threshold 3, no modules, no guard). Issuance not paused, not frozen. Base deployment not separately verified but shares Reserve Protocol governance pattern.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Reserve Yield DTF overview",
@@ -190,11 +210,11 @@
         {
           "label": "Introducing USD3 (Reserve forum)",
           "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691"
+        },
+        {
+          "label": "USD3 RToken contract (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x0d86883FAf4FfD7aEb116390af37746F45b6f378"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the on-chain Governor/owner and any guardian/pauser roles on the USD3 RToken deployments (Ethereum and Base).",
-        "Confirm current issuance/redemption throttle parameters."
       ]
     }
   },

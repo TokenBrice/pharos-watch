@@ -64,36 +64,93 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "JPYT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20. On Optimism, MINTER_ROLE is held by a single contract (0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, likely the DepositManager) and DEFAULT_ADMIN_ROLE by an EOA. On Base, MINTER_ROLE is held by a distinct contract (0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) and DEFAULT_ADMIN_ROLE by a separate EOA. No supply cap is enforced on the token itself.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "label": "JPYT MINTER_ROLE holder — Optimism",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Sourcify Optimism contract source",
             "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+          },
+          {
+            "label": "Optimism explorer — JPYT token",
+            "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
           }
         ],
-        "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "At Optimism block 152,830,546, getRoleMember(MINTER_ROLE, 0) returned 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9; eth_getCode confirmed it is a contract. getRoleMemberCount(MINTER_ROLE) = 1. The token is non-upgradeable (EIP-1967 proxy slots zero)."
+      },
+      {
+        "label": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Optimism explorer — JPYT token",
+            "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ],
+        "evidence": "At Optimism block 152,830,546, getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned 0xbdeb54641a23e2716a2978cde3cdeb1aed335479; eth_getCode returned 0x (EOA). Count = 1."
+      },
+      {
+        "label": "JPYT MINTER_ROLE holder — Base",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Base explorer — JPYT token",
+            "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ],
+        "evidence": "getRoleMember(MINTER_ROLE, 0) on Base returned 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276; eth_getCode confirmed it is a contract. Count = 1."
+      },
+      {
+        "label": "JPYT DEFAULT_ADMIN_ROLE holder — Base",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Base explorer — JPYT token",
+            "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ],
+        "evidence": "getRoleMember(DEFAULT_ADMIN_ROLE, 0) on Base returned 0x2db58fcae002ae16963f122dd657bb360398c54c; eth_getCode returned 0x (EOA). Count = 1."
       }
     ],
     "review": {
+      "evidence": "At Optimism block 152,830,546: non-upgradeable OZ AccessControlEnumerable token. MINTER_ROLE (1 holder): contract 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (DepositManager). DEFAULT_ADMIN_ROLE (1 holder): EOA 0xbdeb54641a23e2716a2978cde3cdeb1aed335479. Base deployment has distinct contract minter (0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) and EOA admin (0x2db58fcae002ae16963f122dd657bb360398c54c). No proxy or upgrade mechanism; authorityPosture downgraded from unbounded-or-compromised to concentrated-admin as mint is routed through a contract, not a raw EOA.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Sourcify Optimism contract source",
           "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+        },
+        {
+          "label": "Optimism explorer — JPYT token",
+          "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        },
+        {
+          "label": "Base explorer — JPYT token",
+          "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
         }
-      ],
-      "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      ]
     }
   },
   "chainTier": "stage1-l2",

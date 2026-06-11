@@ -73,44 +73,62 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "stUSD is StoneYield's strategy-vault token over USDC-routed strategies, but StoneYield docs expose local mint and emergency controls including deposit minting, rewardMint(), pause(), adminUnlock(), and sweepUSDC(); its mint authority is not inherited-only from USDC.",
+    "confidence": "verified",
+    "summary": "stUSD uses OZ AccessControl. The StoneYield wrapper contract (0xb4d3c1bb…) holds MINTER_ROLE (issueFromWrapper); DEFAULT_ADMIN_ROLE is held by an EIP-7702 EOA (0x9ab82f8e…) delegating to 0x63c0c19a…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
     "controls": [
       {
-        "chain": "bsc",
-        "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
-        "label": "StoneYield stUSD deposit mint path",
+        "label": "StoneYield stUSD wrapper contract (MINTER_ROLE / issueFromWrapper)",
         "role": "direct-minter",
         "authorityType": "contract",
+        "chain": "bsc",
+        "address": "0xb4d3c1bb59be7b419af4e10e9b240f425782b22a",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "User deposits USDC into StakeableAssetImpl/StrategyRouter, which mints stUSD shares against strategy assets; the token does not create base USDC supply but can mint local stUSD shares.",
-        "evidence": "StoneYield contract-design docs describe the flow `User Deposits USDC -> StakeableAssetImpl (mints STUSD) -> StrategyRouter`."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() is gated by MINTER_ROLE and enforces MAX_SUPPLY ceiling.",
+        "sources": [
+          {
+            "label": "StoneYield contract design docs",
+            "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+          },
+          {
+            "label": "stUSD contract (BscScan)",
+            "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a) returned true; wrapper() on stUSD returned 0xb4d3c1bb…. Contract source (BscScan) confirms issueFromWrapper() requires MINTER_ROLE and checks MAX_SUPPLY; MAX_SUPPLY is a Solidity constant with no setter."
       },
       {
-        "label": "StoneYield stUSD reward/emergency admin controls",
+        "label": "StoneYield DEFAULT_ADMIN_ROLE (EIP-7702 EOA)",
         "role": "minter-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "StoneYield docs list admin rewardMint(), pause(), adminUnlock(), and sweepUSDC() controls on the STUSD token design; exact owner/admin holder was not resolved in this pass."
+        "authorityType": "eoa",
+        "chain": "bsc",
+        "address": "0x9ab82f8e97bf3202173b92e06e6593f336b76ccf",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "stUSD contract (BscScan)",
+            "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e97bf3202173b92e06e6593f336b76ccf) returned true. eth_getCode on that address returned 23-byte EIP-7702 delegation designator (0xef0100 + 20-byte target 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b); it is an EOA with EIP-7702 delegation. grantRole() is controlled by this EOA."
       }
     ],
     "review": {
-      "evidence": "StoneYield docs describe stUSD share minting from USDC deposits plus admin rewardMint and emergency controls, so the local token has its own permissioned mint/admin surface even though base USDC supply remains Circle-issued.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "StoneYield contract design docs",
           "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+        },
+        {
+          "label": "stUSD contract (BscScan)",
+          "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
         }
-      ],
-      "sourceFreeRationale": "StoneYield docs document local STUSD mint/admin functions; exact owner/admin holder was not resolved from the BSC contract in this pass.",
-      "unresolvedQuestions": [
-        "Resolve the live BSC owner/admin holder for rewardMint(), pause(), adminUnlock(), and sweepUSDC()."
       ]
     }
   },

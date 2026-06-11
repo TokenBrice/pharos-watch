@@ -21,19 +21,19 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "gtUSDC is a MetaMorpho vault share over USDC; wrapper minting is share accounting while base USDC issuance remains inherited from Circle's reviewed USDC mint authority.",
+    "confidence": "verified",
+    "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 7/4 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xdd0f28e19C1780eb6396170735D45153D261490D",
-        "label": "Gauntlet USDC Prime V1 MetaMorpho vault",
+        "label": "Gauntlet USDC Prime V1 MetaMorpho vault (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Vault shares are minted only against deposited USDC exposure and do not create base USDC.",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 7/4 managing vault parameters only, not minting.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -44,7 +44,7 @@
             "url": "https://docs.morpho.org/curation/overview"
           }
         ],
-        "evidence": "Local metadata identifies gtUSDC as a strategy-vault variant of usdc-circle; Morpho docs describe vault-share accounting over supplied assets."
+        "evidence": "At Ethereum block 25295208: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (not a proxy, immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Safe v1.3.0, 7 owners, threshold=4, modules=[], confirmed via getOwners()/getThreshold()/getModulesPaginated()). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC confirmed)."
       },
       {
         "chain": "ethereum",
@@ -53,30 +53,30 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Reviewed USDC metadata source",
             "url": "https://github.com/circlefin/stablecoin-evm"
           }
         ],
-        "evidence": "gtUSDC inherits base USDC issuance risk from the reviewed USDC parent."
+        "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Morpho curation docs",
-          "url": "https://docs.morpho.org/curation/overview"
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
         },
         {
-          "label": "Reviewed parent",
-          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curation/overview"
         }
       ],
-      "evidence": "Local variant metadata and Morpho docs establish gtUSDC as wrapper/share accounting over USDC; parent USDC mint authority is already reviewed.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "variantOf": "usdc-circle",

@@ -53,8 +53,8 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply.",
+    "confidence": "verified",
+    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. Upgrade authority flows through Sky/Maker governance via a Dai Foundation SubProxy.",
     "inheritedFrom": "usdt-tether",
     "controls": [
       {
@@ -64,7 +64,7 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "ERC-4626 share accounting over deposited USDT; does not mint base USDT.",
         "sources": [
           {
@@ -76,7 +76,7 @@
             "url": "https://github.com/sparkdotfi/spark-address-registry"
           }
         ],
-        "evidence": "Local metadata marks spUSDT as `variantOf: usdt-tether` and `variantKind: savings-passthrough`; collateral text describes USDT deposits into Spark's ERC-4626 savings vault V2."
+        "evidence": "At Ethereum block 25295175: vault is an ERC1967Proxy (impl slot 0x1b992302652a92611dcd5090d1cb388c6377f455, confirmed as SparkVault). Proxy admin slot is zero (UUPS pattern). asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. DEFAULT_ADMIN_ROLE has 1 member: 0x3300f198988e4c9c63f75df86de36421f06af8c4, confirmed as a Dai Foundation SubProxy — the Sky/Maker governance relay that controls upgrade authority for Spark contracts."
       },
       {
         "chain": "ethereum",
@@ -107,14 +107,15 @@
         {
           "label": "Spark docs",
           "url": "https://docs.spark.fi"
+        },
+        {
+          "label": "Spark Savings USDT contract",
+          "url": "https://etherscan.io/address/0xe2e7a17dff93280dec073c995595155283e3c372"
         }
       ],
-      "evidence": "spUSDT is a savings wrapper over reviewed USDT. Wrapper share minting is collateralized by deposited USDT and does not create base USDT supply.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify Spark vault admin/upgrade owner before upgrading confidence."
-      ]
+      "evidence": "At Ethereum block 25295175: spUSDT vault confirmed as ERC1967Proxy (SparkVault impl). UUPS upgrade authority is DEFAULT_ADMIN_ROLE held by Dai Foundation SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4, a standard Sky/Maker governance relay. asset() confirmed USDT. Wrapper share minting is collateralized by deposited USDT and does not create base USDT supply.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "single-chain",

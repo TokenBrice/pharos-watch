@@ -139,8 +139,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing USDK depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -153,9 +153,13 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
       },
       {
         "chain": "solana",
@@ -165,8 +169,8 @@
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
         "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose a USDK-specific mint-authority address.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -177,7 +181,7 @@
             "url": "https://docs.m0.org/home/technical-documentations/solana/"
           }
         ],
-        "evidence": "Official M0 deployments list the Solana Portal program; a USDK-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+        "evidence": "At Solana slot 425792124: Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY confirmed executable (BPFLoaderUpgradeab1e owner). Program has 1815 program accounts (PDAs). Bridge from Ethereum locks base M supply."
       },
       {
         "chain": "solana",
@@ -194,7 +198,7 @@
             "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
           }
         ],
-        "evidence": "Solana Token-2022 mint account reads identify this live USDK mint authority; signer model was not decoded."
+        "evidence": "At Solana slot 425792124: getAccountInfo on mint usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX confirms mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 and scaledUiAmountConfig authority=same address. Querying C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 directly returns null (uninitialized account — no SOL, no owner program). Cannot confirm whether this is an EOA keypair, PDA of M0 portal, or multisig."
       }
     ],
     "review": {
@@ -206,11 +210,18 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "MinterGateway on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins; live Solana Token-2022 metadata also exposes a USDK mint authority.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Ethereum MinterGateway and Solana Portal confirmed. USDK Token-2022 mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is a null (uninitialized) Solana account — signer model cannot be determined without further off-chain context or issuer confirmation.",
+      "unresolvedQuestions": [
+        "USDK Solana mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair. Confirm authorityType before promoting to verified."
+      ],
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "rwa",

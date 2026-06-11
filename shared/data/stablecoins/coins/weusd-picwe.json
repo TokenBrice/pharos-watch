@@ -101,7 +101,7 @@
         "address": "0xc12233455beac4e094a5de022be692a264c0c0bc",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Live role checks on BSC, Base, and Arbitrum resolve this EOA as DEFAULT_ADMIN_ROLE holder and a current MINTER_ROLE holder; signer policy was not decoded.",
+        "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement RPC unreachable — Movement role state unconfirmed.",
         "sources": [
           {
             "label": "BscScan WEUSD contract",
@@ -118,7 +118,7 @@
         "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "PicWe docs identify this contract as the WEUSD mint/redeem handler, and live role checks on BSC, Base, and Arbitrum resolve it as a current MINTER_ROLE holder.",
+        "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. Movement unverifiable.",
         "sources": [
           {
             "label": "PicWe WEUSD docs",
@@ -128,9 +128,9 @@
       }
     ],
     "review": {
-      "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint. Live BSC/Base/Arbitrum checks resolve PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc as DEFAULT_ADMIN_ROLE and one MINTER_ROLE holder, and 0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C as an additional mint/redeem MINTER_ROLE holder. The basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement RPC (all public endpoints) unreachable — Movement role state cannot be confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "BscScan WEUSD contract",
@@ -142,7 +142,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Confirm Plume and Movement WEUSD role holders and whether the admin EOA is controlled by a multisig, MPC, or other policy layer."
+        "Movement RPC unreachable: confirm Movement chain role holders (DEFAULT_ADMIN_ROLE, MINTER_ROLE) for 0xf39c2674... contract before promoting above manual-review."
       ]
     }
   },

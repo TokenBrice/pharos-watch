@@ -146,9 +146,9 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR); BimaCore governs collateral types, debt ceilings, and risk parameters, and a PSM adds near-1:1 USDC/USDP/GUSD swaps.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR). BimaCore (0x227E9323D692578Ca3dF92b87d06625Df22380Ab) is owned by EOA 0xaca5d659364636284041b8d3acad8a57f6e7b8a5. USBD token is owned by a separate EOA (0xe3fbba95bb35be804696624dd1e9344a86e3cbc4). No proxy/upgrade paths on any of the core contracts. Posture upgraded to concentrated-admin (single EOA controls).",
     "controls": [
       {
         "label": "BIMA BorrowerOperations (Liquity-v1 fork)",
@@ -159,36 +159,55 @@
         "chain": "ethereum",
         "address": "0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc",
         "capDescription": "Mint gated by per-collateral debt ceilings and a 150% minimum collateral ratio enforced by the TroveManager/Factory.",
-        "evidence": "BIMA docs and mainnet-addresses page describe a Liquity-fork stack (BorrowerOperations, Factory, TroveManager, SortedTroves, StabilityPool) minting the USBD DebtToken against locked BTC collateral.",
+        "evidence": "At Ethereum block 25295203: BorrowerOperations.owner() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5 (EOA, eth_getCode = '0x'); EIP-1967 proxy admin slot = 0x0 (non-upgradeable). BIMA docs confirm Liquity-fork BorrowerOperations mints USBD DebtToken.",
         "sources": [
           {
             "label": "BIMA Mainnet Addresses",
             "url": "https://docs.bima.money/security/mainnet-addresses"
+          },
+          {
+            "label": "BorrowerOperations on Etherscan",
+            "url": "https://etherscan.io/address/0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc"
           }
         ]
       },
       {
         "label": "BimaCore governance / parameter admin",
-        "role": "governor",
-        "authorityType": "contract",
+        "role": "minter-admin",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
         "chain": "ethereum",
-        "address": "0x227E9323D692578Ca3dF92b87d06625Df22380Ab",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "BimaCore is the central access-control hub; governance can add collateral types and adjust debt ceilings, stability fees, and collateral ratios. Owner/admin not disclosed or shown renounced in the docs.",
+        "address": "0xaca5d659364636284041b8d3acad8a57f6e7b8a5",
+        "evidence": "At Ethereum block 25295203: BimaCore.owner() = BimaCore.guardian() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5; eth_getCode = '0x' (EOA). BimaCore EIP-1967 proxy admin slot = 0x0; impl slot = 0x0 — non-upgradeable. Same EOA owns BorrowerOperations. Concentration of authority in a single EOA.",
         "sources": [
           {
-            "label": "BIMA Mainnet Addresses",
-            "url": "https://docs.bima.money/security/mainnet-addresses"
+            "label": "BimaCore on Etherscan",
+            "url": "https://etherscan.io/address/0x227E9323D692578Ca3dF92b87d06625Df22380Ab"
+          }
+        ]
+      },
+      {
+        "label": "USBD token owner (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "chain": "ethereum",
+        "address": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
+        "evidence": "At Ethereum block 25295203: USBD token.owner() = 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4; eth_getCode = '0x' (EOA). USBD token EIP-1967 proxy admin slot = 0x0 (non-upgradeable). Separate EOA from BimaCore owner.",
+        "sources": [
+          {
+            "label": "USBD token on Etherscan",
+            "url": "https://etherscan.io/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           }
         ]
       }
     ],
     "review": {
-      "evidence": "USBD is minted permissionlessly by users via the BIMA BorrowerOperations contract against overcollateralized BTC LST vaults under Liquity-v1 mechanics, with BimaCore governing risk parameters and a PSM for stable swaps. Identical-address multichain deployments mint locally; no bridge mint is documented. Owner renouncement is not asserted.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: BimaCore (0x227E9323...) owner() = guardian() = EOA 0xaca5d659...; BorrowerOperations (0x87FED36c...) owner() = same EOA; USBD token (0x6bede1c6...) owner() = EOA 0xe3fbba95.... All three contract EIP-1967 proxy admin slots = 0x0 (non-upgradeable). eth_getCode = '0x' for both EOAs. Full EOA control with no multisig or timelock.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Minting USBD",
@@ -197,11 +216,11 @@
         {
           "label": "BIMA Mainnet Addresses",
           "url": "https://docs.bima.money/security/mainnet-addresses"
+        },
+        {
+          "label": "BimaCore on Etherscan",
+          "url": "https://etherscan.io/address/0x227E9323D692578Ca3dF92b87d06625Df22380Ab"
         }
-      ],
-      "sourceFreeRationale": "Liquity-fork mechanism and contract addresses confirmed from BIMA docs; the BimaCore owner/admin and any timelock/multisig were not independently read on-chain, so immutability cannot be claimed.",
-      "unresolvedQuestions": [
-        "Read BimaCore owner/guardian on Etherscan to determine whether parameter/upgrade authority is renounced, timelocked, or held by an EOA/multisig before raising confidence."
       ]
     }
   },

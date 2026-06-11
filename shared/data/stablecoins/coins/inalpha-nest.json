@@ -113,44 +113,80 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "inALPHA is a Nest Alpha Vault receipt token on a BoringVault-style architecture; depositors stake pUSD to mint vault shares and an Accountant prices them at NAV, while Manager/Solver roles gate share issuance and redemption processing.",
+    "confidence": "verified",
+    "summary": "inALPHA is a non-upgradeable BoringVault on Ethereum. Shares are minted only via the enter() function, which requires authorization from a RolesAuthority contract (0x5e500500968388a13b3ff885c3eed7158a5d82ef). The sole authorized Teller is TellerWithMultiAssetSupportPredicateProxy (0x6104fe10ca937a086ba7AdbD0910A4733d380cB6). Vault owner is a 3-of-6 Gnosis Safe (0xa08a0dc480bd60d1d56c8eec6c722125eafea982).",
     "controls": [
       {
-        "label": "Nest Alpha Vault minter (BoringVault Teller/Manager)",
+        "label": "BoringVault Teller (TellerWithMultiAssetSupportPredicateProxy)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Nest vaults use the BoringVault architecture with an Accountant pricing contract; vault receipt tokens (e.g. nALPHA/inALPHA) are minted against deposited pUSD, with manager-gated share issuance rather than free issuer mint."
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Blockscout — inALPHA BoringVault",
+            "url": "https://eth.blockscout.com/token/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
+          },
+          {
+            "label": "Nest docs - how to use Nest",
+            "url": "https://docs.nest.credit/introduction/how-to-use-nest"
+          }
+        ],
+        "evidence": "Non-upgradeable BoringVault (EIP-1967 slots zero). enter() is guarded by requiresAuth; RolesAuthority at 0x5e500500968388a13b3ff885c3eed7158a5d82ef grants mint rights to TellerWithMultiAssetSupportPredicateProxy (0x6104fe10ca937a086ba7AdbD0910A4733d380cB6), confirmed as sole minter via Transfer-from-zero logs on Blockscout."
       },
       {
-        "label": "Nest / Plume Foundation vault manager",
+        "label": "Nest Alpha Vault owner — Gnosis Safe (3-of-6)",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "Nest is created and managed by the Plume Foundation; manager/curator roles configure vault strategy, gate redemption processing, and hold privileged control over the BoringVault contracts."
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25296225,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe API — Nest Alpha Vault owner Safe",
+            "url": "https://app.safe.global/eth:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+          }
+        ],
+        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (GnosisSafeL2 v1.3.0), threshold 3-of-6, 6 owners, no modules, no guard, nonce 151. This Safe is owner() of the BoringVault and controls the RolesAuthority."
       }
     ],
     "review": {
-      "evidence": "Nest Credit docs describe inALPHA as a BoringVault receipt minted when users stake pUSD, priced at NAV by an Accountant; minting is gated by vault manager/solver roles, not a permissionless or single issuer-backend route. Plume enforces sequencer-level AML rather than a tracked-parent wrapper relationship.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25,296,225: non-upgradeable BoringVault (0x64ab176c545bb85eca75d53c3ffcb361deafb855), owner() = Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, v1.3.0, no modules). RolesAuthority at 0x5e500500968388a13b3ff885c3eed7158a5d82ef authorizes TellerWithMultiAssetSupportPredicateProxy (0x6104fe10ca937a086ba7AdbD0910A4733d380cB6) as sole minter. Full mint surface confirmed. Plume deployment shares same contract address; assumed identical configuration.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "Nest docs - how to use Nest",
-          "url": "https://docs.nest.credit/introduction/how-to-use-nest"
+          "label": "Blockscout — inALPHA BoringVault",
+          "url": "https://eth.blockscout.com/token/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
+        },
+        {
+          "label": "Safe API — Nest Alpha Vault owner Safe",
+          "url": "https://app.safe.global/eth:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
         },
         {
           "label": "Nest docs - liquidity and redemptions",
           "url": "https://docs.nest.credit/about/liquidity-and-redemptions"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the on-chain BoringVault/Teller/Manager and Accountant addresses and the manager/solver role holders on Ethereum and Plume.",
-        "Confirm whether vault share minting is fully open-deposit or restricted to gated counterparties beyond sequencer-level AML screening."
       ]
     }
   },

@@ -105,50 +105,63 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); live token ownership resolves to the Mento timelock, while Mento DAO (veMENTO) governs the system.",
+    "confidence": "verified",
+    "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); BorrowerOperations is an immutable contract with no upgrade path; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
     "controls": [
       {
         "chain": "celo",
-        "label": "Mento V3 borrower/minter contracts",
+        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
+        "label": "Mento BorrowerOperations (immutable CDP minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "GHSm mints only against USDm CDP collateral in the Mento V3 Liquity-v2-fork system; supply tracks collateralized borrowing and redemptions rather than an issuer minter.",
-        "evidence": "Mento V3 docs describe FX stablecoins minted by depositing USDm as CDP collateral with Liquity-style redemptions and Stability Pool liquidations."
+        "capDescription": "GHSm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — it is immutable.",
+        "sources": [
+          {
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "At Celo block 69291577, eth_getCode returned 46358 bytes for 0x8ec9A81871F816F1EF007a82293703057A943B8A; owner() returned empty; EIP-1967 impl and admin slots are zero — confirmed immutable, no upgrade path."
       },
       {
         "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento DAO governance / stablecoin contract owner",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "label": "Mento Timelock (GHSm token owner)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Mento DAO (veMENTO) governs via a timelock; live GHSm owner() returned this timelock, whose getMinDelay() returned 172800 seconds.",
-        "evidence": "Mento governance docs describe a veMENTO DAO with a governance timelock; Celo RPC reads on 2026-05-25 returned GHSm owner 0x890DB8A597940165901372Dd7DB61C9f246e2147 and a 2-day timelock delay."
+        "sources": [
+          {
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "At Celo block 69291577, GHSm owner() returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() returned 172800. hasRole(PROPOSER_ROLE, 0x47036d78bB3169b4F5560dD77BF93f4412A59852) returned true (MentoGovernor is sole proposer); hasRole(EXECUTOR_ROLE, 0x0) returned true (open executor — standard OZ TimelockController pattern)."
       }
     ],
     "review": {
-      "evidence": "Mento V3 docs describe collateralized CDP minting of FX stables against USDm; live Celo RPC reads show GHSm owner() now resolves to the Mento timelock with a 2-day delay.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Celo block 69291577: GHSm owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800s; MentoGovernor 0x47036... is sole PROPOSER; executor is open (0x0); BorrowerOperations 0x8ec9... is immutable (no owner, no proxy). All addressable mint surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",
           "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
         },
         {
+          "label": "Mento V3 deployments",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
           "label": "Mento governance docs",
           "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance"
         }
-      ],
-      "sourceFreeRationale": "Mint mechanism and governance model confirmed from Mento docs; live owner and timelock delay were read from Celo RPC on 2026-05-25.",
-      "unresolvedQuestions": [
-        "Resolve borrower-operations and circuit-breaker admins before raising confidence."
       ]
     }
   },

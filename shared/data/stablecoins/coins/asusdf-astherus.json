@@ -95,11 +95,22 @@
         "label": "Aster Earn asUSDF wrapper token",
         "role": "wrapper",
         "authorityType": "contract",
-        "directMintAbility": "none",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "asUSDF shares are minted/burned by the Aster Earn wrapper against staked USDF deposits and withdrawals; this share accounting cannot create or destroy base USDF supply.",
-        "evidence": "Savings-passthrough wrapper: staking USDF mints asUSDF shares whose NAV accrues from underlying strategy yield; minting shares only follows USDF deposits and does not expand the parent USDF supply."
+        "capDescription": "asUSDF has a privileged mint(address,uint256) function gated by MINTER_AND_BURN_ROLE (0x144dc672...). At BSC block 103632926, that role is held by contract 0xdB57a53C428a9faFcbFefFB6dd80d0f427543695 (the Aster staking/earn module). DEFAULT_ADMIN_ROLE holder is not identified.",
+        "evidence": "At BSC block 103632926: mint(address,uint256) call reverted with AccessControlUnauthorizedAccount(caller, 0x144dc67236c5b8b129f92a31bb5cba2a9c107df2d9bcedef0515ca3f60ecb794) — confirming a privileged mint path gated by MINTER_AND_BURN_ROLE. hasRole(MINTER_AND_BURN_ROLE, 0xdB57a53C428a9faFcbFefFB6dd80d0f427543695) = true; that address is a contract (1712 bytes). DEFAULT_ADMIN_ROLE holder not found among known Aster contract addresses from docs. Contract has DELEGATECALL opcode (proxy) but EIP-1967 storage slots are zero; custom proxy pattern — upgrade admin unconfirmable."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xdB57a53C428a9faFcbFefFB6dd80d0f427543695",
+        "label": "Aster MINTER_AND_BURN_ROLE holder (staking module)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "hasRole(0x144dc672..., 0xdB57a5...) = true at BSC block 103632926. Contract bytecode len=1712 bytes; owner() and name() revert. Identity not conclusively verified but context (Aster earn module list) suggests it is the Aster staking/earn contract that authorizes shares against deposited USDF."
       },
       {
         "label": "Inherited USDF (Astherus) MINTER_AND_BURN_ROLE mint path",
@@ -112,16 +123,24 @@
       }
     ],
     "review": {
-      "evidence": "asUSDF (variantOf usdf-astherus, variantKind savings-passthrough) is a staked wrapper whose shares track deposited USDF; base mint authority is the inherited USDF permissioned-minter path (partially-bounded-admin) and is mirrored here.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "asUSDF (variantOf usdf-astherus, variantKind savings-passthrough) has a confirmed privileged mint path (MINTER_AND_BURN_ROLE=0x144dc672...) on the wrapper itself, held by contract 0xdB57a5. The DEFAULT_ADMIN_ROLE holder is unknown. The wrapper also uses a custom proxy pattern (DELEGATECALL in bytecode, EIP-1967 slots empty), so upgrade admin is unconfirmable.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Aster asUSDF FAQ",
           "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+        },
+        {
+          "label": "BSC asUSDF contract",
+          "url": "https://bscscan.com/token/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb"
         }
       ],
-      "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usdf-astherus, savings-passthrough, wrapper reserve); posture mirrors the USDF parent mint authority."
+      "unresolvedQuestions": [
+        "DEFAULT_ADMIN_ROLE holder on asUSDF (0x917af4) not identified from known Aster addresses; scan RoleGranted events to find current admin.",
+        "Wrapper uses custom proxy pattern (DELEGATECALL, EIP-1967 slots zero); upgrade admin unconfirmable via standard storage reads. Check Blockscout/BSCscan verified source for implementation and admin.",
+        "Confirm identity of MINTER_AND_BURN_ROLE holder contract 0xdB57a53C428a9faFcbFefFB6dd80d0f427543695 (Aster earn module vs. privileged issuer minter)."
+      ]
     }
   },
   "launchDate": "2024-11-21"

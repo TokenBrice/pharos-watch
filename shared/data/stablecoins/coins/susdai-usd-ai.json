@@ -118,17 +118,36 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdai-usd-ai",
-    "summary": "sUSDai is USD.AI's staked wrapper of USDai; shares are minted only by depositing USDai into the staking vault, so it inherits USDai's permissioned-minter authority rather than creating new base USDai supply.",
+    "summary": "sUSDai (EIP-1967 upgradeable proxy) upgrade path secured by 48-hour TimelockController owned by a 3-of-3 Safe multisig (0x783b08...). Shares minted only by USDai deposit — no privileged mint. Wrapper upgrade path confirmed as timelock-gated multisig.",
     "controls": [
       {
-        "label": "sUSDai staking vault (share accounting)",
+        "label": "sUSDai staking vault (EIP-1967 upgradeable proxy, Ethereum)",
         "role": "wrapper",
-        "authorityType": "contract",
+        "authorityType": "multisig",
         "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "sUSDai shares are minted when USDai is staked into the vault and burned on the queued (30-day) exit; share price appreciates as yield accrues. The wrapper accounts for deposited USDai and cannot create base USDai supply."
+        "chain": "ethereum",
+        "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 3,
+        "sources": [
+          {
+            "label": "USD.AI docs",
+            "url": "https://docs.usd.ai"
+          },
+          {
+            "label": "sUSDai Ethereum contract",
+            "url": "https://etherscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+          },
+          {
+            "label": "USD.AI TimelockController",
+            "url": "https://etherscan.io/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295219: EIP-1967 proxy admin slot = 0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f (ProxyAdmin); impl slot = 0x30198aa66d057a6216db471fce234b98edc1e5ad. ProxyAdmin owner() = 0x0eea1ee08611ff4a4e83bfe3916712751995639b (TimelockController, minDelay = 172800 s = 48 h, DEFAULT_ADMIN_ROLE confirmed). Timelock creation events at block 24993318: PROPOSER_ROLE, CANCELLER_ROLE, EXECUTOR_ROLE granted to Safe 0x783b08aa21de056717173f72e04be0e91328a07b; EXECUTOR_ROLE also granted to SafeProxy 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f (same 3 owners, threshold 3). Safe getOwners() = [0xe982b3f..., 0x986868c..., 0xd1affe2...], getThreshold() = 3. sUSDai shares minted only by USDai deposit."
       },
       {
         "label": "Inherited USDai permissioned mint authority",
@@ -140,13 +159,23 @@
       }
     ],
     "review": {
-      "evidence": "sUSDai (variantOf usdai-usd-ai, variantKind strategy-vault) is an ERC-4626-style staked wrapper over USDai. It inherits USDai's permissioned-minter mint path and concentrated-admin posture; the wrapper itself only mints/burns shares against USDai deposits.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Classified as the staked variant of usdai-usd-ai per coin metadata; posture mirrored from the parent USDai mintAuthority. The vault's own admin and the parent's live STRATEGY_ADMIN_ROLE multisig were not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the sUSDai vault admin/upgrade controls and confirm exit-queue parameters cannot be used to mint base USDai supply."
-      ]
+      "sources": [
+        {
+          "label": "USD.AI docs",
+          "url": "https://docs.usd.ai"
+        },
+        {
+          "label": "sUSDai Ethereum contract",
+          "url": "https://etherscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        },
+        {
+          "label": "USD.AI TimelockController",
+          "url": "https://etherscan.io/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+        }
+      ],
+      "evidence": "At Ethereum block 25295219: sUSDai proxy upgrade path = ProxyAdmin → 48-hour TimelockController → 3-of-3 Safe. No privileged mint on the wrapper; shares minted only by USDai deposit. Exit-queue parameters controlled by same Safe via Timelock (cannot mint base USDai). Parent USDai mint path tracked separately.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2025-05-23"

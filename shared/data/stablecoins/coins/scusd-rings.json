@@ -86,16 +86,37 @@
     "summary": "scUSD is a Veda BoringVault receipt token: users deposit accepted stablecoins to mint scUSD shares via a Teller, but the BoringVault role set (minter/teller/solver/queue) is administered under a 4/6 Veda/Paladin governance multisig with role-based timelocks, making the privileged surface a concentrated admin.",
     "controls": [
       {
-        "label": "Veda/Paladin governance multisig (BoringVault role admin)",
+        "label": "Veda/Paladin governance Safe (4/6, TimelockController proposer)",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
+        "address": "0xb77d74f032cfe55190325474e061052685ceccc0",
         "threshold": 4,
         "signerCount": 6,
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
-        "evidence": "LlamaRisk review states Rings governance uses 4/6 multisigs managed by Veda and Paladin contributors, with role-based timelocks controlling each BoringVault contract set and some EOAs administering the BoringOnChainQueue and BoringSolver."
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "safe": {
+          "threshold": 4,
+          "owners": [
+            "0x3AE790AF0C4d5A248B3509cD4a1dC052E89d2e66",
+            "0x8fb0b2cF20B7178C11F01592936dd063Fe244C9a",
+            "0xa0c28511CaA67eC91a9B76287e2Db47939A66d36",
+            "0x4d5eb3827bde5183a627eB996AF75Ef56Bb9ab9a",
+            "0xf35dEE924F483Bc234F09cbfbc8B4488fD06be20",
+            "0x3dF8cc3923b55a92d992d9A3F119d3923f960986"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25295183,
+          "source": "onchain"
+        },
+        "sources": [
+          { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" },
+          { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
+        ],
+        "evidence": "At Ethereum block 25295183: getOwners() returned 6 signers, getThreshold() returned 4, getModulesPaginated() returned empty. This Safe is a PROPOSER on the TimelockController (0xFb6ec7CCBd77a42922a35D22A94fdF7fd54EE4BC, 86400s min delay) which owns the RolesAuthority (0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348) that gates all BoringVault role grants."
       },
       {
         "label": "Veda BoringVault Teller (scUSD share mint on deposit)",
@@ -105,19 +126,21 @@
         "chain": "ethereum",
         "address": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
         "canRaiseCap": "unknown",
-        "evidence": "scUSD is a BoringVault receipt token minted by the Teller when supported stablecoins are deposited; share issuance is deposit-driven but the minter/teller roles are granted under the governance multisig."
+        "evidence": "At Ethereum block 25295183: Blockscout confirms this is a BoringVault contract; authority() returned RolesAuthority at 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348. scUSD shares are minted on stablecoin deposit via a Teller; role grants for Teller/Solver/Queue are controlled through the TimelockController→RolesAuthority chain."
       }
     ],
     "review": {
-      "evidence": "Veda and Rings docs plus the LlamaRisk security review describe scUSD as a Veda BoringVault receipt token minted on stablecoin deposit, with a 4/6 Veda/Paladin governance multisig and role-based timelocks controlling the minter/teller/solver/queue contract set; canonical backing addresses are not yet fully published.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295183: scUSD (0xd3dce716...) confirmed as BoringVault; authority()=RolesAuthority 0x7D5f61...; RolesAuthority.owner()=TimelockController 0xFb6ec7... (getMinDelay=86400s); TimelockController has proposer 4/6 Safe 0xb77d74f0... (getOwners verified, no modules). Governance chain: 4/6 Safe → 1d Timelock → RolesAuthority → BoringVault.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         { "label": "Rings on Veda", "url": "https://docs.veda.tech/vault-deployments/rings" },
-        { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" }
+        { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" },
+        { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
       ],
-      "sourceFreeRationale": "4/6 multisig and BoringVault role architecture taken from the LlamaRisk review and Veda/Rings docs; the exact governance multisig address, timelock delays, and module/guard status were not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve the on-chain Rings governance multisig address and role-timelock delays, and the published BoringVault/treasury backing addresses."]
+      "unresolvedQuestions": [
+        "Individual Teller/Solver/Queue contract addresses and their specific role assignments in the RolesAuthority not enumerated; Sonic deployment not verified."
+      ]
     }
   },
   "launchDate": "2024-12-09"

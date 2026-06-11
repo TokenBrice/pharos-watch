@@ -106,46 +106,66 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "HOME is minted by Bacon Protocol 'Pan' smart contracts when a borrower draws an overcollateralized loan against a recorded property lien (ERC-721); BACON governance can add Pans and licensed servicers originate the underlying loans.",
+    "confidence": "verified",
+    "summary": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is an EIP-1967 proxy. The ProxyAdmin (0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f) is owned by a 5-signer legacy Gnosis MultiSigWallet (0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, threshold 3-of-5). Minting occurs only through Bacon Protocol Pan contracts when borrowers draw lien-backed loans. BACON governance controls Pan additions.",
     "controls": [
       {
         "chain": "ethereum",
         "label": "Bacon Protocol Pan lending/mint contract",
-        "role": "other",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "HOME supply expands only as new overcollateralized home loans are originated through a Pan; minting is tied to lien-backed loan creation rather than free issuer mint.",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Bacon Protocol docs describe 'Pans' as the core lending contracts that pool funds and mint HOME when a homeowner takes a lien-backed loan; supply is uncapped and demand-driven, not minted at issuer discretion."
+        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy — minting is contract-controlled via Pan loan origination.",
+        "sources": [
+          {
+            "label": "HOME token on Etherscan",
+            "url": "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62"
+          }
+        ]
       },
       {
-        "label": "BACON governance / licensed servicers",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "label": "HomeCoin ProxyAdmin owner (legacy Gnosis MultiSigWallet)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xa42f6fb68607048dde54fcd53d2195cc8ca5f486",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": "unknown",
-        "evidence": "BACON is the governance token able to add new Pans and tune loan criteria; licensed servicers/LoanSnap originate and service the loans, gating which liens can mint HOME."
+        "evidence": "At Ethereum block 25295203: HOME token EIP-1967 proxy admin slot = 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f (ProxyAdmin, verified via Blockscout). ProxyAdmin.owner() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486. getOwners() on that address returns 5 EOA addresses; storage slot 4 = 3 (required/threshold); storage slot 3 = 5 (ownerCount). Contract is 342 bytes — classic Gnosis MultiSigWallet (pre-Safe, no module system).",
+        "sources": [
+          {
+            "label": "HOME ProxyAdmin on Etherscan",
+            "url": "https://etherscan.io/address/0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f"
+          },
+          {
+            "label": "HOME multisig on Etherscan",
+            "url": "https://etherscan.io/address/0xa42f6fb68607048dde54fcd53d2195cc8ca5f486"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Project materials describe collateralized mint: HOME is created by Pan contracts at loan origination against recorded property liens, with BACON governance over Pan parameters and licensed servicers originating loans. No central issuer-discretion mint path is described.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295203: HOME token (0xb8919522...) EIP-1967 proxy admin slot = 0x5729890f... (ProxyAdmin); impl slot = 0x366049d3... (24022 bytes). ProxyAdmin.owner() = 0xa42f6fb6... (legacy Gnosis MultiSigWallet, 342 bytes). getOwners() = 5 EOAs; required (slot 4) = 3; ownerCount (slot 3) = 5. No Safe module system. Minting is via Pan contracts (loan origination); no direct issuer-discretion mint path.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "HomeCoin / Bacon Protocol docs",
           "url": "https://github.com/homecoin-finance/gitbook"
         },
         {
-          "label": "Bacon Protocol launch coverage",
-          "url": "https://cointelegraph.com/news/bacon-protocol-launches-decentralized-mortgage-platform"
+          "label": "HOME token on Etherscan",
+          "url": "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62"
+        },
+        {
+          "label": "HOME multisig on Etherscan",
+          "url": "https://etherscan.io/address/0xa42f6fb68607048dde54fcd53d2195cc8ca5f486"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the on-chain Pan/minter contract address and any owner/proxy admin on Ethereum, and confirm whether HOME minting can be triggered outside the loan-origination path.",
-        "Confirm current BACON governance scope and whether servicer onboarding is fully decentralized or admin-gated."
       ]
     }
   },

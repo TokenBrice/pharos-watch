@@ -104,40 +104,49 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "WEMIX$ is issued through the WEMIX3.0 MINT contract under Authorized Mint Access (AMA), granted only to the WEMIX foundation at launch, against USDC deposited into the Treasury; an algorithmic DIOS stabilizer manages the peg but the mint permission is concentrated in the issuer.",
+    "confidence": "verified",
+    "summary": "WEMIX$ on WEMIX chain (0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1) is an onlyOwner mint contract; owner() resolves to EOA 0x7a907b9df3f4843522b905758c2f542c9c028e4d (WEMIX foundation custody), confirmed on-chain at block 114958903.",
     "controls": [
       {
-        "label": "WEMIX Authorized Mint Access (AMA) holder",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
         "chain": "wemix",
+        "address": "0x7a907b9df3f4843522b905758c2f542c9c028e4d",
+        "label": "WEMIX$ token owner (EOA — WEMIX foundation)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "WEMIX docs state issuance is controlled by the MINT contract and that the AMA (Authorized Mint Access) right was granted only to the WEMIX foundation at launch, minting WEMIX$ 1:1 against USDC deposited to the Treasury; DIOS (TIP/TOP) is an automated stabilizer rather than an open mint route, so supply creation is permissioned to the issuer.",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "WEMIX$ stabilizer docs",
-            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+          },
+          {
+            "label": "WEMIX chain RPC",
+            "url": "https://api.wemix.com"
           }
-        ]
+        ],
+        "evidence": "At WEMIX chain block 114958903, owner() on contract 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1 (name()=WEMIX$) returned 0x7a907b9df3f4843522b905758c2f542c9c028e4d. eth_getCode at that address returned 0x (no bytecode) confirming an EOA. EIP-1967 proxy admin slot is empty (not a proxy). No masterMinter or MINTER_ROLE found."
       }
     ],
     "review": {
-      "evidence": "WEMIX$ is the WEMIX3.0 ecosystem stablecoin minted via the MINT contract under Authorized Mint Access held by the WEMIX foundation, with USDC Treasury collateral and an automated DIOS price stabilizer; there is no permissionless or user-collateralized mint path.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
       "sources": [
         {
           "label": "WEMIX$ stabilizer docs",
           "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+        },
+        {
+          "label": "WEMIX chain RPC (api.wemix.com)",
+          "url": "https://api.wemix.com"
+        },
+        {
+          "label": "CoinGecko WEMIX$ platforms",
+          "url": "https://api.coingecko.com/api/v3/coins/wemix-dollar"
         }
       ],
-      "sourceFreeRationale": "WEMIX chain is non-EVM-indexed and no contract is stored in Pharos; mint mechanism resolved from issuer docs (AMA + MINT + DIOS) rather than a live on-chain admin read.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain AMA/MINT contract owner on WEMIX chain and whether AMA has been extended beyond the foundation."
-      ]
+      "evidence": "At WEMIX block 114958903: contract 0x8e81fcc2 confirmed name=WEMIX$; owner()=0x7a907b9d (EOA, no bytecode); not a proxy. CoinGecko confirmed wemix-network contract address 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1. Mint is controlled solely by the owner EOA (WEMIX foundation custody).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   }
 }

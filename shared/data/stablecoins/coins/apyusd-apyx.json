@@ -132,12 +132,11 @@
           "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#readContract"
         }
       ],
-      "evidence": "Local variant metadata and Ethereum asset() reads confirm apyUSD is a wrapper over reviewed apxUSD rather than an independent base-dollar issuer. The inherited apxUSD mint path is signed-order MinterV0 issuance, not a plain issuer-backend mint.",
-      "reviewer": "Codex mint-authority full-gap batch-1",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295216: apyUSD is a UUPS proxy (impl=0xfd616567ecc1607f61073951a1e822f7315bb112, proxy admin slot=0x0). authority()=0xe167330e2eac88666de253e9607c6d9ae0ca2824 (Apyx shared AccessManager, also used by apxUSD on ETH; Base uses a different AccessManager at 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d). The AccessManager is a large contract (18036 bytes on ETH) that reverts all standard AccessManager interface calls; its admin is unconfirmable from chain state. Wrapper is not paused; asset() returns apxUSD.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve wrapper admin/owner roles if the detail view should show who can pause or upgrade apyUSD itself.",
-        "Parent apxUSD remains manual-review confidence because deeper on-chain role review is pending."
+        "Apyx shared AccessManager (0xe167330e2eac88666de253e9607c6d9ae0ca2824) reverts all standard OZ AccessManager calls and has zero-filled storage slots; its admin/upgrade authority cannot be confirmed via RPC. Resolve by reading Apyx source code on GitHub (apyx-labs/evm-contracts) or Sourcify to identify the AccessManager implementation and its admin address."
       ]
     }
   },

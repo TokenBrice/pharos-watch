@@ -92,9 +92,9 @@
       }
     ],
     "review": {
-      "evidence": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve contract, with CCTP/Gateway transfers to/from USDC on other chains (reserves 100% USDC, depType wrapper, coinId usdc-circle). It is a Circle-operated bridge/lockbox wrapper rather than a new issuer, so it inherits USDC's issuer-direct mint path and concentrated-admin posture. inheritedFrom set to usdc-circle (coin has no variantOf field).",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve contract, with CCTP/Gateway transfers to/from USDC on other chains (reserves 100% USDC, depType wrapper, coinId usdc-circle). It is a Circle-operated bridge/lockbox wrapper rather than a new issuer, so it inherits USDC's issuer-direct mint path and concentrated-admin posture. inheritedFrom set to usdc-circle (coin has no variantOf field). The xReserve contract on Movement (Move VM, non-EVM) was not queryable via standard EVM RPC — standard EIP-1967 admin slot reads are not applicable to Move objects.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Movement: Introducing USDCx",
@@ -105,9 +105,8 @@
           "url": "https://www.circle.com/xreserve"
         }
       ],
-      "sourceFreeRationale": "USDCx classified as a Circle xReserve USDC representation per Movement/Circle materials; posture mirrored from the parent USDC mintAuthority. The xReserve contract's on-chain admin on Movement was not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain admin/upgrade controls of Circle's xReserve contract on Movement and confirm the CCTP/Gateway lockbox cannot mint USDCx beyond locked USDC."
+        "Movement runs a Move VM (not EVM) — verify the xReserve object admin/upgrade controls using Movement's Aptos-compatible RPC (getAccountResource or similar) to confirm Circle is sole admin and no privileged free-mint capability exists beyond USDC lockbox deposits."
       ]
     }
   }

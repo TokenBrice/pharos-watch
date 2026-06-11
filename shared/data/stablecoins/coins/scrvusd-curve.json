@@ -21,7 +21,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
     "inheritedFrom": "crvusd-curve",
     "controls": [
@@ -44,7 +44,7 @@
             "url": "https://resources.curve.finance/crvusd/"
           }
         ],
-        "evidence": "Ethereum RPC `asset()` returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; parent crvUSD has reviewed mintAuthority."
+        "evidence": "At Ethereum block 25295167, asset() returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E. EIP-1967 impl slot is zero (not upgradeable). owner() reverts (no privileged owner). Wrapper cannot mint crvUSD; share accounting only. Parent crvUSD has reviewed mintAuthority."
       }
     ],
     "review": {
@@ -54,9 +54,9 @@
           "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
         }
       ],
-      "evidence": "On-chain asset read confirms scrvUSD wraps crvUSD; durable mint authority inherits from reviewed parent crvUSD.",
-      "reviewer": "Codex mint-authority full-gap batch-4",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295167: asset() = crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E confirmed; EIP-1967 impl slot = 0x0 (immutable, not upgradeable); owner() reverts (no upgrade admin surface). Wrapper is non-upgradeable deposit-only vault; durable mint authority inherits from reviewed parent crvUSD.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "variantOf": "crvusd-curve",

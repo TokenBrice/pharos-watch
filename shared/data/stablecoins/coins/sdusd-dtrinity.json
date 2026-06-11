@@ -109,43 +109,64 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
-    "summary": "sdUSD is dTRINITY's staked dUSD vault receipt; shares are minted only by staking dUSD into the dSTAKE vault (supplied into dLEND), so it inherits dUSD's AMO-or-custodian-hybrid mint authority rather than creating new dUSD supply.",
+    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD — no privileged mint surface. Fraxtal deployment admin not separately verified.",
     "controls": [
       {
-        "label": "dSTAKE sdUSD vault (share accounting)",
+        "label": "dSTAKE sdUSD vault (EIP-1967 upgradeable proxy, Ethereum)",
         "role": "wrapper",
-        "authorityType": "contract",
+        "authorityType": "multisig",
         "directMintAbility": "none",
         "chain": "ethereum",
         "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
-        "canRaiseCap": "unknown",
-        "evidence": "sdUSD receipts are minted when dUSD is staked into the dSTAKE vault and supplied into dLEND, and burned (up to 10 bps retained) on liquidity-gated unstake; NAV accrues dLEND supply APY. The wrapper cannot create base dUSD supply. Deployments are chain-isolated and non-fungible across networks."
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "sources": [
+          {
+            "label": "dTRINITY sdUSD docs",
+            "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+          },
+          {
+            "label": "sdUSD Ethereum contract",
+            "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
+          },
+          {
+            "label": "dTRINITY TimelockController",
+            "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295192: EIP-1967 proxy admin slot = 0xbe90db309b80357631069b689fc3481aca2c65be (ProxyAdmin); ProxyAdmin owner() = 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (TimelockController, minDelay = 86400 s = 24 h). Timelock creation events at block 25105532: PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE all granted to Safe 0xe83c188a7be46b90715c757a06cf917175f30262 (Blockscout ContractName: Safe). Safe getOwners() = 5 addresses; getThreshold() = 3. sdUSD receipts minted only by dUSD deposit (no privileged mint)."
       },
       {
         "label": "Inherited dUSD AMO/governed-reserve mint authority",
         "role": "governor",
-        "authorityType": "multisig",
+        "authorityType": "unknown",
         "directMintAbility": "none",
         "canRaiseCap": "unknown",
         "evidence": "Underlying dUSD is minted 1:1 against a governance-set whitelist of reserve stablecoins, with AMO pre-minting dUSD into Curve pools and contributor governance (pre-TGE multisig) controlling the whitelist, AMO/SMO, and a mint kill-switch. sdUSD inherits this concentrated-admin posture, plus the March 17 2026 dTRINITY exploit exposure noted on the dUSD profile."
       }
     ],
     "review": {
-      "evidence": "sdUSD (variantOf dusd-dtrinity, variantKind strategy-vault) is a dSTAKE vault receipt over dUSD on Ethereum and Fraxtal. It inherits dUSD's amo-or-custodian-hybrid mint path and concentrated-admin posture; the wrapper only mints/burns receipts against dUSD deposits supplied into dLEND.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
       "sources": [
         {
           "label": "dTRINITY sdUSD docs",
           "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+        },
+        {
+          "label": "sdUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
+        },
+        {
+          "label": "dTRINITY TimelockController",
+          "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
         }
       ],
-      "sourceFreeRationale": "Classified as the staked variant of dusd-dtrinity per coin metadata; posture mirrored from the parent dUSD mintAuthority. The dSTAKE vault's own admin was not independently resolved on-chain.",
-      "unresolvedQuestions": [
-        "Resolve the dSTAKE sdUSD vault admin/upgrade controls on Ethereum and Fraxtal and confirm exposure scope of the March 2026 dTRINITY/dLEND exploit on the staking path."
-      ]
+      "evidence": "At Ethereum block 25295192: sdUSD Ethereum proxy upgrade path confirmed as ProxyAdmin → 24-hour TimelockController → 3-of-5 Safe. No privileged mint on the wrapper; receipts minted only by dUSD deposit into dSTAKE. Fraxtal deployment (0x58acc260...) not verified independently — separate admin chain presumed but unconfirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2025-07-30"

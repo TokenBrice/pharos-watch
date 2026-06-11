@@ -60,26 +60,30 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
-    "summary": "sUSDD is a savings wrapper over USDD. Wrapper shares are minted against deposited USDD and inherit USDD's reviewed permissioned mint/admin authority for base supply.",
+    "confidence": "verified",
+    "summary": "sUSDD is an immutable DSR-style savings wrapper (SavingsUsdd, forked from DAI Foundation) over USDD. The contract has no owner, no admin, no proxy — all parameters are immutable (pot, usddJoin set at constructor). Shares are minted/burned only by deposit/withdrawal of USDD. Base USDD mint authority is inherited from reviewed usdd-tron-dao-reserve.",
     "inheritedFrom": "usdd-tron-dao-reserve",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
-        "label": "sUSDD Ethereum wrapper",
+        "label": "sUSDD Ethereum wrapper (SavingsUsdd, immutable)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Savings wrapper over deposited USDD; does not mint base USDD.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Immutable DSR-style savings wrapper over deposited USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
         "sources": [
+          {
+            "label": "SavingsUsdd source (Blockscout ETH)",
+            "url": "https://eth.blockscout.com/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+          },
           {
             "label": "USDD website",
             "url": "https://usdd.io/"
           }
         ],
-        "evidence": "Local metadata marks sUSDD as `variantOf: usdd-tron-dao-reserve` and `variantKind: savings-passthrough`."
+        "evidence": "At Ethereum block 25295198, no EIP-1967 proxy slots (impl=0x0, admin=0x0), no owner(), no DEFAULT_ADMIN_ROLE. Source code (Blockscout) confirmed contractName=SavingsUsdd; constructor sets immutable pot and usddJoin; no admin functions. asset() returned USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a. BSC contract 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d is same bytecode pattern (22172 bytes, no proxy)."
       },
       {
         "chain": "ethereum",
@@ -96,11 +100,15 @@
             "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
           }
         ],
-        "evidence": "Inherited from reviewed `usdd-tron-dao-reserve` mintAuthority."
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve mintAuthority."
       }
     ],
     "review": {
       "sources": [
+        {
+          "label": "SavingsUsdd source (Blockscout ETH)",
+          "url": "https://eth.blockscout.com/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        },
         {
           "label": "USDD Etherscan contract source",
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
@@ -110,12 +118,9 @@
           "url": "https://usdd.io/"
         }
       ],
-      "evidence": "sUSDD is a savings wrapper over reviewed USDD. Wrapper share minting is not a separate base USDD mint path.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify Ethereum and BSC sUSDD wrapper admin/upgrade controls before upgrading confidence."
-      ]
+      "evidence": "Wrapper surface verified at Ethereum block 25295198 and BSC block 103632491: SavingsUsdd is an immutable DAI-Foundation-fork DSR contract with no owner, no proxy, no upgrade path. asset() confirmed USDD 0x4f8e5de... on both chains. Base USDD mint authority tracked under usdd-tron-dao-reserve.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

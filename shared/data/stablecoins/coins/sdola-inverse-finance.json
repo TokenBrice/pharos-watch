@@ -88,7 +88,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
     "inheritedFrom": "dola-inverse-finance",
     "controls": [
@@ -107,7 +107,7 @@
             "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#readContract"
           }
         ],
-        "evidence": "Ethereum RPC `asset()` returned DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4; parent DOLA has reviewed mintAuthority."
+        "evidence": "At Ethereum block 25295167, asset() returned DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4. EIP-1967 impl slot is zero (not upgradeable). owner() reverts (no privileged owner). Wrapper cannot mint DOLA; share accounting only. Parent DOLA has reviewed mintAuthority."
       }
     ],
     "review": {
@@ -117,9 +117,9 @@
           "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#readContract"
         }
       ],
-      "evidence": "On-chain asset read confirms sDOLA wraps DOLA; durable mint authority inherits from reviewed parent DOLA.",
-      "reviewer": "Codex mint-authority full-gap batch-4",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295167: asset() = DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4 confirmed; EIP-1967 impl slot = 0x0 (immutable, not upgradeable); owner() reverts (no upgrade admin surface). Wrapper is non-upgradeable deposit-only vault; durable mint authority inherits from reviewed parent DOLA.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "reserves": [

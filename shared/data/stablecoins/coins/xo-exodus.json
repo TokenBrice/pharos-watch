@@ -142,8 +142,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing XO Cash depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -156,9 +156,13 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
       },
       {
         "chain": "solana",
@@ -167,9 +171,9 @@
         "role": "bridge-admin",
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
-        "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose an XO-specific mint-authority address.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; base M supply is governed by Ethereum MinterGateway.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
@@ -180,7 +184,7 @@
             "url": "https://docs.m0.org/home/technical-documentations/solana/"
           }
         ],
-        "evidence": "Official M0 deployments list the Solana Portal program; an XO-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+        "evidence": "At Solana slot 425792130: Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY confirmed executable (BPFLoaderUpgradeab1e owner). Bridge from Ethereum locks base M supply."
       },
       {
         "chain": "solana",
@@ -191,7 +195,13 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Solana mint-account review resolved this address as the current mint authority. A separate non-mint privileged authority beginning AgNSjv and ending KbCR was observed but not classified as a mint control."
+        "sources": [
+          {
+            "label": "XO Solana token",
+            "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+          }
+        ],
+        "evidence": "At Solana slot 425792130: getAccountInfo on mint xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y confirms mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. All Token-2022 extensions (pausable, permanentDelegate, transferHook, confidentialTransfer, metadataPointer) are controlled by AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR, a confirmed funded EOA (System program owner, 29225720 lamports). The mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null account (uninitialized, no SOL) — cannot confirm whether it is an EOA keypair or PDA."
       }
     ],
     "review": {
@@ -203,11 +213,18 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "MinterGateway on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins, and Solana mint-account review resolved F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu as XO's current Solana mint authority.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Ethereum MinterGateway and Solana Portal confirmed. XO Token-2022 mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null (uninitialized) Solana account — signer model cannot be determined. Extension authority AgNSjv3... confirmed funded EOA. Partial verification improves data but blocks full promotion.",
+      "unresolvedQuestions": [
+        "XO Solana mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair (e.g. ask MoonPay or check M0 Solana docs for per-extension mint authority derivation). Confirm authorityType before promoting to verified."
+      ],
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "rwa",

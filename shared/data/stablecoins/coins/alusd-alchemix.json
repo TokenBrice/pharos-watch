@@ -72,33 +72,86 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "alUSD is minted by the AlchemistV2 contract when users deposit DAI/USDC/USDT collateral; only whitelisted Alchemix contracts can mint the token, and the ALCX DAO (timelocked multisig) sets global mint limits and risk parameters.",
+    "confidence": "verified",
+    "summary": "alUSD is minted by the AlchemistV2 contract when users deposit DAI/USDC/USDT collateral. The AlToken (alUSD) grants ADMIN_ROLE to two holders: a MultiSigWalletWithTimeLock (7 EOA owners, 4-of-7, 10-minute timelock) and a Gnosis Safe 1.3.0 (7 EOA owners, 3-of-7, no modules, no guard). The Safe also owns the AlchemistV2 ProxyAdmin (upgrade rights). Neither ADMIN_ROLE holder can mint directly; they govern parameters and upgrade the AlchemistV2 CDP logic.",
     "controls": [
       {
-        "label": "AlchemistV2 (whitelisted minter)",
+        "label": "AlchemistV2 (CDP minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Per-synthetic global mint limit that linearly cools down over time; minting only against deposited collateral up to ~50% LTV.",
-        "canRaiseCap": "unknown",
-        "evidence": "The alUSD token's setWhitelist/setBlacklist functions restrict minting to authorized Alchemix contracts; AlchemistV2 issues alUSD against deposited collateral within governance-set mint limits."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295217, AlchemistV2 proxy at 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd (impl 0x0f17d8...) is the active CDP minter; EIP-1967 admin slot points to ProxyAdmin 0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d.",
+        "sources": [
+          {
+            "label": "AlchemistV2 on Etherscan",
+            "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+          }
+        ]
       },
       {
-        "label": "Alchemix DAO timelocked multisig (parameter governance)",
-        "role": "governor",
+        "label": "Alchemix MultiSigWalletWithTimeLock (ADMIN_ROLE)",
+        "role": "minter-admin",
         "authorityType": "multisig",
         "directMintAbility": "parameter-only",
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
-        "evidence": "ALCX-governed timelocked multisig configures mint limits, loss thresholds, and emergency Sentinel/Governance recall functions; it tunes parameters rather than minting directly."
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295217, MultiSigWalletWithTimeLock at 0x8392f6669292fa56123f71949b52d883ae57e225 holds ADMIN_ROLE on the AlToken (alUSD). getOwners() returned 7 EOA addresses; required()=4; storage slot 6 = 600 seconds (10-minute timelock); slot 4 = 4 (threshold). All 7 owners confirmed EOA via eth_getCode.",
+        "sources": [
+          {
+            "label": "MultiSigWalletWithTimeLock on Etherscan",
+            "url": "https://etherscan.io/address/0x8392f6669292fa56123f71949b52d883ae57e225"
+          }
+        ]
+      },
+      {
+        "label": "Alchemix Gnosis Safe (ADMIN_ROLE + ProxyAdmin owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "version": "1.3.0",
+          "observedBlock": 25295217,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295217, Gnosis Safe 1.3.0 at 0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9 holds ADMIN_ROLE on AlToken (via getRoleMember check) AND owns the AlchemistV2 ProxyAdmin (0xe0fc5cb7..., slot0=0x9e2b6378...). getOwners()=7 EOAs, getThreshold()=3, getModulesPaginated() returns empty array, guard slot=0x0, masterCopy slot0=0xd9db270c... (Safe 1.3.0).",
+        "sources": [
+          {
+            "label": "Alchemix Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Alchemix docs describe AlchemistV2 as the sole alUSD minter (token whitelist), with governance-set per-synthetic mint limits and ALCX DAO/timelock parameter control; no centralized direct-mint route exists outside the CDP contracts.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295217: AlToken (alUSD, 0xbc6da0fe...) ADMIN_ROLE (0xdf8b4c52...) has 2 members: MultiSigWalletWithTimeLock (0x8392f6..., 4/7 EOA owners, 10-min timelock) and Gnosis Safe 1.3.0 (0x9e2b6378..., 3/7 EOA owners, no modules, no guard). The Safe also owns ProxyAdmin (0xe0fc5cb7...) which controls the AlchemistV2 CDP proxy upgrade path. All owners confirmed EOA via eth_getCode. No centralized direct-mint path; AlchemistV2 is the only CDP minter.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "AlToken (alUSD) on Etherscan",
+          "url": "https://etherscan.io/address/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        },
         {
           "label": "Alchemix V2 Developer Docs",
           "url": "https://alchemix-finance.gitbook.io/v2"
@@ -107,10 +160,6 @@
           "label": "The Transmuter, Elaborated",
           "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated"
         }
-      ],
-      "sourceFreeRationale": "Mechanism and governance confirmed from Alchemix docs; on-chain owner/admin Safe internals and exact multisig threshold not independently resolved.",
-      "unresolvedQuestions": [
-        "Confirm the live AlchemistV2 admin owner, the ALCX timelock/multisig threshold, and current mint-limit parameters on-chain."
       ]
     }
   },

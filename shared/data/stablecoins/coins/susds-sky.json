@@ -80,7 +80,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply.",
     "inheritedFrom": "usds-sky",
     "controls": [
@@ -103,7 +103,7 @@
             "url": "https://chainlog.skyeco.com/"
           }
         ],
-        "evidence": "Local metadata marks sUSDS as `variantOf: usds-sky` and `variantKind: savings-passthrough`; local collateral text describes the ERC-4626 savings vault."
+        "evidence": "Local metadata marks sUSDS as `variantOf: usds-sky` and `variantKind: savings-passthrough`. At Ethereum block 25295174, EIP-1967 admin slot = 0x0 (no external proxy admin; UUPS pattern) and impl slot = 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 (implementation confirmed). wards(MakerDAO PauseProxy 0xBE8E3e...) = 1: Sky governance is the upgrade authority."
       },
       {
         "chain": "ethereum",
@@ -134,12 +134,9 @@
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         }
       ],
-      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance.",
-      "reviewer": "Codex mint-authority full-gap batch-5",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify Ethereum and Base sUSDS vault admin/upgrade controls before upgrading confidence."
-      ]
+      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

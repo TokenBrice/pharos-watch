@@ -100,32 +100,61 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "HedgeCore sUSD is a soul-bound BSC token whose minting is role-gated: only the authorized hUSDC wrapper contract (MINTER_ROLE/BURNER_ROLE) can mint or burn sUSD, with HedgeCore operating the deposit, Venus-yield, and operator-controlled redemption flow.",
+    "confidence": "verified",
+    "summary": "HedgeCore sUSD uses OZ AccessControl. The hUSDC wrapper contract (0x34EEa40FB…) holds MINTER_ROLE; DEFAULT_ADMIN_ROLE is held by EOA 0x30829883…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
     "controls": [
       {
-        "label": "HedgeCore sUSD token (MINTER_ROLE / BURNER_ROLE)",
-        "role": "minter-admin",
+        "label": "HedgeCore hUSDC wrapper contract (MINTER_ROLE holder)",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
         "chain": "bsc",
-        "canRaiseCap": "unknown",
-        "capDescription": "OpenZeppelin AccessControl MINTER_ROLE/BURNER_ROLE restricted to the authorized hUSDC wrapper contract; a 1 billion (18-decimal) max-supply cap is documented.",
-        "evidence": "Verified BscScan source and HedgeCore docs describe sUSD as a soul-bound token where only the authorized hUSDC wrapper contract holds MINTER_ROLE/BURNER_ROLE; minting occurs via hedgeWrap(), with admin functions (hedgeWrapLocked, hedgeSweep) and a 1B supply cap."
+        "address": "0x34eea40fb819bfc762b836dd6269f975227794d3",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() requires MINTER_ROLE and checks MAX_SUPPLY.",
+        "sources": [
+          {
+            "label": "HedgeCore hUSDC wrapper docs",
+            "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+          },
+          {
+            "label": "sUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0x34eea40fb819bfc762b836dd6269f975227794d3) returned true. wrapper() on sUSD returns the same address, cross-confirming the on-chain wrapper. eth_getCode on 0x34eea… returned 5674-byte contract. MAX_SUPPLY() = 1B tokens (immutable Solidity constant, no setter)."
       },
       {
-        "label": "HedgeCore operator (deposit / Venus strategy / redemption)",
+        "label": "HedgeCore DEFAULT_ADMIN_ROLE (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "chain": "bsc",
+        "address": "0x30829883394adfc36f95a84881be1254f60bdd35",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "sUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(DEFAULT_ADMIN_ROLE, 0x30829883394adfc36f95a84881be1254f60bdd35) returned true. Also confirmed as wrapper() owner(). eth_getCode on 0x30829… returned empty bytecode (EOA). This EOA can grantRole/revokeRole to change the wrapper minter."
+      },
+      {
+        "label": "HedgeCore operator (USDC deposit / Venus strategy / redemption)",
         "role": "custodian",
         "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "HedgeCore docs describe an operator running the USDC deposit, Venus lending strategy, and operator-controlled early redemption; the soul-bound wrapper mint is gated behind this operator-controlled flow rather than a user-collateralized CDP."
+        "canRaiseCap": false,
+        "evidence": "HedgeCore docs describe an operator running USDC deposit, Venus lending strategy, and operator-controlled early redemption; wrapper mint is gated behind this operator-controlled flow."
       }
     ],
     "review": {
-      "evidence": "HedgeCore documentation and the verified BscScan sUSD contract describe an operator-controlled, role-gated soul-bound wrapper (MINTER_ROLE/BURNER_ROLE on the wrapper contract) over a Venus yield strategy, not a user-collateralized CDP; on-chain role holders were not independently confirmed.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "HedgeCore hUSDC wrapper docs",
@@ -135,10 +164,6 @@
           "label": "sUSD contract (BscScan)",
           "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the exact address holding MINTER_ROLE/BURNER_ROLE on the sUSD token and the HedgeCore operator/admin multisig.",
-        "Confirm whether the documented 1B supply cap is governance-mutable."
       ]
     }
   },

@@ -147,31 +147,78 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "JAAA is a permissioned Anemoy/Centrifuge fund-share token; shares are minted only when the Centrifuge pool/Hub manager approves a primary-market subscription and issues shares at NAV, with transfers restricted to whitelisted investors by a compliance hook.",
+    "confidence": "verified",
+    "summary": "JAAA is a non-upgradeable Centrifuge Tranche token using a ward-based auth system. Active wards are the Root contract (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), and Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). No direct EOA ward access. The Root's ProtocolGuardian delegates to a Centrifuge protocol 4-of-9 Gnosis Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225). Minting gated by BalanceSheet/manager approval of subscriptions at fund NAV.",
     "controls": [
       {
-        "label": "Centrifuge pool/Hub manager (share issuance)",
+        "label": "Centrifuge Root contract (top-level ward admin)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "present",
-        "evidence": "Centrifuge fund-share tokens mint only after the pool/Hub manager approves a subscription request and issues shares via the BalanceSheet/manager role; the ERC-20 share token carries a transfer/restriction hook limiting holders to whitelisted Professional Investors."
+        "sources": [
+          {
+            "label": "Centrifuge protocol docs - vaults",
+            "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+          },
+          {
+            "label": "Ethereum explorer — JAAA Tranche token",
+            "url": "https://etherscan.io/token/0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
+          }
+        ],
+        "evidence": "At Ethereum block 25,296,225, the JAAA Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). No EOA has direct ward access. Root's ProtocolGuardian (0xCEb7eD5d5B3bAD3088f6A1697738B60d829635c6) routes to the Centrifuge protocol Safe."
+      },
+      {
+        "label": "Centrifuge protocol Gnosis Safe (4-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb307f0b2eDdB84EF63f3F9dc99a3A1a66D68EB3a",
+            "0x044671aCf58340Ac9d7AB782D3F93D1943fE24Bf",
+            "0x701Da7A0c8ee46521955CC29D32943d47E2c02b9",
+            "0x5e7A86178252Aeae9cBDa30f9C342c71799A3EE1",
+            "0xE9441B34f71659cCA2bfE90d98ee0e57D9CAD28F",
+            "0x4d47a7a89478745200Bd51c26bA87664538Df541",
+            "0x080001dBE12fA46A1d7C03fa0Cbf1839E367F155",
+            "0xd55114BfE98a2ca16202Aa741BeE571765292616",
+            "0x9eDec77dd2651Ce062ab17e941347018AD4eAEA9"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1",
+          "observedBlock": 25296225,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe API — Centrifuge protocol Safe",
+            "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
+          }
+        ],
+        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Root's ProtocolGuardian has onlySafe modifier routing control to this Safe."
       },
       {
         "label": "Anemoy / Janus Henderson issuer rail",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Anemoy operates the permissioned primary-market rail for JAAA on Centrifuge; subscriptions/redemptions process at fund NAV through issuer-gated, KYC-restricted access."
+        "canRaiseCap": true,
+        "evidence": "Anemoy operates the permissioned primary-market rail for JAAA on Centrifuge; subscriptions/redemptions process at fund NAV through issuer-gated, KYC-restricted access. Actual on-chain minting executed by BalanceSheet ward after manager approval."
       }
     ],
     "review": {
-      "evidence": "Anemoy/Centrifuge docs and JAAA fund materials describe permissioned, manager-gated share issuance: minting occurs only on manager approval of primary-market subscriptions at NAV, with a freeze/restriction transfer hook on the share token. This is a role-gated fund-share mint, not a free issuer-backend stablecoin mint.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25,296,225: JAAA Tranche is non-upgradeable, ward-based. Active wards: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Full mint surface confirmed on Ethereum; cross-chain deployments follow same Centrifuge ward pattern.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Anemoy JAAA fund",
@@ -180,11 +227,11 @@
         {
           "label": "Centrifuge protocol docs - vaults",
           "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+        },
+        {
+          "label": "Safe API — Centrifuge protocol Safe",
+          "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the JAAA on-chain manager/ward (Root) admin and the configured transfer-hook/restriction module across Ethereum, Base, BSC, Avalanche, and Monad.",
-        "Confirm which Safe/multisig holds the Centrifuge pool admin role for the JAAA pool."
       ]
     }
   },

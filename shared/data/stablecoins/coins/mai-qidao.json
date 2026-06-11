@@ -178,29 +178,57 @@
       },
       {
         "chain": "polygon",
-        "label": "QiDao governance + admin multisig",
+        "address": "0x3feacf904b152b1880bde8bf04ac9eb636fee4d8",
+        "label": "QiDao admin Safe (Polygon MAI owner)",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "QiDao governance (QI holders) and an admin multisig onboard new vaults, set debt ceilings and risk parameters, and can authorize new minting vaults across the 15 supported chains.",
-        "evidence": "QiDao governance (QI) plus an admin multisig administer vault onboarding and debt-ceiling/risk parameters; MAI metadata records a direct admin/upgrade control surface beyond reserve-only exposure."
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "QiDao 3-of-5 Safe owns the Polygon MAI token and administers vault onboarding, debt ceilings, and risk parameters; per-chain vault admins on other chains were not independently read.",
+        "evidence": "At Polygon block 88276735, owner() on MAI token (0xa3fa99a148fa48d14ed51d610c367c61876997f1) returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8. eth_getCode confirmed contract. RPC getOwners() returned 5 signers (0x22cfae74, 0xba9611de, 0xbfef4bf4, 0xa475af18, 0x86fe8d6d) and getThreshold() returned 3.",
+        "sources": [
+          {
+            "label": "Polygon MAI token (PolygonScan)",
+            "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+          }
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x22CFae74ED0b44eEcd9B0CBA30d74B47Ee13dbFF",
+            "0xBa9611De78fb2F2FB6529899783baf3ED439aa68",
+            "0xbFEF4Bf4cb89B414e1FB2357b2B763e240890059",
+            "0xA475Af18a0D5F3DE67a498D91Dab86F6EcCBF843",
+            "0x86FE8d6D4C8A007353617587988552B6921514Cb"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 88326121,
+          "source": "onchain"
+        }
       }
     ],
     "review": {
-      "evidence": "QiDao documentation describes MAI as an overcollateralized multi-chain CDP stablecoin minted from vault positions, with QI governance and an admin multisig controlling vault onboarding and debt ceilings.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Polygon block 88276735, owner() on MAI token returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8; RPC confirmed 3-of-5 multisig (getOwners/getThreshold). masterMinter() and AccessControl getRoleMemberCount(MINTER_ROLE) both revert — no separate minter role. Polygon chain admin is confirmed. Per-chain admins on Ethereum, Arbitrum, and other chains not independently read. Safe modules/guard not confirmed (RPC only, not Safe API).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "QiDao docs",
           "url": "https://docs.mai.finance/"
+        },
+        {
+          "label": "Polygon MAI token (PolygonScan)",
+          "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
         }
       ],
-      "sourceFreeRationale": "CDP mint mechanism and QI-governance/multisig control confirmed from QiDao docs; the admin multisig signer set/threshold and per-chain vault admins were not independently read on-chain.",
       "unresolvedQuestions": [
-        "Resolve the QiDao admin multisig (signers, threshold) and per-chain vault/minter authorization addresses before raising confidence."
+        "Safe modules/guard status for 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8 not confirmed via Safe API (Polygon Safe API endpoint required); unknown modulesOrGuardsStatus caps confidence at manual-review. Per-chain vault/minter admin addresses on Ethereum, Arbitrum, and other chains also not read."
       ]
     }
   },

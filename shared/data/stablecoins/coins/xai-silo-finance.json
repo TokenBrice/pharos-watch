@@ -52,7 +52,7 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "XAI is a governed CDP/protocol asset; Ethereum token ownership resolves to a 3/4 Safe with privileged mint/admin authority.",
     "controls": [
       {
@@ -67,8 +67,19 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xe153437bC974cfE3E06C21c08AeBbf30abaefa2E",
+            "0x1fF60e85852Ac73cd05B69A8B6641fc24A3FC011",
+            "0x66B416a3114A737f0353DC74d1E12a7e23f686F9",
+            "0x22FF5BCE89fe7b6e78262893a535972163332C8b"
+          ],
           "threshold": 3,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25296185,
+          "source": "safe-api"
         },
         "sources": [
           {
@@ -80,7 +91,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE8e8041cB5E3158A0829A19E014CA1cf91098554/"
           }
         ],
-        "evidence": "XAI owner() returned this Safe; getThreshold() returned 3 and getOwners() returned 4 owners at Ethereum block 25165931. Worker Safe API review found no modules and zero guard."
+        "evidence": "At Ethereum block 25296185, owner() on XAI token returned 0xE8e8041cB5E3158A0829A19E014CA1cf91098554. Safe API confirmed threshold 3, 4 owners, no modules, no guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, version 1.3.0."
       }
     ],
     "review": {
@@ -90,9 +101,9 @@
           "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
         }
       ],
-      "evidence": "XAI source/owner reads identify a 3/4 Safe as the privileged mint/admin owner path.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25296185, owner() on XAI token returned 0xE8e8041cB5E3158A0829A19E014CA1cf91098554. Safe API returned threshold 3, 4 owners (0xe153437b, 0x1fF60e85, 0x66B416a3, 0x22FF5BCE), no modules, no guard, fallbackHandler 0xf48f2B2d, masterCopy 0xd9Db270c (v1.3.0). Full safe snapshot populated from Safe API.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",
