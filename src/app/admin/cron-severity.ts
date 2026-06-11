@@ -1,7 +1,7 @@
 import type { StatusResponse } from "@shared/types";
 
 /**
- * Severity score for sorting admin cron cards. Higher = render first.
+ * Severity score for sorting admin cron rows. Higher = render first.
  * 2 = unhealthy/error/in-flight-stale, 1 = degraded or telemetry-unknown bootstrap, 0 = healthy.
  */
 export function getCronSeverity(cron: StatusResponse["crons"][string]): number {

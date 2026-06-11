@@ -55,10 +55,6 @@ vi.mock("@/components/status/circuit-breaker-table", () => ({
   CircuitBreakerTable: () => <div data-testid="circuit-breakers">circuit breakers</div>,
 }));
 
-vi.mock("@/components/status/cron-card", () => ({
-  CronCard: ({ job }: { job: string }) => <div data-testid={`cron-${job}`}>{job}</div>,
-}));
-
 vi.mock("@/components/status/data-quality-cards", () => ({
   DataQualityCards: () => <div data-testid="data-quality-cards">data quality</div>,
 }));
