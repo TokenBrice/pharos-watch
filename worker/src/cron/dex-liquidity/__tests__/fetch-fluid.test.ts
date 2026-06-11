@@ -1,20 +1,23 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchFluidPools } from "../fetch-fluid";
 
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
 describe("fetchFluidPools", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", mockFetch);
+  });
+
   afterEach(() => {
     mockFetch.mockReset();
-    vi.resetModules();
+    vi.unstubAllGlobals();
   });
 
   it("does not sum raw token volumes into volume24hUsd (downstream derives USD from tokenVolumes24h)", async () => {
-    const { fetchFluidPools } = await import("../fetch-fluid");
     // One ticker row matching the real Fluid tickers v3 shape. base_volume and
     // target_volume are string-encoded token amounts in base/target token units,
     // NOT USD. The raw sum (100 + 200 = 300) was previously stamped as volume24hUsd.
@@ -38,7 +41,7 @@ describe("fetchFluidPools", () => {
       return jsonResponse([]);
     });
 
-    const result = await fetchFluidPools();
+    const result = await fetchFluidPools(undefined, new Map());
     const ethPool = result.pools.find(
       (p) => p.poolAddress.toLowerCase() === "0xabc0000000000000000000000000000000000000",
     );
