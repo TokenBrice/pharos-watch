@@ -120,7 +120,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
     "controls": [
       {
@@ -132,13 +132,13 @@
         "evidence": "Issuer-managed mint/redeem: TAU Pty Ltd creates AUDX supply against custodied AUD reserves targeting 1 AUDX = 1 AUD; no permissionless or user-collateralized mint route is described."
       },
       {
-        "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Ethereum + Polygon)",
+        "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Ethereum + Polygon + XDC)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address. Two mint() calls executed from this address on Ethereum.",
+        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. XDC (rpc.xinfin.network, block 0x62dbc1a): hasRole(DEFAULT_ADMIN, 0xc9d8...) = true, hasRole(MINTER_ROLE, 0xc9d8...) = true on the same contract address 0xd687...e00c. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDX contract",
@@ -149,20 +149,36 @@
             "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
           }
         ]
+      },
+      {
+        "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Conflux eSpace)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "Conflux eSpace (evm.confluxrpc.com, block 0x8eb4a2f / 149,717,551): RoleGranted events for DEFAULT_ADMIN_ROLE and MINTER_ROLE on AUDX proxy 0x47a365e29697c700c75d58936b3d93a8a20a43c9 all grant to 0x1274d87337eb9091e22b9686ae34ad54c989c883 in deployment tx 0xa4be8387... No RoleRevoked events. hasRole(DEFAULT_ADMIN, 0x1274...) = true, hasRole(MINTER_ROLE, 0x1274...) = true confirmed via eth_call. Note: this is a different EOA from the Ethereum/Polygon/XDC deployer, consistent with per-chain key management.",
+        "sources": [
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Ethereum and Polygon chains confirmed: a single EOA (0xc9d8...3e28) holds DEFAULT_ADMIN + MINTER_ROLE + all other roles on the AussieDollarToken UUPS proxy — verified via hasRole at blocks 25295029/88323844. XDC uses same contract address as Ethereum.",
+      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. All four chains confirmed: Ethereum and Polygon (EOA 0xc9d8...3e28, hasRole at blocks 25295029/88323844); XDC (same EOA 0xc9d8... confirmed via rpc.xinfin.network hasRole calls, block 0x62dbc1a); Conflux eSpace (different EOA 0x1274...c883 holds all roles, confirmed via eth_call at block 149,717,551 — per-chain key management).",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Ethereum Blockscout AUDX contract",
           "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        },
+        {
+          "label": "Conflux eSpace RPC",
+          "url": "https://evm.confluxrpc.com"
         }
-      ],
-      "unresolvedQuestions": [
-        "Conflux (0x47a365e29697c700c75d58936b3d93a8a20a43c9) and XDC (0xd687...e00c same address) mint authority not directly confirmed via RPC; XDC has no public node in standard list."
       ]
     }
   },

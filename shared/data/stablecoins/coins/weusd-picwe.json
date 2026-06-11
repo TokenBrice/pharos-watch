@@ -89,7 +89,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
     "controls": [
       {
@@ -101,34 +101,55 @@
         "address": "0xc12233455beac4e094a5de022be692a264c0c0bc",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement RPC unreachable — Movement role state unconfirmed.",
+        "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement: the Movement contract (0xf39c2674...) uses a different architecture — minting is controlled by the deployer EOA (0xf39c267... auth key = own address, sequence_number = 3, normal EOA) through admin-gated functions in weusd_mint_redeem and weusd_cross_chain_gas modules, consistent with the same PicWe admin.",
         "sources": [
           {
             "label": "BscScan WEUSD contract",
             "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+          },
+          {
+            "label": "Movement Aptos REST — WEUSD contract resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
           }
         ]
       },
       {
-        "label": "PicWe WEUSD mint/redeem contract",
+        "label": "PicWe WEUSD mint/redeem contract (EVM chains)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "bsc",
         "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. Movement unverifiable.",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. No modules or guards detected in EVM Safe API checks.",
         "sources": [
           {
             "label": "PicWe WEUSD docs",
             "url": "https://docs.picwe.org/what-is-weusd"
           }
         ]
+      },
+      {
+        "label": "PicWe WEUSD Movement cross-chain minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "movement",
+        "address": "0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Movement Aptos REST: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (auth key matches address, sequence_number = 142, active operational relayer EOA). batchMintWeUSDCrossChain is gated on this address. The weusd::mint function is internal to the resource account (signer_capability_offer burned auth key at 0x16bb553...) — minting flows through weusd_mint_redeem and weusd_cross_chain_gas modules. Module upgrade controlled by deployer EOA 0xf39c267... (normal EOA, upgrade policy = 1).",
+        "sources": [
+          {
+            "label": "Movement Aptos REST — WEUSD MintState resource",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement RPC (all public endpoints) unreachable — Movement role state cannot be confirmed.",
+      "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement Aptos REST (mainnet.movementnetwork.xyz/v1) now accessible: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (active EOA, seq 142); deployer EOA 0xf39c267... controls module upgrade (policy=1) and admin-gated functions; resource-account-based mint uses burned signer cap (0x16bb553...). All chains resolved. No multisig or timelock on any chain.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -139,10 +160,11 @@
         {
           "label": "PicWe WEUSD docs",
           "url": "https://docs.picwe.org/what-is-weusd"
+        },
+        {
+          "label": "Movement Aptos REST — WEUSD contract resources",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
         }
-      ],
-      "unresolvedQuestions": [
-        "Movement RPC unreachable: confirm Movement chain role holders (DEFAULT_ADMIN_ROLE, MINTER_ROLE) for 0xf39c2674... contract before promoting above manual-review."
       ]
     }
   },

@@ -143,8 +143,8 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
     "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
     "controls": [
       {
@@ -174,6 +174,22 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "evidence": "Tron Pause (TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW) authority() = GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d); Pause delay() = 0 (no timelock). GovActionsProxy.authority() = zero address (no higher authority set); GovActionsProxy govActions() = TDLgCe2SatVew6PxSwYmqsc3zfahqXwuqX and pause() = Pause contract. This contract's cast() function is the system's governance executor. The signer set that can call cast() was not confirmed — authority()=zero means access control falls back to contract-level access checks or is operated by the deployer."
+      },
+      {
+        "chain": "tron",
+        "address": "TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX",
+        "label": "USDD Tron GovActionsProxy owner — single-key account (governance executor)",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Tronscan GovActionsProxy",
+            "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d"
+          }
+        ],
+        "evidence": "GovActionsProxy.owner() returned 41b28033...eb069 (TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX) via triggerconstantcontract; trongrid getaccount shows a normal account with 1-of-1 owner and active permissions (single keypair, no Tron-native multisig). All recent GovActionsProxy transactions originate from this account; with authority()=zero, ds-auth restricts cast() to this owner."
       }
     ],
     "review": {
@@ -191,12 +207,9 @@
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
         }
       ],
-      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone.",
+      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone. Phase 0c continuation resolved the final blocker: GovActionsProxy.owner() is a single-key Tron account (1-of-1 permissions) that is also the sole historical caller; with authority()=zero, only this owner can execute governance actions. Posture corrected to concentrated-admin (zero-delay Pause, single-key governance executor); the Ethereum system remains permanently caged (live()=0).",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Confirm who controls the USDD Tron GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d) cast() function — authority()=zero; need issuer disclosure or transaction history analysis to identify the operative signer set."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "established-alt-l1",

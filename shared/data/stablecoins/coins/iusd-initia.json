@@ -73,38 +73,88 @@
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "Initia iUSD is a single-chain wrapper of Agora AUSD bridged via LayerZero; each iUSD is minted on Initia against AUSD locked/burned at the LayerZero bridge endpoint, so supply is controlled by the bridge/OFT route rather than a local CDP or issuer.",
     "controls": [
       {
         "chain": "initia",
-        "label": "Initia AUSD LayerZero bridge / OFT endpoint",
+        "label": "iusd-vault contract (mints iUSD 1:1 against AUSD0 deposits)",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "iUSD is minted on Initia 1:1 against AUSD bridged in via LayerZero (lockbox/OFT route); redemption routes back through the AUSD bridge to Agora. Supply is bounded by AUSD locked at the bridge endpoint.",
+        "capDescription": "iUSD is minted by the iusd-vault contract (0x2981d795...) 1:1 against AUSD0 deposited. Supply is hard-bounded by AUSD0 supply bridged in via LayerZero. The vault is the only entity that can invoke the mint_ref through the 0xfd6a07 sticky Move object's ExtendRef.",
         "routeChecks": {
-          "lockboxOrEscrow": "AUSD is locked/burned at the LayerZero endpoint and re-minted as iUSD on Initia; redemption reverses through the bridge to Agora AUSD.",
-          "caps": "Per-route bridge caps and DVN/security config not independently resolved."
+          "lockboxOrEscrow": "User bridges AUSD0 via LayerZero OFT (0xf407bc...); OFT mints AUSD0 on Initia; AUSD0 deposited to vault object 0xfd6a07...; vault uses ExtendRef to generate signer for 0xfd6a07 and calls managed_coin::Capabilities to mint iUSD 1:1.",
+          "caps": "No cap beyond AUSD0 supply deposited. LayerZero DVN/security config not independently resolved. vault::ModuleStore.base_token = AUSD0 (0x8078cf9...)."
         },
-        "evidence": "Initia materials describe iUSD as backed 1:1 by Agora AUSD bridged to Initia via LayerZero, with holder redemption routing back through the AUSD bridge and Agora's USD redemption."
+        "evidence": "Initia REST (rest.initia.xyz): 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a is a sticky Move Object (ObjectCore.owner = 0x0, non-transferable). vault::VaultAccount.extend_ref stored at iusd-vault contract 0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6. Confirmed from tx 4dbe5cba...: OFT LayerZero messaging_composer::ComposeDelivered triggers AUSD0 mint by OFT contract 0xf407bc..., followed by vault MintEvent minting iUSD 1:1. vault module functions are private/friend-only — no external mint path. vault::ModuleStore.admin = self (0x2981d7...).",
+        "sources": [
+          {
+            "label": "Initia REST — 0xfd6a07 resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a/resources"
+          },
+          {
+            "label": "Initia scan — iusd-vault contract",
+            "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
+          }
+        ]
+      },
+      {
+        "chain": "initia",
+        "label": "iusd-vault multisig admin (3-of-4)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "Initia REST: iusd-vault contract (0x2981d795...) has MultisigWallet resource with name 'iusd-vault', threshold 3 (each member weight 1), 4 voting members: 0xa5a8f716d5..., 0xc24c6072be..., 0xc3ffeaeb8d..., 0x6c7034c703... (plus 2 proposers with weight 0). Multisig governs config changes to the vault; the vault's mint function itself is triggered automatically by AUSD0 deposits (no vote required per mint). No modules/guards detected beyond standard MultisigWallet mechanics.",
+        "sources": [
+          {
+            "label": "Initia REST — iusd-vault MultisigWallet resource",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+          }
+        ]
+      },
+      {
+        "chain": "initia",
+        "label": "AUSD0 LayerZero OFT admin multisig (3-of-5)",
+        "role": "bridge-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "Initia REST: AUSD0 OFT contract (0xf407bcfb...) has oapp_store::OAppStore.admin = 0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d. That address is 'AUSD0 Multisig - Weighted' with threshold 30 (3-of-5 × weight 10 each). 5 members with weight 10: 0xe4c4b7..., 0x41f9dd..., 0x20ee9a..., 0xb67236..., 0x2d2ada...; 1 proposer weight 1: 0xc18847.... This controls LayerZero OFT routing for AUSD0, which caps iUSD supply.",
+        "sources": [
+          {
+            "label": "Initia REST — AUSD0 OFT resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Initia documentation and coverage describe iUSD as a single-chain wrapper minted against Agora AUSD bridged via LayerZero; the upstream AUSD is a VanEck/State Street T-bill-backed fiat token, and iUSD supply derives from the bridge route rather than a local CDP or issuer mint.",
+      "evidence": "Initia REST: 0xfd6a07... is a sticky Move Object (owner=0x0, non-transferable); vault::VaultAccount.extend_ref stored at iusd-vault contract 0x2981d795...; only the vault can sign for 0xfd6a07 and invoke managed_coin mint. Confirmed from tx 4dbe5cba...: LayerZero OFT triggers AUSD0 mint by 0xf407bc..., then vault MintEvent mints iUSD 1:1. iusd-vault is governed by a 3-of-4 MultisigWallet for config; AUSD0 OFT admin is 3-of-5 multisig 0x486bc26c... Mint path fully traced: supply bounded by AUSD0 deposited, no free-mint path, all admins identified.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Initia docs",
           "url": "https://docs.initia.xyz"
+        },
+        {
+          "label": "Initia REST — iusd-vault contract resources",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+        },
+        {
+          "label": "Initia scan — iusd-vault contract",
+          "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
         }
-      ],
-      "sourceFreeRationale": "Bridge-wrapper (LayerZero AUSD) classification confirmed from Initia materials and coverage; on-chain reads confirmed iUSD is an Initia Move managed_coin at 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e with ManagingRefs (mint_ref/burn_ref/transfer_ref) stored at that address. ObjectCore.owner = 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a, but that object's own ObjectCore.owner = 0x0 (null/framework address) with no modules. The human controller of the mint_ref chain cannot be confirmed without tracing the full object ownership graph.",
-      "unresolvedQuestions": [
-        "Trace the full Initia Move object ownership chain: 0x6c69733 ObjectCore.owner = 0xfd6a07; 0xfd6a07 ObjectCore.owner = 0x0 (null). Identify who actually controls 0xfd6a07 (the object holding iUSD ManagingRefs) — likely the Initia LayerZero OFT bridge deployer. Read 0xfd6a07 module list and resources to find the LayerZero OFT admin or bridge admin."
       ]
     }
   }

@@ -162,8 +162,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "MAI is minted across 15 chains by borrowing against overcollateralized QiDao vault positions; QiDao governance (QI holders) plus an admin multisig control vault onboarding, debt ceilings, and risk parameters.",
+    "confidence": "verified",
+    "summary": "MAI is minted by borrowing against overcollateralized QiDao vault positions. Token owners confirmed on primary chains: Polygon 3/5 Safe, Ethereum 4/6 Safe, Arbitrum 2/4 Safe — all with overlapping signers and no modules. Other chains note-only per task scope.",
     "controls": [
       {
         "chain": "polygon",
@@ -179,7 +179,7 @@
       {
         "chain": "polygon",
         "address": "0x3feacf904b152b1880bde8bf04ac9eb636fee4d8",
-        "label": "QiDao admin Safe (Polygon MAI owner)",
+        "label": "QiDao admin Safe (Polygon MAI owner, 3/5)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -187,8 +187,8 @@
         "signerCount": 5,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "QiDao 3-of-5 Safe owns the Polygon MAI token and administers vault onboarding, debt ceilings, and risk parameters; per-chain vault admins on other chains were not independently read.",
-        "evidence": "At Polygon block 88276735, owner() on MAI token (0xa3fa99a148fa48d14ed51d610c367c61876997f1) returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8. eth_getCode confirmed contract. RPC getOwners() returned 5 signers (0x22cfae74, 0xba9611de, 0xbfef4bf4, 0xa475af18, 0x86fe8d6d) and getThreshold() returned 3.",
+        "capDescription": "QiDao 3-of-5 Safe owns the Polygon MAI token and administers vault onboarding, debt ceilings, and risk parameters.",
+        "evidence": "At Polygon block 88276735, owner() on MAI token returned 0x3feacf904...; getOwners() = 5 signers; getThreshold() = 3; getModulesPaginated() returned empty (no modules). Safe confirmed.",
         "sources": [
           {
             "label": "Polygon MAI token (PolygonScan)",
@@ -206,15 +206,83 @@
           ],
           "threshold": 3,
           "enabledModules": [],
-          "guard": null,
+          "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "observedBlock": 88326121,
           "source": "onchain"
         }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3182e6856c3b59c39114416075770ec9dc9ff436",
+        "label": "QiDao admin Safe (Ethereum MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "QiDao 4-of-6 Safe owns the Ethereum MAI token.",
+        "evidence": "At Ethereum block 25361903: owner() on MAI ETH (0x8d6cebd7) returned GnosisProxy 0x3182e685; getOwners() = 6 signers [0xcaa86775, 0x9120e7f0, 0x329c5428, 0xcb2714d0, 0xa475af18, 0xbfef4bf4]; getThreshold() = 4; getModulesPaginated() returned empty (no modules).",
+        "sources": [
+          {
+            "label": "Ethereum MAI token",
+            "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+          }
+        ],
+        "safe": {
+          "owners": [
+            "0xcAa86775c4565416D47533467A7c0C3FD9075102",
+            "0x9120e7f03cd2830CD5FC4a6402A493CEA4c04F82",
+            "0x329C54289Ff5D6b7b7dAE13592C6B1EDA1543eD4",
+            "0xcb2714D04318B78cBFCdd43a784Af6a357b718C7",
+            "0xA475Af18a0D5F3DE67a498D91Dab86F6EcCBF843",
+            "0xbFEF4Bf4cb89B414e1FB2357b2B763e240890059"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 25361903
+        }
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xf32e759d5f1c63ed62042497d3a50f044ee0982b",
+        "label": "QiDao admin Safe (Arbitrum MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "QiDao 2-of-4 Safe owns the Arbitrum MAI token.",
+        "evidence": "At Arbitrum block 471552027: owner() on MAI ARB (0x3f56e0c3) returned GnosisProxy 0xf32e759d; getOwners() = 4 signers [0x22cfae74, 0xbfef4bf4, 0x86fe8d6d, 0xa475af18]; getThreshold() = 2; getModulesPaginated() returned empty (no modules).",
+        "sources": [
+          {
+            "label": "Arbitrum MAI token",
+            "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          }
+        ],
+        "safe": {
+          "owners": [
+            "0x22CFae74ED0b44eEcd9B0CBA30d74B47Ee13dbFF",
+            "0xbFEF4Bf4cb89B414e1FB2357b2B763e240890059",
+            "0x86FE8d6D4C8A007353617587988552B6921514Cb",
+            "0xA475Af18a0D5F3DE67a498D91Dab86F6EcCBF843"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 471552027
+        }
       }
     ],
     "review": {
-      "evidence": "At Polygon block 88276735, owner() on MAI token returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8; RPC confirmed 3-of-5 multisig (getOwners/getThreshold). masterMinter() and AccessControl getRoleMemberCount(MINTER_ROLE) both revert — no separate minter role. Polygon chain admin is confirmed. Per-chain admins on Ethereum, Arbitrum, and other chains not independently read. Safe modules/guard not confirmed (RPC only, not Safe API).",
+      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -225,10 +293,15 @@
         {
           "label": "Polygon MAI token (PolygonScan)",
           "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+        },
+        {
+          "label": "Ethereum MAI token",
+          "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+        },
+        {
+          "label": "Arbitrum MAI token",
+          "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
         }
-      ],
-      "unresolvedQuestions": [
-        "Safe modules/guard status for 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8 not confirmed via Safe API (Polygon Safe API endpoint required); unknown modulesOrGuardsStatus caps confidence at manual-review. Per-chain vault/minter admin addresses on Ethereum, Arbitrum, and other chains also not read."
       ]
     }
   },

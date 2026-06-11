@@ -35,7 +35,7 @@
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "M minting is routed through the Ethereum M0 MinterGateway, with cross-chain representations bridged through M0 portal infrastructure.",
     "controls": [
       {
@@ -79,20 +79,20 @@
         "role": "bridge-admin",
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
-        "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
             "url": "https://docs.m0.org/get-started/resources/addresses/"
           },
           {
-            "label": "M0 on Solana technical deep dive",
-            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+            "label": "Solana M mint on Solscan",
+            "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
           }
         ],
-        "evidence": "Official M0 deployments list the Solana M token and Portal program; M0 Solana docs describe Solana as a spoke in the cross-chain model with Ethereum as hub. On-chain Solana SPL mint authority state was not resolved in this verification pass."
+        "evidence": "At Solana slot 425799131: getAccountInfo on M mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo returns mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (SPL multisig, 1-of-2 threshold, signers: 9vSE2CHNE54ENdAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm). Both signers are confirmed off the Ed25519 curve (PDAs, not keypairs). M0 Portal program (mzp1q2j5...) programData upgrade authority: 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded System program account = EOA). freezeAuthority=null. Extension authorities (metadataPointer, transferHook, confidentialTransfer) all point to the same EOA 9QpF8a9T...."
       }
     ],
     "review": {
@@ -104,14 +104,15 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "Solana M mint on Solscan",
+          "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. Solana Portal: SPL on-chain mint authority unresolved.",
+      "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. At Solana slot 425799131: M SPL mint mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (1-of-2 SPL multisig); both signers confirmed off-curve PDAs. Portal upgrade authority=9QpF8a9T... (funded EOA). freezeAuthority=null. All M0 Solana programs share same upgrade authority (EOA). Null but off-curve = program-derived, not a free keypair.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Solana Portal (mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY): Solana SPL mint authority and freeze authority state not verified on-chain; keep manual-review until Solana program account reads confirm mint authority holder and freeze authority."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "infrastructures": [

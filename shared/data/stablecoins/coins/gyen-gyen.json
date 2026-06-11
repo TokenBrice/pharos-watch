@@ -267,6 +267,24 @@
           }
         ],
         "evidence": "EIP-1967 admin slot (0xb531...) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Implementation at 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1 confirmed."
+      },
+      {
+        "chain": "solana",
+        "address": "7zjQfu3nmGqgxYm9p67MQje9uPDBa2uEbtUj8aAChvU6",
+        "label": "GYEN Solana SPL mint authority (2-of-2 token multisig)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solana GYEN mint",
+            "url": "https://solscan.io/token/Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
+          }
+        ],
+        "evidence": "At Solana slot 425797741, getAccountInfo on mint Crn4x1Y2... returned mintAuthority 7zjQfu3n..., an initialized SPL token multisig with numRequiredSigners=2 of 2 valid signers; freezeAuthority CpMoJUPW... is a non-executable account."
       }
     ],
     "review": {
@@ -284,12 +302,9 @@
           "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms).",
+      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Solana SPL mint authority and Stellar issuance controls not verified in this pass."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-regulated",

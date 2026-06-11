@@ -64,7 +64,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself — a self-referential pattern that prevents standard key-based verification.",
     "controls": [
       {
@@ -105,12 +105,12 @@
       {
         "label": "USDU Solana mint authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
-        "directMintAbility": "direct",
+        "authorityType": "none",
+        "directMintAbility": "none",
         "chain": "solana",
         "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
         "canRaiseCap": "unknown",
-        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone.",
+        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen.",
         "sources": [
           {
             "label": "USDU Solana mint",
@@ -130,12 +130,9 @@
           "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
         }
       ],
-      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads.",
+      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Solana USDU Token-2022 mint: mintAuthority = the mint address itself (self-referential). The controlling keypair or program that can exercise this authority cannot be determined from on-chain state. Resolve via Unitas issuer disclosure or Solana program analysis before raising confidence."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

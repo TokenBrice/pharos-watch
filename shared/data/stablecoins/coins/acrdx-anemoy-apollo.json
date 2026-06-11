@@ -116,8 +116,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225).",
+    "confidence": "verified",
+    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
     "controls": [
       {
         "label": "Anemoy / Centrifuge fund issuance authority",
@@ -134,13 +134,13 @@
         ]
       },
       {
-        "label": "ACRDX Ethereum Spoke ward (direct mint path)",
+        "label": "ACRDX Centrifuge Spoke ward (direct mint path — Ethereum, Plume, Monad)",
         "role": "direct-minter",
         "authorityType": "contract",
         "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. Blockscout identifies this as the Centrifuge Spoke contract. The Spoke is the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
+        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract — the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
         "sources": [
           {
             "label": "Ethereum Blockscout ACRDX ShareToken",
@@ -153,13 +153,13 @@
         ]
       },
       {
-        "label": "ACRDX Ethereum Root ward (protocol admin)",
+        "label": "ACRDX Ethereum/Plume Root ward (protocol admin)",
         "role": "minter-admin",
         "authorityType": "contract",
         "address": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
         "directMintAbility": "none",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token.",
+        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) — Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there.",
         "sources": [
           {
             "label": "Ethereum Blockscout Centrifuge Root",
@@ -221,12 +221,9 @@
           "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
         }
       ],
-      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume and Monad not confirmed (no public RPC available).",
+      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain).",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Plume (0x9477...4a74f) and Monad (0x2fabf1c7...3245) deployments not confirmed — no stable public RPC for Plume or Monad mainnet."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2025-12-15"

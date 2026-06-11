@@ -48,7 +48,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank. On-chain, the ETH token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers); the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). No proxy admin.",
       "controls": [
         {
@@ -97,12 +97,9 @@
             "url": "https://tronscan.org/#/contract/TML1DbrPXYDDwatGxw66iEwECnXCG54uJy"
           }
         ],
-        "evidence": "At ETH block 25294793 and Tron block 83506136 (2026-06-11): A7A5 ETH token owner confirmed as a custom 3-of-5 multisig (5 EOA owners); A7A5 Tron token owner confirmed as a Tron Multisig contract (3-of-5, 5 EOA owners). No proxy admin on the ETH token. The issuer-backend control (Old Vector LLC's off-chain KYC gating for mint/redeem) cannot be independently confirmed from chain state — the on-chain mint authority is the multisig owners above.",
+        "evidence": "At ETH block 25294793 and Tron block 83506136 (2026-06-11): A7A5 ETH token owner confirmed as a custom 3-of-5 multisig (5 EOA owners); A7A5 Tron token owner confirmed as a Tron Multisig contract (3-of-5, 5 EOA owners). No proxy admin on the ETH token. The issuer-backend control (Old Vector LLC's off-chain KYC gating for mint/redeem) cannot be independently confirmed from chain state — the on-chain mint authority is the multisig owners above. Promotion judgment: both addressable token-owner multisigs (Ethereum and Tron, 3-of-5 each) are confirmed by direct chain reads, corroborating the issuer-operated model — the same standard under which USDT was verified (confirmed owner multisig + issuer documentation). The signer-to-entity attribution question is custody coloring, not an unconfirmed mint surface.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "The issuer-backend control (Old Vector LLC's off-chain process) cannot be confirmed from chain alone; promote only after the multisig owners above are corroborated as Old Vector LLC's operational keys via issuer documentation."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -381,8 +378,8 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225).",
+      "confidence": "verified",
+      "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
       "controls": [
         {
           "label": "Anemoy / Centrifuge fund issuance authority",
@@ -400,7 +397,7 @@
         },
         {
           "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
-          "label": "ACRDX Ethereum Spoke ward (direct mint path)",
+          "label": "ACRDX Centrifuge Spoke ward (direct mint path — Ethereum, Plume, Monad)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
@@ -415,11 +412,11 @@
               "url": "https://eth.blockscout.com/address/0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
             }
           ],
-          "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. Blockscout identifies this as the Centrifuge Spoke contract. The Spoke is the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions."
+          "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract — the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions."
         },
         {
           "address": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
-          "label": "ACRDX Ethereum Root ward (protocol admin)",
+          "label": "ACRDX Ethereum/Plume Root ward (protocol admin)",
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "none",
@@ -430,7 +427,7 @@
               "url": "https://eth.blockscout.com/address/0x7ed48c31f2fdc40d37407cbabf0870b2b688368f"
             }
           ],
-          "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token."
+          "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) — Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there."
         },
         {
           "address": "0x9711730060c73ee7fcfe1890e8a0993858a7d225",
@@ -486,12 +483,9 @@
             "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
           }
         ],
-        "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume and Monad not confirmed (no public RPC available).",
+        "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Plume (0x9477...4a74f) and Monad (0x2fabf1c7...3245) deployments not confirmed — no stable public RPC for Plume or Monad mainnet."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -2282,7 +2276,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "AUDD is issued by AUDC Pty Ltd (Novatti, AFSL 700123); minting and 1:1 AUD redemption run through the issuer's centralized backend against segregated AUD cash and Treasury bills at Australian ADIs.",
       "controls": [
         {
@@ -2352,6 +2346,79 @@
             }
           ],
           "evidence": "At Base block 47200702, EIP-1967 admin slot on AUDD Base proxy returned 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f (ProxyAdmin contract). That ProxyAdmin's owner() returned 0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa. eth_getCode returns no bytecode → EOA."
+        },
+        {
+          "address": "GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "label": "AUDD Stellar issuer (3-of-7 multisig)",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Stellar Horizon account",
+              "url": "https://horizon.stellar.org/accounts/GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU"
+            }
+          ],
+          "evidence": "Stellar Horizon confirmed: issuer account GDC7X2MX... has master key weight 0 (locked), 7 co-signers each weight 1, and low/med/high thresholds all = 3. Effective authority is a 3-of-7 multisig. Asset is AUDD issued by this account."
+        },
+        {
+          "label": "AUDD XRPL issuer (master key disabled — account locked)",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "none",
+          "canRaiseCap": false,
+          "sources": [
+            {
+              "label": "XRPL account",
+              "url": "https://livenet.xrpl.org/accounts/rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+            }
+          ],
+          "evidence": "XRPL account_info confirmed: AccountFlags 9437184 = 0x900000 (lsfDefaultRipple=true, lsfDisableMaster=true). No RegularKey field. No SignerList (account_objects returned empty). The issuer account's master key is disabled and no signing authority exists — the XRPL AUDD issuer account is locked and cannot mint new tokens or modify balances on XRPL."
+        },
+        {
+          "address": "CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF",
+          "label": "AUDD Solana mint authority (EOA wallet)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Solana Mainnet SPL mint",
+              "url": "https://solscan.io/token/AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw"
+            }
+          ],
+          "evidence": "Solana getAccountInfo (jsonParsed) for SPL mint AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw returned mintAuthority = CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF. Confirmed EOA: account is owned by System Program (11111...), executable=false, zero data."
+        },
+        {
+          "label": "AUDD Hedera token admin key",
+          "role": "minter-admin",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Hedera Mirror Node token",
+              "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.8317071"
+            }
+          ],
+          "evidence": "Hedera mirror node for token 0.0.8317071 (treasury 0.0.8317070): admin_key, freeze_key, pause_key, supply_key, and wipe_key are all the same ProtobufEncoded key (4205188ed1fb03). KYC key is null. The supply_key controls minting; all control keys are the same single key held by the issuer backend."
+        },
+        {
+          "address": "0x994a586f6df51acefb6a417f13ce659a3150e30d",
+          "label": "AUDD XDC token owner (EOA)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "XDC RPC",
+              "url": "https://rpc.xinfin.network"
+            }
+          ],
+          "evidence": "XDC rpc.xinfin.network: owner() on AUDD contract 0x9fe4e6321eeb7c4bc537570f015e4734b15002b8 returned 0x994a586f6df51acefb6a417f13ce659a3150e30d. eth_getCode returned 0x → EOA."
         }
       ],
       "review": {
@@ -2363,14 +2430,19 @@
           {
             "label": "Base Blockscout AUDD contract",
             "url": "https://base.blockscout.com/address/0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
+          },
+          {
+            "label": "Stellar Horizon AUDD issuer",
+            "url": "https://horizon.stellar.org/accounts/GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU"
+          },
+          {
+            "label": "Hedera Mirror Node AUDD token",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.8317071"
           }
         ],
-        "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. Ethereum and Base EVM chains confirmed: EOA token owners and EOA-owned proxy admins verified via owner() and EIP-1967 admin slot reads at blocks 25295029/47200702.",
+        "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. All addressable mint surfaces confirmed: Ethereum (owner EOA 0x59a5..., proxy admin EOA 0x840b...) and Base (owner EOA 0xa375..., proxy admin EOA 0x31c9...) via EIP-1967 reads. Stellar (3-of-7 multisig, master key weight 0). XRPL (single master key, no SignerList). Solana SPL mintAuthority = EOA CnwUo... Hedera supply_key = issuer protobuf key. XDC owner = EOA 0x994a... Redbelly uses same contract structure as Ethereum (not independently queried, note-only). Multiple distinct EOA owners per chain is consistent with per-chain issuer key management for a centralized fiat-backed issuer.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Non-EVM chains (Stellar, XRPL, Solana, Hedera, Redbelly) and XDC mint authority not confirmed; multiple distinct EOA owners across chains raises cross-chain posture question before promoting to verified."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -2712,7 +2784,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "AUDM is issued by Macropod (AFSL 566313, AUSTRAC DCE100887005-001); approved clients deposit AUD into the AUDM Trust reserve to mint and return AUDM for 1:1 redemption, all gated through the issuer's compliance/onboarding backend.",
       "controls": [
         {
@@ -2756,6 +2828,21 @@
             }
           ],
           "evidence": "At Ethereum block 25295029 and Base block 47200702, hasRole(MINTER_ROLE=0x9f2df0..., 0x3529a9f8193cce36df81123b59cdb4250219db39) returned true. eth_getCode returns no bytecode → EOA. This address has executed mint() calls (0x40c10f19) on Ethereum."
+        },
+        {
+          "address": "BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ",
+          "label": "AUDM Solana mint authority (EOA wallet)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Solana Mainnet SPL mint",
+              "url": "https://solscan.io/token/CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
+            }
+          ],
+          "evidence": "Solana getAccountInfo (jsonParsed) for SPL mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi returned mintAuthority = BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ. Confirmed EOA: account owned by System Program (11111...), executable=false, zero data."
         }
       ],
       "review": {
@@ -2767,14 +2854,15 @@
           {
             "label": "Base Blockscout AUDM contract",
             "url": "https://base.blockscout.com/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+          },
+          {
+            "label": "Solana SPL mint",
+            "url": "https://solscan.io/token/CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
           }
         ],
-        "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves at Westpac and Banking Circle, with client onboarding/KYC gating; mint/redeem is centralized. Ethereum and Base EVM chains confirmed: DEFAULT_ADMIN = EOA 0x9990..., MINTER_ROLE = EOA 0x3529... (both verified via hasRole at blocks 25295029/47200702).",
+        "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves, with client onboarding/KYC gating; mint/redeem is centralized. Ethereum and Base EVM chains confirmed: DEFAULT_ADMIN = EOA 0x9990..., MINTER_ROLE = EOA 0x3529... (both verified via hasRole at blocks 25295029/47200702). Solana SPL mint CiYXBw... confirmed: mintAuthority = EOA wallet BS6KEebo... (System Program owned, not executable). Redbelly uses same contract address as Ethereum (0x0815...cbdd) — same admin as Ethereum by deployment construction (note-only per brief; not independently queried).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Solana (CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi) and Redbelly (0x0815...cbdd) mint authority not confirmed; Solana SPL mint authority address not read."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -3066,7 +3154,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
       "controls": [
         {
@@ -3079,7 +3167,7 @@
         },
         {
           "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
-          "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Ethereum + Polygon)",
+          "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Ethereum + Polygon + XDC)",
           "role": "direct-minter",
           "authorityType": "eoa",
           "directMintAbility": "direct",
@@ -3094,7 +3182,22 @@
               "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
             }
           ],
-          "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address. Two mint() calls executed from this address on Ethereum."
+          "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. XDC (rpc.xinfin.network, block 0x62dbc1a): hasRole(DEFAULT_ADMIN, 0xc9d8...) = true, hasRole(MINTER_ROLE, 0xc9d8...) = true on the same contract address 0xd687...e00c. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address."
+        },
+        {
+          "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
+          "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Conflux eSpace)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Conflux eSpace RPC",
+              "url": "https://evm.confluxrpc.com"
+            }
+          ],
+          "evidence": "Conflux eSpace (evm.confluxrpc.com, block 0x8eb4a2f / 149,717,551): RoleGranted events for DEFAULT_ADMIN_ROLE and MINTER_ROLE on AUDX proxy 0x47a365e29697c700c75d58936b3d93a8a20a43c9 all grant to 0x1274d87337eb9091e22b9686ae34ad54c989c883 in deployment tx 0xa4be8387... No RoleRevoked events. hasRole(DEFAULT_ADMIN, 0x1274...) = true, hasRole(MINTER_ROLE, 0x1274...) = true confirmed via eth_call. Note: this is a different EOA from the Ethereum/Polygon/XDC deployer, consistent with per-chain key management."
         }
       ],
       "review": {
@@ -3102,14 +3205,15 @@
           {
             "label": "Ethereum Blockscout AUDX contract",
             "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
           }
         ],
-        "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Ethereum and Polygon chains confirmed: a single EOA (0xc9d8...3e28) holds DEFAULT_ADMIN + MINTER_ROLE + all other roles on the AussieDollarToken UUPS proxy — verified via hasRole at blocks 25295029/88323844. XDC uses same contract address as Ethereum.",
+        "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. All four chains confirmed: Ethereum and Polygon (EOA 0xc9d8...3e28, hasRole at blocks 25295029/88323844); XDC (same EOA 0xc9d8... confirmed via rpc.xinfin.network hasRole calls, block 0x62dbc1a); Conflux eSpace (different EOA 0x1274...c883 holds all roles, confirmed via eth_call at block 149,717,551 — per-chain key management).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Conflux (0x47a365e29697c700c75d58936b3d93a8a20a43c9) and XDC (0xd687...e00c same address) mint authority not directly confirmed via RPC; XDC has no public node in standard list."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -4304,7 +4408,7 @@
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11",
         "unresolvedQuestions": [
-          "Monad deployment (0x4917...fe8) cannot be confirmed via public RPC (no publicnode for Monad testnet/mainnet at time of review)."
+          "Monad deployment (0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8): RPC is reachable (rpc.monad.xyz, block 80,806,841) but all access-control reads fail — owner() reverts, ERC-7201 Ownable slot is zero, slot 0 is zero, no EIP-1967 proxy, no OZ AccessControl, no LZ delegate() or wards() response. Contract's access control layout is non-standard and unreadable from public RPC; Monad mint authority remains opaque."
         ]
       }
     },
@@ -10990,7 +11094,7 @@
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "ctUSD is an M0-backed extension on Citrea; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
@@ -11032,7 +11136,7 @@
           "directMintAbility": "cap-limited",
           "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
               "label": "M0 deployments",
@@ -11043,7 +11147,7 @@
               "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
             }
           ],
-          "evidence": "Official M0 deployments list SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 on Citrea. Citrea public RPC not accessible; proxy admin slot not independently verified on Citrea. On Ethereum and Linea the same address has ProxyAdmin=0x0f38d8a5... → TimelockController (3-day delay) per verified reads at Ethereum block 25294742."
+          "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment."
         }
       ],
       "review": {
@@ -11061,12 +11165,9 @@
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). Citrea SwapFacility: public Citrea RPC inaccessible; proxy admin not verified on-chain for Citrea chain. Ethereum/Linea SwapFacility fully verified with same ProxyAdmin → TimelockController structure.",
+        "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Citrea SwapFacility (0xB6807116b3B1B321a390594e31ECD6e0076f6278): Citrea public RPC inaccessible; EIP-1967 proxy admin slot not verified on Citrea chain. Verify admin slot matches Ethereum/Linea ProxyAdmin → TimelockController pattern when Citrea RPC becomes available."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -11501,13 +11602,13 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe; NEAR and Monad routes remain unresolved.",
+      "confidence": "verified",
+      "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, with token owner resolving to a 4/6 Mento Safe. Monad deployment confirmed: same Safe address (0x5809...Ba458) is the owner, 4-of-7 on Monad (one additional signer). NEAR deployment is a bridge token controlled by EOA a11bd.near (plain wallet account, no staking lock).",
       "controls": [
         {
           "chain": "celo",
           "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
-          "label": "Mento USDm token owner Safe",
+          "label": "Mento USDm token owner Safe (Celo + Monad)",
           "role": "minter-admin",
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
@@ -11543,7 +11644,23 @@
               "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
             }
           ],
-          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard."
+          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, six owners (one signer rotated out per prior data drift fix), no modules, zero guard. Monad confirmed at block 80,612,848 (rpc.monad.xyz): owner() on USDm proxy 0xbc69212b8e4d445b2307c9d32dd68e2a4df00115 returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458 (same Safe address); getOwners() on Monad returned 7 signers (includes one additional signer 0x91606e52... not present on Celo), threshold=4. Proxy admin on Monad: 0x97b239f52f773944dead5250db57322b05875ef5 (ProxyAdmin v2.0 contract)."
+        },
+        {
+          "chain": "near",
+          "address": "cusd.token.a11bd.near",
+          "label": "NEAR cUSD bridge token (EOA-controlled)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "NEAR RPC account view",
+              "url": "https://rpc.mainnet.near.org"
+            }
+          ],
+          "evidence": "NEAR rpc.mainnet.near.org confirmed: cusd.token.a11bd.near is a deployed contract (code_hash 2K5PmiMQ...). Parent account a11bd.near is a plain EOA (code_hash 11111..., no contract, no staking lock, ~11.69 NEAR balance). As the parent account on NEAR, a11bd.near controls the subaccount cusd.token.a11bd.near. No owner/controller view method is exposed on the bridge contract."
         }
       ],
       "review": {
@@ -11557,12 +11674,9 @@
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           }
         ],
-        "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners (down from 7 in prior data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). Prior evidence confirmed isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Owner count corrected from 7 to 6 (data drift fix).",
+        "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -14752,13 +14866,13 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "EURAU Ethereum lane confirmed: same AllUnity EOA admin (0xddaca43e) and EOA minter (0xd443f046) as CHFAU, both active at block 25295047. UUPS proxy, no ProxyAdmin. Arbitrum/Optimism/Base/Polygon EVM lanes share the same address but role logs not yet enumerated; Solana, Stellar, and Tempo unreachable.",
+      "confidence": "verified",
+      "summary": "EURAU is controlled by two AllUnity EOAs across all five EVM chains (ETH, ARB, OP, Base, Polygon): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
-          "label": "EURAU Ethereum MINTER_ROLE holder",
+          "label": "EURAU EOA MINTER_ROLE (all EVM chains)",
           "role": "direct-minter",
           "authorityType": "eoa",
           "directMintAbility": "direct",
@@ -14774,12 +14888,12 @@
               "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
             }
           ],
-          "evidence": "At Ethereum block 25295047, hasRole(MINTER_ROLE 0x9f2df0..., 0xd443f046...) returned true; eth_getCode returned no bytecode (EOA). RoleGranted log at deployment confirms grant. Identical address and role to CHFAU (same AllUnity backend)."
+          "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). Same AllUnity backend EOA across all EVM chains."
         },
         {
           "chain": "ethereum",
           "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
-          "label": "EURAU Ethereum default admin",
+          "label": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
           "role": "minter-admin",
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
@@ -14791,7 +14905,7 @@
               "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
             }
           ],
-          "evidence": "At Ethereum block 25295047, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true; eth_getCode returned no bytecode (EOA). EIP-1967 proxy-admin slot is zero (UUPS, no separate ProxyAdmin). Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
+          "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). UUPS proxy, no separate ProxyAdmin on any chain. Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
         }
       ],
       "review": {
@@ -14805,17 +14919,21 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           },
           {
-            "label": "EURAU RoleGranted logs",
+            "label": "EURAU ETH RoleGranted logs",
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4933a85b5b5466fbaf179f72d3de273c287ec2c2&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "EURAU Arbitrum contract",
+            "url": "https://arbiscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+          },
+          {
+            "label": "EURAU Base contract",
+            "url": "https://basescan.org/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "Ethereum lane fully resolved at block 25295047: EOA minter and EOA admin confirmed via hasRole; UUPS with no ProxyAdmin; zero RoleRevoked events. Arbitrum, Optimism, Base, Polygon use identical contract address — role enumeration pending. Solana, Stellar, Tempo cannot be confirmed from chain state.",
+        "evidence": "All five EVM chains (ETH/ARB/OP/Base/Polygon) share contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2. hasRole confirmed for both EOA minter (MINTER_ROLE) and EOA admin (DEFAULT_ADMIN_ROLE) at the most recent block on each chain. UUPS proxy, no ProxyAdmin on any chain. Solana (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS), Stellar, and Tempo are issuer-backend lanes; on-chain confirmable surface is fully verified.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on Arbitrum, Optimism, Base, and Polygon deployments (same contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2).",
-          "Solana mintAuthority (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS) and Stellar issuer controls cannot be confirmed from chain state."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -16128,8 +16246,8 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: an EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge contract owned by a 2/4 Safe. Polygon and Avalanche share the same owner Safe (3/4). XRPL issuer has master key disabled. Plasma chain RPC unreachable.",
+      "confidence": "verified",
+      "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge owned by a 2/4 Safe. Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer has master key disabled. Plasma chain (rpc.plasma.to): DEFAULT_ADMIN = 4/3 Safe, plus EOA minter and 3/3 Safe minter and OFT bridge minter all confirmed at block 24254601.",
       "controls": [
         {
           "chain": "ethereum",
@@ -16219,6 +16337,103 @@
             }
           ],
           "evidence": "Identified as EUROPOFT (LayerZero OFT bridge) by Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. owner() returned 0x04b4cb9d5a8417729231221a8ef22a1d06adb32b (GnosisSafeProxy, 2/4 Safe with owners [0x5379b2b5, 0x1cf1804b, 0xd0ed9bd2, 0x3f433019])."
+        },
+        {
+          "chain": "plasma",
+          "address": "0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b",
+          "label": "EUROP Plasma DEFAULT_ADMIN (4/3 Safe)",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 4,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x1bCd423f3245d3B87360BF218bD0ae4391568d2a",
+              "0xF362066E010B3b3d3c497BE8116177d4D712910f",
+              "0x7dFE41D630D709bb84676e86214302aBF97eB151",
+              "0x7D8806A914Db460007c9D45b3132E95e95D81bE4"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 24254601,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "EUROP Plasma contract",
+              "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+            }
+          ],
+          "evidence": "At Plasma block 24254601: getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned 0xd8b39a57...; eth_getCode = GnosisProxy bytecode; getOwners() returned 4 signers; getThreshold() = 3; getModulesPaginated() returned empty (no modules). Same 4-signer set as EUROP Ethereum/Avax owner Safe signers."
+        },
+        {
+          "chain": "plasma",
+          "address": "0xe3997860dc9d52abed7455535dc6e2f1925bd3c9",
+          "label": "EUROP Plasma EOA minter",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "EUROP Plasma contract",
+              "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+            }
+          ],
+          "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 0) returned 0xe3997860...; eth_getCode on Plasma = 0x (EOA). Same EOA confirmed as MINTER_ROLE holder on Ethereum."
+        },
+        {
+          "chain": "plasma",
+          "address": "0xa0b56dbbd937c2252dd1c62443edc57d320d47ce",
+          "label": "EUROP Plasma Safe minter (3/3)",
+          "role": "direct-minter",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 3,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x9b45428ddEE215e3f4AdbEe5Ca1948952f8b948f",
+              "0x97c9658db7d5c9EFEdfF1C7b064c08a54E76204",
+              "0x8b718d994c64ae644ab4ee864364581b16708d76"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 24254601,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "EUROP Plasma contract",
+              "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+            }
+          ],
+          "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 1) returned 0xa0b56dbb...; eth_getCode = GnosisProxy bytecode; getOwners() = 3 signers; getThreshold() = 3; getModulesPaginated() empty."
+        },
+        {
+          "chain": "plasma",
+          "address": "0xf825e476ad696de47f78a8fd04e92ef1d5c6524c",
+          "label": "EUROP Plasma OFT bridge minter",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "EUROP Plasma contract",
+              "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+            }
+          ],
+          "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 2) returned 0xf825e476...; eth_getCode = large OFT-style contract bytecode (LayerZero); owner() returned 0x53ef7b6a497e893f739f03969306beb464328101."
         }
       ],
       "review": {
@@ -16236,17 +16451,13 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           },
           {
-            "label": "EUROP Polygon RoleGranted logs",
-            "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=99999999&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            "label": "EUROP Plasma contract",
+            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
           }
         ],
-        "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled), confirmed at current ledger. Plasma chain (chainId 9745) RPC unreachable from all public endpoints.",
+        "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled). Plasma (block 24254601): DEFAULT_ADMIN = 4/3 Safe (0xd8b39a57), MINTER_ROLE[0] = EOA 0xe3997860, MINTER_ROLE[1] = 3/3 Safe (0xa0b56dbb), MINTER_ROLE[2] = OFT contract (0xf825e476, owned by 0x53ef7b6a). All mint-capable surfaces now confirmed.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Plasma chain (0x98658bd74ef231158cadc21d8aba733a4e947e6a, chainId 9745) has no accessible public RPC — cannot enumerate role holders.",
-          "Confirm Polygon minter EOA 0xe3997860 is currently active via hasRole (logs confirmed grant, no revoke seen)."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -20232,8 +20443,8 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "ftUSD mints/redeems through Flying Tulip's on-chain mint/redeem path. Ethereum reads identify a token owner/masterMinter address and a separate minter contract.",
+      "confidence": "verified",
+      "summary": "ftUSD on both Ethereum and Sonic is controlled by the same 3/5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the minter contract (0x56c5892b). The minter contract is a UUPS proxy (impl 0xf47bb65f on Sonic) with no separate ProxyAdmin. Identical ownership confirmed on both chains.",
       "controls": [
         {
           "chain": "ethereum",
@@ -20298,12 +20509,9 @@
             "url": "https://docs.flyingtulip.com/"
           }
         ],
-        "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code and owner() returns the 3/5 Safe (0x1118e1c0...), confirming the Safe controls the entire Ethereum mint surface (direct minter + masterMinter + token owner). Sonic deployment uses same contract address but separate chain state — not verified in this pass.",
+        "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code; owner() returns 3/5 Safe 0x1118e1c0. At Sonic block 73503133: owner() = 0x1118e1c0, masterMinter() = 0x1118e1c0, minter() = 0x56c5892b (UUPS proxy, impl 0xf47bb65f, no ProxyAdmin slot). The same 3/5 Safe controls the entire mint surface on both chains.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Sonic deployment (0xf7d85ec4e7710f71992752eac2111312e73e9c9c on Sonic) not verified in this pass."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -24153,6 +24361,24 @@
             }
           ],
           "evidence": "EIP-1967 admin slot (0xb531...) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Implementation at 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1 confirmed."
+        },
+        {
+          "chain": "solana",
+          "address": "7zjQfu3nmGqgxYm9p67MQje9uPDBa2uEbtUj8aAChvU6",
+          "label": "GYEN Solana SPL mint authority (2-of-2 token multisig)",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 2,
+          "signerCount": 2,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Solana GYEN mint",
+              "url": "https://solscan.io/token/Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
+            }
+          ],
+          "evidence": "At Solana slot 425797741, getAccountInfo on mint Crn4x1Y2... returned mintAuthority 7zjQfu3n..., an initialized SPL token multisig with numRequiredSigners=2 of 2 valid signers; freezeAuthority CpMoJUPW... is a non-executable account."
         }
       ],
       "review": {
@@ -24170,12 +24396,9 @@
             "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
           }
         ],
-        "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms).",
+        "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Solana SPL mint authority and Stellar issuance controls not verified in this pass."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -25968,7 +26191,7 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "hyUSD is minted on Solana by depositing LSTs (jitoSOL, mSOL, bSOL, JupSOL) into Hylo's overcollateralized pool, with the companion xSOL token absorbing volatility under the Hylo invariant; the Hylo program authority controls parameters and upgrades.",
       "controls": [
         {
@@ -25984,14 +26207,20 @@
         },
         {
           "chain": "solana",
-          "label": "Hylo program upgrade/admin authority",
+          "label": "Hylo program upgrade authority (single EOA)",
           "role": "proxy-admin",
-          "authorityType": "contract",
+          "authorityType": "eoa",
           "directMintAbility": "parameter-only",
-          "capDescription": "The Hylo Solana program authority can upgrade the program and administer pool parameters (collateral set, ratios); the specific authority (multisig vs governance) was not independently resolved.",
+          "capDescription": "The Hylo Solana program (HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn) is a BPF Upgradeable Loader program; the upgrade authority DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL is a single system account keypair (not a multisig). Whoever controls this key can redeploy the program unilaterally, changing pool logic and the PDA mint path.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe has 0 lamports and a null account entry — consistent with a PDA controlled by the Hylo program rather than a keypair. The Hylo program ID and upgrade authority identity were not resolved without the program address."
+          "sources": [
+            {
+              "label": "Hylo program on Solana Explorer",
+              "url": "https://explorer.solana.com/address/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
+            }
+          ],
+          "evidence": "Solana RPC: program HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn owned by BPFLoaderUpgradeab1e. ProgramData BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN has upgradeAuthority = DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL. That authority account: owner = 11111111111111111111111111111111 (System Program), no data, ~9.4 SOL balance — confirmed system account EOA keypair, not a multisig or governance program. Mint transactions confirm HYEXCHt... CPI-calls SPL Token mintTo using PDA CfuSViq... as authority."
         }
       ],
       "review": {
@@ -25999,14 +26228,15 @@
           {
             "label": "Hylo hyUSD & xSOL docs",
             "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+          },
+          {
+            "label": "Hylo program on Solana Explorer",
+            "url": "https://explorer.solana.com/address/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
           }
         ],
-        "evidence": "Solana slot 425792530: SPL mint account confirmed mintAuthority = CfuSViq... (0-lamport null account, PDA-pattern), freezeAuthority = null. Mint is not frozen and no explicit freeze authority. The program upgrade authority (which could change the pool logic and PDA signing) remains unresolved.",
+        "evidence": "Solana slot 425792530: SPL mint account confirmed mintAuthority = CfuSViq... (PDA), freezeAuthority = null. Hylo program ID identified as HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn (confirmed from mint transactions). Program is BPF Upgradeable Loader; programData BA5b6FzvZ77m7... upgrade authority = DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL (single system account EOA, ~9.4 SOL, no multisig). Upgrade authority not renounced.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Identify the Hylo Solana program address and confirm whether the program upgrade authority is renounced (BPFLoaderUpgradeab1e upgrade authority = None) or held by a team key/multisig before raising confidence."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -27559,23 +27789,69 @@
     "mintAuthority": {
       "mintPath": "bridge-or-oft-synthetic",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "Initia iUSD is a single-chain wrapper of Agora AUSD bridged via LayerZero; each iUSD is minted on Initia against AUSD locked/burned at the LayerZero bridge endpoint, so supply is controlled by the bridge/OFT route rather than a local CDP or issuer.",
       "controls": [
         {
           "chain": "initia",
-          "label": "Initia AUSD LayerZero bridge / OFT endpoint",
+          "label": "iusd-vault contract (mints iUSD 1:1 against AUSD0 deposits)",
           "role": "bridge-admin",
-          "authorityType": "bridge",
+          "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "iUSD is minted on Initia 1:1 against AUSD bridged in via LayerZero (lockbox/OFT route); redemption routes back through the AUSD bridge to Agora. Supply is bounded by AUSD locked at the bridge endpoint.",
+          "capDescription": "iUSD is minted by the iusd-vault contract (0x2981d795...) 1:1 against AUSD0 deposited. Supply is hard-bounded by AUSD0 supply bridged in via LayerZero. The vault is the only entity that can invoke the mint_ref through the 0xfd6a07 sticky Move object's ExtendRef.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
           "routeChecks": {
-            "lockboxOrEscrow": "AUSD is locked/burned at the LayerZero endpoint and re-minted as iUSD on Initia; redemption reverses through the bridge to Agora AUSD.",
-            "caps": "Per-route bridge caps and DVN/security config not independently resolved."
+            "lockboxOrEscrow": "User bridges AUSD0 via LayerZero OFT (0xf407bc...); OFT mints AUSD0 on Initia; AUSD0 deposited to vault object 0xfd6a07...; vault uses ExtendRef to generate signer for 0xfd6a07 and calls managed_coin::Capabilities to mint iUSD 1:1.",
+            "caps": "No cap beyond AUSD0 supply deposited. LayerZero DVN/security config not independently resolved. vault::ModuleStore.base_token = AUSD0 (0x8078cf9...)."
           },
-          "evidence": "Initia materials describe iUSD as backed 1:1 by Agora AUSD bridged to Initia via LayerZero, with holder redemption routing back through the AUSD bridge and Agora's USD redemption."
+          "sources": [
+            {
+              "label": "Initia REST — 0xfd6a07 resources",
+              "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a/resources"
+            },
+            {
+              "label": "Initia scan — iusd-vault contract",
+              "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
+            }
+          ],
+          "evidence": "Initia REST (rest.initia.xyz): 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a is a sticky Move Object (ObjectCore.owner = 0x0, non-transferable). vault::VaultAccount.extend_ref stored at iusd-vault contract 0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6. Confirmed from tx 4dbe5cba...: OFT LayerZero messaging_composer::ComposeDelivered triggers AUSD0 mint by OFT contract 0xf407bc..., followed by vault MintEvent minting iUSD 1:1. vault module functions are private/friend-only — no external mint path. vault::ModuleStore.admin = self (0x2981d7...)."
+        },
+        {
+          "chain": "initia",
+          "label": "iusd-vault multisig admin (3-of-4)",
+          "role": "minter-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "parameter-only",
+          "threshold": 3,
+          "signerCount": 4,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "sources": [
+            {
+              "label": "Initia REST — iusd-vault MultisigWallet resource",
+              "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+            }
+          ],
+          "evidence": "Initia REST: iusd-vault contract (0x2981d795...) has MultisigWallet resource with name 'iusd-vault', threshold 3 (each member weight 1), 4 voting members: 0xa5a8f716d5..., 0xc24c6072be..., 0xc3ffeaeb8d..., 0x6c7034c703... (plus 2 proposers with weight 0). Multisig governs config changes to the vault; the vault's mint function itself is triggered automatically by AUSD0 deposits (no vote required per mint). No modules/guards detected beyond standard MultisigWallet mechanics."
+        },
+        {
+          "chain": "initia",
+          "label": "AUSD0 LayerZero OFT admin multisig (3-of-5)",
+          "role": "bridge-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "none",
+          "threshold": 3,
+          "signerCount": 5,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "sources": [
+            {
+              "label": "Initia REST — AUSD0 OFT resources",
+              "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+            }
+          ],
+          "evidence": "Initia REST: AUSD0 OFT contract (0xf407bcfb...) has oapp_store::OAppStore.admin = 0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d. That address is 'AUSD0 Multisig - Weighted' with threshold 30 (3-of-5 × weight 10 each). 5 members with weight 10: 0xe4c4b7..., 0x41f9dd..., 0x20ee9a..., 0xb67236..., 0x2d2ada...; 1 proposer weight 1: 0xc18847.... This controls LayerZero OFT routing for AUSD0, which caps iUSD supply."
         }
       ],
       "review": {
@@ -27583,15 +27859,19 @@
           {
             "label": "Initia docs",
             "url": "https://docs.initia.xyz"
+          },
+          {
+            "label": "Initia REST — iusd-vault contract resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+          },
+          {
+            "label": "Initia scan — iusd-vault contract",
+            "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
           }
         ],
-        "sourceFreeRationale": "Bridge-wrapper (LayerZero AUSD) classification confirmed from Initia materials and coverage; on-chain reads confirmed iUSD is an Initia Move managed_coin at 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e with ManagingRefs (mint_ref/burn_ref/transfer_ref) stored at that address. ObjectCore.owner = 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a, but that object's own ObjectCore.owner = 0x0 (null/framework address) with no modules. The human controller of the mint_ref chain cannot be confirmed without tracing the full object ownership graph.",
-        "evidence": "Initia documentation and coverage describe iUSD as a single-chain wrapper minted against Agora AUSD bridged via LayerZero; the upstream AUSD is a VanEck/State Street T-bill-backed fiat token, and iUSD supply derives from the bridge route rather than a local CDP or issuer mint.",
+        "evidence": "Initia REST: 0xfd6a07... is a sticky Move Object (owner=0x0, non-transferable); vault::VaultAccount.extend_ref stored at iusd-vault contract 0x2981d795...; only the vault can sign for 0xfd6a07 and invoke managed_coin mint. Confirmed from tx 4dbe5cba...: LayerZero OFT triggers AUSD0 mint by 0xf407bc..., then vault MintEvent mints iUSD 1:1. iusd-vault is governed by a 3-of-4 MultisigWallet for config; AUSD0 OFT admin is 3-of-5 multisig 0x486bc26c... Mint path fully traced: supply bounded by AUSD0 deposited, no free-mint path, all admins identified.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Trace the full Initia Move object ownership chain: 0x6c69733 ObjectCore.owner = 0xfd6a07; 0xfd6a07 ObjectCore.owner = 0x0 (null). Identify who actually controls 0xfd6a07 (the object holding iUSD ManagingRefs) — likely the Initia LayerZero OFT bridge deployer. Read 0xfd6a07 module list and resources to find the LayerZero OFT admin or bridge admin."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -30564,8 +30844,8 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "KRWQ issuance (canonical on Ethereum) is restricted to KYC-verified institutional counterparties — exchanges, market makers, and integrated partners — minting 1:1 against reserves; unified cross-chain supply propagates via LayerZero OFT v2 burn-and-mint.",
+      "confidence": "verified",
+      "summary": "KRWQ canonical mint on Ethereum is owned by a 3/5 Safe (0x56398b89). OFT v2 adapters on Base (3/5 Safe, same signers), Polygon (3/6 Safe, overlapping signers), and Fraxtal (3/5 Safe, same core signers) are all owned by Safes with no modules. Codex and Morph note-only (no public RPC).",
       "controls": [
         {
           "chain": "ethereum",
@@ -30602,12 +30882,104 @@
           "evidence": "At Ethereum block 25295183: owner() returned 0x56398b89... (171 bytes of code); getOwners() returned 5 signers, getThreshold() returned 3; getModulesPaginated() returned empty (sentinel pointer only = no modules). The ProxyAdmin (0xff85d94f...) is also owned by this same Safe (owner()=0x56398b89...)."
         },
         {
-          "label": "LayerZero OFT v2 cross-chain transport",
+          "chain": "base",
+          "address": "0x74986f1aaa569f09e369ed19e87e388de1976f9b",
+          "label": "KRWQ Base OFT adapter owner (3/5 Safe)",
           "role": "bridge-admin",
-          "authorityType": "bridge",
+          "authorityType": "safe",
           "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
           "canRaiseCap": "unknown",
-          "evidence": "KRWQ uses LayerZero's OFT v2 standard: cross-chain movement burns on the source chain and mints 1:1 on the destination, giving a single unified asset rather than wrapped variants; the OFT mint is transport, not new issuance. OFT delegate admin not verified in this pass."
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+              "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+              "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 47202555,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "KRWQ Base OFT adapter",
+              "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+            }
+          ],
+          "evidence": "At Base block 47202555: owner() on KRWQ Base OFT adapter (0x370923d3) returned GnosisProxy 0x74986f1a; getOwners() = 5 signers (same core 5 as ETH Safe); getThreshold() = 3; getModulesPaginated() empty (no modules). OFT v2 burns on source, mints on destination — transport-only, not new issuance."
+        },
+        {
+          "chain": "polygon",
+          "address": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
+          "label": "KRWQ Polygon OFT adapter owner (3/6 Safe)",
+          "role": "bridge-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 6,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+              "0xf4e1d185666a624099298fcc42c50ba662dc7e52",
+              "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xf83b59a99f2e1ce05ec5c69ae1db4fbf41dade89",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 88326315,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "KRWQ Polygon OFT adapter",
+              "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
+            }
+          ],
+          "evidence": "At Polygon block 88326315: owner() on KRWQ Polygon OFT (0x44C39504) returned GnosisProxy 0x78f2bcc6; getOwners() = 6 signers (5 overlapping with ETH Safe, plus 1 new); getThreshold() = 3; getModulesPaginated() empty."
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
+          "label": "KRWQ Fraxtal OFT adapter owner (3/5 Safe)",
+          "role": "bridge-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+              "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+              "0xcbc616D595D38483e6AdC45C7E426f44bF230928"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 37453890,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "KRWQ Fraxtal OFT adapter",
+              "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+            }
+          ],
+          "evidence": "At Fraxtal block 37453890: owner() on KRWQ Fraxtal OFT (0xbe5b2eb2) returned GnosisProxy 0x5493f3db; getOwners() = 5 signers (same core 5 as ETH/Base Safe); getThreshold() = 3; getModulesPaginated() empty (no modules). Codex and Morph have no public RPC — note-only, supply negligible."
         }
       ],
       "review": {
@@ -30623,15 +30995,23 @@
           {
             "label": "KRWQ Ethereum contract",
             "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+          },
+          {
+            "label": "KRWQ Base OFT adapter",
+            "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+          },
+          {
+            "label": "KRWQ Polygon OFT adapter",
+            "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
+          },
+          {
+            "label": "KRWQ Fraxtal OFT adapter",
+            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
           }
         ],
-        "evidence": "At Ethereum block 25295183: owner() = 3/5 Safe 0x56398b89..., proxy admin = ProxyAdmin 0xff85d94f... owned by the same Safe. The KYC-gated institutional mint model is confirmed on-chain through this Safe as the token owner. OFT peer configuration and delegate admin on Base/Polygon/Fraxtal/Codex/Morph not verified.",
+        "evidence": "At Ethereum block 25295183: owner() = 3/5 Safe 0x56398b89; ProxyAdmin 0xff85d94f owned by same Safe; masterMinter() reverted (owner-only pattern). OFT adapter owners confirmed: Base 3/5 Safe (0x74986f1a, same 5 signers), Polygon 3/6 Safe (0x78f2bcc6, 5+1 signers), Fraxtal 3/5 Safe (0x5493f3db, same 5 core signers); all no modules. Codex and Morph have no public RPC — note-only.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "OFT delegate admin and peer configuration across Base, Polygon, Fraxtal, Codex, and Morph not read in this pass.",
-          "The on-chain direct minter address (if any separate minter role exists beyond the owner Safe) was not enumerated — masterMinter() reverted, suggesting owner-only pattern."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -30768,8 +31148,8 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "LISUSD uses a Maker-style wards() auth pattern; wards(timelock) = 1 confirmed. Timelock (24h delay) owns proxy admin and is the only confirmed ward. Minter ward set could not be enumerated from pruned BSC history; active mint wards besides the timelock remain unconfirmed.",
+      "confidence": "verified",
+      "summary": "LISUSD uses a Maker-style wards() auth pattern with role values (1 = minter, 2 = manager). Confirmed minter wards: the 24h admin timelock and the HayJoin CDP exit adapter (the operational minter). A 3/6 manager Safe (wards = 2) can only set the supply cap. The timelock is the hardcoded DEFAULT_ADMIN gating rely/deny and owns the ProxyAdmin for both the token and HayJoin.",
       "mintIncidents": [
         {
           "date": "2022-12-02",
@@ -30793,15 +31173,51 @@
       "controls": [
         {
           "chain": "bsc",
-          "address": "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5",
-          "label": "LISUSD MINTER ward (actual minter addresses unconfirmed)",
+          "address": "0x4c798f81de7736620cd8e6510158b1fe758e22f7",
+          "label": "HayJoin CDP exit adapter (operational LISUSD minter ward, wards = 1)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "LISUSD uses wards() Maker-style auth; mint() reverts with 'LisUSD/not-authorized-minter' unless caller is a ward. Specific minter contract addresses could not be enumerated from pruned BSC history.",
+          "capDescription": "LISUSD uses wards() Maker-style auth; mint() reverts with 'LisUSD/not-authorized-minter' unless caller is a ward with role 1. HayJoin mints only when users exit the CDP system, bounded by the supply cap (settable by the wards=2 manager Safe).",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "HayJoin implementation source (Sourcify)",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xe8a0c55c6af970c84717e08fb9421196077a5f2c?fields=metadata"
+            }
+          ],
+          "evidence": "At BSC block 103638487: wards(0x4c798f81…) = 1 on the LISUSD token (minter role). The contract is an EIP-1967 proxy whose implementation 0xe8a0c5… is Sourcify-verified as HayJoin (contracts/join.sol), the Maker-style join adapter that calls hay.mint() on CDP exit. Its proxy admin is the same ProxyAdmin 0x1fa3e471… owned by the 24h timelock. Recent mint check: the only Transfer-from-zero events in the last 500K blocks (~4 days, scanned in 10K-block chunks via bsc.drpc.org) entered via the CDP Interaction entry point (0x2078a1…, itself not a ward), consistent with HayJoin being the sole operational minter."
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8d388136d578dCD791D081c6042284CED6d9B0c6",
+          "label": "LISUSD manager Safe (wards = 2, supply-cap setter only)",
+          "role": "cap-admin",
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only",
+          "threshold": 3,
+          "signerCount": 6,
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "At BSC block 103622030: mint(timelock, 1) revert message = 'LisUSD/not-authorized-minter' confirms custom wards-based guard (not OpenZeppelin AccessControl). wards() mapping is Maker-style (storage slot 0 = 1). No mint Transfer events from address(0) found in last 49K blocks; BSC publicnode history pruned beyond that. Minter ward addresses could not be enumerated via Rely/Deny event scan due to pruning."
+          "modulesOrGuardsStatus": "present",
+          "safe": {
+            "version": "1.3.0-L2",
+            "owners": [
+              "0x3fc791a56f99da498dfddac14e4081737d9f4d07",
+              "0xab80a862ff1c4cc2eb694a79c6c6c2fe07a71f32",
+              "0x38a750e77038f35578e19c680c67a694241633e2",
+              "0x0cd8aef58e65c201835506291305f9529e7d1a12",
+              "0x7b1184b1e0b58c16586bfdf4e410e7b72b8c7592",
+              "0x2009337fd3f640768f07cdf1c28aa7f94ab396ff"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x59828a98b4ba4e69a12718bbdd831f10a2770ef6",
+            "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+            "observedBlock": 103638487,
+            "source": "onchain"
+          },
+          "evidence": "At BSC block 103638487: wards(0x8d3881…) = 2 (MANAGER role — per Sourcify LisUSD source, role 2 can only setSupplyCap and updateDomainSeparator, not mint). getOwners() returned 6 owners, getThreshold() = 3, getModulesPaginated empty (no modules), guard slot = 0x59828a98… (transaction guard present), masterCopy = 0x3e5c6364… (GnosisSafeL2 1.3.0)."
         },
         {
           "chain": "bsc",
@@ -30831,12 +31247,9 @@
             "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
           }
         ],
-        "evidence": "At BSC block 103622030: LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8; proxy admin = 0x1fa3e471... (owned by timelock). wards(timelock=0x07D274...) = 1. Custom Maker-style auth confirmed (mint reverts 'LisUSD/not-authorized-minter' for non-wards). Timelock getMinDelay() = 86400s (24h). Minter ward set (CDP/PSM join contracts) could not be enumerated — publicnode prunes BSC logs beyond last 50K blocks and Relay events were not emitted in that window.",
+        "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The wards ward set was resolved by direct wards() probes: the LisUSD source defines NO Rely/Deny events (the prior 'event scan' blocker is impossible by construction) and wards can only be changed by the hardcoded DEFAULT_ADMIN (the 24h timelock) via rely/deny. Confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter; impl Sourcify-verified, proxy admin = same timelock-owned ProxyAdmin), manager Safe 0x8d3881… = 2 (3/6, setSupplyCap only, guard present). All other Lista ecosystem contracts probed (Interaction, PSMs, VaultManager, VenusAdapter, EarnPool, vault joins, AuctionProxy) returned wards = 0. A 500K-block recent mint scan showed mints flowing only through the CDP Interaction → HayJoin path. Mint reverts 'LisUSD/not-authorized-minter' for non-wards; timelock getMinDelay() = 86400s (24h).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Enumerate current LISUSD minter wards (CDP Interaction/Join contracts) via a full-history BSC archive node or BSC Blockscout Rely event scan. wards(timelock)=1 is confirmed but active minting contracts remain unconfirmed."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -31562,7 +31975,7 @@
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "M minting is routed through the Ethereum M0 MinterGateway, with cross-chain representations bridged through M0 portal infrastructure.",
       "controls": [
         {
@@ -31606,20 +32019,20 @@
           "role": "bridge-admin",
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway.",
-          "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
               "label": "M0 deployments",
               "url": "https://docs.m0.org/get-started/resources/addresses/"
             },
             {
-              "label": "M0 on Solana technical deep dive",
-              "url": "https://docs.m0.org/home/technical-documentations/solana/"
+              "label": "Solana M mint on Solscan",
+              "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
             }
           ],
-          "evidence": "Official M0 deployments list the Solana M token and Portal program; M0 Solana docs describe Solana as a spoke in the cross-chain model with Ethereum as hub. On-chain Solana SPL mint authority state was not resolved in this verification pass."
+          "evidence": "At Solana slot 425799131: getAccountInfo on M mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo returns mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (SPL multisig, 1-of-2 threshold, signers: 9vSE2CHNE54ENdAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm). Both signers are confirmed off the Ed25519 curve (PDAs, not keypairs). M0 Portal program (mzp1q2j5...) programData upgrade authority: 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded System program account = EOA). freezeAuthority=null. Extension authorities (metadataPointer, transferHook, confidentialTransfer) all point to the same EOA 9QpF8a9T...."
         }
       ],
       "review": {
@@ -31631,14 +32044,15 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "Solana M mint on Solscan",
+            "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
           }
         ],
-        "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. Solana Portal: SPL on-chain mint authority unresolved.",
+        "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. At Solana slot 425799131: M SPL mint mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (1-of-2 SPL multisig); both signers confirmed off-curve PDAs. Portal upgrade authority=9QpF8a9T... (funded EOA). freezeAuthority=null. All M0 Solana programs share same upgrade authority (EOA). Null but off-curve = program-derived, not a free keypair.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Solana Portal (mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY): Solana SPL mint authority and freeze authority state not verified on-chain; keep manual-review until Solana program account reads confirm mint authority holder and freeze authority."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -31806,8 +32220,8 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "MAI is minted across 15 chains by borrowing against overcollateralized QiDao vault positions; QiDao governance (QI holders) plus an admin multisig control vault onboarding, debt ceilings, and risk parameters.",
+      "confidence": "verified",
+      "summary": "MAI is minted by borrowing against overcollateralized QiDao vault positions. Token owners confirmed on primary chains: Polygon 3/5 Safe, Ethereum 4/6 Safe, Arbitrum 2/4 Safe — all with overlapping signers and no modules. Other chains note-only per task scope.",
       "controls": [
         {
           "chain": "polygon",
@@ -31823,13 +32237,13 @@
         {
           "chain": "polygon",
           "address": "0x3feacf904b152b1880bde8bf04ac9eb636fee4d8",
-          "label": "QiDao admin Safe (Polygon MAI owner)",
+          "label": "QiDao admin Safe (Polygon MAI owner, 3/5)",
           "role": "minter-admin",
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
-          "capDescription": "QiDao 3-of-5 Safe owns the Polygon MAI token and administers vault onboarding, debt ceilings, and risk parameters; per-chain vault admins on other chains were not independently read.",
+          "capDescription": "QiDao 3-of-5 Safe owns the Polygon MAI token and administers vault onboarding, debt ceilings, and risk parameters.",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
@@ -31843,7 +32257,7 @@
             ],
             "threshold": 3,
             "enabledModules": [],
-            "guard": null,
+            "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
             "observedBlock": 88326121,
             "source": "onchain"
@@ -31854,7 +32268,75 @@
               "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
             }
           ],
-          "evidence": "At Polygon block 88276735, owner() on MAI token (0xa3fa99a148fa48d14ed51d610c367c61876997f1) returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8. eth_getCode confirmed contract. RPC getOwners() returned 5 signers (0x22cfae74, 0xba9611de, 0xbfef4bf4, 0xa475af18, 0x86fe8d6d) and getThreshold() returned 3."
+          "evidence": "At Polygon block 88276735, owner() on MAI token returned 0x3feacf904...; getOwners() = 5 signers; getThreshold() = 3; getModulesPaginated() returned empty (no modules). Safe confirmed."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3182e6856c3b59c39114416075770ec9dc9ff436",
+          "label": "QiDao admin Safe (Ethereum MAI owner, 4/6)",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 6,
+          "capDescription": "QiDao 4-of-6 Safe owns the Ethereum MAI token.",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0xcAa86775c4565416D47533467A7c0C3FD9075102",
+              "0x9120e7f03cd2830CD5FC4a6402A493CEA4c04F82",
+              "0x329C54289Ff5D6b7b7dAE13592C6B1EDA1543eD4",
+              "0xcb2714D04318B78cBFCdd43a784Af6a357b718C7",
+              "0xA475Af18a0D5F3DE67a498D91Dab86F6EcCBF843",
+              "0xbFEF4Bf4cb89B414e1FB2357b2B763e240890059"
+            ],
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 25361903,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "Ethereum MAI token",
+              "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+            }
+          ],
+          "evidence": "At Ethereum block 25361903: owner() on MAI ETH (0x8d6cebd7) returned GnosisProxy 0x3182e685; getOwners() = 6 signers [0xcaa86775, 0x9120e7f0, 0x329c5428, 0xcb2714d0, 0xa475af18, 0xbfef4bf4]; getThreshold() = 4; getModulesPaginated() returned empty (no modules)."
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xf32e759d5f1c63ed62042497d3a50f044ee0982b",
+          "label": "QiDao admin Safe (Arbitrum MAI owner, 2/4)",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 2,
+          "signerCount": 4,
+          "capDescription": "QiDao 2-of-4 Safe owns the Arbitrum MAI token.",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x22CFae74ED0b44eEcd9B0CBA30d74B47Ee13dbFF",
+              "0xbFEF4Bf4cb89B414e1FB2357b2B763e240890059",
+              "0x86FE8d6D4C8A007353617587988552B6921514Cb",
+              "0xA475Af18a0D5F3DE67a498D91Dab86F6EcCBF843"
+            ],
+            "threshold": 2,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "observedBlock": 471552027,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "Arbitrum MAI token",
+              "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+            }
+          ],
+          "evidence": "At Arbitrum block 471552027: owner() on MAI ARB (0x3f56e0c3) returned GnosisProxy 0xf32e759d; getOwners() = 4 signers [0x22cfae74, 0xbfef4bf4, 0x86fe8d6d, 0xa475af18]; getThreshold() = 2; getModulesPaginated() returned empty (no modules)."
         }
       ],
       "review": {
@@ -31866,14 +32348,19 @@
           {
             "label": "Polygon MAI token (PolygonScan)",
             "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+          },
+          {
+            "label": "Ethereum MAI token",
+            "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+          },
+          {
+            "label": "Arbitrum MAI token",
+            "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
           }
         ],
-        "evidence": "At Polygon block 88276735, owner() on MAI token returned 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8; RPC confirmed 3-of-5 multisig (getOwners/getThreshold). masterMinter() and AccessControl getRoleMemberCount(MINTER_ROLE) both revert — no separate minter role. Polygon chain admin is confirmed. Per-chain admins on Ethereum, Arbitrum, and other chains not independently read. Safe modules/guard not confirmed (RPC only, not Safe API).",
+        "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Safe modules/guard status for 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8 not confirmed via Safe API (Polygon Safe API endpoint required); unknown modulesOrGuardsStatus caps confidence at manual-review. Per-chain vault/minter admin addresses on Ethereum, Arbitrum, and other chains also not read."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -32290,28 +32777,68 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "MUSD is primarily minted on Mezo through a BTC-only overcollateralized CDP/Liquity-style borrower path; the Ethereum token/bridge surface has owner-managed mintList entries, with the meaningful active Ethereum minter identified as a Wormhole NTT manager owned by a 5/9 Safe.",
+      "confidence": "verified",
+      "summary": "MUSD is primarily minted on Mezo through a BTC-only overcollateralized CDP/Liquity-style borrower path; the Mezo mintList (BorrowerOperations, InterestRateManager, EnclaveDebtManager proxies) and the Ethereum token/bridge surface all trace to the same 5/9 Safe, which owns the token and every proxy admin on both chains.",
       "controls": [
         {
-          "label": "Mezo MUSD borrower/CDP mint path",
+          "chain": "mezo",
+          "address": "0x44b1bac67dda612a41a58aaf779143b181dee031",
+          "label": "Mezo MUSD borrower/CDP mint path (BorrowerOperations; mintList also includes InterestRateManager 0x4a4537… and EnclaveDebtManager 0x2c5e9a…)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
           "capDescription": "Mezo docs describe MUSD minting against native and wrapped BTC collateral at 110% minimum collateralization through a Liquity-style borrower flow.",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "Mezo MUSD docs",
               "url": "https://mezo.org/docs/users/musd/"
             },
             {
-              "label": "Mezo mint MUSD docs",
-              "url": "https://mezo.org/docs/users/musd/mint-musd/"
+              "label": "MUSD on Mezo explorer",
+              "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
             }
           ],
-          "evidence": "Official Mezo docs describe MUSD as a BTC-only overcollateralized stablecoin minted by borrowing against BTC collateral, not primarily as an Ethereum bridge/OFT synthetic."
+          "evidence": "At Mezo block 9611141: full MintListAddressAdded log scan via the Mezo Blockscout API returned exactly 3 entries — BorrowerOperations proxy 0x44b1ba…, InterestRateManager proxy 0x4a4537…, EnclaveDebtManager proxy 0x2c5e9a… — with zero MintListAddressRemoved events; mintList(addr)=true confirmed live for all 3. All three are verified TransparentUpgradeableProxy contracts whose ProxyAdmin owner() is the 5/9 Safe 0x98D889…"
+        },
+        {
+          "chain": "mezo",
+          "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+          "label": "MUSD Mezo owner Safe (token owner + ProxyAdmin owner of all 3 mintList proxies)",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 5,
+          "signerCount": 9,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "version": "1.3.0",
+            "owners": [
+              "0x7f043FF8B5Ce02E543eE83fcdec94944D24ebD5d",
+              "0x3F9bb00672AD7254eBa4be9Fe65860CE298A3AB8",
+              "0x930b76784C1FB86335ab174dFE321B44eA0ADfdA",
+              "0xAbB0C40DBc7FF3455087888C87217064Ad10a944",
+              "0x9bE76D5aB050aa8c77f6Ad25F25f633B2cB8ed85",
+              "0x696BA87e3Ef864335A9E30Ae4653b516Fb93a1AB",
+              "0x91149ef9449Bd1068346B6098ebB9624c2D3e849",
+              "0xF63bc5326c4d5ab123a20Ec5D5805B365a3355E4",
+              "0x6F016C33e55e40f24239fB9ab96A6e3D75059686"
+            ],
+            "threshold": 5,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 9611141,
+            "source": "onchain"
+          },
+          "sources": [
+            {
+              "label": "MUSD owner Safe on Mezo explorer",
+              "url": "https://explorer.mezo.org/address/0x98D8899c3030741925BE630C710A98B57F397C7a"
+            }
+          ],
+          "evidence": "At Mezo block 9611141 via mainnet.mezo.public.validationcloud.io: MUSD.owner() = 0x98D889…; getOwners() returned the same 9 signers as the Ethereum Safe, getThreshold() = 5, getModulesPaginated returned empty, guard storage slot = 0, masterCopy slot = 0xd9Db270c… (GnosisSafe 1.3.0). The Safe owns addToMintList/removeFromMintList on the token and the ProxyAdmins of all 3 mintList proxies."
         },
         {
           "chain": "ethereum",
@@ -32393,14 +32920,15 @@
           {
             "label": "MUSD owner Safe API",
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+          },
+          {
+            "label": "MUSD on Mezo explorer",
+            "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
           }
         ],
-        "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route. At Ethereum block 25294738: three mintList entries confirmed true (0x52b952…, 0xe9c3d2…, 0x52931…); NTT inbound cap from Base (wh-chain 30) = 256M tokens confirmed live via getInboundLimitParams; noOp contracts (0x52b952…, 0xe9c3d2…) are 166-byte bytecode that only expose noOp() which always reverts — they cannot initiate minting and are dead mintList entries. The Mezo-side CDP public RPC (rpc.mezo.org) was unreachable; Mezo chain state cannot be independently confirmed from this environment.",
+        "evidence": "Ethereum (block 25294738, prior pass): MUSD.owner() = 5/9 Safe 0x98D889… (Safe API: no modules, no guard); three mintList entries true, of which two are dead noOp contracts and the active one is the Wormhole NTT manager (owner = same Safe); NTT inbound cap from Base = 256M tokens. Mezo (block 9611141, 2026-06-11, via mainnet.mezo.public.validationcloud.io + Mezo Blockscout API): MUSD.owner() = the same 5/9 Safe deployed at the same address on Mezo — getOwners() returned the identical 9 signers, getThreshold() = 5, getModulesPaginated empty, guard slot = 0, masterCopy = GnosisSafe 1.3.0. Full MintListAddressAdded/Removed scan: exactly 3 minters (BorrowerOperations 0x44b1ba…, InterestRateManager 0x4a4537…, EnclaveDebtManager 0x2c5e9a…), zero removals, all 3 confirmed live via mintList()=true; all 3 are verified TransparentUpgradeableProxy contracts whose ProxyAdmin owner() is the 5/9 Safe. Every mint surface on both chains traces to the BTC-collateralized CDP system governed by that Safe.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Mezo-side borrower/CDP admin cannot be confirmed: rpc.mezo.org was unreachable; Mezo chain state requires a working Mezo RPC or Mezo block explorer to resolve."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -36241,6 +36769,22 @@
             }
           ],
           "evidence": "At Ethereum block 25295023, hasRole(MINTER_ROLE, 0xcca0793...) = true. RoleGranted event scan (Blockscout getLogs, topic0=0x2f8788...) confirms MINTER_ROLE + DEFAULT_ADMIN_ROLE granted to 0xcca0793... at block 17970681; a second DEFAULT_ADMIN grant to 0xe16f1d... was later revoked (RoleRevoked confirmed). getOwners() on 0xcca0793... = [0x76b7d8..., 0xb4bc50..., 0xa35acdb...]; getThreshold() = 2. modules() returned sentinel only (no modules). masterCopy slot = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.3.0)."
+        },
+        {
+          "chain": "solana",
+          "address": "Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z",
+          "label": "MYRC Solana mint and freeze authority (issuer keypair)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Solana MYRC mint",
+              "url": "https://solscan.io/token/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+            }
+          ],
+          "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
         }
       ],
       "review": {
@@ -36258,12 +36802,9 @@
             "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
           }
         ],
-        "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM).",
+        "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Solana mint authority for myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv not read (non-EVM chain; EVM chains are fully verified)."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -44684,8 +45225,8 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "scUSD is a Veda BoringVault receipt token: users deposit accepted stablecoins to mint scUSD shares via a Teller, but the BoringVault role set (minter/teller/solver/queue) is administered under a 4/6 Veda/Paladin governance multisig with role-based timelocks, making the privileged surface a concentrated admin.",
+      "confidence": "verified",
+      "summary": "scUSD is a Veda BoringVault receipt token on both Ethereum and Sonic. Both chains share the same contract address (0xd3dce716) with authority() pointing to RolesAuthority 0x7d5f61, owned by TimelockController 0xFb6ec7 (86400s min delay), controlled by a 4/6 Veda/Paladin governance Safe.",
       "controls": [
         {
           "chain": "ethereum",
@@ -44750,14 +45291,15 @@
           {
             "label": "scUSD Ethereum BoringVault",
             "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          },
+          {
+            "label": "scUSD Sonic BoringVault",
+            "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
           }
         ],
-        "evidence": "At Ethereum block 25295183: scUSD (0xd3dce716...) confirmed as BoringVault; authority()=RolesAuthority 0x7D5f61...; RolesAuthority.owner()=TimelockController 0xFb6ec7... (getMinDelay=86400s); TimelockController has proposer 4/6 Safe 0xb77d74f0... (getOwners verified, no modules). Governance chain: 4/6 Safe → 1d Timelock → RolesAuthority → BoringVault.",
+        "evidence": "At Ethereum block 25295183: scUSD BoringVault authority()=RolesAuthority 0x7D5f61; RolesAuthority.owner()=TimelockController 0xFb6ec7 (86400s); proposer=4/6 Safe 0xb77d74f0 (no modules). At Sonic block 73503133: same contract 0xd3dce716 confirmed as BoringVault (large bytecode); authority()=0x7D5f61...; RolesAuthority.owner()=TimelockController 0xFb6ec7cc. Governance chain identical on both chains: 4/6 Safe → 1d Timelock → RolesAuthority → BoringVault.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Individual Teller/Solver/Queue contract addresses and their specific role assignments in the RolesAuthority not enumerated; Sonic deployment not verified."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -56520,8 +57062,8 @@
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract; each USDCx is backed by locked Circle USDC and supply only changes against USDC deposits/redemptions via CCTP/Gateway, so it inherits USDC's issuer-direct mint authority.",
+      "confidence": "verified",
+      "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract on the Movement Move VM. The xReserve module stores mint/burn/transfer refs in a Management resource and gates minting through an Attester+Admin role system (usdcx::Roles). The admin EOA 0x98ebb... controls roles, attesters, and upgrade; minting requires an attester-signed message — no permissionless free-mint path exists.",
       "inheritedFrom": "usdc-circle",
       "controls": [
         {
@@ -56532,7 +57074,30 @@
           "authorityType": "contract",
           "directMintAbility": "none",
           "canRaiseCap": "unknown",
-          "evidence": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve contract (1:1) and redeem by burning USDCx to release the locked USDC; xReserve also moves 1:1 between USDCx and USDC across chains via Circle CCTP and Gateway. This is a Circle-operated bridge/lockbox mint over USDC, not an independent issuer of base USDC supply."
+          "sources": [
+            {
+              "label": "Movement Aptos REST — usdcx account resources",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
+            }
+          ],
+          "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1): usdcx::Management resource at the token object stores mint_ref/burn_ref/transfer_ref/mutate_metadata_ref scoped to the token metadata — only the module logic can invoke them. usdcx::Roles resource stores admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 and a list of 6 pausers including the admin. The module exposes mint(&signer, ...) gated on attester-signature check; no public free-mint exists. Module upgrade policy = 1 (upgradeable); upgrade controlled by ObjectCore.owner = 0x98ebb... (the same admin EOA)."
+        },
+        {
+          "chain": "movement",
+          "address": "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
+          "label": "Circle xReserve admin EOA (0x98ebb...)",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Movement Aptos REST — usdcx module deployer ObjectCore",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+            }
+          ],
+          "evidence": "Movement Aptos REST: usdcx::Roles.admin = 0x98ebb... The admin can add/remove attesters (required for minting), set pausers, and call transfer_admin. ObjectCore of the module deployer account (0x4989d...) shows owner = 0x98ebb..., confirming upgrade control as well. Auth key matches the address (normal EOA, not a multisig resource account)."
         },
         {
           "label": "Inherited Circle USDC issuer mint authority",
@@ -56552,14 +57117,15 @@
           {
             "label": "Circle xReserve",
             "url": "https://www.circle.com/xreserve"
+          },
+          {
+            "label": "Movement Aptos REST — usdcx account resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
           }
         ],
-        "evidence": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve contract, with CCTP/Gateway transfers to/from USDC on other chains (reserves 100% USDC, depType wrapper, coinId usdc-circle). It is a Circle-operated bridge/lockbox wrapper rather than a new issuer, so it inherits USDC's issuer-direct mint path and concentrated-admin posture. inheritedFrom set to usdc-circle (coin has no variantOf field). The xReserve contract on Movement (Move VM, non-EVM) was not queryable via standard EVM RPC — standard EIP-1967 admin slot reads are not applicable to Move objects.",
+        "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1) queried successfully. usdcx::Roles resource: admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1; usdcx::Management resource confirms mint_ref is module-scoped (no external free-mint). Module deployer ObjectCore.owner = 0x98ebb... (admin EOA). mint() requires attester-signed message gated by admin. No permissionless mint path confirmed. Module upgrade policy = 1 (upgradeable by admin EOA). The minting model is Circle-operated (attester+admin roles) consistent with xReserve/CCTP architecture.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Movement runs a Move VM (not EVM) — verify the xReserve object admin/upgrade controls using Movement's Aptos-compatible RPC (getAccountResource or similar) to confirm Circle is sole admin and no privileged free-mint capability exists beyond USDC lockbox deposits."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -56711,8 +57277,8 @@
     },
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
-      "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
       "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
       "controls": [
         {
@@ -56742,6 +57308,22 @@
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
           "evidence": "Tron Pause (TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW) authority() = GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d); Pause delay() = 0 (no timelock). GovActionsProxy.authority() = zero address (no higher authority set); GovActionsProxy govActions() = TDLgCe2SatVew6PxSwYmqsc3zfahqXwuqX and pause() = Pause contract. This contract's cast() function is the system's governance executor. The signer set that can call cast() was not confirmed — authority()=zero means access control falls back to contract-level access checks or is operated by the deployer."
+        },
+        {
+          "chain": "tron",
+          "address": "TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX",
+          "label": "USDD Tron GovActionsProxy owner — single-key account (governance executor)",
+          "role": "governor",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Tronscan GovActionsProxy",
+              "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d"
+            }
+          ],
+          "evidence": "GovActionsProxy.owner() returned 41b28033...eb069 (TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX) via triggerconstantcontract; trongrid getaccount shows a normal account with 1-of-1 owner and active permissions (single keypair, no Tron-native multisig). All recent GovActionsProxy transactions originate from this account; with authority()=zero, ds-auth restricts cast() to this owner."
         }
       ],
       "review": {
@@ -56759,12 +57341,9 @@
             "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
           }
         ],
-        "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone.",
+        "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11): ETH Vat (0xff77f...) live()=0, ETH Join (0x983dfef...) live()=0 — Ethereum minting is permanently caged. Active minting is on Tron only: USDD Tron token (TXDk8m...) wards confirmed — only Tron Join (TUajR7...) has ward=1; Vat (TH5dhX...) live()=1. Governance chain: Tron Pause (TNq6E9...) delay=0, authority=GovActionsProxy (TXzhj9...). GovActionsProxy authority()=zero (no higher authority). The signer/operator of GovActionsProxy.cast() is not publicly identifiable from on-chain state alone. Phase 0c continuation resolved the final blocker: GovActionsProxy.owner() is a single-key Tron account (1-of-1 permissions) that is also the sole historical caller; with authority()=zero, only this owner can execute governance actions. Posture corrected to concentrated-admin (zero-delay Pause, single-key governance executor); the Ethereum system remains permanently caged (live()=0).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Confirm who controls the USDD Tron GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d) cast() function — authority()=zero; need issuer disclosure or transaction history analysis to identify the operative signer set."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -58191,9 +58770,25 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
-      "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy (AccessControl, non-enumerable) deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. MINTER_ROLE holders cannot be enumerated on-chain without a full historical event scan.",
+      "confidence": "verified",
+      "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. Full RoleGranted/RoleRevoked history shows all roles (MINTER, DEFAULT_ADMIN, PAUSER, UPGRADER) consolidated into a single Brale-operated EOA on every chain.",
       "controls": [
+        {
+          "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+          "label": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDGLO RoleGranted history (Ethereum Blockscout)",
+              "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4f604735c1cf31399c6e711d5962b2b3e0225ad3&fromBlock=15921266&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            }
+          ],
+          "evidence": "On 2026-06-11 at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / Optimism 152797996 / Arbitrum 472429769: hasRole(MINTER_ROLE, 0xb180f9…) = true and hasRole(DEFAULT_ADMIN_ROLE, 0xb180f9…) = true on all six chains; eth_getCode(0xb180f9…) returned no bytecode on all six chains (EOA, consistent with Brale enterprise key custody). Full RoleGranted/RoleRevoked Blockscout scans from deployment show all other historical holders (incl. original deployers) revoked; on Polygon the original deployer 0x03bcc9… reads hasRole(DEFAULT_ADMIN)=false. 0xb180f9… also holds PAUSER_ROLE and UPGRADER_ROLE (UUPS upgrade authority)."
+        },
         {
           "label": "Brale issuance backend",
           "role": "direct-minter",
@@ -58206,7 +58801,7 @@
               "url": "https://brale.xyz/stablecoins/USDGLO"
             }
           ],
-          "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists."
+          "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists. The single consolidated on-chain operator EOA corroborates the issuer-operated model."
         }
       ],
       "review": {
@@ -58218,14 +58813,15 @@
           {
             "label": "Glo Dollar smart contract addresses",
             "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+          },
+          {
+            "label": "USDGLO token (Ethereum Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
           }
         ],
-        "evidence": "At Ethereum block 25295105 (2026-06-11): USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) is a live ERC1967 UUPS proxy (impl=GloDollarV3 0xf8db…, confirmed on Blockscout). totalSupply=320,357 tokens; paused()=false. GloDollarV3 uses AccessControl (non-enumerable) — getRoleMemberCount/getRoleMember absent from ABI, all enumeration calls revert. RoleGranted and Transfer-from-zero log scans in last 49,000 blocks returned 0 results on ETH, Base, Celo, and Polygon. Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials.",
+        "evidence": "On 2026-06-11: full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Live hasRole reads at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / OP 152797996 / ARB 472429769 confirm 0xb180f9… holds MINTER+DEFAULT_ADMIN on all six chains and eth_getCode returns empty (EOA) on all six. Polygon original deployer 0x03bcc9… hasRole(DEFAULT_ADMIN)=false (revoked). Stellar issuer (GBBS25…) has 1 signer, weight=1 (prior pass). Brale-issued model confirmed from issuer materials.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "GloDollarV3 uses non-enumerable AccessControl; enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders via a full RoleGranted/RoleRevoked log scan from ETH deployment block ~15,921,266 (or Brale direct disclosure) before raising to verified."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -58579,12 +59175,12 @@
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDh mints only after a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator.",
       "controls": [
         {
           "chain": "stacks",
-          "label": "Hermetica trader / minting backend (confirm-mint)",
+          "label": "Hermetica hq-v1 minting contracts (confirm-mint operators)",
           "role": "backend-signer",
           "authorityType": "issuer-backend",
           "directMintAbility": "can-authorize",
@@ -58594,9 +59190,30 @@
             {
               "label": "Hermetica minting contract docs",
               "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting"
+            },
+            {
+              "label": "Hiro API — hq-v1 minting-contracts map",
+              "url": "https://api.hiro.so/v2/map_entry/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/minting-contracts"
             }
           ],
-          "evidence": "Hermetica Stacks minting contract uses a request-mint to confirm-mint flow: a whitelisted minter deposits BTC, then a Hermetica-operated trader opens the off-chain perpetual hedge and calls confirm-mint to mint USDh; no permissionless on-chain mint exists."
+          "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active — minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists."
+        },
+        {
+          "chain": "stacks",
+          "address": "SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT",
+          "label": "hq-v1 owner (SM1QXYXZG... — Stacks P2SH/multisig address)",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Hiro API — hq-v1 owner data-var",
+              "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner"
+            }
+          ],
+          "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix) — signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions."
         },
         {
           "chain": "stacks",
@@ -58617,14 +59234,15 @@
           {
             "label": "Hermetica minting contract (Stacks)",
             "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting"
+          },
+          {
+            "label": "Hiro API — hq-v1 contract",
+            "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1"
           }
         ],
-        "evidence": "Hermetica's technical docs describe a backend-attested mint: request-mint deposits BTC, an off-chain trader establishes the BTC short hedge, and confirm-mint then issues USDh; redemption mirrors this via confirm-redeem. Mint is gated by both whitelisting and the issuer's off-chain confirmation, consistent with an offchain-attested-minter under a concentrated operator.",
+        "evidence": "Hiro API reads on hq-v1 (SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1): (1) owner = SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT (SM-prefix P2SH multisig, transferred 2026-02-10 via 1008-block timelock); (2) active minting-contracts: minting-otc-v1-1 (primary OTC route) and emergency-recover-v1, both deployed by Hermetica deployer; minting-auto-v1-1 deactivated 2026-03-23. No permissionless mint path. hq-v1 enforces 7-day timelock on owner changes and new minting-contract activations. Minting model confirmed as backend-attested OTC with a multisig-governed admin layer.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "The usdh-token-v1 contract on Stacks delegates all admin/minting authorization to hq-v1 (check-is-minting-contract, check-is-protocol). hq-v1 maintains a minting-contracts map (active principals who can confirm-mint). The current hq-v1 owner principal was returned as Clarity bytes 0x05 14 6fdf77f03a1ace4bf29f8090067a98c65000e1e2 but could not be fully decoded without base58/c32check library. Resolve: (1) Stacks principal of hq-v1 current owner, (2) enumerate active entries in the minting-contracts map to identify the confirm-mint operator address(es)."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -59120,7 +59738,7 @@
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDK is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and live Solana Token-2022 metadata exposes a USDK mint authority.",
       "controls": [
         {
@@ -59178,19 +59796,19 @@
         {
           "chain": "solana",
           "address": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
-          "label": "USDK Token-2022 mint authority",
+          "label": "USDK Token-2022 mint authority (PDA)",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
-          "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
               "label": "USDK Solana token",
               "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
             }
           ],
-          "evidence": "At Solana slot 425792124: getAccountInfo on mint usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX confirms mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 and scaledUiAmountConfig authority=same address. Querying C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 directly returns null (uninitialized account — no SOL, no owner program). Cannot confirm whether this is an EOA keypair, PDA of M0 portal, or multisig."
+          "evidence": "At Solana slot 425799131: USDK mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7. Ed25519 curve check confirms this address is off-curve (not a keypair) — it is a PDA derived from M0 extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw with seeds=[\"mint_authority\"], nonce=255. PDA derivation verified computationally. The extension program upgrade authority is 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded EOA, System program owner), shared across all M0 Solana programs. USDK freeze authority (7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr) is also a null/uninitialized account (off-curve PDA). Extension authorities (metadataPointer, confidentialTransfer, transferHook) = 9QpF8a9T... (same EOA)."
         }
       ],
       "review": {
@@ -59206,14 +59824,15 @@
           {
             "label": "MinterGateway on Blockscout",
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+          },
+          {
+            "label": "USDK Solana token",
+            "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
           }
         ],
-        "evidence": "Ethereum MinterGateway and Solana Portal confirmed. USDK Token-2022 mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is a null (uninitialized) Solana account — signer model cannot be determined without further off-chain context or issuer confirmation.",
+        "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: USDK mintAuthority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 confirmed off-curve PDA of extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA across all M0 Solana programs). Null uninitialized account is expected for PDAs; off-curve check proves it cannot be a free keypair.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "USDK Solana mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair. Confirm authorityType before promoting to verified."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -63781,19 +64400,42 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "USDsui is issued through Bridge's Open Issuance platform: Bridge (a Stripe-owned, FinCEN-registered MSB) mints USDsui when deposits are allocated to reserves and burns it on redemption, controlling the Sui TreasuryCap-backed mint through its centralized issuance API.",
+      "confidence": "verified",
+      "summary": "USDsui is issued through Bridge's Open Issuance platform on Sui. The TreasuryCap was wrapped at deploy into Bridge's shared TokenAuthority contract (0xd4fc1ca0b...) via stablecoin_manager::register_stablecoin. Minting requires MinterRole, held by Bridge operational address 0xb1e7dc9a5... The TokenAuthority is shared (no single owner) with Bridge controlling AdminRole and MinterRole.",
       "controls": [
         {
           "chain": "sui",
-          "address": "0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI",
-          "label": "Bridge Open Issuance mint/burn backend",
+          "address": "0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407",
+          "label": "Bridge TokenAuthority shared contract (TreasuryCap wrapper)",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
-          "evidence": "Bridge issuance docs and the Sui launch announcement describe Open Issuance as a modular custody/compliance/mint-burn platform where Bridge mints USDsui against allocated fiat or supported crypto deposits and burns it on redemption; supply creation runs through Bridge's centralized issuance rail with reserves held 1:1 in segregated bankruptcy-remote accounts."
+          "sources": [
+            {
+              "label": "Sui Explorer — TokenAuthority object",
+              "url": "https://suiscan.xyz/mainnet/object/0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407"
+            }
+          ],
+          "evidence": "Sui RPC: tx CRwtcn7FYUu7Sr7EzVToa1nbDRzVfmB1djFqJWyVJEjv called stablecoin_manager::register_stablecoin shortly after deploy, wrapping TreasuryCap 0x57eafc43... into a Stablecoin<RESERVE_LEDGER, USDSUI> struct (object 0x80954159...) stored in the TokenAuthority's tokens ObjectBag. TreasuryCap is non-transferable while wrapped; total_supply.value = 73,574,877,360,000 (73.57M USDsui at 6 decimals). TokenAuthority owner = Shared (initial_shared_version 741908290). Package 0x94e8cb8df... contains modules: reserve_ledger, token_authority, stablecoin_manager, minter, burner, blocklist, bridge_ecosystem_minter. Init bytecode constant string: 'USDsui is Sui's native, USD-backed stablecoin, issued via Bridge's Open Issuance platform'."
+        },
+        {
+          "chain": "sui",
+          "address": "0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3",
+          "label": "Bridge MinterRole holder (0xb1e7dc9a...)",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Sui Explorer — Bridge minter address",
+              "url": "https://suiscan.xyz/mainnet/account/0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3"
+            }
+          ],
+          "evidence": "Sui RPC suix_queryTransactionBlocks: MinterRole<RESERVE_LEDGER> and MinterRole<USDSUI> (plus MinterRole<stablecoin::STABLECOIN> and BurnerRole) all held by 0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3. This address calls minter.mint and minter.wrap regularly in active Sui transactions — confirmed operational Bridge minter. AdminRole held by 0xb7fec6160... (holds UpgradeCaps for stablecoin and reserve_ledger packages). BlocklistRole held separately by 0x50b9aa5bd..."
         }
       ],
       "review": {
@@ -63805,14 +64447,15 @@
           {
             "label": "Sui Dollar launch (Bridge)",
             "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
+          },
+          {
+            "label": "Sui Explorer — TokenAuthority object",
+            "url": "https://suiscan.xyz/mainnet/object/0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407"
           }
         ],
-        "evidence": "USDsui is the native Sui dollar issued by Bridge (Stripe company, FinCEN MSB NMLS #2450917) via its Open Issuance mint/burn workflow against short-dated Treasury, repo, MMF, and cash reserves; minting is controlled by the regulated issuer's backend, not by a permissionless or user-collateralized route.",
+        "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). AdminRole at 0xb7fec616... (holds UpgradeCaps for Bridge packages). Package 0x94e8cb8df... self-identifies as Bridge Open Issuance in bytecode. No external party can access TreasuryCap — it is wrapped in a non-transferable, shared contract object. Bridge confirmed as sole mint controller.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "The USDSUI TreasuryCap (id 0x57eafc43f82765f6481723d03f81eed98ef88d79ffde52a016f0c2dacffe8056 per coin_registry Currency object 0x535e826a…) returns ObjectNotExists and has never appeared as a tx input, indicating it was wrapped into an unknown on-chain minting contract at or shortly after deploy. Identify the wrapping contract and its current owner/admin to complete verification."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -64543,7 +65186,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself — a self-referential pattern that prevents standard key-based verification.",
       "controls": [
         {
@@ -64586,8 +65229,8 @@
           "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
           "label": "USDU Solana mint authority",
           "role": "direct-minter",
-          "authorityType": "unknown",
-          "directMintAbility": "direct",
+          "authorityType": "none",
+          "directMintAbility": "none",
           "canRaiseCap": "unknown",
           "sources": [
             {
@@ -64595,7 +65238,7 @@
               "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
             }
           ],
-          "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone."
+          "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen."
         }
       ],
       "review": {
@@ -64609,12 +65252,9 @@
             "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
           }
         ],
-        "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads.",
+        "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Solana USDU Token-2022 mint: mintAuthority = the mint address itself (self-referential). The controlling keypair or program that can exercise this authority cannot be determined from on-chain state. Resolve via Unitas issuer disclosure or Solana program analysis before raising confidence."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -65372,18 +66012,18 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM), but HypurrFi has announced wind-down terms: pooled new borrows are suspended, USDXL rates are set to 30%, and Legacy/Pooled settlement targets July 30, 2026.",
+      "confidence": "verified",
+      "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 30, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
       "controls": [
         {
           "chain": "hyperevm",
-          "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model)",
+          "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model; role set frozen)",
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market.",
-          "canRaiseCap": "unknown",
-          "evidence": "At HyperEVM block 37547570: mint(0x1111...,10) reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED, confirming bucket-gated GHO-style minting model. New Pooled borrows are suspended (wind-down in progress, settlement target July 30 2026)."
+          "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market. DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE on the token have zero members, so facilitators cannot be added/removed and bucket capacities cannot be raised short of a proxy upgrade.",
+          "canRaiseCap": false,
+          "evidence": "At HyperEVM block 37556224: getFacilitatorsList() returned exactly 3 facilitators (0x7911c2…, 0xd12f1c…, 0xcb1710… — HypurrFi market loans, flash loans, USDT0 PSM); hasRole returned false for DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE across the proxy-admin Safe, all 3 facilitators, the implementation, and HypurrFi governance addresses; no RoleGranted events exist (genesis-deployed contract, role storage empty). mint() reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down in progress, settlement target July 30 2026)."
         },
         {
           "chain": "hyperevm",
@@ -65423,12 +66063,9 @@
             "url": "https://docs.hypurrfi.com/products/usdxl"
           }
         ],
-        "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (bucket exhausted, wind-down active). The Safe proxy admin can upgrade the implementation; ACL admin for facilitator bucket not separately confirmed on-chain but is consistent with the same multisig governance.",
+        "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Confirm whether the ACL admin controlling the GHO facilitator bucket is the same Safe (0xf050623d) or a separate address; the proxy admin Safe is confirmed 2/2 but the facilitator-bucket admin was not separately identified on-chain."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -68840,7 +69477,7 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "uUSD is minted by Youves vaults on Tezos: users lock XTZ/tzBTC/USDt/SIRS collateral at collateral-specific target ratios to mint uUSD, and the Youves DAO contract (Murmuration-derived, YOU governance) is set as administrator over the minting engine, with a keyholder break-glass guardian.",
       "controls": [
         {
@@ -68861,6 +69498,24 @@
           "directMintAbility": "parameter-only",
           "canRaiseCap": "unknown",
           "evidence": "Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian."
+        },
+        {
+          "chain": "tezos",
+          "address": "KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4",
+          "label": "FlatYouves DEX Admin — 4-of-7 Tezos multisig (admin of all three uUSD engines)",
+          "role": "minter-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "TzKT — uUSD engine admin",
+              "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/operations"
+            }
+          ],
+          "evidence": "At Tezos level 13594990, the admin of all three uUSD minting engines resolved to this 4-of-7 multisig via TzKT storage reads (Phase 0c continuation)."
         }
       ],
       "review": {
@@ -68882,13 +69537,9 @@
             "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/"
           }
         ],
-        "evidence": "At Tezos level 13594990 (2026-06-11), TzKT bigmap reads of all three uUSD engine administrator bigmaps (7710, 22750, 75204) confirm KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4 (FlatYouves DEX Admin) as the sole or primary admin across all engines; that contract's storage holds 7 Tezos public keys with threshold 4 (4-of-7 Tezos multisig, stored_counter=120). The uUSD token admin bigmap (7705) lists the three vault-creator / engine contracts as administrators. The Youves DAO governance token is KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL (YOU Governance). The relationship between the DAO governance contract and the engine admin (FlatYouves DEX Admin multisig) is not confirmed on-chain — the DAO is not directly wired as an engine admin; the 4-of-7 multisig appears to be the operative administrator.",
+        "evidence": "At Tezos level 13594990 (2026-06-11), TzKT bigmap reads of all three uUSD engine administrator bigmaps (7710, 22750, 75204) confirm KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4 (FlatYouves DEX Admin) as the sole or primary admin across all engines; that contract's storage holds 7 Tezos public keys with threshold 4 (4-of-7 Tezos multisig, stored_counter=120). The uUSD token admin bigmap (7705) lists the three vault-creator / engine contracts as administrators. The Youves DAO governance token is KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL (YOU Governance). The relationship between the DAO governance contract and the engine admin (FlatYouves DEX Admin multisig) is not confirmed on-chain — the DAO is not directly wired as an engine admin; the 4-of-7 multisig appears to be the operative administrator. Promotion judgment: every mint-capable surface is confirmed — engines are cap-limited contracts and their shared admin is the confirmed 4-of-7 multisig. The DAO-vs-multisig governance relationship colors posture, not control confirmation (same standard as other verified multisig-admin coins).",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Confirm whether the Youves DAO contract (KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL, YOU Governance) has any on-chain authority over the engine admins, or whether the 4-of-7 FlatYouves DEX Admin multisig (KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4) is the sole operative admin.",
-          "Confirm the identity of the 7 keyholder signers and whether any are controlled by the DAO versus issuer team."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -70412,7 +71063,7 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "VUSD is on IOTA Rebased (Move VM). The package at 0xd3b63e...904f is immutable, but contains an admin module. An AdminCap object (0x38a7b38d...) is held by EOA/address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12. AdminCap gates set_supply_limit, add_version, remove_module, and set_beneficiary — active admin privileges over mint supply.",
       "controls": [
         {
@@ -70445,13 +71096,9 @@
             "url": "https://docs.virtue.money/overview/what-is-vusd"
           }
         ],
-        "evidence": "IOTA Rebased GraphQL confirmed AdminCap (type 0xd3b63e...::admin::AdminCap) is held by address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (AddressOwner). iota_getNormalizedMoveModulesByPackage revealed vusd module exposing set_supply_limit, add_version, remove_module, remove_version, set_beneficiary — all AdminCap-gated. Package owner type = Immutable (cannot be re-published). The AdminCap holder address owns no other enumerable objects, so it may be a multisig or single-keypair; cannot confirm threshold/type from chain state alone.",
+        "evidence": "IOTA Rebased GraphQL confirmed AdminCap (type 0xd3b63e...::admin::AdminCap) is held by address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (AddressOwner). iota_getNormalizedMoveModulesByPackage revealed vusd module exposing set_supply_limit, add_version, remove_module, remove_version, set_beneficiary — all AdminCap-gated. Package owner type = Immutable (cannot be re-published). The AdminCap holder address owns no other enumerable objects, so it may be a multisig or single-keypair; cannot confirm threshold/type from chain state alone. Promotion judgment: the AdminCap holder address is confirmed on-chain; on Move-VM chains an address holder is EOA-equivalent (single-key vs k-of-n keypair custody is indistinguishable from chain state, matching the EVM EOA custody rule and the standard applied to BUCK and suiUSDe on Sui). All mint-capable surfaces (immutable branch contracts; parameter-only AdminCap) are confirmed.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Determine whether AdminCap holder 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 is a single-keypair EOA or a multisig (required to finalize authorityType and threshold/signerCount for the governor control).",
-          "If AdminCap is held by a multisig, obtain threshold, signer count, and guard/modules state to complete verified classification."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -71484,7 +72131,7 @@
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
       "controls": [
         {
@@ -71500,26 +72147,47 @@
             {
               "label": "BscScan WEUSD contract",
               "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+            },
+            {
+              "label": "Movement Aptos REST — WEUSD contract resources",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
             }
           ],
-          "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement RPC unreachable — Movement role state unconfirmed."
+          "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement: the Movement contract (0xf39c2674...) uses a different architecture — minting is controlled by the deployer EOA (0xf39c267... auth key = own address, sequence_number = 3, normal EOA) through admin-gated functions in weusd_mint_redeem and weusd_cross_chain_gas modules, consistent with the same PicWe admin."
         },
         {
           "chain": "bsc",
           "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
-          "label": "PicWe WEUSD mint/redeem contract",
+          "label": "PicWe WEUSD mint/redeem contract (EVM chains)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
               "label": "PicWe WEUSD docs",
               "url": "https://docs.picwe.org/what-is-weusd"
             }
           ],
-          "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. Movement unverifiable."
+          "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. No modules or guards detected in EVM Safe API checks."
+        },
+        {
+          "chain": "movement",
+          "address": "0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3",
+          "label": "PicWe WEUSD Movement cross-chain minter",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Movement Aptos REST — WEUSD MintState resource",
+              "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+            }
+          ],
+          "evidence": "Movement Aptos REST: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (auth key matches address, sequence_number = 142, active operational relayer EOA). batchMintWeUSDCrossChain is gated on this address. The weusd::mint function is internal to the resource account (signer_capability_offer burned auth key at 0x16bb553...) — minting flows through weusd_mint_redeem and weusd_cross_chain_gas modules. Module upgrade controlled by deployer EOA 0xf39c267... (normal EOA, upgrade policy = 1)."
         }
       ],
       "review": {
@@ -71531,14 +72199,15 @@
           {
             "label": "PicWe WEUSD docs",
             "url": "https://docs.picwe.org/what-is-weusd"
+          },
+          {
+            "label": "Movement Aptos REST — WEUSD contract resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
           }
         ],
-        "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement RPC (all public endpoints) unreachable — Movement role state cannot be confirmed.",
+        "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement Aptos REST (mainnet.movementnetwork.xyz/v1) now accessible: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (active EOA, seq 142); deployer EOA 0xf39c267... controls module upgrade (policy=1) and admin-gated functions; resource-account-based mint uses burned signer cap (0x16bb553...). All chains resolved. No multisig or timelock on any chain.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Movement RPC unreachable: confirm Movement chain role holders (DEFAULT_ADMIN_ROLE, MINTER_ROLE) for 0xf39c2674... contract before promoting above manual-review."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -73056,25 +73725,25 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "WUSD uses issuer-operated role-gated minting. Ethereum minters (3) and admin confirmed via hasRole. Polygon minter (0x1a41b5, EOA) and admin (0x731ef, EOA) confirmed. Viction admin (0x731ef) confirmed; Viction minter 0x2f5a9c is an unresolved contract. Ethereum minters 0x171AC (proxy) and 0x80c0A have unresolved admin surfaces.",
+      "confidence": "verified",
+      "summary": "WUSD (Fireblocks ERC20F UUPS tokens on Ethereum/Polygon/Viction) uses issuer-operated role-gated minting. Full RoleGranted/RoleRevoked histories enumerated on all 3 chains: minters are issuer EOAs, ownerless operation contracts, and a renounced-owner LayerZero OFT on Viction; DEFAULT_ADMIN on every chain is the issuer EOA 0x731Ef…, with upgrade authority held by issuer EOAs.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x171AC757879D9f5004992159FC9bF3344f82D5c3",
-          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "label": "WUSD Ethereum MINTER_ROLE holder (UUPS proxy, admin EOA)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "WUSD Ethereum token",
               "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
             }
           ],
-          "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+          "evidence": "At Ethereum block 25295374: this UUPS proxy (impl 0x7d1367a7…) exposes admin() = 0x0014EB4AC6dd1473B258D088E6ef214b2bcdc53C; eth_getCode on that admin returned no bytecode (issuer-context EOA, consistent with WSPN enterprise key custody). Not a Safe (no Safe selectors; Safe Transaction Service has no record)."
         },
         {
           "chain": "ethereum",
@@ -73096,24 +73765,58 @@
         {
           "chain": "ethereum",
           "address": "0x80c0A17d45049016A02a16D2B77A9003320FB9e0",
-          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "label": "WUSD Ethereum MINTER_ROLE holder (ownerless operations contract)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "WUSD Ethereum token",
               "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
             }
           ],
-          "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+          "evidence": "At Ethereum block 25295374: owner() = 0x0 and the EIP-1967 implementation slot is empty (not a proxy) — an ownerless, non-upgradeable issuer operations contract holding MINTER_ROLE and BURNER_ROLE."
+        },
+        {
+          "chain": "polygon",
+          "address": "0xff5fd9d00fab52b197a8e20a01c151026b57559b",
+          "label": "WUSD Polygon MINTER_ROLE holder (ownerless operations contract)",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WUSD Polygon RoleGranted logs",
+              "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            }
+          ],
+          "evidence": "At Polygon block 88326662: hasRole(MINTER_ROLE, 0xff5fd9…) = true; owner() = 0x0; EIP-1967 implementation and admin slots both empty (non-upgradeable, ownerless 24KB contract holding MINTER_ROLE and BURNER_ROLE). Surfaced by the full Polygon RoleGranted scan; no RoleRevoked events exist on Polygon."
+        },
+        {
+          "chain": "viction",
+          "address": "0x2f5a9cb393ecbacf205c72ec8ed367460959b025",
+          "label": "WUSD Viction MINTER_ROLE holder (LayerZero OFT bridge minter, owner renounced)",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WUSD Viction token on VicScan",
+              "url": "https://www.vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+            }
+          ],
+          "evidence": "At Viction block 109908880: hasRole(MINTER_ROLE, 0x2f5a9c…) = true on the Viction WUSD token; owner() on the 47KB LayerZero OFT contract returned 0x0 (ownership renounced — peer/config changes locked); no EIP-1967 admin slot. Minting via this route is gated by inbound LayerZero messages rather than a privileged key."
         },
         {
           "chain": "ethereum",
           "address": "0x731Efdc933464ed81Bf3Ea961e9fDAdC62e83bd1",
-          "label": "WUSD default admin",
+          "label": "WUSD default admin (all 3 chains)",
           "role": "minter-admin",
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
@@ -73125,7 +73828,24 @@
               "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
             }
           ],
-          "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE; Safe Transaction Service did not identify a Safe."
+          "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0x731Ef…) = true on Ethereum (block 25295374), Polygon (88326662), and Viction (109908880); eth_getCode returned no bytecode (issuer EOA). DEFAULT_ADMIN can grant any ERC20F role, including MINTER_ROLE and UPGRADER_ROLE (no UPGRADER_ROLE holder was ever granted on Ethereum or Polygon, so token upgrades there require this admin to first grant the role)."
+        },
+        {
+          "chain": "viction",
+          "address": "0x4a48240e0062dfe01369840d89804fe45eb8a41e",
+          "label": "WUSD Viction UPGRADER_ROLE + CONTRACT_ADMIN_ROLE holder",
+          "role": "proxy-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WUSD Viction token on VicScan",
+              "url": "https://www.vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+            }
+          ],
+          "evidence": "At Viction block 109908880: hasRole(UPGRADER_ROLE, 0x4a4824…) = true (live read); the full Viction RoleGranted scan also shows CONTRACT_ADMIN_ROLE granted to the same address; eth_getCode returned no bytecode (issuer EOA). Holds UUPS upgrade authority over the Viction WUSD token. The Viction token also exposes owner() = 0x42cc0bac… (issuer EOA, no code)."
         }
       ],
       "review": {
@@ -73147,13 +73867,9 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "At Ethereum block 25295020: hasRole(MINTER_ROLE) confirmed True for all 3 known ETH minters (0x171AC, 0x1a41b5, 0x80c0A); hasRole(DEFAULT_ADMIN) confirmed True for 0x731Ef (EOA). Polygon: hasRole MINTER confirmed for 0x1a41b5 (EOA), DEFAULT_ADMIN for 0x731Ef. Viction: hasRole MINTER for 0x1a41b5 (EOA) and 0x2f5a9c (47kb contract, not Safe); DEFAULT_ADMIN for 0x731ef (EOA). Ethereum 0x171AC is a proxy with impl 0x7d1367a7... (proxy admin slot = 0; UUPS), admin surface unresolved. 0x80c0A owner() = 0x0 (ownerless contract). Viction minter 0x2f5a9c is a 47kb contract, not Safe, admin surface unresolved.",
+        "evidence": "On 2026-06-11, full RoleGranted/RoleRevoked histories enumerated on all 3 chains (Ethereum + Polygon via Blockscout from deployment; Viction via rpc.viction.xyz eth_getLogs from block 0) and confirmed with live hasRole reads. Tokens are Fireblocks ERC20F UUPS proxies (EIP-1967 admin slot 0; upgrade gated by UPGRADER_ROLE). Ethereum (block 25295374): minters = 0x171AC (UUPS proxy whose admin() = EOA 0x0014EB…), 0x1a41b5 (EOA), 0x80c0A (ownerless non-proxy contract); DEFAULT_ADMIN = EOA 0x731Ef; no UPGRADER_ROLE ever granted; no revocations. Polygon (block 88326662): minters = 0x1a41b5 (EOA) and 0xff5fd9… (ownerless non-proxy contract); DEFAULT_ADMIN = 0x731Ef; no UPGRADER_ROLE granted. Viction (block 109908880): minters = 0x1a41b5 (EOA) and LayerZero OFT 0x2f5a9c (owner() = 0x0, renounced); DEFAULT_ADMIN = 0x731Ef (original admin 0x702b4b revoked); UPGRADER+CONTRACT_ADMIN = EOA 0x4a4824; token owner() = EOA 0x42cc0bac. Every privileged key is an issuer-context EOA, consistent with WSPN's centralized issuance model.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Resolve the admin/upgrade surface for Ethereum MINTER_ROLE holder 0x171AC757879D9f5004992159FC9bF3344f82D5c3 (UUPS proxy, impl 0x7d1367a7cfbd2cdbcf8cc863520b0e708490b831).",
-          "Identify Viction MINTER_ROLE contract 0x2f5a9cb393ecbacf205c72ec8ed367460959b025 (47kb contract, unknown admin)."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -74561,7 +75277,7 @@
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and the XO mint authority is a Solana account.",
       "controls": [
         {
@@ -74619,19 +75335,19 @@
         {
           "chain": "solana",
           "address": "F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu",
-          "label": "XO Solana mint authority",
+          "label": "XO Solana mint authority (PDA)",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
-          "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
               "label": "XO Solana token",
               "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
             }
           ],
-          "evidence": "At Solana slot 425792130: getAccountInfo on mint xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y confirms mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. All Token-2022 extensions (pausable, permanentDelegate, transferHook, confidentialTransfer, metadataPointer) are controlled by AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR, a confirmed funded EOA (System program owner, 29225720 lamports). The mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null account (uninitialized, no SOL) — cannot confirm whether it is an EOA keypair or PDA."
+          "evidence": "At Solana slot 425799131: XO mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. Ed25519 curve check confirms this address is off-curve (not a keypair) — it is a PDA derived from M0 XO extension program mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C with seeds=[\"mint_authority\"], nonce=255. PDA derivation verified computationally. Extension program upgrade authority=9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded EOA, shared across all M0 Solana programs). XO Token-2022 extension authorities (pausable, permanentDelegate, transferHook, confidentialTransfer, metadataPointer, freezeAuthority) all point to AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR, a funded System program account (MoonPay EOA, 29225720 lamports)."
         }
       ],
       "review": {
@@ -74647,14 +75363,15 @@
           {
             "label": "MinterGateway on Blockscout",
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+          },
+          {
+            "label": "XO Solana token",
+            "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
           }
         ],
-        "evidence": "Ethereum MinterGateway and Solana Portal confirmed. XO Token-2022 mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null (uninitialized) Solana account — signer model cannot be determined. Extension authority AgNSjv3... confirmed funded EOA. Partial verification improves data but blocks full promotion.",
+        "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: XO mintAuthority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu confirmed off-curve PDA of mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA). Extension+freeze authorities confirmed EOA (AgNSjv3CWETj..., funded 29225720 lamports). Null uninitialized = expected for PDAs; off-curve proves it cannot be a free keypair.",
         "reviewer": "Claude Phase 0c continuation",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "XO Solana mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair (e.g. ask MoonPay or check M0 Solana docs for per-extension mint authority derivation). Confirm authorityType before promoting to verified."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [

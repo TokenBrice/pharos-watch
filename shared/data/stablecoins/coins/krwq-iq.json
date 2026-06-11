@@ -145,8 +145,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "KRWQ issuance (canonical on Ethereum) is restricted to KYC-verified institutional counterparties — exchanges, market makers, and integrated partners — minting 1:1 against reserves; unified cross-chain supply propagates via LayerZero OFT v2 burn-and-mint.",
+    "confidence": "verified",
+    "summary": "KRWQ canonical mint on Ethereum is owned by a 3/5 Safe (0x56398b89). OFT v2 adapters on Base (3/5 Safe, same signers), Polygon (3/6 Safe, overlapping signers), and Fraxtal (3/5 Safe, same core signers) are all owned by Safes with no modules. Codex and Morph note-only (no public RPC).",
     "controls": [
       {
         "chain": "ethereum",
@@ -183,16 +183,108 @@
         "evidence": "At Ethereum block 25295183: owner() returned 0x56398b89... (171 bytes of code); getOwners() returned 5 signers, getThreshold() returned 3; getModulesPaginated() returned empty (sentinel pointer only = no modules). The ProxyAdmin (0xff85d94f...) is also owned by this same Safe (owner()=0x56398b89...)."
       },
       {
-        "label": "LayerZero OFT v2 cross-chain transport",
+        "chain": "base",
+        "address": "0x74986f1aaa569f09e369ed19e87e388de1976f9b",
+        "label": "KRWQ Base OFT adapter owner (3/5 Safe)",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": "unknown",
-        "evidence": "KRWQ uses LayerZero's OFT v2 standard: cross-chain movement burns on the source chain and mints 1:1 on the destination, giving a single unified asset rather than wrapped variants; the OFT mint is transport, not new issuance. OFT delegate admin not verified in this pass."
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 47202555
+        },
+        "sources": [
+          {
+            "label": "KRWQ Base OFT adapter",
+            "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+          }
+        ],
+        "evidence": "At Base block 47202555: owner() on KRWQ Base OFT adapter (0x370923d3) returned GnosisProxy 0x74986f1a; getOwners() = 5 signers (same core 5 as ETH Safe); getThreshold() = 3; getModulesPaginated() empty (no modules). OFT v2 burns on source, mints on destination — transport-only, not new issuance."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
+        "label": "KRWQ Polygon OFT adapter owner (3/6 Safe)",
+        "role": "bridge-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+            "0xf4e1d185666a624099298fcc42c50ba662dc7e52",
+            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xf83b59a99f2e1ce05ec5c69ae1db4fbf41dade89",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 88326315
+        },
+        "sources": [
+          {
+            "label": "KRWQ Polygon OFT adapter",
+            "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
+          }
+        ],
+        "evidence": "At Polygon block 88326315: owner() on KRWQ Polygon OFT (0x44C39504) returned GnosisProxy 0x78f2bcc6; getOwners() = 6 signers (5 overlapping with ETH Safe, plus 1 new); getThreshold() = 3; getModulesPaginated() empty."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
+        "label": "KRWQ Fraxtal OFT adapter owner (3/5 Safe)",
+        "role": "bridge-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
+            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 37453890
+        },
+        "sources": [
+          {
+            "label": "KRWQ Fraxtal OFT adapter",
+            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+          }
+        ],
+        "evidence": "At Fraxtal block 37453890: owner() on KRWQ Fraxtal OFT (0xbe5b2eb2) returned GnosisProxy 0x5493f3db; getOwners() = 5 signers (same core 5 as ETH/Base Safe); getThreshold() = 3; getModulesPaginated() empty (no modules). Codex and Morph have no public RPC — note-only, supply negligible."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295183: owner() = 3/5 Safe 0x56398b89..., proxy admin = ProxyAdmin 0xff85d94f... owned by the same Safe. The KYC-gated institutional mint model is confirmed on-chain through this Safe as the token owner. OFT peer configuration and delegate admin on Base/Polygon/Fraxtal/Codex/Morph not verified.",
+      "evidence": "At Ethereum block 25295183: owner() = 3/5 Safe 0x56398b89; ProxyAdmin 0xff85d94f owned by same Safe; masterMinter() reverted (owner-only pattern). OFT adapter owners confirmed: Base 3/5 Safe (0x74986f1a, same 5 signers), Polygon 3/6 Safe (0x78f2bcc6, 5+1 signers), Fraxtal 3/5 Safe (0x5493f3db, same 5 core signers); all no modules. Codex and Morph have no public RPC — note-only.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -207,11 +299,19 @@
         {
           "label": "KRWQ Ethereum contract",
           "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+        },
+        {
+          "label": "KRWQ Base OFT adapter",
+          "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+        },
+        {
+          "label": "KRWQ Polygon OFT adapter",
+          "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
+        },
+        {
+          "label": "KRWQ Fraxtal OFT adapter",
+          "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
         }
-      ],
-      "unresolvedQuestions": [
-        "OFT delegate admin and peer configuration across Base, Polygon, Fraxtal, Codex, and Morph not read in this pass.",
-        "The on-chain direct minter address (if any separate minter role exists beyond the owner Safe) was not enumerated — masterMinter() reverted, suggesting owner-only pattern."
       ]
     }
   },

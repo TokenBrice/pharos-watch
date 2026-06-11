@@ -131,7 +131,7 @@
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and the XO mint authority is a Solana account.",
     "controls": [
       {
@@ -189,19 +189,19 @@
       {
         "chain": "solana",
         "address": "F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu",
-        "label": "XO Solana mint authority",
+        "label": "XO Solana mint authority (PDA)",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "XO Solana token",
             "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
           }
         ],
-        "evidence": "At Solana slot 425792130: getAccountInfo on mint xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y confirms mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. All Token-2022 extensions (pausable, permanentDelegate, transferHook, confidentialTransfer, metadataPointer) are controlled by AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR, a confirmed funded EOA (System program owner, 29225720 lamports). The mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null account (uninitialized, no SOL) — cannot confirm whether it is an EOA keypair or PDA."
+        "evidence": "At Solana slot 425799131: XO mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. Ed25519 curve check confirms this address is off-curve (not a keypair) — it is a PDA derived from M0 XO extension program mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C with seeds=[\"mint_authority\"], nonce=255. PDA derivation verified computationally. Extension program upgrade authority=9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded EOA, shared across all M0 Solana programs). XO Token-2022 extension authorities (pausable, permanentDelegate, transferHook, confidentialTransfer, metadataPointer, freezeAuthority) all point to AgNSjv3CWETjQgcLK5MkTzRSt3KirbrBqGagjv5AKbCR, a funded System program account (MoonPay EOA, 29225720 lamports)."
       }
     ],
     "review": {
@@ -217,12 +217,13 @@
         {
           "label": "MinterGateway on Blockscout",
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        },
+        {
+          "label": "XO Solana token",
+          "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
         }
       ],
-      "evidence": "Ethereum MinterGateway and Solana Portal confirmed. XO Token-2022 mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is a null (uninitialized) Solana account — signer model cannot be determined. Extension authority AgNSjv3... confirmed funded EOA. Partial verification improves data but blocks full promotion.",
-      "unresolvedQuestions": [
-        "XO Solana mint authority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair (e.g. ask MoonPay or check M0 Solana docs for per-extension mint authority derivation). Confirm authorityType before promoting to verified."
-      ],
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: XO mintAuthority F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu confirmed off-curve PDA of mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA). Extension+freeze authorities confirmed EOA (AgNSjv3CWETj..., funded 29225720 lamports). Null uninitialized = expected for PDAs; off-curve proves it cannot be a free keypair.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }

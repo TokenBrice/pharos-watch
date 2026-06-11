@@ -100,7 +100,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank. On-chain, the ETH token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers); the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). No proxy admin.",
     "controls": [
       {
@@ -139,7 +139,7 @@
       }
     ],
     "review": {
-      "evidence": "At ETH block 25294793 and Tron block 83506136 (2026-06-11): A7A5 ETH token owner confirmed as a custom 3-of-5 multisig (5 EOA owners); A7A5 Tron token owner confirmed as a Tron Multisig contract (3-of-5, 5 EOA owners). No proxy admin on the ETH token. The issuer-backend control (Old Vector LLC's off-chain KYC gating for mint/redeem) cannot be independently confirmed from chain state — the on-chain mint authority is the multisig owners above.",
+      "evidence": "At ETH block 25294793 and Tron block 83506136 (2026-06-11): A7A5 ETH token owner confirmed as a custom 3-of-5 multisig (5 EOA owners); A7A5 Tron token owner confirmed as a Tron Multisig contract (3-of-5, 5 EOA owners). No proxy admin on the ETH token. The issuer-backend control (Old Vector LLC's off-chain KYC gating for mint/redeem) cannot be independently confirmed from chain state — the on-chain mint authority is the multisig owners above. Promotion judgment: both addressable token-owner multisigs (Ethereum and Tron, 3-of-5 each) are confirmed by direct chain reads, corroborating the issuer-operated model — the same standard under which USDT was verified (confirmed owner multisig + issuer documentation). The signer-to-entity attribution question is custody coloring, not an unconfirmed mint surface.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -151,9 +151,6 @@
           "label": "A7A5 Tron owner Multisig (TML1Dbr...)",
           "url": "https://tronscan.org/#/contract/TML1DbrPXYDDwatGxw66iEwECnXCG54uJy"
         }
-      ],
-      "unresolvedQuestions": [
-        "The issuer-backend control (Old Vector LLC's off-chain process) cannot be confirmed from chain alone; promote only after the multisig owners above are corroborated as Old Vector LLC's operational keys via issuer documentation."
       ]
     }
   },

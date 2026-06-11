@@ -90,18 +90,18 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM), but HypurrFi has announced wind-down terms: pooled new borrows are suspended, USDXL rates are set to 30%, and Legacy/Pooled settlement targets July 30, 2026.",
+    "confidence": "verified",
+    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 30, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
     "controls": [
       {
-        "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model)",
+        "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model; role set frozen)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
-        "canRaiseCap": "unknown",
-        "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market.",
-        "evidence": "At HyperEVM block 37547570: mint(0x1111...,10) reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED, confirming bucket-gated GHO-style minting model. New Pooled borrows are suspended (wind-down in progress, settlement target July 30 2026)."
+        "canRaiseCap": false,
+        "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market. DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE on the token have zero members, so facilitators cannot be added/removed and bucket capacities cannot be raised short of a proxy upgrade.",
+        "evidence": "At HyperEVM block 37556224: getFacilitatorsList() returned exactly 3 facilitators (0x7911c2…, 0xd12f1c…, 0xcb1710… — HypurrFi market loans, flash loans, USDT0 PSM); hasRole returned false for DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE across the proxy-admin Safe, all 3 facilitators, the implementation, and HypurrFi governance addresses; no RoleGranted events exist (genesis-deployed contract, role storage empty). mint() reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down in progress, settlement target July 30 2026)."
       },
       {
         "label": "HypurrFi / Last proxy admin Safe (upgrade authority)",
@@ -131,7 +131,7 @@
       }
     ],
     "review": {
-      "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (bucket exhausted, wind-down active). The Safe proxy admin can upgrade the implementation; ACL admin for facilitator bucket not separately confirmed on-chain but is consistent with the same multisig governance.",
+      "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -143,9 +143,6 @@
           "label": "HypurrFi USDXL docs",
           "url": "https://docs.hypurrfi.com/products/usdxl"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm whether the ACL admin controlling the GHO facilitator bucket is the same Safe (0xf050623d) or a separate address; the proxy admin Safe is confirmed 2/2 but the facilitator-bucket admin was not separately identified on-chain."
       ]
     }
   }

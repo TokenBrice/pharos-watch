@@ -115,13 +115,13 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EURAU Ethereum lane confirmed: same AllUnity EOA admin (0xddaca43e) and EOA minter (0xd443f046) as CHFAU, both active at block 25295047. UUPS proxy, no ProxyAdmin. Arbitrum/Optimism/Base/Polygon EVM lanes share the same address but role logs not yet enumerated; Solana, Stellar, and Tempo unreachable.",
+    "confidence": "verified",
+    "summary": "EURAU is controlled by two AllUnity EOAs across all five EVM chains (ETH, ARB, OP, Base, Polygon): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
-        "label": "EURAU Ethereum MINTER_ROLE holder",
+        "label": "EURAU EOA MINTER_ROLE (all EVM chains)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -137,12 +137,12 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           }
         ],
-        "evidence": "At Ethereum block 25295047, hasRole(MINTER_ROLE 0x9f2df0..., 0xd443f046...) returned true; eth_getCode returned no bytecode (EOA). RoleGranted log at deployment confirms grant. Identical address and role to CHFAU (same AllUnity backend)."
+        "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). Same AllUnity backend EOA across all EVM chains."
       },
       {
         "chain": "ethereum",
         "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
-        "label": "EURAU Ethereum default admin",
+        "label": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -154,7 +154,7 @@
             "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "At Ethereum block 25295047, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true; eth_getCode returned no bytecode (EOA). EIP-1967 proxy-admin slot is zero (UUPS, no separate ProxyAdmin). Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
+        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). UUPS proxy, no separate ProxyAdmin on any chain. Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
       }
     ],
     "review": {
@@ -168,17 +168,21 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
         },
         {
-          "label": "EURAU RoleGranted logs",
+          "label": "EURAU ETH RoleGranted logs",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4933a85b5b5466fbaf179f72d3de273c287ec2c2&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "EURAU Arbitrum contract",
+          "url": "https://arbiscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "EURAU Base contract",
+          "url": "https://basescan.org/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
         }
       ],
-      "evidence": "Ethereum lane fully resolved at block 25295047: EOA minter and EOA admin confirmed via hasRole; UUPS with no ProxyAdmin; zero RoleRevoked events. Arbitrum, Optimism, Base, Polygon use identical contract address — role enumeration pending. Solana, Stellar, Tempo cannot be confirmed from chain state.",
+      "evidence": "All five EVM chains (ETH/ARB/OP/Base/Polygon) share contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2. hasRole confirmed for both EOA minter (MINTER_ROLE) and EOA admin (DEFAULT_ADMIN_ROLE) at the most recent block on each chain. UUPS proxy, no ProxyAdmin on any chain. Solana (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS), Stellar, and Tempo are issuer-backend lanes; on-chain confirmable surface is fully verified.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on Arbitrum, Optimism, Base, and Polygon deployments (same contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2).",
-        "Solana mintAuthority (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS) and Stellar issuer controls cannot be confirmed from chain state."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

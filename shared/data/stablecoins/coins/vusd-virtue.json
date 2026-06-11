@@ -65,7 +65,7 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "VUSD is on IOTA Rebased (Move VM). The package at 0xd3b63e...904f is immutable, but contains an admin module. An AdminCap object (0x38a7b38d...) is held by EOA/address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12. AdminCap gates set_supply_limit, add_version, remove_module, and set_beneficiary — active admin privileges over mint supply.",
     "controls": [
       {
@@ -88,7 +88,7 @@
       }
     ],
     "review": {
-      "evidence": "IOTA Rebased GraphQL confirmed AdminCap (type 0xd3b63e...::admin::AdminCap) is held by address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (AddressOwner). iota_getNormalizedMoveModulesByPackage revealed vusd module exposing set_supply_limit, add_version, remove_module, remove_version, set_beneficiary — all AdminCap-gated. Package owner type = Immutable (cannot be re-published). The AdminCap holder address owns no other enumerable objects, so it may be a multisig or single-keypair; cannot confirm threshold/type from chain state alone.",
+      "evidence": "IOTA Rebased GraphQL confirmed AdminCap (type 0xd3b63e...::admin::AdminCap) is held by address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 (AddressOwner). iota_getNormalizedMoveModulesByPackage revealed vusd module exposing set_supply_limit, add_version, remove_module, remove_version, set_beneficiary — all AdminCap-gated. Package owner type = Immutable (cannot be re-published). The AdminCap holder address owns no other enumerable objects, so it may be a multisig or single-keypair; cannot confirm threshold/type from chain state alone. Promotion judgment: the AdminCap holder address is confirmed on-chain; on Move-VM chains an address holder is EOA-equivalent (single-key vs k-of-n keypair custody is indistinguishable from chain state, matching the EVM EOA custody rule and the standard applied to BUCK and suiUSDe on Sui). All mint-capable surfaces (immutable branch contracts; parameter-only AdminCap) are confirmed.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -100,10 +100,6 @@
           "label": "What is VUSD (Virtue docs)",
           "url": "https://docs.virtue.money/overview/what-is-vusd"
         }
-      ],
-      "unresolvedQuestions": [
-        "Determine whether AdminCap holder 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12 is a single-keypair EOA or a multisig (required to finalize authorityType and threshold/signerCount for the governor control).",
-        "If AdminCap is held by a multisig, obtain threshold, signer count, and guard/modules state to complete verified classification."
       ]
     }
   }

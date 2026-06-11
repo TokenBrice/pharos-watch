@@ -197,7 +197,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Monad deployment (0x4917...fe8) cannot be confirmed via public RPC (no publicnode for Monad testnet/mainnet at time of review)."
+        "Monad deployment (0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8): RPC is reachable (rpc.monad.xyz, block 80,806,841) but all access-control reads fail — owner() reverts, ERC-7201 Ownable slot is zero, slot 0 is zero, no EIP-1967 proxy, no OZ AccessControl, no LZ delegate() or wards() response. Contract's access control layout is non-standard and unreadable from public RPC; Monad mint authority remains opaque."
       ]
     }
   },

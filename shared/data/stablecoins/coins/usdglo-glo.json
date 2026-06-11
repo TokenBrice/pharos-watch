@@ -162,16 +162,32 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
-    "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy (AccessControl, non-enumerable) deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. MINTER_ROLE holders cannot be enumerated on-chain without a full historical event scan.",
+    "confidence": "verified",
+    "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. Full RoleGranted/RoleRevoked history shows all roles (MINTER, DEFAULT_ADMIN, PAUSER, UPGRADER) consolidated into a single Brale-operated EOA on every chain.",
     "controls": [
+      {
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "On 2026-06-11 at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / Optimism 152797996 / Arbitrum 472429769: hasRole(MINTER_ROLE, 0xb180f9…) = true and hasRole(DEFAULT_ADMIN_ROLE, 0xb180f9…) = true on all six chains; eth_getCode(0xb180f9…) returned no bytecode on all six chains (EOA, consistent with Brale enterprise key custody). Full RoleGranted/RoleRevoked Blockscout scans from deployment show all other historical holders (incl. original deployers) revoked; on Polygon the original deployer 0x03bcc9… reads hasRole(DEFAULT_ADMIN)=false. 0xb180f9… also holds PAUSER_ROLE and UPGRADER_ROLE (UUPS upgrade authority).",
+        "sources": [
+          {
+            "label": "USDGLO RoleGranted history (Ethereum Blockscout)",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4f604735c1cf31399c6e711d5962b2b3e0225ad3&fromBlock=15921266&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ]
+      },
       {
         "label": "Brale issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists.",
+        "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists. The single consolidated on-chain operator EOA corroborates the issuer-operated model.",
         "sources": [
           {
             "label": "Brale USDGLO proof of reserve",
@@ -181,7 +197,7 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295105 (2026-06-11): USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) is a live ERC1967 UUPS proxy (impl=GloDollarV3 0xf8db…, confirmed on Blockscout). totalSupply=320,357 tokens; paused()=false. GloDollarV3 uses AccessControl (non-enumerable) — getRoleMemberCount/getRoleMember absent from ABI, all enumeration calls revert. RoleGranted and Transfer-from-zero log scans in last 49,000 blocks returned 0 results on ETH, Base, Celo, and Polygon. Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials.",
+      "evidence": "On 2026-06-11: full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Live hasRole reads at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / OP 152797996 / ARB 472429769 confirm 0xb180f9… holds MINTER+DEFAULT_ADMIN on all six chains and eth_getCode returns empty (EOA) on all six. Polygon original deployer 0x03bcc9… hasRole(DEFAULT_ADMIN)=false (revoked). Stellar issuer (GBBS25…) has 1 signer, weight=1 (prior pass). Brale-issued model confirmed from issuer materials.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -190,13 +206,14 @@
         {
           "label": "Glo Dollar smart contract addresses",
           "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+        },
+        {
+          "label": "USDGLO token (Ethereum Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
         }
       ],
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "GloDollarV3 uses non-enumerable AccessControl; enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders via a full RoleGranted/RoleRevoked log scan from ETH deployment block ~15,921,266 (or Brale direct disclosure) before raising to verified."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "reserves": [

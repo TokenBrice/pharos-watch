@@ -74,7 +74,7 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "hyUSD is minted on Solana by depositing LSTs (jitoSOL, mSOL, bSOL, JupSOL) into Hylo's overcollateralized pool, with the companion xSOL token absorbing volatility under the Hylo invariant; the Hylo program authority controls parameters and upgrades.",
     "controls": [
       {
@@ -90,28 +90,35 @@
       },
       {
         "chain": "solana",
-        "label": "Hylo program upgrade/admin authority",
+        "label": "Hylo program upgrade authority (single EOA)",
         "role": "proxy-admin",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Hylo Solana program authority can upgrade the program and administer pool parameters (collateral set, ratios); the specific authority (multisig vs governance) was not independently resolved.",
-        "evidence": "CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe has 0 lamports and a null account entry — consistent with a PDA controlled by the Hylo program rather than a keypair. The Hylo program ID and upgrade authority identity were not resolved without the program address."
+        "capDescription": "The Hylo Solana program (HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn) is a BPF Upgradeable Loader program; the upgrade authority DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL is a single system account keypair (not a multisig). Whoever controls this key can redeploy the program unilaterally, changing pool logic and the PDA mint path.",
+        "evidence": "Solana RPC: program HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn owned by BPFLoaderUpgradeab1e. ProgramData BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN has upgradeAuthority = DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL. That authority account: owner = 11111111111111111111111111111111 (System Program), no data, ~9.4 SOL balance — confirmed system account EOA keypair, not a multisig or governance program. Mint transactions confirm HYEXCHt... CPI-calls SPL Token mintTo using PDA CfuSViq... as authority.",
+        "sources": [
+          {
+            "label": "Hylo program on Solana Explorer",
+            "url": "https://explorer.solana.com/address/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Solana slot 425792530: SPL mint account confirmed mintAuthority = CfuSViq... (0-lamport null account, PDA-pattern), freezeAuthority = null. Mint is not frozen and no explicit freeze authority. The program upgrade authority (which could change the pool logic and PDA signing) remains unresolved.",
+      "evidence": "Solana slot 425792530: SPL mint account confirmed mintAuthority = CfuSViq... (PDA), freezeAuthority = null. Hylo program ID identified as HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn (confirmed from mint transactions). Program is BPF Upgradeable Loader; programData BA5b6FzvZ77m7... upgrade authority = DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL (single system account EOA, ~9.4 SOL, no multisig). Upgrade authority not renounced.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Hylo hyUSD & xSOL docs",
           "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+        },
+        {
+          "label": "Hylo program on Solana Explorer",
+          "url": "https://explorer.solana.com/address/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
         }
-      ],
-      "unresolvedQuestions": [
-        "Identify the Hylo Solana program address and confirm whether the program upgrade authority is renounced (BPFLoaderUpgradeab1e upgrade authority = None) or held by a team key/multisig before raising confidence."
       ]
     }
   }

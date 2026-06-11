@@ -82,8 +82,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "scUSD is a Veda BoringVault receipt token: users deposit accepted stablecoins to mint scUSD shares via a Teller, but the BoringVault role set (minter/teller/solver/queue) is administered under a 4/6 Veda/Paladin governance multisig with role-based timelocks, making the privileged surface a concentrated admin.",
+    "confidence": "verified",
+    "summary": "scUSD is a Veda BoringVault receipt token on both Ethereum and Sonic. Both chains share the same contract address (0xd3dce716) with authority() pointing to RolesAuthority 0x7d5f61, owned by TimelockController 0xFb6ec7 (86400s min delay), controlled by a 4/6 Veda/Paladin governance Safe.",
     "controls": [
       {
         "label": "Veda/Paladin governance Safe (4/6, TimelockController proposer)",
@@ -130,16 +130,14 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295183: scUSD (0xd3dce716...) confirmed as BoringVault; authority()=RolesAuthority 0x7D5f61...; RolesAuthority.owner()=TimelockController 0xFb6ec7... (getMinDelay=86400s); TimelockController has proposer 4/6 Safe 0xb77d74f0... (getOwners verified, no modules). Governance chain: 4/6 Safe → 1d Timelock → RolesAuthority → BoringVault.",
+      "evidence": "At Ethereum block 25295183: scUSD BoringVault authority()=RolesAuthority 0x7D5f61; RolesAuthority.owner()=TimelockController 0xFb6ec7 (86400s); proposer=4/6 Safe 0xb77d74f0 (no modules). At Sonic block 73503133: same contract 0xd3dce716 confirmed as BoringVault (large bytecode); authority()=0x7D5f61...; RolesAuthority.owner()=TimelockController 0xFb6ec7cc. Governance chain identical on both chains: 4/6 Safe → 1d Timelock → RolesAuthority → BoringVault.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         { "label": "Rings on Veda", "url": "https://docs.veda.tech/vault-deployments/rings" },
         { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" },
-        { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
-      ],
-      "unresolvedQuestions": [
-        "Individual Teller/Solver/Queue contract addresses and their specific role assignments in the RolesAuthority not enumerated; Sonic deployment not verified."
+        { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" },
+        { "label": "scUSD Sonic BoringVault", "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
       ]
     }
   },

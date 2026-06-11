@@ -69,20 +69,35 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDh mints only after a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator.",
     "controls": [
       {
-        "label": "Hermetica trader / minting backend (confirm-mint)",
+        "label": "Hermetica hq-v1 minting contracts (confirm-mint operators)",
         "role": "backend-signer",
         "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
         "chain": "stacks",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Hermetica Stacks minting contract uses a request-mint to confirm-mint flow: a whitelisted minter deposits BTC, then a Hermetica-operated trader opens the off-chain perpetual hedge and calls confirm-mint to mint USDh; no permissionless on-chain mint exists.",
+        "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active — minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists.",
         "sources": [
-          { "label": "Hermetica minting contract docs", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" }
+          { "label": "Hermetica minting contract docs", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" },
+          { "label": "Hiro API — hq-v1 minting-contracts map", "url": "https://api.hiro.so/v2/map_entry/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/minting-contracts" }
+        ]
+      },
+      {
+        "label": "hq-v1 owner (SM1QXYXZG... — Stacks P2SH/multisig address)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "stacks",
+        "address": "SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix) — signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions.",
+        "sources": [
+          { "label": "Hiro API — hq-v1 owner data-var", "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner" }
         ]
       },
       {
@@ -96,14 +111,14 @@
       }
     ],
     "review": {
-      "evidence": "Hermetica's technical docs describe a backend-attested mint: request-mint deposits BTC, an off-chain trader establishes the BTC short hedge, and confirm-mint then issues USDh; redemption mirrors this via confirm-redeem. Mint is gated by both whitelisting and the issuer's off-chain confirmation, consistent with an offchain-attested-minter under a concentrated operator.",
+      "evidence": "Hiro API reads on hq-v1 (SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1): (1) owner = SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT (SM-prefix P2SH multisig, transferred 2026-02-10 via 1008-block timelock); (2) active minting-contracts: minting-otc-v1-1 (primary OTC route) and emergency-recover-v1, both deployed by Hermetica deployer; minting-auto-v1-1 deactivated 2026-03-23. No permissionless mint path. hq-v1 enforces 7-day timelock on owner changes and new minting-contract activations. Minting model confirmed as backend-attested OTC with a multisig-governed admin layer.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         { "label": "Hermetica mint mechanism", "url": "https://docs.hermetica.fi/usdh/how-it-works/mint" },
-        { "label": "Hermetica minting contract (Stacks)", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" }
-      ],
-      "unresolvedQuestions": ["The usdh-token-v1 contract on Stacks delegates all admin/minting authorization to hq-v1 (check-is-minting-contract, check-is-protocol). hq-v1 maintains a minting-contracts map (active principals who can confirm-mint). The current hq-v1 owner principal was returned as Clarity bytes 0x05 14 6fdf77f03a1ace4bf29f8090067a98c65000e1e2 but could not be fully decoded without base58/c32check library. Resolve: (1) Stacks principal of hq-v1 current owner, (2) enumerate active entries in the minting-contracts map to identify the confirm-mint operator address(es)."]
+        { "label": "Hermetica minting contract (Stacks)", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" },
+        { "label": "Hiro API — hq-v1 contract", "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1" }
+      ]
     }
   }
 }

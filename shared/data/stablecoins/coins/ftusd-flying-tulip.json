@@ -69,8 +69,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "ftUSD mints/redeems through Flying Tulip's on-chain mint/redeem path. Ethereum reads identify a token owner/masterMinter address and a separate minter contract.",
+    "confidence": "verified",
+    "summary": "ftUSD on both Ethereum and Sonic is controlled by the same 3/5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the minter contract (0x56c5892b). The minter contract is a UUPS proxy (impl 0xf47bb65f on Sonic) with no separate ProxyAdmin. Identical ownership confirmed on both chains.",
     "controls": [
       {
         "chain": "ethereum",
@@ -135,12 +135,9 @@
           "url": "https://docs.flyingtulip.com/"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code and owner() returns the 3/5 Safe (0x1118e1c0...), confirming the Safe controls the entire Ethereum mint surface (direct minter + masterMinter + token owner). Sonic deployment uses same contract address but separate chain state — not verified in this pass.",
+      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code; owner() returns 3/5 Safe 0x1118e1c0. At Sonic block 73503133: owner() = 0x1118e1c0, masterMinter() = 0x1118e1c0, minter() = 0x56c5892b (UUPS proxy, impl 0xf47bb65f, no ProxyAdmin slot). The same 3/5 Safe controls the entire mint surface on both chains.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Sonic deployment (0xf7d85ec4e7710f71992752eac2111312e73e9c9c on Sonic) not verified in this pass."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "collateralQuality": "exotic",

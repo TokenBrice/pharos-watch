@@ -102,8 +102,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: an EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge contract owned by a 2/4 Safe. Polygon and Avalanche share the same owner Safe (3/4). XRPL issuer has master key disabled. Plasma chain RPC unreachable.",
+    "confidence": "verified",
+    "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge owned by a 2/4 Safe. Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer has master key disabled. Plasma chain (rpc.plasma.to): DEFAULT_ADMIN = 4/3 Safe, plus EOA minter and 3/3 Safe minter and OFT bridge minter all confirmed at block 24254601.",
     "controls": [
       {
         "chain": "ethereum",
@@ -193,6 +193,103 @@
           }
         ],
         "evidence": "Identified as EUROPOFT (LayerZero OFT bridge) by Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. owner() returned 0x04b4cb9d5a8417729231221a8ef22a1d06adb32b (GnosisSafeProxy, 2/4 Safe with owners [0x5379b2b5, 0x1cf1804b, 0xd0ed9bd2, 0x3f433019])."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b",
+        "label": "EUROP Plasma DEFAULT_ADMIN (4/3 Safe)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x1bCd423f3245d3B87360BF218bD0ae4391568d2a",
+            "0xF362066E010B3b3d3c497BE8116177d4D712910f",
+            "0x7dFE41D630D709bb84676e86214302aBF97eB151",
+            "0x7D8806A914Db460007c9D45b3132E95e95D81bE4"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 24254601
+        },
+        "sources": [
+          {
+            "label": "EUROP Plasma contract",
+            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+          }
+        ],
+        "evidence": "At Plasma block 24254601: getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned 0xd8b39a57...; eth_getCode = GnosisProxy bytecode; getOwners() returned 4 signers; getThreshold() = 3; getModulesPaginated() returned empty (no modules). Same 4-signer set as EUROP Ethereum/Avax owner Safe signers."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xe3997860dc9d52abed7455535dc6e2f1925bd3c9",
+        "label": "EUROP Plasma EOA minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "EUROP Plasma contract",
+            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+          }
+        ],
+        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 0) returned 0xe3997860...; eth_getCode on Plasma = 0x (EOA). Same EOA confirmed as MINTER_ROLE holder on Ethereum."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xa0b56dbbd937c2252dd1c62443edc57d320d47ce",
+        "label": "EUROP Plasma Safe minter (3/3)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 3,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x9b45428ddEE215e3f4AdbEe5Ca1948952f8b948f",
+            "0x97c9658db7d5c9EFEdfF1C7b064c08a54E76204",
+            "0x8b718d994c64ae644ab4ee864364581b16708d76"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 24254601
+        },
+        "sources": [
+          {
+            "label": "EUROP Plasma contract",
+            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+          }
+        ],
+        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 1) returned 0xa0b56dbb...; eth_getCode = GnosisProxy bytecode; getOwners() = 3 signers; getThreshold() = 3; getModulesPaginated() empty."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xf825e476ad696de47f78a8fd04e92ef1d5c6524c",
+        "label": "EUROP Plasma OFT bridge minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "EUROP Plasma contract",
+            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+          }
+        ],
+        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 2) returned 0xf825e476...; eth_getCode = large OFT-style contract bytecode (LayerZero); owner() returned 0x53ef7b6a497e893f739f03969306beb464328101."
       }
     ],
     "review": {
@@ -210,17 +307,13 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         },
         {
-          "label": "EUROP Polygon RoleGranted logs",
-          "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=99999999&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          "label": "EUROP Plasma contract",
+          "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
         }
       ],
-      "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled), confirmed at current ledger. Plasma chain (chainId 9745) RPC unreachable from all public endpoints.",
+      "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled). Plasma (block 24254601): DEFAULT_ADMIN = 4/3 Safe (0xd8b39a57), MINTER_ROLE[0] = EOA 0xe3997860, MINTER_ROLE[1] = 3/3 Safe (0xa0b56dbb), MINTER_ROLE[2] = OFT contract (0xf825e476, owned by 0x53ef7b6a). All mint-capable surfaces now confirmed.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Plasma chain (0x98658bd74ef231158cadc21d8aba733a4e947e6a, chainId 9745) has no accessible public RPC — cannot enumerate role holders.",
-        "Confirm Polygon minter EOA 0xe3997860 is currently active via hasRole (logs confirmed grant, no revoke seen)."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

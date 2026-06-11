@@ -135,7 +135,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "AUDM is issued by Macropod (AFSL 566313, AUSTRAC DCE100887005-001); approved clients deposit AUD into the AUDM Trust reserve to mint and return AUDM for 1:1 redemption, all gated through the issuer's compliance/onboarding backend.",
     "controls": [
       {
@@ -179,10 +179,25 @@
             "url": "https://eth.blockscout.com/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
           }
         ]
+      },
+      {
+        "label": "AUDM Solana mint authority (EOA wallet)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "Solana getAccountInfo (jsonParsed) for SPL mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi returned mintAuthority = BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ. Confirmed EOA: account owned by System Program (11111...), executable=false, zero data.",
+        "sources": [
+          {
+            "label": "Solana Mainnet SPL mint",
+            "url": "https://solscan.io/token/CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves at Westpac and Banking Circle, with client onboarding/KYC gating; mint/redeem is centralized. Ethereum and Base EVM chains confirmed: DEFAULT_ADMIN = EOA 0x9990..., MINTER_ROLE = EOA 0x3529... (both verified via hasRole at blocks 25295029/47200702).",
+      "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves, with client onboarding/KYC gating; mint/redeem is centralized. Ethereum and Base EVM chains confirmed: DEFAULT_ADMIN = EOA 0x9990..., MINTER_ROLE = EOA 0x3529... (both verified via hasRole at blocks 25295029/47200702). Solana SPL mint CiYXBw... confirmed: mintAuthority = EOA wallet BS6KEebo... (System Program owned, not executable). Redbelly uses same contract address as Ethereum (0x0815...cbdd) — same admin as Ethereum by deployment construction (note-only per brief; not independently queried).",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -193,10 +208,11 @@
         {
           "label": "Base Blockscout AUDM contract",
           "url": "https://base.blockscout.com/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+        },
+        {
+          "label": "Solana SPL mint",
+          "url": "https://solscan.io/token/CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
         }
-      ],
-      "unresolvedQuestions": [
-        "Solana (CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi) and Redbelly (0x0815...cbdd) mint authority not confirmed; Solana SPL mint authority address not read."
       ]
     }
   },

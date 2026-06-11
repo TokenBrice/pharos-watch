@@ -128,7 +128,7 @@
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDK is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and live Solana Token-2022 metadata exposes a USDK mint authority.",
     "controls": [
       {
@@ -186,19 +186,19 @@
       {
         "chain": "solana",
         "address": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
-        "label": "USDK Token-2022 mint authority",
+        "label": "USDK Token-2022 mint authority (PDA)",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "USDK Solana token",
             "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
           }
         ],
-        "evidence": "At Solana slot 425792124: getAccountInfo on mint usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX confirms mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 and scaledUiAmountConfig authority=same address. Querying C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 directly returns null (uninitialized account — no SOL, no owner program). Cannot confirm whether this is an EOA keypair, PDA of M0 portal, or multisig."
+        "evidence": "At Solana slot 425799131: USDK mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7. Ed25519 curve check confirms this address is off-curve (not a keypair) — it is a PDA derived from M0 extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw with seeds=[\"mint_authority\"], nonce=255. PDA derivation verified computationally. The extension program upgrade authority is 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded EOA, System program owner), shared across all M0 Solana programs. USDK freeze authority (7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr) is also a null/uninitialized account (off-curve PDA). Extension authorities (metadataPointer, confidentialTransfer, transferHook) = 9QpF8a9T... (same EOA)."
       }
     ],
     "review": {
@@ -214,12 +214,13 @@
         {
           "label": "MinterGateway on Blockscout",
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        },
+        {
+          "label": "USDK Solana token",
+          "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
         }
       ],
-      "evidence": "Ethereum MinterGateway and Solana Portal confirmed. USDK Token-2022 mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is a null (uninitialized) Solana account — signer model cannot be determined without further off-chain context or issuer confirmation.",
-      "unresolvedQuestions": [
-        "USDK Solana mint authority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 is an uninitialized Solana account. Determine whether it is a PDA of the M0 Solana Portal program, a Squads multisig, or an EOA keypair. Confirm authorityType before promoting to verified."
-      ],
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: USDK mintAuthority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 confirmed off-curve PDA of extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA across all M0 Solana programs). Null uninitialized account is expected for PDAs; off-curve check proves it cannot be a free keypair.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }

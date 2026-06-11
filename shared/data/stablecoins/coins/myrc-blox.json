@@ -154,10 +154,26 @@
           }
         ],
         "evidence": "At Ethereum block 25295023, hasRole(MINTER_ROLE, 0xcca0793...) = true. RoleGranted event scan (Blockscout getLogs, topic0=0x2f8788...) confirms MINTER_ROLE + DEFAULT_ADMIN_ROLE granted to 0xcca0793... at block 17970681; a second DEFAULT_ADMIN grant to 0xe16f1d... was later revoked (RoleRevoked confirmed). getOwners() on 0xcca0793... = [0x76b7d8..., 0xb4bc50..., 0xa35acdb...]; getThreshold() = 2. modules() returned sentinel only (no modules). masterCopy slot = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.3.0)."
+      },
+      {
+        "chain": "solana",
+        "address": "Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z",
+        "label": "MYRC Solana mint and freeze authority (issuer keypair)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solana MYRC mint",
+            "url": "https://solscan.io/token/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+          }
+        ],
+        "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
       }
     ],
     "review": {
-      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM).",
+      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent).",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -173,9 +189,6 @@
           "label": "MYRC Ethereum token",
           "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
         }
-      ],
-      "unresolvedQuestions": [
-        "Solana mint authority for myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv not read (non-EVM chain; EVM chains are fully verified)."
       ]
     }
   },

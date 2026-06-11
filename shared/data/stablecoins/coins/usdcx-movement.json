@@ -68,9 +68,9 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract; each USDCx is backed by locked Circle USDC and supply only changes against USDC deposits/redemptions via CCTP/Gateway, so it inherits USDC's issuer-direct mint authority.",
+    "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract on the Movement Move VM. The xReserve module stores mint/burn/transfer refs in a Management resource and gates minting through an Attester+Admin role system (usdcx::Roles). The admin EOA 0x98ebb... controls roles, attesters, and upgrade; minting requires an attester-signed message — no permissionless free-mint path exists.",
     "controls": [
       {
         "label": "Circle xReserve mint/redeem wrapper (USDCx 1:1 against locked USDC)",
@@ -80,7 +80,30 @@
         "chain": "movement",
         "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
         "canRaiseCap": "unknown",
-        "evidence": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve contract (1:1) and redeem by burning USDCx to release the locked USDC; xReserve also moves 1:1 between USDCx and USDC across chains via Circle CCTP and Gateway. This is a Circle-operated bridge/lockbox mint over USDC, not an independent issuer of base USDC supply."
+        "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1): usdcx::Management resource at the token object stores mint_ref/burn_ref/transfer_ref/mutate_metadata_ref scoped to the token metadata — only the module logic can invoke them. usdcx::Roles resource stores admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 and a list of 6 pausers including the admin. The module exposes mint(&signer, ...) gated on attester-signature check; no public free-mint exists. Module upgrade policy = 1 (upgradeable); upgrade controlled by ObjectCore.owner = 0x98ebb... (the same admin EOA).",
+        "sources": [
+          {
+            "label": "Movement Aptos REST — usdcx account resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
+          }
+        ]
+      },
+      {
+        "label": "Circle xReserve admin EOA (0x98ebb...)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "movement",
+        "address": "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Movement Aptos REST: usdcx::Roles.admin = 0x98ebb... The admin can add/remove attesters (required for minting), set pausers, and call transfer_admin. ObjectCore of the module deployer account (0x4989d...) shows owner = 0x98ebb..., confirming upgrade control as well. Auth key matches the address (normal EOA, not a multisig resource account).",
+        "sources": [
+          {
+            "label": "Movement Aptos REST — usdcx module deployer ObjectCore",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+          }
+        ]
       },
       {
         "label": "Inherited Circle USDC issuer mint authority",
@@ -92,7 +115,7 @@
       }
     ],
     "review": {
-      "evidence": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve contract, with CCTP/Gateway transfers to/from USDC on other chains (reserves 100% USDC, depType wrapper, coinId usdc-circle). It is a Circle-operated bridge/lockbox wrapper rather than a new issuer, so it inherits USDC's issuer-direct mint path and concentrated-admin posture. inheritedFrom set to usdc-circle (coin has no variantOf field). The xReserve contract on Movement (Move VM, non-EVM) was not queryable via standard EVM RPC — standard EIP-1967 admin slot reads are not applicable to Move objects.",
+      "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1) queried successfully. usdcx::Roles resource: admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1; usdcx::Management resource confirms mint_ref is module-scoped (no external free-mint). Module deployer ObjectCore.owner = 0x98ebb... (admin EOA). mint() requires attester-signed message gated by admin. No permissionless mint path confirmed. Module upgrade policy = 1 (upgradeable by admin EOA). The minting model is Circle-operated (attester+admin roles) consistent with xReserve/CCTP architecture.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -103,10 +126,11 @@
         {
           "label": "Circle xReserve",
           "url": "https://www.circle.com/xreserve"
+        },
+        {
+          "label": "Movement Aptos REST — usdcx account resources",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
         }
-      ],
-      "unresolvedQuestions": [
-        "Movement runs a Move VM (not EVM) — verify the xReserve object admin/upgrade controls using Movement's Aptos-compatible RPC (getAccountResource or similar) to confirm Circle is sole admin and no privileged free-mint capability exists beyond USDC lockbox deposits."
       ]
     }
   }
