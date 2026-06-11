@@ -30,7 +30,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
@@ -152,7 +152,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
@@ -747,7 +747,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
@@ -771,6 +771,31 @@
         {
           "authorityType": "eoa",
           "directMintAbility": "none",
+          "canRaiseCap": true
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
+        },
+        {
+          "authorityType": "issuer-backend",
+          "directMintAbility": "none",
+          "canRaiseCap": false
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
+        },
+        {
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
           "canRaiseCap": true
         }
       ]
@@ -855,7 +880,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
@@ -870,6 +895,11 @@
           "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": false
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
         }
       ]
     },
@@ -953,11 +983,16 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
         },
         {
           "authorityType": "eoa",
@@ -3532,7 +3567,7 @@
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -3544,7 +3579,7 @@
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     },
@@ -3728,7 +3763,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "safe",
@@ -3736,6 +3771,11 @@
           "threshold": 4,
           "signerCount": 6,
           "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true
         }
       ]
     },
@@ -4876,7 +4916,7 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "eoa",
@@ -5357,8 +5397,32 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 3,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
@@ -6681,7 +6745,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -7978,6 +8042,13 @@
           "directMintAbility": "upgrade-only",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 2,
+          "signerCount": 2,
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ]
     },
@@ -8676,7 +8747,7 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -8684,7 +8755,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         },
         {
-          "authorityType": "contract",
+          "authorityType": "eoa",
           "directMintAbility": "parameter-only",
           "modulesOrGuardsStatus": "not-applicable"
         }
@@ -9228,12 +9299,26 @@
     "mintAuthoritySummary": {
       "mintPath": "bridge-or-oft-synthetic",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
-          "authorityType": "bridge",
+          "authorityType": "contract",
           "directMintAbility": "cap-limited",
           "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "parameter-only",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "none",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     }
@@ -10269,7 +10354,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "safe",
@@ -10280,8 +10365,25 @@
           "modulesOrGuardsStatus": "none-detected"
         },
         {
-          "authorityType": "bridge",
-          "directMintAbility": "can-authorize"
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     }
@@ -10350,7 +10452,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "mintIncidents": [
         {
           "date": "2022-12-02",
@@ -10375,8 +10477,16 @@
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only",
+          "threshold": 3,
+          "signerCount": 6,
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "present"
         },
         {
           "authorityType": "timelock",
@@ -10602,7 +10712,7 @@
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -10613,7 +10723,8 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
-          "modulesOrGuardsStatus": "unknown"
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     },
@@ -10648,7 +10759,7 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -10660,6 +10771,22 @@
           "directMintAbility": "can-authorize",
           "threshold": 3,
           "signerCount": 5,
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 6,
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 2,
+          "signerCount": 4,
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected"
         }
@@ -10768,12 +10895,19 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 5,
+          "signerCount": 9,
+          "modulesOrGuardsStatus": "none-detected"
         },
         {
           "authorityType": "safe",
@@ -11987,6 +12121,11 @@
           "threshold": 2,
           "signerCount": 3,
           "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ]
     }
@@ -14790,7 +14929,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "safe",
@@ -18608,12 +18747,17 @@
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "inheritedFrom": "usdc-circle",
       "controls": [
         {
           "authorityType": "contract",
           "directMintAbility": "none"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "issuer-backend",
@@ -18701,8 +18845,8 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
-      "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -18712,6 +18856,11 @@
         {
           "authorityType": "contract",
           "directMintAbility": "parameter-only",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -19188,8 +19337,13 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "probable",
+      "confidence": "verified",
       "controls": [
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct"
@@ -19303,10 +19457,15 @@
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "issuer-backend",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "modulesOrGuardsStatus": "not-applicable"
         },
@@ -19508,7 +19667,7 @@
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -19523,9 +19682,10 @@
           "modulesOrGuardsStatus": "none-detected"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     },
@@ -21211,12 +21371,17 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "present"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ]
     }
@@ -21464,7 +21629,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "safe",
@@ -21474,8 +21639,8 @@
           "modulesOrGuardsStatus": "none-detected"
         },
         {
-          "authorityType": "unknown",
-          "directMintAbility": "direct"
+          "authorityType": "none",
+          "directMintAbility": "none"
         }
       ]
     },
@@ -21739,11 +21904,12 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "cap-limited"
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": false
         },
         {
           "authorityType": "safe",
@@ -22917,7 +23083,7 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -22926,6 +23092,13 @@
         {
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ]
     }
@@ -23382,7 +23555,7 @@
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -23697,7 +23870,7 @@
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "eoa",
@@ -23707,7 +23880,12 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ]
     }
@@ -24162,12 +24340,12 @@
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
@@ -24177,11 +24355,26 @@
         {
           "authorityType": "contract",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
         },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "upgrade-only",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
@@ -24619,7 +24812,7 @@
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "controls": [
         {
           "authorityType": "contract",
@@ -24634,9 +24827,10 @@
           "modulesOrGuardsStatus": "none-detected"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ]
     },
