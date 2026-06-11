@@ -3,6 +3,7 @@ import type { StablecoinMeta } from "@shared/types";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
 import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
+import { fetchCentrifugeVaultReserves } from "../centrifuge-vault";
 
 const JTRSY_VAULT = "0x8c213ee79581ff4984583c6a801e5263418c4b86";
 const USDC_ASSET = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -60,8 +61,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       return null;
     });
 
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
-
     const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
       chainRpcs: testChainRpcs,
     });
@@ -109,8 +108,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       return null;
     });
 
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
-
     await expect(
       fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
         chainRpcs: testChainRpcs,
@@ -137,8 +134,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       }
       return null;
     });
-
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
       chainRpcs: testChainRpcs,
@@ -171,8 +166,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       }
       return null;
     });
-
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
       chainRpcs: testChainRpcs,
@@ -211,8 +204,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       }
       return null;
     });
-
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     const result = await fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {
       chainRpcs: testChainRpcs,
@@ -259,8 +250,6 @@ describe("fetchCentrifugeVaultReserves", () => {
       }
       return null;
     });
-
-    const { fetchCentrifugeVaultReserves } = await import("../centrifuge-vault");
 
     await expect(
       fetchCentrifugeVaultReserves(makeCoin(), makeConfig(), new AbortController().signal, {

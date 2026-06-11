@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchBalancerPools } from "../fetch-balancer";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -39,11 +40,11 @@ function fantomJunkPool() {
 describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   afterEach(() => {
     mockFetch.mockReset();
-    vi.resetModules();
+    vi.unstubAllGlobals();
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   it("rejects pools with totalLiquidity above the per-source sanity cap", async () => {
-    const { fetchBalancerPools } = await import("../fetch-balancer");
     mockFetch.mockResolvedValueOnce(
       jsonResponse({ data: { poolGetPools: [fantomJunkPool(), cleanPool()] } }),
     );
@@ -58,7 +59,6 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   });
 
   it("sets pool.price to null (per-token priceUsd is authoritative)", async () => {
-    const { fetchBalancerPools } = await import("../fetch-balancer");
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [cleanPool()] } }));
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBeGreaterThanOrEqual(1);
