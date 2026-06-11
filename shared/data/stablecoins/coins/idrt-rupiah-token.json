@@ -100,31 +100,61 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "IDRT is issued by PT Rupiah Token Indonesia; all 1:1 mint and redemption runs through the issuer's KYC-gated centralized backend against IDR bank deposits.",
+    "confidence": "verified",
+    "summary": "IDRT is a non-upgradeable Ownable ERC20 on Ethereum, BSC, and Polygon. On all three chains the token owner() is the same 4-of-6 Safe multisig (same six signers cross-chain). The owner() controls mint and burn. Harmony is excluded from this assessment (chain inactive).",
     "controls": [
       {
-        "label": "PT Rupiah Token Indonesia issuance backend",
+        "label": "PT Rupiah Token Indonesia — 4-of-6 Safe (Ethereum)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "PT Rupiah Token Indonesia operates centralized KYC-gated mint and redeem against custodied IDR bank deposits; a single regulated issuer controls supply creation."
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf18c1ca6d004bee88752c5170488c915fba9a603",
+            "0x41fad55c32c44cc6e2b36de870c70292bb6f935e",
+            "0x031f9a3ccc3fa27331d0c87d622e73bf59a37073",
+            "0xed4e43105417d30ca59f5234a1396e79e3377395",
+            "0x3dd6ea51cd6e78d868f5d3d33deda5c1308f0ba4",
+            "0xf042bfbdd15caf27a592b0159f648721b3c2d659"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25295025,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295025, IDRT (0x998ffe...) owner() = 0x109046f16d512843138218f061232f2cc7d7c9d7. Blockscout: GnosisSafeProxy. getOwners() = 6 addresses; getThreshold() = 4; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; VERSION() = 1.3.0. BSC (block 103628780) owner() = 0x0e8b655... same Safe with identical 6 owners and threshold 4. Polygon (block 88323921) owner() = 0xa1f0fc535..., identical 6-owner 4-of-6 Safe, no modules.",
+        "sources": [
+          {
+            "label": "IDRT Ethereum token",
+            "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
+          },
+          {
+            "label": "IDRT Ethereum owner Safe",
+            "url": "https://etherscan.io/address/0x109046f16d512843138218f061232f2cc7d7c9d7"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Issuer materials and monthly CPA attestations describe IDRT as a centralized fiat-backed token with 1:1 issuer-operated mint/redeem after KYC; no permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Rupiah Token website",
           "url": "https://rupiahtoken.com/"
+        },
+        {
+          "label": "IDRT Ethereum token (Etherscan)",
+          "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
         }
-      ],
-      "sourceFreeRationale": "Classification based on the centralized issuer model described in project materials; on-chain token owner/minter admin across Ethereum, BSC, Harmony, and Polygon was not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin and any proxy admin for IDRT across its deployments before raising confidence."
       ]
     }
   },

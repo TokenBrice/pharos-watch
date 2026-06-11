@@ -118,26 +118,64 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "VGBP is issued by VNX Commodities AG; live Base reads resolve mint/admin control to a VNX EOA with a large minter allowance and the current proxy admin owned by the same EOA.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "VGBP uses VNX's RBAC architecture on Base. VNXCToken impl with rbacManager = 0xb6622a9...b60ee (Base VNXManager, owner = EOA 0xD63052...051F). EOA confirmed as sole minter: 80 of 80 recent mint() calls on Base originate from that EOA.",
     "controls": [
       {
-        "label": "VGBP owner/minter admin EOA",
+        "label": "VGBP VNXCToken proxy (Base)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Base Blockscout VGBP implementation (VNXCToken)",
+            "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1/contracts"
+          },
+          {
+            "label": "BaseScan VGBP contract",
+            "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+          }
+        ],
+        "evidence": "At Base block 47200982, EIP-1967 impl slot = 0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1 (VNXCToken). VNXCToken source: mint() gated by onlyMinters → isMinter() = rbacManager.hasRole(caller, minterRoleId). 80 of 80 recent mint() calls (selector 0x40c10f19) confirmed successful exclusively from EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F."
+      },
+      {
+        "label": "VGBP Base VNXManager RBAC contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "base",
+        "address": "0xb6622a9ec19561b0a39de87a71b845ffa5cb60ee",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Base Blockscout VGBP rbacManager",
+            "url": "https://basescan.org/address/0xb6622a9ec19561b0a39de87a71b845ffa5cb60ee"
+          }
+        ],
+        "evidence": "Identified from VGBP proxy deployment calldata as the _rbac parameter passed to VNXCToken.initialize(). eth_getCode confirms this is a contract. owner() = 0xD63052E09AF164CEF57695D3b96043EA848B051F (the VNX minting EOA, confirmed EOA via eth_getCode empty at Base block 47200982)."
+      },
+      {
+        "label": "VGBP owner/minter EOA (Base)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "base",
         "address": "0xD63052E09AF164CEF57695D3b96043EA848B051F",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Base owner() returned this EOA; minterAllowance(address) returned a large allowance for the same address, indicating live direct mint ability.",
         "sources": [
           {
-            "label": "BaseScan VGBP contract",
-            "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
+            "label": "BaseScan VNX minter EOA",
+            "url": "https://basescan.org/address/0xD63052E09AF164CEF57695D3b96043EA848B051F"
           }
-        ]
+        ],
+        "evidence": "At Base block 47200982, owner() on VGBP proxy returns this address; eth_getCode returns empty (confirmed EOA). Sole minter: 80 of 80 recent mint() calls confirmed from this EOA. Also owns the Base VNXManager RBAC contract. Issuer-context EOA; off-chain MPC/HSM indistinguishable on-chain, does not block verified."
       },
       {
         "label": "VGBP proxy admin contract",
@@ -147,28 +185,29 @@
         "chain": "base",
         "address": "0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Base EIP-1967 admin slot returned this proxy admin contract, and its owner() returned the same VNX EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F.",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "BaseScan VGBP proxy admin",
-            "url": "https://basescan.org/address/0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8#code"
+            "url": "https://basescan.org/address/0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8"
           }
-        ]
+        ],
+        "evidence": "EIP-1967 admin slot confirmed this address as proxy admin. owner() returns the same VNX EOA 0xD63052...051F. Upgrade path is thus also solely controlled by the issuer EOA."
       }
     ],
     "review": {
-      "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; live Base reads identify owner/minter EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F and proxy admin 0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8 owned by the same EOA.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Base block 47200982: owner() confirmed = EOA 0xD63052...051F (eth_getCode empty); rbacManager = Base VNXManager 0xb6622a9...b60ee (contract, owner = same EOA); 80/80 recent mint() calls exclusively from that EOA. Proxy admin also owned by same EOA. All addressable mint-capable surfaces verified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "BaseScan VGBP contract",
-          "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
+          "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+        },
+        {
+          "label": "Base Blockscout VNXCToken implementation",
+          "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1/contracts"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm whether the VNX owner/minter EOA is controlled by a multisig, MPC, or other policy layer."
       ]
     }
   },

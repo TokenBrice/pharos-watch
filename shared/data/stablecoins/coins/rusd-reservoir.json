@@ -191,8 +191,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "rUSD issuance runs through Reservoir protocol contracts, including PSMs and the Credit Enforcer; governance/admin setup for those contracts remains unresolved.",
+    "confidence": "verified",
+    "summary": "rUSD issuance runs through Reservoir PSMs and the Credit Enforcer. Both the PSM and Credit Enforcer share the same DEFAULT_ADMIN_ROLE holder: Reservoir EOA 0xb7570e32.",
     "controls": [
       {
         "chain": "ethereum",
@@ -201,8 +201,8 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Reservoir docs list the USDC PSM as a core mint/redeem entry point for rUSD.",
         "sources": [
           {
@@ -210,7 +210,7 @@
             "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
           }
         ],
-        "evidence": "Official Reservoir contract-address docs list this PSM address and describe PSMs as mint/redeem infrastructure."
+        "evidence": "At Ethereum block 25295029, Blockscout RoleGranted events confirmed DEFAULT_ADMIN_ROLE on PSM is held by 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (deployer revoked after handover). PSM is a non-proxy AccessControl contract."
       },
       {
         "chain": "ethereum",
@@ -220,8 +220,8 @@
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Credit Enforcer is the protocol risk-control component enforcing solvency, debt limits, and operational constraints.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Credit Enforcer enforces solvency, debt limits, and operational constraints on PSM minting.",
         "sources": [
           {
             "label": "Reservoir contract addresses",
@@ -232,7 +232,24 @@
             "url": "https://github.com/reservoir-protocol/reservoir"
           }
         ],
-        "evidence": "Reservoir docs list Credit Enforcer at this address and describe it as the risk-management control for supply and solvency constraints."
+        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32) on the Credit Enforcer returned True. RoleGranted logs confirm deployer (0x6ed13690) revoked and 0xb7570e32 is current admin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "label": "Reservoir PSM and Credit Enforcer DEFAULT_ADMIN (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Reservoir Credit Enforcer RoleGranted events at Ethereum block 25295029",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x04716DB62C085D9e08050fcF6F7D775A03d07720/logs"
+          }
+        ],
+        "evidence": "At Ethereum block 25295029, eth_getCode returned 0x (EOA). hasRole(DEFAULT_ADMIN_ROLE, this) = True on both PSM and Credit Enforcer. Deployer EOA 0x6ed13690 revoked at blocks 20564175/20564179."
       }
     ],
     "review": {
@@ -246,12 +263,9 @@
           "url": "https://github.com/reservoir-protocol/reservoir"
         }
       ],
-      "evidence": "Reservoir docs list rUSD, PSM, and Credit Enforcer addresses; security setup for governance/admin ownership was not resolved in this pass.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Resolve Reservoir governance/admin owner and any Safe threshold for PSM and Credit Enforcer controls."
-      ]
+      "evidence": "At Ethereum block 25295029: PSM and Credit Enforcer DEFAULT_ADMIN_ROLE confirmed as EOA 0xb7570e32 via hasRole() and RoleGranted/RoleRevoked log scan on Blockscout. Both contracts are non-proxy AccessControl deployments. All mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

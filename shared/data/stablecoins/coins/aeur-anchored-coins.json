@@ -73,7 +73,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "AEUR is issuer-minted by Anchored Coins. Ethereum and BSC token owner plus proxy-admin ownership resolve to the same 4/6 Safe, and the verified implementation exposes owner-gated mint/burn/pause controls.",
     "controls": [
       {
@@ -92,7 +92,8 @@
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 25294993
         },
         "sources": [
           {
@@ -126,7 +127,8 @@
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 103627450
         },
         "sources": [
           {
@@ -169,13 +171,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x7b709447e7812cbb0faec635759144db88e0a58f?fields=metadata,abi"
         }
       ],
-      "evidence": "Official issuer materials identify AEUR as Anchored Coins' euro stablecoin. Ethereum/BSC RPC and Safe API reads identify a shared 4/6 Safe owner/proxy-admin path for the verified mintable implementation.",
-      "reviewer": "Codex mint-authority full-gap batch-1",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Reconfirm whether the same Safe owner remains on both chains immediately before metadata insertion.",
-        "No per-minter allowance/cap surface was found; treat direct owner minting as concentrated admin authority."
-      ]
+      "evidence": "Reconfirmed at Ethereum block 25294993: owner() still returns 0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002. Reconfirmed at BSC block 103627450: owner() same Safe. Safe global API (eth) returned threshold 4, 6 owners, no modules, zero guard. BSC RPC getOwners() returned 6 owners; storage slot 4 returned threshold 4. Both chains verified consistent.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

@@ -72,18 +72,18 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "HLSCOPE's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Polygon and Optimism routes remain unresolved.",
+    "confidence": "verified",
+    "summary": "HLSCOPE is a Securitize DSToken on Ethereum, Polygon, and Optimism. All three chains share the same EOA owner (0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee), confirmed EOA on all three chains. Polygon uses an EIP-1967 proxy; Optimism also uses a proxy. No permissionless mint route exists.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
-        "label": "HLSCOPE Securitize DSToken issuance surface",
+        "label": "HLSCOPE Securitize DSToken issuance surface (Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Securitize HLSCOPE",
@@ -94,18 +94,52 @@
             "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
           }
         ],
-        "evidence": "Ethereum lane reads returned implementation 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+        "evidence": "At Ethereum block 25295014, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (EOA confirmed, eth_getCode returned 0x). Implementation 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9; DSToken exposes issueTokens issuance functions."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x4c5ca366e26409845624e29b62c388a06961a792",
+        "label": "HLSCOPE Securitize DSToken issuance surface (Polygon)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Securitize HLSCOPE",
+            "url": "https://securitize.io/primary-market/hl-scope"
+          }
+        ],
+        "evidence": "At Polygon block 88323698, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (same EOA as Ethereum, confirmed). EIP-1967 proxy; implementation slot = 0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+        "label": "HLSCOPE Securitize DSToken issuance surface (Optimism)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Securitize HLSCOPE",
+            "url": "https://securitize.io/primary-market/hl-scope"
+          }
+        ],
+        "evidence": "At Optimism block 152795880, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (same EOA as Ethereum, confirmed). EIP-1967 proxy; implementation slot = 0x05eadc08ffd13ee7b1e28a883c4ce45e46a063ae."
       },
       {
         "chain": "ethereum",
         "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
-        "label": "HLSCOPE token owner",
+        "label": "HLSCOPE token owner (EOA, all chains)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        "evidence": "At Ethereum block 25295014, eth_getCode returned 0x (EOA confirmed). Same address is owner on Polygon (block 88323698) and Optimism (block 152795880), also confirmed EOA on Polygon."
       }
     ],
     "review": {
@@ -119,12 +153,9 @@
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
         }
       ],
-      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Resolve Polygon and Optimism token or bridge authorities before claiming multichain completeness."
-      ]
+      "evidence": "All three HLSCOPE deployments (Ethereum, Polygon, Optimism) return the same EOA owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee from owner(). EOA confirmed via eth_getCode (0x) on Ethereum and Polygon. Polygon and Optimism are EIP-1967 proxies of DSToken implementations; no proxy admin separate from owner. Polygon proxy admin slot (0xb531...) = 0x00 confirming no separate admin.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

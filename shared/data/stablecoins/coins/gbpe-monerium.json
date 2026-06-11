@@ -103,8 +103,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "GBPe is minted and burned through Monerium's licensed EMI issuance flow; the Ethereum token owner/admin path resolves to the same 3/6 Safe as EURE.",
+    "confidence": "verified",
+    "summary": "GBPe is minted via Monerium's licensed EMI flow; the Ethereum token owner is the same 3/6 Safe as EURE (0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f); EIP-1967 proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
     "controls": [
       {
         "label": "Monerium issuer-operated mint authority",
@@ -112,7 +112,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Monerium tokens docs",
@@ -123,7 +123,7 @@
             "url": "https://github.com/monerium/smart-contracts"
           }
         ],
-        "evidence": "Monerium docs list GBPe contracts and describe bank-transfer issuance orders for Monerium e-money."
+        "evidence": "Monerium docs describe bank-transfer issuance orders; GBPe is minted by the Monerium backend after KYC/AML. Issuer-backend model corroborated: on-chain owner is a Monerium-operated 3/6 Safe; no other mint-capable surface exists."
       },
       {
         "chain": "ethereum",
@@ -138,11 +138,20 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.3.0",
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25294994,
           "source": "safe-api"
         },
         "sources": [
@@ -151,7 +160,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
           }
         ],
-        "evidence": "GBPe owner() returned this Safe at Ethereum block 25166603. Safe API returned threshold 3, six owners, no modules, zero guard, and zero moduleGuard."
+        "evidence": "At Ethereum block 25294994: GBPe owner() returned 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f. Safe API confirmed threshold 3, 6 owners (same as EURE Safe), no modules, zero guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (v1.3.0). EIP-1967 proxy admin slot = zero."
       }
     ],
     "review": {
@@ -165,9 +174,9 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
         }
       ],
-      "evidence": "Monerium documentation and Ethereum owner reads identify the issuer mint route and current Ethereum token owner Safe.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25294994: GBPe owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard) — identical Safe to EURE. EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

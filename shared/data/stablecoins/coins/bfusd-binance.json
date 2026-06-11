@@ -101,11 +101,11 @@
         }
       ],
       "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",
       "unresolvedQuestions": [
-        "If Binance later exposes an on-chain BFUSD contract, resolve its owner/minter admin; currently the product is an off-chain exchange ledger."
+        "BFUSD has no on-chain contract in Pharos metadata; the entire mint path is Binance's internal exchange ledger. If Binance later exposes an on-chain token contract, resolve its owner/minter admin at that time."
       ]
     }
   }

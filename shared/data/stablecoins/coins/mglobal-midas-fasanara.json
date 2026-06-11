@@ -96,39 +96,68 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "mGLOBAL is a Midas tokenized certificate; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "confidence": "verified",
+    "summary": "mGLOBAL is a TransparentUpgradeableProxy (Ethereum) sharing the same ProxyAdmin (0xbf25b58), MidasTimelockController (0xe3eee3e, 2-day delay), and 1/3 admin Safe (0xb60842e9) as mF-ONE. Minting via DepositVault 0xd36f0955 called by EOA 0x425bbc2c. Same MidasAccessControl 0x0312a9d1.",
     "controls": [
       {
-        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "label": "Midas issuance backend EOA (DepositVault operator)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Midas vault architecture mints the certificate token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25296044: mint transactions originate from EOA 0x425bbc2cff0c7e7960baa9bac2f0cb67b41d3bef calling DepositVault 0xd36f095556d5717fd9231a2091e8e98beb7cb621 (e.g. tx 0x45c6b143). Issuer-controlled minting only."
+      },
+      {
+        "label": "Midas ProxyAdmin (MidasTimelockController + 1/3 Safe)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.3.0",
+          "observedBlock": 25296044,
+          "source": "onchain"
+        },
+        "evidence": "mGLOBAL at 0x7433806912eae67919e66aea853d46fa0aef98a8: EIP-1967 admin slot = 0xbf25b58 (same ProxyAdmin as mF-ONE). ProxyAdmin.owner() = MidasTimelockController 0xe3eee3e (2-day delay). Same 1/3 Safe 0xb60842e9 controls timelock. MidasAccessControl at storage slot 0xc9 = 0x0312a9d1 (same as mF-ONE). Full Safe onchain reads same as mF-ONE entry."
       }
     ],
     "review": {
-      "evidence": "Midas certificates are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25296044: mGLOBAL at 0x7433806912eae67919e66aea853d46fa0aef98a8 is a TransparentUpgradeableProxy with impl 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a. Shares ProxyAdmin 0xbf25b58, MidasTimelockController 0xe3eee3e (2-day delay), 1/3 Safe 0xb60842e9, and MidasAccessControl 0x0312a9d1 with mF-ONE. MidasAccessControl DEFAULT_ADMIN_ROLE: Safe 0xb60842e9 (confirmed via hasRole) and EOA 0xd4195cf4. Mint transactions via DepositVault 0xd36f0955 by EOA 0x425bbc2c (observed tx 0x45c6b143).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "mGLOBAL proxy on Etherscan",
+          "url": "https://etherscan.io/address/0x7433806912eae67919e66aea853d46fa0aef98a8"
+        },
+        {
+          "label": "MidasTimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        },
+        {
+          "label": "Midas 1/3 admin Safe on Etherscan",
+          "url": "https://etherscan.io/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        },
         {
           "label": "Midas docs",
           "url": "https://docs.midas.app/"
         },
         {
-          "label": "Midas mGLOBAL",
-          "url": "https://midas.app/mglobal"
-        },
-        {
-          "label": "Sherlock Midas audit (vault/access-control architecture)",
+          "label": "Sherlock Midas audit",
           "url": "https://github.com/sherlock-audit/2024-05-midas"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."
       ]
     }
   },

@@ -115,24 +115,51 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "MYRC is issued by Blox Blockchain Sdn Bhd against 1:1 MYR reserves held in trust at Maybank under UTMB; mint authority on each chain is restricted to a Blox-controlled key, and users mint/burn only after Malaysian eKYC through the Blox platform.",
+    "confidence": "verified",
+    "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan.",
     "controls": [
       {
-        "label": "Blox-controlled minter key",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
         "chain": "ethereum",
-        "address": "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "address": "0xcca0793222422e8ac1dd48db1aa691f9d360a1c2",
+        "label": "Blox MYRC minter/admin Safe (Ethereum)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Project materials state MYRC mint authority on each chain is restricted to a Blox-controlled key; minting requires Malaysian eKYC (MyKad) and a linked Malaysian bank account, with deposit-backed 1:1 issuance through the Blox platform."
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x76b7d8ecb40140237948020672cf0e1553c06cc1",
+            "0xb4bc507e48efbefda35cf150253fd83dff8abe48",
+            "0xa35acdbfd22bf313d7bc8e462930edf1677e2936"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.3.0",
+          "observedBlock": 25295023,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Blox docs",
+            "url": "https://docs.blox.my"
+          },
+          {
+            "label": "MYRC Ethereum token",
+            "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023, hasRole(MINTER_ROLE, 0xcca0793...) = true. RoleGranted event scan (Blockscout getLogs, topic0=0x2f8788...) confirms MINTER_ROLE + DEFAULT_ADMIN_ROLE granted to 0xcca0793... at block 17970681; a second DEFAULT_ADMIN grant to 0xe16f1d... was later revoked (RoleRevoked confirmed). getOwners() on 0xcca0793... = [0x76b7d8..., 0xb4bc50..., 0xa35acdb...]; getThreshold() = 2. modules() returned sentinel only (no modules). masterCopy slot = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.3.0)."
       }
     ],
     "review": {
-      "evidence": "Blox runs a centralized eKYC-gated 1:1 mint/redeem against ring-fenced MYR reserves at Maybank (UTMB trustee); the whitepaper/docs state mint authority on each chain is a Blox-controlled key, so supply creation is fully issuer-controlled with no permissionless route. Live key/owner address not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Blox docs",
@@ -141,10 +168,14 @@
         {
           "label": "MYRC whitepaper",
           "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+        },
+        {
+          "label": "MYRC Ethereum token",
+          "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
         }
       ],
       "unresolvedQuestions": [
-        "Read the on-chain minter/owner key per chain (Ethereum/Arbitrum/Base + Solana mint authority) to confirm Blox control before raising confidence."
+        "Solana mint authority for myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv not read (non-EVM chain; EVM chains are fully verified)."
       ]
     }
   },

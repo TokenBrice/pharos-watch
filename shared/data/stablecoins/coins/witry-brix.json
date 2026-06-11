@@ -91,32 +91,84 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY; the underlying iTRY is mint/redeem-permissioned to institutional participants on a primary market against a BVI-regulated TRY money-market fund, and Brix mints fresh iTRY via NAV-driven supply expansion that flows into the wiTRY staking contract.",
+    "confidence": "verified",
+    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. The wiTRY wrapper owner and the underlying iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3-of-5 threshold, no modules, no guard) sharing the same 5 signers, confirming issuer-controlled mint authority.",
     "controls": [
       {
-        "label": "Brix issuer (institutional primary iTRY mint / NAV supply expansion)",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "label": "wiTRY staking wrapper owner (Brix Safe 3/5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
         "chain": "ethereum",
+        "address": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": "unknown",
-        "evidence": "Brix docs/coverage state institutional participants mint/redeem iTRY on the primary market while retail trades permissionlessly; the protocol mints additional iTRY proportional to money-market fund NAV growth and routes it into the wiTRY staking contract."
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
+            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
+            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
+            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
+            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.3.0 L2",
+          "observedBlock": 25295016,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Brix wiTRY",
+            "url": "https://brix.money/itry"
+          }
+        ],
+        "evidence": "At Ethereum block 25295016: owner() on wiTRY (0xe346c29b5b60ef870b9724c57ccfbbc631e47dee) returned 0x7ac3bb10225a4ef27134bcf54454d545a1738662. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned 5 signers. getThreshold() = 3. getModulesPaginated returned empty array. guard slot = 0x0 (no guard)."
       },
       {
-        "label": "wiTRY staking wrapper (NAV accrual accounting)",
-        "role": "wrapper",
-        "authorityType": "contract",
-        "directMintAbility": "none",
+        "label": "iTRY underlying token owner (Brix Safe 3/5)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
         "chain": "ethereum",
+        "address": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": "unknown",
-        "evidence": "wiTRY shares appreciate against iTRY as vested fund yield is forwarded into the vault; the wrapper performs share accounting and does not itself create discretionary supply."
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
+            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
+            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
+            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
+            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.3.0 L2",
+          "observedBlock": 25295016,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Brix wiTRY",
+            "url": "https://brix.money/itry"
+          }
+        ],
+        "evidence": "At Ethereum block 25295016: iTRY token at 0xb492b4afd9658093694cf9452d5c272e8230f3b0; owner() = 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned same 5 signers as wiTRY owner, threshold = 3. These Safe contracts share the same signer set confirming unified Brix issuer control."
       }
     ],
     "review": {
-      "evidence": "Brix materials describe iTRY as backed 1:1 by a BVI-regulated TRY money-market fund (Zodia custody, Accountable proof-of-solvency, Zellic/Code4rena audits), with institutional-permissioned primary mint/redeem and NAV-driven supply expansion locked into the wiTRY staking wrapper; iTRY is not a separately tracked Pharos coin, so this profile is authored self-contained.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295016: wiTRY wrapper owner and iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3/5, same 5 signers) confirming issuer-controlled architecture. MegaETH OFT adapter (0x15b271d9012b5820fc42b1c495b4c1e206547de5) owner could not be confirmed — MegaETH public RPCs returned errors — but the Ethereum primary chain is fully verified. MegaETH is a bridged deployment; the Ethereum Safe controls the canonical supply.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Brix iTRY",
@@ -125,11 +177,11 @@
         {
           "label": "Brix",
           "url": "https://brix.money/"
+        },
+        {
+          "label": "wiTRY Ethereum token",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
         }
-      ],
-      "sourceFreeRationale": "Institutional-permissioned mint and NAV-accrual wrapper taken from Brix materials and coverage; the on-chain iTRY/wiTRY minter/owner admin and OFT adapter admin were not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain iTRY minter/owner and the wiTRY staking-wrapper and LayerZero OFT adapter admins across Ethereum and MegaETH."
       ]
     }
   },

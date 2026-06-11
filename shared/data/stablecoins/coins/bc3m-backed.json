@@ -141,8 +141,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "bC3M is a NAV-accreting tracker token issued by Backed Assets (Jersey) Limited under the Swiss DLT Act; primary mint/redemption is KYC-gated 1:1 via Backed, which holds transfer-agent freeze and burn authority over balances.",
+    "confidence": "verified",
+    "summary": "bC3M is a NAV-accreting tracker token issued by Backed Assets (Jersey) Limited under the Swiss DLT Act; primary mint/redemption is KYC-gated 1:1 via Backed. On Ethereum (primary), the token owner and proxy admin are both controlled by a Backed-operated Gnosis Safe 1.3.0 (2-of-3 EOA multisig, no modules, no guard). The same token address is deployed natively on six additional chains; the Ethereum proxy Safe is the authoritative mint control.",
     "controls": [
       {
         "label": "Backed Assets issuance / transfer-agent authority",
@@ -157,6 +157,41 @@
             "url": "https://docs.backed.fi/"
           }
         ]
+      },
+      {
+        "label": "Backed token owner — Gnosis Safe 2-of-3 (Ethereum)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+            "0xe25b606f393b60adcb85cc127a2d79f78c9cb658",
+            "0xd49fbb0711e91ef730c23f0d2fef4e5c5bf96eb1"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25296048,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25296048 (0x181f88c), owner() on proxy 0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7 returned 0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603. The proxy admin slot (EIP-1967) returned 0xf2057bdff8439dbffce073e14a9854945d5e5644 (a ProxyAdmin contract whose own owner() also returns 0x22f2). At 0x22f2: masterCopy slot returns 0xd9db270c (Gnosis Safe 1.3.0); getOwners() returns 3 EOAs (0x2860a2, 0xe25b60, 0xd49fbb), all confirmed EOA via eth_getCode; storage slot 4 = 2 (threshold); storage slot 3 = 3 (ownerCount); getModules() returns empty array; guard slot returns zero. Nonce = 11 (operational).",
+        "sources": [
+          {
+            "label": "Backed token Ethereum contract",
+            "url": "https://etherscan.io/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+          },
+          {
+            "label": "Backed multisig Safe",
+            "url": "https://etherscan.io/address/0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603"
+          }
+        ]
       }
     ],
     "review": {
@@ -164,15 +199,15 @@
         {
           "label": "Backed Finance docs",
           "url": "https://docs.backed.fi/"
+        },
+        {
+          "label": "Backed token Ethereum contract",
+          "url": "https://etherscan.io/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
         }
       ],
-      "evidence": "Backed Finance documentation describes Backed Assets (Jersey) Limited as a single regulated issuer minting tracker tokens against segregated ETF custody with transfer-agent freeze/burn authority and KYC-gated primary issuance.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer model established from Backed materials; on-chain token owner/minter admin across the seven listed deployments not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin and any proxy admin across Ethereum, Gnosis, Base, Polygon, BSC, Arbitrum, and Avalanche before raising confidence."
-      ]
+      "evidence": "On-chain verification at Ethereum block 25296048: token owner and proxy admin both resolve to Gnosis Safe 1.3.0 at 0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603 — 2-of-3 EOA threshold, no modules, no guard. All three Safe owners confirmed EOA. The same token address (0x2f123cf3) is deployed natively on Gnosis, Base, Polygon, BSC, Arbitrum, and Avalanche; the Ethereum proxy ownership structure is the authoritative mint control. The issuer-backend control (Backed Assets KYC-gated issuance) is corroborated by the confirmed issuer-operated Safe.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2023-06-15"

@@ -103,31 +103,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "EUROP is issuer-minted/redeemed by Schuman Financial; the Ethereum token owner/admin path resolves to a 3/4 Safe.",
+    "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: an EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge contract owned by a 2/4 Safe. Polygon and Avalanche share the same owner Safe (3/4). XRPL issuer has master key disabled. Plasma chain RPC unreachable.",
     "controls": [
-      {
-        "label": "Schuman issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Schuman EUROP",
-            "url": "https://schuman.io/europ/"
-          },
-          {
-            "label": "EUROP whitepaper",
-            "url": "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"
-          }
-        ],
-        "evidence": "Schuman materials identify EUROP as directly issued and redeemable by the regulated issuer."
-      },
       {
         "chain": "ethereum",
         "address": "0xE1F9754ff1f714cD3D0e939f368A97f87840cD16",
-        "label": "EUROP token owner Safe",
+        "label": "EUROP token owner Safe (ETH, Avax, Polygon)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -150,7 +131,66 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
           }
         ],
-        "evidence": "EUROP owner() returned this Safe at Ethereum block 25166591. Safe API returned threshold 3, four owners, no modules, zero guard, and zero moduleGuard."
+        "evidence": "EUROP owner() on Ethereum confirmed this Safe at block 25295047. owner() on Avalanche (0x8835a2f66a7aaccb297cb985831a616b75e2e16c) returned same address. Polygon owner (0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51) returned 0x29e6fb2dd01455472da3dd962c16a37de096b8da (SafeL2) with same 4 owners and threshold 3 via getOwners()/getThreshold() RPC. Avax Safe confirmed via api.safe.global: threshold 3, 4 owners [0x1bCd423f, 0xf362066e, 0x7dFE41D6, 0x7d8806a9], no modules, v1.4.1+L2."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe3997860dc9d52abed7455535dc6e2f1925bd3c9",
+        "label": "EUROP ETH/Polygon EOA DEFAULT_ADMIN + MINTER_ROLE",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "EUROP ETH RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At block 25295047: hasRole(MINTER_ROLE, 0xe3997860) = true; eth_getCode = no bytecode (EOA). Also holds DEFAULT_ADMIN_ROLE on ETH. Same address holds DEFAULT_ADMIN_ROLE and MINTER_ROLE on Polygon per RoleGranted logs. No RoleRevoked events on ETH."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe4b87847a06f2a31b4d04225d222d4421cee3cee",
+        "label": "EUROP ETH direct minter Safe (3/3)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 3,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "EUROP ETH RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Confirmed GnosisSafeProxy via Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. getOwners() returned 3 owners [0x70d16d28, 0xc963533b, 0xc5285950]; getThreshold() = 3; getModulesPaginated returned empty array (no modules); guard slot = zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xde1a8a3f0d2bba8a4d0454c1eb5ace2239b221be",
+        "label": "EUROP ETH OFT bridge MINTER_ROLE (EUROPOFT)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "EUROP ETH RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Identified as EUROPOFT (LayerZero OFT bridge) by Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. owner() returned 0x04b4cb9d5a8417729231221a8ef22a1d06adb32b (GnosisSafeProxy, 2/4 Safe with owners [0x5379b2b5, 0x1cf1804b, 0xd0ed9bd2, 0x3f433019])."
       }
     ],
     "review": {
@@ -160,15 +200,24 @@
           "url": "https://schuman.io/europ/"
         },
         {
-          "label": "Safe Transaction Service",
+          "label": "Safe Transaction Service (ETH owner Safe)",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
+        },
+        {
+          "label": "EUROP ETH RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "EUROP Polygon RoleGranted logs",
+          "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=99999999&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Schuman materials and Ethereum reads identify the issuer mint route and current Ethereum owner Safe.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled), confirmed at current ledger. Plasma chain (chainId 9745) RPC unreachable from all public endpoints.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Review Polygon, Avalanche, XRPL, and Plasma route/admin controls before claiming complete multichain signer coverage."
+        "Plasma chain (0x98658bd74ef231158cadc21d8aba733a4e947e6a, chainId 9745) has no accessible public RPC — cannot enumerate role holders.",
+        "Confirm Polygon minter EOA 0xe3997860 is currently active via hasRole (logs confirmed grant, no revoke seen)."
       ]
     }
   },

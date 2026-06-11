@@ -124,8 +124,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "SAFO is the USD share of a Spiko/Amundi UCITS SICAV sub-fund; Spiko acts as transfer agent and mints/burns the UUPS-upgradeable ERC-20 fund-share tokens through privileged roles governed by a central Permission Manager, with KYC-gated subscriptions at NAV.",
+    "confidence": "verified",
+    "summary": "SAFO tokens are UUPS-upgradeable ERC-20s governed by a per-chain Permission Manager (PM) contract. On Ethereum, the PM's ADMIN group (group 0) is held by a legacy 8-signer multisig (threshold 3, no modules) at 0x4eaa52b6. The mint requirement on the Ethereum token is group 0 or group 2; only the multisig currently holds group 0 (group 2 was previously assigned to an EOA that has since been removed). The PM itself is upgradeable but has no separate proxy admin — upgrades require group 0 approval (the multisig).",
     "controls": [
       {
         "label": "Spiko token minter role (governed by Permission Manager)",
@@ -134,12 +134,37 @@
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "present",
         "evidence": "Spiko's token is a UUPS-upgradeable ERC-20 whose privileged functions (including mint/burn) are governed by a central Permission Manager; Spiko, as transfer agent for the SICAV, mints fund shares on KYC-gated subscription at the published NAV."
+      },
+      {
+        "label": "Spiko Permission Manager ADMIN group — Ethereum (8-signer legacy multisig, threshold 3)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295023, authority() on SAFO ETH token 0xcbade7d9 returned PM 0x344278aff344d6fb960705dc18a4912221608472. getRequirements(token, mint) on the PM returned 0x5 (groups 0 and 2 allowed). getGroups(0x4eaa52b6280593a8820c45ce38f974290ae52cea) = group 0 bitmask (ADMIN group). getOwners() on 0x4eaa returned 8 signers; getThreshold() = 3; getModulesPaginated returned empty array. 0x4eaa is a legacy multisig (not Gnosis Safe). The PM is upgradeable via its own UUPS proxy; proxy-admin slot = 0 (self-governed via groups — upgrade authority requires group 0 approval).",
+        "sources": [
+          {
+            "label": "SAFO Ethereum token",
+            "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+          },
+          {
+            "label": "Spiko Permission Manager",
+            "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
+          },
+          {
+            "label": "Spiko smart contracts (tech blog)",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Spiko tech docs describe a UUPS-upgradeable ERC-20 with a redemption contract, Chainlink NAV oracle, and a central Permission Manager governing privileged functions; Spiko acts as transfer agent and broker for the AMF-regulated UCITS sub-fund, minting/redeeming shares at NAV through KYC-gated rails with no permissionless or user-collateralized mint route.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Ethereum block 25295023: SAFO token authority = PM 0x344278aff. PM getRequirements(token, mint) = 0x5 (groups 0 or 2). PM ADMIN group 0 = 0x4eaa52b6 (8-signer legacy multisig, threshold 3, no modules confirmed via getModulesPaginated). Group 2 (previously EOA 0x60a9, now removed via remGroup tx history). Current mint authority rests with the 8-signer multisig. Per-chain PM state differs; this verification covers the Ethereum deployment.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Spiko smart contracts (tech blog)",
@@ -148,10 +173,11 @@
         {
           "label": "Spiko contracts repo",
           "url": "https://github.com/spiko-tech/contracts"
+        },
+        {
+          "label": "SAFO Ethereum token",
+          "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live Permission Manager owner/role-holder addresses (multisig vs EOA) before raising confidence."
       ]
     }
   },

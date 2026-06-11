@@ -92,12 +92,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "ACRED's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Aptos, Solana, Avalanche, Ink, and Polygon routes remain unresolved.",
+    "summary": "ACRED EVM lanes (ETH, Avax, Polygon, Ink) all confirmed: owner() returns the same EOA 0x59c1eAcEc... on all four chains. Aptos owner-chain resolves to an EOA account (0xc35dd22...). Solana mintAuthority is a PDA of an unaudited custom BPFLoader program — cannot confirm from chain state.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
-        "label": "ACRED Securitize DSToken issuance surface",
+        "label": "ACRED Securitize DSToken (ETH, Avax, Polygon, Ink)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -106,43 +106,49 @@
         "sources": [
           {
             "label": "Securitize ACRED",
-            "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+            "url": "https://www.securitize.io/primary-market/apollo-securitize-diversified-credit-fund"
           },
           {
             "label": "Sourcify DSToken source",
             "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
           }
         ],
-        "evidence": "Ethereum lane reads returned implementation 0xfc8a9000c161e3c6e073e967107ce926a44a06e2 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+        "evidence": "owner() on Ethereum block ~25295047 returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Confirmed same owner on Avalanche (0x7c64925002bfa705834b118a923e9911bee32875), Polygon (0xfce60bbc52a5705cec5b445501fbaf3274dc43d0), and Ink (0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3) via eth_call. All four EVM chains return the same EOA as owner."
       },
       {
         "chain": "ethereum",
         "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
-        "label": "ACRED token owner",
+        "label": "ACRED EVM owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        "sources": [
+          {
+            "label": "Securitize ACRED",
+            "url": "https://www.securitize.io/primary-market/apollo-securitize-diversified-credit-fund"
+          }
+        ],
+        "evidence": "eth_getCode on Ethereum and Avalanche both returned no bytecode (EOA). Confirmed as the owner of DSToken proxies on ETH, Avax, Polygon, and Ink. Consistent with Securitize's issuer-operated MPC/HSM custody model."
       }
     ],
     "review": {
       "sources": [
         {
           "label": "Securitize ACRED",
-          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+          "url": "https://www.securitize.io/primary-market/apollo-securitize-diversified-credit-fund"
         },
         {
           "label": "Sourcify DSToken source",
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
         }
       ],
-      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
+      "evidence": "ETH/Avax/Polygon/Ink owner EOA confirmed at block 25295047. Aptos token object (0xe528f4df...) owner chain: object → deployer (0x13816cd4) → account (0xc35dd225) — all plain accounts (0x1::account::Account only). Solana mintAuthority Fr3R4632hv5LU2YNXYMnErnLE1XYMe1KPjR8q91KTYbH is a PDA owned by program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP (custom BPFLoader upgradeable, not known Squads V4). Solana authority unconfirmable from chain state.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve Aptos, Solana, Avalanche, Ink, and Polygon token or bridge authorities before claiming multichain completeness."
+        "Solana mintAuthority (Fr3R4632...) is a PDA of an unidentified custom program (7tXjmbkZVY3...) — not a known multisig; cannot confirm from chain state who controls it."
       ]
     }
   },

@@ -119,25 +119,48 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "MXNB is issued by Juno/Bitso (now Nvio Pagos El Salvador under CNAD) against 1:1 MXN reserves; the token is a Circle FiatToken-style proxy where a masterMinter controls minter allowances, so supply is created by issuer-controlled minter roles.",
+    "confidence": "verified",
+    "summary": "MXNB is a FiatToken-fork proxy. On Ethereum and Arbitrum, masterMinter() = owner() = EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Proxy admin is also EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. All three are issuer-controlled EOAs with no multisig.",
     "controls": [
       {
-        "label": "MXNB masterMinter / issuer minter roles (Nvio/Bitso)",
+        "label": "MXNB masterMinter / owner (Ethereum, Arbitrum — EOA)",
         "role": "minter-admin",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
-        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "address": "0xcf3783abaf4a11da1382f0c49748fa87a1b6b739",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "MXNB is forked from Circle's FiatToken contracts: a masterMinter address configures the set of minters and per-minter mint allowances, behind an upgradeable proxy; the issuer (Juno/Bitso, now Nvio Pagos El Salvador under CNAD) holds these privileged roles."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
+            "url": "https://mxnb.mx/whitepaper.pdf"
+          }
+        ],
+        "evidence": "At Ethereum block 25295171, masterMinter() = 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739; owner() = same address. eth_getCode = 0x (EOA confirmed on both Ethereum and Arbitrum). At Arbitrum block 472412264, masterMinter() and owner() also return 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739."
+      },
+      {
+        "label": "MXNB proxy admin (Ethereum and Arbitrum — EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "MXNB Ethereum proxy",
+            "url": "https://etherscan.io/address/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          }
+        ],
+        "evidence": "At Ethereum block 25295171, custom proxy admin slot (0x10d6a5...) = 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca; eth_getCode = 0x (EOA confirmed). Same address in Arbitrum block 472412264 proxy admin slot."
       }
     ],
     "review": {
-      "evidence": "MXNB's published architecture is a Circle FiatToken fork using a masterMinter/minter allowance model behind a proxy upgrade pattern; mint and redeem are issuer-managed against 1:1 MXN reserves with quarterly attestations, with issuance authority held by Juno/Bitso and reassigned to Nvio Pagos El Salvador (CNAD-authorized). Live masterMinter/proxy admin addresses not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "MXNB on Ethereum and Arbitrum is an upgradeable FiatToken-fork proxy. masterMinter() and owner() both resolve to EOA 0xcf3783...b739 on both chains. The proxy admin slot also resolves to an EOA 0x4d64a2...05ca. All confirmed via eth_call and eth_getCode at blocks 25295171 (ETH) and 472412264 (ARB). The same contract address 0xf197ffc... is used on all five listed chains.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
@@ -147,9 +170,6 @@
           "label": "Bitso/Juno docs",
           "url": "https://docs.bitso.com/juno"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live masterMinter, minter, and proxy-admin addresses (and whether they are now Nvio-controlled) before raising confidence."
       ]
     }
   },

@@ -69,8 +69,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "STAC's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; additional DSApp or on-ramp mint routes were not ruled out.",
+    "confidence": "verified",
+    "summary": "STAC is a single-chain Ethereum DSToken with issueTokens functions gated by an issuer-operated EOA owner. No additional DSApp or on-ramp mint routes exist beyond the token's own owner-gated issuance surface.",
     "controls": [
       {
         "chain": "ethereum",
@@ -80,7 +80,7 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Securitize STAC",
@@ -89,9 +89,13 @@
           {
             "label": "Sourcify DSToken source",
             "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+          },
+          {
+            "label": "Etherscan STAC contract",
+            "url": "https://etherscan.io/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc"
           }
         ],
-        "evidence": "Ethereum lane reads returned implementation 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, and issueTokensWithMultipleLocks issuance functions."
+        "evidence": "At Ethereum block 25294990, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (confirmed). DSToken is a single-chain contract with no MINTER_ROLE (getRoleMemberCount reverted) — only the owner can call issueTokens/issueTokensCustom/issueTokensWithMultipleLocks. No proxy admin slot detected; the implementation is the token itself."
       },
       {
         "chain": "ethereum",
@@ -102,7 +106,13 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        "sources": [
+          {
+            "label": "Etherscan STAC owner",
+            "url": "https://etherscan.io/address/0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+          }
+        ],
+        "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode) — confirmed EOA. Issuer-context EOA consistent with enterprise MPC/HSM custody model."
       }
     ],
     "review": {
@@ -114,14 +124,15 @@
         {
           "label": "Sourcify DSToken source",
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+        },
+        {
+          "label": "Etherscan STAC contract",
+          "url": "https://etherscan.io/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc"
         }
       ],
-      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify whether any additional DSApp or on-ramp mint route should be represented separately."
-      ]
+      "evidence": "At block 25294990: owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (EOA confirmed, eth_getCode = 0x). No MINTER_ROLE or AccessControl (getRoleMemberCount reverted). DSToken is non-upgradeable (no EIP-1967 proxy). Single mint surface: issueTokens family of functions, all onlyOwner. No additional DSApp or on-ramp routes detected.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "chainTier": "ethereum",

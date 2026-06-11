@@ -139,8 +139,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDKG is issued by Gold Dollar under a Kyrgyz Republic virtual-asset license; minting and redemption run 1:1 through the issuer (against USD, som, physical gold, or approved crypto) with mandatory KYC/AML, backed by physical LBMA gold bars.",
+    "confidence": "probable",
+    "summary": "USDKG is issued by Gold Dollar under a Kyrgyz Republic virtual-asset license. On Ethereum, the non-upgradeable USDKG token's owner() is a 3-of-7 old-style Gnosis multisig (0xcF355ad32abf378F067fa93a28d96a767FeB7377) with no modules/guards; issue() and redeem() are the mint/burn functions. Tron owner not independently confirmed.",
     "controls": [
       {
         "label": "Gold Dollar issuance backend",
@@ -155,12 +155,34 @@
             "url": "https://www.usdkg.com/transparency"
           }
         ]
+      },
+      {
+        "label": "USDKG Ethereum token owner (3-of-7 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295047 (2026-06-11), owner() on USDKG token (0xe820c06321e60d36257c666643fa5436643445e3) returned 0xcF355ad32abf378F067fa93a28d96a767FeB7377. getOwners() on that contract returned 7 owner addresses; threshold()=3. The contract ABI (Blockscout) confirms type=Multisig with getOwners/getThreshold/isOwner but no modules-related functions. No proxy admin or impl slot (non-upgradeable). The USDKG token exposes issue() and redeem() as the mint/burn functions callable by the owner.",
+        "sources": [
+          {
+            "label": "USDKG token on Etherscan",
+            "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+          },
+          {
+            "label": "USDKG owner multisig on Etherscan",
+            "url": "https://etherscan.io/address/0xcf355ad32abf378f067fa93a28d96a767feb7377"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Gold Dollar is the sole issuer of USDKG under Kyrgyz virtual-asset regulation; mint/redeem is centralized and KYC/AML-gated against physical gold reserves audited by Kreston Global. No permissionless mint path is described.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Gold Dollar is the sole issuer of USDKG under Kyrgyz virtual-asset regulation; mint/redeem is centralized and KYC/AML-gated against physical gold reserves audited by Kreston Global. On Ethereum (block 25295047): owner()=0xcF355ad32abf378F067fa93a28d96a767FeB7377, confirmed as a 3-of-7 old-style Gnosis multisig (no modules/guards detected). Ethereum token is non-upgradeable (no proxy). Tron deployment (TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG) owner not independently confirmed due to Tron API format issues.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "USDKG transparency",
@@ -169,11 +191,14 @@
         {
           "label": "USDKG website",
           "url": "https://www.usdkg.com/"
+        },
+        {
+          "label": "USDKG token on Etherscan",
+          "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
         }
       ],
-      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Gold Dollar materials; the on-chain USDKG token owner/minter admin on Tron and Ethereum was not independently resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain USDKG token owner/minter admin and proxy admin on Tron and Ethereum before raising confidence."
+        "Confirm Tron USDKG (TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG) owner/minter admin address to complete multichain verification."
       ]
     }
   },

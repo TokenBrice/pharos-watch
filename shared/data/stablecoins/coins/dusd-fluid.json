@@ -107,18 +107,30 @@
         "sources": [
           { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" }
         ]
+      },
+      {
+        "label": "TransparentUpgradeableProxy admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Arbitrum block 472412309, EIP-1967 proxy admin slot (0xb531…) of 0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709 returned 0xdeab81c9ff7528de932890058579c0c2341f7223; eth_getCode on that address returned no bytecode (EOA). Implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is deployed but unverified; the token's mint owner could not be read because owner() reverts through the transparent proxy for admin callers and the impl ABI is not published.",
+        "sources": [
+          { "label": "DUSD contract on Arbiscan", "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709" }
+        ]
       }
     ],
     "review": {
-      "evidence": "Fluid Finance SA centrally issues DUSD against off-chain USD reserves; minting is bounded by an issuer-controlled oracle (verifiedOffchainAssetBalance) and redemption burns DUSD on-chain crediting USD to the user's IBAN. No permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Fluid Finance SA centrally issues DUSD against off-chain USD reserves; minting is bounded by an issuer-controlled oracle (verifiedOffchainAssetBalance) and redemption burns DUSD on-chain crediting USD to the user's IBAN. No permissionless or user-collateralized mint route exists. The TransparentUpgradeableProxy admin is EOA 0xdeab81c9ff7528de932890058579c0c2341f7223 (Arbitrum block 472412309). The implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified; the token's internal mint owner/role is not readable from public ABI.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" }
+        { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" },
+        { "label": "DUSD contract on Arbiscan", "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709" }
       ],
-      "sourceFreeRationale": "Issuer/oracle model confirmed from project materials; on-chain proxy admin and oracle-update authority not independently resolved on Arbiscan.",
       "unresolvedQuestions": [
-        "Resolve the on-chain proxy admin / owner of 0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709 and the address authorized to update the reserve-balance oracle before raising confidence."
+        "The implementation contract 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified; the internal mint-capable owner/role address cannot be read. Verify or obtain the ABI to confirm the mint-surface owner before raising confidence."
       ]
     }
   }

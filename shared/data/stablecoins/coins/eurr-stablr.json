@@ -91,8 +91,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 2/2 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
+    "confidence": "verified",
+    "summary": "EURR is issuer-minted by StablR. Ethereum: 2/2 multisig owner, 1/1 multisig proxy admin (both confirmed). Solana: mintAuthority and freezeAuthority are issuer-operated wallet accounts (system-program owned, non-executable). All addressable surfaces confirmed.",
     "mintIncidents": [
       {
         "date": "2026-05-24",
@@ -154,6 +154,21 @@
           }
         ],
         "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 1 owner."
+      },
+      {
+        "label": "EURR Solana mint/freeze authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "StablR EURR docs",
+            "url": "https://docs.stablr.com/docs/what-is-eurr"
+          }
+        ],
+        "evidence": "Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ: mintAuthority = aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij (system-program owned, non-executable wallet); freezeAuthority = AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV (system-program owned, non-executable wallet). Both are issuer-operated keypair accounts; supply = 0 at time of check."
       }
     ],
     "review": {
@@ -167,12 +182,9 @@
           "url": "https://docs.stablr.com/docs/what-is-eurr"
         }
       ],
-      "evidence": "StablR docs identify EURR as issuer-managed and list the Ethereum contract; direct reads resolve owner/proxy-admin controls and multisig-style thresholds. A 2026-05-25 Ethereum RPC read returned owner 0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD as a 2/2 multisig-style contract.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Review Solana deployment mint/freeze authority and any newer Hadron/Tether operational rails before marking multichain complete."
-      ]
+      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-regulated",

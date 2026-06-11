@@ -163,7 +163,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "probable",
-    "summary": "USDGLO (Glo Dollar) is issued by Brale, a FinCEN-registered MSB / state money transmitter; minting and redemption run 1:1 through Brale's centralized backend against cash and US government debt, with reserve yield directed to charity.",
+    "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy (AccessControl, non-enumerable) deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. MINTER_ROLE holders cannot be enumerated on-chain without a full historical event scan.",
     "controls": [
       {
         "label": "Brale issuance backend",
@@ -181,9 +181,7 @@
       }
     ],
     "review": {
-      "evidence": "Brale (FinCEN MSB / money transmitter, NMLS #2376957) is the issuer of USDGLO; mint/redeem is centralized 1:1 through Brale against segregated reserves with monthly CPA attestations. No permissionless mint path is described.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295105 (2026-06-11): USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) is a live ERC1967 UUPS proxy (impl=GloDollarV3 0xf8db…, confirmed on Blockscout). totalSupply=320,357 tokens; paused()=false. GloDollarV3 uses AccessControl (non-enumerable) — getRoleMemberCount/getRoleMember absent from ABI, all enumeration calls revert. RoleGranted and Transfer-from-zero log scans in last 49,000 blocks returned 0 results on ETH, Base, Celo, and Polygon. Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -194,9 +192,10 @@
           "url": "https://www.glodollar.org/articles/smart-contract-addresses"
         }
       ],
-      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Brale/Glo Dollar materials; on-chain token owner/minter admin and proxy admin across chains not independently resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve the on-chain USDGLO token owner/minter admin and proxy admin across deployed chains before raising to verified."
+        "GloDollarV3 uses non-enumerable AccessControl; enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders via a full RoleGranted/RoleRevoked log scan from ETH deployment block ~15,921,266 (or Brale direct disclosure) before raising to verified."
       ]
     }
   },

@@ -96,12 +96,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "SPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+    "summary": "SPKCC Ethereum mint/burn routes through Spiko's PermissionManager (ERC1967Proxy). Mint requires PermissionManager group 0 (ADMIN) or group 2 (daily-operator). Group 2 is a rotating Spiko EOA; group 0 ADMIN holder is not identifiable from on-chain state alone.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
-        "label": "SPKCC token restricted mint/burn",
+        "label": "SPKCC token (UUPS proxy, restricted mint/burn via PermissionManager)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -117,18 +117,24 @@
             "url": "https://docs.spiko.io/"
           }
         ],
-        "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        "evidence": "At Ethereum block 25295096, EIP-1967 impl slot = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 (Token.sol). Token authority() = PermissionManager proxy 0x344278aff. mint() requires restricted() → PermissionManager.canCall(msg.sender, token, mint_selector). getRequirements(token, mint) = groups {0, 2}."
       },
       {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
-        "label": "Spiko authority policy contract",
+        "label": "Spiko PermissionManager (ERC1967Proxy) — shared authority policy",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        "sources": [
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, ERC1967 impl = 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e (PermissionManager). Group structure: group 0 = ADMIN (controls everything), group 2 = daily-operator/minter, group 5 = KYC operator (manages group 6 user allowlist). Group 2 admins = group 0 only. getGroupAdmins(0) = {0} (self-referential). Group 0 holder not determinable from on-chain state."
       }
     ],
     "review": {
@@ -142,11 +148,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
         }
       ],
-      "evidence": "Verified Ethereum implementation source and direct reads show SPKCC mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295096: PermissionManager fully decoded — group 0 (ADMIN) controls mint authorization; group 2 (daily-operator) is the rotating EOA minter; minting at block 23169041 confirmed EOA 0x2B3755 in group 2. Group 0 ADMIN not found via getGroups() queries on known addresses; _permissions mapping not enumerable without brute force. Polygon, Arbitrum, Base, Starknet, Stellar lanes not verified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+        "Identify and verify the PermissionManager group 0 (ADMIN) holder — the entity that controls minter group 2 membership — before promoting to verified.",
         "Resolve Polygon, Arbitrum, Base, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
       ]
     }

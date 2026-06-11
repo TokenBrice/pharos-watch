@@ -58,31 +58,72 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "GLDY is issued by Streamex Ltd (a Cayman open-ended fund) as a gold-backed tokenized security; tokens are minted and credited to accredited/institutional investors only after KYC, subscription signing, and fund settlement, through the issuer's compliance-gated process.",
+    "confidence": "verified",
+    "summary": "GLDY is minted only by the TREASURY_ROLE Safe (2-of-3 multisig), which must satisfy Chainlink PoR reserve backing before minting succeeds. DEFAULT_ADMIN (UUPS upgrade authority) is an issuer EOA. An OPERATOR_ROLE Safe (2-of-3) handles pausing and whitelist management.",
     "controls": [
       {
-        "label": "Streamex Ltd issuance backend (compliance-gated)",
+        "label": "GLDY TREASURY_ROLE Safe (direct minter)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Streamex mints GLDY only after investors complete KYC, sign subscription documents, fund, and the gold purchase settles; mint/redeem is operationally serviced by the issuer (with market makers for instant mint/redeem). Supply is issuer-controlled with no permissionless route."
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x53c54134420051b57736a06df7a7c8c2a6fb9725",
+            "0x4aadf18cd7c5b0627e7b94d08e1dfd30b9c6192c",
+            "0xc8e474f88451daef995fdec755040575cff9ab22"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "unknown",
+          "observedBlock": 47200691,
+          "source": "onchain"
+        },
+        "evidence": "At Base block 47200691, GLDY (0x632db1...) hasRole(TREASURY_ROLE, 0x655f31f9136d54bc319c00dd43009104646b0951) = true. Blockscout confirms 0x655f31... is SafeL2. getOwners() = 3; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules). GLDYTokenERC20.mint() requires TREASURY_ROLE and passes reserve check (reserves >= newSupply via Chainlink PoR).",
+        "sources": [
+          {
+            "label": "GLDY on Basescan",
+            "url": "https://basescan.org/address/0x632db1aaace73401a5dc8cde6e9062b8ec0fd819"
+          },
+          {
+            "label": "GLDYTokenERC20 implementation (Blockscout)",
+            "url": "https://base.blockscout.com/address/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5"
+          }
+        ]
+      },
+      {
+        "label": "GLDY DEFAULT_ADMIN EOA (UUPS upgrade authority)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "evidence": "At Base block 47200691, hasRole(DEFAULT_ADMIN_ROLE, 0x9625c15f7b305680c1690cd41103870e2050028d) = true; eth_getCode = 0x (EOA). DEFAULT_ADMIN controls _authorizeUpgrade() only; role admin for TREASURY_ROLE and OPERATOR_ROLE is also DEFAULT_ADMIN.",
+        "sources": [
+          {
+            "label": "GLDY on Basescan",
+            "url": "https://basescan.org/address/0x632db1aaace73401a5dc8cde6e9062b8ec0fd819"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Streamex launch materials and coverage describe a compliance-gated issuer mint for accredited investors (Cayman open-ended fund, $25k minimum), with Chainlink PoR over physical gold; no permissionless or user-collateralized mint exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Base block 47200691: GLDYProxy (ERC1967, UUPS) → GLDYTokenERC20 implementation. TREASURY_ROLE = 2-of-3 Safe 0x655f31... (SafeL2, no modules); minting gated on reserve check. OPERATOR_ROLE = 2-of-3 Safe 0xe46c4b... (SafeL2, no modules). DEFAULT_ADMIN = EOA 0x9625c1... (controls upgrade only). No permissionless mint. Chainlink PoR enforces 1:1 reserve backing before mint completes.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Streamex GLDY",
           "url": "https://www.streamex.com/GLDY"
+        },
+        {
+          "label": "GLDYTokenERC20 implementation (Blockscout)",
+          "url": "https://base.blockscout.com/address/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5"
         }
-      ],
-      "sourceFreeRationale": "Classification based on the issuer/fund model in launch materials and coverage; the on-chain Base owner/minter admin for GLDY was not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain Base owner/minter admin for GLDY before raising confidence."
       ]
     }
   },

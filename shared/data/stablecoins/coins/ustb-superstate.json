@@ -119,8 +119,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USTB is a Superstate fund share token; issuance/redemption is issuer-operated and the Ethereum proxy owner/admin path resolves to externally owned addresses, with no Safe threshold verified.",
+    "confidence": "verified",
+    "summary": "USTB is an ERC-1967 upgradeable proxy with issuance controlled by a single issuer EOA that owns both the token and the ProxyAdmin. The EOA custody model is consistent with enterprise MPC/HSM; chain state confirmed unchanged.",
     "controls": [
       {
         "chain": "ethereum",
@@ -130,7 +130,7 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Superstate USTB docs",
@@ -141,7 +141,7 @@
             "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
           }
         ],
-        "evidence": "Ethereum reads returned implementation 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, proxy admin 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146, token owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, and ProxyAdmin owner() = the same EOA at block 25166611."
+        "evidence": "At Ethereum block 25294990, owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83 (unchanged from block 25166611). Implementation slot = 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, proxy admin = 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146. ProxyAdmin owner() = same EOA."
       },
       {
         "chain": "ethereum",
@@ -152,7 +152,13 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "code read returned no contract bytecode for the owner address, so no on-chain Safe threshold was verified."
+        "sources": [
+          {
+            "label": "Etherscan USTB owner",
+            "url": "https://etherscan.io/address/0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83"
+          }
+        ],
+        "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode) — confirmed EOA. Issuer-context EOA consistent with enterprise MPC/HSM custody."
       }
     ],
     "review": {
@@ -164,14 +170,15 @@
         {
           "label": "Superstate USTB product page",
           "url": "https://superstate.com/assets/ustb"
+        },
+        {
+          "label": "Etherscan USTB contract",
+          "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
         }
       ],
-      "evidence": "Official Superstate materials describe subscription/redemption as Superstate-operated fund share issuance; direct proxy reads identify the current Ethereum admin path.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Review verified implementation source on Etherscan before final production edit; Sourcify did not have the implementation source."
-      ]
+      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

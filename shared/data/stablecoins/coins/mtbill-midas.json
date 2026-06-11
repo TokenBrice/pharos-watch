@@ -166,23 +166,98 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "mTBILL is Midas's tokenized T-Bill fund; new units are minted only by Midas's permissioned M_TBILL_MINT_OPERATOR_ROLE when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain at the Ankura Trust daily NAV.",
+    "confidence": "verified",
+    "summary": "mTBILL is minted exclusively by the Midas DepositVault (proxy 0x9936…) holding M_TBILL_MINT_OPERATOR_ROLE in the shared MidasAccessControl (0x0312…). DEFAULT_ADMIN_ROLE is held by a 1-of-3 Midas Safe and an EOA. Proxy upgrades require a 2-day MidasTimelockController (0xe3ee…). No permissionless mint route exists.",
     "controls": [
       {
-        "label": "Midas issuance manager (M_TBILL_MINT_OPERATOR_ROLE / DepositVault)",
+        "chain": "ethereum",
+        "label": "mTBILL DepositVault (M_TBILL_MINT_OPERATOR_ROLE)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Audited Midas vault architecture mints mTBILL via the permissioned M_TBILL_MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain at the issuer's daily NAV and the mTBILL/vault contracts are upgradeable with pause/blacklist controls behind MidasAccessControl."
+        "canRaiseCap": false,
+        "address": "0x99361435420711723af805f08187c9e6bf796683",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ethereum DepositVault proxy (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x99361435420711723af805f08187c9e6bf796683"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_TBILL_MINT_OPERATOR_ROLE, 0x9936…) returned true on MidasAccessControl 0x0312…. Implementation: DepositVault (0xC8AF…). This is the only address currently holding this role."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE Safe (1-of-3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295093,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Midas admin Safe (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE=0x0000…, 0xb608…) returned true on MidasAccessControl. getOwners() returned 3 signers; getThreshold() = 1; getModulesPaginated() returned 0 modules; guard slot = 0x0; Safe version 1.4.1."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE, 0xd419…) returned true on MidasAccessControl. eth_getCode returned 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "MidasTimelockController (proxy upgrade guard)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasTimelockController (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          }
+        ],
+        "evidence": "ProxyAdmin (0xbf25…) owner() = 0xe3ee… (MidasTimelockController). getMinDelay() = 172800 s (2 days). Proxy upgrades for all mToken and vault contracts require passing through this timelock."
       }
     ],
     "review": {
-      "evidence": "mTBILL is minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + M_TBILL_MINT_OPERATOR_ROLE), with off-chain NAV pricing and upgradeable proxies; no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "All five Midas mTokens share MidasAccessControl at 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b (TransparentUpgradeableProxy → MidasAccessControl impl 0xDd5a…). At block 25295093: (1) M_TBILL_MINT_OPERATOR_ROLE (keccak256) held only by DepositVault proxy 0x9936…; (2) DEFAULT_ADMIN_ROLE (0x0000…) held by Safe 0xb608… (1-of-3, no modules/guard) and EOA 0xd419…; (3) shared ProxyAdmin 0xbf25… owned by MidasTimelockController 0xe3ee… with 2-day min delay. No permissionless mint route. The EOA co-holding DEFAULT_ADMIN_ROLE is a structural risk but does not prevent verification.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Midas mTBILL docs",
@@ -191,10 +266,11 @@
         {
           "label": "Sherlock Midas audit (DepositVault/RedemptionVault/MidasAccessControl roles)",
           "url": "https://github.com/sherlock-audit/2024-05-midas"
+        },
+        {
+          "label": "MidasAccessControl on Ethereum (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."
       ]
     }
   },

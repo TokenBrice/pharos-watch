@@ -117,35 +117,117 @@
     }
   ],
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "mAPOLLO is a Midas liquid-yield token minted through role-gated DepositVault/RedemptionVault contracts: only addresses with the Midas MINT_OPERATOR role (managed by MidasAccessControl) can mint, deposits/redemptions are greenlist-gated, and the upgradeable contracts use an off-chain NAV conversion rate.",
+    "confidence": "verified",
+    "summary": "mAPOLLO is minted by the MApolloDepositVault proxy (0xc215…) and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE in the shared MidasAccessControl (0x0312…). DEFAULT_ADMIN_ROLE is held by a 1-of-3 Midas Safe and an EOA. Proxy upgrades require a 2-day MidasTimelockController.",
     "controls": [
       {
         "chain": "ethereum",
-        "label": "Midas mint operator (role-gated mint)",
+        "label": "mAPOLLO MApolloDepositVault (M_APOLLO_MINT_OPERATOR_ROLE)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Midas tokens can only be minted/burned by addresses holding the MINT/BURN_OPERATOR role granted through MidasAccessControl; the DepositVault mints mTokens against greenlisted deposits at an off-chain conversion rate, with admin-set mint/redeem limits."
+        "canRaiseCap": false,
+        "address": "0xc21511edd1e6ecdc36e8ad4c82117033e50d5921",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MApolloDepositVault proxy (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xc21511edd1e6ecdc36e8ad4c82117033e50d5921"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_APOLLO_MINT_OPERATOR_ROLE=keccak256('M_APOLLO_MINT_OPERATOR_ROLE')=0x5940…, 0xc215…) returned true on MidasAccessControl 0x0312…. Implementation: MApolloDepositVault (0xD60c…). Confirmed via live mint TX 0xb786…."
       },
       {
-        "label": "Midas DEFAULT_ADMIN_ROLE (MidasAccessControl)",
+        "chain": "ethereum",
+        "label": "mAPOLLO mint operator EOA (M_APOLLO_MINT_OPERATOR_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "address": "0xe10abe1af40afa411190cf776ead838f8d70d9d3",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_APOLLO_MINT_OPERATOR_ROLE, 0xe10a…) returned true; eth_getCode = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE Safe (1-of-3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295093,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Midas admin Safe (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE=0x0000…, 0xb608…) returned true. getOwners() = 3; threshold = 1; 0 modules; guard = 0x0; Safe v1.4.1."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE, 0xd419…) returned true; eth_getCode = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "MidasTimelockController (proxy upgrade guard)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Midas DEFAULT_ADMIN_ROLE grants/revokes the mint/burn/pause/greenlist/blacklist operator roles and can change the price aggregator; Midas docs acknowledge management roles create a centralized, trust-based system over upgradeable contracts."
+        "canRaiseCap": true,
+        "address": "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasTimelockController (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          }
+        ],
+        "evidence": "ProxyAdmin (0xbf25…) owner() = 0xe3ee… (MidasTimelockController). getMinDelay() = 172800 s (2 days)."
       }
     ],
     "review": {
-      "evidence": "Midas smart-contract architecture (audited) uses MidasAccessControl with role-gated MINT_OPERATOR minting via DepositVault, greenlist/blacklist access control, off-chain conversion pricing, and upgradeable contracts; mAPOLLO follows the same Midas mToken pattern. This is a role-gated permissioned mint, refining the issuer-direct-mint lead.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295093: M_APOLLO_MINT_OPERATOR_ROLE (keccak256 = 0x5940…) held by MApolloDepositVault proxy 0xc215… and EOA 0xe10a…; DEFAULT_ADMIN_ROLE held by Safe 0xb608… (1-of-3, no modules) and EOA 0xd419…; shared ProxyAdmin gated by 2-day MidasTimelockController. All five Midas mTokens share the same MidasAccessControl 0x0312….",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Midas smart contracts docs",
@@ -154,11 +236,11 @@
         {
           "label": "Midas mAPOLLO",
           "url": "https://midas.app/mapollo"
+        },
+        {
+          "label": "MidasAccessControl on Ethereum (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         }
-      ],
-      "sourceFreeRationale": "mAPOLLO-specific on-chain MidasAccessControl/DepositVault addresses and the DEFAULT_ADMIN_ROLE holder (EOA/multisig) were not read live in this pass; classification rests on the documented Midas mToken role architecture.",
-      "unresolvedQuestions": [
-        "Resolve the mAPOLLO DepositVault/RedemptionVault and MidasAccessControl addresses and the DEFAULT_ADMIN_ROLE / mint-operator holders on Ethereum, and whether admin is a Safe/multisig."
       ]
     }
   },

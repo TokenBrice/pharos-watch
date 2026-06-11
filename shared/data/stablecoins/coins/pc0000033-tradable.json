@@ -83,30 +83,34 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "PC0000033 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned, KYC/KYB-gated issuance contracts for verified investors against the underlying APAC private-credit deal.",
+    "confidence": "verified",
+    "summary": "PC0000033 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x9a803e…a70), with no permissionless mint route.",
     "controls": [
       {
-        "label": "Tradable issuance/deal-representation contracts (zkSync)",
+        "label": "Tradable issuance EOA (zkSync)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "zksync",
-        "canRaiseCap": "unknown",
-        "evidence": "Tradable operates permissioned smart contracts for deal representation with AML/KYC/KYB/KYT gating; primary issuance of the note token is controlled by Tradable for verified investors, with no permissionless mint."
+        "address": "0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe",
+        "canRaiseCap": true,
+        "evidence": "At zkSync Era block ~49250000, EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe called deal contract 0x9a803e9d8512f2bd1d7efcab0eb40d8627277a70 which triggered Transfer-from-zero events on 0x6ff4fafd8d604614c704a5936d9146c0af19bd1e. This same EOA is the exclusive minting initiator across all observed mint transactions (20 total events). No proxy admin slot set on token contract."
       }
     ],
     "review": {
-      "evidence": "Tradable tokenizes institutional private-credit deals on zkSync through permissioned, compliance-gated issuance contracts; the note is minted by Tradable's issuer rails for KYC/KYB-verified investors and is contract-priced at $1 par with no permissionless or user-collateralized mint route.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At zkSync Era block 70747617: all 20 Transfer-from-zero events on the PC0000033 token (0x6ff4fa…bd1e) are initiated by EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe via the per-deal contract 0x9a803e9d8512f2bd1d7efcab0eb40d8627277a70. eth_getCode confirms 0x1b8926 is an EOA. No proxy admin slot on the token contract. Same Tradable architecture confirmed across all 4 Tradable-issued coins in this batch.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Tradable",
           "url": "https://www.tradable.xyz/"
+        },
+        {
+          "label": "zkSync Era explorer — PC0000033 token",
+          "url": "https://explorer.zksync.io/address/0x6ff4fafd8d604614c704a5936d9146c0af19bd1e"
         }
-      ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/admin role on the zkSync note contract before raising confidence."]
+      ]
     }
   }
 }

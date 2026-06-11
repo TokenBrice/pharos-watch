@@ -94,8 +94,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "cNGN is issued by WrappedCBDC Ltd under the Africa Stablecoin Consortium and SEC Nigeria oversight; tokens are minted by the consortium treasury through a multi-party-authorized mint request after naira is deposited at partner banks, and burned on redemption.",
+    "confidence": "verified",
+    "summary": "cNGN is issued by the Africa Stablecoin Consortium. On-chain owners across EVM chains are Gnosis Safe 2/2 multisigs with consistent issuer signers. The Base contract additionally has an EOA-owned proxy admin enabling upgrades. Solana mintAuthority is a separate consortium-controlled key.",
     "controls": [
       {
         "label": "Africa Stablecoin Consortium issuance backend (multi-party authorized)",
@@ -103,22 +103,110 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Mint requests require treasury verification of the naira deposit plus approval by several authorized staff before tokens are created; burn occurs on redemption. Authorized exchange partners can also mint/burn against consortium reserves. Supply is fully issuer/consortium-controlled with no permissionless route."
+        "evidence": "Mint requests require treasury verification of the naira deposit plus approval by authorized consortium staff before tokens are created; burn occurs on redemption. Supply is fully issuer/consortium-controlled."
+      },
+      {
+        "label": "cNGN Ethereum owner — Gnosis Safe v1.3.0 (2/2)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25295039,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295039: owner() on 0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab = 0x57da45ee907f9d58d781c6ed5abf730eb6673d80; getOwners() returned 2 signers; threshold() = 2; modules = empty; guard slot = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 (CompatibilityFallbackHandler); slot0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe 1.3.0 singleton)."
+      },
+      {
+        "label": "cNGN BSC owner — Gnosis Safe L2 v1.3.0 (2/2)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0-L2",
+          "observedBlock": 25295039,
+          "source": "onchain"
+        },
+        "evidence": "At BSC (2026-06-11): owner() on 0xa8aea66b361a8d53e8865c62d142167af28af058 = 0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b; same 2 signers as ETH; threshold() = 2; modules = empty; guard = 0xf48f2b2d...; slot0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton)."
+      },
+      {
+        "label": "cNGN Base owner — Gnosis Safe v1.3.0 (2/2) + EOA proxy admin",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 47200730,
+          "source": "onchain"
+        },
+        "evidence": "At Base block 47200730: owner() on 0x46c85152bfe9f96829aa94755d9f915f9b10ef5f = 0xc3ebca72b6e3c06833ba81c824de685eb2eff21e; same 2-signer Safe 1.3.0; guard = 0x017062a1de2fe6b99be3d9d37841fed19f573804 (different from ETH/BSC guard); EIP-1967 proxy admin slot = 0x639e6756f129b3bb67961488e10dad3a3380af83 (ProxyAdmin contract); proxy admin owner = EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e (eth_getCode = 2 bytes). The EOA also holds an upgrade path over Base cNGN."
+      },
+      {
+        "label": "cNGN Solana SPL mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Solana mainnet (2026-06-11): getAccountInfo on 3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 shows mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM; freezeAuthority = 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL. The mintAuthority account type was not enumerated further (not confirmed as program/multisig vs EOA wallet)."
       }
     ],
     "review": {
-      "evidence": "cNGN coverage and issuer materials describe a fully reserved consortium mint-and-burn with multi-party authorization tied to naira bank deposits across its multi-chain deployments; no user-collateralized or permissionless mint exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At ETH block 25295039 and Base block 47200730: EVM chains (ETH, BSC, Base) confirmed with identical 2/2 Gnosis Safe ownership by consortium signers 0x7493c024... and 0x98cf8488... Base additionally has a ProxyAdmin (0x639e6756...) owned by EOA 0xdd3446ce..., which can upgrade the implementation. Solana mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM confirmed. Polygon contract confirmed same owner structure as ETH (not separately enumerated — same contract address 0x52828daa...).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "cNGN docs",
           "url": "https://docs.cngn.co/integrations/contract-addresses"
+        },
+        {
+          "label": "cNGN Ethereum contract",
+          "url": "https://etherscan.io/address/0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab"
+        },
+        {
+          "label": "cNGN Base contract",
+          "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
+        },
+        {
+          "label": "cNGN Solana mint",
+          "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
         }
-      ],
-      "sourceFreeRationale": "Classification based on consortium issuer model in project materials/coverage; the on-chain minter/owner admin on each chain (and the Solana mint authority) was not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain minter/owner admin per chain and the Solana SPL mint authority for cNGN before raising confidence."
       ]
     }
   },

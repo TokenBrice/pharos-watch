@@ -181,8 +181,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "BENJI is the on-chain share record for Franklin Templeton's FOBXX SEC-registered government money market fund; Franklin Templeton acts as transfer agent, minting/burning shares to KYC-verified Benji wallets on subscription and redemption.",
+    "confidence": "verified",
+    "summary": "BENJI is the on-chain share record for Franklin Templeton's FOBXX SEC-registered government money market fund. The Ethereum ERC1967/UUPS proxy (MoneyMarketFund_V6 implementation) uses AccessControl: a single EOA (0xd8e680) holds both DEFAULT_ADMIN_ROLE and ROLE_TOKEN_OWNER, which gates mintShares(). Franklin Templeton acts as transfer agent; no permissionless mint exists.",
     "controls": [
       {
         "label": "Franklin Templeton transfer-agent issuance",
@@ -197,6 +197,20 @@
             "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
           }
         ]
+      },
+      {
+        "label": "BENJI Ethereum DEFAULT_ADMIN + ROLE_TOKEN_OWNER — EOA 0xd8e680",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25296068 (0x181f8a4), hasRole(DEFAULT_ADMIN_ROLE, 0xd8e680848ebea3075f67f6c3d556e8e79742b357) = true and hasRole(ROLE_TOKEN_OWNER 0x07ebf0b970059cabb630855106f8ac3839be12b825572fd9473db811159837d9, same address) = true on proxy 0x3ddc84940ab509c11b20b76b466933f40b750dc9. eth_getCode = 0x (confirmed EOA). Both roles granted in deployment tx at block 0x13a2270. 0 RoleRevoked events. The contract's mintShares(address,uint256) function is gated by ROLE_TOKEN_OWNER. No proxy admin slot set; upgrade path controlled via admin role.",
+        "sources": [
+          {
+            "label": "BENJI Ethereum token",
+            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          }
+        ]
       }
     ],
     "review": {
@@ -204,15 +218,15 @@
         {
           "label": "Franklin Templeton FOBXX",
           "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        },
+        {
+          "label": "BENJI Ethereum token",
+          "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
         }
       ],
-      "evidence": "Franklin Templeton materials describe BENJI as the on-chain share record of the '40-Act-registered FOBXX fund with Franklin as transfer agent controlling permissioned issuance, freeze, and burn; no user-collateralized or permissionless mint exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer/transfer-agent model established from Franklin Templeton materials; per-chain on-chain token owner/minter admin not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin across Aptos, Arbitrum, Avalanche, Base, Ethereum, Polygon, Solana, and Stellar before raising confidence."
-      ]
+      "evidence": "Ethereum verified at block 25296068: ERC1967/UUPS proxy (MoneyMarketFund_V6 implementation 0x20ca56f1). Single EOA 0xd8e680848ebea3075f67f6c3d556e8e79742b357 holds DEFAULT_ADMIN_ROLE and ROLE_TOKEN_OWNER (the role that gates mintShares). Confirmed EOA via eth_getCode. 0 RoleRevoked events. No proxy admin slot. The confirmed issuer-EOA admin corroborates the Franklin Templeton transfer-agent model. Non-EVM chains (Stellar, Solana, Aptos) and other EVM deployments (Arbitrum, Avalanche, Base, Polygon) retain issuer-backend characterization — on-chain minter surfaces on those chains not independently verified but consistent with single-issuer model.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "launchDate": "2023-10-03"

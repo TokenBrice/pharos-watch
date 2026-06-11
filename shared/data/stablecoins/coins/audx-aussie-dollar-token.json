@@ -130,15 +130,39 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "evidence": "Issuer-managed mint/redeem: TAU Pty Ltd creates AUDX supply against custodied AUD reserves targeting 1 AUDX = 1 AUD; no permissionless or user-collateralized mint route is described."
+      },
+      {
+        "label": "AUDX DEFAULT_ADMIN + MINTER_ROLE (Ethereum + Polygon)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address. Two mint() calls executed from this address on Ethereum.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDX contract",
+            "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "Polygon Blockscout AUDX contract",
+            "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves; transparency disclosure is limited but the model is a centralized fiat issuer.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins on Ethereum, Polygon, and Conflux not independently resolved, and issuer transparency is limited.",
+      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Ethereum and Polygon chains confirmed: a single EOA (0xc9d8...3e28) holds DEFAULT_ADMIN + MINTER_ROLE + all other roles on the AussieDollarToken UUPS proxy — verified via hasRole at blocks 25295029/88323844. XDC uses same contract address as Ethereum.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDX contract",
+          "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin on Ethereum, Polygon, and Conflux before raising confidence."
+        "Conflux (0x47a365e29697c700c75d58936b3d93a8a20a43c9) and XDC (0xd687...e00c same address) mint authority not directly confirmed via RPC; XDC has no public node in standard list."
       ]
     }
   },

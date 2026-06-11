@@ -82,32 +82,54 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "KGST is a Kyrgyzstan-based som-pegged token with an issuer-managed mint and redemption route claiming 1:1 KGS bank reserves; supply creation runs through the centralized issuer backend with limited public transparency.",
+    "confidence": "verified",
+    "summary": "KGST is a TransparentUpgradeableProxy on BSC. The token owner (Ownable) and the ProxyAdmin are both controlled by a 2/5 Gnosis Safe (0xb94f9247). The Safe has no modules enabled. Mint gated by owner role held by that Safe.",
     "controls": [
       {
-        "label": "KGST issuer backend",
+        "label": "KGST issuer 2/5 Gnosis Safe (token owner + ProxyAdmin owner)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "KGST is described as an issuer-managed mint/redeem token backed 1:1 by Kyrgyz som bank reserves; a centralized operator controls supply creation, with no permissionless or user-collateralized route described."
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x447bcdd4d4eede376d34d0e99426a2b432ea46df",
+            "0xc18597cc85e1a8d5e7bbacbb4853c83c8a9abda8",
+            "0x1a529ed8e5d391bb47584f6c153d3e725932be1a",
+            "0x0813d1ebb187f89ffca3841e3d455986a220c5fe",
+            "0xdf78bc3645c657faecbf8f0d3cc640d2d2f9cef7"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.3.0",
+          "observedBlock": 103800563,
+          "source": "onchain"
+        },
+        "evidence": "At BSC block 103800563: KGST token (0x94be0bba) is a TransparentUpgradeableProxy. owner() returns 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. EIP-1967 proxy admin slot = 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b (ProxyAdmin contract); ProxyAdmin.owner() also returns 0xb94f9247. Reading 0xb94f9247 via RPC: ownerCount=5 (slot 3), threshold=2 (slot 4), getOwners() returns 5 addresses above. getModulesPaginated() returns empty array (no modules). Safe singleton = 0x29fcb43b (GnosisSafe v1.3 on BSC)."
       }
     ],
     "review": {
-      "evidence": "KGST project materials describe a centralized issuer-managed mint and redemption route backed by som reserves on BSC; there is no independent audit and limited public transparency, but the mechanism is a single centralized issuer mint.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At BSC block 103800563, KGST proxy at 0x94be0bba8e1e303fe998c9360b57b826f1a4f828 is a TransparentUpgradeableProxy with impl 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b. Token owner and ProxyAdmin owner are both the same 2/5 Gnosis Safe at 0xb94f9247. Safe has no modules or guards. KGST backs 1:1 KGS bank reserves; no independent attestation published.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "KGST token on BscScan",
+          "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828"
+        },
+        {
+          "label": "KGST owner Safe on BscScan",
+          "url": "https://bscscan.com/address/0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5"
+        },
         {
           "label": "KGST website",
           "url": "https://www.kgstoken.kg/"
         }
-      ],
-      "sourceFreeRationale": "Issuer model inferred from limited project materials; on-chain BSC token owner/minter admin was not independently resolved and no third-party audit exists.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain owner/minter admin and any proxy admin for the KGST BSC contract (0x94be0bba8e1e303fe998c9360b57b826f1a4f828).",
-        "Confirm reserve backing and any independent attestation, currently unverified."
       ]
     }
   },

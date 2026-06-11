@@ -123,12 +123,21 @@
       }
     ],
     "review": {
-      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. No permissionless mint path is described in project materials.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Classification based on the Anzens issuer model in project materials; the Cardano native-asset minting policy controller and any policy keys were not independently resolved on-chain.",
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Anzens USDA homepage",
+          "url": "https://www.anzens.com/"
+        },
+        {
+          "label": "Koios policy_asset_list for USDA policy",
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the Cardano minting-policy controller / policy keys for USDA before raising confidence."
+        "Cardano PlutusV2 minting policy confirmed (policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456). The controlling signing key(s) are embedded as script parameters in the PlutusV2 bytecode and cannot be read from Koios/chain-state APIs without full script parameter decoding. Decode the script parameters or obtain Anzens' published policy key documentation to confirm authorityType and raise confidence."
       ]
     }
   },

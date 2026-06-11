@@ -156,30 +156,55 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "RUSD is RIB / Royal Coins' centralized dollar stablecoin (Hong Kong, same issuer as REUR); mint and redemption run through the issuer's backend for approved users against issuer-managed cash and short-term liquid reserves.",
+    "confidence": "verified",
+    "summary": "RUSD is issued by RIB / Royal Coins (Hong Kong) via non-upgradeable token contracts. On Ethereum and BSC the MASTERMINTER and DEFAULT_ADMIN is EOA 0xc50ebe57 (same issuer EOA as REUR); on Tron the MASTERMINTER is a separate EOA (0x9a0c5f3a in EVM notation, same Tron EOA as REUR).",
     "controls": [
       {
-        "label": "RIB / Royal Coins issuance backend",
+        "label": "RIB Digital issuance EOA — Ethereum and BSC (MASTERMINTER + DEFAULT_ADMIN)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "RIB/Royal Coins operates a centralized 1:1 mint/redeem for approved users against issuer-managed fiat and short-term liquid reserves; a single issuer controls supply creation."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295037, owner() on 0x44bb433d29fe966992a9c812da7f252c9c53f285 returned 0xc50ebe57ae937a8ac0bcaab8945777c3be54a511; eth_getCode = 0x (EOA). hasRole(DEFAULT_ADMIN_ROLE, 0xc50ebe57) = true; hasRole(MASTERMINTER_ROLE, 0xc50ebe57) = true. Contract is not upgradeable (no proxy-admin or impl slots). BSC: same address and same owner confirmed at BSC block 103629529.",
+        "sources": [
+          {
+            "label": "RUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+          }
+        ]
+      },
+      {
+        "label": "RIB Digital issuance EOA — Tron (MASTERMINTER + DEFAULT_ADMIN)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "On Tron, owner() on TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1 (EVM 0xcff568886f655cf6) returned 0x9a0c5f3a73fafb8bd7e7c4c8295cdd8daa87f692; eth_getCode via Tron JSONRPC = 0x (EOA). hasRole(MASTERMINTER_ROLE, 0x9a0c5f3a) = true. Same Tron EOA as REUR Tron.",
+        "sources": [
+          {
+            "label": "RUSD Tron token",
+            "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "RUSD whitepaper/Royal Coins materials describe a centralized 1:1 dollar token with issuer-managed mint and redemption for approved users against issuer-held cash and liquid reserves; the same issuer (RIB Digital Holdings) operates REUR, and no permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable. BSC block 103629529: same owner confirmed. Tron (TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains. Same issuer as REUR.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "RUSD whitepaper",
           "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+        },
+        {
+          "label": "RUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+        },
+        {
+          "label": "RUSD Tron token",
+          "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron RUSD contracts before raising confidence."
       ]
     }
   },

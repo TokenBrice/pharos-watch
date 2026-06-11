@@ -89,8 +89,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+    "confidence": "verified",
+    "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
     "controls": [
       {
         "chain": "ethereum",
@@ -112,7 +112,7 @@
             "url": "https://www.matrixdock.com/xaum"
           }
         ],
-        "evidence": "Ethereum reads returned implementation 0x3194e478b6d3ebee969470295f271727b62adf7b, operator() = 0x89Bb23E4a82E04a253d9f11767feDf321C127799, owner() = 0xb573c94260582f0715FC477928B04A2708dd36D7, and mintBudget() = 0 at block 25166611."
+        "evidence": "At Ethereum block 25295020: implementation slot confirmed 0x3194e478b6d3ebee969470295f271727b62adf7b, operator() = 0x89Bb23E4a82E04a253d9f11767feDf321C127799, owner() = 0xb573c94260582f0715FC477928B04A2708dd36D7 (all unchanged). eth_getCode on owner = 0x (EOA). Sui State object 0x9429033f56b8a4b9601b62386075a87e1c943bd45e4c09e0db863e3fae0d96c4 shows identical structure: owner 0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8, operator 0xdb0769b530e4425b9872de332a9e17104128cafde3dd5fdf80ea881b4134aee2, mint_budget 0."
       },
       {
         "chain": "ethereum",
@@ -141,7 +141,7 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "code read returned no contract bytecode, so no on-chain multisig threshold was verified."
+        "evidence": "At Ethereum block 25295020: eth_getCode on 0xb573c94260582f0715FC477928B04A2708dd36D7 returned 0x (EOA confirmed). This EOA controls setOperator() and reserve accounting. Same address owns both XAGm and XAUm MToken contracts."
       }
     ],
     "review": {
@@ -153,11 +153,15 @@
         {
           "label": "Sourcify Matrixdock MToken source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+        },
+        {
+          "label": "XAUm Ethereum token",
+          "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
         }
       ],
-      "evidence": "Matrixdock source and direct reads identify operator/NFT-contract budgeted minting plus owner-controlled operator changes.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25295020: proxy impl 0x3194e478... confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... eth_getCode on owner = 0x (EOA). Sui State 0x9429033f... confirmed same owner/operator/mint_budget=0 via Sui fullnode.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "custodyModel": "institutional-regulated",

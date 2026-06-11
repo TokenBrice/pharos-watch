@@ -121,7 +121,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "WUSD uses issuer-operated role-gated minting. Ethereum role reconstruction identified three current MINTER_ROLE holders and one default-admin EOA; Polygon and Viction controls remain unresolved.",
+    "summary": "WUSD uses issuer-operated role-gated minting. Ethereum minters (3) and admin confirmed via hasRole. Polygon minter (0x1a41b5, EOA) and admin (0x731ef, EOA) confirmed. Viction admin (0x731ef) confirmed; Viction minter 0x2f5a9c is an unresolved contract. Ethereum minters 0x171AC (proxy) and 0x80c0A have unresolved admin surfaces.",
     "controls": [
       {
         "chain": "ethereum",
@@ -211,13 +211,12 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "WSPN docs describe qualified-business mint and redemption through WSPN Mint Account; Ethereum role reconstruction identifies current MINTER_ROLE holders and the default admin for the WUSD token.",
-      "reviewer": "Codex mint-authority follow-up EVM lane",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25295020: hasRole(MINTER_ROLE) confirmed True for all 3 known ETH minters (0x171AC, 0x1a41b5, 0x80c0A); hasRole(DEFAULT_ADMIN) confirmed True for 0x731Ef (EOA). Polygon: hasRole MINTER confirmed for 0x1a41b5 (EOA), DEFAULT_ADMIN for 0x731Ef. Viction: hasRole MINTER for 0x1a41b5 (EOA) and 0x2f5a9c (47kb contract, not Safe); DEFAULT_ADMIN for 0x731ef (EOA). Ethereum 0x171AC is a proxy with impl 0x7d1367a7... (proxy admin slot = 0; UUPS), admin surface unresolved. 0x80c0A owner() = 0x0 (ownerless contract). Viction minter 0x2f5a9c is a 47kb contract, not Safe, admin surface unresolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
-        "Reconstruct Polygon role holders and Viction owner/minter controls.",
-        "Confirm signer custody or operational policy for the Ethereum admin and minter EOAs."
+        "Resolve the admin/upgrade surface for Ethereum MINTER_ROLE holder 0x171AC757879D9f5004992159FC9bF3344f82D5c3 (UUPS proxy, impl 0x7d1367a7cfbd2cdbcf8cc863520b0e708490b831).",
+        "Identify Viction MINTER_ROLE contract 0x2f5a9cb393ecbacf205c72ec8ed367460959b025 (47kb contract, unknown admin)."
       ]
     }
   },

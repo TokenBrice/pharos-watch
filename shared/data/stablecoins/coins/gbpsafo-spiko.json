@@ -140,8 +140,8 @@
     ],
     "review": {
       "evidence": "Spiko's smart-contract post describes a permission-group RBAC: an in-house daily-operator relayer mints to KYC'd investors, a redemption contract holds the sole burn role, and a super-admin multisig controls UUPS upgrades and permissions. This is centralized issuer-direct minting, not a user-collateralized path.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Spiko smart contracts",
@@ -152,9 +152,9 @@
           "url": "https://www.spiko.io/spiko-pound"
         }
       ],
-      "sourceFreeRationale": "Roles and minter design taken from Spiko's first-party contract documentation; live on-chain super-admin multisig signers/threshold and the relayer address were not independently read on-chain, so confidence is probable rather than verified.",
+      "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI.",
       "unresolvedQuestions": [
-        "Confirm the on-chain super-admin multisig signers/threshold and the daily-operator relayer address for the GBPSAFO deployments to reach verified."
+        "Spiko's custom permission-group RBAC does not expose enumerable role holders via standard interfaces. To verify: call Spiko's proprietary getPermissionGroup() or equivalent on the token implementation contracts, or obtain off-chain attestation of the super-admin multisig signer set and daily-operator relayer addresses for each deployment chain."
       ]
     }
   },

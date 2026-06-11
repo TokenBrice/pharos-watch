@@ -122,39 +122,145 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "mRe7YIELD is a Midas liquid-yield token; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "confidence": "verified",
+    "summary": "mRe7YIELD is minted by the MRe7DepositVault proxy (0xce0a…) and two EOAs holding M_RE7_MINT_OPERATOR_ROLE in the shared MidasAccessControl (0x0312…). DEFAULT_ADMIN_ROLE is held by a 1-of-3 Midas Safe and an EOA. Proxy upgrades require a 2-day MidasTimelockController.",
     "controls": [
       {
-        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "chain": "ethereum",
+        "label": "mRe7YIELD MRe7DepositVault (M_RE7_MINT_OPERATOR_ROLE)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Midas vault architecture mints the token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl."
+        "canRaiseCap": false,
+        "address": "0xce0a2953a5d46400af601a9857235312d1924ac7",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MRe7DepositVault proxy (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xce0a2953a5d46400af601a9857235312d1924ac7"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_RE7_MINT_OPERATOR_ROLE=keccak256('M_RE7_MINT_OPERATOR_ROLE')=0xa6a5…, 0xce0a…) returned true on MidasAccessControl 0x0312…. Implementation: MRe7DepositVault (0xF803…). Confirmed via live mint TX 0x7f54…."
+      },
+      {
+        "chain": "ethereum",
+        "label": "mRe7YIELD mint operator EOA-1 (M_RE7_MINT_OPERATOR_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "address": "0x11e58b044b04eca3230c67217c482f24bdb90a72",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_RE7_MINT_OPERATOR_ROLE, 0x11e5…) returned true; eth_getCode = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "mRe7YIELD mint operator EOA-2 (M_RE7_MINT_OPERATOR_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "address": "0xb755ff07fd80b38265ae35639568cfcdc874f21d",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(M_RE7_MINT_OPERATOR_ROLE, 0xb755…) returned true; eth_getCode = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE Safe (1-of-3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295093,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Midas admin Safe (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE=0x0000…, 0xb608…) returned true. getOwners() = 3; threshold = 1; 0 modules; guard = 0x0; Safe v1.4.1."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE, 0xd419…) returned true; eth_getCode = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "label": "MidasTimelockController (proxy upgrade guard)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "MidasTimelockController (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          }
+        ],
+        "evidence": "ProxyAdmin (0xbf25…) owner() = 0xe3ee… (MidasTimelockController). getMinDelay() = 172800 s (2 days)."
       }
     ],
     "review": {
-      "evidence": "Midas liquid-yield tokens are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295093: M_RE7_MINT_OPERATOR_ROLE (0xa6a5…) held by MRe7DepositVault proxy 0xce0a… and two EOAs (0x11e5…, 0xb755…); DEFAULT_ADMIN_ROLE held by Safe 0xb608… (1-of-3, no modules) and EOA 0xd419…; shared ProxyAdmin gated by 2-day MidasTimelockController. Etherlink/Starknet are bridged deployments; Ethereum issuance surface is authoritative.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Midas docs",
           "url": "https://docs.midas.app/"
         },
         {
-          "label": "Midas mRe7YIELD",
-          "url": "https://midas.app/mre7yield"
-        },
-        {
           "label": "Sherlock Midas audit (vault/access-control architecture)",
           "url": "https://github.com/sherlock-audit/2024-05-midas"
+        },
+        {
+          "label": "MidasAccessControl on Ethereum (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live on-chain MidasAccessControl role holders and any bridge admin for the Etherlink/Starknet deployments before raising confidence."
       ]
     }
   },

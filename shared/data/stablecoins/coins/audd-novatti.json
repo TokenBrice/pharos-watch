@@ -207,15 +207,84 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "evidence": "Issuer-operated mint/redeem: AUDC Pty Ltd creates and redeems AUDD supply 1:1 against custodied AUD reserves; no permissionless or user-collateralized mint route exists across its native multichain deployments."
+      },
+      {
+        "label": "AUDD Ethereum token owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x59a50cbd643347296e2cf5573b40eda3099d0c54",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029, owner() on the AUDD ERC1967 proxy (0x4cce...0c54, impl 0xc6114a25) returned 0x59a50cbd643347296e2cf5573b40eda3099d0c54. eth_getCode returns no bytecode → EOA.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDD contract",
+            "url": "https://eth.blockscout.com/address/0x4cce605ed955295432958d8951d0b176c10720d5"
+          }
+        ]
+      },
+      {
+        "label": "AUDD Ethereum proxy admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0x840b18b93e44ded7d616a0f61aff8562f2548743",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029, EIP-1967 admin slot on AUDD proxy returned 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b (a ProxyAdmin contract). That ProxyAdmin's owner() returned 0x840b18b93e44ded7d616a0f61aff8562f2548743. eth_getCode returns no bytecode → EOA.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDD proxy admin",
+            "url": "https://eth.blockscout.com/address/0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b"
+          }
+        ]
+      },
+      {
+        "label": "AUDD Base token owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Base block 47200702, owner() on the AUDD Base proxy (0x449b...ae65, impl 0x3c9ead9a) returned 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127. eth_getCode returns no bytecode → EOA.",
+        "sources": [
+          {
+            "label": "Base Blockscout AUDD contract",
+            "url": "https://base.blockscout.com/address/0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
+          }
+        ]
+      },
+      {
+        "label": "AUDD Base proxy admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Base block 47200702, EIP-1967 admin slot on AUDD Base proxy returned 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f (ProxyAdmin contract). That ProxyAdmin's owner() returned 0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa. eth_getCode returns no bytecode → EOA.",
+        "sources": [
+          {
+            "label": "Base Blockscout AUDD proxy admin",
+            "url": "https://base.blockscout.com/address/0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations; mint/redeem is centralized.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins across Ethereum, Base, Stellar, XDC, XRPL, Solana, Hedera, and Redbelly not independently resolved.",
+      "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. Ethereum and Base EVM chains confirmed: EOA token owners and EOA-owned proxy admins verified via owner() and EIP-1967 admin slot reads at blocks 25295029/47200702.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDD contract",
+          "url": "https://eth.blockscout.com/address/0x4cce605ed955295432958d8951d0b176c10720d5"
+        },
+        {
+          "label": "Base Blockscout AUDD contract",
+          "url": "https://base.blockscout.com/address/0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the per-chain token owner/minter admin and any proxy admin before raising confidence."
+        "Non-EVM chains (Stellar, XRPL, Solana, Hedera, Redbelly) and XDC mint authority not confirmed; multiple distinct EOA owners across chains raises cross-chain posture question before promoting to verified."
       ]
     }
   },

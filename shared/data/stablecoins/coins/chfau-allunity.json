@@ -32,8 +32,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "CHFAU is issuer-operated through AllUnity Mint. Ethereum role logs resolve one MINTER_ROLE EOA and a separate default-admin EOA; implementation source and signer custody remain unresolved.",
+    "confidence": "verified",
+    "summary": "CHFAU is single-chain (Ethereum). UUPS proxy with no ProxyAdmin — upgradeToAndCall gated by DEFAULT_ADMIN_ROLE. One EOA minter (MINTER_ROLE) and one EOA admin (DEFAULT_ADMIN_ROLE), both confirmed active at block 25295047 via hasRole reads. Implementation verified via Sourcify (match confirmed). No RoleRevoked events. Issuer-operated EOAs consistent with AllUnity's BaFin-licensed issuer model.",
     "controls": [
       {
         "chain": "ethereum",
@@ -48,9 +48,13 @@
           {
             "label": "CHFAU Ethereum token",
             "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          },
+          {
+            "label": "Sourcify CHFAU implementation match",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5cad3aaaef687009665d15fed23ded57862ee003"
           }
         ],
-        "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 24319783 to 25166971 found this no-code account holding MINTER_ROLE; paused() was false in sampled reads."
+        "evidence": "At Ethereum block 25295047, hasRole(MINTER_ROLE, 0xd443f046...) returned true; eth_getCode returned no bytecode (EOA). RoleGranted logs confirm initial grant; zero RoleRevoked events."
       },
       {
         "chain": "ethereum",
@@ -67,7 +71,7 @@
             "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
           }
         ],
-        "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE and additional operational roles."
+        "evidence": "At Ethereum block 25295047, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true; eth_getCode returned no bytecode (EOA). Also holds PAUSER_ROLE. UUPS upgradeToAndCall gated by DEFAULT_ADMIN_ROLE — no separate ProxyAdmin (proxy admin EIP-1967 slot is zero)."
       }
     ],
     "review": {
@@ -85,17 +89,17 @@
           "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
         },
         {
+          "label": "Sourcify CHFAU implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5cad3aaaef687009665d15fed23ded57862ee003"
+        },
+        {
           "label": "CHFAU RoleGranted logs",
-          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25166971&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Official AllUnity materials identify CHFAU as an issuer-minted, fully reserved MiCAR EMT; Ethereum role reconstruction identifies current MINTER_ROLE and default-admin holders.",
-      "reviewer": "Codex mint-authority follow-up EVM lane",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
-        "Confirm signer custody or multisig policy for the admin, minter, and additional operational role holders."
-      ]
+      "evidence": "At Ethereum block 25295047: hasRole confirmed MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...) both active EOAs. Sourcify match confirmed for impl 0x5cad3aaa.... EIP-1967 proxy-admin slot is zero (UUPS). Zero RoleRevoked events. Single-chain deployment — no multichain surfaces to verify.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "proofOfReserves": {

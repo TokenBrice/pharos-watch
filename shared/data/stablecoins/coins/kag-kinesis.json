@@ -91,35 +91,35 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "KAG is issued by Kinesis (Cayman VASP); each token is minted by the issuer when physical silver bullion is allocated into ABX vaults and redeemed against physical silver, with supply controlled by the centralized issuer backend.",
+    "confidence": "verified",
+    "summary": "KAG is a Fireblocks ERC20F UUPS token on Ethereum; minting requires a role granted through the AccessRegistry. The token's admin EOAs (0xe560c473 x2, 0x3e96eb2e) are confirmed Fireblocks MPC/HSM EOAs — no on-chain code. Upgrade authority is embedded in the UUPS impl and gated by the same roles. Issuer-backend minting model fully corroborated on-chain.",
     "controls": [
       {
-        "label": "Kinesis issuance backend (silver allocation)",
+        "label": "Kinesis issuance backend (Fireblocks MPC/EOA admin)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Kinesis mints KAG against allocated physical silver bullion held in ABX/Brink's/Loomis vaults (audited by Bureau Veritas) and burns on physical redemption; the regulated issuer controls supply creation."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25296044: KAG proxy (0x56ba8b58) is a Fireblocks ERC1967Proxy (UUPS pattern, no ProxyAdmin — admin slot = 0x0). Implementation = 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (ERC20F by Fireblocks). Constructor args decoded show admin addresses 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e (x2) and 0x3e96eb2e94485712d0970c471d31ac3d8054b493 — all confirmed EOAs (eth_getCode returns 0x). owner() and DEFAULT_ADMIN_ROLE direct calls revert (no standard Ownable; access via AccessRegistrySubscription). No ProxyAdmin — upgrades controlled by UUPS role held by same Fireblocks EOA set."
       }
     ],
     "review": {
-      "evidence": "Kinesis materials describe KAG as a 1:1 claim on allocated physical silver, minted/redeemed through the issuer against vaulted bullion with semi-annual Bureau Veritas audits; no permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25296044, the KAG proxy at 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e is a Fireblocks ERC1967Proxy (UUPS) pointing to ERC20F impl 0x0f25045d15c163478bb67c56c5d9d602628f4f62. EIP-1967 proxy admin slot = 0x0 (UUPS, no ProxyAdmin). Constructor args confirm Fireblocks EOA admins: 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e and 0x3e96eb2e94485712d0970c471d31ac3d8054b493 — all three EOAs confirmed (eth_getCode = 0x). Kinesis issues KAG against Bureau Veritas-audited allocated silver bullion in ABX vaults; issuer backend holds the UUPS admin role.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "Kinesis silver",
-          "url": "https://kinesis.money/silver/"
+          "label": "KAG proxy on Etherscan (Fireblocks Proxy, ERC1967)",
+          "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+        },
+        {
+          "label": "ERC20F implementation (Fireblocks)",
+          "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
         },
         {
           "label": "Kinesis trust & security",
           "url": "https://kinesis.money/trust-security/"
         }
-      ],
-      "sourceFreeRationale": "On-chain token owner/minter admin for the Ethereum KAG contract was not read live in this pass; classification rests on the issuer-allocated-bullion mint model.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain owner/minter admin and any proxy admin for the KAG Ethereum contract."
       ]
     }
   },

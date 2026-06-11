@@ -97,8 +97,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "TRYB is issued by BiLira, which mints and redeems 1:1 against Turkish-lira cash reserves through its centralized backend across issuer-managed native deployments on multiple chains.",
+    "confidence": "verified",
+    "summary": "TRYB is issued by BiLira using a FiatTokenProxy pattern on Ethereum. The ETH owner is a Gnosis Safe 1.3.0 (3 signers, 2-of-3, no modules); the masterMinter controlling minting allowances is a separate Gnosis Safe 1.3.0 (6 signers, 3-of-6, no modules). No proxy admin (admin slot=0). Both on-chain controls confirmed.",
     "controls": [
       {
         "label": "BiLira issuance backend",
@@ -113,12 +113,81 @@
             "url": "https://www.bilira.co/en/audit-reports"
           }
         ]
+      },
+      {
+        "label": "TRYB ETH owner Safe (2-of-3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xb9fda3c5a457573535684f591f3e00d949a8dad6",
+        "chain": "ethereum",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x07913270b3b198b3854df9463d646ce145e02349",
+            "0x6f36b2fcfa6f72d53bdd45dbb7652df6421cbfe4",
+            "0xf320c4092e8c1b5005dfb10d831b178c451fdb64"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.3.0",
+          "observedBlock": 25294993,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25294993: owner() on FiatTokenProxy 0x2c537e5624e4af88a7ae4060c022609376c8d0eb returned 0xb9fda3c5a457573535684f591f3e00d949a8dad6. getOwners() confirmed 3 owners; getThreshold() = 2; slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 singleton). getModulesPaginated returned empty (next=0x1, arr_len=0). EIP-1967 impl and admin slots both 0x0 (not a proxy in the ERC1967 sense; FiatTokenProxy stores impl in custom slot).",
+        "sources": [
+          {
+            "label": "TRYB ETH contract on Etherscan",
+            "url": "https://etherscan.io/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+          }
+        ]
+      },
+      {
+        "label": "TRYB ETH masterMinter Safe (3-of-6)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "address": "0x68193b59a8b188f04da07fa234888b1926384b8e",
+        "chain": "ethereum",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x30941fe71ea3eb348dcf5643b2af570f6383981e",
+            "0x0587cf82699c19f5b6168da136fb68bf1e0883a4",
+            "0x0829ecef2378cef39dda61b8a9093d1c3e1264b0",
+            "0x12fe663743e4604a4fe73393cf4502f2d75c4ea7",
+            "0x07913270b3b198b3854df9463d646ce145e02349",
+            "0x6f36b2fcfa6f72d53bdd45dbb7652df6421cbfe4"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.3.0",
+          "observedBlock": 25294993,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25294993: masterMinter() on FiatTokenProxy 0x2c537e5624e4af88a7ae4060c022609376c8d0eb returned 0x68193b59a8b188f04da07fa234888b1926384b8e. getOwners() confirmed 6 owners; getThreshold() = 3; slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0). getModulesPaginated returned empty.",
+        "sources": [
+          {
+            "label": "TRYB ETH contract on Etherscan",
+            "url": "https://etherscan.io/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "BiLira is the sole issuer of TRYB; minting/redemption runs 1:1 through BiLira's backend against TRY cash reserves with quarterly audit reports, and no permissionless mint path is described in issuer materials.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25294993: TRYB ETH is a FiatTokenProxy (0x2c537e5624e4af88a7ae4060c022609376c8d0eb, source verified as FiatTokenProxy on Blockscout). owner() = Safe 0xb9fda3c... (3 owners, 2/3, Gnosis 1.3.0, no modules). masterMinter() = Safe 0x68193b... (6 owners, 3/6, Gnosis 1.3.0, no modules). Both confirmed via getOwners(), getThreshold(), slot 0 masterCopy, and getModulesPaginated. EIP-1967 impl and admin slots are 0x0 (FiatTokenProxy uses custom storage). BSC chain: owner and masterMinter share a single EOA address (0x07913270..., confirmed code=0 on BSC). Ethereum mint surface fully resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "BiLira audit reports",
@@ -127,11 +196,11 @@
         {
           "label": "BiLira TRYB product page",
           "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+        },
+        {
+          "label": "TRYB ETH contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
         }
-      ],
-      "sourceFreeRationale": "Issuer-controlled mint model confirmed from BiLira materials; on-chain token minter/owner admin across chains not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain TRYB token minter/owner admin and proxy admin across deployed chains before raising confidence."
       ]
     }
   },

@@ -35,41 +35,45 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "CADD uses an ERC20F implementation with role-gated minting and UUPS upgrades. Ethereum role logs resolve a separate default admin and MINTER_ROLE holder; both appear as EIP-7702-style delegated accounts rather than verified Safes.",
+    "summary": "CADD uses ERC20F with role-gated minting and UUPS upgrades. Both ETH and Base deploy the same contract address with the same role holders: EIP-7702 delegated-account minter (0x4b37dd8b) and EIP-7702 delegated-account admin (0xb3a77dd7). EIP-7702 delegation target cannot be confirmed from chain state.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9",
-        "label": "CADD Ethereum MINTER_ROLE holder",
+        "label": "CADD MINTER_ROLE holder (ETH and Base)",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "CADD Sourcify implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+          },
+          {
+            "label": "CADD Base RoleGranted logs",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=47200457&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "Sourcify ERC20F source shows mint(address,uint256) is onlyRole(MINTER_ROLE); Ethereum role reconstruction found this delegated account holding MINTER_ROLE."
+        "evidence": "RoleGranted logs on both ETH and Base confirm this address holds MINTER_ROLE (0x9f2df0fed...). eth_getCode on both chains returns prefix 0xef0100... (EIP-7702 delegated account, not a standard EOA or Safe). Delegation target unresolvable from chain state."
       },
       {
         "chain": "ethereum",
         "address": "0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce",
-        "label": "CADD default admin",
+        "label": "CADD DEFAULT_ADMIN_ROLE holder (ETH and Base)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "CADD Sourcify implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
           }
         ],
-        "evidence": "Ethereum role reconstruction found this delegated account holding DEFAULT_ADMIN_ROLE. Current code begins 0xef0100, consistent with an EIP-7702 delegated account, not a verified Safe."
+        "evidence": "RoleGranted logs on ETH and Base confirm DEFAULT_ADMIN_ROLE held by this address. eth_getCode returns 0xef0100... (EIP-7702) on both chains. Also controls UUPS upgradeToAndCall path (DEFAULT_ADMIN is upgrade authority). Delegation target unresolvable from chain state."
       }
     ],
     "review": {
@@ -87,17 +91,19 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
         },
         {
-          "label": "CADD RoleGranted logs",
-          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          "label": "CADD ETH RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "CADD Base RoleGranted logs",
+          "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=47200457&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Sourcify ERC20F source and Ethereum role reconstruction identify role-gated CADD minting through a current MINTER_ROLE holder plus a separate default-admin account.",
-      "reviewer": "Codex mint-authority follow-up EVM lane",
-      "reviewedAt": "2026-05-24",
+      "evidence": "Base role holders confirmed: same addresses as Ethereum (0x4b37dd8b MINTER_ROLE, 0xb3a77dd7 DEFAULT_ADMIN). Both are EIP-7702 delegated accounts on both chains. EIP-7702 code prefix 0xef0100 confirmed on ETH and Base for both accounts. Blocker: EIP-7702 delegation target (the executing signer policy) cannot be verified from chain state — this caps confidence at manual-review.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Reconstruct Base role holders before treating CADD as fully reviewed across all deployments.",
-        "Classify the EIP-7702 delegated-account custody and executor policy for both admin and minter accounts.",
-        "Review accessRegistry recipient policy and non-mint operational roles separately."
+        "EIP-7702 delegation target for both minter (0x4b37dd8b) and admin (0xb3a77dd7) cannot be resolved from chain state; custody policy (multisig, HSM, etc.) is unknown."
       ]
     }
   },

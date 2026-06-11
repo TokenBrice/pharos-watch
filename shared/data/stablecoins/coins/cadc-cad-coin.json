@@ -80,31 +80,110 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "CADC is issued by Loon (a FINTRAC-registered MSB, formerly PayTrie); the issuer mints on CAD deposit and burns on redemption against segregated trust reserves through a centralized backend.",
+    "confidence": "verified",
+    "summary": "CADC is issued by Loon (FINTRAC-registered MSB); on-chain owner/masterMinter across all five deployments is a set of Gnosis Safe multisigs with identical 3 signers (2/3 threshold) operated by the issuer.",
     "controls": [
       {
-        "label": "Loon (CADC) issuance backend",
+        "label": "Loon CADC issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Loon controls 1:1 mint on deposit and burn on redemption against CAD/short-term securities held in segregated trust; minting is issuer-operated with no permissionless route."
+        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route."
+      },
+      {
+        "label": "CADC Ethereum owner/masterMinter — Gnosis Safe v1.3.0 (2/3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
+            "0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5",
+            "0xb8149afcce866f62c310a289a93e8442faab51e9"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25295003,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295003: owner() and masterMinter() on 0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef both returned 0x3e30d340c83d068d632e11b5a30507ce973d7700. eth_getCode = 344 bytes. getOwners() returned 3 addresses; threshold() = 2; getModulesPaginated = empty; guard slot = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 (CompatibilityFallbackHandler); storage slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe 1.3.0 singleton)."
+      },
+      {
+        "label": "CADC Base/Linea owner — Gnosis Safe v1.4.1 (2/3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
+            "0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5",
+            "0xb8149afcce866f62c310a289a93e8442faab51e9"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 47200682,
+          "source": "onchain"
+        },
+        "evidence": "At Base block 47200682: owner() on 0x043eb4b75d0805c43d7c834902e335621983cf03 returned 0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8. getOwners() = same 3 signers; threshold() = 2; modules = empty; guard slot = 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (Safe L2 1.4.1 singleton). CADC Linea (0xa0b18e...) returns same Safe address."
+      },
+      {
+        "label": "CADC Polygon/Arbitrum owner — Gnosis Safe v1.3.0 L2 (2/3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x16662303fc0ea5c4b12fccf493aeb22c884ad062",
+            "0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5",
+            "0xb8149afcce866f62c310a289a93e8442faab51e9"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0-L2",
+          "observedBlock": 25295003,
+          "source": "onchain"
+        },
+        "evidence": "Polygon owner() on 0x9de41aff... = 0x9bba7ae7276e352387211384de6f87491162a19c; Arbitrum owner() on 0x2b28e826... = 0xf78280429f296f44fa2e222bec2e877afff9ac35. Both return identical 3-signer set, threshold 2, guard 0xf48f2b2d..., slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton)."
       }
     ],
     "review": {
-      "evidence": "Loon/PayTrie documentation describes a single centralized issuer minting CADC against segregated CAD trust reserves with direct 1:1 redemption; no user-collateralized mint exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295003 and Base block 47200682: all five CADC deployments confirmed. ETH owner/masterMinter = Safe 1.3.0 2/3 at 0x3e30d340... Polygon owner = Safe L2 1.3.0 2/3 at 0x9bba7ae7... Arbitrum owner = Safe L2 1.3.0 2/3 at 0xf7828042... Base/Linea owner = Safe 1.4.1 2/3 at 0x3de34058... All Safes share the same 3 issuer-controlled signers. No modules detected on any chain.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Loon Finance",
           "url": "https://loon.finance/"
+        },
+        {
+          "label": "CADC Ethereum contract",
+          "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+        },
+        {
+          "label": "CADC Base contract",
+          "url": "https://basescan.org/address/0x043eb4b75d0805c43d7c834902e335621983cf03"
         }
-      ],
-      "sourceFreeRationale": "Classification based on issuer model in project materials; on-chain owner/minter admin across deployments not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain owner/minter admin on the CADC contracts before raising confidence."
       ]
     }
   },

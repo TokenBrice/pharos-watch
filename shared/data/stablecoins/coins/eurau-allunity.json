@@ -116,43 +116,45 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "EURAU is issuer-minted/redeemed by AllUnity; the reviewed pass confirms the regulated issuer route and Ethereum proxy implementation, but not signer custody.",
+    "summary": "EURAU Ethereum lane confirmed: same AllUnity EOA admin (0xddaca43e) and EOA minter (0xd443f046) as CHFAU, both active at block 25295047. UUPS proxy, no ProxyAdmin. Arbitrum/Optimism/Base/Polygon EVM lanes share the same address but role logs not yet enumerated; Solana, Stellar, and Tempo unreachable.",
     "controls": [
       {
-        "label": "AllUnity issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "label": "EURAU Ethereum MINTER_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "AllUnity EURAU",
-            "url": "https://allunity.com/eurau/"
+            "label": "Ethereum EURAU token",
+            "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           },
           {
-            "label": "AllUnity whitepaper",
-            "url": "https://allunity.com/whitepaper/"
+            "label": "Sourcify EURAU implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           }
         ],
-        "evidence": "AllUnity materials describe direct 1:1 EURAU issuance/redemption by the regulated issuer."
+        "evidence": "At Ethereum block 25295047, hasRole(MINTER_ROLE 0x9f2df0..., 0xd443f046...) returned true; eth_getCode returned no bytecode (EOA). RoleGranted log at deployment confirms grant. Identical address and role to CHFAU (same AllUnity backend)."
       },
       {
         "chain": "ethereum",
-        "address": "0x4933A85b5B5466FBaf179f72d3DE273C287eC2c2",
-        "label": "EURAU Ethereum token proxy",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
+        "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+        "label": "EURAU Ethereum default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum EURAU token",
             "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "Ethereum reads at block 25166591 resolved EIP-1967 implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482; role holders were not enumerated."
+        "evidence": "At Ethereum block 25295047, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true; eth_getCode returned no bytecode (EOA). EIP-1967 proxy-admin slot is zero (UUPS, no separate ProxyAdmin). Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
       }
     ],
     "review": {
@@ -160,13 +162,22 @@
         {
           "label": "AllUnity EURAU",
           "url": "https://allunity.com/eurau/"
+        },
+        {
+          "label": "Sourcify EURAU implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
+        },
+        {
+          "label": "EURAU RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4933a85b5b5466fbaf179f72d3de273c287ec2c2&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "AllUnity is the issuer/redemption operator; Ethereum proxy reads identify the current token implementation.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
+      "evidence": "Ethereum lane fully resolved at block 25295047: EOA minter and EOA admin confirmed via hasRole; UUPS with no ProxyAdmin; zero RoleRevoked events. Arbitrum, Optimism, Base, Polygon use identical contract address — role enumeration pending. Solana, Stellar, Tempo cannot be confirmed from chain state.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Identify current mint role holders and proxy admin signer setup across EVM, Solana, Stellar, and Tempo deployments."
+        "Enumerate MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on Arbitrum, Optimism, Base, and Polygon deployments (same contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2).",
+        "Solana mintAuthority (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS) and Stellar issuer controls cannot be confirmed from chain state."
       ]
     }
   },

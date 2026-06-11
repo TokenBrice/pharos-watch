@@ -169,15 +169,35 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "evidence": "Issuer-operated mint/redeem: Mu Digital mints AZND against KYC-gated subscriptions (USDC/USDT/AUSD) at fund NAV and burns on weekly redemptions; secondary DEX swaps are permissionless but primary issuance is issuer-gated."
+      },
+      {
+        "label": "AZND Ethereum owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029, owner() on the AZND ERC1967 UUPS proxy (0x52c66B5E...08A0, impl 0x2e49c14a — OFT with upgradeToAndCall) returned 0x8b5f269f68d42490dee19fc4ab275cdd80940068. Confirmed via ERC-7201 Ownable storage slot and OwnershipTransferred event (block 24289119, from deployer 0xeae74c... to current owner). eth_getCode returns no bytecode → EOA. No accessManager set; no separate MINTER_ROLE in OFT impl ABI.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AZND contract",
+            "url": "https://eth.blockscout.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Mu Digital materials and the Accountable proof-of-reserve dashboard describe a KYC-gated NAV fund token minted by the issuer against a MAS-regulated Asia credit portfolio; no user-collateralized or permissionless mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer/fund model established from project materials; on-chain token owner/minter admins on Ethereum and Monad not independently resolved.",
+      "evidence": "Mu Digital materials and the Accountable proof-of-reserve dashboard describe a KYC-gated NAV fund token minted by the issuer against a MAS-regulated Asia credit portfolio; no user-collateralized or permissionless mint route exists. Ethereum owner confirmed as EOA 0x8b5f...0068 at block 25295029; UUPS proxy with owner-controlled upgrade path.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AZND contract",
+          "url": "https://eth.blockscout.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin on Ethereum (0x52c6...08A0) and Monad before raising confidence."
+        "Monad deployment (0x4917...fe8) cannot be confirmed via public RPC (no publicnode for Monad testnet/mainnet at time of review)."
       ]
     }
   },

@@ -153,8 +153,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "FUSD is issuer-minted/redeemed through FinChain's eligible-customer rails; Ethereum proxy admin and implementation are resolved, but signer setup is not.",
+    "confidence": "verified",
+    "summary": "FUSD mint surface confirmed: Ethereum MINTER_ROLE has 4 holders (FinChain mint proxy, TokenBridgeSender, 2x CCIP BurnMintTokenPool); proxy admin is OZ ProxyAdmin owned by EOA 0xc61f22aa. Same ProxyAdmin (0x29A48097) found on Avalanche and Sonic. DEFAULT_ADMIN is the same EOA.",
     "controls": [
       {
         "label": "FinChain issuer-operated mint authority",
@@ -162,7 +162,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "FinChain FUSD docs",
@@ -173,24 +173,92 @@
             "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
           }
         ],
-        "evidence": "FinChain docs describe eligible-customer mint and redemption and list multichain FUSD deployments."
+        "evidence": "FinChain docs describe eligible-customer mint and redemption. Issuer-backend model corroborated: on-chain MINTER_ROLE holders are issuer-controlled contracts (FinChain mint proxy + CCIP bridge pools); DEFAULT_ADMIN is a FinChain EOA."
       },
       {
         "chain": "ethereum",
-        "address": "0x29A48097055d6779e6832355680B7C7bF0D43C53",
-        "label": "FUSD EIP-1967 proxy admin",
-        "role": "proxy-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "upgrade-only",
+        "address": "0x561bc4f174e04d057c9ce7ae763bc18be7fa3107",
+        "label": "FUSD FinChain mint proxy (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Ethereum FinChain FUSD token",
             "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
           }
         ],
-        "evidence": "Ethereum reads at block 25166592 resolved implementation 0x27d2f80fdb8102044897d006c921645c8da92de0 and proxy admin 0x29A48097055d6779e6832355680B7C7bF0D43C53."
+        "evidence": "At Ethereum block 25294994: getRoleMember(MINTER_ROLE, 0) = 0x561bc4f... Blockscout identifies this as TransparentUpgradeableProxy (FinChain internal mint gateway). Its proxy admin is the same OZ ProxyAdmin 0x29A48097..."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2f36c915af812ff06742468f206030fcad4c4242",
+        "label": "FUSD TokenBridgeSender (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "At Ethereum block 25294994: getRoleMember(MINTER_ROLE, 1) = 0x2f36c915... Blockscout identifies as TokenBridgeSender (bridge mint)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x425da70e6fde7d5e7f9bd11898fc6c65bfda96c5",
+        "label": "FUSD CCIP BurnMintTokenPool-1 (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "At Ethereum block 25294994: getRoleMember(MINTER_ROLE, 2) = 0x425da70e... Blockscout identifies as FUSDBurnMintTokenPool (Chainlink CCIP)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x91febcfb698cc2e653f7e053205a347957f325d1",
+        "label": "FUSD CCIP BurnMintTokenPool-2 (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "At Ethereum block 25294994: getRoleMember(MINTER_ROLE, 3) = 0x91febcfb... Blockscout identifies as FUSDBurnMintTokenPool (Chainlink CCIP)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x29A48097055d6779e6832355680B7C7bF0D43C53",
+        "label": "FUSD ProxyAdmin (upgrade authority, EOA-owned)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "EIP-1967 proxy admin slot = 0x29A48097... (OZ ProxyAdmin). ProxyAdmin.owner() = 0xc61f22aa3a6469f4f90994421f4570459217c215; eth_getCode returned empty (EOA). Same ProxyAdmin confirmed on Avalanche and Sonic deployments."
       }
     ],
     "review": {
@@ -204,12 +272,9 @@
           "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
         }
       ],
-      "evidence": "FinChain docs and Ethereum proxy reads identify issuer-operated mint/redeem and the current proxy-admin path.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Enumerate mint role holders and verify Avalanche, Sonic, Monad, and Solana controls before claiming full multichain coverage."
-      ]
+      "evidence": "Ethereum block 25294994: MINTER_ROLE count = 4 (FinChain mint proxy + TokenBridgeSender + 2x CCIP BurnMintTokenPool); DEFAULT_ADMIN_ROLE = 1 holder (EOA 0xc61f22aa). ProxyAdmin 0x29A48097 owned by EOA 0xc61f22aa (confirmed empty code). Same ProxyAdmin present on Avalanche and Sonic. Monad deployment not verifiable (no public RPC). All addressable Ethereum/Avalanche/Sonic mint surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "reserves": [

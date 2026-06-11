@@ -103,22 +103,60 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "IAUon is a centrally issued Ondo Global Markets tokenized ETF tracker; subscription/redemption and supply creation run through Ondo GM's issuer-controlled, eligibility-gated infrastructure against custodied ETF exposure.",
+    "confidence": "verified",
+    "summary": "IAUon on Ethereum uses AccessControl: MINTER_ROLE held by GMTokenManager (subscription/redemption engine) and OndoOFT (LayerZero bridge for cross-chain minting). DEFAULT_ADMIN is a TimelockController with no PROPOSER_ROLE members — effectively locking admin changes. BSC follows the same pattern with a separate GMTokenManager and OndoOFT.",
     "controls": [
       {
-        "label": "Ondo Global Markets issuance backend",
+        "label": "GMTokenManager (Ethereum) — primary minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Ondo GM operates issuer-controlled subscription, redemption, and transfer infrastructure for IAUon with eligibility restrictions; supply is created/destroyed against custodied IAU economic exposure rather than via a permissionless route."
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295025, getRoleMember(MINTER_ROLE, 0) = 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c; Blockscout source: GMTokenManager. This contract handles issuer subscription/redemption minting for Ondo Global Markets.",
+        "sources": [
+          {
+            "label": "IAUon Ethereum token (Etherscan)",
+            "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+          },
+          {
+            "label": "GMTokenManager (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c"
+          }
+        ]
+      },
+      {
+        "label": "OndoOFT (Ethereum) — LayerZero cross-chain minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295025, getRoleMember(MINTER_ROLE, 1) = 0x8ffe0da486a4075e7bbb5763fad4732d41f9667c; Blockscout source: OndoOFT. This contract enables LayerZero-based cross-chain mint/burn for IAUon.",
+        "sources": [
+          {
+            "label": "OndoOFT (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
+          }
+        ]
+      },
+      {
+        "label": "IAUon Ethereum DEFAULT_ADMIN TimelockController (no proposers — effectively locked)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295025, getRoleMember(DEFAULT_ADMIN_ROLE, 0) = 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1; Blockscout source: TimelockController. getMinDelay() = 7200 seconds (2 hours). PROPOSER_ROLE count = 0 (no proposers). EXECUTOR_ROLE count = 2 (0x2e55b738... and 0xff1621ee...). With zero proposers, no new operations can be proposed, making admin changes effectively impossible through this path.",
+        "sources": [
+          {
+            "label": "IAUon Timelock (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Ondo Global Markets documentation describes IAUon as a centrally issued tokenized ETF product with issuer-controlled subscription, redemption, and transfer rails and KYC/eligibility gating; no user-collateralized or permissionless mint exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers — locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Ondo Global Markets overview",
@@ -127,11 +165,11 @@
         {
           "label": "Ondo Global Markets important notes",
           "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+        },
+        {
+          "label": "IAUon Ethereum token (Etherscan)",
+          "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
         }
-      ],
-      "sourceFreeRationale": "Issuer model is established from Ondo GM materials; on-chain token owner/minter admin and proxy admin were not independently resolved in this pass.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain mint/minter-admin and proxy admin for the IAUon token across its Ethereum, BSC, Solana, and HyperEVM deployments."
       ]
     }
   },

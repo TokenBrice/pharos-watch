@@ -113,39 +113,68 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "mF-ONE is a Midas tokenized certificate; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "confidence": "verified",
+    "summary": "mF-ONE is a TransparentUpgradeableProxy (Ethereum). Upgrades controlled by ProxyAdmin (0xbf25b58) owned by a MidasTimelockController (2-day delay, controlled by 1/3 Safe 0xb60842e9). Minting via DepositVault (0x41438435) called by Midas backend EOA (0x9419bfcc). MidasAccessControl DEFAULT_ADMIN_ROLE held by 0xb60842e9 Safe and EOA 0xd4195cf4.",
     "controls": [
       {
-        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "label": "Midas issuance backend EOA (DepositVault operator)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Midas vault architecture mints the certificate token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25296044: mint transactions originate from EOA 0x9419bfccf62469dd3abac731cac3fb24f5b8edaf calling DepositVault 0x41438435c20b1c2f1fca702d387889f346a0c3de (e.g. tx 0xdb38d291). MidasAccessControl (0x0312a9d1) grants 0x9419bfcc role 0xd2576bd6 (deposit vault operator). Minting is strictly issuer-controlled."
+      },
+      {
+        "label": "Midas ProxyAdmin (MidasTimelockController + 1/3 Safe)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.3.0",
+          "observedBlock": 25296044,
+          "source": "onchain"
+        },
+        "evidence": "ProxyAdmin at 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (confirmed via EIP-1967 admin slot). ProxyAdmin.owner() = MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852 (2-day min delay). Timelock proposer/executor = Safe 0xb60842e9: getOwners() returns 3 EOA owners; slot[3]=3 (ownerCount), slot[4]=1 (threshold). Safe getModulesPaginated returns empty."
       }
     ],
     "review": {
-      "evidence": "Midas certificates are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25296044: mF-ONE at 0x238a700ed6165261cf8b2e544ba797bc11e466ba is a TransparentUpgradeableProxy with impl 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2 (mFONE contract extending mTBILL). ProxyAdmin = 0xbf25b58, owned by MidasTimelockController 0xe3eee3e (verified name on Blockscout, 2-day delay, constructor args confirm). Timelock controlled by 1/3 Gnosis Safe 0xb60842e9 (onchain slot reads). MidasAccessControl 0x0312a9d1 (stored at storage slot 0xc9 of token proxy) has DEFAULT_ADMIN_ROLE granted to Safe 0xb60842e9 (hasRole confirmed, never revoked) and EOA 0xd4195cf4. Mint transactions go through DepositVault by EOA 0x9419bfcc.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "mF-ONE proxy on Etherscan",
+          "url": "https://etherscan.io/address/0x238a700ed6165261cf8b2e544ba797bc11e466ba"
+        },
+        {
+          "label": "MidasTimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        },
+        {
+          "label": "Midas 1/3 admin Safe on Etherscan",
+          "url": "https://etherscan.io/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        },
         {
           "label": "Midas docs",
           "url": "https://docs.midas.app/"
         },
         {
-          "label": "Midas mF-ONE",
-          "url": "https://midas.app/mfone"
-        },
-        {
-          "label": "Sherlock Midas audit (vault/access-control architecture)",
+          "label": "Sherlock Midas audit",
           "url": "https://github.com/sherlock-audit/2024-05-midas"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."
       ]
     }
   },

@@ -64,7 +64,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "GRAMS is issuer-minted by Token Teknoloji against physical silver reserves; the Avalanche token owner is an EOA shared with EUROT and GRAMG.",
     "controls": [
       {
@@ -97,7 +97,24 @@
             "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
           }
         ],
-        "evidence": "owner() returned this address at Avalanche block 86270529; code read returned no contract bytecode."
+        "evidence": "Avalanche owner() still returns 0xff80B391B286887d446B1124820F87D5b049b4fB at block 87749923; code read returned no contract bytecode (EOA confirmed)."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+        "label": "GRAMS Polygon token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "PolygonScan GRAMS token",
+            "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+          }
+        ],
+        "evidence": "Polygon owner() returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077 at block 88323540; eth_getCode returned 0x (EOA confirmed). Same EOA as EUROT/GRAMG Polygon; all three Token Teknoloji tokens share the same Polygon owner."
       }
     ],
     "review": {
@@ -107,12 +124,9 @@
           "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
         }
       ],
-      "evidence": "Official Token Teknoloji materials and Avalanche reads identify the issuer route and current token owner.",
-      "reviewer": "Codex mint-authority full-gap batch-2",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify Polygon owner/roles and whether the owner EOA is backed by MPC, multisig, or institutional custody."
-      ]
+      "evidence": "Avalanche block 87749923: owner() = 0xff80B391B286887d446B1124820F87D5b049b4fB (EOA confirmed). Polygon block 88323540: owner() = 0xd61c0129f6c35a675db6e2a067b31e75b2573077 (EOA confirmed). Polygon blocker resolved; all mint-capable surfaces confirmed across both chains.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",

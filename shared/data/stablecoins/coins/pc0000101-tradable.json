@@ -79,30 +79,34 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "PC0000101 is a Tradable-issued private-credit token on zkSync backed by post-settlement legal-financing receivables; tokens are minted only by Tradable's permissioned, KYC/KYB-gated issuance contracts for verified investors.",
+    "confidence": "verified",
+    "summary": "PC0000101 is a Tradable-issued legal-financing receivables token on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x02d539…0eb), with no permissionless mint route.",
     "controls": [
       {
-        "label": "Tradable issuance/deal-representation contracts (zkSync)",
+        "label": "Tradable issuance EOA (zkSync)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "zksync",
-        "canRaiseCap": "unknown",
-        "evidence": "Tradable operates permissioned smart contracts for deal representation with AML/KYC/KYB/KYT gating; primary issuance of the note token is controlled by Tradable for verified investors, with no permissionless mint."
+        "address": "0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe",
+        "canRaiseCap": true,
+        "evidence": "At zkSync Era block 68025166 (most recent confirmed), EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe called deal contract 0x02d539c957a60453363ec3682b9d5df887adc0eb which triggered Transfer-from-zero events on 0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81. 106 total mint events observed; same EOA confirmed as exclusive minting initiator. No proxy admin slot on token contract."
       }
     ],
     "review": {
-      "evidence": "Tradable tokenizes institutional private-credit deals on zkSync through permissioned, compliance-gated issuance contracts; the note is minted by Tradable's issuer rails for KYC/KYB-verified investors and is contract-priced at $1 par with no permissionless or user-collateralized mint route.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At zkSync Era block 70747617: all 106 Transfer-from-zero events on the PC0000101 token (0x3d1962…ee81) are initiated by EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe via per-deal contract 0x02d539c957a60453363ec3682b9d5df887adc0eb. Most recent mint confirmed at block 68025166. eth_getCode confirms 0x1b8926 is an EOA. No proxy admin slot on the token contract.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Tradable",
           "url": "https://www.tradable.xyz/"
+        },
+        {
+          "label": "zkSync Era explorer — PC0000101 token",
+          "url": "https://explorer.zksync.io/address/0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81"
         }
-      ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/admin role on the zkSync note contract before raising confidence."]
+      ]
     }
   }
 }

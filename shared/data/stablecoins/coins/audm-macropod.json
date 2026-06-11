@@ -145,15 +145,58 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "evidence": "Issuer-operated mint/redeem: Macropod mints AUDM against AUD deposited into the AUDM Trust reserve by KYC/AML-approved clients and redeems 1:1; no permissionless or user-collateralized mint route exists."
+      },
+      {
+        "label": "AUDM DEFAULT_ADMIN (Ethereum + Base)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0x999071576cc6d7feadb908bede992ab9e19212cf",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029 and Base block 47200702, hasRole(DEFAULT_ADMIN_ROLE, 0x999071576cc6d7feadb908bede992ab9e19212cf) returned true on the AUDM ERC1967 proxy (impl: ERC20FGasless). eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted event in creation tx (Ethereum: 0x744699f5..., Base creation logs match).",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDM contract",
+            "url": "https://eth.blockscout.com/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+          },
+          {
+            "label": "Base Blockscout AUDM contract",
+            "url": "https://base.blockscout.com/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+          }
+        ]
+      },
+      {
+        "label": "AUDM MINTER_ROLE holder (Ethereum + Base)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x3529a9f8193cce36df81123b59cdb4250219db39",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295029 and Base block 47200702, hasRole(MINTER_ROLE=0x9f2df0..., 0x3529a9f8193cce36df81123b59cdb4250219db39) returned true. eth_getCode returns no bytecode → EOA. This address has executed mint() calls (0x40c10f19) on Ethereum.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDM contract",
+            "url": "https://eth.blockscout.com/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves at Westpac and Banking Circle, with client onboarding/KYC gating; mint/redeem is centralized.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins on Ethereum, Solana, and Redbelly not independently resolved.",
+      "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves at Westpac and Banking Circle, with client onboarding/KYC gating; mint/redeem is centralized. Ethereum and Base EVM chains confirmed: DEFAULT_ADMIN = EOA 0x9990..., MINTER_ROLE = EOA 0x3529... (both verified via hasRole at blocks 25295029/47200702).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDM contract",
+          "url": "https://eth.blockscout.com/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+        },
+        {
+          "label": "Base Blockscout AUDM contract",
+          "url": "https://base.blockscout.com/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+        }
+      ],
       "unresolvedQuestions": [
-        "Resolve the on-chain token owner/minter admin on Ethereum (0x0815...cbdd), Solana, and Redbelly before raising confidence."
+        "Solana (CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi) and Redbelly (0x0815...cbdd) mint authority not confirmed; Solana SPL mint authority address not read."
       ]
     }
   },

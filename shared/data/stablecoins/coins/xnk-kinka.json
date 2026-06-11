@@ -124,11 +124,11 @@
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
         }
       ],
-      "evidence": "XNK source/RPC reads show ongoing owner mint ability.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24",
+      "evidence": "XNK source/RPC reads show ongoing owner mint ability. Phase 0c follow-up: 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is a contract (22kb), not a Safe (Safe API 422, getOwners() reverts). owner() on 0x2691 returned 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe (another contract, 22kb). 0x50ea is not a Safe (getOwners reverts, required() reverts). Neither contract exposes a legible multisig interface. The control chain from XNK token → 0x2691 → 0x50ea is unresolvable without verified source or ABI.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Resolve the owner contract's admin/signature model."
+        "Resolve the admin/signature model for owner contract 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 and its owner 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe. Neither is a Safe or known multisig. Source code not verified on Sourcify or Etherscan. Cannot determine signer count or threshold."
       ]
     }
   },

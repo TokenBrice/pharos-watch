@@ -106,7 +106,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "UKTBL Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar routes remain unresolved.",
+    "summary": "UKTBL Ethereum mint/burn is confirmed gated by Spiko's PermissionManager (UUPS proxy, immutable admin slot). The PermissionManager admin = issuer EOA 0xed608cf...7375 (deployed+initialized it). Non-Ethereum chain mint surfaces unresolved.",
     "controls": [
       {
         "chain": "ethereum",
@@ -116,7 +116,7 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Sourcify Spiko Token source",
@@ -127,18 +127,24 @@
             "url": "https://docs.spiko.io/"
           }
         ],
-        "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        "evidence": "At Ethereum block 25294990, implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000 (renounced), authority() = 0x344278aff344d6fb960705dc18a4912221608472 (PermissionManager). Mint and burn are restricted() calls requiring PermissionManager authorization."
       },
       {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
-        "label": "Spiko authority policy contract",
+        "label": "Spiko PermissionManager authority contract",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Blockscout PermissionManager",
+            "url": "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
+          }
+        ],
+        "evidence": "ERC1967 UUPS proxy wrapping PermissionManager impl 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e. Proxy admin slot = 0x0 (immutable; upgrade via _authorizeUpgrade gated to ADMIN group). Initialized with admin = 0xed608cf38968c0ba09676843d90b33dd59dd7375 (deployer EOA). ADMIN group (getGroupAdmins(0)) = mask 0x01 = deployer EOA at index 0. Issuer EOA controls who can mint and can upgrade the PermissionManager itself."
       }
     ],
     "review": {
@@ -150,13 +156,16 @@
         {
           "label": "Sourcify Spiko Token source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Blockscout PermissionManager source",
+          "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
         }
       ],
-      "evidence": "Verified Ethereum implementation source and direct reads show UKTBL mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
-      "reviewer": "Codex mint-authority follow-up family lane",
-      "reviewedAt": "2026-05-24",
+      "evidence": "Ethereum mint surface confirmed: Token.sol restricted() gated by PermissionManager (immutable proxy, EOA admin 0xed608cf...7375). Deployer EOA is the sole admin. Non-Ethereum chains (Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar) not yet verified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
         "Resolve Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
       ]
     }

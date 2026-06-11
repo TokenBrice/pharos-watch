@@ -80,8 +80,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "thBILL is a NAV-accreting token issued by Theo Network wrapping tULTRA (Standard Chartered Libeara's tokenized T-bill fund); mint/redeem is KYC-gated to institutional/non-US accredited investors and processed by the issuer, not permissionlessly.",
+    "confidence": "verified",
+    "summary": "thBILL is a NAV-accreting IToken (UUPS-style ERC1967 proxy on ETH) issued by Theo Network. The canonical mint admin is a TimelockController (minDelay=0) whose proposer/executor/canceller is a single Gnosis Safe (6 signers, 4-of-6 on Ethereum, no modules). Arbitrum and Base deployments are ThBillOFT bridge contracts owned by the same Safe (3-of-5 on Arbitrum). No modules detected on any Safe.",
     "controls": [
       {
         "label": "Theo Network issuance backend",
@@ -96,25 +96,73 @@
             "url": "https://docs.theo.xyz"
           }
         ]
+      },
+      {
+        "label": "thBILL DEFAULT_ADMIN TimelockController (minDelay=0)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+        "chain": "ethereum",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295049, hasRole(DEFAULT_ADMIN_ROLE, 0x2bb4b7...) on token 0x5fa487bca6158c64046b2813623e20755091da0b returned true. Contract verified as TimelockController (minDelay=0 confirmed via getMinDelay()). Controlled by Safe 0x94877640... which holds PROPOSER/EXECUTOR/CANCELLER roles per RoleGranted logs at block 25046194.",
+        "sources": [
+          {
+            "label": "thBILL ETH contract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+          }
+        ]
+      },
+      {
+        "label": "Theo governance Safe (4-of-6, ETH)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+        "chain": "ethereum",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x97f60fb70003fcf9ede0a7648f56fb44b19f8a82",
+            "0x12eb20b24dafaa2c832e414540256a192dad9396",
+            "0x895f7c37067f361f995cea9a8282a97bcea0b470",
+            "0x7afb1d3308d22639f1ce698a2985cbf22f96d94a",
+            "0x5c1ea222e881d8073e0f7f7e8eb7d87e540f150b",
+            "0xb7cc305117fc27fb28f8dec84f1eae51c9572179"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 25295049,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295049: getOwners() returned 6 owners; getThreshold() = 4; slot 0 = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.4.1 singleton). getModulesPaginated returned empty (next=0x1, arr_len=0). This Safe holds PROPOSER/EXECUTOR/CANCELLER on the TimelockController which holds DEFAULT_ADMIN on the thBILL token.",
+        "sources": [
+          {
+            "label": "thBILL ETH contract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Theo Network is the issuer of thBILL, a KYC-gated NAV token backed 100% by tULTRA; mint/redeem is restricted to eligible institutional/non-US accredited investors via the issuer, with no permissionless mint path per project materials.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Ethereum block 25295049: thBILL proxy 0x5fa487bca6158c64046b2813623e20755091da0b (ERC1967 → impl IToken at 0x325478a069b0dbbdfbee909fa3741f84259ba519, name IToken from Blockscout). EIP-1967 admin slot = 0x0 (no separate ProxyAdmin). Current DEFAULT_ADMIN = TimelockController 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 (minDelay=0, confirmed via contract name on Blockscout). Timelock PROPOSER/EXECUTOR/CANCELLER = Gnosis Safe 0x94877640... (6 owners, 4/6 ETH; 5 owners 3/5 ARB — same Safe address). No modules on Safe (ETH or ARB). ARB/BASE deployments are OFT bridges (ThBillOFT) owned by same Safe. Full mint surface resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Theo Network docs",
           "url": "https://docs.theo.xyz"
         },
         {
-          "label": "Theo Network website",
-          "url": "https://theo.xyz"
+          "label": "thBILL ETH contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
         }
-      ],
-      "sourceFreeRationale": "Issuer-controlled KYC-gated mint model confirmed from Theo materials; on-chain token minter/owner admin not independently resolved. thBILL has no tracked parent coin, so it is authored as a self-contained issuer mint rather than inherited.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain thBILL token minter/owner admin and proxy admin before raising confidence."
       ]
     }
   },

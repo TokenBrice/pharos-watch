@@ -113,37 +113,61 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "MMXN is issued by Moneta Digital against self-reported MXN bank reserves; the verified ERC-20 contract is mintable/burnable/pausable with role-gated minters, so supply is created at the issuer's discretion through privileged minter roles.",
+    "confidence": "verified",
+    "summary": "MMXN is issued by Moneta Digital; on Ethereum the deployer EOA 0xdda6544b6d38e3a58bb8bcdd8fc11b1a2314bcab holds MINTER_ROLE (isMinter returned true at block 25295007). On Tron, deployer-equivalent EOA TLboJzFnBRcxVSHm1GmSRdKHshuBgYDrRD is also confirmed minter. Both are EOAs (issuer-controlled, no multisig).",
     "controls": [
       {
-        "label": "Moneta Digital minter role (ERC20Mintable)",
+        "label": "Moneta Digital minter (Ethereum EOA)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "ethereum",
-        "address": "0x95c2e7cbc7ae370e28160bd04297c53f96d092b4",
+        "address": "0xdda6544b6d38e3a58bb8bcdd8fc11b1a2314bcab",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Etherscan-verified non-proxy ERC-20 implements mint()/burn()/pause with addMinter/renounceMinter and addPauser/renouncePauser role management; new MMXN is created by issuer-held minter roles against off-chain MXN reserves."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan MMXN token (verified source: Mintable/Burnable/Pausable)",
+            "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25295007, isMinter(0xdda6544b6d38e3a58bb8bcdd8fc11b1a2314bcab) returned true; eth_getCode for this address = 0x (EOA confirmed). Also isPauser = true. Address is the contract deployer (creation tx 0xc6f84e601844fc65af31529e57990b2e931f45961ac0de6f24275e0c0179e596, block 12639761). Contract is not paused."
+      },
+      {
+        "label": "Moneta Digital minter (Tron EOA)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "tron",
+        "address": "TLboJzFnBRcxVSHm1GmSRdKHshuBgYDrRD",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Tron contract TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe",
+            "url": "https://tronscan.org/#/contract/TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe"
+          }
+        ],
+        "evidence": "triggersmartcontract isMinter(0x749cdf4d4f5b8e8a7812724b4cf0d8cc376b9748) on TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe returned 0x01 (true). getcontractinfo for TLboJzFnBRcxVSHm1GmSRdKHshuBgYDrRD returned no ABI (EOA confirmed). Address is the Tron contract deployer (origin_address = TLboJzFnBRcxVSHm1GmSRdKHshuBgYDrRD)."
       }
     ],
     "review": {
-      "evidence": "Moneta Digital operates a centralized 1:1 mint/redeem against MXN bank deposits, and the on-chain token (Etherscan-verified) exposes mintable/burnable/pausable functionality gated by minter/pauser roles held by the issuer; no permissionless or user-collateralized mint route exists. Live role holders not independently read.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Ethereum: isMinter(deployer) = true at block 25295007; deployer 0xdda6544... is an EOA (code=0x); contract is non-proxy (EIP-1967 impl slot = 0x00), not paused. Tron: isMinter returned true for deployer EOA TLboJzFnBRcxVSHm1GmSRdKHshuBgYDrRD confirmed via triggerconstantcontract. Both chains use non-upgradeable contracts with issuer-held EOA minter.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Etherscan MMXN token (verified source: Mintable/Burnable/Pausable)",
           "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code"
         },
         {
+          "label": "Tron contract TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe",
+          "url": "https://tronscan.org/#/contract/TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe"
+        },
+        {
           "label": "Moneta Digital website",
           "url": "https://monetadigital.com/"
         }
-      ],
-      "unresolvedQuestions": [
-        "Resolve the live minter/pauser role holders and the Tron deployment's mint authority before raising confidence."
       ]
     }
   },

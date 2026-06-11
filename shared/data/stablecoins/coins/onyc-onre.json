@@ -97,24 +97,39 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "ONYC is minted and redeemed at NAV through OnRe's KYC-gated primary interface; OnRe (a Bermuda BMA-regulated SAC) operates the issuance programs and controls supply creation against its segregated reinsurance account.",
+    "confidence": "verified",
+    "summary": "ONYC SPL mint authority is a PDA (AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX) owned by the OnRe program (onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe); the program is upgradeable with upgrade authority held by OnRe team EOA FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f. Freeze authority is a separate OnRe keypair.",
     "controls": [
       {
-        "label": "OnRe issuance/redemption programs (Solana)",
+        "label": "OnRe program PDA (mint authority)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "solana",
-        "canRaiseCap": "unknown",
-        "evidence": "OnRe operates audited Solana issuance/redemption programs; primary mint occurs at NAV through OnRe's KYC-gated interface (USDC/USDG swap), so OnRe controls supply creation against the segregated account."
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Solana slot ~405,000,000 (2026-06-11), getAccountInfo(5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5, jsonParsed) returned mintAuthority=AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, freezeAuthority=45YnzauhsBM8CpUz96Djf8UG5vqq2Dua62wuW9H3jaJ5, supply=171456709677981373, decimals=9. getAccountInfo(AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX) confirmed owner=onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe (the OnRe BPF-upgradeable program), executable=false — confirming it is a PDA of the OnRe program. The OnRe program's programData account (91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg) shows upgradeAuthority=FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, which is a system-program-owned keypair (OnRe team EOA). Freeze authority 45Ynz... is also a system-program-owned keypair.",
+        "sources": [
+          {
+            "label": "ONYC SPL mint on Solana Explorer",
+            "url": "https://explorer.solana.com/address/5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"
+          },
+          {
+            "label": "OnRe program on Solana Explorer",
+            "url": "https://explorer.solana.com/address/onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "OnRe docs describe minting ONYC directly at NAV through OnRe's primary interface (KYC-gated), with audited Solana issuance/redemption programs operated by OnRe SAC Ltd. against a BMA-regulated segregated reinsurance account; no permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At Solana slot ~405,000,000 (2026-06-11): ONYC mint (5Y8NV33V...) has mintAuthority=AbpE5YL... (PDA), freezeAuthority=45YnzauhsBM8... (keypair). The PDA AbpE5YL is owned by the OnRe BPFLoaderUpgradeable program onreuGhH..., confirming it is a program-derived address. The OnRe program's programData account shows upgrade authority = FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, a system-program-owned keypair (OnRe team wallet). This means the entire mint surface is controlled by OnRe through their upgradeable on-chain program. No permissionless or user-collateralized mint route exists.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "ONYC SPL mint on Solana Explorer",
+          "url": "https://explorer.solana.com/address/5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"
+        },
         {
           "label": "OnRe ONYC docs",
           "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
@@ -123,8 +138,7 @@
           "label": "OnRe FAQ",
           "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
         }
-      ],
-      "unresolvedQuestions": ["Resolve the on-chain Solana mint authority address (multisig vs program PDA) before raising confidence."]
+      ]
     }
   }
 }

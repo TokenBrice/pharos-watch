@@ -101,25 +101,51 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "REUR is issued by The RIB Digital Holdings Limited (Royal Coins, Hong Kong); minting and redemption run through the issuer's centralized backend targeting 1 REUR = 1 EUR against euro cash reserves at top-tier banks.",
+    "confidence": "verified",
+    "summary": "REUR is issued by RIB Digital Holdings (Hong Kong) via non-upgradeable token contracts on three chains. On Ethereum and BSC the MASTERMINTER and DEFAULT_ADMIN is EOA 0xc50ebe57; on Tron the MASTERMINTER is a separate EOA (0x9a0c5f3a in EVM notation). The MASTERMINTER can call mintByMaster() directly or configureMinter() to authorize sub-minters; no active sub-minters were found at review time.",
     "controls": [
       {
-        "label": "RIB Digital Holdings issuance backend",
+        "label": "RIB Digital issuance EOA — Ethereum and BSC (MASTERMINTER + DEFAULT_ADMIN)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "RIB/Royal Coins operates a centralized mint/redeem targeting 1:1 EUR backing subject to reserve sufficiency and redemption terms; a single issuer controls supply creation against custodied euro reserves."
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295037, owner() on 0x3ed0b3c4c0168a560d34e361b8130dcca4677736 returned 0xc50ebe57ae937a8ac0bcaab8945777c3be54a511; eth_getCode = 0x (EOA). hasRole(DEFAULT_ADMIN_ROLE, 0xc50ebe57) = true; hasRole(MASTERMINTER_ROLE, 0xc50ebe57) = true. Neither the proxy-admin slot nor the EIP-1967 impl slot is set (contract is not upgradeable). BSC: owner() same address confirmed at BSC block 103629529. isMinter(owner) = false (no sub-minter configured); mintByMaster() is available directly to the MASTERMINTER.",
+        "sources": [
+          {
+            "label": "REUR Ethereum token",
+            "url": "https://etherscan.io/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+          }
+        ]
+      },
+      {
+        "label": "RIB Digital issuance EOA — Tron (MASTERMINTER + DEFAULT_ADMIN)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "On Tron, owner() on TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz (EVM 0xebef0a34) returned 0x9a0c5f3a73fafb8bd7e7c4c8295cdd8daa87f692; eth_getCode via Tron JSONRPC = 0x (EOA). hasRole(MASTERMINTER_ROLE, 0x9a0c5f3a) = true. Different EOA from ETH/BSC but same concentrated-admin pattern.",
+        "sources": [
+          {
+            "label": "REUR Tron token",
+            "url": "https://tronscan.org/#/contract/TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Royal Coins materials describe an issuer-managed mint and redemption route targeting 1 REUR = 1 EUR backed by euro cash reserves at top-tier international banks; the same issuer (RIB Digital Holdings) operates RUSD, and no permissionless or user-collateralized mint route exists.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Classification based on the issuer model described in RIB/Royal Coins materials; on-chain token owner/minter admin not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron REUR contracts before raising confidence."
+      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "REUR Ethereum token",
+          "url": "https://etherscan.io/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "label": "REUR Tron token",
+          "url": "https://tronscan.org/#/contract/TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+        }
       ]
     }
   },

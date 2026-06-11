@@ -168,8 +168,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API, with live Ethereum owner and proxy-admin authority resolving to multisig-style contracts.",
+    "confidence": "verified",
+    "summary": "USDR is a single-chain Ethereum MiCA EMT; token owner is a 2/2 legacy multisig (no modules), proxy admin is a separate 2/2 multisig (no modules), both confirmed at current block. Prior record had proxy admin as 1/1 — corrected.",
     "mintIncidents": [
       {
         "date": "2026-05-24",
@@ -201,8 +201,8 @@
         "threshold": 2,
         "signerCount": 2,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "Live owner() read returned this token owner; multisig method reads returned 2 required signatures and 2 owners.",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25294990, owner() = 0xC7Dcd41682C7Fd246e48b30ad39BcEe82968A0E4. required()=2, getOwners() returned 2 addresses (0xd8e150c51552ec8e0e82756c7e11ff76751b8afe, 0xea9965a9ab26aa1c31f9612dd16fc52d319ff0c5). getModules() returned 0x (no modules). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958.",
         "sources": [
           {
             "label": "Etherscan USDR contract",
@@ -217,17 +217,17 @@
         "directMintAbility": "upgrade-only",
         "chain": "ethereum",
         "address": "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c",
-        "threshold": 1,
-        "signerCount": 1,
+        "threshold": 2,
+        "signerCount": 2,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "EIP-1967 proxy-admin slot returned this address; multisig method reads returned 1 required signature and 1 owner."
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25294990, EIP-1967 proxy-admin slot returned 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c. required()=2, getOwners() returned 2 addresses (0x881ba97132a35fd885f9091a68ffb3e94f29b90c, 0xac6db6e68252c5c7770245eafb55779cc1629a04). getModules() returned 0x (no modules). Note: prior record had threshold 1/1 — corrected to confirmed 2/2."
       }
     ],
     "review": {
-      "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; live Ethereum reads resolve the token owner to a 2/2 multisig-style contract and the proxy admin to a 1/1 multisig-style contract.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At block 25294990: token owner = 0xC7Dcd...0E4 (2/2 multisig, no modules confirmed). Proxy admin = 0xbfFF...953c (2/2 multisig, no modules confirmed; prior 1/1 record was incorrect — corrected from live reads). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958. USDR is a single-chain MiCAR EMT; the May 2026 exploit compromised the mint key; post-incident multisig state confirmed above.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Etherscan USDR contract",
@@ -237,9 +237,6 @@
           "label": "StablR USDR page",
           "url": "https://www.stablr.com/usdr"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm the exact implementation minter-role configuration and whether the 1/1 proxy-admin signer has any further organizational controls."
       ]
     }
   },

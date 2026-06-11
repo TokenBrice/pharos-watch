@@ -165,37 +165,58 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
-    "summary": "SBC is issued by Brale, a FinCEN-registered MSB and licensed US money transmitter; all minting and redemption run through Brale's centralized issuance backend against segregated cash and Treasury reserves.",
+    "confidence": "verified",
+    "summary": "SBC is issued by Brale (FinCEN MSB / US money transmitter) via UUPS-upgradeable AccessControl token contracts. On Ethereum, EOA 0xb180f98 holds both MINTER_ROLE and DEFAULT_ADMIN_ROLE; the UPGRADER_ROLE (proxy upgrade authority) is held by a separate 6-signer legacy multisig (threshold 3, no modules) at 0x4d16d9e3. Same minter EOA confirmed on Arbitrum.",
     "controls": [
       {
-        "label": "Brale issuance backend",
+        "label": "Brale issuance EOA — MINTER_ROLE and DEFAULT_ADMIN_ROLE",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Brale operates the centralized mint/redeem for SBC, creating supply 1:1 against custodied cash and short-duration US Treasuries; no permissionless or user-collateralized mint route exists.",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295066, hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true; hasRole(DEFAULT_ADMIN_ROLE, 0xb180f98) = true; eth_getCode = 0x (EOA). The EOA is the sole active minter (all txns with method 0x40c10f19 originate from 0xb180f98). At Arbitrum block 472412491, hasRole(MINTER_ROLE, 0xb180f98) = true.",
         "sources": [
+          {
+            "label": "SBC Ethereum token",
+            "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          },
           {
             "label": "Brale SBC proof of reserve",
             "url": "https://brale.xyz/stablecoins/SBC"
           }
         ]
+      },
+      {
+        "label": "Proxy upgrade authority — 6-signer legacy multisig, threshold 3 (UPGRADER_ROLE)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295066, hasRole(UPGRADER_ROLE, 0x4d16d9e3358b68638e25f631ac861fa40a8fb87e) = true; 0x4d16d9 is a contract (344 bytes, legacy multisig not Safe). getOwners() returned 6 addresses; getThreshold() = 3; getModulesPaginated returned empty array. The EIP-1967 impl slot on the SBC proxy contains 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 (verified contract). hasRole(UPGRADER_ROLE, 0xb180f98) = false (minter EOA cannot upgrade).",
+        "sources": [
+          {
+            "label": "SBC Ethereum proxy implementation",
+            "url": "https://etherscan.io/address/0x935eda0060ba40ea409bb05fa2300abb4e215ac1"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Brale (FinCEN MSB / US money transmitter) is the sole issuer; SBC mint/redeem is operated 1:1 through Brale's backend against segregated reserves with monthly CPA attestations. No on-chain permissionless mint path.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "Ethereum block 25295066: MINTER_ROLE + DEFAULT_ADMIN_ROLE = EOA 0xb180f98 (confirmed via hasRole + eth_getCode). UPGRADER_ROLE = legacy multisig 0x4d16d9e3 (6 signers, threshold 3, no modules). Arbitrum block 472412491: MINTER_ROLE = 0xb180f98 confirmed. EIP-1967 impl slot = 0x935eda (verified contract). All mint-capable on-chain surfaces resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
       "sources": [
         {
           "label": "Brale SBC proof of reserve",
           "url": "https://brale.xyz/stablecoins/SBC"
+        },
+        {
+          "label": "SBC Ethereum token",
+          "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
         }
-      ],
-      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Brale first-party materials; on-chain token owner/minter admin and any proxy admin not independently resolved.",
-      "unresolvedQuestions": [
-        "Resolve the on-chain SBC token owner/minter admin and any proxy admin across deployed chains before raising to verified."
       ]
     }
   },
