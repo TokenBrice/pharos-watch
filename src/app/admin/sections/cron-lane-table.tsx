@@ -10,7 +10,7 @@ import { CronInFlightProgress } from "@/components/status/cron-in-flight-progres
 import { formatInterval, formatLatency } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import type { CronGroup } from "./crons-section";
+import type { CronGroup } from "./cron-lane-types";
 
 type CronEntry = CronGroup["entries"][number];
 type CronStatus = CronEntry[1];

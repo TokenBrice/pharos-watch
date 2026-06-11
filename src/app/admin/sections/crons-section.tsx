@@ -1,14 +1,9 @@
 import type { StatusResponse } from "@shared/types";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { CronLaneTable } from "./cron-lane-table";
+import type { CronGroup } from "./cron-lane-types";
 
-export interface CronGroup {
-  key: string;
-  title: string;
-  badge: string;
-  description: string;
-  entries: [string, StatusResponse["crons"][string]][];
-}
+export type { CronGroup } from "./cron-lane-types";
 
 export interface CronsSectionProps {
   data: StatusResponse;
