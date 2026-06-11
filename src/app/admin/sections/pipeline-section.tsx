@@ -41,7 +41,10 @@ function deriveInitialPipelineTab(data: StatusResponse): PipelineTab {
   ) {
     return "quality";
   }
-  if ((data.coingeckoPriceDiff?.mismatchedCount ?? 0) > 0 || data.priceSourceHealth?.missingCount) {
+  if (
+    (data.coingeckoPriceDiff?.mismatchedCount ?? 0) > 0 ||
+    (data.priceSourceHealth?.sourceDistribution.missing ?? 0) > 0
+  ) {
     return "markets";
   }
   if (
@@ -55,7 +58,7 @@ function deriveInitialPipelineTab(data: StatusResponse): PipelineTab {
   if (data.yieldHealth?.status && data.yieldHealth.status !== "healthy") {
     return "yield";
   }
-  if (data.sectionErrors.d1Usage || data.sectionErrors.datasetFreshness) {
+  if (data.sectionErrors.d1Usage) {
     return "storage";
   }
   if ((data.discoveryCandidates?.length ?? 0) > 0) {
