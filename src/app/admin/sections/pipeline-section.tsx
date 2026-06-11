@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { StatusResponse } from "@shared/types";
 import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { DataQualityCards } from "@/components/status/data-quality-cards";
@@ -19,12 +22,56 @@ export interface PipelineSectionProps {
   handleRefresh: () => void;
 }
 
+type PipelineTab = "quality" | "markets" | "reserves" | "yield" | "storage" | "discovery";
+
+const PIPELINE_TABS: Array<{ id: PipelineTab; label: string }> = [
+  { id: "quality", label: "Quality" },
+  { id: "markets", label: "Markets" },
+  { id: "reserves", label: "Reserves" },
+  { id: "yield", label: "Yield" },
+  { id: "storage", label: "Storage" },
+  { id: "discovery", label: "Discovery" },
+];
+
+function deriveInitialPipelineTab(data: StatusResponse): PipelineTab {
+  if (
+    data.dataQuality.missingPrices > 0 ||
+    data.dataQuality.blacklistMissingAmounts > 0 ||
+    data.dataQuality.onchainSupplyDivergences > 0
+  ) {
+    return "quality";
+  }
+  if ((data.coingeckoPriceDiff?.mismatchedCount ?? 0) > 0 || data.priceSourceHealth?.missingCount) {
+    return "markets";
+  }
+  if (
+    data.reserveComposition.status !== "healthy" ||
+    data.reserveComposition.deferredCoins > 0 ||
+    (data.reserveDrift?.length ?? 0) > 0 ||
+    (data.classificationWarnings?.length ?? 0) > 0
+  ) {
+    return "reserves";
+  }
+  if (data.yieldHealth?.status && data.yieldHealth.status !== "healthy") {
+    return "yield";
+  }
+  if (data.sectionErrors.d1Usage || data.sectionErrors.datasetFreshness) {
+    return "storage";
+  }
+  if ((data.discoveryCandidates?.length ?? 0) > 0) {
+    return "discovery";
+  }
+  return "quality";
+}
+
 export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
+  const [activeTab, setActiveTab] = useState<PipelineTab>(() => deriveInitialPipelineTab(data));
+
   return (
     <StatusSection
       id="pipeline"
       kicker="Data Pipeline"
-      title="Freshness and coverage"
+      title="Pipeline Health"
       accentClassName="border-l-cyan-500"
       summary={
         <>
@@ -42,7 +89,29 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
         </>
       }
     >
-      <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
+      <div className="flex flex-wrap gap-2">
+        {PIPELINE_TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "pharos-focus-ring rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                isActive
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border/60 bg-background/55 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "quality" ? (
+        <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
@@ -63,59 +132,73 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
           <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
         </div>
       </div>
+      ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <PriceSourceHealthCard
-          health={data.priceSourceHealth}
-          error={data.sectionErrors.priceSourceHealth}
+      {activeTab === "markets" ? (
+        <div className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-2">
+            <PriceSourceHealthCard
+              health={data.priceSourceHealth}
+              error={data.sectionErrors.priceSourceHealth}
+              nowSeconds={data.timestamp}
+            />
+            <LiquidityHealthCard
+              health={data.liquidityHealth}
+              error={data.sectionErrors.liquidityHealth}
+            />
+          </div>
+          <CoinGeckoPriceDiffCard
+            summary={data.coingeckoPriceDiff}
+            error={data.sectionErrors.coingeckoPriceDiff}
+            nowSeconds={data.timestamp}
+          />
+        </div>
+      ) : null}
+
+      {activeTab === "reserves" ? (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
+          <div className="space-y-5">
+            <MintBurnReconciliationCard
+              summary={data.mintBurnReconciliation}
+              error={data.sectionErrors.mintBurnReconciliation}
+            />
+            <MetadataIntegrityCard
+              reserveDrift={data.reserveDrift}
+              classificationWarnings={data.classificationWarnings}
+              reserveDriftError={data.sectionErrors.reserveDrift}
+              classificationWarningsError={data.sectionErrors.classificationWarnings}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "yield" ? (
+        <YieldHealthCard
+          health={data.yieldHealth}
+          error={data.sectionErrors.yieldHealth}
+        />
+      ) : null}
+
+      {activeTab === "storage" ? (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.42fr)]">
+          <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
+          <D1UsageCard
+            summary={data.d1Usage}
+            error={data.sectionErrors.d1Usage}
+            nowSeconds={data.timestamp}
+          />
+        </div>
+      ) : null}
+
+      {activeTab === "discovery" ? (
+        <DiscoveryCandidatesCard
+          candidates={data.discoveryCandidates}
+          error={data.sectionErrors.discoveryCandidates}
           nowSeconds={data.timestamp}
+          onDismissed={handleRefresh}
         />
-        <LiquidityHealthCard
-          health={data.liquidityHealth}
-          error={data.sectionErrors.liquidityHealth}
-        />
-      </div>
-
-      <YieldHealthCard
-        health={data.yieldHealth}
-        error={data.sectionErrors.yieldHealth}
-      />
-
-      <CoinGeckoPriceDiffCard
-        summary={data.coingeckoPriceDiff}
-        error={data.sectionErrors.coingeckoPriceDiff}
-        nowSeconds={data.timestamp}
-      />
-
-      <div className="grid gap-5 xl:grid-cols-3">
-        <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
-        <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
-        <D1UsageCard
-          summary={data.d1Usage}
-          error={data.sectionErrors.d1Usage}
-          nowSeconds={data.timestamp}
-        />
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <MintBurnReconciliationCard
-          summary={data.mintBurnReconciliation}
-          error={data.sectionErrors.mintBurnReconciliation}
-        />
-        <MetadataIntegrityCard
-          reserveDrift={data.reserveDrift}
-          classificationWarnings={data.classificationWarnings}
-          reserveDriftError={data.sectionErrors.reserveDrift}
-          classificationWarningsError={data.sectionErrors.classificationWarnings}
-        />
-      </div>
-
-      <DiscoveryCandidatesCard
-        candidates={data.discoveryCandidates}
-        error={data.sectionErrors.discoveryCandidates}
-        nowSeconds={data.timestamp}
-        onDismissed={handleRefresh}
-      />
+      ) : null}
     </StatusSection>
   );
 }

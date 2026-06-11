@@ -4,7 +4,15 @@ import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
-export type DashboardSectionId = "overview" | "pipeline" | "reliability" | "crons" | "control" | "history";
+export type DashboardSectionId =
+  | "overview"
+  | "pipeline"
+  | "crons"
+  | "reliability"
+  | "actions"
+  | "credentials"
+  | "comms"
+  | "history";
 
 export interface DashboardSection {
   id: DashboardSectionId;
@@ -371,23 +379,31 @@ export function buildStatusDashboardData({
         : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0
           ? 1
           : 0;
-  const controlStatus = recommendedActions.length > 0 ? 2 : 0;
+  const actionsStatus = recommendedActions.length > 0 ? 2 : 0;
+  const telegramDispatch = data.crons["dispatch-telegram-alerts"]?.lastRun ?? null;
+  const commsStatus =
+    (data.telegramBot?.pendingDeliveries ?? 0) > 0 ||
+    (telegramDispatch != null && telegramDispatch.status !== "ok")
+      ? 1
+      : 0;
   const sectionPriority: Record<DashboardSectionId, number> = {
     overview: 999,
-    control: controlStatus * 100 + recommendedActions.length,
     pipeline: STATUS_PRIORITY[data.dataQualityStatus] * 100 + blockerCauses.filter((cause) => cause.layer === "data-quality").length,
     crons: cronStatus * 100 + data.summary.availabilityImpactingUnhealthyCrons * 10 + data.summary.availabilityImpactingCronErrors,
     reliability: reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
+    actions: actionsStatus * 100 + recommendedActions.length,
+    credentials: 0,
+    comms: commsStatus * 100 + (data.telegramBot?.pendingDeliveries ?? 0),
     history: -1,
   };
-  const sectionOrder: DashboardSectionId[] = ["overview", "control", "pipeline", "crons", "reliability", "history"];
+  const sectionOrder: DashboardSectionId[] = ["overview", "pipeline", "crons", "reliability", "actions", "credentials", "comms", "history"];
   const baseSections: DashboardSection[] = [
     {
       id: "overview",
-      label: "Overview",
+      label: "Triage",
       kicker: "Command Center",
-      title: "Current incident picture",
-      description: "State machine counters, root causes, and the operator-facing view of what changed last.",
+      title: "Triage",
+      description: "Current incident state, blockers, watch items, recommended action, and diagnostics.",
       accentClassName: "border-l-frost-blue",
       value: overallTone.label,
       valueClassName: overallTone.valueClassName,
@@ -397,7 +413,7 @@ export function buildStatusDashboardData({
       id: "pipeline",
       label: "Pipeline",
       kicker: "Data Pipeline",
-      title: "Freshness and coverage",
+      title: "Pipeline Health",
       description: "Dataset recency, price coverage, supply drift, liquidity coverage, and discovery backlog.",
       accentClassName: "border-l-cyan-500",
       value: getStatusTone(data.dataQualityStatus).label,
@@ -420,9 +436,9 @@ export function buildStatusDashboardData({
     },
     {
       id: "crons",
-      label: "Cron Lanes",
+      label: "Crons",
       kicker: "Schedulers",
-      title: "Worker job lanes",
+      title: "Cron Lanes",
       description: "Grouped by trigger theme so failures, degraded runs, and in-flight leases are easier to scan.",
       accentClassName: "border-l-orange-500",
       value: `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
@@ -433,44 +449,67 @@ export function buildStatusDashboardData({
       summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons} watch unhealthy, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
     },
     {
-      id: "control",
+      id: "actions",
       label: "Actions",
       kicker: "Operations",
-      title: "Manual response",
-      description: "Rarely-used recovery actions and operator controls. Positioned last since these are only needed during active incidents.",
+      title: "Actions",
+      description: "Recommended recovery actions, backfills, audits, diagnostics, and recent execution results.",
       accentClassName: "border-l-emerald-500",
       value: recommendedActions.length > 0 ? `${recommendedActions.length} suggested` : "Clear",
       valueClassName:
         recommendedActions.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400",
-      summary: `${recommendedActions.length} recommended actions, ${data.telegramBot?.deliverableChats ?? 0} alert-ready chats, ${data.telegramBot?.pendingDeliveries ?? 0} pending deliveries`,
+      summary: `${recommendedActions.length} recommended actions, ${data.summary.cronErrors} cron errors`,
+    },
+    {
+      id: "credentials",
+      label: "Credentials",
+      kicker: "Access",
+      title: "Credentials",
+      description: "API-key inventory, creation, rotation, deactivation, and rate-limit controls.",
+      accentClassName: "border-l-slate-500",
+      value: "Managed",
+      valueClassName: "text-foreground",
+      summary: "API-key inventory and lifecycle controls",
+    },
+    {
+      id: "comms",
+      label: "Comms",
+      kicker: "Messaging",
+      title: "Comms",
+      description: "Telegram delivery, pending queues, alert-ready audiences, and outbound operator messaging.",
+      accentClassName: "border-l-teal-500",
+      value: `${data.telegramBot?.pendingDeliveries ?? 0} pending`,
+      valueClassName:
+        (data.telegramBot?.pendingDeliveries ?? 0) > 0
+          ? "text-amber-700 dark:text-amber-400"
+          : "text-green-700 dark:text-green-400",
+      summary: `${data.telegramBot?.deliverableChats ?? 0} alert-ready chats, ${data.telegramBot?.pendingDeliveries ?? 0} pending deliveries`,
     },
     {
       id: "history",
       label: "History",
       kicker: "Incident Log",
-      title: "Timeline and recovery trail",
+      title: "Incident History",
       description: "Persisted transitions for drills, regressions, and dwell-state validation.",
       accentClassName: "border-l-rose-500",
       value: latestTransition ? formatTransitionLabel(latestTransition) : "No transitions",
       summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
     },
   ];
-  const sections = [...baseSections].sort((a, b) => {
-    if (a.id === "overview") return -1;
-    if (b.id === "overview") return 1;
-    if (a.id === "control") return 1;
-    if (b.id === "control") return -1;
-    if (a.id === "history") return 1;
-    if (b.id === "history") return -1;
+  const attentionSections = baseSections
+    .filter((section) => section.id !== "overview" && section.id !== "credentials" && section.id !== "history")
+    .filter((section) => sectionPriority[section.id] > 0)
+    .sort((a, b) => {
+      const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
+      if (priorityDelta !== 0) return priorityDelta;
 
-    const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
-    if (priorityDelta !== 0) return priorityDelta;
-
-    return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
-  });
+      return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
+    });
+  const sections = baseSections;
 
   return {
     allTransitions,
+    attentionSections,
     blockerCauses,
     browserProbeSummary,
     clientDataAgeSec,

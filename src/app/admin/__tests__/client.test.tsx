@@ -383,13 +383,19 @@ function makeModel() {
     ],
     recommendedActions: [],
     runningCrons: 0,
-    sections: [
-      { id: "overview", label: "Overview", kicker: "", title: "Current incident picture", description: "", accentClassName: "", value: "Degraded", summary: "State summary" },
-      { id: "pipeline", label: "Pipeline", kicker: "", title: "Freshness and coverage", description: "", accentClassName: "", value: "Healthy", summary: "Pipeline summary" },
+    attentionSections: [
       { id: "reliability", label: "Reliability", kicker: "", title: "Probes, breakers, and cache pressure", description: "", accentClassName: "", value: "Degraded", summary: "Reliability summary" },
-      { id: "crons", label: "Crons", kicker: "", title: "Worker job lanes", description: "", accentClassName: "", value: "1 unhealthy", summary: "Cron summary" },
-      { id: "control", label: "Control", kicker: "", title: "Manual response", description: "", accentClassName: "", value: "2 pending", summary: "Control summary" },
-      { id: "history", label: "History", kicker: "", title: "Timeline and recovery trail", description: "", accentClassName: "", value: "24h", summary: "History summary" },
+      { id: "crons", label: "Crons", kicker: "", title: "Cron Lanes", description: "", accentClassName: "", value: "1 unhealthy", summary: "Cron summary" },
+    ],
+    sections: [
+      { id: "overview", label: "Triage", kicker: "", title: "Triage", description: "", accentClassName: "", value: "Degraded", summary: "State summary" },
+      { id: "pipeline", label: "Pipeline", kicker: "", title: "Pipeline Health", description: "", accentClassName: "", value: "Healthy", summary: "Pipeline summary" },
+      { id: "reliability", label: "Reliability", kicker: "", title: "Probes, breakers, and cache pressure", description: "", accentClassName: "", value: "Degraded", summary: "Reliability summary" },
+      { id: "crons", label: "Crons", kicker: "", title: "Cron Lanes", description: "", accentClassName: "", value: "1 unhealthy", summary: "Cron summary" },
+      { id: "actions", label: "Actions", kicker: "", title: "Actions", description: "", accentClassName: "", value: "2 pending", summary: "Actions summary" },
+      { id: "credentials", label: "Credentials", kicker: "", title: "Credentials", description: "", accentClassName: "", value: "Managed", summary: "Credentials summary" },
+      { id: "comms", label: "Comms", kicker: "", title: "Comms", description: "", accentClassName: "", value: "2 pending", summary: "Comms summary" },
+      { id: "history", label: "History", kicker: "", title: "Incident History", description: "", accentClassName: "", value: "24h", summary: "History summary" },
     ],
     statusHoldingAge: 300,
     healthDiffersFromStatus: false,
@@ -418,7 +424,7 @@ describe("admin status client", () => {
     });
 
     expect(screen.getByText("Operator tooling is no longer available on the public host.")).toBeTruthy();
-    expect(screen.queryByText("Current incident picture")).toBeNull();
+    expect(screen.queryByText("Blockers")).toBeNull();
   });
 
   it("renders the dashboard, auto-expands critical details, and wires refresh/sign-out actions", async () => {
@@ -459,11 +465,14 @@ describe("admin status client", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(screen.getByText("Current incident picture")).toBeTruthy();
+    expect(screen.getAllByText("Blockers").length).toBeGreaterThan(0);
+    expect(screen.getByText("Needs attention")).toBeTruthy();
     expect(screen.getByText("Operator warning")).toBeTruthy();
     expect(screen.getByText("API Mix Fetch")).toBeTruthy();
     expect(screen.getByTestId("request-source-attribution")).toBeTruthy();
     expect(screen.getByTestId("api-key-load-table")).toBeTruthy();
+    expect(screen.getByTestId("api-keys-panel")).toBeTruthy();
+    expect(screen.getByTestId("telegram-bot-stats")).toBeTruthy();
 
     const diagnosticsDetails = screen
       .getByText("State machine, probe, and discrepancy diagnostics")
@@ -471,13 +480,9 @@ describe("admin status client", () => {
     const reliabilityDetails = screen
       .getByText("Endpoint probes, circuit breakers, and cache freshness")
       .closest("details");
-    const telegramDetails = screen
-      .getByText("Telegram delivery telemetry")
-      .closest("details");
 
     expect(diagnosticsDetails?.hasAttribute("open")).toBe(true);
     expect(reliabilityDetails?.hasAttribute("open")).toBe(true);
-    expect(telegramDetails?.hasAttribute("open")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh now" }));
     expect(handleRefresh).toHaveBeenCalledTimes(1);

@@ -25,7 +25,7 @@ export function HistorySection({
     <StatusSection
       id="history"
       kicker="Incident Log"
-      title="Timeline and recovery trail"
+      title="Incident History"
       accentClassName="border-l-rose-500"
       summary={
         <>

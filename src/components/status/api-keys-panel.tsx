@@ -9,6 +9,7 @@ import type {
 } from "@shared/types";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { postAdminJson } from "@/lib/admin-access";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import {
@@ -22,6 +23,7 @@ import {
 import type { CreateKeyState, EditableKeyState } from "@/lib/api-key-admin-view-model";
 import {
   ApiKeyInventorySummary,
+  ApiKeyTable,
   ApiKeyRowEditor,
   CreateApiKeyForm,
   TokenRevealPanel,
@@ -32,6 +34,8 @@ const EMPTY_KEYS: readonly ApiKeySummary[] = [];
 export function ApiKeysPanel() {
   const { data, error, isLoading, refetch } = useApiKeys();
   const [createState, setCreateState] = useState<CreateKeyState>(DEFAULT_CREATE_KEY_STATE);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingKeyId, setEditingKeyId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
@@ -74,6 +78,7 @@ export function ApiKeysPanel() {
       );
       setRevealedToken({ label: `Created ${response.key.name}`, token: requirePlaintextToken(response, "created") });
       setCreateState(DEFAULT_CREATE_KEY_STATE);
+      setIsCreateOpen(false);
       await refetch();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Unknown error");
@@ -90,12 +95,28 @@ export function ApiKeysPanel() {
       <CardContent className="space-y-5">
         {!isLoading && !error ? <ApiKeyInventorySummary items={keySummary} /> : null}
 
-        <CreateApiKeyForm
-          busy={createBusy}
-          state={createState}
-          onChange={(patch) => setCreateState((previous) => ({ ...previous, ...patch }))}
-          onCreate={handleCreate}
-        />
+        {!isLoading && !error ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+            <div>
+              <h3 className="text-sm font-medium text-foreground">Key inventory</h3>
+              <p className="text-xs text-muted-foreground">
+                Scan keys first; open create or edit only when you need to mutate credentials.
+              </p>
+            </div>
+            <Button size="sm" variant={isCreateOpen ? "default" : "outline"} onClick={() => setIsCreateOpen((value) => !value)}>
+              {isCreateOpen ? "Creating key" : "Create read key"}
+            </Button>
+          </div>
+        ) : null}
+
+        {isCreateOpen ? (
+          <CreateApiKeyForm
+            busy={createBusy}
+            state={createState}
+            onChange={(patch) => setCreateState((previous) => ({ ...previous, ...patch }))}
+            onCreate={handleCreate}
+          />
+        ) : null}
 
         {revealedToken ? <TokenRevealPanel revealedToken={revealedToken} /> : null}
 
@@ -114,13 +135,26 @@ export function ApiKeysPanel() {
 
         {!isLoading && !error ? (
           <div className="space-y-3">
-            {keys.length === 0 ? (
-              <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
-                No API keys created yet.
-              </div>
-            ) : null}
+            <ApiKeyTable
+              keys={keys}
+              nowSeconds={nowSeconds}
+              busyKeyId={busyKeyId}
+              editingKeyId={editingKeyId}
+              onEdit={(keyId) => setEditingKeyId((current) => current === keyId ? null : keyId)}
+              onDeactivate={(keyId) => runKeyAction(async () => {
+                await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${keyId}/deactivate`);
+              }, keyId)}
+              onRotate={(keyId) => runKeyAction(async () => {
+                const response = await postAdminJson<ApiKeyRotateResponse>(`/api/api-keys/${keyId}/rotate`);
+                setRevealedToken({
+                  label: `Rotated ${response.key.name}`,
+                  token: requirePlaintextToken(response, "rotated"),
+                });
+              }, keyId)}
+            />
 
             {keys.map((key) => {
+              if (editingKeyId !== key.id) return null;
               const draft = draftState[key.id] ?? buildEditableKeyState(key);
               const isBusy = busyKeyId === key.id;
 
@@ -141,6 +175,7 @@ export function ApiKeysPanel() {
                       buildUpdateApiKeyPayload(draft),
                     );
                     setDrafts((previous) => ({ ...previous, [key.id]: buildEditableKeyState(response.key) }));
+                    setEditingKeyId(null);
                   }, key.id)}
                   onDeactivate={() => runKeyAction(async () => {
                     await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${key.id}/deactivate`);

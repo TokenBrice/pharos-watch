@@ -1,6 +1,6 @@
 import type { StatusResponse } from "@shared/types";
-import { CronCard } from "@/components/status/cron-card";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { CronLaneTable } from "./cron-lane-table";
 
 export interface CronGroup {
   key: string;
@@ -19,27 +19,6 @@ export interface CronsSectionProps {
   setIsHealthyCronGroupsOpen: (open: boolean) => void;
 }
 
-function CronGroupCard({ group, nowSeconds }: { group: CronGroup; nowSeconds: number }) {
-  return (
-    <div key={group.key} className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">{group.title}</h3>
-          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {group.badge}
-          </span>
-        </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{group.description}</p>
-      </div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {group.entries.map(([job, cron]) => (
-          <CronCard key={job} job={job} cron={cron} nowSeconds={nowSeconds} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function CronsSection({
   data,
   runningCrons,
@@ -52,7 +31,7 @@ export function CronsSection({
     <StatusSection
       id="crons"
       kicker="Schedulers"
-      title="Worker job lanes"
+      title="Cron Lanes"
       accentClassName="border-l-orange-500"
       summary={
         <>
@@ -65,9 +44,11 @@ export function CronsSection({
     >
       <div className="space-y-4">
         {activeCronGroups.length > 0 ? (
-          activeCronGroups.map((group) => (
-            <CronGroupCard key={group.key} group={group} nowSeconds={data.timestamp} />
-          ))
+          <CronLaneTable
+            groups={activeCronGroups}
+            nowSeconds={data.timestamp}
+            emptyLabel="No unhealthy cron lanes."
+          />
         ) : (
           <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4 text-sm leading-relaxed text-muted-foreground">
             No unhealthy cron lanes. Healthy groups are collapsed below.
@@ -86,9 +67,11 @@ export function CronsSection({
               </span>
             </summary>
             <div className="mt-4 space-y-4">
-              {healthyCronGroups.map((group) => (
-                <CronGroupCard key={group.key} group={group} nowSeconds={data.timestamp} />
-              ))}
+              <CronLaneTable
+                groups={healthyCronGroups}
+                nowSeconds={data.timestamp}
+                emptyLabel="No healthy lanes to show."
+              />
             </div>
           </details>
         ) : null}

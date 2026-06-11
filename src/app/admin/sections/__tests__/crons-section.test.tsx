@@ -8,10 +8,6 @@ afterEach(() => {
   cleanup();
 });
 
-vi.mock("@/components/status/cron-card", () => ({
-  CronCard: ({ job }: { job: string }) => <div data-testid={`cron-${job}`}>{job}</div>,
-}));
-
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
@@ -48,10 +44,10 @@ describe("CronsSection", () => {
       />,
     );
 
-    expect(screen.getByText("Worker job lanes")).toBeTruthy();
+    expect(screen.getByText("Cron Lanes")).toBeTruthy();
     expect(screen.getByText("No unhealthy cron lanes. Healthy groups are collapsed below.")).toBeTruthy();
     expect(screen.getByText("Healthy lanes (1)")).toBeTruthy();
-    // Healthy details is collapsed — cron card is still rendered inside <details>,
+    // Healthy details is collapsed — cron rows are still rendered inside <details>,
     // but the details element should not have the `open` attribute.
     const details = screen.getByText("Healthy lanes (1)").closest("details");
     expect(details?.hasAttribute("open")).toBe(false);
@@ -98,10 +94,10 @@ describe("CronsSection", () => {
       />,
     );
 
-    // Active group card renders its title/description and the mocked CronCard child
     expect(screen.getByText("Delivery")).toBeTruthy();
-    expect(screen.getByText("Dispatch lane is erroring.")).toBeTruthy();
-    expect(screen.getByTestId("cron-dispatch-telegram-alerts")).toBeTruthy();
+    expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
+    expect(screen.getAllByText("dispatch-telegram-alerts").length).toBeGreaterThan(0);
+    expect(screen.getByText("errors 2")).toBeTruthy();
     // Summary badges reflect the degraded counts
     const impactingBadge = screen.getByText("Impacting").parentElement;
     expect(impactingBadge?.textContent).toContain("1");
@@ -138,7 +134,7 @@ describe("CronsSection", () => {
     const details = screen.getByText("Healthy lanes (1)").closest("details");
     expect(details).toBeTruthy();
     expect(details?.hasAttribute("open")).toBe(true);
-    expect(screen.getByTestId("cron-sync-stablecoins")).toBeTruthy();
-    expect(screen.getByTestId("cron-sync-prices")).toBeTruthy();
+    expect(screen.getByTestId("cron-row-sync-stablecoins")).toBeTruthy();
+    expect(screen.getByTestId("cron-row-sync-prices")).toBeTruthy();
   });
 });

@@ -5,12 +5,17 @@ import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { SummaryBadge } from "@/components/status/page-primitives";
+import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import {
+  type BrowserProbeSummary,
+  type DashboardQuerySync,
+  type DashboardSection,
   formatTransitionLabel,
+  formatTimestampSeconds,
   getStatusTone,
   getSeverityBadgeClass,
 } from "@/lib/status-dashboard-model";
@@ -27,7 +32,14 @@ export interface TriageSummaryProps {
   watchCauseCount: number;
   blockerCauses: StatusCause[];
   latestTransition: StatusTransition | null;
+  attentionSections: DashboardSection[];
   recommendedActions: StatusActionRecommendation[];
+  isDiagnosticsOpen: boolean;
+  setIsDiagnosticsOpen: (open: boolean) => void;
+  browserProbeSummary: BrowserProbeSummary | null;
+  querySyncs: DashboardQuerySync[];
+  clientDataAgeSec: number;
+  clientDataStale: boolean;
   lastUpdated: number;
   handleRefresh: () => void;
   onSignOut: () => void;
@@ -42,7 +54,14 @@ export function TriageSummary({
   watchCauseCount,
   blockerCauses,
   latestTransition,
+  attentionSections,
   recommendedActions,
+  isDiagnosticsOpen,
+  setIsDiagnosticsOpen,
+  browserProbeSummary,
+  querySyncs,
+  clientDataAgeSec,
+  clientDataStale,
   lastUpdated,
   handleRefresh,
   onSignOut,
@@ -50,11 +69,16 @@ export function TriageSummary({
   const [isBlockersExpanded, setIsBlockersExpanded] = useState(false);
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
   const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
+  const statusSync = querySyncs.find((s) => s.key === "status");
+  const healthSync = querySyncs.find((s) => s.key === "health");
+  const probeSync = querySyncs.find((s) => s.key === "probes");
+  const requestSourceSync = querySyncs.find((s) => s.key === "requestSource");
 
   return (
     <section
+      id="overview"
       className={cn(
-        "rounded-[1.5rem] border px-4 py-4 sm:px-5 lg:px-6",
+        "scroll-mt-36 rounded-xl border px-4 py-4 sm:px-5 lg:px-6",
         topFoldCopy.shell,
       )}
     >
@@ -142,11 +166,10 @@ export function TriageSummary({
           <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
         </div>
 
-        {/* Blockers + recommended actions side by side */}
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)_minmax(18rem,0.7fr)]">
           <div className="rounded-xl border border-border/60 bg-background/35 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Current Blockers</h3>
+              <h3 className="text-sm font-semibold text-foreground">Blockers</h3>
               <span className="text-[11px] text-muted-foreground">
                 {overallCauseCount > 0
                   ? isBlockersExpanded
@@ -219,11 +242,77 @@ export function TriageSummary({
             </div>
           </div>
 
+          <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">Needs attention</h3>
+              <span className="text-[11px] text-muted-foreground">
+                {attentionSections.length > 0 ? `${attentionSections.length} lanes` : "clear"}
+              </span>
+            </div>
+            <div className="mt-3 divide-y divide-border/60">
+              {attentionSections.length > 0 ? (
+                attentionSections.slice(0, 4).map((section) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className="pharos-focus-ring flex items-start justify-between gap-3 rounded-md px-1 py-2 text-left hover:bg-background/45"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-foreground">{section.title}</span>
+                      <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{section.summary}</span>
+                    </span>
+                    <span className={cn("shrink-0 font-mono text-xs tabular-nums", section.valueClassName)}>
+                      {section.value}
+                    </span>
+                  </a>
+                ))
+              ) : (
+                <div className="rounded-lg border border-border/60 bg-background/45 p-3 text-sm text-muted-foreground">
+                  No operator lanes need attention.
+                </div>
+              )}
+            </div>
+          </div>
+
           <RecommendedActionStrip
             recommendations={recommendedActions}
             onActionFinished={handleRefresh}
           />
         </div>
+
+        <details
+          open={isDiagnosticsOpen}
+          onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
+          className="rounded-xl border border-border/60 bg-background/30 p-4"
+        >
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            State machine, probe, and discrepancy diagnostics
+          </summary>
+          <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
+              <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
+              <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+              <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
+              <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
+              <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
+              <SummaryBadge
+                label="Sync Floor"
+                value={`${clientDataAgeSec}s`}
+                className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+              />
+            </div>
+            <SystemDiagnostics
+              state={data.state}
+              staleness={data.staleness}
+              probe={data.probe}
+              discrepancy={data.discrepancy}
+              browserProbe={browserProbeSummary}
+              error={data.sectionErrors.statusState}
+              nowSeconds={data.timestamp}
+            />
+          </div>
+        </details>
       </div>
     </section>
   );

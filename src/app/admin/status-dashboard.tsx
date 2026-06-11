@@ -1,8 +1,7 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { NoticeRail } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
@@ -12,11 +11,12 @@ import {
 } from "@/lib/status-dashboard-model";
 import { useAutoExpand } from "./use-auto-expand";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { OverviewSection } from "./sections/overview-section";
 import { PipelineSection } from "./sections/pipeline-section";
 import { ReliabilitySection } from "./sections/reliability-section";
 import { CronsSection, type CronGroup } from "./sections/crons-section";
-import { ControlSection } from "./sections/control-section";
+import { ActionsSection } from "./sections/actions-section";
+import { CredentialsSection } from "./sections/credentials-section";
+import { CommsSection } from "./sections/comms-section";
 import { HistorySection } from "./sections/history-section";
 import { getCronSeverity } from "./cron-severity";
 import { TriageSummary } from "./status-dashboard/triage-summary";
@@ -45,19 +45,9 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     (healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy" ||
     (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
     (data?.summary.worstCacheRatio ?? 0) > 1;
-  const telegramDispatch = data?.crons["dispatch-telegram-alerts"]?.lastRun ?? null;
-  const telegramDispatchMeta = parseTelegramDispatchCronMetadata(telegramDispatch?.metadata);
-  const telegramSignal =
-    (data?.telegramBot?.pendingDeliveries ?? 0) > 0 ||
-    Boolean(data?.sectionErrors.telegramBot) ||
-    (telegramDispatch != null && telegramDispatch.status !== "ok") ||
-    Boolean(telegramDispatchMeta?.cappedAtLimit) ||
-    Boolean(telegramDispatchMeta?.pendingRateLimited) ||
-    Boolean(telegramDispatchMeta?.safetyAlertsSuppressed);
 
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
   const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
-  const [isTelegramOpen, setIsTelegramOpen] = useAutoExpand(telegramSignal);
   const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useAutoExpand(false);
 
   if (isLoading) {
@@ -84,6 +74,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const {
     allTransitions,
+    attentionSections,
     blockerCauses,
     browserProbeSummary,
     clientDataAgeSec,
@@ -118,22 +109,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     group.entries.every(([, cron]) => getCronSeverity(cron) === 0),
   );
 
-  const sectionNodes: Record<DashboardSectionId, ReactNode> = {
-    overview: (
-      <SectionErrorBoundary name="overview">
-        <OverviewSection
-          data={data}
-          handleRefresh={handleRefresh}
-          overallTone={overallTone}
-          isDiagnosticsOpen={isDiagnosticsOpen}
-          setIsDiagnosticsOpen={setIsDiagnosticsOpen}
-          browserProbeSummary={browserProbeSummary}
-          querySyncs={querySyncs}
-          clientDataAgeSec={clientDataAgeSec}
-          clientDataStale={clientDataStale}
-        />
-      </SectionErrorBoundary>
-    ),
+  const sectionNodes: Partial<Record<DashboardSectionId, ReactNode>> = {
     pipeline: (
       <SectionErrorBoundary name="pipeline">
         <PipelineSection
@@ -170,15 +146,23 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
         />
       </SectionErrorBoundary>
     ),
-    control: (
-      <SectionErrorBoundary name="control">
-        <ControlSection
+    actions: (
+      <SectionErrorBoundary name="actions">
+        <ActionsSection
           data={data}
           handleRefresh={handleRefresh}
           recommendedActions={recommendedActions}
-          isTelegramOpen={isTelegramOpen}
-          setIsTelegramOpen={setIsTelegramOpen}
         />
+      </SectionErrorBoundary>
+    ),
+    credentials: (
+      <SectionErrorBoundary name="credentials">
+        <CredentialsSection />
+      </SectionErrorBoundary>
+    ),
+    comms: (
+      <SectionErrorBoundary name="comms">
+        <CommsSection data={data} />
       </SectionErrorBoundary>
     ),
     history: (
@@ -206,7 +190,14 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
         watchCauseCount={watchCauseCount}
         blockerCauses={blockerCauses}
         latestTransition={latestTransition}
+        attentionSections={attentionSections}
         recommendedActions={recommendedActions}
+        isDiagnosticsOpen={isDiagnosticsOpen}
+        setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+        browserProbeSummary={browserProbeSummary}
+        querySyncs={querySyncs}
+        clientDataAgeSec={clientDataAgeSec}
+        clientDataStale={clientDataStale}
         lastUpdated={lastUpdated}
         handleRefresh={handleRefresh}
         onSignOut={onSignOut}
@@ -224,9 +215,11 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
           </span>
         }
       />
-      {sections.map((section) => (
-        <Fragment key={section.id}>{sectionNodes[section.id]}</Fragment>
-      ))}
+      {sections
+        .filter((section) => section.id !== "overview")
+        .map((section) => (
+          <div key={section.id}>{sectionNodes[section.id]}</div>
+        ))}
     </div>
   );
 }

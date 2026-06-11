@@ -8,6 +8,7 @@ const ADMIN_SHELL_PROPS = {
   path: "/admin/",
   title: "Operator Admin",
   variant: "auth-gated" as const,
+  containerClassName: "mx-auto w-full max-w-[92rem] space-y-6",
 };
 
 export default function StatusClient() {
@@ -26,7 +27,7 @@ export default function StatusClient() {
       publicTitle="Operator tooling is no longer available on the public host."
       publicDescription={
         <>
-          Manual response tools and deep operator telemetry now run behind the Access-protected ops host.
+          Operator actions, credentials, messaging telemetry, and deep status evidence now run behind the Access-protected ops host.
           The public `/status/` page is read-only.
         </>
       }

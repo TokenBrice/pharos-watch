@@ -72,6 +72,7 @@ describe("ApiKeysPanel", () => {
     }));
     const { refetch } = renderPanel([]);
 
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
     expect(screen.getByText(/Default 90 days from creation/i)).toBeTruthy();
     fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Digest Key" } });
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
@@ -108,6 +109,7 @@ describe("ApiKeysPanel", () => {
     expect(within(summary).getByText("Expiring soon")).toBeTruthy();
     expect(within(summary).getByText("Non-expiring")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
     fireEvent.change(screen.getAllByLabelText("Name")[0], { target: { value: "Digest Key" } });
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
@@ -126,6 +128,7 @@ describe("ApiKeysPanel", () => {
     }));
     const { refetch } = renderPanel([]);
 
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
@@ -146,6 +149,7 @@ describe("ApiKeysPanel", () => {
 
     renderPanel([]);
 
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Permanent" } });
     fireEvent.change(screen.getByLabelText("Expiry Policy"), { target: { value: "non-expiring" } });
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
@@ -168,6 +172,7 @@ describe("ApiKeysPanel", () => {
 
     renderPanel([makeKey()]);
 
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("Expires At"), { target: { value: "2026-04-10T12:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
