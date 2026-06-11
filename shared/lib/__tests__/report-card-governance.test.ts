@@ -71,3 +71,68 @@ describe("scoreDecentralization (v6 — 5-band penalty)", () => {
     expect(result.detail).toContain("parent 100 - 5");
   });
 });
+
+describe("scoreDecentralization mint-authority blend (v8, pending activation)", () => {
+  const makeMeta = (chainTier: string, deploymentModel: string, governanceQuality?: string) => ({
+    flags: { backing: "crypto-backed" as const, governance: "decentralized" as const },
+    chainTier,
+    deploymentModel,
+    collateralQuality: "native" as const,
+    custodyModel: "onchain" as const,
+    ...(governanceQuality ? { governanceQuality } : {}),
+  });
+
+  it("drags the dimension when the MAS undercuts it (penalty-only)", () => {
+    // dao-governance (85), ethereum/single-chain (no penalty), MAS 20:
+    // blended = round(85*0.65 + 20*0.35) = 62
+    const meta = makeMeta("ethereum", "single-chain");
+    const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 20 });
+    expect(result.score).toBe(62);
+    expect(result.detail).toContain("Mint authority: 20/100 (Exposed)");
+    expect(result.detailItems.some((item) => item.label === "Mint authority" && item.detail === "-23")).toBe(true);
+  });
+
+  it("never lifts the dimension when the MAS exceeds it", () => {
+    // single-entity (20), MAS 80: blended = round(20*0.65 + 80*0.35) = 41 > 20 → unchanged
+    const meta = makeMeta("ethereum", "single-chain", "single-entity");
+    const result = scoreDecentralization("centralized", meta as never, { mintAuthorityScore: 80 });
+    expect(result.score).toBe(20);
+    expect(result.detailItems.some((item) => item.label === "Mint authority")).toBe(false);
+  });
+
+  it("skips the blend when the MAS is null, absent, or not finite", () => {
+    const meta = makeMeta("ethereum", "single-chain");
+    expect(scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: null }).score).toBe(85);
+    expect(scoreDecentralization("decentralized", meta as never, {}).score).toBe(85);
+    expect(scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: Number.NaN }).score).toBe(85);
+  });
+
+  it("applies the blend after wrapper inheritance", () => {
+    // wrapper inherits parent 100 - 5 = 95 (chain penalty exempt), MAS 25:
+    // blended = round(95*0.65 + 25*0.35) = 71
+    const meta = {
+      ...makeMeta("unproven", "native-multichain", "wrapper"),
+      variantOf: "bold-liquity",
+      variantKind: "strategy-vault",
+    };
+    const result = scoreDecentralization("centralized-dependent", meta as never, {
+      wrappedAssetId: "bold-liquity",
+      wrappedAssetDecentralizationScore: 100,
+      variantKind: "strategy-vault",
+      mintAuthorityScore: 25,
+    });
+    expect(result.score).toBe(71);
+    expect(result.detail).toContain("parent 100 - 5");
+    expect(result.detail).toContain("Mint authority: 25/100 (Exposed)");
+  });
+
+  it("applies the blend after the chain penalty", () => {
+    // dao-governance (85) - 25 (mature-alt-l1) = 60, MAS 30:
+    // blended = round(60*0.65 + 30*0.35) = 50 (rounding: 39 + 10.5 = 49.5 -> 50)
+    const meta = makeMeta("mature-alt-l1", "single-chain");
+    const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 30 });
+    expect(result.score).toBe(50);
+    expect(result.detailItems.some((item) => item.label === "Chain")).toBe(true);
+    expect(result.detailItems.some((item) => item.label === "Mint authority" && item.detail === "-10")).toBe(true);
+  });
+});

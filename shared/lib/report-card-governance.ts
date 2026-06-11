@@ -11,6 +11,16 @@ import { joinReportCardDetail } from "./report-card-detail";
 import { inferGovernanceQuality } from "./report-card-policy";
 import { chainInfraLabel, chainInfraScore, resolveResilienceFactors } from "./report-card-resilience";
 import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
+import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./mint-authority-scoring";
+
+/**
+ * Safety Score v8 (pending activation): weight of the Mint Authority Score in
+ * the penalty-only decentralization blend. The blend runs only when a caller
+ * passes `options.mintAuthorityScore`; no caller does until the v8.0
+ * methodology activation wires the worker snapshot builder
+ * (see agents/mint-authority-score-in-safety-score.md).
+ */
+export const MAS_BLEND_WEIGHT = 0.35;
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -34,6 +44,12 @@ export interface ScoreDecentralizationOptions {
   wrappedAssetDecentralizationScore?: number | null;
   wrappedAssetId?: string | null;
   variantKind?: VariantKind | null;
+  /**
+   * Mint Authority Score (0-100) for the penalty-only blend: a weak privileged
+   * mint path can drag the dimension down but never lift it. `null`/absent
+   * (review missing or unresolved) leaves the dimension unchanged.
+   */
+  mintAuthorityScore?: number | null;
 }
 
 export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
@@ -90,6 +106,21 @@ export function scoreDecentralization(
     score = Math.max(0, score + penalty);
   }
 
+  // Penalty-only Mint Authority blend (inert until a caller passes the score):
+  // privileged-mint risk can undermine a decentralization claim, never improve it.
+  const mintAuthorityScore =
+    typeof options.mintAuthorityScore === "number" && Number.isFinite(options.mintAuthorityScore)
+      ? Math.max(0, Math.min(100, Math.round(options.mintAuthorityScore)))
+      : null;
+  let mintAuthorityDrag = 0;
+  if (mintAuthorityScore != null) {
+    const blended = Math.round(score * (1 - MAS_BLEND_WEIGHT) + mintAuthorityScore * MAS_BLEND_WEIGHT);
+    if (blended < score) {
+      mintAuthorityDrag = blended - score;
+      score = blended;
+    }
+  }
+
   const governanceScore = inheritedWrapperScore ?? GOVERNANCE_QUALITY_SCORE[quality];
   const penaltyApplied =
     penalty < 0 &&
@@ -114,6 +145,14 @@ export function scoreDecentralization(
       label: "Chain",
       value: chainInfraLabel(factors.chainTier, factors.deploymentModel),
       detail: `${penalty}`,
+    });
+  }
+  if (mintAuthorityDrag < 0 && mintAuthorityScore != null) {
+    const band = resolveMintAuthorityScoreBand(mintAuthorityScore);
+    detailItems.push({
+      label: "Mint authority",
+      value: `${mintAuthorityScore}/100${band ? ` (${MINT_AUTHORITY_SCORE_BANDS[band].label})` : ""}`,
+      detail: `${mintAuthorityDrag}`,
     });
   }
 
