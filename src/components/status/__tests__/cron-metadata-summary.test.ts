@@ -67,4 +67,22 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("safety alerts suppressed");
     expect(summary).toContain("source age 420s");
   });
+
+  it("surfaces live-reserve artifact cleanup counts and warnings", () => {
+    const summary = summarizeCronMetadata("sync-live-reserves", {
+      synced: 100,
+      failed: 0,
+      skipped: 0,
+      total: 100,
+      artifactCleanup: {
+        syncStateDeleted: 2,
+        compositionDeleted: 1,
+        breakerCacheDeleted: 3,
+      },
+      artifactCleanupWarningCount: 1,
+    });
+
+    expect(summary).toContain("artifact cleanup deleted sync 2, composition 1, breakers 3");
+    expect(summary).toContain("artifact cleanup warnings 1");
+  });
 });

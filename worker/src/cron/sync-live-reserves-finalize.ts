@@ -9,6 +9,7 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   cleanupStaleLiveReserveArtifacts,
   pruneLiveReserveHistory,
+  type LiveReserveArtifactCleanupResult,
 } from "../lib/live-reserves-store";
 import {
   CONFIGURED_COINS,
@@ -40,6 +41,12 @@ export interface FinalizeReserveSyncRunArgs {
   nextCursorStablecoinId: string | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
+}
+
+interface LiveReserveFinalizationWarning {
+  eventType: string;
+  message: string;
+  error: string;
 }
 
 async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<void> {
@@ -112,16 +119,18 @@ async function recordFinalizationWarning(
   eventType: string,
   message: string,
   error: unknown,
-): Promise<void> {
+): Promise<LiveReserveFinalizationWarning> {
+  const errorMessage = error instanceof Error ? error.message : String(error);
   await logCronEvent(db, {
     job: "sync-live-reserves",
     eventType,
     severity: "warning",
     message,
     metadata: {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
     },
   });
+  return { eventType, message, error: errorMessage };
 }
 
 function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"] {
@@ -157,18 +166,22 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     );
   }
 
+  let artifactCleanup: LiveReserveArtifactCleanupResult | null = null;
+  const artifactCleanupWarnings: LiveReserveFinalizationWarning[] = [];
   try {
-    await cleanupStaleLiveReserveArtifacts(
+    artifactCleanup = await cleanupStaleLiveReserveArtifacts(
       args.db,
       CONFIGURED_COINS.map((coin) => coin.id),
       args.breakerKeys,
     );
   } catch (error) {
-    await recordFinalizationWarning(
-      args.db,
-      "live-reserve-artifact-cleanup-failed",
-      "Ghost live-reserve artifact cleanup failed.",
-      error,
+    artifactCleanupWarnings.push(
+      await recordFinalizationWarning(
+        args.db,
+        "live-reserve-artifact-cleanup-failed",
+        "Ghost live-reserve artifact cleanup failed.",
+        error,
+      ),
     );
   }
 
@@ -206,7 +219,10 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
       cursorPersistFailed,
+      artifactCleanup,
+      artifactCleanupWarningCount: artifactCleanupWarnings.length,
       ...(cursorPersistError ? { cursorPersistError } : {}),
+      ...(artifactCleanupWarnings.length > 0 ? { artifactCleanupWarnings } : {}),
       ...(historyWriteFailedCoins.length > 0 ? { historyWriteFailedCoins } : {}),
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
       ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),

@@ -276,6 +276,15 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
   const nextCursorStablecoinId = readString(metadata.nextCursorStablecoinId);
   const coinsWithWarnings = readArray(metadata.coinsWithWarnings)?.length ?? 0;
   const breakerKeys = formatStringList(metadata.breakerKeys);
+  const artifactCleanup = readRecord(metadata.artifactCleanup);
+  const artifactSyncStateDeleted = readNumber(artifactCleanup?.syncStateDeleted);
+  const artifactCompositionDeleted = readNumber(artifactCleanup?.compositionDeleted);
+  const artifactBreakerCacheDeleted = readNumber(artifactCleanup?.breakerCacheDeleted);
+  const artifactCleanupWarningCount = readNumber(metadata.artifactCleanupWarningCount);
+  const artifactCleanupDeletedTotal =
+    (artifactSyncStateDeleted ?? 0) +
+    (artifactCompositionDeleted ?? 0) +
+    (artifactBreakerCacheDeleted ?? 0);
 
   return [
     synced != null && total != null
@@ -286,6 +295,12 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
       : null,
     runBudgetTruncated
       ? `run budget truncated; deferred ${deferredCoins ?? 0}${nextCursorStablecoinId ? `, resumes at ${nextCursorStablecoinId}` : ""}`
+      : null,
+    artifactCleanupDeletedTotal > 0
+      ? `artifact cleanup deleted sync ${artifactSyncStateDeleted ?? 0}, composition ${artifactCompositionDeleted ?? 0}, breakers ${artifactBreakerCacheDeleted ?? 0}`
+      : null,
+    artifactCleanupWarningCount != null && artifactCleanupWarningCount > 0
+      ? `artifact cleanup warnings ${artifactCleanupWarningCount}`
       : null,
     breakerKeys ? `breaker keys ${breakerKeys}` : null,
   ].filter((line): line is string => line != null);

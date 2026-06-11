@@ -267,9 +267,23 @@ describe("syncLiveReserves", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      artifactCleanup?: {
+        syncStateDeleted?: number;
+        compositionDeleted?: number;
+        breakerCacheDeleted?: number;
+      } | null;
+      artifactCleanupWarningCount?: number;
+    };
 
     expect(result?.status).toBe("ok");
     expect(result?.itemCount).toBe(configuredCoinCount);
+    expect(metadata.artifactCleanup).toEqual({
+      syncStateDeleted: 0,
+      compositionDeleted: 0,
+      breakerCacheDeleted: 0,
+    });
+    expect(metadata.artifactCleanupWarningCount).toBe(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition"))).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM reserve_composition_history"))).toBe(true);
@@ -445,6 +459,45 @@ describe("syncLiveReserves", () => {
         entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id = ?")
       )),
     ).toBe(false);
+  });
+
+  it("keeps stale artifact cleanup best-effort and records warning metadata", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves-store")>("../../lib/live-reserves-store");
+    vi.doMock("../../lib/live-reserves-store", async () => ({
+      ...actualStore,
+      cleanupStaleLiveReserveArtifacts: vi.fn(async () => {
+        throw new Error("artifact cleanup unavailable");
+      }),
+    }));
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      artifactCleanup?: unknown;
+      artifactCleanupWarningCount?: number;
+      artifactCleanupWarnings?: Array<{ eventType?: string; message?: string; error?: string }>;
+    };
+
+    expect(result?.status).toBe("ok");
+    expect(metadata.artifactCleanup).toBeNull();
+    expect(metadata.artifactCleanupWarningCount).toBe(1);
+    expect(metadata.artifactCleanupWarnings).toEqual([
+      {
+        eventType: "live-reserve-artifact-cleanup-failed",
+        message: "Ghost live-reserve artifact cleanup failed.",
+        error: "artifact cleanup unavailable",
+      },
+    ]);
+    const cleanupEvent = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-artifact-cleanup-failed"
+    ));
+    expect(cleanupEvent).toBeDefined();
   });
 
   it("persists a deferred cursor on budget exhaustion and resumes from that coin on the next run", async () => {
