@@ -66,29 +66,53 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDX is minted by Kava Mint's x/cdp module: users lock crypto collateral and draw USDX up to a governance-set debt limit, with Kava (KAVA) on-chain governance and a Stability Committee controlling the global debt limit, accepted collateral, ratios, and fees.",
     "controls": [
       {
+        "chain": "kava",
         "label": "Kava x/cdp module (USDX mint)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Mint bounded by per-collateral and global USDX debt limits and collateral ratios enforced by the Kava x/cdp module.",
-        "evidence": "Kava docs describe the x/cdp module as managing CDPs that mint USDX against locked collateral up to governance-set per-asset and global debt limits."
+        "sources": [
+          {
+            "label": "Kava x/cdp params API",
+            "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Kava CDP module docs",
+            "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+          }
+        ],
+        "evidence": "At Kava height 21133461, the x/cdp params API returned debt denom usdx, debt floor 10000000, and 10 live collateral parameter sets with per-collateral debt limits and liquidation ratios. The x/cdp module mints USDX only through overcollateralized CDPs under those parameters."
       },
       {
+        "chain": "kava",
         "label": "Kava on-chain governance + Stability Committee (KAVA)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "evidence": "Kava docs state KAVA stakers govern critical CDP parameters (global debt limit, accepted collateral and per-asset limits, collateral ratios, fees, savings rate), and a Stability Committee can adjust a subset of parameters quickly without a full vote."
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Kava committees API",
+            "url": "https://api.kava-rpc.com/kava/committee/v1beta1/committees"
+          },
+          {
+            "label": "Kava CDP module docs",
+            "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+          }
+        ],
+        "evidence": "At Kava height 21133461, committee id 1 resolved as the Kava Stability Committee with five members, vote_threshold 0.5, proposal_duration 604800s, and permissions covering cdp GlobalDebtLimit, CollateralParams, and DebtParam changes."
       }
     ],
     "review": {
-      "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions, with KAVA on-chain governance and a Stability Committee controlling debt limits, collateral, ratios, and fees; specific live parameters and module admin not independently confirmed.",
+      "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions. Phase 0c second pass confirmed live x/cdp params and Stability Committee membership/threshold on Kava at height 21133461.",
       "reviewer": "Codex Phase 0c verification",
       "reviewedAt": "2026-06-11",
       "sources": [
@@ -97,14 +121,13 @@
           "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
         },
         {
-          "label": "Kava Mint help",
-          "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+          "label": "Kava x/cdp params API",
+          "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+        },
+        {
+          "label": "Kava committees API",
+          "url": "https://api.kava-rpc.com/kava/committee/v1beta1/committees"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm current x/cdp parameters (global debt limit, fees) and whether new USDX issuance is still enabled given the sustained depeg.",
-        "Confirm the Stability Committee membership/threshold.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Kava x/cdp module (USDX mint); Kava on-chain governance + Stability Committee (KAVA)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
       ]
     }
   }

@@ -17778,8 +17778,8 @@
     "mintAuthority": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
-      "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the Frax Comptroller 3/5 Safe.",
+      "confidence": "verified",
+      "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe.",
       "controls": [
         {
           "chain": "ethereum",
@@ -17801,7 +17801,7 @@
               "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
             }
           ],
-          "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+          "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
         },
         {
           "chain": "ethereum",
@@ -17823,7 +17823,7 @@
               "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
             }
           ],
-          "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+          "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
         },
         {
           "chain": "ethereum",
@@ -17845,7 +17845,7 @@
               "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
             }
           ],
-          "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+          "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
         },
         {
           "chain": "ethereum",
@@ -17867,7 +17867,7 @@
               "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
             }
           ],
-          "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+          "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
         },
         {
           "chain": "ethereum",
@@ -17889,30 +17889,45 @@
               "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
             }
           ],
-          "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+          "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
         },
         {
           "chain": "ethereum",
-          "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
-          "label": "Frax Comptroller Safe",
+          "address": "0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937",
+          "label": "frxUSD owner/custodian admin Safe",
           "role": "minter-admin",
           "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "threshold": 3,
-          "signerCount": 5,
+          "threshold": 4,
+          "signerCount": 7,
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
-            "threshold": 3,
-            "source": "manual"
+            "version": "1.3.0+L2",
+            "owners": [
+              "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+              "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+              "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+              "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+              "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+              "0xDf41722D7b1355dB08D4e7D0528fE9c82377Bb37",
+              "0xC6EF452b0de9E95Ccb153c2A5A7a90154aab3419"
+            ],
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "moduleGuard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25294620,
+            "source": "safe-api"
           },
           "sources": [
             {
               "label": "Safe transaction service",
-              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
             }
           ],
-          "evidence": "frxUSD token owner() and each checked custodian owner() returned this Safe; getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911."
+          "evidence": "frxUSD token owner() and all listed Ethereum custodian owner() reads returned this Safe at Ethereum block 25294620; Safe API returned threshold 4, seven owners, no enabled modules, zero guard, and zero moduleGuard on 2026-06-11."
         }
       ],
       "review": {
@@ -17924,15 +17939,15 @@
           {
             "label": "FrxUSDCustodian docs",
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+          },
+          {
+            "label": "Safe transaction service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
           }
         ],
-        "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner. Phase 0c did not promote confidence because current custodian owner reads no longer matched the older Frax Comptroller Safe evidence.",
+        "evidence": "FraxNet docs list the current frxUSD custodian contracts; Phase 0c second pass confirmed frxUSD token owner() and every listed Ethereum custodian owner() resolves to 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937 at Ethereum block 25294620. The Safe API record for that address returns a 4/7 Safe with no enabled modules, zero guard, and zero moduleGuard.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Phase 0c (2026-06-11): current owner() reads for listed frxUSD custodian proxies returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937 instead of the Frax Comptroller Safe; resolve the current custodian owner/admin path before verified confidence.",
-          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (frxUSD-USDB Custodian Proxy; frxUSD-WTGXX Custodian Proxy; frxUSD-BUIDL Custodian Proxy); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -47407,8 +47422,8 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
-      "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, and live reads resolve the owner to a non-Safe 3/5 multisig-style contract; no timelock or Safe module/guard setup was verified.",
+      "confidence": "verified",
+      "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, and live reads resolve the owner to a legacy 3/5 multisig-style contract.",
       "controls": [
         {
           "chain": "ethereum",
@@ -47419,7 +47434,7 @@
           "directMintAbility": "direct",
           "threshold": 3,
           "signerCount": 5,
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "USAT Ethereum proxy",
@@ -47430,7 +47445,7 @@
               "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
             }
           ],
-          "evidence": "The USAT proxy owner() returned this address; required() and owners() reads returned a 3/5 multisig-style owner. Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+          "evidence": "At Ethereum block 25294588, the USAT proxy owner() returned this address; required() returned 3 and getOwners() returned five legacy multisig owner slots. Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
         }
       ],
       "review": {
@@ -47452,14 +47467,9 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
           }
         ],
-        "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
+        "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority. Phase 0c second pass rechecked owner(), required(), and getOwners() at Ethereum block 25294588.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Verify operational custody and signer identities for the owner multisig-style contract.",
-          "Check whether additional chain deployments exist and share the same issuer control.",
-          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -49116,7 +49126,7 @@
     "mintAuthority": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDaf is minted only when users borrow against overcollateralized CDPs (BTC and savings-stablecoin collateral) in Asymmetry's immutable Liquity-v2 fork on Ethereum; mint is fixed to the registered branch contracts and the core is non-upgradeable with no admin-mint or freeze surface.",
       "controls": [
         {
@@ -49128,7 +49138,13 @@
           "directMintAbility": "none",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "Asymmetry licensed and deployed the Liquity-v2 codebase; its docs state the core logic is immutable and cannot be altered once deployed. Per the Liquity-v2 BoldToken design, minting is confined to the registered per-branch protocol contracts and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. veASF governance directs incentives only, not core minting."
+          "sources": [
+            {
+              "label": "Sourcify exact-match source",
+              "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8/"
+            }
+          ],
+          "evidence": "Sourcify exact-match BoldToken source confirms mint() is limited to the registered BorrowerOperations, ActivePool, and StabilityPool branch contracts, while setBranchAddresses is onlyOwner and renounces ownership after registry wiring. owner() returned 0x0000000000000000000000000000000000000000 and collateralRegistryAddress() returned 0x33D68055Cd54061991B2e98b9ab326fFCE4d60Fe at Ethereum block 25294594."
         }
       ],
       "review": {
@@ -49140,15 +49156,15 @@
           {
             "label": "Electisec USDaf v2 review",
             "url": "https://reports.electisec.com/2025-05-Asymmetry-USDaf-V2"
+          },
+          {
+            "label": "Sourcify exact-match source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8/"
           }
         ],
-        "evidence": "USDaf is an exclusive Liquity-v2 fork on Ethereum (audited 10x across the BOLD codebase plus Asymmetry's collateral changes); Asymmetry docs state the system is entirely immutable, permissionless, and non-upgradeable. Minting is user-collateralized CDP borrowing confined to the registered branch contracts. Renouncement is grounded in the documented, audited immutable Liquity-v2 architecture rather than an independent on-chain owner() read.",
+        "evidence": "USDaf is an exclusive Liquity-v2 fork on Ethereum (audited 10x across the BOLD codebase plus Asymmetry's collateral changes); Asymmetry docs state the system is entirely immutable, permissionless, and non-upgradeable. Phase 0c second pass confirmed the exact-match BoldToken source, branch-only mint gates, owner renouncement, and current collateral registry pointer at Ethereum block 25294594.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8.",
-          "Phase 0c (2026-06-11): immutable/no-privileged-mint classification still needs a fresh source-code or native-chain specialist confirmation before verified confidence."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -57697,7 +57713,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
       "mintIncidents": [
         {
@@ -57737,7 +57753,7 @@
               "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
             }
           ],
-          "evidence": "Ethereum USDT getOwner() returned this address; required() returned 3 and owners(0..5) confirmed six owner slots at block 25165911."
+          "evidence": "At Ethereum block 25294588, USDT getOwner() returned this address; required() returned 3 and getOwners() returned six legacy multisig owner slots."
         }
       ],
       "review": {
@@ -57751,12 +57767,9 @@
             "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
           }
         ],
-        "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract.",
+        "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract. Phase 0c second pass rechecked getOwner(), required(), and getOwners() at Ethereum block 25294588.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum USDT token owner multisig); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -58917,25 +58930,49 @@
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "USDX is minted by Kava Mint's x/cdp module: users lock crypto collateral and draw USDX up to a governance-set debt limit, with Kava (KAVA) on-chain governance and a Stability Committee controlling the global debt limit, accepted collateral, ratios, and fees.",
       "controls": [
         {
+          "chain": "kava",
           "label": "Kava x/cdp module (USDX mint)",
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
           "capDescription": "Mint bounded by per-collateral and global USDX debt limits and collateral ratios enforced by the Kava x/cdp module.",
-          "canRaiseCap": "unknown",
-          "evidence": "Kava docs describe the x/cdp module as managing CDPs that mint USDX against locked collateral up to governance-set per-asset and global debt limits."
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Kava x/cdp params API",
+              "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+            },
+            {
+              "label": "Kava CDP module docs",
+              "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+            }
+          ],
+          "evidence": "At Kava height 21133461, the x/cdp params API returned debt denom usdx, debt floor 10000000, and 10 live collateral parameter sets with per-collateral debt limits and liquidation ratios. The x/cdp module mints USDX only through overcollateralized CDPs under those parameters."
         },
         {
+          "chain": "kava",
           "label": "Kava on-chain governance + Stability Committee (KAVA)",
           "role": "governor",
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "canRaiseCap": "unknown",
-          "evidence": "Kava docs state KAVA stakers govern critical CDP parameters (global debt limit, accepted collateral and per-asset limits, collateral ratios, fees, savings rate), and a Stability Committee can adjust a subset of parameters quickly without a full vote."
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Kava committees API",
+              "url": "https://api.kava-rpc.com/kava/committee/v1beta1/committees"
+            },
+            {
+              "label": "Kava CDP module docs",
+              "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+            }
+          ],
+          "evidence": "At Kava height 21133461, committee id 1 resolved as the Kava Stability Committee with five members, vote_threshold 0.5, proposal_duration 604800s, and permissions covering cdp GlobalDebtLimit, CollateralParams, and DebtParam changes."
         }
       ],
       "review": {
@@ -58945,18 +58982,17 @@
             "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
           },
           {
-            "label": "Kava Mint help",
-            "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+            "label": "Kava x/cdp params API",
+            "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Kava committees API",
+            "url": "https://api.kava-rpc.com/kava/committee/v1beta1/committees"
           }
         ],
-        "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions, with KAVA on-chain governance and a Stability Committee controlling debt limits, collateral, ratios, and fees; specific live parameters and module admin not independently confirmed.",
+        "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions. Phase 0c second pass confirmed live x/cdp params and Stability Committee membership/threshold on Kava at height 21133461.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Confirm current x/cdp parameters (global debt limit, fees) and whether new USDX issuance is still enabled given the sustained depeg.",
-          "Confirm the Stability Committee membership/threshold.",
-          "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Kava x/cdp module (USDX mint); Kava on-chain governance + Stability Committee (KAVA)); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -68065,7 +68101,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
       "controls": [
         {
@@ -68076,7 +68112,7 @@
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "StraitsX product page",
@@ -68087,7 +68123,7 @@
               "url": "https://etherscan.io/"
             }
           ],
-          "evidence": "Ethereum reads returned owner() = 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964 and masterMinter() = 0x4a423F581dF9A7575FBe9cf22013638E8DbbE273 at block 25166611."
+          "evidence": "At Ethereum block 25294588, owner() returned 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964 and masterMinter() returned 0x4a423F581dF9A7575FBe9cf22013638E8DbbE273."
         },
         {
           "chain": "ethereum",
@@ -68102,10 +68138,18 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.4.1",
+            "owners": [
+              "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+              "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+              "0x6BA8c6793C376c04730f76f854D5a59EED93754B",
+              "0x1647ABd62E70595C972717995714c02d2F78A11B",
+              "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            ],
             "threshold": 3,
             "enabledModules": [],
             "guard": "0x828718eEeBfbf18Df20b3A45b9ABEA74E4bdf47c",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25294588,
             "source": "safe-api"
           },
           "sources": [
@@ -68114,7 +68158,7 @@
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4a423F581dF9A7575FBe9cf22013638E8DbbE273/"
             }
           ],
-          "evidence": "Safe API returned threshold 3, five owners, no enabled modules, and guard 0x828718eEeBfbf18Df20b3A45b9ABEA74E4bdf47c on 2026-05-24."
+          "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no enabled modules, and guard 0x828718eEeBfbf18Df20b3A45b9ABEA74E4bdf47c."
         },
         {
           "chain": "ethereum",
@@ -68129,10 +68173,18 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.4.1",
+            "owners": [
+              "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+              "0x97D0299f9C945393ae415b85d8ADB3A577e810BA",
+              "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+              "0xEc0f004A0b57DF88e617b913b246DCc44d646e9C",
+              "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            ],
             "threshold": 3,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25294588,
             "source": "safe-api"
           },
           "sources": [
@@ -68141,7 +68193,7 @@
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
             }
           ],
-          "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+          "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no modules, and zero guard."
         },
         {
           "chain": "solana",
@@ -68153,8 +68205,8 @@
           "threshold": 3,
           "signerCount": 10,
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "Solana mint-account review resolved this address as the XSGD mint authority and decoded it as a 3-of-10 multisig."
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "At finalized Solana slot 425774906, the XSGD mint account 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
         }
       ],
       "review": {
@@ -68168,12 +68220,9 @@
             "url": "https://www.straitsx.com/xusd"
           }
         ],
-        "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
+        "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XSGD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [
@@ -68698,7 +68747,7 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "manual-review",
+      "confidence": "verified",
       "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
       "controls": [
         {
@@ -68709,7 +68758,7 @@
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "StraitsX XUSD",
@@ -68720,7 +68769,7 @@
               "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
             }
           ],
-          "evidence": "Ethereum reads returned owner() = 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964, implementation() = 0x71CdE20c36cCC0d4bED213315d8Fa42B59C18a3C, and masterMinter() = 0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB at block 25166611."
+          "evidence": "At Ethereum block 25294588, owner() returned 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964 and masterMinter() returned 0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB."
         },
         {
           "chain": "ethereum",
@@ -68735,10 +68784,18 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.4.1",
+            "owners": [
+              "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+              "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+              "0x6BA8c6793C376c04730f76f854D5a59EED93754B",
+              "0x1647ABd62E70595C972717995714c02d2F78A11B",
+              "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            ],
             "threshold": 3,
             "enabledModules": [],
             "guard": "0x247160D158EcCCEE395388Ee1A96a83Eac0b6219",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25294588,
             "source": "safe-api"
           },
           "sources": [
@@ -68747,7 +68804,7 @@
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB/"
             }
           ],
-          "evidence": "Safe API returned threshold 3, five owners, no enabled modules, and guard 0x247160D158EcCCEE395388Ee1A96a83Eac0b6219 on 2026-05-24."
+          "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no enabled modules, and guard 0x247160D158EcCCEE395388Ee1A96a83Eac0b6219."
         },
         {
           "chain": "ethereum",
@@ -68762,10 +68819,18 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.4.1",
+            "owners": [
+              "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+              "0x97D0299f9C945393ae415b85d8ADB3A577e810BA",
+              "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+              "0xEc0f004A0b57DF88e617b913b246DCc44d646e9C",
+              "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            ],
             "threshold": 3,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25294588,
             "source": "safe-api"
           },
           "sources": [
@@ -68774,7 +68839,7 @@
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
             }
           ],
-          "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+          "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no modules, and zero guard."
         },
         {
           "chain": "solana",
@@ -68786,8 +68851,8 @@
           "threshold": 3,
           "signerCount": 10,
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "Solana mint-account review resolved this address as the XUSD mint authority and decoded it as a 3-of-10 multisig."
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "At finalized Solana slot 425774906, the XUSD mint account 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
         }
       ],
       "review": {
@@ -68797,12 +68862,9 @@
             "url": "https://www.straitsx.com/xusd"
           }
         ],
-        "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
+        "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XUSD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig.",
         "reviewer": "Codex Phase 0c verification",
-        "reviewedAt": "2026-06-11",
-        "unresolvedQuestions": [
-          "Phase 0c (2026-06-11): Safe/multisig threshold, signer count, or modules/guards state is still not fully resolved for every mint-capable control; verified confidence requires current chain-state confirmation."
-        ]
+        "reviewedAt": "2026-06-11"
       }
     },
     "contracts": [

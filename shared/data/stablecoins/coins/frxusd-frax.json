@@ -260,8 +260,8 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the Frax Comptroller 3/5 Safe.",
+    "confidence": "verified",
+    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe.",
     "controls": [
       {
         "chain": "ethereum",
@@ -283,7 +283,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
       },
       {
         "chain": "ethereum",
@@ -305,7 +305,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
       },
       {
         "chain": "ethereum",
@@ -327,7 +327,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
       },
       {
         "chain": "ethereum",
@@ -349,7 +349,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
       },
       {
         "chain": "ethereum",
@@ -371,30 +371,45 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
       },
       {
         "chain": "ethereum",
-        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
-        "label": "Frax Comptroller Safe",
+        "address": "0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937",
+        "label": "frxUSD owner/custodian admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "threshold": 3,
-        "signerCount": 5,
+        "threshold": 4,
+        "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "threshold": 3,
-          "source": "manual"
+          "version": "1.3.0+L2",
+          "threshold": 4,
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+            "0xDf41722D7b1355dB08D4e7D0528fE9c82377Bb37",
+            "0xC6EF452b0de9E95Ccb153c2A5A7a90154aab3419"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294620,
+          "source": "safe-api"
         },
         "sources": [
           {
             "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
           }
         ],
-        "evidence": "frxUSD token owner() and each checked custodian owner() returned this Safe; getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911."
+        "evidence": "frxUSD token owner() and all listed Ethereum custodian owner() reads returned this Safe at Ethereum block 25294620; Safe API returned threshold 4, seven owners, no enabled modules, zero guard, and zero moduleGuard on 2026-06-11."
       }
     ],
     "review": {
@@ -406,15 +421,15 @@
         {
           "label": "FrxUSDCustodian docs",
           "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
         }
       ],
-      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner. Phase 0c did not promote confidence because current custodian owner reads no longer matched the older Frax Comptroller Safe evidence.",
+      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Phase 0c second pass confirmed frxUSD token owner() and every listed Ethereum custodian owner() resolves to 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937 at Ethereum block 25294620. The Safe API record for that address returns a 4/7 Safe with no enabled modules, zero guard, and zero moduleGuard.",
       "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current owner() reads for listed frxUSD custodian proxies returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937 instead of the Frax Comptroller Safe; resolve the current custodian owner/admin path before verified confidence.",
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (frxUSD-USDB Custodian Proxy; frxUSD-WTGXX Custodian Proxy; frxUSD-BUIDL Custodian Proxy); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "third-party-bridge",

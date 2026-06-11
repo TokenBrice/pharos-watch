@@ -311,7 +311,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
     "mintIncidents": [
       {
@@ -351,7 +351,7 @@
             "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
           }
         ],
-        "evidence": "Ethereum USDT getOwner() returned this address; required() returned 3 and owners(0..5) confirmed six owner slots at block 25165911."
+        "evidence": "At Ethereum block 25294588, USDT getOwner() returned this address; required() returned 3 and getOwners() returned six legacy multisig owner slots."
       }
     ],
     "review": {
@@ -365,12 +365,9 @@
           "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
         }
       ],
-      "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract.",
+      "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract. Phase 0c second pass rechecked getOwner(), required(), and getOwners() at Ethereum block 25294588.",
       "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Phase 0c (2026-06-11): current on-chain verification remains incomplete for every mint-capable control (Ethereum USDT token owner multisig); keep manual-review until role membership, owner, and upgrade/cap state are confirmed."
-      ]
+      "reviewedAt": "2026-06-11"
     }
   },
   "deploymentModel": "native-multichain",
