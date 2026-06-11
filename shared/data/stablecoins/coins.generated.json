@@ -13858,10 +13858,10 @@
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "StandX DUSD is minted on-chain via the protocol Gateway when users deposit USDT/USDC into the StandX Secure Vault; the StandX off-chain Settler/backend manages delta-neutral CEX hedges and validates redemption order signatures, with an RSV Fund multisig bridging assets on/off-chain.",
+      "summary": "StandX DUSD is minted on-chain via the protocol Gateway when users deposit USDT/USDC into the StandX Secure Vault; Solana mint authority is a PDA of an immutable StandX program, while BSC live reads resolve DEFAULT_ADMIN to an unverified 171-byte contract and MINTER to the Gateway controller. The unscanned BSC RoleGranted gap keeps the review blocked at manual confidence.",
       "controls": [
         {
-          "label": "StandX Gateway / program mint authority (PDA of immutable StandX program on Solana; BSC admin unresolved)",
+          "label": "StandX Gateway / program mint authority (Solana PDA confirmed; BSC roles partially resolved)",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
@@ -13876,7 +13876,7 @@
               "url": "https://api.mainnet-beta.solana.com"
             }
           ],
-          "evidence": "Solana (confirmed): at slot 425778638, DUSD Solana mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, owned by immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB (upgradeAuthority: None). BSC (unresolved): DUSD BSC token 0xaf44... has multi-layer proxy admin — full chain: 0x2c02(proxy→0xdf09)→0x00b4(proxy→0xb69f AccessControl+UUPS). Role holders in BSC AccessControl not enumerable via standard ABI. Docs describe Gateway contract minting on collateral deposit with 7-day redemption lock."
+          "evidence": "Solana (confirmed): at slot 425778638, DUSD Solana mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, owned by immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB (upgradeAuthority: None). BSC (blocked): live hasRole reads at block 103642466 confirm DEFAULT_ADMIN_ROLE = 0x6c2404092cb1acfe9a06bc7de61bf619933edba5 (unverified 171-byte contract) and MINTER_ROLE = 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a (Gateway controller proxy). The historical RoleGranted scan covers only ~47M-52M; blocks 52M→103.6M remain unscanned on keyless BSC log APIs. Docs describe Gateway contract minting on collateral deposit with 7-day redemption lock."
         },
         {
           "label": "StandX Settler / backend + RSV Fund multisig",
