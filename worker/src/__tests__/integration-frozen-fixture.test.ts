@@ -60,7 +60,7 @@ vi.mock("@shared/lib/stablecoins/registry", async () => {
 
 describe("frozen fixture — end-to-end", () => {
   it("orphan-close skips the fixture coin", async () => {
-    const { shouldCloseOrphanedDepeg } = await import("../cron/detect-depegs");
+    const { shouldCloseOrphanedDepeg } = await import("../cron/depeg-detection/repair");
     expect(shouldCloseOrphanedDepeg("fixture-frozen", new Set())).toBe(false);
   });
 
