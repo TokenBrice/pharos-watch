@@ -172,6 +172,7 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary-shared.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts",
+  "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
   "worker/src/cron/sync-stablecoins/fallback-cache.ts",
   "worker/src/cron/sync-stablecoins/fallback-enrichment.ts",

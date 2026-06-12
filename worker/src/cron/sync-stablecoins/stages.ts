@@ -187,8 +187,11 @@ export async function runStablecoinsPricingStage(
 
   const primaryPricesAbort = returnIfAborted(options.signal, "primary-prices");
   if (primaryPricesAbort) return primaryPricesAbort;
-  await reportStablecoinsStage(options.reportProgress, "price-enrichment", "Running primary pricing and enrichment", {
+  await reportStablecoinsStage(options.reportProgress, "price-enrichment", "Collecting primary stablecoin prices", {
     itemsTotal: options.assets.length,
+    metadata: {
+      subphase: "primary-provider-collection",
+    },
   });
   const {
     results: primaryPriceResults,
@@ -208,6 +211,20 @@ export async function runStablecoinsPricingStage(
       addressProvider: options.addressPriceProvider,
     },
   );
+  const primaryPricedCount = options.assets.length - options.assets.filter(hasMissingPrice).length;
+  await reportStablecoinsStage(options.reportProgress, "price-enrichment-primary-complete", "Collected primary stablecoin prices", {
+    itemsDone: primaryPricedCount,
+    itemsTotal: options.assets.length,
+    metadata: {
+      subphase: "primary-consensus",
+      countTotals: {
+        pricedAssets: primaryPricedCount,
+        missingPrices: options.assets.length - primaryPricedCount,
+        primaryResults: primaryPriceResults.size,
+        providerDiagnostics: primaryProviderDiagnostics.length,
+      },
+    },
+  });
   applyConsensusResults({
     assets: options.assets,
     primaryPriceResults,
@@ -226,6 +243,13 @@ export async function runStablecoinsPricingStage(
     logLabel: "Pre-rejected bad price",
   });
   const authoritativeOverrideStats = createAuthoritativeLivePriceOverrideStats();
+  await reportStablecoinsStage(options.reportProgress, "price-enrichment-overrides", "Fetching protocol-backed price overrides", {
+    itemsDone: primaryPricedCount,
+    itemsTotal: options.assets.length,
+    metadata: {
+      subphase: "authoritative-overrides",
+    },
+  });
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
     options.assets,
     options.signal,
@@ -249,6 +273,49 @@ export async function runStablecoinsPricingStage(
     coingeckoApiKey: options.coingeckoApiKey,
     jupiterApiKey: options.jupiterApiKey,
     returnIfAborted,
+    onProgress: async (progress) => {
+      const pass = progress.pass;
+      const passLabel = pass?.passLabel ?? "Fallback";
+      const missingCount = progress.finalMissing ?? options.assets.filter(hasMissingPrice).length;
+      let message: string;
+      switch (progress.phase) {
+        case "start":
+          message = "Preparing fallback price enrichment";
+          break;
+        case "fx-rates-loaded":
+          message = "Loaded fallback price-enrichment bounds";
+          break;
+        case "pass-start":
+          message = `Running ${passLabel} fallback price pass`;
+          break;
+        case "pass-failed":
+          message = `${passLabel} fallback price pass failed`;
+          break;
+        case "complete":
+          message = "Completed fallback price enrichment";
+          break;
+        case "pass-complete":
+          message = `${passLabel} fallback price pass completed`;
+          break;
+      }
+      await reportStablecoinsStage(options.reportProgress, "price-enrichment-fallback", message, {
+        itemsDone: options.assets.length - missingCount,
+        itemsTotal: options.assets.length,
+        metadata: {
+          subphase: progress.phase,
+          passKey: pass?.passKey,
+          passLabel: pass?.passLabel,
+          passIndex: pass?.passIndex,
+          passTotal: pass?.passTotal,
+          missingBeforePass: pass?.missingBeforePass,
+          missingAfterPass: pass?.missingAfterPass,
+          totalMissingBeforeFallback: progress.totalMissing,
+          finalMissing: progress.finalMissing,
+          failedPasses: progress.failedPasses,
+          counts: pass?.counts,
+        },
+      });
+    },
   }, "");
   if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
   const { missingBefore, enrichStats } = enrichmentPhase;

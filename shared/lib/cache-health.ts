@@ -22,11 +22,8 @@ export function getCacheFreshnessStatus(
 
 export function getCacheImpactStatus(cache: CacheStatus): "healthy" | "degraded" | "stale" {
   const freshnessStatus = getCacheFreshnessStatus(cache);
-  if (freshnessStatus === "stale" || cache.sourceStatus === "stale") return "stale";
-  if (
-    freshnessStatus === "degraded"
-    || cache.mode === "cached-fallback"
-  ) {
+  if (freshnessStatus === "stale") return "stale";
+  if (freshnessStatus === "degraded" || cache.mode === "cached-fallback") {
     return "degraded";
   }
   return "healthy";

@@ -9,11 +9,13 @@ export interface ScheduledSlotJobSummary {
   itemCount?: number;
   reason?: string;
   error?: string;
+  neutral?: boolean;
 }
 
 export interface ScheduledSlotSummary {
   jobsRun: number;
   jobsSkipped: number;
+  jobsNeutralSkipped: number;
   jobsDegraded: number;
   jobsErrored: number;
   budgetOnlyJobs: number;
@@ -68,11 +70,16 @@ export function summarizeThrownScheduledJob(job: string, err: unknown): Schedule
   };
 }
 
-export function summarizeSkippedScheduledJob(job: string, reason: string): ScheduledSlotJobSummary {
+export function summarizeSkippedScheduledJob(
+  job: string,
+  reason: string,
+  options: { neutral?: boolean } = {},
+): ScheduledSlotJobSummary {
   return {
     job,
     outcome: "skipped",
     reason,
+    ...(options.neutral ? { neutral: true } : {}),
   };
 }
 
@@ -80,9 +87,11 @@ export function buildScheduledSlotSummary(
   jobs: readonly ScheduledSlotJobSummary[],
   options: { budgetOnlyJobs?: number } = {},
 ): ScheduledSlotSummary {
+  const neutralSkippedJobs = jobs.filter((job) => job.outcome === "skipped" && job.neutral === true);
   return {
     jobsRun: jobs.filter((job) => job.outcome === "ok").length,
-    jobsSkipped: jobs.filter((job) => job.outcome === "skipped").length,
+    jobsSkipped: jobs.filter((job) => job.outcome === "skipped" && job.neutral !== true).length,
+    jobsNeutralSkipped: neutralSkippedJobs.length,
     jobsDegraded: jobs.filter((job) => job.outcome === "degraded").length,
     jobsErrored: jobs.filter((job) => job.outcome === "error").length,
     budgetOnlyJobs: options.budgetOnlyJobs ?? 0,

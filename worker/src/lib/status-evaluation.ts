@@ -28,6 +28,7 @@ import {
   withRunbook,
 } from "./status/evaluation-causes";
 import { loadCronHealth } from "./status/cron-health";
+import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
 
 export interface RawStatusComputation {
@@ -78,18 +79,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
     telegramBot: null,
     sectionErrors: {},
     datasetFreshness: emptyDatasetFreshness(),
-    summary: {
-      unhealthyCrons: 0,
-      availabilityImpactingUnhealthyCrons: 0,
-      watchUnhealthyCrons: 0,
-      degradedCrons: 0,
-      cronErrors: 0,
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-      diagnosticIssueCount: 0,
-      worstCacheRatio: 0,
-      transitionsLast24h: 0,
-    },
+    summary: emptyStatusSummary(),
     reserveComposition: emptyReserveComposition(),
     freshnessDiagnostics: [],
   };
@@ -249,17 +239,11 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     datasetFreshness,
     reserveComposition,
     freshnessDiagnostics: publicHealth.cacheDiagnostics,
-    summary: {
-      unhealthyCrons,
-      availabilityImpactingUnhealthyCrons,
-      watchUnhealthyCrons,
-      degradedCrons: degradedCronRuns,
-      cronErrors: cronErrorCount,
-      availabilityImpactingCronErrors,
-      availabilityImpactingConsecutiveCronErrors,
+    summary: buildStatusSummary({
+      cronHealth,
       diagnosticIssueCount,
       worstCacheRatio: publicHealth.worstCacheRatio,
       transitionsLast24h,
-    },
+    }),
   };
 }

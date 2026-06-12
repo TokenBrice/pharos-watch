@@ -76,6 +76,7 @@ export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
 const OPS_API_ACCESS_GATE_EXPECTED_STATUSES = [302, 403] as const;
+const SITE_API_ACCESS_GATE_EXPECTED_STATUSES = [401, 403] as const;
 const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
   "/api/usds-status": "sync-usds-status",
   "/api/bluechip-ratings": "sync-bluechip",
@@ -520,6 +521,15 @@ function buildExternalProductionProbeTargets(siteApiSharedSecret?: string | null
       headers: {
         [SITE_DATA_PROXY_SECRET_HEADER]: siteSecret,
       },
+    });
+  } else {
+    targets.push({
+      label: "site-api-access-gate",
+      lane: "site-api",
+      origin: SITE_API_ORIGIN,
+      path: HEALTH_PROBE_PATH,
+      expectedStatuses: SITE_API_ACCESS_GATE_EXPECTED_STATUSES,
+      expectedFailureMessage: "site-api-access-gate-open-or-unreachable",
     });
   }
 

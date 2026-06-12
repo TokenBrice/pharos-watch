@@ -103,6 +103,10 @@ export interface CronStalenessObservation {
   producerJob: string;
   ageSeconds: number | null;
   thresholdSec: number;
+  producerThresholdSec: number;
+  endpointThresholdSec: number;
+  availabilityThresholdSec: number;
+  availabilityImpacting: boolean;
 }
 
 interface AlertMarker {
@@ -153,6 +157,10 @@ function buildObservation(
     producerJob: lane.producerJob,
     ageSeconds,
     thresholdSec,
+    producerThresholdSec: thresholdSec,
+    endpointThresholdSec: lane.endpointMaxAgeSec,
+    availabilityThresholdSec: lane.availabilityMaxAgeSec,
+    availabilityImpacting: ageSeconds == null || ageSeconds > lane.availabilityMaxAgeSec,
   };
 }
 
@@ -238,6 +246,12 @@ export async function runCronStalenessWatchdog(
       producerJob: lane.producerJob,
       ageSeconds: status.caches[lane.cacheKey]?.ageSeconds ?? null,
       thresholdSec: lane.producerIntervalSec * 2,
+      producerThresholdSec: lane.producerIntervalSec * 2,
+      endpointThresholdSec: lane.endpointMaxAgeSec,
+      availabilityThresholdSec: lane.availabilityMaxAgeSec,
+      availabilityImpacting:
+        (status.caches[lane.cacheKey]?.ageSeconds ?? null) == null ||
+        (status.caches[lane.cacheKey]?.ageSeconds ?? Infinity) > lane.availabilityMaxAgeSec,
     } satisfies CronStalenessObservation;
   });
   const markers = await loadAlertMarkers(db, watchedObservations);

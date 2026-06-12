@@ -4,7 +4,7 @@ import {
   type YieldSourceRiskGoldenCaseId,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
-import { buildHistoryKey, evaluateYieldSources } from "../yield-sync/evaluation";
+import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import type { ResolvedYield } from "../yield-sync/types";
 
@@ -177,6 +177,32 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
 };
 
 describe("evaluateYieldSources", () => {
+  it("cooperative evaluation matches synchronous evaluation and reports progress", async () => {
+    const input = baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:base",
+        }),
+      }],
+    });
+    const progress: string[] = [];
+
+    const sync = evaluateYieldSources(input);
+    const cooperative = await evaluateYieldSourcesCooperative(input, {
+      yieldEveryCoins: 1,
+      onProgress: (snapshot) => {
+        progress.push(snapshot.phase);
+      },
+    });
+
+    expect(cooperative.evaluatedSources).toHaveLength(sync.evaluatedSources.length);
+    expect(cooperative.bestSourceKeyByCoin.get("coin-a")).toBe(sync.bestSourceKeyByCoin.get("coin-a"));
+    expect(cooperative.medianApy).toBe(sync.medianApy);
+    expect(progress).toEqual(["coin-evaluation", "coin-evaluation", "warning-finalization"]);
+  });
+
   it("covers source-risk golden rows from evaluation inputs", () => {
     const startSec = 1776729600;
     for (const row of SOURCE_RISK_GOLDEN_ROWS) {

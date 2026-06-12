@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { abortError, sleepWithSignal, throwIfAborted } from "../abort";
+import { abortError, sleepWithSignal, throwIfAborted, yieldToEventLoop } from "../abort";
 
 describe("abort helpers", () => {
   afterEach(() => {
@@ -42,5 +42,14 @@ describe("abort helpers", () => {
     controller.abort("cancelled");
 
     await expect(promise).rejects.toThrow("cancelled");
+  });
+
+  it("yields to the event loop and honors aborts", async () => {
+    await expect(yieldToEventLoop()).resolves.toBeUndefined();
+
+    const controller = new AbortController();
+    const aborted = yieldToEventLoop(controller.signal);
+    controller.abort("stop");
+    await expect(aborted).rejects.toThrow("stop");
   });
 });

@@ -17,9 +17,9 @@ import {
   purgeYieldHistoryOwnershipHandoffs,
 } from "./yield-sync/history";
 import {
-  evaluateYieldSources,
+  evaluateYieldSourcesCooperative,
 } from "./yield-sync/evaluation";
-import { buildYieldHistoryEvaluationInputs } from "./yield-sync/coordinator-history";
+import { buildYieldHistoryEvaluationInputsCooperative } from "./yield-sync/coordinator-history";
 import {
   buildComparisonAnchorFreshnessMeta,
   buildYieldDegradationReasons,
@@ -248,8 +248,38 @@ export async function syncYieldData(
   }
 
   const historySnapshots = resolvedIds.length > 0
-    ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec)
+    ? await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec, {
+        signal,
+        onProgress: async (progress) => {
+          await reportYieldProgress("history-loading", "Loading yield history snapshots", "yield-history", {
+            itemsDone: progress.resolvedIdsDone,
+            itemsTotal: progress.resolvedIdsTotal,
+            metadata: {
+              countTotals: {
+                resolvedSources: resolvedWithYield.length,
+                resolvedCoins: resolvedIds.length,
+                historyRows: progress.historyRows,
+                previousTvlRows: progress.prevTvlRows,
+                previousBestRows: progress.prevBestRows,
+              },
+              chunksDone: progress.chunksDone,
+              chunksTotal: progress.chunksTotal,
+            },
+          });
+        },
+      })
     : { historyRows: [], prevTvlRows: [], prevBestRows: [] };
+  await reportYieldProgress("history-loaded", "Loaded yield history snapshots", "yield-history", {
+    itemsDone: resolvedIds.length,
+    itemsTotal: resolvedIds.length,
+    metadata: {
+      countTotals: {
+        historyRows: historySnapshots.historyRows.length,
+        previousTvlRows: historySnapshots.prevTvlRows.length,
+        previousBestRows: historySnapshots.prevBestRows.length,
+      },
+    },
+  });
   const {
     sourceHistory,
     onChainCompatibilityHistoryById,
@@ -259,7 +289,23 @@ export async function syncYieldData(
     legacyPrevTvlById,
     prevBestSourceKeyByCoin,
     sourceSwitchCount30dByCoin,
-  } = buildYieldHistoryEvaluationInputs(historySnapshots);
+  } = await buildYieldHistoryEvaluationInputsCooperative(historySnapshots, {
+    signal,
+    onProgress: async (progress) => {
+      await reportYieldProgress("history-input-construction", "Preparing yield history evaluation inputs", "yield-history", {
+        itemsDone: progress.rowsDone,
+        itemsTotal: progress.rowsTotal,
+        metadata: {
+          phase: progress.phase,
+          countTotals: {
+            historyRows: historySnapshots.historyRows.length,
+            previousTvlRows: historySnapshots.prevTvlRows.length,
+            previousBestRows: historySnapshots.prevBestRows.length,
+          },
+        },
+      });
+    },
+  });
 
   await reportYieldProgress("evaluation", "Evaluating best yield sources and source risk", "yield", {
     itemsDone: 0,
@@ -278,7 +324,7 @@ export async function syncYieldData(
     divergenceFlags,
     sourceSwitches,
     medianApy,
-  } = evaluateYieldSources({
+  } = await evaluateYieldSourcesCooperative({
     resolved: resolvedWithYield,
     startSec,
     sevenDaysAgoSec,
@@ -295,6 +341,24 @@ export async function syncYieldData(
     sourceSwitchCount30dByCoin,
     stablecoinSupplyById,
     dlPoolsMeta,
+  }, {
+    signal,
+    onProgress: async (progress) => {
+      await reportYieldProgress("evaluation", "Evaluating best yield sources and source risk", "yield", {
+        itemsDone: progress.coinsDone,
+        itemsTotal: progress.coinsTotal,
+        metadata: {
+          phase: progress.phase,
+          countTotals: {
+            evaluatedSources: progress.evaluatedSources,
+            bestSourceCoins: progress.bestSourceCoins,
+            rowsRejected: progress.rowsRejected,
+            divergenceFlags: progress.divergenceFlags,
+            sourceSwitches: progress.sourceSwitches,
+          },
+        },
+      });
+    },
   });
   await reportYieldProgress("evaluation-complete", "Completed yield source evaluation", "yield", {
     itemsDone: evaluatedSources.length,

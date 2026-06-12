@@ -1,8 +1,12 @@
-import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runEnrichmentPasses } from "./enrich-prices-fallback";
+import {
+  loadFxRatesForPriceBounds,
+  logEnrichmentSummary,
+  type EnrichmentProgressReporter,
+} from "./enrich-prices-progress";
 
 export { isReasonablePrice, PRICE_BOUNDS } from "../../lib/price-validation";
 export {
@@ -42,10 +46,13 @@ export async function enrichMissingPrices(
   signal?: AbortSignal,
   jupiterApiKey?: string | null,
   coingeckoApiKey?: string | null,
+  onProgress?: EnrichmentProgressReporter,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
+  await onProgress?.({ phase: "start", totalMissing });
   if (totalMissing === 0) {
+    await onProgress?.({ phase: "complete", totalMissing, finalMissing: 0, failedPasses: [] });
     return {
       totalMissing: 0,
       pass1: 0,
@@ -59,15 +66,8 @@ export async function enrichMissingPrices(
     };
   }
 
-  let fxRates: Record<string, number> | undefined;
-  if (db) {
-    try {
-      const fxCache = await getCache(db, "fx-rates");
-      if (fxCache) fxRates = JSON.parse(fxCache.value);
-    } catch (e) {
-      console.warn("[enrich-prices] Failed to load FX rates for price bounds:", e);
-    }
-  }
+  const fxRates = await loadFxRatesForPriceBounds(db);
+  await onProgress?.({ phase: "fx-rates-loaded", totalMissing });
 
   const { counts, failedPasses, providerDiagnostics } = await runEnrichmentPasses({
     assets,
@@ -77,21 +77,20 @@ export async function enrichMissingPrices(
     db,
     fxRates,
     signal,
+    onProgress: async (progress) => {
+      await onProgress?.({
+        phase: progress.phase,
+        totalMissing,
+        finalMissing: progress.missingAfterPass,
+        pass: progress,
+        failedPasses: progress.failedPasses,
+      });
+    },
   });
 
   const finalMissing = assets.filter(hasMissingPrice).length;
-  const totalEnriched = Object.values(counts).reduce((sum, count) => sum + count, 0);
-  console.log(
-    `[enrich] ${totalMissing} assets missing prices → ` +
-    `Pass 1: +${counts.pass1}, Pass 1b (multi-chain): +${counts.pass1b}, ` +
-    `Pass 2 (CMC): +${counts.passCmc}, ` +
-    `Pass 3 (Jupiter): +${counts.passJupiter}, ` +
-    `Pass 4 (DexScreener): +${counts.passDex}, ` +
-    `Pass 5 (CG low-volume): +${counts.passCgLowVolume}, still missing: ${finalMissing}`
-  );
-  if (totalEnriched > 0) {
-    console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
-  }
+  await onProgress?.({ phase: "complete", totalMissing, finalMissing, failedPasses });
+  logEnrichmentSummary(totalMissing, counts, finalMissing);
   return {
     totalMissing,
     ...counts,

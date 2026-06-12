@@ -15,7 +15,12 @@ import {
 import { getPriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { enrichMissingPrices, hasMissingPrice, type PrimaryPriceResult } from "./enrich-prices";
+import {
+  enrichMissingPrices,
+  hasMissingPrice,
+  type PrimaryPriceResult,
+} from "./enrich-prices";
+import type { EnrichmentProgressReporter } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
@@ -102,6 +107,7 @@ export interface MissingPriceEnrichmentInput {
   coingeckoApiKey?: string | null;
   jupiterApiKey?: string | null;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
+  onProgress?: EnrichmentProgressReporter;
 }
 
 export interface MissingPriceEnrichmentResult {
@@ -416,6 +422,7 @@ export async function runMissingPriceEnrichmentPhase(
     input.signal,
     input.jupiterApiKey,
     input.coingeckoApiKey,
+    input.onProgress,
   );
 
   for (const asset of input.assets) {

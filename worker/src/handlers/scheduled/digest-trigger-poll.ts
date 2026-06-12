@@ -46,7 +46,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
     return buildScheduledSlotSummary([
-      summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request"),
+      summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
     ], { budgetOnlyJobs: 1 });
   }
 

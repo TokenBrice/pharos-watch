@@ -61,20 +61,36 @@ describe("runDigestTriggerPollSlot", () => {
   it("is a no-op when the force-run cache key is absent", async () => {
     vi.mocked(getCache).mockResolvedValueOnce(null);
 
-    await runDigestTriggerPollSlot(buildRuntime());
+    const summary = await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(deleteCache).not.toHaveBeenCalled();
     expect(setCache).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({
+      jobsSkipped: 0,
+      jobsNeutralSkipped: 1,
+      jobsDegraded: 0,
+      jobsErrored: 0,
+      jobs: [
+        {
+          job: "digest-trigger-poll",
+          outcome: "skipped",
+          reason: "no-pending-request",
+          neutral: true,
+        },
+      ],
+    });
   });
 
   it("clears a malformed payload without running the digest", async () => {
     vi.mocked(getCache).mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
 
-    await runDigestTriggerPollSlot(buildRuntime());
+    const summary = await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
+    expect(summary.jobsSkipped).toBe(1);
+    expect(summary.jobsNeutralSkipped).toBe(0);
   });
 
   it("runs daily-digest with force=true and clears the flag on success", async () => {

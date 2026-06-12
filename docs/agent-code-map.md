@@ -616,11 +616,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
-- ... 313 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 314 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
-- `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, runWithAbort, sleepWithSignal, throwIfAborted
+- `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, runWithAbort, sleepWithSignal, throwIfAborted, yieldToEventLoop
 - `worker/src/lib/address-price-providers/alchemy.ts` - runAlchemyAddressProvider
 - `worker/src/lib/address-price-providers/birdeye.ts` - runBirdeyeAddressProvider
 - `worker/src/lib/address-price-providers/coingecko-onchain.ts` - runCoingeckoOnchainAddressProvider
@@ -680,7 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 221 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 222 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -744,4 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/supply-helper-usage.test.ts`
 - `scripts/__tests__/sync-depeg-events.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
-- ... 170 more files omitted; use `rg --files scripts` for the full list.
+- ... 171 more files omitted; use `rg --files scripts` for the full list.

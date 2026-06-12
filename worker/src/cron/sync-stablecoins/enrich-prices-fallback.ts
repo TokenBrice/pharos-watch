@@ -1,4 +1,4 @@
-import type { PeggedAsset } from "./enrich-prices-shared";
+import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runCoingeckoLowVolumePass, runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
@@ -25,16 +25,33 @@ interface EnrichmentPassContext {
   db?: D1Database;
   fxRates?: Record<string, number>;
   signal?: AbortSignal;
+  onProgress?: EnrichmentPassProgressReporter;
 }
 
 interface EnrichmentPassDefinition {
+  key: keyof EnrichmentPassCounts;
   label: string;
   failureLabel?: string;
   run: (context: EnrichmentPassContext) => Promise<EnrichmentPassResult>;
 }
 
+export interface EnrichmentPassProgress {
+  phase: "pass-start" | "pass-complete" | "pass-failed";
+  passKey: keyof EnrichmentPassCounts;
+  passLabel: string;
+  passIndex: number;
+  passTotal: number;
+  missingBeforePass: number;
+  missingAfterPass: number;
+  counts: EnrichmentPassCounts;
+  failedPasses: string[];
+}
+
+export type EnrichmentPassProgressReporter = (progress: EnrichmentPassProgress) => void | Promise<void>;
+
 const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
+    key: "pass1",
     label: "DefiLlama contracts",
     run: async ({ assets, fxRates, db, signal }) => {
       const result = await runDlContractPasses(assets, fxRates, signal, db);
@@ -48,6 +65,7 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     },
   },
   {
+    key: "passCmc",
     label: "CoinMarketCap",
     failureLabel: "coinmarketcap",
     run: async ({ assets, cmcApiKey, fxRates, db, signal }) => {
@@ -62,6 +80,7 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     },
   },
   {
+    key: "passJupiter",
     label: "Jupiter",
     failureLabel: "jupiter",
     run: async ({ assets, fxRates, db, signal, jupiterApiKey }) => {
@@ -76,6 +95,7 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     },
   },
   {
+    key: "passDex",
     label: "DexScreener",
     failureLabel: "dexscreener",
     run: async ({ assets, fxRates, db, signal }) => {
@@ -90,6 +110,7 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     },
   },
   {
+    key: "passCgLowVolume",
     label: "CoinGecko low-volume",
     failureLabel: "coingecko-low-volume",
     run: async ({ assets, coingeckoApiKey, fxRates, db, signal }) => {
@@ -124,7 +145,19 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
   const failedPasses: string[] = [];
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
-  for (const pass of FALLBACK_PRICE_PASSES) {
+  for (const [passIndex, pass] of FALLBACK_PRICE_PASSES.entries()) {
+    const missingBeforePass = context.assets.filter(hasMissingPrice).length;
+    await context.onProgress?.({
+      phase: "pass-start",
+      passKey: pass.key,
+      passLabel: pass.label,
+      passIndex,
+      passTotal: FALLBACK_PRICE_PASSES.length,
+      missingBeforePass,
+      missingAfterPass: missingBeforePass,
+      counts,
+      failedPasses: [...failedPasses],
+    });
     try {
       const result = await pass.run(context);
       for (const [key, value] of Object.entries(result.counts) as Array<[keyof EnrichmentPassCounts, number | undefined]>) {
@@ -138,12 +171,34 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
       if (result.diagnostics?.length) {
         providerDiagnostics.push(...result.diagnostics);
       }
+      await context.onProgress?.({
+        phase: "pass-complete",
+        passKey: pass.key,
+        passLabel: pass.label,
+        passIndex,
+        passTotal: FALLBACK_PRICE_PASSES.length,
+        missingBeforePass,
+        missingAfterPass: context.assets.filter(hasMissingPrice).length,
+        counts,
+        failedPasses: [...failedPasses],
+      });
     } catch (err) {
       if (context.signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       console.warn(`[sync-stablecoins] ${pass.label} enrichment failed:`, err);
       if (pass.failureLabel) {
         failedPasses.push(pass.failureLabel);
       }
+      await context.onProgress?.({
+        phase: "pass-failed",
+        passKey: pass.key,
+        passLabel: pass.label,
+        passIndex,
+        passTotal: FALLBACK_PRICE_PASSES.length,
+        missingBeforePass,
+        missingAfterPass: context.assets.filter(hasMissingPrice).length,
+        counts,
+        failedPasses: [...failedPasses],
+      });
     }
   }
 

@@ -56,6 +56,16 @@ export interface CronInFlight {
   stale: boolean;
 }
 
+export interface CronStaleArtifact {
+  kind: "expired-lease" | "orphaned-progress";
+  job: string;
+  leaseOwner?: string;
+  leaseUntil?: number;
+  progressUpdatedAt?: number;
+  progressStage?: string;
+  slotStartedAt?: number | null;
+}
+
 export interface CronStatus {
   lastRun: CronRun | null;
   recentRuns: CronRun[];
@@ -63,6 +73,7 @@ export interface CronStatus {
   healthy: boolean;
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
+  staleArtifacts?: CronStaleArtifact[];
   /**
    * Set to `true` only for watch-tier crons that have zero historical runs
    * (bootstrap state). The cron is considered healthy in this state because
@@ -801,6 +812,9 @@ export interface StatusResponse {
     availabilityImpactingCronErrors: number;
     /** Count of availability-critical crons with 2+ consecutive failed runs (sustained outage). */
     availabilityImpactingConsecutiveCronErrors: number;
+    staleCronArtifacts?: number;
+    expiredCronLeases?: number;
+    orphanedCronProgressRows?: number;
     diagnosticIssueCount: number;
     worstCacheRatio: number;
     /**

@@ -49,3 +49,40 @@ export async function sleepWithSignal(ms: number, signal?: AbortSignal): Promise
     signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
+
+export async function yieldToEventLoop(signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+
+  await new Promise<void>((resolve, reject) => {
+    let channel: {
+      port1: { close: () => void; onmessage: (() => void) | null };
+      port2: { close: () => void; postMessage: (value: unknown) => void };
+    } | null = null;
+    let settled = false;
+
+    const onAbort = () => {
+      settle(() => reject(abortError(signal)));
+    };
+
+    const settle = (complete: () => void) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", onAbort);
+      channel?.port1.close();
+      channel?.port2.close();
+      complete();
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (typeof globalThis.MessageChannel === "function") {
+      const messageChannel = new MessageChannel();
+      channel = messageChannel;
+      messageChannel.port1.onmessage = () => settle(resolve);
+      messageChannel.port2.postMessage(undefined);
+    } else {
+      queueMicrotask(() => settle(resolve));
+    }
+  });
+
+  throwIfAborted(signal);
+}

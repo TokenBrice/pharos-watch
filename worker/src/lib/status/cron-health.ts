@@ -1,5 +1,5 @@
 import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
-import type { CronInFlight, CronRun, CronStatus } from "@shared/types/status";
+import type { CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 
@@ -13,6 +13,9 @@ export interface CronHealthSnapshot {
   availabilityImpactingCronErrors: number;
   /** Count of availability-critical crons whose most recent 2+ runs are all `error`. */
   availabilityImpactingConsecutiveCronErrors: number;
+  staleCronArtifacts: number;
+  expiredCronLeases: number;
+  orphanedCronProgressRows: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
 }
@@ -140,7 +143,9 @@ export async function loadCronHealth(
   let cronProgressByJob = new Map<string, CronInFlight>();
   let cronProgressQueryFailed = false;
   let cronLeaseByJob: Map<string, { leaseOwner: string; leaseUntil: number }> | null = null;
+  let cronLeaseRows: Array<{ job: string; lease_owner: string; lease_until: number }> = [];
   let cronLeaseQueryFailed = false;
+  const staleArtifactsByJob = new Map<string, CronStaleArtifact[]>();
 
   try {
     const leaseRows = await db
@@ -156,8 +161,9 @@ export async function loadCronHealth(
         lease_until: number;
       }>();
 
+    cronLeaseRows = leaseRows.results ?? [];
     cronLeaseByJob = new Map(
-      (leaseRows.results ?? []).map((row) => [row.job, {
+      cronLeaseRows.map((row) => [row.job, {
         leaseOwner: row.lease_owner,
         leaseUntil: row.lease_until,
       }]),
@@ -178,7 +184,7 @@ export async function loadCronHealth(
   try {
     const progressRows = await db
       .prepare(
-        `SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata
+        `SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata, slot_started_at
            FROM cron_run_progress
            WHERE job IN (${cronJobInClause.sql})`,
       )
@@ -193,16 +199,38 @@ export async function loadCronHealth(
         message: string | null;
         lease_owner: string | null;
         metadata: string | null;
+        slot_started_at: number | null;
       }>();
 
+    const progressArtifacts: CronStaleArtifact[] = [];
     const filteredProgressRows = (progressRows.results ?? []).filter((row) => {
       if (cronLeaseQueryFailed || cronLeaseByJob == null || !row.lease_owner) {
         return true;
       }
 
       const lease = cronLeaseByJob.get(row.job);
-      return lease != null && lease.leaseOwner === row.lease_owner && lease.leaseUntil >= now;
+      const active = lease != null && lease.leaseOwner === row.lease_owner && lease.leaseUntil >= now;
+      if (!active) {
+        progressArtifacts.push({
+          kind: "orphaned-progress",
+          job: row.job,
+          leaseOwner: row.lease_owner,
+          ...(lease?.leaseUntil != null ? { leaseUntil: lease.leaseUntil } : {}),
+          progressUpdatedAt: row.updated_at,
+          ...(row.stage ? { progressStage: row.stage } : {}),
+          slotStartedAt: row.slot_started_at,
+        });
+      }
+      return active;
     });
+
+    if (progressArtifacts.length > 0) {
+      for (const artifact of progressArtifacts) {
+        const artifacts = staleArtifactsByJob.get(artifact.job) ?? [];
+        artifacts.push(artifact);
+        staleArtifactsByJob.set(artifact.job, artifacts);
+      }
+    }
 
     cronProgressByJob = new Map(
       filteredProgressRows.map((row) => {
@@ -234,6 +262,20 @@ export async function loadCronHealth(
     });
   }
 
+  if (!cronLeaseQueryFailed) {
+    for (const lease of cronLeaseRows) {
+      if (lease.lease_until >= now) continue;
+      const artifacts = staleArtifactsByJob.get(lease.job) ?? [];
+      artifacts.push({
+        kind: "expired-lease",
+        job: lease.job,
+        leaseOwner: lease.lease_owner,
+        leaseUntil: lease.lease_until,
+      });
+      staleArtifactsByJob.set(lease.job, artifacts);
+    }
+  }
+
   const cronByJob = new Map<string, CronRun[]>();
   for (const row of cronRows.results ?? []) {
     const runs = cronByJob.get(row.job) ?? [];
@@ -259,6 +301,9 @@ export async function loadCronHealth(
   let cronErrorCount = 0;
   let availabilityImpactingCronErrors = 0;
   let availabilityImpactingConsecutiveCronErrors = 0;
+  let staleCronArtifacts = 0;
+  let expiredCronLeases = 0;
+  let orphanedCronProgressRows = 0;
 
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
     const runs = cronByJob.get(job) ?? [];
@@ -335,8 +380,18 @@ export async function loadCronHealth(
           stale: now - inFlight.updatedAt > Math.max(300, interval),
         };
       })(),
+      ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),
       ...(watchBootstrap ? { bootstrap: true } : {}),
     };
+
+    for (const artifact of staleArtifactsByJob.get(job) ?? []) {
+      staleCronArtifacts++;
+      if (artifact.kind === "expired-lease") {
+        expiredCronLeases++;
+      } else {
+        orphanedCronProgressRows++;
+      }
+    }
   }
 
   return {
@@ -348,6 +403,9 @@ export async function loadCronHealth(
     cronErrorCount,
     availabilityImpactingCronErrors,
     availabilityImpactingConsecutiveCronErrors,
+    staleCronArtifacts,
+    expiredCronLeases,
+    orphanedCronProgressRows,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   };

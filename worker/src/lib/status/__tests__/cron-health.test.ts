@@ -184,3 +184,57 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
     expect(snapshot.crons["sync-dex-liquidity"]?.bootstrap).toBeUndefined();
   });
 });
+
+describe("loadCronHealth — stale cron artifact readout", () => {
+  const NOW = 1_775_890_000;
+
+  it("surfaces expired leases and orphaned progress without treating them as in-flight", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      {
+        match: "FROM cron_leases",
+        rows: [{
+          job: "sync-yield-data",
+          lease_owner: "yield-owner-a",
+          lease_until: NOW - 60,
+        }],
+      },
+      {
+        match: "FROM cron_run_progress",
+        rows: [{
+          job: "sync-yield-data",
+          started_at: NOW - 3_600,
+          updated_at: NOW - 1_800,
+          stage: "evaluation",
+          items_done: 10,
+          items_total: 20,
+          message: "Evaluating",
+          lease_owner: "yield-owner-a",
+          metadata: null,
+          slot_started_at: NOW - 3_600,
+        }],
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.expiredCronLeases).toBe(1);
+    expect(snapshot.orphanedCronProgressRows).toBe(1);
+    expect(snapshot.staleCronArtifacts).toBe(2);
+    expect(snapshot.crons["sync-yield-data"]?.inFlight).toBeNull();
+    expect(snapshot.crons["sync-yield-data"]?.staleArtifacts).toEqual([
+      expect.objectContaining({
+        kind: "orphaned-progress",
+        leaseOwner: "yield-owner-a",
+        progressStage: "evaluation",
+        slotStartedAt: NOW - 3_600,
+      }),
+      expect.objectContaining({
+        kind: "expired-lease",
+        leaseOwner: "yield-owner-a",
+        leaseUntil: NOW - 60,
+      }),
+    ]);
+  });
+});

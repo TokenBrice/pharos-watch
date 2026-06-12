@@ -3,7 +3,11 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
-function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "healthy"): Response {
+function buildProbeResponse(
+  input: unknown,
+  healthStatus: HealthProbeStatus = "healthy",
+  init?: RequestInit,
+): Response {
   let rawUrl = "https://api.pharos.watch";
   if (typeof input === "string") {
     rawUrl = input;
@@ -19,6 +23,12 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
   }
 
   const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+  const headers = new Headers(
+    init?.headers ?? (input instanceof Request ? input.headers : undefined),
+  );
+  if (url.hostname === "site-api.pharos.watch" && !headers.has("X-Pharos-Site-Proxy-Secret")) {
+    return new Response("Unauthorized", { status: 401 });
+  }
   if (url.hostname === "ops-api.pharos.watch") {
     return new Response("Forbidden", { status: 403 });
   }
@@ -104,7 +114,7 @@ describe("runStatusSelfCheck", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input));
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => buildProbeResponse(input, "healthy", init));
     routeMock.mockImplementation(async ({ url }: { url: URL }) => buildProbeResponse(url));
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
       hasDivergence: true,
@@ -247,7 +257,7 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("downgrades the probe aggregate when /api/health reports degraded in a 200 response", async () => {
-    fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input, "degraded"));
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => buildProbeResponse(input, "degraded", init));
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
       hasDivergence: false,
       severityDelta: 0,
@@ -433,6 +443,49 @@ describe("runStatusSelfCheck", () => {
     );
   });
 
+  it("treats the site-api auth gate as healthy when no shared secret is configured", async () => {
+    const ctx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+    fetchMock.mockImplementation(async (input: unknown, _init?: RequestInit) => {
+      const rawUrl = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input && typeof input === "object" && "url" in input && typeof (input as { url: unknown }).url === "string"
+            ? (input as { url: string }).url
+            : "https://api.pharos.watch";
+      const url = new URL(rawUrl);
+      if (url.hostname === "site-api.pharos.watch") {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      return buildProbeResponse(input);
+    });
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "https://api.pharos.watch",
+      undefined,
+      ctx,
+      undefined,
+      null,
+      null,
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failCount?: number;
+      probePlanes?: { external?: { sampleCount?: number; origins?: string[] } };
+      slowestProbes?: Array<{ label?: string; status?: number; error?: string | null }>;
+    };
+    const siteCall = fetchMock.mock.calls.find((call) => String(call[0]).startsWith("https://site-api.pharos.watch/"));
+    const siteInit = siteCall?.[1] as RequestInit | undefined;
+
+    expect(new Headers(siteInit?.headers).get("X-Pharos-Site-Proxy-Secret")).toBeNull();
+    expect(metadata.failCount).toBe(0);
+    expect(metadata.probePlanes?.external?.sampleCount).toBe(3);
+    expect(metadata.probePlanes?.external?.origins).toEqual(expect.arrayContaining(["https://site-api.pharos.watch"]));
+  });
+
   it("surfaces internal-vs-external discrepancies in details and alerts", async () => {
     const ctx = {
       waitUntil: vi.fn(),
@@ -567,7 +620,7 @@ describe("health probe semantic classification", () => {
   }
 
   function mockHealthBody(body: unknown): void {
-    fetchMock.mockImplementation(async (input: unknown) => {
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
       let rawUrl = "https://api.pharos.watch";
       if (typeof input === "string") {
         rawUrl = input;
@@ -582,6 +635,12 @@ describe("health probe semantic classification", () => {
         rawUrl = (input as { url: string }).url;
       }
       const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      );
+      if (url.hostname === "site-api.pharos.watch" && !headers.has("X-Pharos-Site-Proxy-Secret")) {
+        return new Response("Unauthorized", { status: 401 });
+      }
       if (url.hostname === "ops-api.pharos.watch") {
         return new Response("Forbidden", { status: 403 });
       }

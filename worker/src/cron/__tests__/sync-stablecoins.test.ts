@@ -484,7 +484,15 @@ describe("syncStablecoins", () => {
         addressProvider: undefined,
       }),
     );
-    expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined, undefined, undefined);
+    expect(enrichMissingPrices).toHaveBeenCalledWith(
+      expect.any(Array),
+      undefined,
+      db,
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Function),
+    );
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;

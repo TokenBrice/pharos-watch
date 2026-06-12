@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldHistoryEvaluationInputs } from "../yield-sync/coordinator-history";
+import {
+  buildYieldHistoryEvaluationInputs,
+  buildYieldHistoryEvaluationInputsCooperative,
+} from "../yield-sync/coordinator-history";
 import { loadYieldHistorySnapshots, type YieldHistorySnapshotRow } from "../yield-sync/history";
 
 function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotRow {
@@ -70,6 +73,32 @@ describe("yield coordinator history", () => {
     });
 
     expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(2);
+  });
+
+  it("cooperative input construction matches the synchronous builder", async () => {
+    const input = {
+      historyRows: [
+        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 100 }),
+        row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1, recorded_at: 200 }),
+      ],
+      prevTvlRows: [row({ stablecoin_id: "coin-a", source_key: "source-a", source_tvl_usd: 9_000 })],
+      prevBestRows: [row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1 })],
+    };
+    const progress: string[] = [];
+
+    const sync = buildYieldHistoryEvaluationInputs(input);
+    const cooperative = await buildYieldHistoryEvaluationInputsCooperative(input, {
+      yieldEveryRows: 1,
+      onProgress: (snapshot) => {
+        progress.push(snapshot.phase);
+      },
+    });
+
+    expect([...cooperative.sourceHistory.keys()]).toEqual([...sync.sourceHistory.keys()]);
+    expect(cooperative.prevTvlBySource.get("coin-a::source-a")).toBe(sync.prevTvlBySource.get("coin-a::source-a"));
+    expect(cooperative.prevBestSourceKeyByCoin.get("coin-a")).toBe(sync.prevBestSourceKeyByCoin.get("coin-a"));
+    expect(cooperative.sourceSwitchCount30dByCoin.get("coin-a")).toBe(sync.sourceSwitchCount30dByCoin.get("coin-a"));
+    expect(progress).toEqual(expect.arrayContaining(["history-rows", "previous-tvl", "previous-best", "source-switches"]));
   });
 
   it("loads only published or legacy history rows for evaluation inputs", async () => {

@@ -11,7 +11,7 @@ describe("cache-health", () => {
     ).toBe("degraded");
   });
 
-  it("still treats source-stale fallback modes as stale public impact", () => {
+  it("does not let stale producer source status escalate degraded cache age to stale public impact", () => {
     expect(
       getCacheImpactStatus({
         ageSeconds: 16000,
@@ -19,7 +19,7 @@ describe("cache-health", () => {
         healthy: false,
         sourceStatus: "stale",
       }),
-    ).toBe("stale");
+    ).toBe("degraded");
   });
 
   it("marks degraded cache ratios as degraded public impact when the source is otherwise live", () => {

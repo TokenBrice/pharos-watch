@@ -27,10 +27,36 @@ describe("loadYieldHistorySnapshots", () => {
     ]);
 
     const resolvedIds = Array.from({ length: 90 }, (_, index) => `coin-${index}`);
-    const result = await loadYieldHistorySnapshots(db, resolvedIds, 1_800_000_000, 1_799_000_000);
+    const result = await loadYieldHistorySnapshots(db, resolvedIds, 1_800_000_000, 1_799_000_000, {
+      chunkSize: 90,
+    });
 
     expect(result.historyRows).toHaveLength(130_000);
     expect(result.prevTvlRows).toHaveLength(0);
     expect(result.prevBestRows).toHaveLength(0);
+  });
+
+  it("reports bounded progress across history chunks", async () => {
+    const db = mockD1([
+      { match: "recorded_at >= ?", rows: [] },
+      { match: "source_tvl_usd IS NOT NULL", rows: [] },
+      { match: "is_best = 1", rows: [] },
+    ]);
+    const progress: Array<{ chunksDone: number; chunksTotal: number; resolvedIdsDone: number }> = [];
+
+    const resolvedIds = Array.from({ length: 31 }, (_, index) => `coin-${index}`);
+    await loadYieldHistorySnapshots(db, resolvedIds, 1_800_000_000, 1_799_000_000, {
+      chunkSize: 30,
+      onProgress: (snapshot) => {
+        progress.push({
+          chunksDone: snapshot.chunksDone,
+          chunksTotal: snapshot.chunksTotal,
+          resolvedIdsDone: snapshot.resolvedIdsDone,
+        });
+      },
+    });
+
+    expect(progress[0]).toEqual({ chunksDone: 0, chunksTotal: 2, resolvedIdsDone: 0 });
+    expect(progress[progress.length - 1]).toEqual({ chunksDone: 2, chunksTotal: 2, resolvedIdsDone: 31 });
   });
 });

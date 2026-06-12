@@ -344,18 +344,23 @@ describe("enrichMissingPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1.0, pegType: "peggedUSD", circulating: {} },
       { id: "usdc-circle", name: "USD Coin", symbol: "USDC", price: 0.999, pegType: "peggedUSD", circulating: {} },
     ];
+    const progress: string[] = [];
 
-    const stats = await enrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets, undefined, undefined, undefined, undefined, undefined, (snapshot) => {
+      progress.push(snapshot.phase);
+    });
 
     expect(stats.totalMissing).toBe(0);
     expect(stats.pass1).toBe(0);
     expect(stats.passDex).toBe(0);
     expect(stats.finalMissing).toBe(0);
+    expect(progress).toEqual(["start", "complete"]);
   });
 
   it("continues when the FX-rate cache cannot be read", async () => {
     mockFetch([]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -372,11 +377,14 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.totalMissing).toBe(1);
     expect(stats.finalMissing).toBe(1);
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[enrich-prices] Failed to load FX rates for price bounds:",
-      expect.any(Error),
-    );
+    expect(JSON.parse(String(warnSpy.mock.calls[0]?.[0]))).toMatchObject({
+      level: "warn",
+      event: "stablecoin-price-enrichment.fx-rates-load-failed",
+      job: "sync-stablecoins",
+      errorMessage: "d1 unavailable",
+    });
     warnSpy.mockRestore();
+    infoSpy.mockRestore();
   });
 
   it("enriches via Pass 1 (contract address → DL coins API)", async () => {

@@ -32,23 +32,55 @@ type SlotExecutionRow = {
   metadata: string | null;
 };
 
+type ProgressRow = {
+  job: string;
+  started_at: number;
+  updated_at: number;
+  stage: string | null;
+  lease_owner: string | null;
+  slot_started_at: number | null;
+};
+
+type CronRunRow = {
+  job: string;
+  started_at: number;
+  duration_ms: number;
+  status: string;
+  error: string | null;
+  metadata: string | null;
+  slot_started_at: number | null;
+};
+
 interface TestLeaseDb extends D1Database {
   getSlot: (slotKey: string, slotStartedAt: number) => SlotExecutionRow | undefined;
+  getLease: (job: string) => LeaseRow | undefined;
+  getProgress: (job: string) => ProgressRow | undefined;
+  getRuns: () => CronRunRow[];
 }
 
 function makeSlotMapKey(slotKey: string, slotStartedAt: number): string {
   return `${slotKey}:${slotStartedAt}`;
 }
 
-function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] }): TestLeaseDb {
+function makeLeaseDb(seed?: {
+  leases?: LeaseRow[];
+  slots?: SlotExecutionRow[];
+  progress?: ProgressRow[];
+  runs?: CronRunRow[];
+}): TestLeaseDb {
   const leases = new Map<string, LeaseRow>();
   const slots = new Map<string, SlotExecutionRow>();
+  const progressRows = new Map<string, ProgressRow>();
+  const cronRuns: CronRunRow[] = [...(seed?.runs ?? [])];
 
   for (const lease of seed?.leases ?? []) {
     leases.set(lease.job, lease);
   }
   for (const slot of seed?.slots ?? []) {
     slots.set(makeSlotMapKey(slot.slot_key, slot.slot_started_at), slot);
+  }
+  for (const progress of seed?.progress ?? []) {
+    progressRows.set(progress.job, progress);
   }
 
   function stmt(sql: string) {
@@ -110,12 +142,50 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
           }
 
           if (sql.includes("DELETE FROM cron_leases")) {
-            const [job, owner] = args as [string, string];
+            const [job, owner, nowSec] = args as [string, string, number | undefined];
             const existing = leases.get(job);
             if (!existing || existing.lease_owner !== owner) {
               return { success: true, meta: { changes: 0 } };
             }
+            if (sql.includes("lease_until < ?") && !(typeof nowSec === "number" && existing.lease_until < nowSec)) {
+              return { success: true, meta: { changes: 0 } };
+            }
             leases.delete(job);
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, error, item_count")) {
+            const [job, startedAt, durationMs, error, metadata, slotStartedAt] = args as [
+              string,
+              number,
+              number,
+              string | null,
+              string | null,
+              number | null,
+            ];
+            cronRuns.push({
+              job,
+              started_at: startedAt,
+              duration_ms: durationMs,
+              status: "error",
+              error,
+              metadata,
+              slot_started_at: slotStartedAt,
+            });
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("DELETE FROM cron_run_progress")) {
+            const [job, slotStartedAt, owner] = args as [string, number, string];
+            const existing = progressRows.get(job);
+            if (
+              !existing ||
+              existing.slot_started_at !== slotStartedAt ||
+              existing.lease_owner !== owner
+            ) {
+              return { success: true, meta: { changes: 0 } };
+            }
+            progressRows.delete(job);
             return { success: true, meta: { changes: 1 } };
           }
 
@@ -146,17 +216,19 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
           }
 
           if (sql.includes("UPDATE cron_slot_executions") && sql.includes("result_status = 'error'")) {
-            const [finishedAt, updatedAt, metadata, slotKey, staleBefore] = args as [
+            const [finishedAt, updatedAt, metadata, slotKey, slotStartedAt, staleBefore] = args as [
               number,
               number,
               string,
               string,
+              number,
               number,
             ];
             let changes = 0;
             for (const [key, existing] of slots) {
               if (
                 existing.slot_key === slotKey &&
+                existing.slot_started_at === slotStartedAt &&
                 existing.state === "running" &&
                 existing.updated_at < staleBefore
               ) {
@@ -250,9 +322,48 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
               updated_at: row.updated_at,
             };
           }
+          if (sql.includes("SELECT lease_owner, lease_until FROM cron_leases")) {
+            const [job] = args as [string];
+            const lease = leases.get(job);
+            if (!lease) return null;
+            return {
+              lease_owner: lease.lease_owner,
+              lease_until: lease.lease_until,
+            };
+          }
+          if (sql.includes("SELECT id FROM cron_runs")) {
+            const [job, slotStartedAt] = args as [string, number];
+            const index = cronRuns.findIndex((run) => run.job === job && run.slot_started_at === slotStartedAt);
+            return index >= 0 ? { id: index + 1 } : null;
+          }
           return null;
         },
-        all: async () => ({ results: [], success: true, meta: {} }),
+        all: async () => {
+          if (sql.includes("FROM cron_slot_executions") && sql.includes("ORDER BY slot_started_at ASC")) {
+            const [slotKey, staleBefore] = args as [string, number];
+            return {
+              results: [...slots.values()].filter((slot) =>
+                slot.slot_key === slotKey &&
+                slot.state === "running" &&
+                slot.updated_at < staleBefore,
+              ),
+              success: true,
+              meta: {},
+            };
+          }
+          if (sql.includes("FROM cron_run_progress") && sql.includes("slot_started_at = ?")) {
+            const [slotStartedAt] = args as [number];
+            return {
+              results: [...progressRows.values()].filter((progress) =>
+                progress.slot_started_at === slotStartedAt &&
+                progress.lease_owner != null,
+              ),
+              success: true,
+              meta: {},
+            };
+          }
+          return { results: [], success: true, meta: {} };
+        },
       }),
       run: async () => ({ success: true, meta: { changes: 0 } }),
       first: async () => null,
@@ -266,6 +377,9 @@ function makeLeaseDb(seed?: { leases?: LeaseRow[]; slots?: SlotExecutionRow[] })
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     getSlot: (slotKey: string, slotStartedAt: number) => slots.get(makeSlotMapKey(slotKey, slotStartedAt)),
+    getLease: (job: string) => leases.get(job),
+    getProgress: (job: string) => progressRows.get(job),
+    getRuns: () => [...cronRuns],
   } as unknown as TestLeaseDb;
 }
 
@@ -682,6 +796,122 @@ describe("runScheduledSlotWithFence", () => {
       { slotStartedAt: staleSlotStartedAt, owner: "owner-c", staleAfterSec: 1200 },
     );
     expect(staleRetry.status).toBe("skipped_duplicate");
+  });
+
+  it("reconciles stale slot progress into a synthetic child cron run and clears expired ownership", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const currentSlotStartedAt = now;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "hourlyYield",
+        slot_started_at: staleSlotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "slot-owner-a",
+        started_at: staleSlotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+      leases: [{
+        job: "sync-yield-data",
+        lease_owner: "yield-owner-a",
+        lease_until: now - 60,
+        heartbeat_at: now - 1800,
+        updated_at: now - 1800,
+      }],
+      progress: [{
+        job: "sync-yield-data",
+        started_at: staleSlotStartedAt + 20,
+        updated_at: now - 1800,
+        stage: "evaluation",
+        lease_owner: "yield-owner-a",
+        slot_started_at: staleSlotStartedAt,
+      }],
+    });
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "hourlyYield",
+      async () => undefined,
+      { slotStartedAt: currentSlotStartedAt, owner: "slot-owner-b", staleAfterSec: 1200 },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "sync-yield-data",
+        status: "error",
+        slot_started_at: staleSlotStartedAt,
+        error: "scheduled slot heartbeat stale; child job progress abandoned",
+      }),
+    ]);
+    expect(db.getProgress("sync-yield-data")).toBeUndefined();
+    expect(db.getLease("sync-yield-data")).toBeUndefined();
+    const staleSlot = db.getSlot("hourlyYield", staleSlotStartedAt);
+    expect(staleSlot?.result_status).toBe("error");
+    expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
+      staleSlotReconciliation: {
+        syntheticCronRuns: 1,
+        progressRowsCleared: 1,
+        leasesCleared: 1,
+      },
+    });
+  });
+
+  it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const currentSlotStartedAt = now;
+    const db = makeLeaseDb({
+      slots: [{
+        slot_key: "hourlyYield",
+        slot_started_at: staleSlotStartedAt,
+        state: "running",
+        result_status: null,
+        execution_owner: "slot-owner-a",
+        started_at: staleSlotStartedAt,
+        finished_at: null,
+        updated_at: now - 1800,
+        metadata: null,
+      }],
+      leases: [{
+        job: "sync-yield-data",
+        lease_owner: "yield-owner-a",
+        lease_until: now + 300,
+        heartbeat_at: now - 60,
+        updated_at: now - 60,
+      }],
+      progress: [{
+        job: "sync-yield-data",
+        started_at: staleSlotStartedAt + 20,
+        updated_at: now - 60,
+        stage: "evaluation",
+        lease_owner: "yield-owner-a",
+        slot_started_at: staleSlotStartedAt,
+      }],
+    });
+
+    const result = await runScheduledSlotWithFence(
+      db,
+      "hourlyYield",
+      async () => undefined,
+      { slotStartedAt: currentSlotStartedAt, owner: "slot-owner-b", staleAfterSec: 1200 },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(db.getRuns()).toEqual([]);
+    expect(db.getProgress("sync-yield-data")).toBeDefined();
+    expect(db.getLease("sync-yield-data")).toBeDefined();
+    const staleSlot = db.getSlot("hourlyYield", staleSlotStartedAt);
+    expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
+      staleSlotReconciliation: {
+        syntheticCronRuns: 0,
+        progressRowsCleared: 0,
+        leasesCleared: 0,
+      },
+    });
   });
 
   it("stores child job summaries and degraded slot status", async () => {
