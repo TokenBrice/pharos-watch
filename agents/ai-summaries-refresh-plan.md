@@ -24,7 +24,7 @@ Workers must update only their assigned row below after completing their batch. 
 | W3-thin-early | complete | Remaining thin entries, early slice | Expanded owned 50-64 word entries and cleaned steakUSDT/steakUSDC fragment openings. |
 | W4-thin-middle | complete | Remaining thin entries, middle slice | Expanded 12 assigned 65-73 word summaries; JSON/glossary checks passed. |
 | W5-thin-late | complete | Remaining thin entries, late slice | Expanded 13 owned 74-79 word summaries with June 12 metadata; wrappers now separate parent stablecoin risk from wrapper risk. |
-| W6-structure-cleanup | pending | Structural duplicate/fragment entries not owned by W1-W5 | Clean pasted/fractured openings and duplicate lead sentences. |
+| W6-structure-cleanup | complete | Structural duplicate/fragment entries not owned by W1-W5 | Cleaned owned pasted/fractured openings and duplicate lead sentences; metadata refreshed to 2026-06-12. |
 
 ## Evidence
 
