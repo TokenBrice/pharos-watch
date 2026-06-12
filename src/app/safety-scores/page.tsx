@@ -13,7 +13,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 
 const reportCardsDescription =
-  "Compare stablecoin safety grades by peg stability, liquidity, resilience, decentralization, dependency risk, and contagion stress-test impact.";
+  "Compare stablecoin safety grades by peg stability, liquidity, resilience, decentralization, CDP oracle setup, dependency risk, and contagion stress-test impact.";
 
 export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Each stablecoin is scored across four weighted base dimensions: liquidity / exit capacity, resilience, decentralization, and dependency risk. Peg stability is then applied as a multiplier on the result. The resulting 0–100 score maps to a letter grade from A+ to F.",
+      "Each stablecoin is scored across four weighted base dimensions: liquidity / exit capacity, resilience, decentralization, and dependency risk. Decentralization can include CDP oracle setup and mint-authority penalties when reviewed metadata exists. Peg stability is then applied as a multiplier on the result. The resulting 0–100 score maps to a letter grade from A+ to F.",
   },
   {
     question: "What does the contagion simulation show?",

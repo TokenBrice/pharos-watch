@@ -123,12 +123,7 @@ export const MINT_AUTHORITY_POSTURE_VALUES = [
 ] as const;
 export type MintAuthorityPosture = (typeof MINT_AUTHORITY_POSTURE_VALUES)[number];
 
-export const MINT_AUTHORITY_CONFIDENCE_VALUES = [
-  "verified",
-  "probable",
-  "manual-review",
-  "unknown",
-] as const;
+export const MINT_AUTHORITY_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
 export type MintAuthorityConfidence = (typeof MINT_AUTHORITY_CONFIDENCE_VALUES)[number];
 
 export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
@@ -184,8 +179,7 @@ export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "unknown",
   "not-applicable",
 ] as const;
-export type MintAuthorityModulesOrGuardsStatus =
-  (typeof MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES)[number];
+export type MintAuthorityModulesOrGuardsStatus = (typeof MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES)[number];
 
 export interface MintAuthoritySafeState {
   version?: string;
@@ -285,13 +279,7 @@ export interface Jurisdiction {
   license?: string;
 }
 
-export const MICA_STATUS_VALUES = [
-  "authorized",
-  "pending",
-  "transitional",
-  "non-compliant",
-  "out-of-scope",
-] as const;
+export const MICA_STATUS_VALUES = ["authorized", "pending", "transitional", "non-compliant", "out-of-scope"] as const;
 export type MicaStatus = (typeof MICA_STATUS_VALUES)[number];
 
 export const MICA_TOKEN_TYPE_VALUES = ["EMT", "ART"] as const;
@@ -352,13 +340,7 @@ export const GENIUS_SOURCE_KIND_VALUES = [
 ] as const;
 export type GeniusSourceKind = (typeof GENIUS_SOURCE_KIND_VALUES)[number];
 
-export const GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES = [
-  "OCC",
-  "Federal Reserve",
-  "FDIC",
-  "NCUA",
-  "Unknown",
-] as const;
+export const GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES = ["OCC", "Federal Reserve", "FDIC", "NCUA", "Unknown"] as const;
 export type GeniusPrimaryFederalRegulator = (typeof GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES)[number];
 
 export const GENIUS_FOREIGN_EXCEPTION_STATUS_VALUES = [
@@ -455,13 +437,25 @@ export interface DependencyWeight {
 export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
 export type ChainTier = (typeof CHAIN_TIER_VALUES)[number];
 
-export const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
+export const DEPLOYMENT_MODEL_VALUES = [
+  "single-chain",
+  "canonical-bridge",
+  "third-party-bridge",
+  "native-multichain",
+] as const;
 export type DeploymentModel = (typeof DEPLOYMENT_MODEL_VALUES)[number];
 
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
 
-export const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
+export const CUSTODY_MODEL_VALUES = [
+  "onchain",
+  "institutional-top",
+  "institutional-regulated",
+  "institutional-unregulated",
+  "institutional-sanctioned",
+  "cex",
+] as const;
 export type CustodyModel = (typeof CUSTODY_MODEL_VALUES)[number];
 
 export const GOVERNANCE_QUALITY_VALUES = [
@@ -474,16 +468,37 @@ export const GOVERNANCE_QUALITY_VALUES = [
 ] as const;
 export type GovernanceQuality = (typeof GOVERNANCE_QUALITY_VALUES)[number];
 
+export const ORACLE_RISK_TIER_VALUES = [
+  "oracleless-or-internal",
+  "redundant-with-failover",
+  "medianized-with-delay",
+  "standard-external",
+  "single-source-or-laggy",
+  "opaque-or-unknown",
+] as const;
+export type OracleRiskTier = (typeof ORACLE_RISK_TIER_VALUES)[number];
+
+export interface OracleRiskProfile {
+  tier: OracleRiskTier;
+  summary: string;
+  sources?: StablecoinLink[];
+}
+
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
 export type Infrastructure = (typeof INFRASTRUCTURE_VALUES)[number];
 
 export const INFRASTRUCTURE_LABELS: Record<Infrastructure, string> = {
   "liquity-v1": "Liquity v1",
   "liquity-v2": "Liquity v2",
-  "m0": "M0",
+  m0: "M0",
 };
 
-export const VARIANT_KIND_VALUES = ["savings-passthrough", "strategy-vault", "risk-absorption", "bond-maturity"] as const;
+export const VARIANT_KIND_VALUES = [
+  "savings-passthrough",
+  "strategy-vault",
+  "risk-absorption",
+  "bond-maturity",
+] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 export const MECHANISM_ARCHETYPE_VALUES = [
   "fiat-cash",
@@ -500,6 +515,7 @@ export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
+export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
@@ -626,6 +642,7 @@ export interface StablecoinMeta {
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
+  oracleRisk?: OracleRiskProfile;
   infrastructures?: Infrastructure[];
   variantOf?: string;
   variantKind?: VariantKind;
@@ -655,13 +672,7 @@ type PegCurrencyFilterTag = `${Lowercase<PegCurrency>}-peg`;
 type InfrastructureFilterTag = `infrastructure-${Infrastructure}`;
 type VariantFilterTag = "variant-tracked" | `variant-${VariantKind}`;
 type PegGroupFilterTag = "fiat-non-usd-peg" | "commodity-peg";
-type GradeFilterTag =
-  | "grade-a"
-  | "grade-ge-b"
-  | "grade-ge-c"
-  | "grade-ge-c-plus"
-  | "grade-ge-c-minus"
-  | "grade-le-d";
+type GradeFilterTag = "grade-a" | "grade-ge-b" | "grade-ge-c" | "grade-ge-c-plus" | "grade-ge-c-minus" | "grade-le-d";
 
 export type FilterTag =
   | PegCurrencyFilterTag

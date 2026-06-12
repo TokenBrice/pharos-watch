@@ -17,6 +17,8 @@ describe("show-your-work formatters", () => {
       liquidityScore: 72,
       effectiveExitScore: 70,
       collateralQuality: "rwa",
+      oracleRiskTier: "medianized-with-delay",
+      oracleRiskScore: 85,
     });
     const table = formatReportCard(rawInputs);
     expect(table.topic).toBe("safetyScore");
@@ -24,7 +26,10 @@ describe("show-your-work formatters", () => {
     expect(pegRow?.value).toBe("95");
     const liqRow = table.rows.find((r) => r.label === "Liquidity score");
     expect(liqRow?.value).toBe("72");
+    expect(table.rows.find((r) => r.label === "Oracle risk tier")?.value).toBe("medianized-with-delay");
+    expect(table.rows.find((r) => r.label === "Oracle risk score")?.value).toBe("85");
     expect(table.formula).toContain("weighted(liquidity/exit, resilience, decentralization, dependency risk)");
+    expect(table.formula).toContain("CDP oracle");
     expect(table.formula).toContain("(Peg Score/100)^0.40");
     expect(table.formula).toContain("×0.9");
     expect(table.formula).toContain("active-depeg");

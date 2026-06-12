@@ -154,3 +154,74 @@ describe("scoreDecentralization mint-authority blend (v8)", () => {
     expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-10")).toBe(true);
   });
 });
+
+describe("scoreDecentralization oracle-risk blend (v8.1)", () => {
+  const makeMeta = (overrides: Record<string, unknown> = {}) => ({
+    flags: { backing: "crypto-backed" as const, governance: "decentralized" as const },
+    mechanismArchetype: "cdp" as const,
+    chainTier: "ethereum" as const,
+    deploymentModel: "single-chain" as const,
+    collateralQuality: "native" as const,
+    custodyModel: "onchain" as const,
+    governanceQuality: "immutable-code" as const,
+    ...overrides,
+  });
+
+  it("drags crypto-backed CDP decentralization when oracle setup undercuts it", () => {
+    // immutable-code (100), single-source oracle score 45:
+    // blended = round(100*0.75 + 45*0.25) = 86
+    const meta = makeMeta({
+      oracleRisk: {
+        tier: "single-source-or-laggy",
+        summary: "Single feed without reviewed failover",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+    expect(result.score).toBe(86);
+    expect(result.detail).toContain("Oracle setup: Single-source or laggy feeds");
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-14")).toBe(true);
+  });
+
+  it("does not lift decentralization when the oracle setup scores above the current score", () => {
+    const meta = makeMeta({
+      governanceQuality: "dao-governance",
+      chainTier: "mature-alt-l1",
+      oracleRisk: {
+        tier: "redundant-with-failover",
+        summary: "Reviewed redundant feed setup",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+    expect(result.score).toBe(60);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "95")).toBe(true);
+  });
+
+  it("skips the oracle blend for non-CDP assets even when metadata is present", () => {
+    const meta = makeMeta({
+      mechanismArchetype: "synthetic-delta-neutral",
+      oracleRisk: {
+        tier: "opaque-or-unknown",
+        summary: "Not a CDP liquidation oracle profile",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+    expect(result.score).toBe(100);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup")).toBe(false);
+  });
+
+  it("applies oracle risk before the Mint Authority blend", () => {
+    // dao-governance (85), single-source oracle = 75, MAS 20:
+    // round(75*0.65 + 20*0.35) = 56
+    const meta = makeMeta({
+      governanceQuality: "dao-governance",
+      oracleRisk: {
+        tier: "single-source-or-laggy",
+        summary: "Single feed without reviewed failover",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 20 });
+    expect(result.score).toBe(56);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-10")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-19")).toBe(true);
+  });
+});

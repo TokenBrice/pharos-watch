@@ -2292,7 +2292,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.291",
+    "version": "8.1",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -2319,6 +2319,8 @@ The Liquidity dimension now represents `effectiveExitScore`: the public DEX liqu
 When present, `collateralDriftCoins` lists live-reserve scoring deltas that exceed the reserve-drift threshold, and `liveToFallbackCoins` lists live-reserve-enabled assets whose report card used curated fallback reserves because no scoring-eligible live snapshot was available.
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
+
+For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore` are populated only when a crypto-backed CDP has a reviewed `oracleRisk` profile. Missing reviews and non-CDP assets return `null` and do not receive an oracle penalty.
 
 `GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. The published envelope is also the preferred Safety Score source for yield hydration, while the smaller `report_card_cache` score map remains available for lightweight Chain Health/OG consumers and is rejected when its compact `methodologyVersion` does not match the current Safety Score methodology.
 
@@ -2372,6 +2374,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `governanceTier`                   | `GovernanceType`                                                                            |
 | `governanceQuality`                | `GovernanceQuality`                                                                         |
 | `mintAuthorityScore`               | `number \| null`                                                                            |
+| `oracleRiskTier`                   | `OracleRiskTier \| null`                                                                    |
+| `oracleRiskScore`                  | `number \| null`                                                                            |
 | `dependencies`                     | `DependencyWeight[]`                                                                        |
 | `variantParentId`                  | `string \| null`                                                                            |
 | `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
@@ -2379,6 +2383,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `collateralFromLive`               | `boolean`                                                                                   |
 
 `rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the four-status model: `true` -> `Yes`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Admin mint authority is reviewed separately in Mint Authority and is not a FreezeWatch status. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
+
+`rawInputs.oracleRiskTier` is one of `"oracleless-or-internal"`, `"redundant-with-failover"`, `"medianized-with-delay"`, `"standard-external"`, `"single-source-or-laggy"`, `"opaque-or-unknown"`, or `null`.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 

@@ -81,6 +81,8 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
     { label: "Custody model", value: rawInputs.custodyModel },
     { label: "Governance tier", value: rawInputs.governanceTier },
     { label: "Governance quality", value: rawInputs.governanceQuality },
+    { label: "Oracle risk tier", value: rawInputs.oracleRiskTier ?? "—" },
+    { label: "Oracle risk score", value: fmtNum(rawInputs.oracleRiskScore) },
     {
       label: "Blacklist exposure",
       value:
@@ -105,7 +107,7 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
   return {
     rows,
     formula:
-      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
+      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; decentralization may include chain, CDP oracle, and mint-authority penalties; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
     topic: "safetyScore",
   };
 }
@@ -146,9 +148,7 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
 // Liquidity Score
 // ---------------------------------------------------------------------------
 
-export function formatLiquidity(
-  scoreComponents: NonNullable<DexLiquidityData["scoreComponents"]>,
-): ShowYourWorkTable {
+export function formatLiquidity(scoreComponents: NonNullable<DexLiquidityData["scoreComponents"]>): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = LIQUIDITY_SCORE_WEIGHTS.map((w) => {
     const value = scoreComponents[w.key];
     const contribution = value * w.weight;
@@ -162,8 +162,7 @@ export function formatLiquidity(
 
   return {
     rows,
-    formula:
-      "score = 0.30·TVL Depth + 0.20·Volume + 0.20·Pool Quality + 0.20·Durability + 0.10·Diversity",
+    formula: "score = 0.30·TVL Depth + 0.20·Volume + 0.20·Pool Quality + 0.20·Durability + 0.10·Diversity",
     topic: "liquidityScore",
   };
 }
@@ -228,17 +227,11 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
     { label: "Model confidence", value: entry.modelConfidence },
     {
       label: "Immediate capacity (USD)",
-      value:
-        entry.immediateCapacityUsd != null
-          ? `$${entry.immediateCapacityUsd.toLocaleString()}`
-          : "—",
+      value: entry.immediateCapacityUsd != null ? `$${entry.immediateCapacityUsd.toLocaleString()}` : "—",
     },
     {
       label: "Immediate capacity ratio",
-      value:
-        entry.immediateCapacityRatio != null
-          ? fmtPct(entry.immediateCapacityRatio * 100, 1)
-          : "—",
+      value: entry.immediateCapacityRatio != null ? fmtPct(entry.immediateCapacityRatio * 100, 1) : "—",
     },
     {
       label: "Fee (bps)",
@@ -264,8 +257,7 @@ export function formatChainHealth(factors: ChainHealthFactors): ShowYourWorkTabl
       label: "Quality",
       value: fmtNum(factors.quality),
       weight: `${Math.round(QUALITY_WEIGHT * 100)}%`,
-      contribution:
-        factors.quality != null ? (factors.quality * QUALITY_WEIGHT).toFixed(1) : "—",
+      contribution: factors.quality != null ? (factors.quality * QUALITY_WEIGHT).toFixed(1) : "—",
     },
     {
       label: "Chain environment",

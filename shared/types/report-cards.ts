@@ -8,6 +8,7 @@ import {
   DeploymentModelSchema,
   GovernanceQualitySchema,
   GovernanceTypeSchema,
+  OracleRiskTierSchema,
   VARIANT_KIND_VALUES,
 } from "./core";
 import type {
@@ -19,6 +20,7 @@ import type {
   DeploymentModel,
   GovernanceQuality,
   GovernanceType,
+  OracleRiskTier,
   VariantKind,
 } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
@@ -103,6 +105,10 @@ const RawDimensionInputsSchema = z.object({
   governanceQuality: GovernanceQualitySchema,
   /** Mint Authority Score input to the v8 decentralization blend; absent on pre-v8 cached snapshots. */
   mintAuthorityScore: z.number().nullable().optional(),
+  /** Oracle setup tier used by the CDP-only v8.1 decentralization blend; absent on pre-v8.1 cached snapshots. */
+  oracleRiskTier: OracleRiskTierSchema.nullable().optional(),
+  /** Oracle setup score used by the CDP-only v8.1 decentralization blend; absent on pre-v8.1 cached snapshots. */
+  oracleRiskScore: z.number().nullable().optional(),
   dependencies: z.array(DependencyWeightSchema),
   variantParentId: z.string().nullable().optional(),
   variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),
@@ -119,6 +125,8 @@ export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSch
   custodyModel: CustodyModel;
   governanceTier: GovernanceType;
   governanceQuality: GovernanceQuality;
+  oracleRiskTier?: OracleRiskTier | null;
+  oracleRiskScore?: number | null;
   dependencies: DependencyWeight[];
   variantParentId?: string | null;
   variantKind?: VariantKind | null;

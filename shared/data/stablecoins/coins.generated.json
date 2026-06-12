@@ -3084,9 +3084,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -5340,10 +5338,7 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": [
-          "por-reserve-under-supply",
-          "partial-supply-read-failure"
-        ]
+        "allowedDegradedWarningCodes": ["por-reserve-under-supply", "partial-supply-read-failure"]
       },
       "adapter": "chainlink-por",
       "inputs": {
@@ -5656,9 +5651,21 @@
     "collateralQuality": "eth-lst",
     "custodyModel": "onchain",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+      "sources": [
+        {
+          "label": "Liquity BOLD contract docs",
+          "url": "https://github.com/liquity/bold/"
+        },
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        }
+      ]
+    },
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "wstETH (Lido)",
@@ -6467,9 +6474,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -7078,9 +7083,7 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -8383,9 +8386,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -10094,9 +10095,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -10279,9 +10278,7 @@
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "ETH",
@@ -10389,10 +10386,7 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0",
-            "owners": [
-              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-            ],
+            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
@@ -10413,10 +10407,7 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0-L2",
-            "owners": [
-              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-            ],
+            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
@@ -10437,10 +10428,7 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0",
-            "owners": [
-              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-            ],
+            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
@@ -10694,9 +10682,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -11210,9 +11196,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills",
@@ -14129,9 +14113,7 @@
     },
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "sUSDe (Ethena savings)",
@@ -18998,9 +18980,7 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
@@ -21809,9 +21789,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -22701,9 +22679,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -24972,9 +24948,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "HBAR overcollateralized Troves",
@@ -28766,9 +28740,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -30184,9 +30156,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -31131,10 +31101,7 @@
         "message": "Issuer commits to monthly third-party attestations starting 2025 but has not named an auditor or published a report. Proof-of-reserves is currently a self-reported on-chain dashboard."
       }
     ],
-    "tags": [
-      "korea",
-      "rwa"
-    ],
+    "tags": ["korea", "rwa"],
     "launchDate": "2025-09-18"
   },
   {
@@ -31714,9 +31681,7 @@
     },
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "ETH",
@@ -32184,9 +32149,7 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-unregulated",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (30-90 day)",
@@ -32986,9 +32949,7 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -33016,9 +32977,7 @@
         "risk": "medium",
         "probe": {
           "kind": "json-path",
-          "path": [
-            "total_supply"
-          ]
+          "path": ["total_supply"]
         }
       }
     },
@@ -36305,9 +36264,7 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "U.S. Treasury bills (0-180 day maturity)",
@@ -37251,9 +37208,7 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -38411,9 +38366,7 @@
         "label": "Nest Credit API"
       },
       "scoring": {
-        "allowedDegradedWarningCodes": [
-          "nest-nav-coverage-gap"
-        ]
+        "allowedDegradedWarningCodes": ["nest-nav-coverage-gap"]
       },
       "adapter": "nest-vault-positions",
       "inputs": {
@@ -40604,9 +40557,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -41946,15 +41897,11 @@
         "risk": "very-low",
         "reserveProbe": {
           "kind": "json-path",
-          "path": [
-            "totalFiatReserves"
-          ]
+          "path": ["totalFiatReserves"]
         },
         "supplyProbe": {
           "kind": "json-path",
-          "path": [
-            "totalSupply"
-          ]
+          "path": ["totalSupply"]
         },
         "reserveSourceLabel": "Stablecorp balances API"
       }
@@ -43393,10 +43340,7 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": [
-          "unknown-position",
-          "source-total-gap"
-        ]
+        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -44404,9 +44348,7 @@
     "chainTier": "unproven",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "BTC (overcollateralized CDP)",
@@ -45046,9 +44988,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "variantOf": "bold-liquity",
     "variantKind": "risk-absorption",
     "reserves": [
@@ -47412,10 +47352,7 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": [
-          "unknown-position",
-          "source-total-gap"
-        ]
+        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -49670,10 +49607,7 @@
         "label": "USD.AI Reserves"
       },
       "scoring": {
-        "allowedDegradedWarningCodes": [
-          "source-timestamp-spread",
-          "usdai-share-coverage-gap"
-        ]
+        "allowedDegradedWarningCodes": ["source-timestamp-spread", "usdai-share-coverage-gap"]
       },
       "adapter": "usdai-proof-of-reserves",
       "inputs": {
@@ -53828,9 +53762,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
-    "infrastructures": [
-      "liquity-v1"
-    ],
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
@@ -55481,9 +55413,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "ysyBOLD (Yearn savings BOLD)",
@@ -55682,9 +55612,7 @@
               "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
             ],
             "threshold": 3,
-            "enabledModules": [
-              "0x719fB18e31287aB36771aB3038575253502E41AB"
-            ],
+            "enabledModules": ["0x719fB18e31287aB36771aB3038575253502E41AB"],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
             "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
@@ -56003,9 +55931,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -59931,9 +59857,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -60057,9 +59981,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "WETH",
@@ -61008,9 +60930,7 @@
     },
     "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
@@ -61394,9 +61314,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
@@ -63215,9 +63133,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "wETH",
@@ -64079,6 +63995,20 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "medianized-with-delay",
+      "summary": "Sky/Maker collateral prices use whitelisted feed medianizers and Oracle Security Module delays before prices reach the core accounting system; governance can still alter oracle authorization and parameters.",
+      "sources": [
+        {
+          "label": "Maker Oracle Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        },
+        {
+          "label": "Sky governance upgrade key information",
+          "url": "https://developers.skyeco.com/guides/sky/token-governance-upgrade/key-info/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Stablecoins (PSM)",
@@ -64342,9 +64272,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -66124,10 +66052,7 @@
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
-            "owners": [
-              "0x67a6d918c3adfc36b047a8684491481114f6b3a6",
-              "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"
-            ],
+            "owners": ["0x67a6d918c3adfc36b047a8684491481114f6b3a6", "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -67308,9 +67233,7 @@
     "chainTier": "stage1-l2",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "tBTC",
@@ -67426,9 +67349,7 @@
           "safe": {
             "version": "1.3.0",
             "threshold": 3,
-            "enabledModules": [
-              "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
-            ],
+            "enabledModules": ["0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
             "observedBlock": 25295316,
@@ -70180,10 +70101,7 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.4.1+L2",
-            "owners": [
-              "0x29Aa2eD8712072e918632259780E587698Ef58df",
-              "0x8b01d375e274213c860eF6ac013DBDd5286CD816"
-            ],
+            "owners": ["0x29Aa2eD8712072e918632259780E587698Ef58df", "0x8b01d375e274213c860eF6ac013DBDd5286CD816"],
             "threshold": 1,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -72624,10 +72542,7 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.3.0",
-            "owners": [
-              "0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1",
-              "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"
-            ],
+            "owners": ["0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1", "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -72763,9 +72678,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -73417,10 +73330,7 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": [
-          "unknown-position",
-          "source-total-gap"
-        ]
+        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -75498,9 +75408,7 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
-    "infrastructures": [
-      "m0"
-    ],
+    "infrastructures": ["m0"],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
@@ -75653,9 +75561,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -76783,9 +76689,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "variantOf": "bold-liquity",
     "variantKind": "strategy-vault",
     "reserves": [
@@ -78201,9 +78105,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": [
-      "liquity-v2"
-    ],
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",

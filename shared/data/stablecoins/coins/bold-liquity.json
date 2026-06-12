@@ -18,6 +18,20 @@
   "detailProvider": "defillama",
   "geckoId": "liquity-bold-2",
   "pythFeedId": "0xd6134dbb0427240f901e3e596d6e63f7d85088f96cd4cd4ae2f89c0819b5d623",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+    "sources": [
+      {
+        "label": "Liquity BOLD contract docs",
+        "url": "https://github.com/liquity/bold/"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -130,9 +144,7 @@
   "collateralQuality": "eth-lst",
   "custodyModel": "onchain",
   "governanceQuality": "immutable-code",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "wstETH (Lido)",

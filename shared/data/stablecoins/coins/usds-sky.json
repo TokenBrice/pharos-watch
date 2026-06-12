@@ -18,6 +18,20 @@
   "detailProvider": "defillama",
   "geckoId": "usds",
   "pythFeedId": "0x77f0971af11cc8bac224917275c1bf55f2319ed5c654a1ca955c82fa2d297ea1",
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "Sky/Maker collateral prices use whitelisted feed medianizers and Oracle Security Module delays before prices reach the core accounting system; governance can still alter oracle authorization and parameters.",
+    "sources": [
+      {
+        "label": "Maker Oracle Module docs",
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+      },
+      {
+        "label": "Sky governance upgrade key information",
+        "url": "https://developers.skyeco.com/guides/sky/token-governance-upgrade/key-info/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

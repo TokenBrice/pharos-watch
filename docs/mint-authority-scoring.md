@@ -13,7 +13,7 @@
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied after wrapper inheritance and the chain-infrastructure penalty; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
+Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied as the final Decentralization stage after wrapper inheritance, chain infrastructure, and any reviewed CDP oracle setup; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
 
 ## Inputs
 
@@ -41,12 +41,12 @@ rawScore = round(
 )
 ```
 
-| Component  | Weight | Meaning |
-| ---------- | ------ | ------- |
-| Route      | 30%    | Structural mint route family. Immutable user/protocol minting scores highest; bridge, off-chain attested, and issuer-direct routes score lower. |
+| Component  | Weight | Meaning                                                                                                                                                          |
+| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route      | 30%    | Structural mint route family. Immutable user/protocol minting scores highest; bridge, off-chain attested, and issuer-direct routes score lower.                  |
 | Controller | 40%    | Weakest mint-capable controller. Single-key, backend, bridge, custodian, Safe/multisig, timelock, DAO, and contract controls are scored by weakest active route. |
-| Bounds     | 15%    | Whether mint-capable paths are quantitatively bounded and whether caps can be raised. |
-| Posture    | 15%    | Curated operator posture from no privileged route through unbounded or compromised authority. |
+| Bounds     | 15%    | Whether mint-capable paths are quantitatively bounded and whether caps can be raised.                                                                            |
+| Posture    | 15%    | Curated operator posture from no privileged route through unbounded or compromised authority.                                                                    |
 
 The controller component is weakest-link by design. If any mint-capable path can directly mint, authorize a minter, raise a cap, or upgrade mint logic, the lowest controller score among those paths constrains the component.
 
@@ -54,12 +54,12 @@ The controller component is weakest-link by design. If any mint-capable path can
 
 Caps apply after the weighted raw score:
 
-| Cap | Limit | Trigger |
-| --- | ----- | ------- |
-| Incident cap | 10 / 15 / 20 | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. The limit decays purely with the age of the most recent incident: under 2 years = 10, 2-4 years = 15, 4+ years = 20 (v1.1). Unparseable dates stay at 10. Always below the unbounded cap. |
-| Unbounded cap | 25 | Unbounded or compromised posture without a recorded incident. |
-| EOA cap | 40 | Non-issuer-context EOA can directly mint or authorize minting without MPC/HSM key-custody attestation. |
-| Confidence cap | 100 / 90 / 85 | Verified = 100, probable = 90, manual-review = 85. Unknown confidence returns `NR`. |
+| Cap            | Limit         | Trigger                                                                                                                                                                                                                                                                                       |
+| -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Incident cap   | 10 / 15 / 20  | `authorityPosture: "unbounded-or-compromised"` with at least one recorded entry in `mintIncidents`. The limit decays purely with the age of the most recent incident: under 2 years = 10, 2-4 years = 15, 4+ years = 20 (v1.1). Unparseable dates stay at 10. Always below the unbounded cap. |
+| Unbounded cap  | 25            | Unbounded or compromised posture without a recorded incident.                                                                                                                                                                                                                                 |
+| EOA cap        | 40            | Non-issuer-context EOA can directly mint or authorize minting without MPC/HSM key-custody attestation.                                                                                                                                                                                        |
+| Confidence cap | 100 / 90 / 85 | Verified = 100, probable = 90, manual-review = 85. Unknown confidence returns `NR`.                                                                                                                                                                                                           |
 
 Caps are reported in the detail-page breakdown so users can distinguish a weak raw score from a hard governance, incident, or evidence cap.
 
@@ -71,14 +71,14 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 
 ## Bands
 
-| Band | Range | Meaning |
-| ---- | ----- | ------- |
-| Hardened | 80-100 | No resolved privileged mint path or strongly bounded, high-confidence controls. |
-| Governed | 65-79 | Governance or admin controls exist, but they are comparatively bounded or slow. |
-| Managed | 50-64 | Active mint management exists with some controls or route limits. |
-| Concentrated | 35-49 | A small operator, backend, custodian, bridge, or low-threshold route can affect supply. |
-| Exposed | 0-34 | Unbounded, compromised, single-key, or otherwise weak authority dominates the score. |
-| NR | Not rated | Missing, unknown, inherited-but-unresolved, or insufficient review data. |
+| Band         | Range     | Meaning                                                                                 |
+| ------------ | --------- | --------------------------------------------------------------------------------------- |
+| Hardened     | 80-100    | No resolved privileged mint path or strongly bounded, high-confidence controls.         |
+| Governed     | 65-79     | Governance or admin controls exist, but they are comparatively bounded or slow.         |
+| Managed      | 50-64     | Active mint management exists with some controls or route limits.                       |
+| Concentrated | 35-49     | A small operator, backend, custodian, bridge, or low-threshold route can affect supply. |
+| Exposed      | 0-34      | Unbounded, compromised, single-key, or otherwise weak authority dominates the score.    |
+| NR           | Not rated | Missing, unknown, inherited-but-unresolved, or insufficient review data.                |
 
 ## Surfaces
 

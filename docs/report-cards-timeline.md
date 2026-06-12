@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.0 (2026-02-25 → 2026-06-11). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.1 (2026-02-25 → 2026-06-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.1 — CDP oracle setup enters Decentralization (2026-06-12)
+
+Crypto-backed CDP stablecoins can now carry a reviewed `oracleRisk` profile. When present, the Decentralization dimension applies a penalty-only oracle setup blend — `decentralization = min(current, 0.75 x current + 0.25 x oracleScore)` — after governance and chain infrastructure but before the Mint Authority blend. Robust oracle setups never lift the score, while single-source, stale, or opaque feeds can drag it down. Missing reviews and non-CDP assets are unchanged. Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redundant-with-failover`); other CDPs stay unchanged until oracle profiles are curated.
 
 ## v8.0 — Mint Authority Score enters Decentralization (2026-06-11)
 

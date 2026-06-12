@@ -28,7 +28,12 @@ export {
   resolveResilienceFactors,
   scoreResilience,
 } from "./report-card-resilience";
-export { GOVERNANCE_QUALITY_SCORE, resolveGovernanceQuality, scoreDecentralization } from "./report-card-governance";
+export {
+  GOVERNANCE_QUALITY_SCORE,
+  resolveGovernanceQuality,
+  resolveOracleRiskScore,
+  scoreDecentralization,
+} from "./report-card-governance";
 export { scoreDependencyRisk } from "./report-card-dependency";
 export { applyVariantOverallCap, computeOverallGrade, computeStressedGrades } from "./report-card-overall";
 export {

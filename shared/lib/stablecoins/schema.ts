@@ -1,10 +1,7 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
-import {
-  DetailProviderSchema,
-  PEG_CURRENCY_VALUES,
-} from "../../types/core";
+import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
 import {
@@ -19,6 +16,7 @@ import {
   LaunchMilestoneSchema,
   MintAuthorityProfileSchema,
   MicaProfileSchema,
+  OracleRiskProfileSchema,
   ProofOfReservesSchema,
   StablecoinFlagsSchema,
   StablecoinLinkSchema,
@@ -172,17 +170,24 @@ const StablecoinMetaAssetSchemaShape = {
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
   custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
   governanceQuality: StablecoinMetaEnumSchemas.governanceQuality.optional(),
+  oracleRisk: OracleRiskProfileSchema.optional(),
   infrastructures: StablecoinMetaEnumSchemas.infrastructures.optional(),
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
-  archetypeOverride: z.boolean().describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.").optional(),
+  archetypeOverride: z
+    .boolean()
+    .describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.")
+    .optional(),
   reserves: FullReserveCompositionSchema.optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeSchema).optional(),
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
-  frozenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  frozenAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   obituary: obituarySchema.optional(),
   launchDate: z.string().optional(),
   announcedDate: z.string().optional(),
@@ -196,62 +201,74 @@ const StablecoinMetaAssetSchemaShape = {
 
 const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
 
-export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine((meta, ctx) => {
-  if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
+export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine(
+  (meta, ctx) => {
+    if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
+        path: ["blacklistabilityReview"],
+      });
+    }
+
+    if (
+      meta.canBeBlacklisted !== undefined &&
+      meta.blacklistabilityReview?.reviewedStatus !== undefined &&
+      meta.blacklistabilityReview.reviewedStatus !== meta.canBeBlacklisted
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
+        path: ["blacklistabilityReview", "reviewedStatus"],
+      });
+    }
+  },
+)
+  .superRefine((meta, ctx) => {
+    if ((meta.variantOf == null) === (meta.variantKind == null)) {
+      return;
+    }
+
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
-      path: ["blacklistabilityReview"],
+      message: "variantOf and variantKind must both be set or both be absent",
+      path: ["variantOf"],
     });
-  }
-
-  if (
-    meta.canBeBlacklisted !== undefined &&
-    meta.blacklistabilityReview?.reviewedStatus !== undefined &&
-    meta.blacklistabilityReview.reviewedStatus !== meta.canBeBlacklisted
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
-      path: ["blacklistabilityReview", "reviewedStatus"],
-    });
-  }
-
-}).superRefine((meta, ctx) => {
-  if ((meta.variantOf == null) === (meta.variantKind == null)) {
-    return;
-  }
-
-  ctx.addIssue({
-    code: z.ZodIssueCode.custom,
-    message: "variantOf and variantKind must both be set or both be absent",
-    path: ["variantOf"],
+  })
+  .superRefine((meta, ctx) => {
+    if (meta.variantOf != null && meta.pegReferenceId != null && meta.variantOf !== meta.pegReferenceId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `pegReferenceId (${meta.pegReferenceId}) must equal variantOf (${meta.variantOf}) when both are present`,
+        path: ["pegReferenceId"],
+      });
+    }
+  })
+  .superRefine((meta, ctx) => {
+    if (meta.status === "frozen") {
+      if (!meta.frozenAt) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require frozenAt", path: ["frozenAt"] });
+      }
+      if (!meta.obituary) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require obituary", path: ["obituary"] });
+      }
+    } else {
+      if (meta.frozenAt) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "frozenAt is only allowed when status is frozen",
+          path: ["frozenAt"],
+        });
+      }
+      if (meta.obituary) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "obituary is only allowed when status is frozen",
+          path: ["obituary"],
+        });
+      }
+    }
   });
-}).superRefine((meta, ctx) => {
-  if (meta.variantOf != null && meta.pegReferenceId != null && meta.variantOf !== meta.pegReferenceId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `pegReferenceId (${meta.pegReferenceId}) must equal variantOf (${meta.variantOf}) when both are present`,
-      path: ["pegReferenceId"],
-    });
-  }
-}).superRefine((meta, ctx) => {
-  if (meta.status === "frozen") {
-    if (!meta.frozenAt) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require frozenAt", path: ["frozenAt"] });
-    }
-    if (!meta.obituary) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require obituary", path: ["obituary"] });
-    }
-  } else {
-    if (meta.frozenAt) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozenAt is only allowed when status is frozen", path: ["frozenAt"] });
-    }
-    if (meta.obituary) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "obituary is only allowed when status is frozen", path: ["obituary"] });
-    }
-  }
-});
 
 function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.RefinementCtx): void {
   if (stablecoins.length < 2) {
@@ -315,30 +332,40 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
   }
 }
 
-export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z.array(StablecoinMetaAssetSchema).superRefine(refineMintAuthorityCatalog);
+export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z
+  .array(StablecoinMetaAssetSchema)
+  .superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
-export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z.object({
-  id: DeadStablecoinIdSchema,
-  name: z.string(),
-  symbol: z.string(),
-  llamaId: z.string().optional(),
-  geckoId: z.string().optional(),
-  aliases: z.array(z.string()).optional(),
-  logo: z.string().optional(),
-  pegCurrency: z.enum(PEG_CURRENCY_VALUES),
-  causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-  deathDate: z.string(),
-  peakMcap: z.number().optional(),
-  epitaph: z.string().optional(),
-  obituary: z.string(),
-  sourceUrl: z.string(),
-  sourceLabel: z.string(),
-  contracts: z.array(z.object({
-    chain: z.string(),
-    address: z.string(),
-  }).strict()).optional(),
-}).strict();
+export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z
+  .object({
+    id: DeadStablecoinIdSchema,
+    name: z.string(),
+    symbol: z.string(),
+    llamaId: z.string().optional(),
+    geckoId: z.string().optional(),
+    aliases: z.array(z.string()).optional(),
+    logo: z.string().optional(),
+    pegCurrency: z.enum(PEG_CURRENCY_VALUES),
+    causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
+    deathDate: z.string(),
+    peakMcap: z.number().optional(),
+    epitaph: z.string().optional(),
+    obituary: z.string(),
+    sourceUrl: z.string(),
+    sourceLabel: z.string(),
+    contracts: z
+      .array(
+        z
+          .object({
+            chain: z.string(),
+            address: z.string(),
+          })
+          .strict(),
+      )
+      .optional(),
+  })
+  .strict();
 
 export const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
 
@@ -352,11 +379,7 @@ function formatSchemaIssues(error: z.ZodError): string {
     .join("; ");
 }
 
-function parseWithSchema<T>(
-  schema: z.ZodType<T>,
-  input: unknown,
-  label: string,
-): T {
+function parseWithSchema<T>(schema: z.ZodType<T>, input: unknown, label: string): T {
   const result = schema.safeParse(input);
   if (result.success) {
     return result.data;

@@ -1,6 +1,7 @@
 import type {
   GovernanceQuality,
   GovernanceType,
+  OracleRiskTier,
   ReportCardDimension,
   ReportCardDetailItem,
   StablecoinMeta,
@@ -18,6 +19,7 @@ import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./min
  * decentralization blend.
  */
 const MAS_BLEND_WEIGHT = 0.35;
+const ORACLE_RISK_BLEND_WEIGHT = 0.25;
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -35,6 +37,24 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   "regulated-entity": "Regulated entity",
   "single-entity": "Single-entity governance",
   wrapper: "Wrapper (inherits upstream)",
+};
+
+const ORACLE_RISK_SCORE: Record<OracleRiskTier, number> = {
+  "oracleless-or-internal": 100,
+  "redundant-with-failover": 95,
+  "medianized-with-delay": 85,
+  "standard-external": 75,
+  "single-source-or-laggy": 45,
+  "opaque-or-unknown": 20,
+};
+
+const ORACLE_RISK_LABEL: Record<OracleRiskTier, string> = {
+  "oracleless-or-internal": "No external liquidation oracle",
+  "redundant-with-failover": "Redundant feeds with failover",
+  "medianized-with-delay": "Medianized feeds with delay",
+  "standard-external": "Standard external feeds",
+  "single-source-or-laggy": "Single-source or laggy feeds",
+  "opaque-or-unknown": "Opaque or unknown setup",
 };
 
 export interface ScoreDecentralizationOptions {
@@ -58,6 +78,26 @@ export interface ScoreDecentralizationOptions {
    * its blended parent.
    */
   wrappedAssetBlendedDecentralizationScore?: number | null;
+}
+
+export interface ResolvedOracleRiskScore {
+  tier: OracleRiskTier;
+  score: number;
+  label: string;
+}
+
+function isOracleRiskApplicable(meta: StablecoinMeta): boolean {
+  return meta.flags.backing === "crypto-backed" && meta.mechanismArchetype === "cdp";
+}
+
+export function resolveOracleRiskScore(meta?: StablecoinMeta): ResolvedOracleRiskScore | null {
+  if (!meta?.oracleRisk || !isOracleRiskApplicable(meta)) return null;
+  const tier = meta.oracleRisk.tier;
+  return {
+    tier,
+    score: ORACLE_RISK_SCORE[tier],
+    label: ORACLE_RISK_LABEL[tier],
+  };
 }
 
 export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
@@ -114,6 +154,19 @@ export function scoreDecentralization(
     score = Math.max(0, score + penalty);
   }
 
+  // Penalty-only oracle-risk blend for crypto-backed CDPs:
+  // liquidation and redemption logic depends on the price-feed setup, so weak
+  // or opaque feeds can undercut decentralization, but robust feeds never lift it.
+  const oracleRisk = meta ? resolveOracleRiskScore(meta) : null;
+  let oracleRiskDrag = 0;
+  if (oracleRisk != null) {
+    const blended = Math.round(score * (1 - ORACLE_RISK_BLEND_WEIGHT) + oracleRisk.score * ORACLE_RISK_BLEND_WEIGHT);
+    if (blended < score) {
+      oracleRiskDrag = blended - score;
+      score = blended;
+    }
+  }
+
   // Penalty-only Mint Authority blend:
   // privileged-mint risk can undermine a decentralization claim, never improve it.
   const mintAuthorityScore =
@@ -160,6 +213,13 @@ export function scoreDecentralization(
       label: "Chain",
       value: chainInfraLabel(factors.chainTier, factors.deploymentModel),
       detail: `${penalty}`,
+    });
+  }
+  if (oracleRisk != null) {
+    detailItems.push({
+      label: "Oracle setup",
+      value: `${oracleRisk.label} (${oracleRisk.score}/100)`,
+      detail: oracleRiskDrag < 0 ? `${oracleRiskDrag}` : `${oracleRisk.score}`,
     });
   }
   if (mintAuthorityDrag < 0 && mintAuthorityScore != null) {

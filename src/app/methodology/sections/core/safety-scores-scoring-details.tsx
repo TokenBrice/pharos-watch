@@ -1,11 +1,4 @@
-import {
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 
 export function SafetyScoresScoringDetails() {
   return (
@@ -135,19 +128,27 @@ export function SafetyScoresScoringDetails() {
               <TableCell className="py-2 pr-4 text-foreground">Resilience</TableCell>
               <TableCell className="py-2 pr-4">20%</TableCell>
               <TableCell className="py-2 pr-4 whitespace-normal">Collateral, custody</TableCell>
-              <TableCell className="py-2 whitespace-normal">2-factor solvency measure; blacklist capability reported descriptively only</TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                2-factor solvency measure; blacklist capability reported descriptively only
+              </TableCell>
             </TableRow>
             <TableRow>
               <TableCell className="py-2 pr-4 text-foreground">Decentralization</TableCell>
               <TableCell className="py-2 pr-4">15%</TableCell>
-              <TableCell className="py-2 pr-4 whitespace-normal">Governance type, chain risk</TableCell>
-              <TableCell className="py-2 whitespace-normal">Governance structure with chain-risk penalty</TableCell>
+              <TableCell className="py-2 pr-4 whitespace-normal">
+                Governance type, chain risk, CDP oracle setup, mint authority
+              </TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                Governance structure with chain-risk, oracle, and privileged-mint penalties
+              </TableCell>
             </TableRow>
             <TableRow>
               <TableCell className="py-2 pr-4 text-foreground">Dependency Risk</TableCell>
               <TableCell className="py-2 pr-4">25%</TableCell>
               <TableCell className="py-2 pr-4 whitespace-normal">Upstream grades, collateral weights</TableCell>
-              <TableCell className="py-2 whitespace-normal">Inherited risk from upstream stablecoins, weighted by exposure</TableCell>
+              <TableCell className="py-2 whitespace-normal">
+                Inherited risk from upstream stablecoins, weighted by exposure
+              </TableCell>
             </TableRow>
           </TableBody>
         </TableFrame>
@@ -162,8 +163,12 @@ export function SafetyScoresScoringDetails() {
           current executable capacity and route confidence.
         </p>
         <p className="pharos-numeric">modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)</p>
-        <p className="pharos-numeric">adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor</p>
-        <p className="pharos-numeric">effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))</p>
+        <p className="pharos-numeric">
+          adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor
+        </p>
+        <p className="pharos-numeric">
+          effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))
+        </p>
         <p>
           <code className="text-xs">capacityFactor</code> is capped at 1.0 from current executable capacity divided by
           the modeled exit size. Confidence factors are 1.0 for high-confidence routes, 0.75 for medium-confidence

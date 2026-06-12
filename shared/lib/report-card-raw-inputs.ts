@@ -1,8 +1,6 @@
 import type { RawDimensionInputs } from "../types/report-cards";
 
-export function createReportCardRawInputs(
-  overrides: Partial<RawDimensionInputs> = {},
-): RawDimensionInputs {
+export function createReportCardRawInputs(overrides: Partial<RawDimensionInputs> = {}): RawDimensionInputs {
   const inputs: RawDimensionInputs = {
     pegScore: null,
     activeDepeg: false,
@@ -27,6 +25,8 @@ export function createReportCardRawInputs(
     governanceTier: "centralized",
     governanceQuality: "single-entity",
     mintAuthorityScore: null,
+    oracleRiskTier: null,
+    oracleRiskScore: null,
     dependencies: [],
     variantParentId: null,
     variantKind: null,
