@@ -127,3 +127,5 @@ output/playwright/
 /alt-pegs-*.png
 /*-screenshot.png
 .superpowers/
+
+/agents/
