@@ -282,6 +282,226 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
   });
 
+  it("reviews sealed repaired tails against the current source event without moving the lock-time start", async () => {
+    const originalStartedAt = STARTED_AT;
+    const lockedAt = originalStartedAt + 86_400;
+    const tailStartedAt = lockedAt + 3_600;
+    const recoveredAt = lockedAt + 10_000;
+    const incident = {
+      incidentKey: "ddr2:sealed-repaired-tail",
+      eventId: 42,
+      currentEventId: 89,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: tailStartedAt,
+      eligibleAt: tailStartedAt + 86_400,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 42,
+            stablecoin_id: "lusd-liquity",
+            started_at: originalStartedAt,
+            ended_at: lockedAt + 60,
+            recovery_price: 1,
+          },
+          {
+            id: 89,
+            stablecoin_id: "lusd-liquity",
+            started_at: tailStartedAt,
+            ended_at: recoveredAt,
+            recovery_price: 1,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 56,
+          publicPredictionId: 56,
+          incidentKey: incident.incidentKey,
+          eventId: 42,
+          assessmentId: 91,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: lockedAt,
+          lockedAt,
+          eventAgeAtLockSec: lockedAt - originalStartedAt,
+          lockTiming: "on_time" as const,
+          rowHash: "f".repeat(64),
+          sealedPayload: {
+            eventId: 42,
+            startedAt: originalStartedAt,
+            symbol: "LUSD",
+            name: "Liquity USD",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            frozen: {
+              resolution: {
+                tier: "recovery_likely",
+                factors: [],
+              },
+              duration: {
+                suppressed: false,
+                suppressedReason: null,
+                medianSec: 3_600,
+                iqrSec: [1_800, 7_200],
+                horizons: JSON.parse(assessmentRow().horizons_json as string),
+                stratum: "below - moderate - robust - USD",
+              },
+            },
+          },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 56,
+          incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-56",
+          snapshotGeneration: 1,
+          publishedAt: lockedAt + 60,
+          firstPublished: true,
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, recoveredAt + 1, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "prediction_review",
+      eventId: 89,
+      currentEventId: 89,
+      incidentKey: incident.incidentKey,
+      startedAt: originalStartedAt,
+      eligibleAt: lockedAt,
+      lockedAt,
+      sourceEventState: "recovered",
+      actual: { kind: "recovered", actualRemainingSec: recoveredAt - lockedAt },
+      verdictReview: "correct_recoverable",
+    });
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
+  });
+
+  it("keeps sealed repaired tails pending when the current source event starts after lock and remains open", async () => {
+    const originalStartedAt = STARTED_AT;
+    const lockedAt = originalStartedAt + 86_400;
+    const tailStartedAt = lockedAt + 7_200;
+    const incident = {
+      incidentKey: "ddr2:sealed-open-tail",
+      eventId: 43,
+      currentEventId: 90,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: tailStartedAt,
+      eligibleAt: tailStartedAt + 86_400,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 43,
+            stablecoin_id: "lusd-liquity",
+            started_at: originalStartedAt,
+            ended_at: lockedAt + 60,
+            recovery_price: 1,
+          },
+          {
+            id: 90,
+            stablecoin_id: "lusd-liquity",
+            started_at: tailStartedAt,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 57,
+          publicPredictionId: 57,
+          incidentKey: incident.incidentKey,
+          eventId: 43,
+          assessmentId: 92,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: lockedAt,
+          lockedAt,
+          eventAgeAtLockSec: lockedAt - originalStartedAt,
+          lockTiming: "on_time" as const,
+          rowHash: "a".repeat(64),
+          sealedPayload: {
+            eventId: 43,
+            // Bad future payload start should fall back to lockedAt - eventAgeAtLockSec.
+            startedAt: tailStartedAt,
+            symbol: "LUSD",
+            name: "Liquity USD",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            frozen: {
+              resolution: {
+                tier: "recovery_likely",
+                factors: [],
+              },
+              duration: {
+                suppressed: false,
+                suppressedReason: null,
+                medianSec: 3_600,
+                iqrSec: [1_800, 7_200],
+                horizons: JSON.parse(assessmentRow().horizons_json as string),
+                stratum: "below - moderate - robust - USD",
+              },
+            },
+          },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 57,
+          incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-57",
+          snapshotGeneration: 1,
+          publishedAt: lockedAt + 60,
+          firstPublished: true,
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, tailStartedAt + 3_600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "prediction_review",
+      eventId: 90,
+      currentEventId: 90,
+      startedAt: originalStartedAt,
+      eligibleAt: lockedAt,
+      lockedAt,
+      sourceEventState: "active",
+      actual: { kind: "still_open" },
+      verdictReview: "pending",
+      durationReview: "duration_unscored",
+    });
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
+  });
+
   it("reviews stored DDR assessments against actual depeg event outcomes", async () => {
     const db = mockD1([
       { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },

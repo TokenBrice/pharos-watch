@@ -488,6 +488,43 @@ function baseFieldsForIncident(incident: DdrCanonicalIncident, payload: Record<s
   };
 }
 
+function sealedExposureStartedAt(
+  sealed: DdrSealedPublicPrediction,
+  incident: DdrCanonicalIncident,
+  payload: Record<string, unknown>,
+): number {
+  const payloadStartedAt = numberValue(payload.startedAt);
+  if (
+    payloadStartedAt != null &&
+    Number.isInteger(payloadStartedAt) &&
+    payloadStartedAt >= 0 &&
+    payloadStartedAt <= sealed.lockedAt
+  ) {
+    return payloadStartedAt;
+  }
+
+  const inferredStartedAt = sealed.lockedAt - sealed.eventAgeAtLockSec;
+  if (Number.isInteger(inferredStartedAt) && inferredStartedAt >= 0 && inferredStartedAt <= sealed.lockedAt) {
+    return inferredStartedAt;
+  }
+
+  return Math.min(incident.startedAt, sealed.lockedAt);
+}
+
+function baseFieldsForSealedExposure(
+  sealed: DdrSealedPublicPrediction,
+  incident: DdrCanonicalIncident,
+  payload: Record<string, unknown>,
+) {
+  return {
+    ...baseFieldsForIncident(incident, payload),
+    eventId: incident.currentEventId,
+    currentEventId: incident.currentEventId,
+    startedAt: sealedExposureStartedAt(sealed, incident, payload),
+    eligibleAt: sealed.eligibleAt,
+  };
+}
+
 function assessmentFromPrediction(
   sealed: DdrSealedPublicPrediction,
   incident: DdrCanonicalIncident,
@@ -499,8 +536,7 @@ function assessmentFromPrediction(
   const duration = recordValue(frozen.duration);
   const iqr = arrayValue(duration.iqrSec);
   const parsed = DdrrAssessmentSchema.safeParse({
-    ...baseFieldsForIncident(incident, payload),
-    eligibleAt: sealed.eligibleAt,
+    ...baseFieldsForSealedExposure(sealed, incident, payload),
     publicPredictionId: publicPredictionIdOf(sealed),
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
@@ -533,8 +569,7 @@ function assessmentFromNoCall(
   const noCall = recordValue(payload.noCall);
   const missingReasons = arrayValue(noCall.missingReasons).filter((entry): entry is string => typeof entry === "string");
   const parsed = DdrrAssessmentSchema.safeParse({
-    ...baseFieldsForIncident(incident, payload),
-    eligibleAt: sealed.eligibleAt,
+    ...baseFieldsForSealedExposure(sealed, incident, payload),
     publicPredictionId: publicPredictionIdOf(sealed),
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
@@ -774,8 +809,7 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
       const originalOutcome = (sealed.outcomeKind === "no_call" ? payload.noCall : payload.frozen) as DdrOfficialLockOutcome | undefined;
       if (originalOutcome) {
         invalidatedPredictions.push({
-          ...baseFieldsForIncident(incident, payload),
-          eligibleAt: sealed.eligibleAt,
+          ...baseFieldsForSealedExposure(sealed, incident, payload),
           sourceEventState: "invalidated",
           terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
           terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
