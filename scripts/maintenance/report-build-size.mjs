@@ -39,7 +39,10 @@ const DEFAULT_BUDGETS = {
   // optimized. Ceiling raised to keep ~4% headroom without losing signal.
   homepageHtmlBytes: 340_000,
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
-  largestTxtBytes: 1_300_000,
+  // Safety Score v8.12 exposes bridge-route and oracle-risk report-card fields,
+  // pushing the generated API reference helper to ~1.31 MB. Keep this tight so
+  // the next public schema expansion has to re-ratchet deliberately.
+  largestTxtBytes: 1_325_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD plus the inline critical-CSS block
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
