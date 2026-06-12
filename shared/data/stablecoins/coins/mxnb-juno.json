@@ -19,8 +19,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://mxnb.mx/transparency",
-    "attestorTier": "niche",
-    "cadence": "quarterly"
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "provider": "Unnamed Big Four auditor"
   },
   "links": [
     {

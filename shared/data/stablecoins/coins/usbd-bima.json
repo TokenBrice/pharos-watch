@@ -140,10 +140,6 @@
       ]
     }
   },
-  "yieldConfig": {
-    "yieldSource": "BIMA savings (sUSBD)",
-    "yieldType": "lending-vault"
-  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",

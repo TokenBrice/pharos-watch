@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://brale.xyz/stablecoins/SBC",
-    "provider": "Michael Coglianese, CPA, P.C.",
-    "attestorTier": "niche",
+    "provider": "Abdo",
+    "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards"

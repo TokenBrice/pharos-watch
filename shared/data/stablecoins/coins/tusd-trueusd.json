@@ -281,5 +281,12 @@
       "assetRisk": "very-high"
     }
   },
-  "launchDate": "2018-12-31"
+  "launchDate": "2018-12-31",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Material issuer and market-stability risks",
+      "message": "TrueUSD has multiple unresolved 2025-2026 risk events: Archblock filed Chapter 11 on February 6, 2026; Kraken scheduled TUSD delisting with remaining balances liquidated on March 1, 2026; S&P Global assigned TUSD its weakest stablecoin stability score of 5 on November 14, 2025; and the DIFC Digital Economy Court issued a worldwide freezing injunction up to USD 456M in Techteryx-related reserve litigation."
+    }
+  ]
 }

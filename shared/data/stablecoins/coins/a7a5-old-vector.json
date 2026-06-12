@@ -2,7 +2,7 @@
   "id": "a7a5-old-vector",
   "name": "A7A5",
   "symbol": "A7A5",
-  "oneLiner": "A7A5 is a centralized ruble stablecoin from Old Vector LLC, backed 1:1 by RUB deposits at sanctioned Russian state bank Promsvyazbank.",
+  "oneLiner": "A7A5 is Old Vector's RUB stablecoin backed at sanctioned Promsvyazbank; the token and issuer network face OFAC, EU, and UK sanctions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "RUB",
@@ -154,5 +154,12 @@
       ]
     }
   },
-  "launchDate": "2025-03-19"
+  "launchDate": "2025-03-19",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Multi-jurisdiction sanctions exposure",
+      "message": "A7A5 and related infrastructure are subject to major sanctions risk. OFAC designated Grinex and A7-linked entities in August 2025, and the A7A5 token, issuer network, and venues such as Grinex/TengriCoin have also been targeted by EU and UK sanctions actions tied to Russian sanctions-evasion infrastructure."
+    }
+  ]
 }

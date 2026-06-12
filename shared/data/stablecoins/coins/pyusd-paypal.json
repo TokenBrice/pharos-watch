@@ -43,8 +43,8 @@
   ],
   "jurisdiction": {
     "country": "United States",
-    "regulator": "NYDFS",
-    "license": "Limited Purpose Trust Charter"
+    "regulator": "OCC",
+    "license": "National Trust Charter"
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",

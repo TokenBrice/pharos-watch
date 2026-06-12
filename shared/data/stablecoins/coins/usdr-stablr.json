@@ -240,5 +240,12 @@
       ]
     }
   },
-  "launchDate": "2024-12-06"
+  "launchDate": "2024-12-06",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Minting and redemption suspended",
+      "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting USDR and EURR. Minting and redemption were suspended, 8.35M unbacked USDR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
+    }
+  ]
 }

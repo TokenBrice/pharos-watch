@@ -306,5 +306,12 @@
       ]
     }
   },
-  "launchDate": "2021-05-25"
+  "launchDate": "2021-05-25",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Recurring cauldron exploit history",
+      "message": "Abracadabra/MIM has suffered three material cauldron-related incidents since January 2024: a January 2024 borrow-logic exploit, a March 2025 gmCauldron collateral-accounting exploit, and an October 2025 deprecated CauldronV4 sequencing exploit. Treat cauldron implementation and deprecation risk as recurring protocol risk."
+    }
+  ]
 }

@@ -102,6 +102,11 @@
   },
   "notices": [
     {
+      "type": "danger",
+      "title": "Vietnam criminal investigation and withdrawal freeze",
+      "message": "Vietnamese authorities arrested ONUS/VNDC-linked executives in March 2026 in a fraud and money-laundering investigation involving VNDC, ONUS, and related tokens. Local reporting also described platform withdrawal disruptions during the investigation, so VNDC redemption and reserve claims should be treated as high risk."
+    },
+    {
       "type": "warning",
       "title": "Market cap and supply inconsistency",
       "message": "Aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by Jade Labs without an independent audit cadence."

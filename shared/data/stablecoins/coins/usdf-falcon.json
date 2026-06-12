@@ -24,7 +24,7 @@
     "url": "https://app.falcon.finance/transparency",
     "provider": "ht.digital",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "weekly"
   },
   "links": [
     {

@@ -11,9 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "100% USDC-backed omni-chain stablecoin per current PicWe documentation (Phase 1: minted 1:1 against USDC, with the official contracts page naming per-chain USDC as the reserve/redemption asset); future RWA/yield collateral (tokenized treasuries, real estate, commodities) is described as Phase 2 roadmap rather than current backing",
-  "pegMechanism": "Per current PicWe docs, WEUSD is minted 1:1 against USDC and redeemed to USDC anytime via PicWe's on-chain mint/redeem contract; the protocol holds USDC reserves against circulating WEUSD.",
-  "mechanismArchetype": "fiat-cash",
+  "collateral": "PicWe's current public docs describe WEUSD as minted and redeemed 1:1 against USDC during Phase 1, while the mint-authority review and earlier PicWe materials describe basket-style backing around 9 USDT + 1 MOVE. Pharos treats the backing model as disputed until PicWe reconciles the documentation with on-chain and market evidence.",
+  "pegMechanism": "Issuer-operated mint/redeem route through PicWe contracts. Current PicWe docs describe 1:1 USDC mint and redemption, but earlier basket materials and persistent secondary-market pricing near $0.91 indicate unresolved redemption/backing ambiguity.",
   "llamaId": "278",
   "detailProvider": "defillama",
   "geckoId": "weusd",
@@ -72,18 +71,16 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDC reserves",
+      "name": "Disputed USDC versus USDT/MOVE backing disclosure",
       "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "risk": "high"
     }
   ],
   "notices": [
     {
       "type": "warning",
-      "title": "Active depeg",
-      "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
+      "title": "Backing disclosure conflict and active depeg",
+      "message": "WEUSD trades near $0.91 while PicWe's current docs describe 1:1 USDC backing and older PicWe-linked materials describe a roughly 9 USDT + 1 MOVE basket. Treat the peg and redemption model as disputed until PicWe publishes reconciled reserve evidence."
     }
   ],
   "mintAuthority": {

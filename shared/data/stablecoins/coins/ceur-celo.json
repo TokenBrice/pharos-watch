@@ -214,5 +214,6 @@
       }
     ]
   },
-  "launchDate": "2021-03-15"
+  "launchDate": "2021-03-15",
+  "mechanismArchetype": "algorithmic"
 }

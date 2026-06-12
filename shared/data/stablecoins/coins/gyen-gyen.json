@@ -2,7 +2,7 @@
   "id": "gyen-gyen",
   "name": "GYEN",
   "symbol": "GYEN",
-  "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin; multiple 2021 depegs led to a 2026 class-action settlement covering NY and CA holders.",
+  "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin now in wind-down, with purchases disabled and redemption-only access open during the initial period.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -133,6 +133,11 @@
     }
   ],
   "notices": [
+    {
+      "type": "danger",
+      "title": "GYEN and ZUSD wind-down",
+      "message": "GMO-Z.com Trust Company announced an orderly wind-down of GYEN and ZUSD on May 15, 2026. Purchases are disabled; redemption remains available during the initial redemption period from May 15, 2026 through November 11, 2026 for eligible account holders."
+    },
     {
       "type": "warning",
       "title": "2021 depeg and 2026 class-action settlement",

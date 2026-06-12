@@ -2,7 +2,7 @@
   "id": "usx-solstice",
   "name": "Solstice USX",
   "symbol": "USX",
-  "oneLiner": "USX is Solstice's Solana dollar minted 1:1 against USDC/USDT, with Chainlink Proof of Reserve and KYC-gated institutional minting at $500K minimum.",
+  "oneLiner": "USX is Solstice's Solana dollar with Chainlink PoR and institutional redemption; retail holders rely on DEX liquidity during stress.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -161,5 +161,12 @@
         "url": "https://attestation-api.solstice.finance/dashboard"
       }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Retail redemption gap and thin-liquidity depeg",
+      "message": "USX traded as low as roughly $0.10 on Orca during a December 2025 thin-liquidity event. Solstice documents institutional/KYC redemption, so retail holders without direct redemption access depend on secondary-market liquidity during stress."
+    }
+  ]
 }

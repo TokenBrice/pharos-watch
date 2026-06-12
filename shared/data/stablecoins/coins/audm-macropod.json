@@ -21,9 +21,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.macropod.com/transparency",
-    "provider": "Macropod independent quarterly reconciliation",
+    "provider": "Macropod independent monthly reserve attestation",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "monthly",
     "attestorJurisdiction": "Australia"
   },
   "links": [

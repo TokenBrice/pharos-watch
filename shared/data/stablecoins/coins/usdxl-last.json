@@ -82,6 +82,11 @@
   ],
   "notices": [
     {
+      "type": "danger",
+      "title": "HypurrFi market closure deadline",
+      "message": "HypurrFi announced that Legacy and Pooled markets will wind down and close by July 15, 2026. USDXL borrow rates were raised to 30% to incentivize repayment before closure; users with debt positions should verify repayment and migration routes directly in HypurrFi/Euler tooling."
+    },
+    {
       "type": "info",
       "title": "No direct public redemption rail",
       "message": "USDXL is minted and repaid through HypurrFi debt positions. Pharos does not model a redemption backstop because public Last/HypurrFi materials reviewed do not expose an enabled direct 1:1 holder redemption route."

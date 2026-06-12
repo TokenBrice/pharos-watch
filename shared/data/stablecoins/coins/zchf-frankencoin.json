@@ -34,20 +34,18 @@
   "jurisdiction": {
     "country": "Switzerland",
     "regulator": "FINMA",
-    "license": "MiCA-compliant payment token"
+    "license": "Swiss payment token classification (LEXR legal opinion)"
   },
   "mica": {
-    "status": "authorized",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
+    "status": "out-of-scope",
     "references": [
       {
         "label": "Frankencoin compliance summary",
         "url": "https://frankencoin.com/compliance/#compliance-summary"
       },
       {
-        "label": "Frankencoin docs",
-        "url": "https://docs.frankencoin.com/"
+        "label": "LEXR public summary: ZCHF MiCA classification",
+        "url": "https://www.frankencoin.com/20260209%20ZCHF%20MiCA%20Frankencoin%20Association%20Public%20Summary%20FINAL.pdf"
       }
     ]
   },

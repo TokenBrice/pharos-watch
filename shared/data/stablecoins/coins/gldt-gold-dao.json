@@ -123,5 +123,6 @@
       ]
     }
   },
-  "launchDate": "2025-07-09"
+  "launchDate": "2025-07-09",
+  "mechanismArchetype": "rwa-credit-fund"
 }

@@ -227,5 +227,6 @@
       ]
     }
   },
-  "launchDate": "2024-07-04"
+  "launchDate": "2024-07-04",
+  "mechanismArchetype": "algorithmic"
 }

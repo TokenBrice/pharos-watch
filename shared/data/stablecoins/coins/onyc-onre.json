@@ -88,10 +88,10 @@
     }
   },
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://docs.onre.finance/introduction/transparency-dashboard",
-    "provider": "OnRe transparency dashboard",
-    "attestorTier": "self",
+    "provider": "Apex Group",
+    "attestorTier": "niche",
     "cadence": "daily-nav"
   },
   "mintAuthority": {
@@ -140,5 +140,6 @@
         }
       ]
     }
-  }
+  },
+  "mechanismArchetype": "rwa-credit-fund"
 }

@@ -233,5 +233,12 @@
         "url": "https://usdh.com/reserves"
       }
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "USDH sunset and redemption migration",
+      "message": "Bridge and Native Markets announced the USDH migration in May 2026. New issuance is ending except for migration liquidity, the USDH dashboard is supported only during the migration period, and holders should use the fee-free USDH-to-USDC or fiat redemption routes while they remain available."
+    }
+  ]
 }

@@ -5,7 +5,7 @@
     "detailProvider": "defillama",
     "name": "A7A5",
     "symbol": "A7A5",
-    "oneLiner": "A7A5 is a centralized ruble stablecoin from Old Vector LLC, backed 1:1 by RUB deposits at sanctioned Russian state bank Promsvyazbank.",
+    "oneLiner": "A7A5 is Old Vector's RUB stablecoin backed at sanctioned Promsvyazbank; the token and issuer network face OFAC, EU, and UK sanctions.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "RUB",
@@ -151,6 +151,13 @@
         "risk": "very-high"
       }
     },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Multi-jurisdiction sanctions exposure",
+        "message": "A7A5 and related infrastructure are subject to major sanctions risk. OFAC designated Grinex and A7-linked entities in August 2025, and the A7A5 token, issuer network, and venues such as Grinex/TengriCoin have also been targeted by EU and UK sanctions actions tied to Russian sanctions-evasion infrastructure."
+      }
+    ],
     "yieldConfig": {
       "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
       "yieldType": "governance-set"
@@ -1481,6 +1488,7 @@
     },
     "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — variable-rate, dividend-bearing preferred equity from companies holding digital assets (e.g., Strategy STRC, Strive SATA), held in excess of apxUSD outstanding, plus a cash and short-term U.S. Treasury Bill buffer (incl. USDC) for liquidity; redemptions settle in USDC, with preferred-share positions sold to USDC under stress",
     "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apxusd",
     "proofOfReserves": {
       "type": "real-time",
@@ -2751,9 +2759,9 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.macropod.com/transparency",
-      "provider": "Macropod independent quarterly reconciliation",
+      "provider": "Macropod independent monthly reserve attestation",
       "attestorTier": "niche",
-      "cadence": "quarterly",
+      "cadence": "monthly",
       "attestorJurisdiction": "Australia"
     },
     "links": [
@@ -5514,7 +5522,7 @@
         "message": "Balanced is migrating to a v2 architecture that re-anchors bnUSD issuance on Sonic. The cross-chain deployments tracked here are the v1 (ICON-Hub) bnUSD that DefiLlama indexes under id 204; the v2 bnUSD on Sonic is a separate contract not yet tracked. Expect supply distribution and the canonical issuance chain to shift over time."
       }
     ],
-    "launchDate": "2024-04-04"
+    "launchDate": "2021-04-25"
   },
   {
     "id": "bold-liquity",
@@ -9184,6 +9192,7 @@
     },
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "celo-euro",
     "proofOfReserves": {
       "type": "real-time",
@@ -9406,10 +9415,10 @@
     "cmcSlug": "comtech-gold",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://comtechgold.com/Routine",
+      "url": "https://comtechgold.com/proof-of-gold-audit",
       "provider": "unnamed",
       "attestorTier": "niche",
-      "cadence": "ad-hoc"
+      "cadence": "monthly"
     },
     "links": [
       {
@@ -9937,7 +9946,7 @@
         "message": "CHFAU launched on 2026-02-26 as a MiCAR-compliant, BaFin-licensed Swiss franc stablecoin, but CoinGecko does not yet publish usable live price data, so active price coverage remains pending."
       }
     ],
-    "launchDate": "2026-01-26"
+    "launchDate": "2026-02-26"
   },
   {
     "id": "chfm-mento",
@@ -11234,7 +11243,7 @@
         }
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2026-01-27"
   },
   {
     "id": "cusd-cap",
@@ -11253,6 +11262,7 @@
     },
     "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",
     "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "cap-usd",
     "cmcSlug": "cap-cusd",
     "proofOfReserves": {
@@ -12904,7 +12914,7 @@
         ]
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2023-03-16"
   },
   {
     "id": "doc-money-on-chain",
@@ -13049,7 +13059,7 @@
         "rpcUrl": "https://public-node.rsk.co"
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2019-10-05"
   },
   {
     "id": "dola-inverse-finance",
@@ -13458,6 +13468,7 @@
     },
     "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "dtrinity-usd",
     "cmcSlug": "dtrinity-dusd",
     "links": [
@@ -17175,6 +17186,13 @@
         "risk": "very-low"
       }
     },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Minting and redemption suspended",
+        "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting EURR and USDR. Minting and redemption were suspended, 4.5M unbacked EURR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
+      }
+    ],
     "launchDate": "2024-12-17"
   },
   {
@@ -18616,7 +18634,7 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.firstdigitallabs.com/transparency",
-      "provider": "AOGB CPA Limited",
+      "provider": "Prescient Assurance",
       "attestorTier": "niche",
       "cadence": "monthly"
     },
@@ -19282,7 +19300,7 @@
         }
       }
     },
-    "launchDate": "2023-04-06"
+    "launchDate": "2026-02-04"
   },
   {
     "id": "fiusd-fiserv",
@@ -19645,6 +19663,7 @@
     },
     "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
     "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "frax",
     "pythFeedId": "0x735f591e4fed988cd38df74d8fcedecf2fe8d9111664e0fd500db9aa78b316b1",
     "links": [
@@ -22091,6 +22110,7 @@
     },
     "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
     "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.001,
     "geckoId": "goldfish-gold",
     "links": [
@@ -22737,6 +22757,7 @@
     },
     "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
     "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.000321507467,
     "geckoId": "gold-token",
     "proofOfReserves": {
@@ -22864,6 +22885,7 @@
     },
     "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
     "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "streamex-gldy",
     "proofOfReserves": {
@@ -23014,7 +23036,7 @@
       "yieldSource": "Streamex gold leasing yield",
       "yieldType": "fee-sharing"
     },
-    "launchDate": "2025-11-03"
+    "launchDate": "2026-02-25"
   },
   {
     "id": "gramg-token-teknoloji",
@@ -23032,6 +23054,7 @@
     },
     "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-gold",
     "proofOfReserves": {
@@ -23191,6 +23214,7 @@
     },
     "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-silver",
     "cmcSlug": "silver-grams",
@@ -24132,7 +24156,7 @@
     "detailProvider": "defillama",
     "name": "GYEN",
     "symbol": "GYEN",
-    "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin; multiple 2021 depegs led to a 2026 class-action settlement covering NY and CA holders.",
+    "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin now in wind-down, with purchases disabled and redemption-only access open during the initial period.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "JPY",
@@ -24465,6 +24489,11 @@
       }
     },
     "notices": [
+      {
+        "type": "danger",
+        "title": "GYEN and ZUSD wind-down",
+        "message": "GMO-Z.com Trust Company announced an orderly wind-down of GYEN and ZUSD on May 15, 2026. Purchases are disabled; redemption remains available during the initial redemption period from May 15, 2026 through November 11, 2026 for eligible account holders."
+      },
       {
         "type": "warning",
         "title": "2021 depeg and 2026 class-action settlement",
@@ -26294,6 +26323,7 @@
     },
     "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Gold Trust (IAU), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
     "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying IAU economic exposure through Ondo Global Markets and eligible investor flows",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -27507,6 +27537,7 @@
     },
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
     "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "infinifi-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -29629,7 +29660,7 @@
         "blacklistable": true
       }
     ],
-    "launchDate": "1970-01-01"
+    "launchDate": "2026-01-28"
   },
   {
     "id": "jusd-jusd-stable-token",
@@ -29647,7 +29678,7 @@
     },
     "collateral": "Self-described \"diversified reserve of high-quality assets\" managed by the issuer; the 2023 whitepaper claims supply is minted/burned as the issuer adds or reduces backing assets but names no specific reserve assets, custodians, or amounts and publishes no attestation.",
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "jusd",
     "cmcSlug": "jusd-stable-token",
     "protocolSlug": "jusd",
@@ -33887,6 +33918,13 @@
         ]
       }
     },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Recurring cauldron exploit history",
+        "message": "Abracadabra/MIM has suffered three material cauldron-related incidents since January 2024: a January 2024 borrow-logic exploit, a March 2025 gmCauldron collateral-accounting exploit, and an October 2025 deprecated CauldronV4 sequencing exploit. Treat cauldron implementation and deprecation risk as recurring protocol risk."
+      }
+    ],
     "launchDate": "2021-05-25"
   },
   {
@@ -36321,8 +36359,9 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://mxnb.mx/transparency",
-      "attestorTier": "niche",
-      "cadence": "quarterly"
+      "provider": "Unnamed Big Four auditor",
+      "attestorTier": "big4",
+      "cadence": "monthly"
     },
     "links": [
       {
@@ -38645,12 +38684,13 @@
     },
     "collateral": "Tokenized exposure to OnRe-managed structured insurance and reinsurance yield products, designed to hold stable value while distributing real-world insurance-market returns through NAV appreciation",
     "pegMechanism": "ONYC is a yield-bearing stable-value token rather than a fixed $1 wrapper; the token value accrues yield from OnRe's structured insurance collateral strategies, with primary-market access governed by OnRe's platform terms",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "onyc",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://docs.onre.finance/introduction/transparency-dashboard",
-      "provider": "OnRe transparency dashboard",
-      "attestorTier": "self",
+      "provider": "Apex Group",
+      "attestorTier": "niche",
       "cadence": "daily-nav"
     },
     "links": [
@@ -39510,6 +39550,7 @@
     },
     "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
     "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "pax-gold",
     "pythFeedId": "0x273717b49430906f4b0c230e99aa1007f83758e3199edbc887c0d06c3e332494",
@@ -40141,6 +40182,7 @@
     },
     "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
     "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 1,
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
@@ -41468,8 +41510,8 @@
     ],
     "jurisdiction": {
       "country": "United States",
-      "regulator": "NYDFS",
-      "license": "Limited Purpose Trust Charter"
+      "regulator": "OCC",
+      "license": "National Trust Charter"
     },
     "mica": {
       "status": "non-compliant",
@@ -42541,6 +42583,13 @@
         ]
       }
     },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "June 2025 exploit was repaid",
+        "message": "Resupply suffered a June 2025 oracle-manipulation exploit that created about $9.6M of bad debt. The protocol reported the bad debt fully repaid by August 2025 using treasury funds, insurance-pool burn mechanics, and a Yearn DAO loan, but the incident remains relevant to vault/oracle risk."
+      }
+    ],
     "launchDate": "2025-03-13"
   },
   {
@@ -43867,6 +43916,7 @@
     },
     "collateral": "USD share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
     "pegMechanism": "USD-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "safo",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -44617,8 +44667,8 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://brale.xyz/stablecoins/SBC",
-      "provider": "Michael Coglianese, CPA, P.C.",
-      "attestorTier": "niche",
+      "provider": "Abdo",
+      "attestorTier": "regional",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
       "attestorLicense": "AICPA attestation standards"
@@ -45338,7 +45388,7 @@
       {
         "type": "info",
         "title": "On-chain reserve tracking pending",
-        "message": "Live reserve tracking for scUSD is pending Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.rings.money/backing for the latest published addresses."
+        "message": "Live reserve tracking for scUSD is pending Trevee/Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.trevee.xyz/backing for the latest published addresses."
       }
     ],
     "launchDate": "2024-12-09"
@@ -47211,6 +47261,7 @@
     "pegReferenceId": "rusd-reservoir",
     "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
     "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "reservoir-srusd",
     "proofOfReserves": {
       "type": "real-time",
@@ -52984,6 +53035,13 @@
         "assetRisk": "very-high"
       }
     },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Material issuer and market-stability risks",
+        "message": "TrueUSD has multiple unresolved 2025-2026 risk events: Archblock filed Chapter 11 on February 6, 2026; Kraken scheduled TUSD delisting with remaining balances liquidated on March 1, 2026; S&P Global assigned TUSD its weakest stablecoin stability score of 5 on November 14, 2025; and the DIFC Digital Economy Court issued a worldwide freezing injunction up to USD 456M in Techteryx-related reserve litigation."
+      }
+    ],
     "launchDate": "2018-12-31"
   },
   {
@@ -53835,10 +53893,6 @@
           }
         ]
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "BIMA savings (sUSBD)",
-      "yieldType": "lending-vault"
     },
     "launchDate": "2025-03-21"
   },
@@ -55486,7 +55540,7 @@
         }
       }
     },
-    "launchDate": "2025-07-22"
+    "launchDate": "2025-05-28"
   },
   {
     "id": "usdai-usd-ai",
@@ -56143,7 +56197,7 @@
       "yieldSource": "Blast native yield",
       "yieldType": "governance-set"
     },
-    "launchDate": "2026-06-10"
+    "launchDate": "2024-02-29"
   },
   {
     "id": "usdb-bridge",
@@ -57423,7 +57477,14 @@
         ]
       }
     },
-    "launchDate": "2025-09-02"
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Historical reserve-governance and depeg risk",
+        "message": "USDD has a history of peg stress, including a March 2023 depeg around $0.93. In August 2024, Tron DAO Reserve removed roughly 12,000 BTC from USDD collateral without prior DAO approval, leaving reserve governance dependent on Tron DAO Reserve decisions."
+      }
+    ],
+    "launchDate": "2022-05-05"
   },
   {
     "id": "usde-ethena",
@@ -58033,7 +58094,7 @@
       "url": "https://app.falcon.finance/transparency",
       "provider": "ht.digital",
       "attestorTier": "niche",
-      "cadence": "real-time"
+      "cadence": "weekly"
     },
     "links": [
       {
@@ -59633,7 +59694,14 @@
           "url": "https://usdh.com/reserves"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "USDH sunset and redemption migration",
+        "message": "Bridge and Native Markets announced the USDH migration in May 2026. New issuance is ending except for migration liquidity, the USDH dashboard is supported only during the migration period, and holders should use the fee-free USDH-to-USDC or fiat redemption routes while they remain available."
+      }
+    ]
   },
   {
     "id": "usdk-kast",
@@ -60094,7 +60162,14 @@
         }
       }
     },
-    "launchDate": "1970-01-01"
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Swellchain shutdown deadline",
+        "message": "Swell announced Swellchain will permanently shut down on June 15, 2026. Users should withdraw USDK-related Swellchain positions before that date; after shutdown, remaining withdrawals may require direct contract interaction and become increasingly difficult before the chain stops on June 30, 2026."
+      }
+    ],
+    "launchDate": "2025-05-15"
   },
   {
     "id": "usdkg-gold-dollar",
@@ -60112,6 +60187,7 @@
     },
     "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "usdkg",
     "cmcSlug": "usdkg",
     "proofOfReserves": {
@@ -63230,7 +63306,7 @@
         }
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2025-05-07"
   },
   {
     "id": "usdr-ring",
@@ -63648,6 +63724,13 @@
         "risk": "very-low"
       }
     },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Minting and redemption suspended",
+        "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting USDR and EURR. Minting and redemption were suspended, 8.35M unbacked USDR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
+      }
+    ],
     "launchDate": "2024-12-06"
   },
   {
@@ -63787,7 +63870,7 @@
         "risk": "high"
       }
     ],
-    "launchDate": "1970-01-01"
+    "launchDate": "2023-09-28"
   },
   {
     "id": "usds-sky",
@@ -64287,7 +64370,7 @@
         }
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2025-12-03"
   },
   {
     "id": "usdsui-sui",
@@ -65851,7 +65934,7 @@
     "detailProvider": "defillama",
     "name": "USDX",
     "symbol": "USDX",
-    "oneLiner": "USDX is Kava Mint's legacy CDP dollar, sustained by crypto-collateralized debt positions and currently trading at a ~45% discount to peg.",
+    "oneLiner": "USDX is Kava Mint's legacy CDP dollar, sustained by crypto-collateralized debt positions and currently trading at a material discount to peg.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -65975,7 +66058,7 @@
       {
         "type": "warning",
         "title": "Legacy depeg risk",
-        "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
+        "message": "USDX trades at a material discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Use live runtime data for the current discount; Pharos tracks the active provider entry separately from the historical cemetery incident."
       }
     ]
   },
@@ -66121,6 +66204,11 @@
       }
     ],
     "notices": [
+      {
+        "type": "danger",
+        "title": "HypurrFi market closure deadline",
+        "message": "HypurrFi announced that Legacy and Pooled markets will wind down and close by July 15, 2026. USDXL borrow rates were raised to 30% to incentivize repayment before closure; users with debt positions should verify repayment and migration routes directly in HypurrFi/Euler tooling."
+      },
       {
         "type": "info",
         "title": "No direct public redemption rail",
@@ -66386,7 +66474,7 @@
       "yieldSource": "Ondo T-bill fund",
       "yieldType": "nav-appreciation"
     },
-    "launchDate": "2023-07-11"
+    "launchDate": "2023-08-03"
   },
   {
     "id": "usdz-anzen",
@@ -67473,6 +67561,7 @@
     },
     "collateral": "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
     "pegMechanism": "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "usp-yield-optimized-stablecoin",
     "links": [
       {
@@ -68752,7 +68841,7 @@
     "detailProvider": "defillama",
     "name": "Solstice USX",
     "symbol": "USX",
-    "oneLiner": "USX is Solstice's Solana dollar minted 1:1 against USDC/USDT, with Chainlink Proof of Reserve and KYC-gated institutional minting at $500K minimum.",
+    "oneLiner": "USX is Solstice's Solana dollar with Chainlink PoR and institutional redemption; retail holders rely on DEX liquidity during stress.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -68909,7 +68998,14 @@
           "url": "https://attestation-api.solstice.finance/dashboard"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "danger",
+        "title": "Retail redemption gap and thin-liquidity depeg",
+        "message": "USX traded as low as roughly $0.10 on Orca during a December 2025 thin-liquidity event. Solstice documents institutional/KYC redemption, so retail holders without direct redemption access depend on secondary-market liquidity during stress."
+      }
+    ]
   },
   {
     "id": "usyc-hashnote",
@@ -70798,6 +70894,11 @@
     },
     "notices": [
       {
+        "type": "danger",
+        "title": "Vietnam criminal investigation and withdrawal freeze",
+        "message": "Vietnamese authorities arrested ONUS/VNDC-linked executives in March 2026 in a fraud and money-laundering investigation involving VNDC, ONUS, and related tokens. Local reporting also described platform withdrawal disruptions during the investigation, so VNDC redemption and reserve claims should be treated as high risk."
+      },
+      {
         "type": "warning",
         "title": "Market cap and supply inconsistency",
         "message": "Aggregator-reported market cap (~$50M) does not consistently match on-chain Polygon/BSC supply, and reserves are self-disclosed by Jade Labs without an independent audit cadence."
@@ -70826,6 +70927,7 @@
     },
     "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
     "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+    "mechanismArchetype": "rwa-credit-fund",
     "commodityOunces": 0.0321507466,
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
@@ -71349,7 +71451,7 @@
         "risk": "high"
       }
     },
-    "launchDate": "2025-07-02"
+    "launchDate": "2025-11-01"
   },
   {
     "id": "wbrl-ripio",
@@ -72113,9 +72215,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "100% USDC-backed omni-chain stablecoin per current PicWe documentation (Phase 1: minted 1:1 against USDC, with the official contracts page naming per-chain USDC as the reserve/redemption asset); future RWA/yield collateral (tokenized treasuries, real estate, commodities) is described as Phase 2 roadmap rather than current backing",
-    "pegMechanism": "Per current PicWe docs, WEUSD is minted 1:1 against USDC and redeemed to USDC anytime via PicWe's on-chain mint/redeem contract; the protocol holds USDC reserves against circulating WEUSD.",
-    "mechanismArchetype": "fiat-cash",
+    "collateral": "PicWe's current public docs describe WEUSD as minted and redeemed 1:1 against USDC during Phase 1, while the mint-authority review and earlier PicWe materials describe basket-style backing around 9 USDT + 1 MOVE. Pharos treats the backing model as disputed until PicWe reconciles the documentation with on-chain and market evidence.",
+    "pegMechanism": "Issuer-operated mint/redeem route through PicWe contracts. Current PicWe docs describe 1:1 USDC mint and redemption, but earlier basket materials and persistent secondary-market pricing near $0.91 indicate unresolved redemption/backing ambiguity.",
     "geckoId": "weusd",
     "links": [
       {
@@ -72254,18 +72355,16 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "USDC reserves",
+        "name": "Disputed USDC versus USDT/MOVE backing disclosure",
         "pct": 100,
-        "risk": "low",
-        "coinId": "usdc-circle",
-        "depType": "collateral"
+        "risk": "high"
       }
     ],
     "notices": [
       {
         "type": "warning",
-        "title": "Active depeg",
-        "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
+        "title": "Backing disclosure conflict and active depeg",
+        "message": "WEUSD trades near $0.91 while PicWe's current docs describe 1:1 USDC backing and older PicWe-linked materials describe a roughly 9 USDT + 1 MOVE basket. Treat the peg and redemption model as disputed until PicWe publishes reconciled reserve evidence."
       }
     ],
     "launchDate": "2025-06-26"
@@ -72475,7 +72574,7 @@
     },
     "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
     "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "wrappedm-by-m0",
     "proofOfReserves": {
       "type": "real-time",
@@ -76277,7 +76376,7 @@
         ]
       }
     },
-    "launchDate": "1970-01-01"
+    "launchDate": "2021-06-01"
   },
   {
     "id": "xusd-straitsx",
@@ -78146,7 +78245,7 @@
       "pegCurrency": "ZAR",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
@@ -78369,20 +78468,18 @@
     "jurisdiction": {
       "country": "Switzerland",
       "regulator": "FINMA",
-      "license": "MiCA-compliant payment token"
+      "license": "Swiss payment token classification (LEXR legal opinion)"
     },
     "mica": {
-      "status": "authorized",
-      "tokenType": "EMT",
-      "authorizationType": "emi",
+      "status": "out-of-scope",
       "references": [
         {
           "label": "Frankencoin compliance summary",
           "url": "https://frankencoin.com/compliance/#compliance-summary"
         },
         {
-          "label": "Frankencoin docs",
-          "url": "https://docs.frankencoin.com/"
+          "label": "LEXR public summary: ZCHF MiCA classification",
+          "url": "https://www.frankencoin.com/20260209%20ZCHF%20MiCA%20Frankencoin%20Association%20Public%20Summary%20FINAL.pdf"
         }
       ]
     },
@@ -78627,6 +78724,20 @@
             {
               "label": "SolidityScan - Zoth hack analysis",
               "url": "https://blog.solidityscan.com/zoth-hack-analysis-80ba3ac5076b/"
+            }
+          ]
+        },
+        {
+          "date": "2025-03-21",
+          "summary": "A compromised Zoth admin/deployer key enabled a malicious proxy upgrade of USD0PPSubVaultUpgradeable and drained roughly $8.4M-$8.85M of USD0++ before funds were swapped and moved off-chain.",
+          "sources": [
+            {
+              "label": "Halborn — Zoth March 2025 hack explained",
+              "url": "https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
+            },
+            {
+              "label": "Rekt News — Zoth admin-key compromise",
+              "url": "https://rekt.news/zoth-rekt"
             }
           ]
         }

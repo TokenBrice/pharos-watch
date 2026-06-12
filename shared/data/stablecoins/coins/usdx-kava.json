@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "USDX",
   "symbol": "USDX",
-  "oneLiner": "USDX is Kava Mint's legacy CDP dollar, sustained by crypto-collateralized debt positions and currently trading at a ~45% discount to peg.",
+  "oneLiner": "USDX is Kava Mint's legacy CDP dollar, sustained by crypto-collateralized debt positions and currently trading at a material discount to peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -60,7 +60,7 @@
     {
       "type": "warning",
       "title": "Legacy depeg risk",
-      "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
+      "message": "USDX trades at a material discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Use live runtime data for the current discount; Pharos tracks the active provider entry separately from the historical cemetery incident."
     }
   ],
   "mintAuthority": {

@@ -212,5 +212,12 @@
       ]
     }
   },
-  "launchDate": "2025-03-13"
+  "launchDate": "2025-03-13",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "June 2025 exploit was repaid",
+      "message": "Resupply suffered a June 2025 oracle-manipulation exploit that created about $9.6M of bad debt. The protocol reported the bad debt fully repaid by August 2025 using treasury funds, insurance-pool burn mechanics, and a Yearn DAO loan, but the incident remains relevant to vault/oracle risk."
+    }
+  ]
 }

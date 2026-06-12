@@ -286,5 +286,6 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
-  "launchDate": "2026-02-18"
+  "launchDate": "2026-02-18",
+  "mechanismArchetype": "rwa-credit-fund"
 }

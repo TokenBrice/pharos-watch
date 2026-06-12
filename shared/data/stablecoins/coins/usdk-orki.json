@@ -200,5 +200,12 @@
       ]
     }
   },
-  "launchDate": "1970-01-01"
+  "launchDate": "2025-05-15",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Swellchain shutdown deadline",
+      "message": "Swell announced Swellchain will permanently shut down on June 15, 2026. Users should withdraw USDK-related Swellchain positions before that date; after shutdown, remaining withdrawals may require direct contract interaction and become increasingly difficult before the chain stops on June 30, 2026."
+    }
+  ]
 }

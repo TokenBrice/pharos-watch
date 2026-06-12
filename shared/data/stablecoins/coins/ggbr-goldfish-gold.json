@@ -149,5 +149,6 @@
       "risk": "high"
     }
   },
-  "launchDate": "2025-10-06"
+  "launchDate": "2025-10-06",
+  "mechanismArchetype": "rwa-credit-fund"
 }

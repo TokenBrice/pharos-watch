@@ -261,5 +261,12 @@
       "risk": "high"
     }
   ],
-  "launchDate": "2025-09-02"
+  "launchDate": "2022-05-05",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Historical reserve-governance and depeg risk",
+      "message": "USDD has a history of peg stress, including a March 2023 depeg around $0.93. In August 2024, Tron DAO Reserve removed roughly 12,000 BTC from USDD collateral without prior DAO approval, leaving reserve governance dependent on Tron DAO Reserve decisions."
+    }
+  ]
 }
