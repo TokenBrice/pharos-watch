@@ -19,15 +19,23 @@
   "geckoId": "bucket-protocol-buck-stablecoin",
   "pythFeedId": "0xfdf28a46570252b25fd31cb257973f865afc5ca2f320439e45d95e0394bc7382",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Bucket Protocol BUCK do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Bucket's oracle repo aggregates Switchboard, Pyth, and Supra feeds with freshness and tolerance checks for BUCK collateral pricing, without documented shutdown handling.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Bucket Protocol BUCK docs",
-        "url": "https://docs.bucketprotocol.io/"
+        "label": "Bucket Protocol oracle README",
+        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/README.md"
+      },
+      {
+        "label": "Bucket single_oracle.move",
+        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/single_oracle.move"
+      },
+      {
+        "label": "Bucket price_aggregator.move",
+        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/parser/price_aggregator.move"
       }
     ]
   },

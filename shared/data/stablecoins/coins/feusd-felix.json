@@ -19,15 +19,19 @@
   "geckoId": "felix-feusd",
   "pythFeedId": "0x7f2e9a7365eb634c543e9ca72683a9cf778cdc16ee5b8bca73abe6d08c1410d5",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Felix feUSD identify a Liquity-style CDP but do not identify the deployed oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Felix feUSD uses RedStone price-feed contracts for its CDP collateral branches, but reviewed docs do not document fallback, delay, or shutdown behavior.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Felix docs",
-        "url": "https://usefelix.gitbook.io/docs"
+        "label": "Felix Market 1 feUSD CDP",
+        "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp.md"
+      },
+      {
+        "label": "Felix risk management",
+        "url": "https://usefelix.gitbook.io/docs/advanced/risk-management.md"
       }
     ]
   },
@@ -139,7 +143,9 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",

@@ -20,15 +20,15 @@
   "cmcSlug": "metronome-synth-usd",
   "pythFeedId": "0xc753c899ffdfcc8d1a02440fe380501b454b559122998bcd245d9063d07cc162",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Metronome msUSD do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Metronome Synth uses Chainlink for synthetic and collateral prices and internal oracle parameters to reduce disruptions, but no stronger failover tier is documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Metronome msUSD docs",
-        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+        "label": "Metronome oracle disruptions",
+        "url": "https://docs.metronome.io/metronome-synth/risks/oracle-disruptions.md"
       }
     ]
   },

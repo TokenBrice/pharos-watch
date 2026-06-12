@@ -27,15 +27,23 @@
   "detailProvider": "coingecko",
   "geckoId": "fx-usd-saving",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for fxSAVE do not identify a wrapper-specific oracle setup, and the underlying fxUSD oracle/failure handling remains unresolved.",
+    "tier": "redundant-with-failover",
+    "summary": "fxSAVE inherits the f(x) V2 fxUSD oracle path, where ETH/WBTC pricing combines Chainlink, DEX, and anchor feeds with threshold fallback to anchor pricing.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "f(x) Protocol docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs"
+        "label": "f(x) ETH oracle docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+      },
+      {
+        "label": "f(x) WBTC oracle docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
+      },
+      {
+        "label": "fxSAVE integration docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md"
       }
     ]
   },

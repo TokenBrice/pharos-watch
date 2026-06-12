@@ -25,15 +25,15 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Yuzu USD do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Yuzu Money documents RedStone yzUSD/syzUSD feeds and lists Chainlink, Pyth, and RedStone for underlying strategy oracles, without failover handling documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Yuzu USD docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        "label": "Yuzu oracles",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/oracles.md"
       }
     ]
   },

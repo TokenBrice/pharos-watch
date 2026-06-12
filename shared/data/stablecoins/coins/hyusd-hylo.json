@@ -18,15 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "hylo-usd",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Hylo hyUSD describe internal pool accounting but do not clearly identify whether collateral TVL uses external oracle feeds or failure handling.",
+    "tier": "standard-external",
+    "summary": "Hylo values LST collateral internally via Sanctum stake-pool accounting but uses the Pyth EMA SOL/USD oracle for hyUSD NAV and collateral-ratio calculations.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Hylo docs",
-        "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+        "label": "Hylo collateral pool docs",
+        "url": "https://docs.hylo.so/protocol-overview/collateral-pool-a-basket-of-LST.md"
+      },
+      {
+        "label": "Hylo equations",
+        "url": "https://docs.hylo.so/technical-addendum/hylo-equations.md"
       }
     ]
   },

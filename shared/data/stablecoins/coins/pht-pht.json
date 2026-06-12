@@ -18,15 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "pht-stablecoin",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for PHT Stablecoin do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "APACX/PHT architecture uses Chainlink oracle updates through Pip and Spot with a 24h heartbeat and 1% deviation threshold for collateral valuations.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "PHT Stablecoin docs",
-        "url": "https://docs.apacx.io/"
+        "label": "APACX system architecture",
+        "url": "https://docs.apacx.io/technical-references/system-architecture.md"
+      },
+      {
+        "label": "APACX multi-collateral system",
+        "url": "https://docs.apacx.io/what-is-pht/multi-collateral-system.md"
       }
     ]
   },

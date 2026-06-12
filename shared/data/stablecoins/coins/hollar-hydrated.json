@@ -18,15 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "hydrated-dollar",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Hydrated Dollar HOLLAR do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "HOLLAR mints through Hydration Borrow, and DIA says it powers Hydration money-market collateral pricing with custom price feeds, but no stronger failover is documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Hydrated Dollar HOLLAR docs",
+        "label": "Hydration HOLLAR docs",
         "url": "https://docs.hydration.net/quick_start/hollar/"
+      },
+      {
+        "label": "DIA Hydration money-market oracle case study",
+        "url": "https://www.diadata.org/use-cases/vaults-lending/"
       }
     ]
   },

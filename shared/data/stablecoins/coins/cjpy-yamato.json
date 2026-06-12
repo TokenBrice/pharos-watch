@@ -14,20 +14,26 @@
   "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
   "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
   "mechanismArchetype": "cdp",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "llamaId": "179",
   "detailProvider": "defillama",
   "geckoId": "convertible-jpy-token",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Yamato CJPY do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Yamato PriceFeedV3 derives ETH/JPY from Chainlink ETH/USD and JPY/USD feeds with broken/frozen checks, while no active fallback is verified in the current source.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Yamato CJPY docs",
-        "url": "https://docs.yamato.fi/v/en"
+        "label": "Yamato PriceFeedV3 source",
+        "url": "https://raw.githubusercontent.com/DeFiGeek-Community/yamato/master/contracts/PriceFeedV3.sol"
+      },
+      {
+        "label": "Yamato README",
+        "url": "https://raw.githubusercontent.com/DeFiGeek-Community/yamato/master/README.md"
       }
     ]
   },

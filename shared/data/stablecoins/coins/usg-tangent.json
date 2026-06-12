@@ -17,15 +17,19 @@
   "detailProvider": "coingecko",
   "launchDate": "2026-02-12",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Tangent USG do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Tangent prices USG collateral with Chainlink, Curve pool oracles, and Pendle official oracles, but the docs do not identify a stronger failover path.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Tangent USG docs",
-        "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        "label": "Tangent USG oracles",
+        "url": "https://docs.tangent.finance/docs/usg/oracle"
+      },
+      {
+        "label": "Tangent contracts",
+        "url": "https://docs.tangent.finance/docs/faq/contracts"
       }
     ]
   },

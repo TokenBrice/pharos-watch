@@ -17,15 +17,19 @@
   "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
   "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for EURO3 do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "3A exposes oracle-backed collateral price endpoints and ChainlinkPriceFeed/ConvertedPriceFeed contracts for EURO3 collateral valuation, without documented failover handling.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "EURO3 docs",
-        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        "label": "3A smart-contract API docs",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
+      },
+      {
+        "label": "3A collateral requirements",
+        "url": "https://docs.3adao.org/3a-protocol/whitelisting-criteria/mandatory-requirements.md"
       }
     ]
   },

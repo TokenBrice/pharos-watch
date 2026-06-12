@@ -19,15 +19,19 @@
   "cmcSlug": "token-force-usd",
   "protocolSlug": "dforce-lending",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for dForce USX do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "dForce says Chainlink Price Feeds are the primary oracle solution for its lending and stablecoin protocols, with no stronger USX-specific failover documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
+        "label": "dForce Chainlink oracle announcement",
+        "url": "https://medium.com/dforcenet/dforce-integrates-chainlink-price-feeds-on-arbitrum-7a0c800c084e"
+      },
+      {
         "label": "dForce USX docs",
-        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin.md"
       }
     ]
   },

@@ -17,15 +17,27 @@
   "llamaId": "291",
   "detailProvider": "defillama",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Parallel USDp do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Parallel USDp prices backing assets with Chainlink, RedStone, DIA fundamental feeds, exchange-rate feeds, and per-asset stale periods, without documented failover.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Parallel USDp docs",
-        "url": "https://docs.parallel.best/"
+        "label": "Parallel USDp implementation",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation.md"
+      },
+      {
+        "label": "Parallelizer module",
+        "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module.md"
+      },
+      {
+        "label": "Parallel RedStone fundamental oracle",
+        "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/redstone/fundamental.md"
+      },
+      {
+        "label": "Parallel DIA fundamental oracle",
+        "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/dia/fundamental.md"
       }
     ]
   },

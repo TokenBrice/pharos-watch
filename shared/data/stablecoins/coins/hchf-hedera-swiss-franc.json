@@ -11,7 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "collateral": "HBAR locked in overcollateralized HLiquity Troves on Hedera, with a 110% minimum collateral ratio and Stability Pool liquidations",
   "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
   "mechanismArchetype": "cdp",
@@ -19,19 +21,23 @@
   "geckoId": "hedera-swiss-franc",
   "llamaId": "200",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for HLiquity HCHF identify a Liquity fork but do not identify the HBAR/CHF oracle setup or failure handling.",
+    "tier": "redundant-with-failover",
+    "summary": "HLiquity PriceFeed uses Pyth as primary and Supra as fallback for HBAR/CHF pricing, with frozen/broken/deviation checks and last-good-price behavior.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "HLiquity docs",
-        "url": "https://docs.hliquity.org/"
+        "label": "HLiquity README",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md"
       },
       {
-        "label": "HLiquity repository",
-        "url": "https://github.com/SwisscoastAG/HLiquity"
+        "label": "HLiquity PriceFeed source",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/packages/contracts/contracts/PriceFeed.sol"
+      },
+      {
+        "label": "HLiquity Omniscia audit",
+        "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
       }
     ]
   },

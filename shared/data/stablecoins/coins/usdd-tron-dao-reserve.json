@@ -25,12 +25,16 @@
     "cadence": "ad-hoc"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for USDD do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "TRON DAO says Chainlink Data Feeds are the official oracle solution securing TRON DeFi including the USDD protocol, with no stronger USDD-specific failover documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "TRON DAO Chainlink oracle announcement",
+        "url": "https://trondao.medium.com/tron-dao-upgrades-to-chainlink-data-feeds-as-official-oracle-solution-securing-5-5-905dc3c0f984"
+      },
       {
         "label": "USDD docs",
         "url": "https://docs.usdd.io"

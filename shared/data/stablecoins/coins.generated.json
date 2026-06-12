@@ -7547,15 +7547,23 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Bucket Protocol BUCK do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Bucket's oracle repo aggregates Switchboard, Pyth, and Supra feeds with freshness and tolerance checks for BUCK collateral pricing, without documented shutdown handling.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Bucket Protocol BUCK docs",
-          "url": "https://docs.bucketprotocol.io/"
+          "label": "Bucket Protocol oracle README",
+          "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/README.md"
+        },
+        {
+          "label": "Bucket single_oracle.move",
+          "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/single_oracle.move"
+        },
+        {
+          "label": "Bucket price_aggregator.move",
+          "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/parser/price_aggregator.move"
         }
       ]
     },
@@ -10503,15 +10511,19 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Yamato CJPY do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Yamato PriceFeedV3 derives ETH/JPY from Chainlink ETH/USD and JPY/USD feeds with broken/frozen checks, while no active fallback is verified in the current source.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Yamato CJPY docs",
-          "url": "https://docs.yamato.fi/v/en"
+          "label": "Yamato PriceFeedV3 source",
+          "url": "https://raw.githubusercontent.com/DeFiGeek-Community/yamato/master/contracts/PriceFeedV3.sol"
+        },
+        {
+          "label": "Yamato README",
+          "url": "https://raw.githubusercontent.com/DeFiGeek-Community/yamato/master/README.md"
         }
       ]
     },
@@ -13177,15 +13189,19 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Sovryn Dollar do not identify the collateral oracle setup or failure handling.",
+      "tier": "oracleless-or-internal",
+      "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Sovryn Dollar docs",
-          "url": "https://sovryn.com/sovryn-dollar"
+          "label": "Sovryn Dollar wiki",
+          "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
+        },
+        {
+          "label": "Sovryn Mynt design preview",
+          "url": "https://sovryn.com/all-things-sovryn/zero-design-preview-3-earning-btc-and-using-mynt"
         }
       ]
     },
@@ -14507,15 +14523,15 @@
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Ebisu ebUSD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Ebisu lists RedStone and Chainlink collateral oracle providers with deviation thresholds, but reviewed docs do not document stronger failover or shutdown handling.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Ebisu ebUSD docs",
-          "url": "https://ebisu.gitbook.io/ebisu-money"
+          "label": "Ebisu oracle and parameter configuration",
+          "url": "https://ebisu.gitbook.io/ebisu-money/developers/oracle-and-parameter-configuration.md"
         }
       ]
     },
@@ -16384,15 +16400,19 @@
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for EURO3 do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "3A exposes oracle-backed collateral price endpoints and ChainlinkPriceFeed/ConvertedPriceFeed contracts for EURO3 collateral valuation, without documented failover handling.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "EURO3 docs",
-          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+          "label": "3A smart-contract API docs",
+          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
+        },
+        {
+          "label": "3A collateral requirements",
+          "url": "https://docs.3adao.org/3a-protocol/whitelisting-criteria/mandatory-requirements.md"
         }
       ]
     },
@@ -19402,15 +19422,19 @@
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Felix feUSD identify a Liquity-style CDP but do not identify the deployed oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Felix feUSD uses RedStone price-feed contracts for its CDP collateral branches, but reviewed docs do not document fallback, delay, or shutdown behavior.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Felix docs",
-          "url": "https://usefelix.gitbook.io/docs"
+          "label": "Felix Market 1 feUSD CDP",
+          "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp.md"
+        },
+        {
+          "label": "Felix risk management",
+          "url": "https://usefelix.gitbook.io/docs/advanced/risk-management.md"
         }
       ]
     },
@@ -21655,15 +21679,23 @@
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for fxSAVE do not identify a wrapper-specific oracle setup, and the underlying fxUSD oracle/failure handling remains unresolved.",
+      "tier": "redundant-with-failover",
+      "summary": "fxSAVE inherits the f(x) V2 fxUSD oracle path, where ETH/WBTC pricing combines Chainlink, DEX, and anchor feeds with threshold fallback to anchor pricing.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "f(x) Protocol docs",
-          "url": "https://fxprotocol.gitbook.io/fx-docs"
+          "label": "f(x) ETH oracle docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+        },
+        {
+          "label": "f(x) WBTC oracle docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
+        },
+        {
+          "label": "fxSAVE integration docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md"
         }
       ]
     },
@@ -21867,19 +21899,19 @@
       "reviewedAt": "2026-05-12"
     },
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for fxUSD mention oracle-priced redemptions but do not identify the oracle provider set or failure handling.",
+      "tier": "redundant-with-failover",
+      "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "f(x) Protocol docs",
-          "url": "https://fxprotocol.gitbook.io/fx-docs"
+          "label": "f(x) ETH oracle docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
         },
         {
-          "label": "f(x) Protocol site",
-          "url": "https://fx.aladdin.club/"
+          "label": "f(x) WBTC oracle docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
         }
       ]
     },
@@ -25500,19 +25532,23 @@
     "custodyModel": "onchain",
     "governanceQuality": "immutable-code",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for HLiquity HCHF identify a Liquity fork but do not identify the HBAR/CHF oracle setup or failure handling.",
+      "tier": "redundant-with-failover",
+      "summary": "HLiquity PriceFeed uses Pyth as primary and Supra as fallback for HBAR/CHF pricing, with frozen/broken/deviation checks and last-good-price behavior.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "HLiquity docs",
-          "url": "https://docs.hliquity.org/"
+          "label": "HLiquity README",
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md"
         },
         {
-          "label": "HLiquity repository",
-          "url": "https://github.com/SwisscoastAG/HLiquity"
+          "label": "HLiquity PriceFeed source",
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/packages/contracts/contracts/PriceFeed.sol"
+        },
+        {
+          "label": "HLiquity Omniscia audit",
+          "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
         }
       ]
     },
@@ -26235,15 +26271,19 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Hydrated Dollar HOLLAR do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "HOLLAR mints through Hydration Borrow, and DIA says it powers Hydration money-market collateral pricing with custom price feeds, but no stronger failover is documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "probable",
       "sources": [
         {
-          "label": "Hydrated Dollar HOLLAR docs",
+          "label": "Hydration HOLLAR docs",
           "url": "https://docs.hydration.net/quick_start/hollar/"
+        },
+        {
+          "label": "DIA Hydration money-market oracle case study",
+          "url": "https://www.diadata.org/use-cases/vaults-lending/"
         }
       ]
     },
@@ -26841,15 +26881,19 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Hylo hyUSD describe internal pool accounting but do not clearly identify whether collateral TVL uses external oracle feeds or failure handling.",
+      "tier": "standard-external",
+      "summary": "Hylo values LST collateral internally via Sanctum stake-pool accounting but uses the Pyth EMA SOL/USD oracle for hyUSD NAV and collateral-ratio calculations.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Hylo docs",
-          "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+          "label": "Hylo collateral pool docs",
+          "url": "https://docs.hylo.so/protocol-overview/collateral-pool-a-basket-of-LST.md"
+        },
+        {
+          "label": "Hylo equations",
+          "url": "https://docs.hylo.so/technical-addendum/hylo-equations.md"
         }
       ]
     },
@@ -29681,15 +29725,19 @@
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Dephaser JPYT do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Dephaser JPYT docs",
-          "url": "https://docs.dephaser.com/"
+          "label": "DePhaser money flow",
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+        },
+        {
+          "label": "DePhaser overview",
+          "url": "https://docs.dephaser.com/concept/what-is-dephaser.md"
         }
       ]
     },
@@ -30278,14 +30326,14 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Juice Dollar JUSD do not identify the collateral oracle setup or failure handling.",
+      "tier": "oracleless-or-internal",
+      "summary": "JuiceDollar docs describe JUSD as an over-collateralized stablecoin with no oracles, so collateral accounting is protocol-internal.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Juice Dollar JUSD docs",
+          "label": "JuiceDollar docs",
           "url": "https://docs.juicedollar.com/"
         }
       ]
@@ -35478,15 +35526,19 @@
     },
     "deploymentModel": "native-multichain",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for defi.money MONEY do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "defi.money uses Chainlink EMA feeds on supported chains and RedStone Push feeds with heartbeat/deviation checks elsewhere, without a stronger reviewed failover tier.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "defi.money MONEY docs",
-          "url": "https://docs.defi.money/"
+          "label": "defi.money oracles",
+          "url": "https://docs.defi.money/welcome/protocol-components/oracles.md"
+        },
+        {
+          "label": "defi.money liquidations",
+          "url": "https://docs.defi.money/welcome/how-does-it-work/liquidation.md"
         }
       ]
     },
@@ -36301,15 +36353,15 @@
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Metronome msUSD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Metronome Synth uses Chainlink for synthetic and collateral prices and internal oracle parameters to reduce disruptions, but no stronger failover tier is documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Metronome msUSD docs",
-          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+          "label": "Metronome oracle disruptions",
+          "url": "https://docs.metronome.io/metronome-synth/risks/oracle-disruptions.md"
         }
       ]
     },
@@ -39370,15 +39422,19 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Nereus NXUSD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Nereus Finance integrated Chainlink Price Feeds on Avalanche and Polygon to calculate NXUSD collateral values, with no stronger failover path documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Nereus NXUSD docs",
-          "url": "https://nereus.finance/"
+          "label": "Nereus Chainlink integration announcement",
+          "url": "https://medium.com/nereus-protocol/nereus-finance-integrates-chainlink-price-feeds-to-help-secure-lending-and-borrowing-operations-11b85b20c020"
+        },
+        {
+          "label": "Nereus on Chainlink ecosystem",
+          "url": "https://www.chainlinkecosystem.com/ecosystem/nereus-finance"
         }
       ]
     },
@@ -41620,15 +41676,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for PHT Stablecoin do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "APACX/PHT architecture uses Chainlink oracle updates through Pip and Spot with a 24h heartbeat and 1% deviation threshold for collateral valuations.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "PHT Stablecoin docs",
-          "url": "https://docs.apacx.io/"
+          "label": "APACX system architecture",
+          "url": "https://docs.apacx.io/technical-references/system-architecture.md"
+        },
+        {
+          "label": "APACX multi-collateral system",
+          "url": "https://docs.apacx.io/what-is-pht/multi-collateral-system.md"
         }
       ]
     },
@@ -43327,15 +43387,15 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Resupply reUSD do not identify the collateral oracle setup or failure handling.",
+      "tier": "oracleless-or-internal",
+      "summary": "Resupply reUSD values crvUSD/frxUSD collateral at one dollar by protocol assumption, so the CDP collateral path uses internal stablecoin accounting rather than an external liquidation oracle.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Resupply reUSD docs",
-          "url": "https://docs.resupply.finance/"
+          "label": "Resupply collateralized debt positions",
+          "url": "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md"
         }
       ]
     },
@@ -47324,15 +47384,19 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Shade SILK do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Shade documents Band Protocol data feeds for SILK basket pricing and Shade apps, with SupraOracles noted separately but no stronger failover tier verified.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Shade SILK docs",
-          "url": "https://docs.shadeprotocol.io/shade-protocol/"
+          "label": "Shade tech stack",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/tech-stack.md"
+        },
+        {
+          "label": "SILK basket composition",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/basket-composition.md"
         }
       ]
     },
@@ -56375,15 +56439,15 @@
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Avalon USDa do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Avalon USDa uses RedStone as the primary BTC-USD oracle for the BTC-backed CDP system, with no fallback or shutdown behavior documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Avalon USDa docs",
-          "url": "https://docs.avalonfinance.xyz"
+          "label": "Avalon USDa risk management",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management.md"
         }
       ]
     },
@@ -58576,12 +58640,16 @@
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for USDD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "TRON DAO says Chainlink Data Feeds are the official oracle solution securing TRON DeFi including the USDD protocol, with no stronger USDD-specific failover documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
+        {
+          "label": "TRON DAO Chainlink oracle announcement",
+          "url": "https://trondao.medium.com/tron-dao-upgrades-to-chainlink-data-feeds-as-official-oracle-solution-securing-5-5-905dc3c0f984"
+        },
         {
           "label": "USDD docs",
           "url": "https://docs.usdd.io"
@@ -61228,15 +61296,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Orki USDK do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Orki USDK documents RedStone oracle feeds for its Liquity V2-style collateral markets, with no stronger failover behavior verified.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Orki USDK docs",
-          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+          "label": "Orki RedStone oracles",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/oracles-by-redstone.md"
+        },
+        {
+          "label": "Orki CDP design",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/cdp-design-by-liquity-v2.md"
         }
       ]
     },
@@ -63389,15 +63461,27 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Parallel USDp do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Parallel USDp prices backing assets with Chainlink, RedStone, DIA fundamental feeds, exchange-rate feeds, and per-asset stale periods, without documented failover.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Parallel USDp docs",
-          "url": "https://docs.parallel.best/"
+          "label": "Parallel USDp implementation",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation.md"
+        },
+        {
+          "label": "Parallelizer module",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module.md"
+        },
+        {
+          "label": "Parallel RedStone fundamental oracle",
+          "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/redstone/fundamental.md"
+        },
+        {
+          "label": "Parallel DIA fundamental oracle",
+          "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/dia/fundamental.md"
         }
       ]
     },
@@ -64412,15 +64496,15 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Quill USDQ do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Quill uses Chainlink as the primary oracle for collateral price feeds used by USDQ liquidations, with Pyth only noted for a future USDQ-USD feed.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Quill USDQ docs",
-          "url": "https://docs.quill.finance/faq/usdusdq"
+          "label": "Quill liquidations, oracle, and redemptions",
+          "url": "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md"
         }
       ]
     },
@@ -67440,15 +67524,19 @@
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Last USD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "HypurrFi docs identify Pyth as the primary price-feed source for USDXL markets, with RedStone redundancy and Hyperliquid validator feeds for select assets but no reviewed failover logic.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Last USD docs",
-          "url": "https://www.last.net/"
+          "label": "HypurrFi agents overview",
+          "url": "https://docs.hypurrfi.com/agents/overview"
+        },
+        {
+          "label": "HypurrFi USDXL docs",
+          "url": "https://docs.hypurrfi.com/agents/usdxl"
         }
       ]
     },
@@ -68135,15 +68223,19 @@
     },
     "deploymentModel": "single-chain",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Tangent USG do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Tangent prices USG collateral with Chainlink, Curve pool oracles, and Pendle official oracles, but the docs do not identify a stronger failover path.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Tangent USG docs",
-          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+          "label": "Tangent USG oracles",
+          "url": "https://docs.tangent.finance/docs/usg/oracle"
+        },
+        {
+          "label": "Tangent contracts",
+          "url": "https://docs.tangent.finance/docs/faq/contracts"
         }
       ]
     },
@@ -70089,15 +70181,19 @@
     },
     "deploymentModel": "native-multichain",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for dForce USX do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "dForce says Chainlink Price Feeds are the primary oracle solution for its lending and stablecoin protocols, with no stronger USX-specific failover documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
+          "label": "dForce Chainlink oracle announcement",
+          "url": "https://medium.com/dforcenet/dforce-integrates-chainlink-price-feeds-on-arbitrum-7a0c800c084e"
+        },
+        {
           "label": "dForce USX docs",
-          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin.md"
         }
       ]
     },
@@ -79296,15 +79392,15 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "oracleRisk": {
-      "tier": "opaque-or-unknown",
-      "summary": "Public docs reviewed for Yuzu USD do not identify the collateral oracle setup or failure handling.",
+      "tier": "standard-external",
+      "summary": "Yuzu Money documents RedStone yzUSD/syzUSD feeds and lists Chainlink, Pyth, and RedStone for underlying strategy oracles, without failover handling documented.",
       "reviewedAt": "2026-06-12",
       "reviewer": "Codex data review",
-      "confidence": "limited",
+      "confidence": "verified",
       "sources": [
         {
-          "label": "Yuzu USD docs",
-          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+          "label": "Yuzu oracles",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/oracles.md"
         }
       ]
     },

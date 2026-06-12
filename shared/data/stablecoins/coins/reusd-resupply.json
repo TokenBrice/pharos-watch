@@ -18,15 +18,15 @@
   "detailProvider": "defillama",
   "geckoId": "resupply-usd",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Resupply reUSD do not identify the collateral oracle setup or failure handling.",
+    "tier": "oracleless-or-internal",
+    "summary": "Resupply reUSD values crvUSD/frxUSD collateral at one dollar by protocol assumption, so the CDP collateral path uses internal stablecoin accounting rather than an external liquidation oracle.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Resupply reUSD docs",
-        "url": "https://docs.resupply.finance/"
+        "label": "Resupply collateralized debt positions",
+        "url": "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md"
       }
     ]
   },

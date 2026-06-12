@@ -38,15 +38,15 @@
     "reviewedAt": "2026-05-25"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Quill USDQ do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Quill uses Chainlink as the primary oracle for collateral price feeds used by USDQ liquidations, with Pyth only noted for a future USDQ-USD feed.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Quill USDQ docs",
-        "url": "https://docs.quill.finance/faq/usdusdq"
+        "label": "Quill liquidations, oracle, and redemptions",
+        "url": "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md"
       }
     ]
   },
@@ -75,7 +75,9 @@
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "wETH",

@@ -38,15 +38,19 @@
     "reviewedAt": "2026-05-25"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Orki USDK do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Orki USDK documents RedStone oracle feeds for its Liquity V2-style collateral markets, with no stronger failover behavior verified.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Orki USDK docs",
-        "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+        "label": "Orki RedStone oracles",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/oracles-by-redstone.md"
+      },
+      {
+        "label": "Orki CDP design",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/cdp-design-by-liquity-v2.md"
       }
     ]
   },
@@ -74,7 +78,9 @@
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "WETH",

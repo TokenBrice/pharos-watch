@@ -17,14 +17,14 @@
   "detailProvider": "coingecko",
   "geckoId": "juice-dollar",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Juice Dollar JUSD do not identify the collateral oracle setup or failure handling.",
+    "tier": "oracleless-or-internal",
+    "summary": "JuiceDollar docs describe JUSD as an over-collateralized stablecoin with no oracles, so collateral accounting is protocol-internal.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Juice Dollar JUSD docs",
+        "label": "JuiceDollar docs",
         "url": "https://docs.juicedollar.com/"
       }
     ]

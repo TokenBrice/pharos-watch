@@ -19,15 +19,19 @@
   "geckoId": "nxusd",
   "protocolSlug": "nereus-finance",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Nereus NXUSD do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "Nereus Finance integrated Chainlink Price Feeds on Avalanche and Polygon to calculate NXUSD collateral values, with no stronger failover path documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Nereus NXUSD docs",
-        "url": "https://nereus.finance/"
+        "label": "Nereus Chainlink integration announcement",
+        "url": "https://medium.com/nereus-protocol/nereus-finance-integrates-chainlink-price-feeds-to-help-secure-lending-and-borrowing-operations-11b85b20c020"
+      },
+      {
+        "label": "Nereus on Chainlink ecosystem",
+        "url": "https://www.chainlinkecosystem.com/ecosystem/nereus-finance"
       }
     ]
   },

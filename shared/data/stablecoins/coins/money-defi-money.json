@@ -18,15 +18,19 @@
   "geckoId": "defi-money",
   "protocolSlug": "defi.money",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for defi.money MONEY do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "defi.money uses Chainlink EMA feeds on supported chains and RedStone Push feeds with heartbeat/deviation checks elsewhere, without a stronger reviewed failover tier.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "defi.money MONEY docs",
-        "url": "https://docs.defi.money/"
+        "label": "defi.money oracles",
+        "url": "https://docs.defi.money/welcome/protocol-components/oracles.md"
+      },
+      {
+        "label": "defi.money liquidations",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/liquidation.md"
       }
     ]
   },

@@ -19,15 +19,19 @@
   "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
   "mechanismArchetype": "cdp",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Sovryn Dollar do not identify the collateral oracle setup or failure handling.",
+    "tier": "oracleless-or-internal",
+    "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Sovryn Dollar docs",
-        "url": "https://sovryn.com/sovryn-dollar"
+        "label": "Sovryn Dollar wiki",
+        "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
+      },
+      {
+        "label": "Sovryn Mynt design preview",
+        "url": "https://sovryn.com/all-things-sovryn/zero-design-preview-3-earning-btc-and-using-mynt"
       }
     ]
   },

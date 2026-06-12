@@ -18,19 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "f-x-protocol-fxusd",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for fxUSD mention oracle-priced redemptions but do not identify the oracle provider set or failure handling.",
+    "tier": "redundant-with-failover",
+    "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "f(x) Protocol docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs"
+        "label": "f(x) ETH oracle docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
       },
       {
-        "label": "f(x) Protocol site",
-        "url": "https://fx.aladdin.club/"
+        "label": "f(x) WBTC oracle docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
       }
     ]
   },

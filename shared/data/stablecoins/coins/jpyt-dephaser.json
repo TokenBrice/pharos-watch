@@ -17,15 +17,19 @@
   "detailProvider": "coingecko",
   "geckoId": "dephaser-jpy",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Dephaser JPYT do not identify the collateral oracle setup or failure handling.",
+    "tier": "standard-external",
+    "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Dephaser JPYT docs",
-        "url": "https://docs.dephaser.com/"
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+      },
+      {
+        "label": "DePhaser overview",
+        "url": "https://docs.dephaser.com/concept/what-is-dephaser.md"
       }
     ]
   },
