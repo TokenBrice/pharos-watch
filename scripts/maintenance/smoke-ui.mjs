@@ -8,6 +8,8 @@ const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
 const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_UI_RETRY_COUNT = 1;
 const DEFAULT_UI_RETRY_DELAY_MS = 1500;
+const DEFAULT_LIVE_ANALYTICS_RETRY_COUNT = 1;
+const DEFAULT_LIVE_ANALYTICS_RETRY_DELAY_MS = 5000;
 const MOBILE_WIDTH = 390;
 const MOBILE_HEIGHT = 844;
 const DEFAULT_OVERFLOW_WAIT_MS = 2000;
@@ -142,6 +144,10 @@ function readPositiveIntEnv(key, fallback) {
 
 function readNonNegativeIntEnv(key, fallback) {
   return parseNonNegativeInt(process.env[key], fallback);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
@@ -644,17 +650,17 @@ export function isExpectedGaPageViewCollectUrl(url, expectedGaId) {
 
 export function isToleratedGaCollectFailure(failure, successfulCollectUrls) {
   return (
-    failure?.errorText === "net::ERR_ABORTED"
-    && typeof failure.url === "string"
-    && successfulCollectUrls.has(failure.url)
+    failure?.errorText === "net::ERR_ABORTED" &&
+    typeof failure.url === "string" &&
+    successfulCollectUrls.has(failure.url)
   );
 }
 
 export function isExpectedGaCollectAbort(failure, expectedGaId) {
   return (
-    failure?.errorText === "net::ERR_ABORTED"
-    && typeof failure.url === "string"
-    && isExpectedGaCollectUrl(failure.url, expectedGaId)
+    failure?.errorText === "net::ERR_ABORTED" &&
+    typeof failure.url === "string" &&
+    isExpectedGaCollectUrl(failure.url, expectedGaId)
   );
 }
 
@@ -666,8 +672,8 @@ export function getUnexpectedGaAnalyticsFailures(
 ) {
   return failures.filter(
     (failure) =>
-      !isToleratedGaCollectFailure(failure, successfulCollectUrls)
-      && !(tolerateExpectedCollectAbort && isExpectedGaCollectAbort(failure, expectedGaId)),
+      !isToleratedGaCollectFailure(failure, successfulCollectUrls) &&
+      !(tolerateExpectedCollectAbort && isExpectedGaCollectAbort(failure, expectedGaId)),
   );
 }
 
@@ -687,25 +693,29 @@ export function getUnexpectedGaCspViolations(violations, expectedGaId) {
 }
 
 export function hasExpectedGaRuntimeState(runtime) {
+  return runtime?.gtagType === "function" && runtime.hasExpectedConfig === true && runtime.hasPageView === true;
+}
+
+export function hasAnyGaAnalyticsSignal(network) {
   return (
-    runtime?.gtagType === "function"
-    && runtime.hasExpectedConfig === true
-    && runtime.hasPageView === true
+    (Array.isArray(network?.requests) && network.requests.length > 0) ||
+    (Array.isArray(network?.responses) && network.responses.length > 0) ||
+    (Array.isArray(network?.failures) && network.failures.length > 0) ||
+    (Array.isArray(network?.violations) && network.violations.length > 0)
   );
 }
 
-export function getExpectedGaNetworkSignals(
-  network,
-  expectedGaId,
-  { tolerateCollectAbortAsSignal = false } = {},
-) {
+export function shouldRetryLiveAnalyticsSmoke({ expectedGaId, mode, network, runtime }) {
+  return (
+    mode === "live" && Boolean(expectedGaId) && !hasExpectedGaRuntimeState(runtime) && !hasAnyGaAnalyticsSignal(network)
+  );
+}
+
+export function getExpectedGaNetworkSignals(network, expectedGaId, { tolerateCollectAbortAsSignal = false } = {}) {
   const responses = Array.isArray(network?.responses) ? network.responses : [];
   const failures = Array.isArray(network?.failures) ? network.failures : [];
   const collectResponses = responses.filter(
-    (entry) =>
-      isExpectedGaPageViewCollectUrl(entry.url, expectedGaId)
-      && entry.status >= 200
-      && entry.status < 400,
+    (entry) => isExpectedGaPageViewCollectUrl(entry.url, expectedGaId) && entry.status >= 200 && entry.status < 400,
   );
   const collectAborts = tolerateCollectAbortAsSignal
     ? failures.filter((failure) => isExpectedGaCollectAbort(failure, expectedGaId))
@@ -772,6 +782,14 @@ export async function run() {
     uiRetryDelayMs,
     waitTimeoutMs,
     expectedGaId,
+    liveAnalyticsRetryCount:
+      mode === "live" && expectedGaId
+        ? readNonNegativeIntEnv("SMOKE_UI_LIVE_ANALYTICS_RETRY_COUNT", DEFAULT_LIVE_ANALYTICS_RETRY_COUNT)
+        : 0,
+    liveAnalyticsRetryDelayMs: readPositiveIntEnv(
+      "SMOKE_UI_LIVE_ANALYTICS_RETRY_DELAY_MS",
+      DEFAULT_LIVE_ANALYTICS_RETRY_DELAY_MS,
+    ),
   };
   const overflowWorkerCount = getOverflowWorkerCount(mode, config.routes.length, skipOverflow);
   const overflowRouteChunks = chunkOverflowRoutes(config.routes, overflowWorkerCount);
@@ -798,8 +816,7 @@ export async function run() {
         violations: [],
       };
       const isAnalyticsUrl = (requestUrl) =>
-        Boolean(smokeConfig.expectedGaId)
-        && /googletagmanager|google-analytics|analytics\.google/.test(requestUrl);
+        Boolean(smokeConfig.expectedGaId) && /googletagmanager|google-analytics|analytics\.google/.test(requestUrl);
 
       if (smokeConfig.expectedGaId) {
         await page.addInitScript(() => {
@@ -855,13 +872,34 @@ export async function run() {
       }
     };
 
-    const homepageResult = await runSmokeSession(
-      {
-        ...config,
-        runOverflow: false,
-      },
-      "homepage",
-    );
+    const runHomepageSmokeSession = (stepLabel) =>
+      runSmokeSession(
+        {
+          ...config,
+          runOverflow: false,
+        },
+        stepLabel,
+      );
+
+    let homepageResult = await runHomepageSmokeSession("homepage");
+    for (let attempt = 0; attempt < config.liveAnalyticsRetryCount; attempt += 1) {
+      if (
+        !shouldRetryLiveAnalyticsSmoke({
+          expectedGaId,
+          mode,
+          network: homepageResult.analyticsNetwork,
+          runtime: homepageResult.analyticsRuntime,
+        })
+      ) {
+        break;
+      }
+      const retryNumber = attempt + 1;
+      console.log(
+        `[smoke-ui] WARN live analytics produced no runtime or network signal for ${expectedGaId}; retrying homepage smoke ${retryNumber}/${config.liveAnalyticsRetryCount}`,
+      );
+      await sleep(config.liveAnalyticsRetryDelayMs);
+      homepageResult = await runHomepageSmokeSession(`homepage analytics retry ${retryNumber}`);
+    }
     const summary = homepageResult.homepage;
 
     assert(summary, "Homepage smoke check did not produce a summary result");
@@ -901,23 +939,14 @@ export async function run() {
       const diagnostics = `runtime=${JSON.stringify(runtime)}, network=${JSON.stringify(network)}`;
       const hasRuntimeState = hasExpectedGaRuntimeState(runtime);
       if (mode === "local") {
-        assert(
-          hasRuntimeState,
-          `Expected local analytics runtime state for ${expectedGaId}; ${diagnostics}`,
-        );
+        assert(hasRuntimeState, `Expected local analytics runtime state for ${expectedGaId}; ${diagnostics}`);
       } else if (!hasRuntimeState) {
         console.log(
           `[smoke-ui] WARN live analytics runtime global not observable for ${expectedGaId}; requiring network signal instead (${JSON.stringify(runtime)})`,
         );
       }
-      assert(
-        hasGtagScriptResponse,
-        `Expected successful gtag.js load for ${expectedGaId}; ${diagnostics}`,
-      );
-      assert(
-        hasCollectSignal,
-        `Expected GA4 page_view collect signal for ${expectedGaId}; ${diagnostics}`,
-      );
+      assert(hasGtagScriptResponse, `Expected successful gtag.js load for ${expectedGaId}; ${diagnostics}`);
+      assert(hasCollectSignal, `Expected GA4 page_view collect signal for ${expectedGaId}; ${diagnostics}`);
       const successfulCollectUrls = new Set(collectResponses.map((entry) => entry.url));
       const tolerateExpectedCollectAbort = tolerateCollectAbortAsSignal || collectResponses.length > 0;
       const unexpectedFailures = getUnexpectedGaAnalyticsFailures(
@@ -936,7 +965,7 @@ export async function run() {
         `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(unexpectedCspViolations)}`,
       );
       const expectedCollectAbortCount = network.failures.filter((failure) =>
-        isExpectedGaCollectAbort(failure, expectedGaId)
+        isExpectedGaCollectAbort(failure, expectedGaId),
       ).length;
       if (tolerateExpectedCollectAbort && expectedCollectAbortCount > 0) {
         console.log(

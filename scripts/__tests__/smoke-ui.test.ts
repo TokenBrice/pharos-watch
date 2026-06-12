@@ -10,6 +10,7 @@ import {
   getUnexpectedGaCspViolations,
   getUnexpectedGaAnalyticsFailures,
   hasGaConfigInit,
+  hasAnyGaAnalyticsSignal,
   hasExpectedGaRuntimeState,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
   isAnalyticsCspViolation,
@@ -17,6 +18,7 @@ import {
   isExpectedGaCollectUrl,
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
+  shouldRetryLiveAnalyticsSmoke,
   verifyAnalyticsSnippet,
 } from "../maintenance/smoke-ui.mjs";
 
@@ -286,6 +288,78 @@ describe("hasExpectedGaRuntimeState", () => {
   });
 });
 
+describe("hasAnyGaAnalyticsSignal", () => {
+  it("detects request, response, failure, or CSP violation evidence", () => {
+    expect(hasAnyGaAnalyticsSignal({ requests: [] })).toBe(false);
+    expect(hasAnyGaAnalyticsSignal({ requests: [{ url: "https://www.googletagmanager.com/gtag/js?id=G-TEST" }] })).toBe(
+      true,
+    );
+    expect(hasAnyGaAnalyticsSignal({ responses: [{ status: 200 }] })).toBe(true);
+    expect(hasAnyGaAnalyticsSignal({ failures: [{ errorText: "net::ERR_FAILED" }] })).toBe(true);
+    expect(hasAnyGaAnalyticsSignal({ violations: [{ blockedURI: "https://www.googletagmanager.com" }] })).toBe(true);
+  });
+});
+
+describe("shouldRetryLiveAnalyticsSmoke", () => {
+  const missingRuntime = {
+    dataLayerLength: 0,
+    gtagType: "undefined",
+    hasExpectedConfig: false,
+    hasPageView: false,
+    pageViewPath: null,
+    timedOut: true,
+  };
+
+  it("retries only live smoke runs with no runtime or network analytics signal", () => {
+    expect(
+      shouldRetryLiveAnalyticsSmoke({
+        expectedGaId: "G-6TS0KG8H04",
+        mode: "live",
+        network: { failures: [], requests: [], responses: [], violations: [] },
+        runtime: missingRuntime,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not retry local smoke runs, healthy runtime state, or concrete analytics failures", () => {
+    expect(
+      shouldRetryLiveAnalyticsSmoke({
+        expectedGaId: "G-6TS0KG8H04",
+        mode: "local",
+        network: { failures: [], requests: [], responses: [], violations: [] },
+        runtime: missingRuntime,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRetryLiveAnalyticsSmoke({
+        expectedGaId: "G-6TS0KG8H04",
+        mode: "live",
+        network: { failures: [], requests: [], responses: [], violations: [] },
+        runtime: {
+          dataLayerLength: 4,
+          gtagType: "function",
+          hasExpectedConfig: true,
+          hasPageView: true,
+          pageViewPath: "/",
+        },
+      }),
+    ).toBe(false);
+    expect(
+      shouldRetryLiveAnalyticsSmoke({
+        expectedGaId: "G-6TS0KG8H04",
+        mode: "live",
+        network: {
+          failures: [{ errorText: "net::ERR_FAILED", url: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" }],
+          requests: [],
+          responses: [],
+          violations: [],
+        },
+        runtime: missingRuntime,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("getExpectedGaNetworkSignals", () => {
   it("requires both gtag.js and a successful page_view collect response", () => {
     const signals = getExpectedGaNetworkSignals(
@@ -465,8 +539,8 @@ describe("verifyAnalyticsSnippet", () => {
       return new Response("not found", { status: 404 });
     };
 
-    await expect(
-      verifyAnalyticsSnippet("https://pharos.watch/", "G-6TS0KG8H04", fetchMock),
-    ).rejects.toThrow("not a first-paint HTML preload");
+    await expect(verifyAnalyticsSnippet("https://pharos.watch/", "G-6TS0KG8H04", fetchMock)).rejects.toThrow(
+      "not a first-paint HTML preload",
+    );
   });
 });
