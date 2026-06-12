@@ -565,14 +565,14 @@ export function DepegControlBoard({
               <span className="font-mono text-xs tabular-nums text-muted-foreground">
                 page {effectivePage + 1} / {totalPages}
               </span>
-                <button
-                  type="button"
-                  onClick={onNextPage}
-                  disabled={effectivePage >= totalPages - 1}
-                  className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
+              <button
+                type="button"
+                onClick={onNextPage}
+                disabled={effectivePage >= totalPages - 1}
+                className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           ) : null}
         </div>
