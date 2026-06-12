@@ -30,6 +30,11 @@ export function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
       pegStability: 88,
       backingDiversity: 76,
     },
+    chainEnvironmentEvidence: {
+      source: "pharos-chain-tier",
+      score: 80,
+      resilienceTier: 2,
+    },
     ...overrides,
   };
 }
@@ -53,4 +58,3 @@ export function makeCoin(overrides: Partial<ChainStablecoin> = {}): ChainStablec
     ...overrides,
   };
 }
-

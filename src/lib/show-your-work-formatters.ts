@@ -22,7 +22,7 @@ import type { RawDimensionInputs } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
-import type { ChainHealthFactors } from "@shared/types/chains";
+import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 
 export interface ShowYourWorkRow {
   label: string;
@@ -251,7 +251,21 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
 // Chain Health
 // ---------------------------------------------------------------------------
 
-export function formatChainHealth(factors: ChainHealthFactors): ShowYourWorkTable {
+function formatChainEnvironmentValue(
+  score: number,
+  evidence?: ChainEnvironmentEvidence,
+): string {
+  if (!evidence) return fmtNum(score);
+  if (evidence.source === "l2beat") {
+    return `${fmtNum(score)} (${evidence.name} ${evidence.stage}, risk ${evidence.riskScore}, snapshot ${evidence.snapshot.fetchedAt})`;
+  }
+  return `${fmtNum(score)} (Pharos tier ${evidence.resilienceTier})`;
+}
+
+export function formatChainHealth(
+  factors: ChainHealthFactors,
+  chainEnvironmentEvidence?: ChainEnvironmentEvidence,
+): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = [
     {
       label: "Quality",
@@ -261,7 +275,7 @@ export function formatChainHealth(factors: ChainHealthFactors): ShowYourWorkTabl
     },
     {
       label: "Chain environment",
-      value: fmtNum(factors.chainEnvironment),
+      value: formatChainEnvironmentValue(factors.chainEnvironment, chainEnvironmentEvidence),
       weight: `${Math.round(CHAIN_ENVIRONMENT_WEIGHT * 100)}%`,
       contribution: (factors.chainEnvironment * CHAIN_ENVIRONMENT_WEIGHT).toFixed(1),
     },

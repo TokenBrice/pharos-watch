@@ -1,6 +1,6 @@
 import type { ChainResilienceTier } from "./index";
-import type { ChainHealthFactors, HealthBand } from "../../types/chains";
-import { getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
+import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
+import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
 
@@ -102,13 +102,42 @@ export function computeQualityScore(
   return Math.round(weightedSum / totalSupply);
 }
 
-/** Chain environment: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */
-export function computeChainEnvironmentScore(tier: ChainResilienceTier, chainId?: string): number {
+/** Chain environment evidence: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */
+export function computeChainEnvironmentAssessment(
+  tier: ChainResilienceTier,
+  chainId?: string,
+): ChainEnvironmentEvidence {
   if (chainId) {
     const l2beat = getL2BeatChainEnvironmentAssessment(chainId);
-    if (l2beat) return l2beat.score;
+    if (l2beat) {
+      return {
+        source: "l2beat",
+        score: l2beat.score,
+        projectId: l2beat.projectId,
+        slug: l2beat.slug,
+        name: l2beat.name,
+        stage: l2beat.stage,
+        isUnderReview: l2beat.isUnderReview,
+        stageScore: l2beat.stageScore,
+        riskScore: l2beat.riskScore,
+        risks: l2beat.risks,
+        snapshot: {
+          source: L2BEAT_CHAIN_RISK_SNAPSHOT_META.source,
+          fetchedAt: L2BEAT_CHAIN_RISK_SNAPSHOT_META.fetchedAt,
+        },
+      };
+    }
   }
-  return CHAIN_ENVIRONMENT_SCORES[tier];
+  return {
+    source: "pharos-chain-tier",
+    score: CHAIN_ENVIRONMENT_SCORES[tier],
+    resilienceTier: tier,
+  };
+}
+
+/** Chain environment: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */
+export function computeChainEnvironmentScore(tier: ChainResilienceTier, chainId?: string): number {
+  return computeChainEnvironmentAssessment(tier, chainId).score;
 }
 
 // --- Composite ---

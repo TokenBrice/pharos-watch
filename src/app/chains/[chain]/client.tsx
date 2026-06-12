@@ -109,6 +109,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
           <ShowYourWorkPanel
             kind="chain-health"
             factors={chain.healthFactors}
+            chainEnvironmentEvidence={chain.chainEnvironmentEvidence}
             chainName={chain.name}
           />
         )}

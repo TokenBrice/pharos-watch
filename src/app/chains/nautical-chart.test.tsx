@@ -33,6 +33,11 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
     healthScore: overrides.healthScore ?? 82,
     healthBand: overrides.healthBand ?? "healthy",
     healthFactors: { concentration: 80, quality: 85, pegStability: 90, backingDiversity: 70, chainEnvironment: 80 },
+    chainEnvironmentEvidence: overrides.chainEnvironmentEvidence ?? {
+      source: "pharos-chain-tier",
+      score: 80,
+      resilienceTier: 2,
+    },
   };
 }
 

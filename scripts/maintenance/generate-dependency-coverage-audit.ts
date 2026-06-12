@@ -7,6 +7,7 @@ import {
   filterDependencyGraphEdgesToLive,
   type DependencyGraphEdge,
 } from "../../shared/lib/dependency-graph";
+import { getL2BeatInfrastructureContext } from "../../shared/lib/chains/l2beat-audit";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../../shared/types";
 import {
@@ -31,6 +32,7 @@ const DEFAULT_BASELINE_PATH = "scripts/lib/dependency-coverage-baseline.json";
 const MISSING_CANDIDATE_LIMIT = 50;
 const RESERVE_SLICE_LIMIT = 50;
 const MANUAL_DEPENDENCY_LIMIT = 50;
+const L2BEAT_CONTEXT_LIMIT = 75;
 
 export interface DependencyGraphCoverageSummary {
   edgeCount: number;
@@ -71,6 +73,24 @@ export interface MissingDependencyCandidateRow {
   rank: number;
 }
 
+export interface L2BeatDeploymentContextRow {
+  coinId: string;
+  symbol: string;
+  chainId: string;
+  routeKind: "canonical-contract" | "traded-contract";
+  projectId: string;
+  l2beatName: string;
+  layer: "layer2" | "layer3";
+  category: string;
+  hostChain: string;
+  hostChainId: string | null;
+  stage: string;
+  isUnderReview: boolean;
+  chainEnvironmentScore: number;
+  chainTier: string | null;
+  deploymentModel: string | null;
+}
+
 export interface DependencyCoverageBaseline {
   staticEdgeCount?: number;
   participantCount?: number;
@@ -98,6 +118,9 @@ export interface DependencyCoverageAudit {
     reserveSlicesMissingCoinId: number;
     depTypeWithoutCoinIdWarnings: number;
     missingCandidateCount: number;
+    l2beatDeploymentContextCount: number;
+    l2beatLayer3DeploymentContextCount: number;
+    l2beatUnderReviewDeploymentContextCount: number;
     missingCandidateRankSource: "stablecoin-api-market-cap" | "local-canonical-order";
     missingCandidateGraphSource: "static" | "report-card";
   };
@@ -107,6 +130,7 @@ export interface DependencyCoverageAudit {
   reserveSlicesMissingCoinId: ReserveSliceCoverageRow[];
   depTypeWithoutCoinIdWarnings: ReserveSliceCoverageRow[];
   highestMarketCapMissingCandidates: MissingDependencyCandidateRow[];
+  l2beatDeploymentContext: L2BeatDeploymentContextRow[];
   warnings: string[];
 }
 
@@ -284,6 +308,51 @@ function findMissingCandidates(input: {
   return sortByMarketCapOrRank(rows);
 }
 
+function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[]): L2BeatDeploymentContextRow[] {
+  const rows: L2BeatDeploymentContextRow[] = [];
+  const seen = new Set<string>();
+
+  for (const coin of activeCoins) {
+    const deployments = [
+      ...(coin.contracts ?? []).map((contract) => ({ ...contract, routeKind: "canonical-contract" as const })),
+      ...(coin.tradedContracts ?? []).map((contract) => ({ ...contract, routeKind: "traded-contract" as const })),
+    ];
+
+    for (const deployment of deployments) {
+      const context = getL2BeatInfrastructureContext(deployment.chain);
+      if (!context) continue;
+      const key = `${coin.id}::${deployment.chain}::${deployment.routeKind}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      rows.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        chainId: deployment.chain,
+        routeKind: deployment.routeKind,
+        projectId: context.projectId,
+        l2beatName: context.name,
+        layer: context.layer,
+        category: context.category,
+        hostChain: context.hostChain,
+        hostChainId: context.hostChainId,
+        stage: context.stage,
+        isUnderReview: context.isUnderReview,
+        chainEnvironmentScore: context.chainEnvironmentScore,
+        chainTier: coin.chainTier ?? null,
+        deploymentModel: coin.deploymentModel ?? null,
+      });
+    }
+  }
+
+  return rows.sort((left, right) => (
+    left.chainEnvironmentScore - right.chainEnvironmentScore ||
+    left.coinId.localeCompare(right.coinId) ||
+    left.chainId.localeCompare(right.chainId) ||
+    left.routeKind.localeCompare(right.routeKind)
+  ));
+}
+
 export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput = {}): DependencyCoverageAudit {
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const activeIds = new Set(activeCoins.map((coin) => coin.id));
@@ -314,6 +383,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const reserveMissing = findReserveSlicesMissingCoinId(activeCoins, marketCapById);
   const depTypeWithoutCoinIdWarnings = reserveMissing.filter((row) => row.depType != null);
   const manualOnlyDependencies = findManualOnlyDependencies(activeCoins);
+  const l2beatDeploymentContext = findL2BeatDeploymentContextRows(activeCoins);
 
   return {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
@@ -334,6 +404,9 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
       reserveSlicesMissingCoinId: reserveMissing.length,
       depTypeWithoutCoinIdWarnings: depTypeWithoutCoinIdWarnings.length,
       missingCandidateCount: missingCandidates.length,
+      l2beatDeploymentContextCount: l2beatDeploymentContext.length,
+      l2beatLayer3DeploymentContextCount: l2beatDeploymentContext.filter((row) => row.layer === "layer3").length,
+      l2beatUnderReviewDeploymentContextCount: l2beatDeploymentContext.filter((row) => row.isUnderReview).length,
       missingCandidateRankSource: marketCapById ? "stablecoin-api-market-cap" : "local-canonical-order",
       missingCandidateGraphSource: reportCardGraph ? "report-card" : "static",
     },
@@ -343,6 +416,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
     reserveSlicesMissingCoinId: reserveMissing,
     depTypeWithoutCoinIdWarnings,
     highestMarketCapMissingCandidates: missingCandidates,
+    l2beatDeploymentContext,
     warnings,
   };
 }
@@ -397,6 +471,29 @@ function renderManualDependencyRows(rows: readonly ManualOnlyDependencyRow[]): s
   ];
 }
 
+function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContextRow[]): string[] {
+  const clipped = rows.slice(0, L2BEAT_CONTEXT_LIMIT);
+  if (clipped.length === 0) return ["_None._"];
+  return [
+    "coin | chain | route | L2BEAT project | layer | category | host | stage | env score | chainTier | deploymentModel",
+    "--- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---",
+    ...clipped.map((row) => [
+      `${row.symbol} (${row.coinId})`,
+      row.chainId,
+      row.routeKind,
+      `${row.l2beatName} (${row.projectId})`,
+      row.layer,
+      row.category,
+      row.hostChain,
+      row.stage,
+      row.chainEnvironmentScore,
+      row.chainTier,
+      row.deploymentModel,
+    ].map(markdownValue).join(" | ")),
+    ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
+  ];
+}
+
 export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageAudit): string {
   const lines = [
     "# Dependency Coverage Audit",
@@ -418,6 +515,9 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     `- Reserve slices missing coinId: ${audit.summary.reserveSlicesMissingCoinId}`,
     `- depType without coinId warnings: ${audit.summary.depTypeWithoutCoinIdWarnings}`,
     `- Missing graph-participant candidates: ${audit.summary.missingCandidateCount}`,
+    `- L2BEAT deployment context rows: ${audit.summary.l2beatDeploymentContextCount}`,
+    `- L2BEAT layer 3 context rows: ${audit.summary.l2beatLayer3DeploymentContextCount}`,
+    `- L2BEAT under-review context rows: ${audit.summary.l2beatUnderReviewDeploymentContextCount}`,
     `- Missing candidate graph source: ${audit.summary.missingCandidateGraphSource}`,
     `- Missing candidate rank source: ${audit.summary.missingCandidateRankSource}`,
     "",
@@ -432,6 +532,10 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     "## Manual-Only Dependencies",
     "",
     ...renderManualDependencyRows(audit.manualOnlyDependencies),
+    "",
+    "## L2BEAT Deployment Context",
+    "",
+    ...renderL2BeatDeploymentContextRows(audit.l2beatDeploymentContext),
     "",
     "## Reserve Slices Missing coinId",
     "",

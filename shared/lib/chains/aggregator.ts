@@ -8,7 +8,7 @@ import {
   computeBackingDiversityScore,
   computePegStabilityScore,
   computeQualityScore,
-  computeChainEnvironmentScore,
+  computeChainEnvironmentAssessment,
   computeHealthScore,
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
@@ -166,13 +166,14 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
     // Chain environment
     const resilienceTier = getChainResilienceTier(chainId);
+    const chainEnvironmentEvidence = computeChainEnvironmentAssessment(resilienceTier, chainId);
 
     const healthFactors: ChainHealthFactors = {
       concentration: computeConcentrationScore(shares),
       quality: computeQualityScore(qualityCoins),
       pegStability: computePegStabilityScore(pegCoins),
       backingDiversity: computeBackingDiversityScore(backingTotals),
-      chainEnvironment: computeChainEnvironmentScore(resilienceTier, chainId),
+      chainEnvironment: chainEnvironmentEvidence.score,
     };
 
     const healthScore = computeHealthScore(healthFactors);
@@ -201,6 +202,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       healthScore,
       healthBand,
       healthFactors,
+      chainEnvironmentEvidence,
     });
   }
 

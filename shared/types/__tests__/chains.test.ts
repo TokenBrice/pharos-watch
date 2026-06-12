@@ -39,6 +39,11 @@ const validChainsPayload = {
         backingDiversity: 70,
         chainEnvironment: 85,
       },
+      chainEnvironmentEvidence: {
+        source: "pharos-chain-tier",
+        score: 85,
+        resilienceTier: 2,
+      },
     },
   ],
   globalTotalUsd: 1250,

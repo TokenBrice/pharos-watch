@@ -43,6 +43,11 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
       backingDiversity: 70,
       chainEnvironment: 80,
     },
+    chainEnvironmentEvidence: overrides.chainEnvironmentEvidence ?? {
+      source: "pharos-chain-tier",
+      score: 80,
+      resilienceTier: 2,
+    },
   };
 }
 

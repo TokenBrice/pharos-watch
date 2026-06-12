@@ -10,6 +10,48 @@ export const ChainHealthFactorsSchema = z.object({
 
 export type ChainHealthFactors = z.infer<typeof ChainHealthFactorsSchema>;
 
+export const ChainEnvironmentRiskValueSchema = z.object({
+  value: z.string(),
+  sentiment: z.enum(["good", "warning", "bad", "UnderReview", "neutral"]),
+  warning: z.boolean().optional(),
+});
+
+export const L2BeatChainEnvironmentEvidenceSchema = z.object({
+  source: z.literal("l2beat"),
+  score: z.number(),
+  projectId: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  stage: z.enum(["Stage 0", "Stage 1", "Stage 2", "Not applicable", "Under review"]),
+  isUnderReview: z.boolean(),
+  stageScore: z.number(),
+  riskScore: z.number(),
+  risks: z.object({
+    sequencerFailure: ChainEnvironmentRiskValueSchema,
+    stateValidation: ChainEnvironmentRiskValueSchema,
+    dataAvailability: ChainEnvironmentRiskValueSchema,
+    exitWindow: ChainEnvironmentRiskValueSchema,
+    proposerFailure: ChainEnvironmentRiskValueSchema,
+  }),
+  snapshot: z.object({
+    source: z.string(),
+    fetchedAt: z.string(),
+  }),
+});
+
+export const TierChainEnvironmentEvidenceSchema = z.object({
+  source: z.literal("pharos-chain-tier"),
+  score: z.number(),
+  resilienceTier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+});
+
+export const ChainEnvironmentEvidenceSchema = z.discriminatedUnion("source", [
+  L2BeatChainEnvironmentEvidenceSchema,
+  TierChainEnvironmentEvidenceSchema,
+]);
+
+export type ChainEnvironmentEvidence = z.infer<typeof ChainEnvironmentEvidenceSchema>;
+
 export const HealthBandSchema = z.enum(["robust", "healthy", "mixed", "fragile", "concentrated"]);
 export type HealthBand = z.infer<typeof HealthBandSchema>;
 
@@ -46,6 +88,7 @@ export const ChainSummarySchema = z.object({
   healthScore: z.number().nullable(),
   healthBand: HealthBandSchema.nullable(),
   healthFactors: ChainHealthFactorsSchema,
+  chainEnvironmentEvidence: ChainEnvironmentEvidenceSchema.optional(),
 });
 
 export type ChainSummary = z.infer<typeof ChainSummarySchema>;

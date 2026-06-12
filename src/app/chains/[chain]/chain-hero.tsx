@@ -13,7 +13,7 @@ import {
   getHealthBand,
 } from "@shared/lib/chain-health";
 import { formatCompactUsd, formatElapsedSeconds, formatSignedPercent } from "@shared/lib/format";
-import type { ChainSummary, HealthBand } from "@shared/types/chains";
+import type { ChainEnvironmentEvidence, ChainSummary, HealthBand } from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
@@ -104,11 +104,13 @@ function FactorRow({
   weight,
   score,
   methodology,
+  context,
 }: {
   label: string;
   weight: number;
   score: number | null;
   methodology: "chainHealthQuality" | "chainHealthEnvironment" | "chainHealthConcentration" | "chainHealthPegStability" | "chainHealthBackingDiversity";
+  context?: string | null;
 }) {
   const hasScore = score != null;
   const band = hasScore ? resolveScoreBand(score) : null;
@@ -135,8 +137,20 @@ function FactorRow({
           />
         )}
       </div>
+      {context ? (
+        <p className="text-[11px] leading-snug text-muted-foreground">{context}</p>
+      ) : null}
     </div>
   );
+}
+
+function formatChainEnvironmentContext(evidence: ChainEnvironmentEvidence | undefined): string | null {
+  if (!evidence) return null;
+  if (evidence.source === "l2beat") {
+    const review = evidence.isUnderReview ? " under review" : "";
+    return `L2BEAT ${evidence.stage}${review}; risk ${evidence.riskScore}/100; snapshot ${evidence.snapshot.fetchedAt}.`;
+  }
+  return `Pharos resilience tier ${evidence.resilienceTier} fallback.`;
 }
 
 function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }) {
@@ -273,6 +287,11 @@ function HealthZone({
             weight={def.weight}
             score={chain?.healthFactors[def.key] ?? null}
             methodology={def.methodology}
+            context={
+              def.key === "chainEnvironment"
+                ? formatChainEnvironmentContext(chain?.chainEnvironmentEvidence)
+                : null
+            }
           />
         ))}
       </div>

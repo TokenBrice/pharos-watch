@@ -345,6 +345,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chains/health-version.ts` - CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, getChainHealthMethodologyVersionAt
 - `shared/lib/chains/health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT
 - `shared/lib/chains/index.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_META, CHAIN_RESILIENCE_TIER
+- `shared/lib/chains/l2beat-audit.ts` - L2BeatAliasIntegrityIssue, L2BeatAliasIntegrityIssueKind, L2BeatChainCoverageAudit, L2BeatChainCoverageRow, L2BeatInfrastructureContext, L2BeatStablecoinMetadataInput
+- `shared/lib/chains/l2beat-risk.ts` - L2BEAT_CHAIN_ALIASES, L2BEAT_CHAIN_RISK_FIELDS, L2BEAT_CHAIN_RISK_FIELD_LABELS, L2BEAT_CHAIN_RISK_SNAPSHOT, L2BEAT_CHAIN_RISK_SNAPSHOT_META, L2BEAT_RISK_SENTIMENT_SCORES
 - `shared/lib/citation/formats.ts` - CitationInput, deriveCiteKey, formatAPA7, formatBibTeX, formatChicago, formatPlain
 - `shared/lib/citation/urn.ts` - PharosUrn, PharosUrnEntityClass, formatPharosUrn, parsePharosUrn
 - `shared/lib/classification-pegs.ts`
@@ -373,9 +375,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
 - `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
-- `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
-- `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 242 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 244 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -409,7 +409,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/bfusd-binance.json` - 24 keys
 - `shared/data/stablecoins/coins/bib01-backed.json` - 28 keys
 - `shared/data/stablecoins/coins/bnusd-balanced.json` - 23 keys
-- `shared/data/stablecoins/coins/bold-liquity.json` - 25 keys
+- `shared/data/stablecoins/coins/bold-liquity.json` - 26 keys
 - `shared/data/stablecoins/coins/brd-volpon.json` - 21 keys
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
@@ -693,6 +693,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/audit-pricing-provider-config.test.ts`
 - `scripts/__tests__/backtest-depeg-resolver-lock-policy.test.ts`
 - `scripts/__tests__/blacklistability-review.test.ts`
+- `scripts/__tests__/build-l2beat-safety-score-candidates.test.ts`
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
@@ -720,6 +721,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/freeze-stablecoin.test.ts`
 - `scripts/__tests__/generate-dependency-coverage-audit.test.ts`
+- `scripts/__tests__/generate-l2beat-snapshot-coverage-audit.test.ts`
 - `scripts/__tests__/generate-markdown-exports.test.ts`
 - `scripts/__tests__/generate-public-datasets.test.ts`
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
@@ -742,6 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/sql-interpolation-safety.test.ts`
 - `scripts/__tests__/stablecoin-catalog-sources.test.ts`
 - `scripts/__tests__/supply-helper-usage.test.ts`
-- `scripts/__tests__/sync-depeg-events.test.ts`
-- `scripts/__tests__/test-merge-gate.test.ts`
-- ... 171 more files omitted; use `rg --files scripts` for the full list.
+- ... 175 more files omitted; use `rg --files scripts` for the full list.

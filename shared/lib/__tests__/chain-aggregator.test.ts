@@ -161,6 +161,11 @@ describe("aggregateChains", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;
     expect(eth.healthFactors.chainEnvironment).toBe(100); // tier 1
+    expect(eth.chainEnvironmentEvidence).toEqual({
+      source: "pharos-chain-tier",
+      score: 100,
+      resilienceTier: 1,
+    });
   });
 
   it("uses L2BEAT chain environment scoring for matched chains", () => {
@@ -181,6 +186,18 @@ describe("aggregateChains", () => {
     const result = aggregateChains(input);
     const base = result.chains.find((c) => c.id === "base")!;
     expect(base.healthFactors.chainEnvironment).toBe(82);
+    expect(base.chainEnvironmentEvidence).toMatchObject({
+      source: "l2beat",
+      projectId: "base",
+      stage: "Stage 1",
+      stageScore: 80,
+      riskScore: 84,
+      score: 82,
+      snapshot: {
+        source: "https://l2beat.com/api/scaling/summary",
+        fetchedAt: "2026-06-12",
+      },
+    });
   });
 
   it("resolves DL chain names to CHAIN_META IDs", () => {

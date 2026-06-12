@@ -643,6 +643,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `healthScore`        | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
 | `healthBand`         | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
 | `healthFactors`      | `ChainHealthFactors`                 | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
+| `chainEnvironmentEvidence` | `ChainEnvironmentEvidence`      | Provenance for `healthFactors.chainEnvironment`; either the consumed L2BEAT snapshot fields or the fallback Pharos resilience tier |
 
 **`ChainHealthFactors` fields:**
 
@@ -653,6 +654,13 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `chainEnvironment` | `number`         | Chain environment score. Matched L2BEAT scaling projects use stage plus the five L2BEAT risk fields; unmatched chains fall back to Pharos resilience tiers (`100` tier 1, `60` tier 2, `20` tier 3). |
 | `pegStability`     | `number`         | Supply-weighted average peg deviation score                                                                                                                                                          |
 | `backingDiversity` | `number`         | Shannon entropy of the active backing split across the chain (`rwa-backed` vs `crypto-backed`)                                                                                                       |
+
+**`ChainEnvironmentEvidence` variants:**
+
+| Variant | Fields | Description |
+| --- | --- | --- |
+| L2BEAT | `source: "l2beat"`, `score`, `projectId`, `slug`, `name`, `stage`, `isUnderReview`, `stageScore`, `riskScore`, `risks`, `snapshot` | Static L2BEAT snapshot evidence used for matched scaling projects. `risks` includes Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure values/sentiments. |
+| Pharos tier | `source: "pharos-chain-tier"`, `score`, `resilienceTier` | Fallback evidence for chains without an explicit L2BEAT alias. |
 
 ---
 

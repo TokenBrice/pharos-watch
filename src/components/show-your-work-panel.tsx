@@ -20,7 +20,7 @@ import type { RawDimensionInputs } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
-import type { ChainHealthFactors } from "@shared/types/chains";
+import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 
 export type ShowYourWorkPanelProps =
   | {
@@ -54,6 +54,7 @@ export type ShowYourWorkPanelProps =
   | {
       kind: "chain-health";
       factors: ChainHealthFactors;
+      chainEnvironmentEvidence?: ChainEnvironmentEvidence;
       chainName?: string;
     };
 
@@ -70,7 +71,7 @@ function buildTable(props: ShowYourWorkPanelProps): ShowYourWorkTable {
     case "redemption":
       return formatRedemption(props.entry);
     case "chain-health":
-      return formatChainHealth(props.factors);
+      return formatChainHealth(props.factors, props.chainEnvironmentEvidence);
   }
 }
 

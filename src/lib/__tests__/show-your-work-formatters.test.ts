@@ -139,11 +139,50 @@ describe("show-your-work formatters", () => {
       pegStability: 95,
       backingDiversity: 60,
       chainEnvironment: 100,
+    }, {
+      source: "pharos-chain-tier",
+      score: 100,
+      resilienceTier: 1,
     });
     expect(table.topic).toBe("chainHealth");
     const quality = table.rows.find((r) => r.label === "Quality");
     expect(quality?.value).toBe("70");
     expect(quality?.weight).toBe("30%");
     expect(quality?.contribution).toBe("21.0");
+    expect(table.rows.find((r) => r.label === "Chain environment")?.value).toBe("100 (Pharos tier 1)");
+  });
+
+  it("formats L2BEAT chain-health evidence", () => {
+    const table = formatChainHealth({
+      concentration: 80,
+      quality: 70,
+      pegStability: 95,
+      backingDiversity: 60,
+      chainEnvironment: 82,
+    }, {
+      source: "l2beat",
+      score: 82,
+      projectId: "base",
+      slug: "base",
+      name: "Base Chain",
+      stage: "Stage 1",
+      isUnderReview: false,
+      stageScore: 80,
+      riskScore: 84,
+      risks: {
+        sequencerFailure: { value: "Self sequence", sentiment: "good" },
+        stateValidation: { value: "Fraud proofs", sentiment: "good" },
+        dataAvailability: { value: "Onchain", sentiment: "good" },
+        exitWindow: { value: "None", sentiment: "bad" },
+        proposerFailure: { value: "Self propose", sentiment: "good" },
+      },
+      snapshot: {
+        source: "https://l2beat.com/api/scaling/summary",
+        fetchedAt: "2026-06-12",
+      },
+    });
+
+    expect(table.rows.find((r) => r.label === "Chain environment")?.value)
+      .toBe("82 (Base Chain Stage 1, risk 84, snapshot 2026-06-12)");
   });
 });

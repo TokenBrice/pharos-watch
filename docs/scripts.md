@@ -212,6 +212,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-stablecoin-data.ts` via `npm run check:stablecoin-data`
 - `check-supply-helper-usage.mjs` via `npm run check:supply-helper-usage`
 - `generate-dependency-coverage-audit.ts --check` via `npm run check:dependency-coverage`
+- `generate-l2beat-snapshot-coverage-audit.ts --check` via `npm run check:l2beat-snapshot-coverage`
 - `build-world-map-svg.ts --check` via `npm run check:world-map`
 - `audit-pricing-provider-config.ts` via `npm run audit:pricing-providers`
 
@@ -222,6 +223,8 @@ These scripts are intentionally not CI guardrails. Keep their reports under `age
 - `npm run audit:price-source-depth -- --prod` for source-depth baseline research
 - `npm run audit:price-source-depth -- --input scripts/__tests__/fixtures/audit-price-source-depth --json` for deterministic fixture validation
 - `npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json` for DIA exact-address provider research
+- `npm run audit:l2beat-snapshot-coverage -- --live --report agents/l2beat-snapshot-coverage.md` for an advisory comparison between the checked-in L2BEAT snapshot and the current L2BEAT summary payload
+- `npm run candidates:l2beat-safety-score` for an advisory `agents/l2beat-safety-score-candidates.md` queue covering L2BEAT-backed `chainTier` and `deploymentModel` review candidates
 - `npm run audit:reserve-coverage -- --report agents/reserve-coverage.json` for reserve-coverage backlog research
 - `npm run calibrate:yield-pys-v8 -- --input agents/yield-rankings.json` for PYS v8 calibration artifacts
 - `npm run lighthouse:static` after `npm run build` for a local Lighthouse performance score against the static export; reports stay under `agents/lighthouse/`. Use `npm run lighthouse:static -- --form-factor desktop` for desktop Lighthouse. Do not use `next dev` / `localhost:3000` for Lighthouse performance diagnostics: development bundles are intentionally unminified and the dev-server WebSocket prevents back/forward cache restoration.

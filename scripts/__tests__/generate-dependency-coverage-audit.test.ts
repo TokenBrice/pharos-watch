@@ -23,6 +23,8 @@ function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): Stab
     },
     collateral: input.collateral ?? "Fixture collateral",
     pegMechanism: input.pegMechanism ?? "Fixture mechanism",
+    ...(input.contracts ? { contracts: input.contracts } : {}),
+    ...(input.tradedContracts ? { tradedContracts: input.tradedContracts } : {}),
     ...(input.reserves ? { reserves: input.reserves } : {}),
     ...(input.dependencies ? { dependencies: input.dependencies } : {}),
     ...(input.variantOf ? { variantOf: input.variantOf } : {}),
@@ -50,7 +52,12 @@ const activeCoins: StablecoinMeta[] = [
       { name: "Stablecoin basket", pct: 10, risk: "low", depType: "mechanism" },
     ],
   }),
-  coin({ id: "lone-high", symbol: "LONE", name: "Lone High" }),
+  coin({
+    id: "lone-high",
+    symbol: "LONE",
+    name: "Lone High",
+    contracts: [{ chain: "base", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+  }),
 ];
 
 const stablecoinsPayload = {
@@ -83,6 +90,9 @@ describe("generate-dependency-coverage-audit", () => {
       reserveSlicesMissingCoinId: 2,
       depTypeWithoutCoinIdWarnings: 1,
       missingCandidateCount: 2,
+      l2beatDeploymentContextCount: 1,
+      l2beatLayer3DeploymentContextCount: 0,
+      l2beatUnderReviewDeploymentContextCount: 0,
       missingCandidateGraphSource: "static",
       missingCandidateRankSource: "stablecoin-api-market-cap",
     });
@@ -106,6 +116,15 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.highestMarketCapMissingCandidates.map((row) => row.coinId)).toEqual([
       "lone-high",
       "cash-only",
+    ]);
+    expect(audit.l2beatDeploymentContext).toEqual([
+      expect.objectContaining({
+        coinId: "lone-high",
+        chainId: "base",
+        projectId: "base",
+        layer: "layer2",
+        hostChain: "Ethereum",
+      }),
     ]);
   });
 
@@ -150,6 +169,8 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("## Highest-Market-Cap Missing Candidates");
     expect(markdown).toContain("LONE (lone-high)");
     expect(markdown).toContain("## depType Without coinId Warnings");
+    expect(markdown).toContain("## L2BEAT Deployment Context");
+    expect(markdown).toContain("Base Chain (base)");
   });
 
   it("evaluates the light ratchet baseline", () => {

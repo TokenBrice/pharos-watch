@@ -62,6 +62,14 @@ Stage scores are `Stage 2 -> 100`, `Stage 1 -> 80`, `Stage 0 -> 55`, and `Not ap
 
 L2BEAT audit helpers also expose chainTier/deploymentModel review context for Safety Score research, but live Safety Score scoring does not consume the snapshot in `v1.4`.
 
+`GET /api/chains` keeps the numeric `healthFactors.chainEnvironment` field and adds `chainEnvironmentEvidence` beside it. Matched projects return the consumed L2BEAT project ID, slug, stage score, risk score, five risk fields, and snapshot source date; unmatched chains return the fallback Pharos resilience tier. This is evidence/provenance only and does not introduce live L2BEAT fetching.
+
+Maintenance commands:
+
+- `npm run check:l2beat-snapshot-coverage` validates that explicit Pharos aliases still point at checked-in snapshot projects.
+- `npm run audit:l2beat-snapshot-coverage -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
+- `npm run candidates:l2beat-safety-score` writes an advisory `agents/l2beat-safety-score-candidates.md` queue for Safety Score `chainTier` and `deploymentModel` review. It does not mutate stablecoin metadata.
+
 ## Update Contract
 
 When Chain Health behavior changes, update these files together:

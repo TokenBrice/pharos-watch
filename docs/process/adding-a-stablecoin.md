@@ -207,6 +207,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - Is there a meaningful redemption route worth modeling?
 - Is the token itself yield-bearing, or is yield only available through a separate wrapper?
 - Is Ethereum a canonical issuance chain worth tracking for mint/burn?
+- For each supported `contracts[]` or high-signal `tradedContracts[]` chain, does the chain resolve to a L2BEAT project? If yes, record L2BEAT layer, category, host chain, stage, under-review flag, and weak risk fields as chain-route review context.
 - Who can create durable supply or change minting paths: users only, issuer/operator, minter role, facilitator, bridge route, proxy/cap admin, backend signer, DAO, timelock, Safe/multisig, wrapper parent, or unknown?
 - Does Bluechip publish a rating for it?
 - Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
@@ -270,6 +271,8 @@ These skills do not replace review — they are research scaffolding. Always ver
 ### Infrastructure taxonomy vs dependency graph
 
 `infrastructures[]` is project taxonomy. `dependencies[]` is reserve/mechanism dependency.
+
+L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review `chainTier`, `deploymentModel`, and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
 
 Use `infrastructures[]` only when the coin directly belongs to a supported technical lineage:
 
@@ -730,6 +733,8 @@ npm run test:merge-gate
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run check:redemption-backstops`
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score` and `npm run check:l2beat-snapshot-coverage`
+- dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:doc-counts`, `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
 If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:
