@@ -101,13 +101,13 @@
   },
   "sdola-inverse-finance": {
     "title": "DOLA With an Exchange Rate",
-    "text": "sDOLA is Inverse Finance's {{term:yield-bearing}}yield-bearing{{/term}} DOLA wrapper, not a separate base dollar. DOLA deposits sit in the sDOLA contract while FiRM borrowing revenue is converted through the DBR-DOLA auction and compounded into a rising DOLA:sDOLA exchange rate. The design avoids rehypothecating user principal, but it still inherits DOLA's {{term:cdp}}CDP{{/term}} collateral mix, governance history, and upstream dilution risk. Chainlink CCIP deployments on Base, Optimism, Arbitrum, and Berachain broaden access while keeping Ethereum as the source of exchange-rate truth.",
-    "updatedAt": "2026-05-24",
+    "text": "sDOLA is the ERC-4626 wrapper around DOLA's savings account, which means the stablecoin risk is still DOLA and the extra product risk is the exchange-rate wrapper sitting on top. FiRM borrowing revenue is converted through the DBR-DOLA auction and compounded into a rising DOLA:sDOLA exchange rate, so the yield story is at least tied to borrower demand rather than a mystery emissions spreadsheet. The wrapper does not create new base DOLA supply, but holders still inherit DOLA's CDP collateral mix, governance scars, and any upstream stress in the parent peg. Cross-chain deployments on Base, Optimism, Arbitrum, and Berachain broaden access while keeping Ethereum as the source of truth, which is convenient until the bridge path becomes the part everyone suddenly remembers.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "codex-stablecoin-review",
+    "model": "gpt-5-codex",
     "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-05-24",
-    "factsAsOf": "2026-05-24"
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "gusd-gemini": {
     "title": "Pristine Reserves, Ghost Town Liquidity",
@@ -2121,23 +2121,23 @@
   },
   "sfrxusd-frax": {
     "title": "Frax's Yield Sleeve",
-    "text": "A staking wrapper over frxUSD that concentrates Frax's custodian and reserve assumptions into a rising-exchange-rate vault share.\n\nsfrxUSD is the savings wrapper over frxUSD. Holders are effectively taking the Frax USD reserve stack and opting into a rising exchange rate instead of the flat base token, so the key risk is not a new reserve book but the same Frax {{term:custody}}custodian{{/term}} and wrapper assumptions concentrated into a {{term:yield-bearing}}yield-bearing{{/term}} vault share over T-bill-style {{term:treasury}}Treasury{{/term}} collateral.",
-    "updatedAt": "2026-05-15",
+    "text": "sfrxUSD is the savings sleeve for frxUSD, not a second Frax dollar with its own reserve book. Depositors trade the flat base token for a vault share whose exchange rate rises as Frax routes frxUSD income and custodian yield into the wrapper. That distinction matters: wrapper risk is share accounting, redemption mechanics, and liquidity for sfrxUSD, while the parent stablecoin risk remains the frxUSD custodian and reserve stack. The multichain footprint makes the token easier to hold, but it also turns a simple Treasury-style reserve story into Frax governance, issuer controls, and bridge-aware exit math wearing a tidy yield label.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "scrvusd-curve": {
     "title": "Borrower Interest Receipt",
-    "text": "Curve's savings share for crvUSD, whose value grows as Curve routes part of borrower interest and protocol revenue into the vault.\n\nscrvUSD is the savings share for Curve's crvUSD system. It is backed by deposited crvUSD, but its value grows as Curve routes part of crvUSD borrower interest and protocol revenue into the vault. The result is a cleaner hold-for-{{term:yield-bearing}}yield{{/term}} version of crvUSD, while still inheriting the base stablecoin's BTC/ETH {{term:cdp}}CDP{{/term}} collateral profile and peg-defense design.",
-    "updatedAt": "2026-05-15",
+    "text": "scrvUSD is Curve's ERC-4626 savings share over crvUSD, so the wrapper adds yield and exchange-rate behavior without inventing a new dollar. Deposited crvUSD backs the share, while borrower interest and protocol revenue make the redeemable crvUSD balance climb over time. The wrapper risk is vault accounting, liquidity, and the ability to exit back into crvUSD; the parent risk is still Curve's CDP and LLAMMA machinery, with BTC and ETH collateral doing the heavy lifting underneath. It is the polite version of leverage plumbing: cleaner to hold than raw crvUSD, but absolutely not detached from the machinery that mints the base asset.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "cusdo-openeden": {
     "title": "Non-Rebasing OpenDollar",
@@ -2151,13 +2151,13 @@
   },
   "syusd-aegis": {
     "title": "Aegis Cooldown Wrapper",
-    "text": "the staked, cooldown-gated wrapper over Aegis YUSD that capitalizes BTC delta-neutral funding into a rising share price. sYUSD is the staked version of Aegis YUSD. It inherits YUSD's BTC spot plus short-{{term:perpetual}}perpetual{{/term}} hedge design and off-exchange {{term:custody}}custody{{/term}} assumptions, then adds a {{term:yield-bearing}}yield-bearing{{/term}} vault wrapper and a seven-day unstaking cooldown on top. That makes it meaningfully different from base YUSD even though both ultimately depend on the same {{term:delta-neutral}}delta-neutral{{/term}} {{term:basis-trade}}basis trade{{/term}} machine running on {{term:funding-rate}}funding rate{{/term}} income.",
-    "updatedAt": "2026-05-15",
+    "text": "sYUSD is Aegis's staking wrapper over YUSD, capitalizing funding-rate income into a rising exchange rate instead of paying out a separate coupon. The parent stablecoin risk is YUSD's BTC spot plus short-perpetual hedge model and off-exchange custody assumptions; the wrapper risk is the ERC-4626 vault, bridge footprint, and seven-day cooldown before holders get back to liquid YUSD. Accountable provides real-time reserve visibility, which is useful, but it does not turn a delta-neutral basis trade into a bank deposit. The product is different enough from YUSD to deserve its own row and similar enough that anyone pretending the risks are independent is doing spreadsheet theater.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "stusds-sky": {
     "title": "Sky Risk-Capital USDS",
@@ -3051,13 +3051,13 @@
   },
   "hbusdt-hyperbeat": {
     "title": "Hyperbeat USDT Vault",
-    "text": "USDT0 vault wrapper on HyperEVM; ultimate fiat par exit still routes through Tether. hbUSDT is a HyperEVM vault share built around USDT0, USDe, USR, and Hyperbeat strategy liquidity. Metadata and contract tracking are present, but reserve confidence remains conservative until product-scoped Hyperbeat data can separate hbUSDT from aggregate Accountable reporting. Treat hbUSDT as a {{term:yield-bearing}}yield-bearing{{/term}} wrapper whose exit depends on Hyperbeat vault liquidity and an upstream Tether {{term:redemption}}redemption{{/term}} route, with cross-chain settlement riding the USDT0 {{term:bridge}}bridge{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "hbUSDT is a HyperEVM vault share over USDT strategy exposure, not a cleaner version of Tether with a new logo. Pharos models the reserves as a split between hoUSDT strategy exposure and masterUSD strategy exposure, both high-risk, with Accountable providing real-time visibility that is helpful but still product-scope dependent. The parent leg inherits USDT and USDT0 risk, including Tether redemption discretion and cross-chain settlement assumptions, while the wrapper adds Hyperbeat vault liquidity, strategy allocation, and single-chain HyperEVM execution risk. It is yield-bearing because more machinery was inserted between the holder and the dollar, which is the stablecoin market's favorite magic trick.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "witry-brix": {
     "title": "Wrapped Turkish Lira Yield",
@@ -3071,13 +3071,13 @@
   },
   "srusd-reservoir": {
     "title": "Reservoir Savings Token",
-    "text": "Reservoir savings exposure tracked directly rather than via the wrapped wsrUSD; the reserve stack is diversified lending and RWA exposure, not a single cash account.\n\nsrUSD tracks Reservoir savings exposure directly instead of only through the wrapped wsrUSD token. The protocol has a live reserve endpoint and a documented savings path, but the reserve stack is diversified lending and {{term:rwa}}RWA{{/term}} exposure rather than a single cash account, making srUSD a {{term:yield-bearing}}yield-bearing{{/term}} share over a mixed credit book.",
-    "updatedAt": "2026-05-15",
+    "text": "srUSD is Reservoir's savings wrapper over rUSD, so the immediate asset is a yield-accruing share and the underlying risk is the Reservoir balance sheet. That balance sheet is not a sleepy cash account: it includes stablecoin PSM liquidity, RWA allocations, Morpho and Euler lending vaults, and governance-approved credit strategies. The wrapper adds exchange-rate and exit-to-rUSD mechanics, while rUSD itself still depends on PSM liquidity and protocol risk controls for the actual stablecoin exit. Reservoir's real-time reserve endpoint gives Pharos a live window into the stack, but the window looks into a mixed credit book, not a vault of crisp bills.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "usdn-smardex": {
     "title": "Delta-Neutral USDN",
@@ -3121,13 +3121,13 @@
   },
   "qcad-stablecorp": {
     "title": "Regulated CAD Stablecoin",
-    "text": "A small but properly regulated Canadian-dollar stablecoin under VRCA and FINTRAC, with a live reserve feed and issuer API.\n\nStablecorp QCAD adds a live Canadian-dollar reserve feed with official supply and fiat reserve totals. The product is small, but the Canadian VRCA framework, FINTRAC registration, and issuer API make it a useful non-USD fiat stablecoin to track. Pharos surfaces the curated {{term:redemption}}redemption{{/term}} path and reserve composition while leaving room for stronger {{term:attestation}}attestation{{/term}} coverage as Stablecorp publishes more frequent updates.",
-    "updatedAt": "2026-05-15",
+    "text": "QCAD is a Canadian-dollar stablecoin with the sort of regulatory scaffolding most small fiat tokens can only gesture at: FINTRAC registration, the QCAD Digital Trust framework, and CAD reserves held 1:1 at regulated Canadian institutions. Stablecorp's live balances API gives Pharos real-time supply and reserve totals, which is better than the monthly PDF treasure hunt some issuers still call transparency. The tradeoff is scale and centralization: minting and redemption run through Stablecorp or authorized partners, with Safe-controlled token ownership and upgrade paths rather than permissionless plumbing. For a non-USD stablecoin, QCAD is useful because it is boring in the right places and still small enough that liquidity remains the unglamorous part of the story.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "usdxl-last": {
     "title": "Position-backed synthetic dollar on Hyperliquid",
@@ -3701,13 +3701,13 @@
   },
   "stac-securitize": {
     "title": "CLO Fund Access on Securitize",
-    "text": "A Securitize-issued BNY CLO fund token with NAV exposure to managed structured credit — not a $1-redemption stablecoin.\n\nSTAC is a Securitize-issued BNY CLO fund token with NAV-style exposure rather than a fixed dollar {{term:redemption}}redemption{{/term}} promise. Its value depends on the fund's managed CLO portfolio and the Securitize primary-market process, which gives Pharos a clear centralized issuer and transfer-control profile with regulated {{term:custody}}custody{{/term}} underneath. Chronicle proof-of-asset coverage improves {{term:attestation}}attestation{{/term}} transparency, but the {{term:rwa}}RWA{{/term}} collateral risk remains structured credit.",
-    "updatedAt": "2026-05-15",
+    "text": "STAC is a Securitize-issued tokenized fund share for a BNY-advised AAA CLO portfolio, which makes it dollar-denominated without making it a dollar. The token is priced by fund NAV and investor access runs through Securitize's qualification, transfer-control, and primary-market process, so there is no open $1 redemption backstop hiding behind the ticker. Chronicle proof-of-asset coverage improves transparency around the fund exposure, but Pharos still treats the collateral as high-risk structured credit rather than cash-like reserves. The funny part is that AAA appears in the fund name while the stablecoin dashboard still has to ask the rude question: can you actually exit when you need to?",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "hlscope-hamilton-lane": {
     "title": "Hamilton Lane Private Credit Rail",
@@ -3760,14 +3760,14 @@
     "factsAsOf": "2026-05-15"
   },
   "asusdf-astherus": {
-    "title": "Astherus Yield Wrapper Over USDF",
-    "text": "asUSDF is the staked, NAV-accreting wrapper of Aster's USDF, capturing yield from underlying {{term:delta-neutral}}delta-neutral{{/term}} and {{term:funding-rate}}funding-fee{{/term}} strategies on Binance/MirrorX. asUSDF is the yield-accruing Astherus wrapper around USDF, with a queue-style {{term:redemption}}redemption{{/term}} path rather than instant stablecoin conversion. The model now reflects the two-hour waiting period and a conservative partial capacity assumption because exits depend on downstream USDF liquidity. Reserve dependency is captured through the wrapped USDF exposure instead of a duplicate manual dependency entry.",
-    "updatedAt": "2026-05-15",
+    "title": "Astherus Yield Wrapper",
+    "text": "asUSDF is Aster's staked wrapper over USDF, so the wrapper share accrues yield while the base stablecoin risk remains USDF's Ceffu, Binance, and MirrorX strategy stack. Deposits mint asUSDF against USDF, and exits return USDF only after Aster's documented waiting period, which is not quite the same thing as instant dollar liquidity no matter how smooth the UI feels. Pharos captures the reserve dependency as 100% wrapped USDF rather than pretending the wrapper has an independent balance sheet. The extra yield comes from delta-neutral and funding-fee strategies upstream, meaning asUSDF is best read as USDF plus queue risk, role-controlled wrapper minting, and a little more patience demanded from anyone leaving.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "mf-one-midas": {
     "title": "Fasanara Strategy in Midas Form",
@@ -3801,23 +3801,23 @@
   },
   "mmev-midas": {
     "title": "MEV Capital Strategy in a Midas Wrapper",
-    "text": "Midas NAV token tied to MEV Capital DeFi strategy exposure with a live Chainlink NAV feed; tokenized strategy access, not a transactional stablecoin. mMEV is a Midas NAV token tied to MEV Capital DeFi strategy exposure. A Chainlink NAV feed gives Pharos live reserve visibility, but the reserve-risk grade stays high because the underlying strategy is complex and not cash-like, classified as {{term:rwa}}RWA{{/term}}-adjacent strategy collateral. The token is best read as tokenized strategy access, not as a transactional stablecoin.",
-    "updatedAt": "2026-05-15",
+    "text": "mMEV is a Midas NAV token tied to MEV Capital's DeFi lending, liquidity, arbitrage, carry, and liquidation strategies, which is a long way of saying the dollar reference is doing more work than the cash reserve. The token accrues through NAV appreciation and mints or redeems through Midas rails, not through an open par redemption path built for payments. Daily self-reported Midas transparency gives Pharos a valuation route, but the underlying strategy remains high-risk, complex, and not especially interested in being mistaken for a checking account. The Midas control stack adds its own concentrated-admin flavor, because apparently tokenized strategy access was not already operationally spicy enough.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "mapollo-midas": {
     "title": "Apollo Crypto Strategy via Midas",
-    "text": "Permissioned Midas NAV token tracking an Apollo Crypto managed yield strategy; treat the backing as high-risk digital-asset strategy exposure, not a cash reserve. mAPOLLO tracks an Apollo Crypto managed yield strategy through Midas liquid-yield rails, classified as {{term:rwa}}RWA{{/term}}-adjacent strategy exposure rather than a dollar reserve token. Chainlink NAV data supports live valuation, while the risk model treats the backing as high-risk digital-asset strategy exposure. As with the rest of the Midas strategy set, {{term:redemption}}redemption{{/term}} depends on permissioned issuer infrastructure.",
-    "updatedAt": "2026-05-15",
+    "text": "mAPOLLO is the Midas liquid-yield wrapper for an Apollo Crypto managed strategy, not the Apollo credit fund and not a transactional stablecoin. Its value follows NAV appreciation through permissioned Midas mint and redeem rails, while the reserve risk is high because the backing is digital-asset strategy exposure rather than cash or bills. Pharos keeps the self-reported Midas transparency and NAV route in view, but that does not make the underlying strategy any less manager-dependent. This is useful if you want tokenized strategy access; it is less charming if you were hoping the word Apollo would magically turn crypto yield into a bank deposit.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "safo-spiko-usd": {
     "title": "Spiko Smart Cash USD Share Class",
@@ -3841,13 +3841,13 @@
   },
   "eursafo-spiko": {
     "title": "EUR Smart Cash Through Spiko",
-    "text": "EURSAFO is the euro share of Spiko/Amundi Smart Cash, a UCITS overnight-swap {{term:money-market-fund}}MMF{{/term}} authorized by the AMF — a fund token, not a bank-deposit reserve. EURSAFO is the euro share class of Spiko / Amundi Smart Cash exposure. The fund uses fully collateralized overnight total-return swaps with tier-1 bank counterparties, so Pharos treats the reserve as medium-risk {{term:rwa}}strategy{{/term}} exposure rather than a simple euro deposit reserve. KYC-gated Spiko fund rails control subscriptions and {{term:redemption}}redemptions{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "EURSAFO is the euro share class of Spiko and Amundi's Smart Cash fund, an AMF-authorized UCITS structure that behaves like a NAV-accreting fund token rather than a bank-deposit stablecoin. The reserve is fully collateralized overnight total-return swap exposure with tier-1 bank counterparties and liquid collateral, so Pharos treats it as medium-risk RWA strategy exposure instead of pretending it is a plain euro cash account. PwC quarterly audit coverage and regulated French fund status help, but subscriptions and redemptions still run through KYC-gated Spiko rails. It is conservative by crypto standards and still absolutely a fund share, which is the sort of nuance stablecoin tickers tend to flatten on contact.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "eurspkcc-spiko": {
     "title": "Euro Cash and Carry Fund Token",
@@ -3901,13 +3901,13 @@
   },
   "hchf-hedera-swiss-franc": {
     "title": "Hedera's Small CHF Experiment",
-    "text": "Liquity-style CHF CDP minted from HBAR troves on Hedera; CoinGecko-only price coverage, supply data still thin. HCHF is a Swiss-franc stable asset on Hedera with CoinGecko price and market-cap coverage, while DefiLlama's row is not usable for live supply today. Collateral, governance, and redemption evidence remains thinner than for regulated fiat-backed franc issuers, so the entry is high-uncertainty CHF coverage. As an HLiquity {{term:cdp}}CDP{{/term}} variant, HCHF inherits HBAR-collateral {{term:overcollateralization}}overcollateralization{{/term}} and Liquity-style {{term:liquidation}}liquidation{{/term}} dynamics rather than any fiat {{term:attestation}}attestation{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "HCHF is a Swiss-franc synthetic minted against HBAR troves on Hedera, closer to Liquity wearing a CHF coat than to a regulated franc account. Borrowers create HCHF from overcollateralized HBAR positions, undercollateralized troves are liquidated through the Stability Pool, and face-value redemptions against collateral are the peg-defense mechanism. The upside is unusually clean on-chain control: the Hedera token has no admin, freeze, wipe, or pause key, and Pharos marks governance as immutable-code rather than issuer discretion. The downside is equally plain: collateral is volatile HBAR, liquidity is tiny, and anyone expecting the comfort of a Swiss bank attestation has wandered into the wrong canton.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "eurot-token-teknoloji": {
     "title": "Token Teknoloji's Euro Token",
