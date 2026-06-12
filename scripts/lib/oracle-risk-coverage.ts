@@ -23,11 +23,12 @@ export interface OracleRiskCoverageOptions {
   staleDays?: number;
 }
 
-function isActiveCryptoCdp(coin: StablecoinMeta): boolean {
+function isScoreActiveCryptoCdp(coin: StablecoinMeta): boolean {
   return (
     (coin.status ?? "active") === "active" &&
     coin.flags.backing === "crypto-backed" &&
-    coin.mechanismArchetype === "cdp"
+    coin.mechanismArchetype === "cdp" &&
+    !coin.variantOf
   );
 }
 
@@ -55,7 +56,7 @@ export function analyzeOracleRiskCoverage(
 ): OracleRiskCoverageResult {
   const staleDays = options.staleDays ?? 180;
   const asOf = options.asOf ?? new Date();
-  const inScope = coins.filter(isActiveCryptoCdp);
+  const inScope = coins.filter(isScoreActiveCryptoCdp);
   const findings: OracleRiskCoverageFinding[] = [];
 
   for (const coin of inScope) {

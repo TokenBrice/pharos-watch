@@ -55,7 +55,7 @@ describe("analyzeOracleRiskCoverage", () => {
     });
   });
 
-  it("accepts complete fresh profiles and ignores non-CDP assets", () => {
+  it("accepts complete fresh profiles and ignores non-CDP assets and variants", () => {
     const result = analyzeOracleRiskCoverage(
       [
         makeCoin({
@@ -78,6 +78,11 @@ describe("analyzeOracleRiskCoverage", () => {
             navToken: false,
           },
           mechanismArchetype: "fiat-cash",
+        }),
+        makeCoin({
+          id: "variant-cdp",
+          variantOf: "test-cdp",
+          variantKind: "strategy-vault",
         }),
       ],
       { asOf: new Date("2026-06-12T00:00:00Z") },
