@@ -2951,13 +2951,13 @@
   },
   "apyusd-apyx": {
     "title": "Apyx Savings Share",
-    "text": "apyUSD is the ERC-4626 {{term:yield-bearing}}yield-bearing{{/term}} wrapper of apxUSD, capturing dividends and preferred-equity yield from Apyx's Digital Asset Treasury collateral. apyUSD is the value-accruing wrapper over apxUSD, whose collateral base is unusual: preferred equity and a {{term:treasury}}Treasury{{/term}} buffer rather than standard cash-only reserves. Pharos tracks the wrapper with ERC-4626 reserve proof and keeps the underlying Apyx collateral risk visible through the parent dependency.",
-    "updatedAt": "2026-05-15",
+    "text": "apyUSD is the savings wrapper over apxUSD, so the asset is not trying to be the boring cash layer; it is trying to turn Apyx's preferred-share collateral into a rising NAV. The parent reserve stack is the interesting part: Digital Asset Treasury preferred equity and liquidity buffers sit underneath, which is a long way from a plain Treasury-bill stablecoin. Pharos treats the Accountable feed as useful live proof for the wrapper while still carrying the parent dependency and concentrated Apyx admin surface forward. The result is a yield token with a dollar reference and a capital-structure story, which is exactly the sort of thing that looks clean until the collateral thesis has to do real work.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "susd1plus-lorenzo": {
     "title": "Lorenzo Strategy Dollar",
@@ -2971,23 +2971,23 @@
   },
   "savusd-avant": {
     "title": "Avant Staked Dollar",
-    "text": "A short-cooldown staked wrapper of avUSD that compounds delta-neutral strategy yield while inheriting the parent's USDC redemption path.\n\nsavUSD is the staked, {{term:yield-bearing}}yield-accruing{{/term}} form of Avant USD. The dashboard models it as a wrapper on avUSD with a short cooldown, preserving the parent {{term:delta-neutral}}delta-neutral{{/term}} strategy risk while separately tracking the savings-token supply and contract footprint, and exits inherit avUSD's USDC {{term:redemption}}redemption{{/term}} path.",
-    "updatedAt": "2026-05-15",
+    "text": "savUSD is Avant's staked avUSD receipt, with the exchange rate rising as the senior tranche earns from actively managed market-neutral strategies. The protection stack is explicit but not magical: Avant points to a Reserve Fund and junior avUSDx tranche before savUSD takes losses, while Pennyworks supplies the weekly NAV calculation. Unstaking has a one-day cooldown with no yield, and the final exit still inherits avUSD's 1:1 USDC redemption process. Pharos therefore reads savUSD as a yield sleeve over a managed strategy book, not as a faster or safer dollar than its parent.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "steakusdc-steakhouse": {
-    "title": "Prime Instant USDC",
-    "text": "a {{term:yield-bearing}}yield-bearing{{/term}} Morpho ERC-4626 vault share over USDC, priced by borrower interest rather than by Circle reserves. Steakhouse USDC is a Morpho Prime Instant vault share over USDC, making it a DeFi lending wrapper rather than a new fiat issuer. Pharos uses ERC-4626 proof to validate the vault asset and classifies the risk around lending liquidity rather than around Circle reserve quality alone.",
-    "updatedAt": "2026-05-15",
+    "title": "Circle, With Borrowers",
+    "text": "Steakhouse USDC is an immutable MetaMorpho vault share over USDC, so the base dollar is Circle's but the yield comes from borrowers in Steakhouse-curated Morpho markets. That distinction matters: the vault does not improve Circle's reserve story, it adds curator choices, lending collateral, and withdrawal liquidity on top of it. Pharos treats the wrapper minting as deposit-only share accounting while inheriting the underlying USDC issuer risk and tracking the Steakhouse governance surface separately. It is a clean-looking USDC yield wrapper, but exits still depend on available Morpho liquidity; the word \"instant\" is doing some reputational heavy lifting.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "srusde-strata": {
     "title": "Senior Ethena Tranche",
@@ -3011,23 +3011,23 @@
   },
   "fxsave-f-x-protocol": {
     "title": "f(x) Stability Vault",
-    "text": "fxSAVE is a {{term:yield-bearing}}value-accruing{{/term}} vault share over f(x) Protocol's Stability Pool, inheriting fxUSD {{term:cdp}}CDP{{/term}} collateral risk on WBTC and wstETH. fxSAVE packages f(x) Protocol Stability Pool exposure into a value-accruing vault share. It is not a plain fxUSD balance: the reserve path runs through fxSP, so Pharos treats it as a high-risk strategy vault while keeping the fxUSD parent dependency and {{term:overcollateralization}}overcollateralization{{/term}} requirements explicit.",
-    "updatedAt": "2026-05-15",
+    "text": "fxSAVE is an auto-compounding ERC-4626 receipt over f(x) Protocol's Stability Pool, not a simple parked fxUSD balance. The exit path runs through fxSP into a fxUSD-and-USDC mix, then onward into fxUSD's CDP machinery backed by WBTC and wstETH. That gives holders strategy yield and peg-support exposure in one package, but it also imports oracle, liquidation, Curve-pool, and governance-tuned collateral risk. Pharos classifies it as a high-risk NAV strategy vault because the wrapper may look like savings, while the engine underneath is still a leveraged crypto collateral system with better manners.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "steakusdt-steakhouse": {
-    "title": "Prime Instant USDT",
-    "text": "the USDT-denominated twin of steakUSDC, accruing Morpho lending interest while inheriting Tether issuer risk underneath. Steakhouse USDT mirrors the Steakhouse USDC setup on top of USDT: an ERC-4626 Morpho lending vault with NAV appreciation and liquidity-dependent {{term:redemption}}redemption{{/term}} capacity. The entry gives Pharos separate visibility into the vault while preserving the Tether dependency.",
-    "updatedAt": "2026-05-15",
+    "title": "Tether In A Vault",
+    "text": "Steakhouse USDT is not a new dollar; it is a MetaMorpho vault share over USDT, with yield coming from borrower interest in Steakhouse-curated lending markets. The trust stack is Tether first, Morpho market liquidity second, and Steakhouse curator discipline third, which is quite a lot to fit inside one polite vault receipt. Pharos keeps the Tether issuer and blacklist dependency attached while separately treating the wrapper as a lending vault whose withdrawals rely on available USDT liquidity or patiently returning market capacity. It is a usable yield sleeve, but not a redemption backstop with a steak knife.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "susn-noon": {
     "title": "Noon Savings Share",
@@ -3041,13 +3041,13 @@
   },
   "mre7yield-midas": {
     "title": "Midas Re7 Yield Token",
-    "text": "Midas managed-yield product with a public NAV oracle but no granular strategy-composition feed; a USD-referenced NAV token with exotic strategy risk, not a cash-backed dollar issuer. mRe7YIELD adds a Midas managed-yield product with a public NAV oracle but without a granular strategy-composition feed. Pharos treats it as a USD-referenced NAV token with exotic {{term:rwa}}RWA{{/term}}-adjacent strategy risk, not as a cash-backed dollar issuer.",
-    "updatedAt": "2026-05-15",
+    "text": "mRe7YIELD is a Midas and Re7 Capital liquid-yield token, with NAV appreciation sourced from DeFi lending, liquidity provision, restaking, funding-rate trades, and options strategies. That mix may be institutionally packaged, but it is not a cash reserve and should not be mistaken for one because the symbol has a dollar reference. Pharos gives credit for the daily Midas transparency feed while flagging the missing granular strategy-composition feed and the concentrated Midas mint/admin surface. It is a managed strategy note wearing stablecoin colors; useful for yield analytics, awkward as a transactional dollar.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "hbusdt-hyperbeat": {
     "title": "Hyperbeat USDT Vault",
@@ -3081,23 +3081,23 @@
   },
   "usdn-smardex": {
     "title": "Delta-Neutral USDN",
-    "text": "SMARDEX USDN is an Ethereum {{term:cdp}}CDP{{/term}} synthetic dollar backed by a wstETH-centered {{term:delta-neutral}}delta-neutral{{/term}} vault, unrelated to Noble USDN or Neutrino USDN. SMARDEX USDN is unrelated to Noble USDN and the old Neutrino USDN. It is an Ethereum synthetic dollar backed by the USDN vault and wstETH-centered {{term:delta-neutral}}delta-neutral{{/term}} mechanics, with rebasing yield and protocol-state {{term:redemption}}redemption{{/term}} constraints.",
-    "updatedAt": "2026-05-15",
+    "text": "SMARDEX USDN is the Ethereum synthetic dollar built around a wstETH-backed vault and delta-neutral protocol mechanics, not Noble USDN and blessedly not Neutrino nostalgia. Users mint and redeem through the vault, but the process can be throttled by protocol imbalance and a two-step oracle validation flow, so the peg mechanism is more state machine than cashier window. The token also rebases, which turns yield into a protocol accounting event rather than a separate savings wrapper. Pharos flags the bounded-but-permissioned mint path through the USDN vault and its 2-of-3 governance Safe, because elegant delta-neutral math still needs someone to hold the keys.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "scusd-rings": {
     "title": "Rings Stable Collateral",
-    "text": "A Sonic/Ethereum stablecoin backed by stablecoin collateral plus Veda DeFi strategy exposure; the liquid token isn't the main yield wrapper.\n\nRings scUSD adds Sonic/Ethereum scAsset coverage with Veda-backed strategy exposure. The liquid token is not the main {{term:yield-bearing}}yield wrapper{{/term}}, so Pharos treats it as a stablecoin backed by stablecoin collateral plus DeFi strategy risk rather than as a savings token.",
-    "updatedAt": "2026-05-15",
+    "text": "Rings scUSD is the liquid scAsset, not the main savings wrapper, which is the first useful guardrail before anyone starts annualizing the wrong thing. The collateral model accepts stablecoins and routes a strategy sleeve through Trevee/Veda BoringVault infrastructure into venues such as Aave and Morpho, so the backing is part cash-like collateral and part curated DeFi exposure. Proof is still self-reported through published backing addresses, with Pharos carrying an explicit notice that deeper on-chain reserve tracking is pending. The governance path runs through the Veda/Paladin Safe, timelock, RolesAuthority, and Teller machinery, which is orderly enough to document and centralized enough to matter.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "weusd-picwe": {
     "title": "PicWe USDC Wrapper",
@@ -3111,13 +3111,13 @@
   },
   "gbpe-monerium": {
     "title": "GBP E-Money Rail",
-    "text": "GBPe is Monerium's licensed-EMI British pound e-money, with {{term:redemption}}redemption{{/term}} through regulated bank-transfer rails on permitted EMI reserve assets. Monerium GBPe extends the Monerium e-money model to British pounds across several EVM chains. Pharos uses the official Monerium token API addresses where they diverge from older CoinGecko metadata and treats redemption as regulated bank-transfer e-money rails backed by safeguarded GBP funds in regulated {{term:custody}}custody{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "GBPe is Monerium's British-pound e-money token, issued under an Icelandic EMI framework rather than a crypto-native collateral game. The reserve story is deliberately dull: safeguarded GBP client funds and permitted EMI reserve assets, with mint and burn handled through KYC'd bank-transfer rails. Pharos still treats the issuer backend and 3-of-6 token-owner Safe as concentrated administration, because regulated does not mean permissionless. For a non-USD stablecoin, that boring bank-rail dependence is the product and the risk; GBPe is useful precisely because it refuses to pretend otherwise.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "qcad-stablecorp": {
     "title": "Regulated CAD Stablecoin",
