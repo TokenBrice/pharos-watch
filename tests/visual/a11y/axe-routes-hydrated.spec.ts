@@ -39,12 +39,25 @@ async function waitForHydratedTableRows(page: Page): Promise<void> {
     .toBeGreaterThan(0);
 }
 
+async function waitForHydratedDepegBoardRows(page: Page): Promise<void> {
+  const board = page.getByRole("region", { name: "Depeg control board" });
+  await expect(board).toBeVisible({ timeout: HYDRATION_TIMEOUT_MS });
+  await expect
+    .poll(
+      async () =>
+        (await board.getByRole("button", { name: /^Open .+ depeg detail$/ }).count()) +
+        (await board.getByRole("link", { name: /^Open .+ depeg detail$/ }).count()),
+      { timeout: HYDRATION_TIMEOUT_MS, message: "hydrated depeg board rows never appeared" },
+    )
+    .toBeGreaterThan(0);
+}
+
 const ROUTES: ReadonlyArray<{
   path: string;
   tier: string;
   ready: (page: Page) => Promise<void>;
 }> = [
-  { path: "/depeg", tier: "analytics", ready: waitForHydratedTableRows },
+  { path: "/depeg", tier: "analytics", ready: waitForHydratedDepegBoardRows },
   { path: "/screener", tier: "power-user", ready: waitForHydratedTableRows },
   { path: "/yield", tier: "analytics", ready: waitForHydratedTableRows },
   {
