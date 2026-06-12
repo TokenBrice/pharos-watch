@@ -133,6 +133,13 @@ describe("compareDepegTrackerRows — __attention sort", () => {
     const result = compareDepegTrackerRows(active, inactive, sort("unknown" as DepegTableSortKey));
     expect(result).toBeLessThan(0);
   });
+
+  it("reverses attention ordering when sorted ascending", () => {
+    const active = makeRow({ activeDepeg: true });
+    const inactive = makeRow({ activeDepeg: false });
+    const result = compareDepegTrackerRows(active, inactive, sort("__attention", "asc"));
+    expect(result).toBeGreaterThan(0);
+  });
 });
 
 describe("compareDepegTrackerRows — pegScore", () => {

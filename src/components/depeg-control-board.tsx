@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, Gauge, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, RotateCcw, ShieldCheck, Waves } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
@@ -28,6 +28,7 @@ interface DepegControlBoardProps {
   onPegFilterChange: (v: PegCurrency | "all") => void;
   onTypeFilterChange: (v: GovernanceType | "all") => void;
   onSearchChange: (v: string) => void;
+  onClearFilters: () => void;
   onRowClick: (id: string) => void;
   nowSeconds: number;
 }
@@ -42,7 +43,15 @@ const SORT_MODES: Array<{ key: DepegTableSortKey; label: string }> = [
 ];
 
 const BOARD_GRID_CLASS =
-  "grid w-full grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 md:grid-cols-[2.5rem_minmax(11rem,1.12fr)_minmax(12rem,1fr)_minmax(7rem,0.58fr)_minmax(7rem,0.58fr)_minmax(7rem,0.58fr)] xl:grid-cols-[2.75rem_minmax(13rem,1.15fr)_minmax(13rem,1fr)_minmax(7.5rem,0.58fr)_minmax(7.5rem,0.58fr)_minmax(7.5rem,0.58fr)_minmax(7.5rem,0.58fr)_minmax(8rem,0.62fr)]";
+  "grid w-full grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 md:grid-cols-[2.5rem_minmax(11rem,1.12fr)_minmax(12rem,1fr)_minmax(7rem,0.58fr)_minmax(8rem,0.68fr)_minmax(7rem,0.58fr)] xl:grid-cols-[2.75rem_minmax(13rem,1.15fr)_minmax(13rem,1fr)_minmax(7.5rem,0.58fr)_minmax(9rem,0.72fr)_minmax(7.5rem,0.58fr)_minmax(8rem,0.62fr)]";
+
+const METRIC_HELP = {
+  deviation: "Current deviation from the peg in basis points. 100 bps equals 1%.",
+  dews: "DEWS is the Depeg Early Warning Score, a 0-100 stress score. Higher is more stressed.",
+  pegHealth: "Peg Health merges Peg Score, where 100 is best, with the live percent of observations holding peg.",
+  events: "Confirmed depeg event count for the asset, with the worst historical deviation shown below.",
+  dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
+};
 
 function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
@@ -67,94 +76,79 @@ function statusClassName(row: DepegTrackerRow): string {
 }
 
 function rowToneClassName(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "border-l-red-500/70 bg-red-500/[0.018]";
-  if (row.pendingIncident) return "border-l-amber-500/70 bg-amber-500/[0.02]";
-  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return "border-l-orange-500/70 bg-orange-500/[0.016]";
-  if (row.coin.depegEventCoverageLimited) return "border-l-sky-500/60";
-  return "border-l-emerald-500/50";
+  if (row.coin.activeDepeg) return "bg-red-500/[0.07] ring-1 ring-inset ring-red-500/15";
+  if (row.pendingIncident) return "bg-amber-500/[0.06]";
+  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return "bg-orange-500/[0.05]";
+  if (row.coin.depegEventCoverageLimited) return "bg-sky-500/[0.04]";
+  return "";
 }
 
-function gaugeToneClassName(tone: "green" | "amber" | "red" | "blue"): string {
-  switch (tone) {
-    case "red":
-      return "text-red-600 dark:text-red-400";
-    case "amber":
-      return "text-amber-600 dark:text-amber-300";
-    case "blue":
-      return "text-sky-600 dark:text-sky-300";
-    case "green":
-    default:
-      return "text-emerald-600 dark:text-emerald-300";
-  }
-}
-
-function SemicircleGauge({
-  value,
-  tone,
-  label,
+function ThreatTickerStrip({
+  worstAbs,
+  warningCount,
+  totalRows,
+  clearPct,
+  worstSymbol,
 }: {
-  value: number;
-  tone: "green" | "amber" | "red" | "blue";
-  label: string;
+  worstAbs: number;
+  warningCount: number;
+  totalRows: number;
+  clearPct: number;
+  worstSymbol?: string;
 }) {
-  const progress = clampPercent(value);
-  const dash = 126;
-  const offset = dash - (dash * progress) / 100;
-  return (
-    <svg viewBox="0 0 120 68" role="img" aria-label={`${label}: ${Math.round(progress)} percent`} className="h-12 w-20">
-      <path
-        d="M18 58a42 42 0 0 1 84 0"
-        fill="none"
-        stroke="var(--color-border)"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
-      <path
-        d="M18 58a42 42 0 0 1 84 0"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeDasharray={dash}
-        strokeDashoffset={offset}
-        className={gaugeToneClassName(tone)}
-      />
-      <line x1="60" y1="58" x2={60 + Math.cos(Math.PI - (Math.PI * progress) / 100) * 32} y2={58 - Math.sin(Math.PI - (Math.PI * progress) / 100) * 32} stroke="var(--color-foreground)" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="60" cy="58" r="3" fill="var(--color-foreground)" />
-    </svg>
-  );
-}
+  const stressPct = totalRows > 0 ? (warningCount / totalRows) * 100 : 0;
+  const cells = [
+    {
+      label: "Peg pressure",
+      value: `${Math.round(worstAbs)} bps`,
+      detail: worstSymbol ? `${worstSymbol} worst live move` : "no live outlier",
+      icon: Waves,
+      className: worstAbs >= 500 ? "text-red-700 dark:text-red-300" : worstAbs >= 100 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300",
+    },
+    {
+      label: "Stress breadth",
+      value: `${warningCount}/${totalRows || 0}`,
+      detail: `${formatPercent(stressPct, 0)} of filtered rows`,
+      icon: AlertTriangle,
+      className: stressPct >= 25 ? "text-red-700 dark:text-red-300" : stressPct >= 10 ? "text-amber-700 dark:text-amber-300" : "text-sky-700 dark:text-sky-300",
+    },
+    {
+      label: "At-peg coverage",
+      value: formatPercent(clearPct, 0),
+      detail: "tracked universe holding peg",
+      icon: ShieldCheck,
+      className: clearPct >= 95 ? "text-emerald-700 dark:text-emerald-300" : clearPct >= 85 ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300",
+    },
+  ] as const;
 
-function BoardGauge({
-  icon: Icon,
-  label,
-  value,
-  subvalue,
-  progress,
-  tone,
-}: {
-  icon: typeof Gauge;
-  label: string;
-  value: string;
-  subvalue: string;
-  progress: number;
-  tone: "green" | "amber" | "red" | "blue";
-}) {
   return (
-    <div className="rounded-lg border border-border/60 bg-background/55 px-3 py-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {label}
+    <div className="grid gap-2 md:grid-cols-3" aria-label="Current depeg triage summary">
+      {cells.map((cell) => {
+        const Icon = cell.icon;
+        return (
+          <div key={cell.label} className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/55 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", cell.className)} aria-hidden="true" />
+              <div className="min-w-0">
+                <div className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{cell.label}</div>
+                <div className="truncate text-xs text-muted-foreground">{cell.detail}</div>
+              </div>
+            </div>
+            <div className={cn("shrink-0 font-mono text-lg font-bold tabular-nums", cell.className)}>
+              {cell.value}
+            </div>
           </div>
-          <div className="mt-1.5 font-mono text-xl font-bold leading-none tabular-nums text-foreground">{value}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{subvalue}</div>
-        </div>
-        <SemicircleGauge value={progress} tone={tone} label={label} />
-      </div>
+        );
+      })}
     </div>
   );
+}
+
+export function getDeviationBarWidthPercent(abs: number): number {
+  if (abs <= 200) return (abs / 200) * 35;
+  if (abs <= 500) return 35 + ((abs - 200) / 300) * 25;
+  const severeRatio = Math.log10(Math.min(abs, 10_000) / 500) / Math.log10(10_000 / 500);
+  return 60 + severeRatio * 35;
 }
 
 function DeviationBar({ bps }: { bps: number | null }) {
@@ -162,7 +156,7 @@ function DeviationBar({ bps }: { bps: number | null }) {
     return <div className="h-1.5 rounded-full bg-muted" aria-label="Deviation unavailable" />;
   }
   const abs = Math.abs(bps);
-  const width = clampPercent((abs / 500) * 100);
+  const width = clampPercent(getDeviationBarWidthPercent(abs));
   const barClass =
     abs >= 500
       ? "bg-red-500"
@@ -209,9 +203,35 @@ function metricTone(value: number | null | undefined, goodHigh = true): string {
   return "bg-emerald-500";
 }
 
-function desktopHeaderCell(label: string, className?: string) {
+function EventLoadMeter({ count, symbol }: { count: number; symbol: string }) {
+  const filled = count <= 0 ? 0 : Math.max(1, Math.min(5, Math.ceil(Math.log10(count + 1))));
   return (
-    <div className={cn("text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground", className)}>
+    <div className="flex gap-1" aria-label={`Historical depeg event load for ${symbol}: ${count}`}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span
+          key={index}
+          className={cn(
+            "h-1.5 flex-1 rounded-[2px] border border-border/50",
+            index < filled ? "border-orange-500/40 bg-orange-500" : "bg-muted/35",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+function desktopHeaderCell(label: string, className?: string, title?: string) {
+  return (
+    <div
+      className={cn(
+        "text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+        title ? "pharos-focus-ring rounded-sm" : "",
+        className,
+      )}
+      title={title}
+      tabIndex={title ? 0 : undefined}
+      aria-label={title ? `${label}: ${title}` : undefined}
+    >
       {label}
     </div>
   );
@@ -222,14 +242,16 @@ function MetricCell({
   value,
   children,
   subline,
+  className,
 }: {
   label: string;
   value: ReactNode;
   children?: ReactNode;
   subline?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="col-span-2 min-w-0 md:col-span-1">
+    <div className={cn("min-w-0", className)}>
       <div className="mb-1 flex items-baseline justify-between gap-2 md:hidden">
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
         <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{value}</span>
@@ -258,6 +280,12 @@ function InstrumentRow({
   const coin = row.coin;
   const absDev = Math.abs(coin.currentDeviationBps ?? 0);
   const worstAbsDev = Math.abs(coin.worstDeviationBps ?? 0);
+  const pegHealthValue =
+    coin.pegScore !== null ? (
+      <span className={pegScoreColor(coin.pegScore)}>{coin.pegScore}</span>
+    ) : (
+      <span className="text-muted-foreground">NR</span>
+    );
   const eventAge =
     row.pendingIncident?.ageSec != null
       ? formatElapsedSeconds(row.pendingIncident.ageSec)
@@ -271,7 +299,7 @@ function InstrumentRow({
       onMouseEnter={() => prefetch(coin.id)}
       className={cn(
         BOARD_GRID_CLASS,
-        "items-center border-l-2 border-b border-border/55 px-3 py-2.5 text-left transition-colors hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "items-center border-b border-border/55 px-3 py-2.5 text-left transition-colors hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         rowToneClassName(row),
       )}
       aria-label={`Open ${coin.symbol} depeg detail`}
@@ -294,60 +322,49 @@ function InstrumentRow({
           <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{coin.pegCurrency}</span>
         </div>
       </div>
-      <div className="col-span-2 md:col-span-1">
+      <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 md:contents">
         <MetricCell
+          className="col-span-2 md:col-span-1"
           label="Deviation"
-          value={(
+          value={
             <span className={cn(deviationColorClass(absDev))}>
-            {coin.currentDeviationBps != null ? `${coin.currentDeviationBps > 0 ? "+" : ""}${coin.currentDeviationBps} bps` : "—"}
+              {coin.currentDeviationBps != null ? `${coin.currentDeviationBps > 0 ? "+" : ""}${coin.currentDeviationBps} bps` : "—"}
             </span>
-          )}
-          subline={coin.worstDeviationBps != null ? `worst ${coin.worstDeviationBps > 0 ? "+" : ""}${coin.worstDeviationBps}` : "worst —"}
+          }
+          subline={coin.worstDeviationBps != null ? `worst ${coin.worstDeviationBps > 0 ? "+" : ""}${coin.worstDeviationBps} bps` : "worst —"}
         >
           <DeviationBar bps={coin.currentDeviationBps} />
         </MetricCell>
-      </div>
-      <MetricCell
-        label="DEWS"
-        value={row.dews ? row.dews.score : "—"}
-        subline={row.dews?.band ? row.dews.band.toLowerCase() : "no signal"}
-      >
-        <div className="flex items-center gap-2">
-          {row.dews ? (
-            <>
-              <DEWSBadge score={row.dews.score} band={row.dews.band as ThreatBand} compact signals={row.dews.signals} />
-              <LinearGauge value={row.dews.score} tone={metricTone(row.dews.score, false)} ariaLabel={`DEWS score for ${coin.symbol}`} />
-            </>
-          ) : (
-            <LinearGauge value={null} ariaLabel={`DEWS score for ${coin.symbol}`} />
-          )}
-        </div>
-      </MetricCell>
-      <MetricCell
-        label="Peg score"
-        value={coin.pegScore !== null ? <span className={pegScoreColor(coin.pegScore)}>{coin.pegScore}</span> : <span className="text-muted-foreground">NR</span>}
-        subline={formatPercent(coin.pegPct, 1)}
-      >
-        <LinearGauge value={coin.pegScore} tone={metricTone(coin.pegScore)} ariaLabel={`Peg score for ${coin.symbol}`} />
-      </MetricCell>
-      <MetricCell
-        label="Events"
-        value={coin.eventCount}
-        subline={worstAbsDev > 0 ? `${worstAbsDev} bps max` : "no history"}
-      >
-        <LinearGauge value={coin.eventCount} max={2000} tone={coin.eventCount > 0 ? "bg-orange-500" : "bg-emerald-500"} ariaLabel={`Historical depeg events for ${coin.symbol}`} />
-      </MetricCell>
-      <div className="hidden items-center justify-between gap-2 xl:block">
-        <MetricCell label="Peg %" value={formatPercent(coin.pegPct, 1)} subline={formatTrackingSpanDays(coin.trackingSpanDays)}>
-          <LinearGauge value={coin.pegPct} tone={metricTone(coin.pegPct)} ariaLabel={`Peg percent for ${coin.symbol}`} />
-        </MetricCell>
-      </div>
-      <div className="hidden xl:block">
         <MetricCell
-          label="Cross-check"
-          value={coin.dexPriceCheck ? (coin.dexPriceCheck.agrees ? "agree" : "diverge") : "—"}
-          subline={coin.dexPriceCheck ? `${coin.dexPriceCheck.sourcePools} pools · ${formatCurrency(coin.dexPriceCheck.sourceTvl)}` : formatTrackingSpanDays(coin.trackingSpanDays)}
-        />
+          label="DEWS"
+          value={row.dews ? row.dews.score : "—"}
+          subline={row.dews?.band ? `${row.dews.band.toLowerCase()} band` : "no signal"}
+        >
+          <div className="flex min-h-5 items-center gap-2">
+            {row.dews ? <DEWSBadge score={row.dews.score} band={row.dews.band as ThreatBand} compact signals={row.dews.signals} /> : <span className="text-xs text-muted-foreground">—</span>}
+          </div>
+        </MetricCell>
+        <MetricCell
+          label="Peg health"
+          value={pegHealthValue}
+          subline={`${formatPercent(coin.pegPct, 1)} at peg`}
+        >
+          <LinearGauge value={coin.pegScore} tone={metricTone(coin.pegScore)} ariaLabel={`Peg score for ${coin.symbol}`} />
+        </MetricCell>
+        <MetricCell
+          label="Events"
+          value={coin.eventCount}
+          subline={worstAbsDev > 0 ? `${worstAbsDev} bps max` : "no history"}
+        >
+          <EventLoadMeter count={coin.eventCount} symbol={coin.symbol} />
+        </MetricCell>
+        <div className="hidden xl:block">
+          <MetricCell
+            label="DEX check"
+            value={coin.dexPriceCheck ? (coin.dexPriceCheck.agrees ? "agree" : "diverge") : "—"}
+            subline={coin.dexPriceCheck ? `${coin.dexPriceCheck.sourcePools} pools · ${formatCurrency(coin.dexPriceCheck.sourceTvl)}` : formatTrackingSpanDays(coin.trackingSpanDays)}
+          />
+        </div>
       </div>
     </button>
   );
@@ -363,6 +380,7 @@ export function DepegControlBoard({
   onPegFilterChange,
   onTypeFilterChange,
   onSearchChange,
+  onClearFilters,
   onRowClick,
   nowSeconds,
 }: DepegControlBoardProps) {
@@ -370,14 +388,13 @@ export function DepegControlBoard({
   const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident || (row.dews?.score ?? 0) >= 36).length;
   const totalRows = rows.length;
   const clearPct = stats && stats.totalTracked > 0 ? (stats.coinsAtPeg / stats.totalTracked) * 100 : 0;
-  const stressPct = totalRows > 0 ? (warningCount / totalRows) * 100 : 0;
-  const pressureTone = worstAbs >= 500 ? "red" : worstAbs >= 100 ? "amber" : "green";
-  const stressTone = stressPct >= 25 ? "red" : stressPct >= 10 ? "amber" : "blue";
-  const clearTone = clearPct >= 95 ? "green" : clearPct >= 85 ? "amber" : "red";
+  const filtersActive = pegFilter !== "all" || typeFilter !== "all" || searchQuery.length > 0;
 
   const {
     sortKey,
+    sortDirection,
     toggleSort,
+    handleSortKeyDown,
     effectivePage,
     totalPages,
     paginatedRows,
@@ -410,32 +427,13 @@ export function DepegControlBoard({
 
       <div className="overflow-hidden rounded-xl border border-border/60 bg-background/35">
         <div className="border-b border-border/70 bg-muted/25 p-3">
-          <div className="grid gap-3 lg:grid-cols-3">
-            <BoardGauge
-              icon={Gauge}
-              label="Peg pressure"
-              value={`${Math.round(worstAbs)} bps`}
-              subvalue={stats?.worstCurrent ? `${stats.worstCurrent.symbol} worst live move` : "no live outlier"}
-              progress={(worstAbs / 500) * 100}
-              tone={pressureTone}
-            />
-            <BoardGauge
-              icon={AlertTriangle}
-              label="Stress breadth"
-              value={formatPercent(stressPct, 0)}
-              subvalue={`${warningCount} of ${totalRows || 0} filtered rows`}
-              progress={stressPct}
-              tone={stressTone}
-            />
-            <BoardGauge
-              icon={ShieldCheck}
-              label="At-peg coverage"
-              value={stats ? formatPercent(clearPct, 0) : "—"}
-              subvalue={stats ? `${stats.coinsAtPeg} of ${stats.totalTracked} monitored` : "summary unavailable"}
-              progress={clearPct}
-              tone={clearTone}
-            />
-          </div>
+          <ThreatTickerStrip
+            worstAbs={worstAbs}
+            warningCount={warningCount}
+            totalRows={totalRows}
+            clearPct={clearPct}
+            worstSymbol={stats?.worstCurrent?.symbol}
+          />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <ToggleGroup
               type="single"
@@ -471,82 +469,112 @@ export function DepegControlBoard({
               inputClassName="pl-8 h-11 md:h-8 text-xs"
               ariaLabel="Search stablecoins by name or symbol"
             />
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-border/70 bg-background/45 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                Clear filters
+              </button>
+            ) : null}
           </div>
         </div>
 
         <div className="min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-muted/20 px-3 py-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {SORT_MODES.map((mode) => (
-                  <button
-                    type="button"
-                    key={mode.key}
-                    onClick={() => toggleSort(mode.key)}
-                    aria-pressed={sortKey === mode.key}
-                    className={cn(
-                      "pharos-focus-ring rounded-sm border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                      sortKey === mode.key
-                        ? "border-foreground/20 bg-foreground text-background"
-                        : "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
-              <div className="font-mono text-xs tabular-nums text-muted-foreground">
-                {rangeStart}-{rangeEnd} / {sortedTotalRows}
-              </div>
-            </div>
-            <div className={cn(BOARD_GRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 md:grid")}>
-              {desktopHeaderCell("#", "text-right")}
-              {desktopHeaderCell("Asset")}
-              {desktopHeaderCell("Deviation")}
-              {desktopHeaderCell("DEWS")}
-              {desktopHeaderCell("Peg score")}
-              {desktopHeaderCell("Events")}
-              {desktopHeaderCell("Peg %", "hidden xl:block")}
-              {desktopHeaderCell("Cross-check", "hidden xl:block")}
-            </div>
-            <div className="divide-y divide-border/55">
-              {paginatedRows.length === 0 ? (
-                <div className="px-3 py-12 text-center text-sm text-muted-foreground">No stablecoins match these filters.</div>
-              ) : (
-                paginatedRows.map((row, index) => (
-                  <InstrumentRow
-                    key={row.coin.id}
-                    row={row}
-                    rank={pageStartIndex + index + 1}
-                    logos={logos}
-                    onRowClick={onRowClick}
-                    nowSeconds={nowSeconds}
-                  />
-                ))
-              )}
-            </div>
-            {totalPages > 1 ? (
-              <div className="flex items-center justify-between gap-3 border-t border-border/70 px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-muted/20 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {SORT_MODES.map((mode) => (
                 <button
                   type="button"
-                  onClick={onPreviousPage}
-                  disabled={effectivePage <= 1}
-                  className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  key={mode.key}
+                  onClick={() => toggleSort(mode.key)}
+                  onKeyDown={(event) => handleSortKeyDown(event, mode.key)}
+                  aria-pressed={sortKey === mode.key}
+                  aria-label={`${mode.label} sort${sortKey === mode.key ? `, ${sortDirection}` : ""}`}
+                  className={cn(
+                    "pharos-focus-ring rounded-sm border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    sortKey === mode.key
+                      ? "border-foreground/20 bg-foreground text-background"
+                      : "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  Previous
+                  <span>{mode.label}</span>
+                  {sortKey === mode.key ? (
+                    sortDirection === "asc" ? (
+                      <ArrowUp className="ml-1 inline h-3 w-3" aria-label="ascending" />
+                    ) : (
+                      <ArrowDown className="ml-1 inline h-3 w-3" aria-label="descending" />
+                    )
+                  ) : null}
                 </button>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  page {effectivePage} / {totalPages}
-                </span>
+              ))}
+            </div>
+            <div className="font-mono text-xs tabular-nums text-muted-foreground">
+              {rangeStart}-{rangeEnd} / {sortedTotalRows}
+            </div>
+          </div>
+          <div className={cn(BOARD_GRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 md:grid")}>
+            {desktopHeaderCell("#", "text-right")}
+            {desktopHeaderCell("Asset")}
+            {desktopHeaderCell("Deviation", undefined, METRIC_HELP.deviation)}
+            {desktopHeaderCell("DEWS", undefined, METRIC_HELP.dews)}
+            {desktopHeaderCell("Peg health", undefined, METRIC_HELP.pegHealth)}
+            {desktopHeaderCell("Events", undefined, METRIC_HELP.events)}
+            {desktopHeaderCell("DEX check", "hidden xl:block", METRIC_HELP.dexCheck)}
+          </div>
+          <div className="divide-y divide-border/55">
+            {paginatedRows.length === 0 ? (
+              <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                <p>No stablecoins match these filters.</p>
+                {filtersActive ? (
+                  <button
+                    type="button"
+                    onClick={onClearFilters}
+                    className="pharos-focus-ring mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                    Clear filters
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              paginatedRows.map((row, index) => (
+                <InstrumentRow
+                  key={row.coin.id}
+                  row={row}
+                  rank={pageStartIndex + index + 1}
+                  logos={logos}
+                  onRowClick={onRowClick}
+                  nowSeconds={nowSeconds}
+                />
+              ))
+            )}
+          </div>
+          {totalPages > 1 ? (
+            <div className="flex items-center justify-between gap-3 border-t border-border/70 px-3 py-2">
+              <button
+                type="button"
+                onClick={onPreviousPage}
+                disabled={effectivePage <= 0}
+                className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                page {effectivePage + 1} / {totalPages}
+              </span>
                 <button
                   type="button"
                   onClick={onNextPage}
-                  disabled={effectivePage >= totalPages}
+                  disabled={effectivePage >= totalPages - 1}
                   className="pharos-focus-ring rounded-sm border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
-              </div>
-            ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

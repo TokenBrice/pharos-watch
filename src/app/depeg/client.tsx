@@ -18,7 +18,6 @@ import { DepegControlBoard } from "@/components/depeg-control-board";
 import { DEWSSummary } from "@/components/dews-summary";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { DepegFeed } from "@/components/depeg-feed";
-import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { DepegResolverPostureModule } from "@/components/depeg-resolver-posture-module";
 import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
@@ -132,7 +131,7 @@ export function DepegClient() {
   const router = useRouter();
 
   // Unified filter state (shared by table + heatmap)
-  const { getParam, setParam } = useUrlFilters();
+  const { getParam, setParam, setParams } = useUrlFilters();
   const rawPeg = getParam("peg", "all");
   const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
   const rawType = getParam("type", "all");
@@ -151,6 +150,10 @@ export function DepegClient() {
     trackSearch("depeg", v.length);
     setParam("q", v);
   }, [setParam]);
+  const clearBoardFilters = useCallback(() => {
+    trackEvent("filter_applied", { page: "depeg", filter_type: "all", filter_value: "clear" });
+    setParams({ peg: "all", type: "all", q: "" });
+  }, [setParams]);
 
   // Filter peg coins (shared between table + heatmap)
   const filteredPegCoins = useMemo(
@@ -181,10 +184,6 @@ export function DepegClient() {
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
   );
-  const activeEvents = useMemo(
-    () => (eventsData?.events ?? []).filter((event) => event.endedAt === null),
-    [eventsData],
-  );
   // Coins currently in an active depeg — same source as the activeDepegCount headline, so the
   // hero logo cluster always matches the count. Worst deviation first.
   const activeDepegCoins = useMemo(
@@ -211,10 +210,10 @@ export function DepegClient() {
       oldestAgeSec,
       malformedRows: dewsData?.malformedRows ?? 0,
       coverageLimitedCount: pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
-      activeCount: pegData?.summary?.activeDepegCount ?? activeEvents.length,
+      activeCount: pegData?.summary?.activeDepegCount ?? 0,
       pendingCount: pendingIncidents.length,
     };
-  }, [activeEvents.length, dewsData, nowSeconds, pegData, pendingIncidents.length]);
+  }, [dewsData, nowSeconds, pegData, pendingIncidents.length]);
 
   const handleRowClick = useCallback((id: string) => {
     router.push(buildStablecoinUrl(id));
@@ -317,22 +316,10 @@ export function DepegClient() {
           onPegFilterChange={setPegFilter}
           onTypeFilterChange={setTypeFilter}
           onSearchChange={setSearchQuery}
+          onClearFilters={clearBoardFilters}
           onRowClick={handleRowClick}
           nowSeconds={nowSeconds}
         />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary name="active-depeg-feed">
-        <DepegFeed
-          title="Active Incidents"
-          events={activeEvents}
-          logos={logos}
-          emptyMessage="No confirmed active depeg incidents."
-        />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary name="pending-depeg-feed">
-        <DepegPendingIncidents incidents={pendingIncidents} logos={logos} />
       </SectionErrorBoundary>
 
       {/* Recent Depeg Events */}

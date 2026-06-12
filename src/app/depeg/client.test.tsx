@@ -78,12 +78,6 @@ vi.mock("@/components/depeg-feed", () => ({
   ),
 }));
 
-vi.mock("@/components/depeg-pending-incidents", () => ({
-  DepegPendingIncidents: ({ incidents }: { incidents: unknown[] }) => (
-    <div data-testid="pending-incidents">{incidents.length}</div>
-  ),
-}));
-
 vi.mock("@/components/depeg-resolver-module", () => ({
   DepegResolverModule: () => <div data-testid="depeg-resolver" />,
 }));
@@ -120,7 +114,7 @@ function makeCoin(id: string, symbol: string) {
 }
 
 describe("DepegClient", () => {
-  it("keeps filters scoped to the leaderboard/heatmap and wires active/pending lanes", () => {
+  it("keeps filters scoped to the leaderboard/heatmap without rendering standalone active or pending feeds", () => {
     mocks.usePegSummary.mockReturnValue({
       data: {
         coins: [makeCoin("coin-a", "A"), makeCoin("coin-b", "B")],
@@ -208,6 +202,7 @@ describe("DepegClient", () => {
     mocks.useUrlFilters.mockReturnValue({
       getParam: (_key: string, fallback = "") => fallback,
       setParam: vi.fn(),
+      setParams: vi.fn(),
     });
 
     render(<DepegClient />);
@@ -216,9 +211,9 @@ describe("DepegClient", () => {
     expect(mocks.useDepegResolverSurfaces).toHaveBeenCalled();
     expect(screen.getByText("Leaderboard controls")).toBeTruthy();
     expect(screen.getByTestId("depeg-control-board").textContent).toContain("pending rows 1");
-    expect(screen.getByTestId("feed-Active Incidents").textContent).toBe("1");
+    expect(screen.queryByTestId("feed-Active Incidents")).toBeNull();
     expect(screen.getByTestId("feed-Recent Depeg Events").textContent).toBe("1");
-    expect(screen.getByTestId("pending-incidents").textContent).toBe("1");
+    expect(screen.queryByTestId("pending-incidents")).toBeNull();
     expect(screen.getByTestId("depeg-resolver")).toBeTruthy();
     expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("Depeg Resolver");
@@ -277,6 +272,7 @@ describe("DepegClient", () => {
     mocks.useUrlFilters.mockReturnValue({
       getParam: (_key: string, fallback = "") => fallback,
       setParam: vi.fn(),
+      setParams: vi.fn(),
     });
 
     render(<DepegClient />);
