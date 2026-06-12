@@ -251,6 +251,7 @@ export async function probeGeckoTerminalPrices(
   db: D1Database,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  options?: { budgetMs?: number },
 ): Promise<{ prices: Map<string, SourcePrice>; stats: GtProbeStats }> {
   const prices = new Map<string, SourcePrice>();
   const stats = createEmptyGtProbeStats();
@@ -298,18 +299,28 @@ export async function probeGeckoTerminalPrices(
     return { prices, stats };
   }
 
-  let failures = 0;
-  const budgetController = new AbortController();
-  const budgetTimer = setTimeout(() => {
-    budgetController.abort(new Error("GT probe run budget exhausted"));
-  }, GT_PROBE_RUN_BUDGET_MS);
-  const probeSignal = signal
-    ? AbortSignal.any([signal, budgetController.signal])
-    : budgetController.signal;
+  const runBudgetMs = Math.max(0, Math.floor(options?.budgetMs ?? GT_PROBE_RUN_BUDGET_MS));
   const markBudgetExhausted = (skippedCount: number) => {
     stats.budgetExhausted = true;
     stats.budgetSkipped = Math.max(stats.budgetSkipped, skippedCount);
   };
+  if (runBudgetMs <= 0) {
+    markBudgetExhausted(candidates.length);
+    await recordOutcome(db, CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, true);
+    console.warn(
+      `[gt-probe] Skipped ${candidates.length} candidate${candidates.length === 1 ? "" : "s"}; run budget unavailable`,
+    );
+    return { prices, stats };
+  }
+
+  let failures = 0;
+  const budgetController = new AbortController();
+  const budgetTimer = setTimeout(() => {
+    budgetController.abort(new Error("GT probe run budget exhausted"));
+  }, runBudgetMs);
+  const probeSignal = signal
+    ? AbortSignal.any([signal, budgetController.signal])
+    : budgetController.signal;
 
   try {
     for (let index = 0; index < candidates.length; index++) {

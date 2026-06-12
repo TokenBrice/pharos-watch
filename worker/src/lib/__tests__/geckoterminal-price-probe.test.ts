@@ -463,6 +463,27 @@ describe("probeGeckoTerminalPrices", () => {
     );
   });
 
+  it("skips probeable candidates without opening fetches when caller budget is exhausted", async () => {
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-404", price: 1 }],
+      {} as D1Database,
+      undefined,
+      null,
+      { budgetMs: 0 },
+    );
+
+    expect(result.prices.size).toBe(0);
+    expect(result.stats.probed).toBe(0);
+    expect(result.stats.budgetExhausted).toBe(true);
+    expect(result.stats.budgetSkipped).toBe(1);
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
+  });
+
   it("stops probing when the run budget is exhausted and reports skipped candidates", async () => {
     vi.useFakeTimers();
     fetchWithRetryMock.mockImplementation((_url: string, opts?: RequestInit) =>

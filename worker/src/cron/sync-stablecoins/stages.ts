@@ -1,7 +1,9 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
+import { GT_PROBE_RUN_BUDGET_MS } from "../../lib/constants";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe";
+import { CRON_TIMEOUT_MS } from "../../lib/cron-lease";
 import { syncViaCoingeckoFallback } from "./fallback";
 import { loadStablecoinsIntake } from "./intake";
 import type {
@@ -46,6 +48,18 @@ import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronStageContext } from "../shared/stage-contracts";
+
+const STABLECOINS_JOB_NAME = "sync-stablecoins";
+const STABLECOINS_SYNC_TAIL_RESERVE_MS = 90_000;
+const GT_PROBE_MIN_USEFUL_BUDGET_MS = 20_000;
+
+function resolveGtProbeBudgetMs(syncStartSec: number): number {
+  const elapsedMs = Math.max(0, Date.now() - syncStartSec * 1000);
+  const timeoutMs = CRON_TIMEOUT_MS[STABLECOINS_JOB_NAME] ?? 8 * 60_000;
+  const remainingBeforeTailMs = timeoutMs - elapsedMs - STABLECOINS_SYNC_TAIL_RESERVE_MS;
+  if (remainingBeforeTailMs < GT_PROBE_MIN_USEFUL_BUDGET_MS) return 0;
+  return Math.min(GT_PROBE_RUN_BUDGET_MS, remainingBeforeTailMs);
+}
 
 interface StablecoinsIntakeStageOptions extends CronStageContext {
   db: D1Database;
@@ -323,6 +337,22 @@ export async function runStablecoinsPricingStage(
   const gtProbeAbort = returnIfAborted(options.signal, "gt-probe");
   if (gtProbeAbort) return gtProbeAbort;
   try {
+    const gtProbeBudgetMs = resolveGtProbeBudgetMs(options.syncStartSec);
+    await reportStablecoinsStage(
+      options.reportProgress,
+      "price-enrichment-gt-probe",
+      "Running GeckoTerminal price probe",
+      {
+        itemsDone: options.assets.length - options.assets.filter(hasMissingPrice).length,
+        itemsTotal: options.assets.length,
+        metadata: {
+          subphase: "gt-probe",
+          budgetMs: gtProbeBudgetMs,
+          maxBudgetMs: GT_PROBE_RUN_BUDGET_MS,
+          tailReserveMs: STABLECOINS_SYNC_TAIL_RESERVE_MS,
+        },
+      },
+    );
     gtProbe = await runGtProbePass(
       options.assets,
       primaryPriceResults,
@@ -330,6 +360,8 @@ export async function runStablecoinsPricingStage(
       options.signal,
       options.validationReferences,
       options.coingeckoApiKey,
+      validationContexts,
+      { budgetMs: gtProbeBudgetMs },
     );
     if (gtProbe.updatedCount > 0) {
       applyConsensusResults({

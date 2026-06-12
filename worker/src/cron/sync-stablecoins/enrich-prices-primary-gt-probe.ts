@@ -103,6 +103,7 @@ export async function runGtProbePass(
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
   validationContexts?: ValidationContextResolver,
+  options?: { budgetMs?: number },
 ): Promise<{ updatedCount: number; stats: import("../../lib/geckoterminal-price-probe").GtProbeStats }> {
   const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../../lib/geckoterminal-price-probe");
   const contexts = validationContexts ?? createValidationContextResolver();
@@ -115,7 +116,13 @@ export async function runGtProbePass(
     };
   }
 
-  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(gtProbeTargets, db, signal, coingeckoApiKey);
+  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(
+    gtProbeTargets,
+    db,
+    signal,
+    coingeckoApiKey,
+    options,
+  );
 
   let updatedCount = 0;
   for (const asset of assets) {
