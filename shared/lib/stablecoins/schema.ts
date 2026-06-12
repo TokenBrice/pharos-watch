@@ -203,6 +203,8 @@ const StablecoinMetaAssetSchemaShape = {
 
 const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
 
+const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
+
 export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine(
   (meta, ctx) => {
     if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
@@ -226,6 +228,28 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
     }
   },
 )
+  .superRefine((meta, ctx) => {
+    if (
+      !meta.oracleRisk ||
+      meta.variantOf ||
+      meta.flags.backing !== "crypto-backed" ||
+      meta.mechanismArchetype !== "cdp"
+    ) {
+      return;
+    }
+
+    for (const field of ORACLE_RISK_PROVENANCE_FIELDS) {
+      if (meta.oracleRisk[field]) {
+        continue;
+      }
+
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "score-active oracleRisk requires review provenance",
+        path: ["oracleRisk", field],
+      });
+    }
+  })
   .superRefine((meta, ctx) => {
     if ((meta.variantOf == null) === (meta.variantKind == null)) {
       return;

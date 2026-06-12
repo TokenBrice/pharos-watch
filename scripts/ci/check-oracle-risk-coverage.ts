@@ -24,7 +24,7 @@ const result = analyzeOracleRiskCoverage(coins, { staleDays });
 const prefix = ENFORCE ? "oracleRisk coverage" : "oracleRisk coverage warning";
 
 process.stdout.write(
-  `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} active crypto-backed CDPs have oracleRisk; ` +
+  `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
     `${result.completeProfiles} complete profiles.\n`,
 );
 

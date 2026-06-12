@@ -3,6 +3,7 @@ import type {
   GovernanceQuality,
   GovernanceType,
   OracleRiskBranch,
+  OracleRiskProfile,
   OracleRiskTier,
   ReportCardDimension,
   ReportCardDetailItem,
@@ -122,8 +123,14 @@ export function isOracleRiskApplicable(meta: StablecoinMeta): boolean {
   return meta.flags.backing === "crypto-backed" && meta.mechanismArchetype === "cdp" && !meta.variantOf;
 }
 
+function hasOracleRiskReviewProvenance(profile: OracleRiskProfile): boolean {
+  return Boolean(profile.reviewedAt && profile.reviewer && profile.confidence);
+}
+
 export function resolveOracleRiskScore(meta?: StablecoinMeta): ResolvedOracleRiskScore | null {
-  if (!meta?.oracleRisk || !isOracleRiskApplicable(meta)) return null;
+  if (!meta?.oracleRisk || !isOracleRiskApplicable(meta) || !hasOracleRiskReviewProvenance(meta.oracleRisk)) {
+    return null;
+  }
   let tier = meta.oracleRisk.tier;
   let selectedBranch: OracleRiskBranch | null = null;
 
@@ -287,14 +294,14 @@ export function scoreDecentralization(
     detailItems.push({
       label: "Oracle setup",
       value: `${oracleRisk.selectedBranch ? `${oracleRisk.selectedBranch.label}: ` : ""}${oracleRisk.label} (${oracleRisk.score}/100)`,
-      detail: oracleRiskDrag < 0 ? `${oracleRiskDrag}` : `${oracleRisk.score}`,
+      detail: oracleRiskDrag < 0 ? `${oracleRiskDrag}` : "0",
     });
   }
   if (bridgeRouteRisk != null) {
     detailItems.push({
       label: "Bridge route",
       value: `${bridgeRouteRisk.label} (${bridgeRouteRisk.score}/100)`,
-      detail: bridgeRouteRiskDrag < 0 ? `${bridgeRouteRiskDrag}` : `${bridgeRouteRisk.score}`,
+      detail: bridgeRouteRiskDrag < 0 ? `${bridgeRouteRiskDrag}` : "0",
     });
   }
   if (mintAuthorityDrag < 0 && mintAuthorityScore != null) {

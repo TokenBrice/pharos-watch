@@ -166,15 +166,21 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
     governanceQuality: "immutable-code" as const,
     ...overrides,
   });
+  const reviewedOracleRisk = (overrides: Record<string, unknown>) => ({
+    reviewedAt: "2026-06-12",
+    reviewer: "test",
+    confidence: "verified" as const,
+    ...overrides,
+  });
 
   it("drags crypto-backed CDP decentralization when oracle setup undercuts it", () => {
     // immutable-code (100), single-source oracle score 45:
     // blended = round(100*0.75 + 45*0.25) = 86
     const meta = makeMeta({
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "single-source-or-laggy",
         summary: "Single feed without reviewed failover",
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never);
     expect(result.score).toBe(86);
@@ -186,23 +192,35 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
     const meta = makeMeta({
       governanceQuality: "dao-governance",
       chainTier: "mature-alt-l1",
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "redundant-with-failover",
         summary: "Reviewed redundant feed setup",
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never);
     expect(result.score).toBe(60);
-    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "95")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "0")).toBe(true);
+  });
+
+  it("skips the oracle blend when review provenance is missing", () => {
+    const meta = makeMeta({
+      oracleRisk: {
+        tier: "single-source-or-laggy",
+        summary: "Unreviewed oracle metadata must not affect scoring.",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+    expect(result.score).toBe(100);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup")).toBe(false);
   });
 
   it("skips the oracle blend for non-CDP assets even when metadata is present", () => {
     const meta = makeMeta({
       mechanismArchetype: "synthetic-delta-neutral",
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "opaque-or-unknown",
         summary: "Not a CDP liquidation oracle profile",
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never);
     expect(result.score).toBe(100);
@@ -212,10 +230,10 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
   it("skips direct oracle blending for tracked variants", () => {
     const meta = makeMeta({
       variantOf: "parent-cdp",
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "opaque-or-unknown",
         summary: "Variant inherits the parent CDP oracle exposure.",
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never);
     expect(result.score).toBe(100);
@@ -227,10 +245,10 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
     // round(75*0.65 + 20*0.35) = 56
     const meta = makeMeta({
       governanceQuality: "dao-governance",
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "single-source-or-laggy",
         summary: "Single feed without reviewed failover",
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never, { mintAuthorityScore: 20 });
     expect(result.score).toBe(56);
@@ -240,7 +258,7 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
 
   it("uses the weakest branch score when branch-level oracle profiles are present", () => {
     const meta = makeMeta({
-      oracleRisk: {
+      oracleRisk: reviewedOracleRisk({
         tier: "redundant-with-failover",
         summary: "Most branches have redundant oracle failover.",
         branches: [
@@ -257,7 +275,7 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
             summary: "LST branch has standard external feeds.",
           },
         ],
-      },
+      }),
     });
     const result = scoreDecentralization("decentralized", meta as never);
 
@@ -300,7 +318,7 @@ describe("scoreDecentralization bridge-route blend (v8.12)", () => {
     );
 
     expect(result.score).toBe(20);
-    expect(result.detailItems?.some((item) => item.label === "Bridge route" && item.detail === "90")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Bridge route" && item.detail === "0")).toBe(true);
   });
 
   it("drags decentralization when a reviewed external lock/mint route undercuts it", () => {
@@ -334,6 +352,9 @@ describe("scoreDecentralization bridge-route blend (v8.12)", () => {
         oracleRisk: {
           tier: "single-source-or-laggy",
           summary: "Single feed without reviewed failover.",
+          reviewedAt: "2026-06-12",
+          reviewer: "test",
+          confidence: "verified",
         },
         bridgeRouteRisk: {
           tier: "external-lock-mint",
