@@ -164,7 +164,7 @@ function normalizeSearchText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ");
 }
 
-function searchTermsForProtocol(protocol: L2BeatInteropProtocolSnapshot): string[] {
+function searchTermsForProtocol(protocol: (typeof L2BEAT_INTEROP_PROTOCOLS)[number]): string[] {
   const terms = [protocol.id, protocol.slug, protocol.name, ...(EXTRA_PROTOCOL_SEARCH_TERMS[protocol.id] ?? [])];
   const normalizedTerms: string[] = [];
   const seen = new Set<string>();
