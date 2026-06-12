@@ -29,4 +29,13 @@ describe("DepegPage", () => {
     expect(html).toContain("surface pre-price and live-market stress signals");
     expect(html).not.toContain("before it hits the price");
   });
+
+  it("renders the Telegram setup CTA once in the header action area", () => {
+    const html = renderToStaticMarkup(<DepegPage />);
+
+    const matches = html.match(/Get instant Telegram alerts/g) ?? [];
+    expect(matches).toHaveLength(1);
+    expect(html).toContain('href="/pharoswatchbot/#bot"');
+    expect(html).toContain("Set up alerts");
+  });
 });

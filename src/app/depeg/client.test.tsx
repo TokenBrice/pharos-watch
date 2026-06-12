@@ -63,9 +63,12 @@ vi.mock("@/components/dews-alert-feed", () => ({
   DEWSAlertFeed: () => <div data-testid="dews-alert-feed" />,
 }));
 
-vi.mock("@/components/depeg-tracker-table", () => ({
-  DepegTrackerTable: ({ rows }: { rows: Array<{ pendingIncident?: unknown }> }) => (
-    <div data-testid="depeg-table">pending rows {rows.filter((row) => row.pendingIncident).length}</div>
+vi.mock("@/components/depeg-control-board", () => ({
+  DepegControlBoard: ({ rows }: { rows: Array<{ pendingIncident?: unknown }> }) => (
+    <div data-testid="depeg-control-board">
+      <span>Leaderboard controls</span>
+      pending rows {rows.filter((row) => row.pendingIncident).length}
+    </div>
   ),
 }));
 
@@ -79,10 +82,6 @@ vi.mock("@/components/depeg-pending-incidents", () => ({
   DepegPendingIncidents: ({ incidents }: { incidents: unknown[] }) => (
     <div data-testid="pending-incidents">{incidents.length}</div>
   ),
-}));
-
-vi.mock("@/components/peg-heatmap", () => ({
-  PegHeatmap: () => <div data-testid="peg-heatmap" />,
 }));
 
 vi.mock("@/components/depeg-resolver-module", () => ({
@@ -215,8 +214,8 @@ describe("DepegClient", () => {
 
     expect(mocks.useInfiniteDepegEvents).toHaveBeenCalledWith({ includePending: true });
     expect(mocks.useDepegResolverSurfaces).toHaveBeenCalled();
-    expect(screen.getByText("Leaderboard and heatmap filters")).toBeTruthy();
-    expect(screen.getByTestId("depeg-table").textContent).toContain("pending rows 1");
+    expect(screen.getByText("Leaderboard controls")).toBeTruthy();
+    expect(screen.getByTestId("depeg-control-board").textContent).toContain("pending rows 1");
     expect(screen.getByTestId("feed-Active Incidents").textContent).toBe("1");
     expect(screen.getByTestId("feed-Recent Depeg Events").textContent).toBe("1");
     expect(screen.getByTestId("pending-incidents").textContent).toBe("1");

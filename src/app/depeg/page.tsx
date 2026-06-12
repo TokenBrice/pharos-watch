@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
@@ -44,6 +43,29 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
+function TelegramAlertsHeaderAction() {
+  return (
+    <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
+      <div
+        role="note"
+        className="flex max-w-full items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-700 sm:text-sm dark:text-sky-300"
+      >
+        <Bell className="mt-0.5 h-4 w-4 shrink-0" />
+        <p className="min-w-0 leading-relaxed lg:whitespace-nowrap">
+          Get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
+          <Link
+            href="/pharoswatchbot/#bot"
+            className="pharos-focus-ring text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
+          >
+            Set up alerts&nbsp;&rarr;
+          </Link>
+        </p>
+      </div>
+      <ShareButton ogPath="/api/og/depeg" />
+    </div>
+  );
+}
+
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
   loading: <DepegLoadingState />,
@@ -55,7 +77,7 @@ export default createClientFeaturePage({
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     },
-    headerActions: <ShareButton ogPath="/api/og/depeg" />,
+    headerActions: <TelegramAlertsHeaderAction />,
     preface: (
       <script
         type="application/ld+json"
@@ -66,20 +88,6 @@ export default createClientFeaturePage({
       "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals. DEWS anticipate upcoming depeg risk. DDR predicts depeg resolution chances and duration.",
     ],
   },
-  beforeClient: (
-    <CalloutBanner
-      icon={<Bell className="h-4 w-4" />}
-      className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-    >
-      Get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
-      <Link
-        href="/pharoswatchbot/#bot"
-        className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-      >
-        Set up alerts&nbsp;&rarr;
-      </Link>
-    </CalloutBanner>
-  ),
   afterClient: (
     <>
       <DepegEventArchive />
