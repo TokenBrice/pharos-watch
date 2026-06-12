@@ -1,6 +1,6 @@
 # AI Summaries Refresh Plan
 
-Generated: 2026-06-12  
+Generated: 2026-06-12
 Scope: `data/ai-summaries.json` against `shared/data/stablecoins/coins/*.json` plus live Pharos report-card drift.
 
 ## Summary
