@@ -19,7 +19,7 @@ Workers must update only their assigned row below after completing their batch. 
 
 | Worker | Status | Owned summary IDs | Notes |
 | --- | --- | --- | --- |
-| W1-live-drift | pending | P0 high/medium plus P3 low drift | Fix live contradictions and de-brittle volatile numbers. |
+| W1-live-drift | complete | P0 high/medium plus P3 low drift | Refreshed owned entries, removed stale live-grade/DEWS claims, and de-brittled low-drift exact values. |
 | W2-very-thin-examples | complete | Named examples plus very thin entries not owned by W1 | Completed W2 expansions; `zchf-frankencoin` intentionally unchanged as exemplar. |
 | W3-thin-early | complete | Remaining thin entries, early slice | Expanded owned 50-64 word entries and cleaned steakUSDT/steakUSDC fragment openings. |
 | W4-thin-middle | complete | Remaining thin entries, middle slice | Expanded 12 assigned 65-73 word summaries; JSON/glossary checks passed. |
