@@ -3,8 +3,8 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 4811902,
-      "chunkCount": 148
+      "totalBytes": 4840988,
+      "chunkCount": 151
     },
     {
       "key": "recharts-component",
@@ -13,17 +13,17 @@
     },
     {
       "key": "error-boundary",
-      "totalBytes": 1440459,
+      "totalBytes": 1416945,
       "chunkCount": 19
     },
     {
       "key": "methodology-version",
-      "totalBytes": 813629,
-      "chunkCount": 12
+      "totalBytes": 1013715,
+      "chunkCount": 16
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 624499,
+      "totalBytes": 625327,
       "chunkCount": 1
     },
     {

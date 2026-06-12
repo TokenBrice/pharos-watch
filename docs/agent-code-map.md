@@ -246,7 +246,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
-- ... 133 more files omitted; use `rg --files src/lib` for the full list.
+- ... 132 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -290,7 +290,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
-- ... 371 more files omitted; use `rg --files src/components` for the full list.
+- ... 367 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
