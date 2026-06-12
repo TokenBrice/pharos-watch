@@ -125,7 +125,7 @@ const EXTRA_PROTOCOL_SEARCH_TERMS: Record<L2BeatInteropProtocolId, readonly stri
   ccip: ["chainlink ccip", "ccip"],
   cctpv1: ["cctp v1"],
   cctpv2: ["cctp v2", "cctp"],
-  relay: ["relay"],
+  relay: ["relay protocol", "relay bridge", "l2beat.com interop protocols relay"],
   gaszip: ["gas.zip", "gaszip"],
   lifi: ["li.fi", "lifi"],
   layerzero: ["layerzero", "layerzero oft", "oft"],
@@ -158,13 +158,30 @@ const EXTRA_PROTOCOL_SEARCH_TERMS: Record<L2BeatInteropProtocolId, readonly stri
   agglayer: ["agglayer"],
 };
 
+const AMBIGUOUS_SINGLE_TOKEN_TERMS = new Set(["base", "ink", "oft", "relay"]);
+
 function normalizeSearchText(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9.+]+/g, " ");
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ");
 }
 
-function containsSearchTerm(normalizedText: string, term: string): boolean {
-  const normalizedTerm = normalizeSearchText(term).trim();
-  if (!normalizedTerm) return false;
+function searchTermsForProtocol(protocol: L2BeatInteropProtocolSnapshot): string[] {
+  const terms = [protocol.id, protocol.slug, protocol.name, ...(EXTRA_PROTOCOL_SEARCH_TERMS[protocol.id] ?? [])];
+  const normalizedTerms: string[] = [];
+  const seen = new Set<string>();
+
+  for (const term of terms) {
+    const normalizedTerm = normalizeSearchText(term).trim();
+    if (!normalizedTerm || AMBIGUOUS_SINGLE_TOKEN_TERMS.has(normalizedTerm) || seen.has(normalizedTerm)) {
+      continue;
+    }
+    seen.add(normalizedTerm);
+    normalizedTerms.push(normalizedTerm);
+  }
+
+  return normalizedTerms;
+}
+
+function containsSearchTerm(normalizedText: string, normalizedTerm: string): boolean {
   return ` ${normalizedText.trim()} `.includes(` ${normalizedTerm} `);
 }
 
@@ -191,7 +208,7 @@ export function findL2BeatInteropProtocolReferences(text: string): L2BeatInterop
   const matches: L2BeatInteropProtocolSnapshot[] = [];
 
   for (const protocol of L2BEAT_INTEROP_PROTOCOLS) {
-    const terms = [protocol.id, protocol.slug, protocol.name, ...(EXTRA_PROTOCOL_SEARCH_TERMS[protocol.id] ?? [])];
+    const terms = searchTermsForProtocol(protocol);
     if (terms.some((term) => containsSearchTerm(normalized, term))) {
       matches.push(protocol);
     }

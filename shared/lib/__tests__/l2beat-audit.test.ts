@@ -128,9 +128,21 @@ describe("L2BEAT audit helpers", () => {
   });
 
   it("does not match common protocol IDs as substrings inside ordinary prose", () => {
-    const matches = findL2BeatInteropProtocolReferences("Issuer route is burn/mint based and uses CCTP v2.");
+    const matches = findL2BeatInteropProtocolReferences(
+      "Issuer route is burn/mint based, uses inked docs, relay status text, OFT-style prose, and CCTP v2.",
+    );
 
     expect(matches.map((protocol) => protocol.id)).toContain("cctpv2");
-    expect(matches.map((protocol) => protocol.id)).not.toContain("base");
+    expect(matches.map((protocol) => protocol.id)).not.toEqual(expect.arrayContaining(["base", "ink", "layerzero", "relay"]));
+  });
+
+  it("still matches explicit protocol phrases for ambiguous one-token protocol names", () => {
+    const matches = findL2BeatInteropProtocolReferences(
+      "Bridge docs cite Base Canonical, Ink Canonical, LayerZero OFT, and the Relay protocol.",
+    );
+
+    expect(matches.map((protocol) => protocol.id)).toEqual(
+      expect.arrayContaining(["base", "ink", "layerzero", "relay"]),
+    );
   });
 });
