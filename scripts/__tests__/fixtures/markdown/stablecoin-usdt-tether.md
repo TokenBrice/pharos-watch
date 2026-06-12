@@ -2,7 +2,7 @@
 title: "Tether (USDT) Stablecoin Analytics"
 canonical: "https://pharos.watch/stablecoin/usdt-tether/"
 description: "Build-time stablecoin profile for Tether (USDT). Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
-dateModified: "2026-05-18"
+dateModified: "2026-06-12"
 ---
 
 
@@ -19,7 +19,7 @@ dateModified: "2026-05-18"
 
 ## Overview
 
-USDT remains the largest dollar stablecoin, with Tether's Q1 2026 attestation showing $191.77B of assets against $183.54B of liabilities. The reserve stack is still Treasury-heavy, with about $141B in direct and indirect U.S. T-bill exposure, plus material gold and Bitcoin positions. The core risk is issuer concentration, discretionary redemption access, and reliance on Tether's quarterly attestation model.
+USDT's B-grade profile is not a peg indictment; Pharos still sees an A+ peg record, while liquidity and especially decentralization do the dragging. Tether's Q1 2026 attestation shows $191.77B of assets against $183.54B of liabilities, led by about $141B of direct and indirect U.S. Treasury-bill exposure, with gold, Bitcoin, and an excess reserve buffer making the balance sheet less boring than its dollar promise. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and another reminder that omnichain convenience is not the same thing as issuer decentralization. The redemption floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly BDO Italia attestation cadence rather than continuous bank-style disclosure. On-chain supply authority is still concentrated around Tether-controlled mint infrastructure, and the 2019 accidental 5B USDT mint remains the canonical lesson in why the biggest stablecoin can be operationally serious and structurally centralized at the same time.
 
 ## Collateral
 

@@ -30,7 +30,7 @@ PSI is deliberately conservative: one small depeg should not move the entire mar
 
 Pharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.
 
-Liquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier and deployment model affect only the Decentralization chain-risk penalty, and resolvable wrappers inherit Decentralization from their wrapped asset with a wrapper-kind haircut. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets, with tracked parent-linked variants applying family-specific wrapper ceilings.
+Liquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier, deployment model, reviewed CDP oracle setup, reviewed bridge-route risk, and Mint Authority affect the Decentralization penalties; branch-aware oracle reviews use the weakest verified branch when present, and resolvable wrappers inherit Decentralization from their wrapped asset with a wrapper-kind haircut. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets, with tracked parent-linked variants applying family-specific wrapper ceilings.
 
 The peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.
 
