@@ -23,6 +23,7 @@ import {
   readFileSync,
   readdirSync,
   unlinkSync,
+  rmSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -30,7 +31,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
-const STAGING = resolve(REPO_ROOT, "agents/og-case-study-staging");
+const STAGING_ROOT = resolve(REPO_ROOT, "agents/og-case-study-staging");
+const STAGING = resolve(STAGING_ROOT, `run-${process.pid}`);
 const CONTENT_DIR = resolve(REPO_ROOT, "src/app/learn/case-studies/content");
 const CHECK_MODE = process.argv.includes("--check");
 
@@ -241,4 +243,5 @@ try {
   }
 } finally {
   await browser.close();
+  rmSync(STAGING, { recursive: true, force: true });
 }
