@@ -71,6 +71,23 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "aave-stkgho",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "sGHO uses internal savings-token accounting but inherits GHO collateral-oracle risk from Aave reserve oracle contracts.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave sGHO guide",
+        "url": "https://aave.com/docs/aave-v3/guides/sgho"
+      },
+      {
+        "label": "Aave Oracle docs",
+        "url": "https://aave.com/docs/ecosystem/oracle"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

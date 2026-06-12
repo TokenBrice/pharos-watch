@@ -18,6 +18,19 @@
   "mechanismArchetype": "cdp",
   "geckoId": "nxusd",
   "protocolSlug": "nereus-finance",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Nereus NXUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Nereus NXUSD docs",
+        "url": "https://nereus.finance/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

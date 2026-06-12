@@ -16,6 +16,23 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "decentralized-euro",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "dEURO follows the Frankencoin/dEURO auction-based collateral model, where auctions establish collateral value instead of an external liquidation oracle.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dEURO docs",
+        "url": "https://docs.deuro.com/"
+      },
+      {
+        "label": "Frankencoin auction docs",
+        "url": "https://docs.frankencoin.com/positions/auctions"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -17,6 +17,19 @@
   "llamaId": "79",
   "detailProvider": "defillama",
   "geckoId": "helio-protocol-hay",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Lista Multi-Oracle compares and validates prices from multiple sources before lisUSD collateral pricing uses them.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lista Multi-Oracle docs",
+        "url": "https://docs.bsc.lista.org/for-developer/multi-oracle"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

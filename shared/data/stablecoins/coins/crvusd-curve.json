@@ -17,6 +17,23 @@
   "llamaId": "110",
   "detailProvider": "defillama",
   "geckoId": "crvusd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Curve crvUSD uses collateral price oracles for LLAMMA/loan health, but reviewed sources do not show an explicit redundant failover tier.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Curve crvUSD risk docs",
+        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+      },
+      {
+        "label": "Curve stablecoin audit",
+        "url": "https://reports.chainsecurity.com/Curve/ChainSecurity_Curve_CurveStablecoin_Audit.pdf"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

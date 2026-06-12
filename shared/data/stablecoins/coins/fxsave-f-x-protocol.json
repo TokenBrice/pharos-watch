@@ -26,6 +26,19 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "fx-usd-saving",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for fxSAVE do not identify a wrapper-specific oracle setup, and the underlying fxUSD oracle/failure handling remains unresolved.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "f(x) Protocol docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

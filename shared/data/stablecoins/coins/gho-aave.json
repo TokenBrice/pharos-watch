@@ -18,6 +18,23 @@
   "detailProvider": "defillama",
   "geckoId": "gho",
   "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "GHO minting follows Aave reserve collateralization, where each reserve has a governance-selected oracle contract for market prices.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave GHO docs",
+        "url": "https://aave.com/docs/ecosystem/gho"
+      },
+      {
+        "label": "Aave Oracle docs",
+        "url": "https://aave.com/docs/ecosystem/oracle"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

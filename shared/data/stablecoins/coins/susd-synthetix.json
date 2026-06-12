@@ -17,6 +17,19 @@
   "llamaId": "22",
   "detailProvider": "defillama",
   "geckoId": "nusd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Synthetix sUSD historically relies on Chainlink-decentralized price feeds for synth pricing, with no stronger failover tier verified here.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Synthetix Chainlink integration",
+        "url": "https://blog.synthetix.io/chainlink-decentralizes-first-wave-of-synthetix-price-feeds/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

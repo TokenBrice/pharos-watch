@@ -18,6 +18,19 @@
   "mechanismArchetype": "cdp",
   "cmcSlug": "token-force-usd",
   "protocolSlug": "dforce-lending",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for dForce USX do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "dForce USX docs",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

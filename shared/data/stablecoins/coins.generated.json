@@ -1432,6 +1432,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "oracleless-or-internal",
+      "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Alchemix V2 docs",
+          "url": "https://v2-docs.alchemix.fi/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "DAI (in Yearn/Aave yield strategies)",
@@ -3084,7 +3097,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -5338,7 +5370,10 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": ["por-reserve-under-supply", "partial-supply-read-failure"]
+        "allowedDegradedWarningCodes": [
+          "por-reserve-under-supply",
+          "partial-supply-read-failure"
+        ]
       },
       "adapter": "chainlink-por",
       "inputs": {
@@ -5492,6 +5527,23 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Balanced bnUSD loans depend on external collateral price feeds, with public sources tying Balanced oracle integration to Band but not showing stronger failover handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Balanced bnUSD overview",
+          "url": "https://balanced.network/stablecoin/"
+        },
+        {
+          "label": "Band Protocol Balanced partnership",
+          "url": "https://medium.com/bandprotocol/balanced-network-strategic-partnership-with-band-protocol-and-launch-review-1cfbde8adaef"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "sICX (staked ICX) collateral on ICON",
@@ -5654,6 +5706,9 @@
     "oracleRisk": {
       "tier": "redundant-with-failover",
       "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
       "sources": [
         {
           "label": "Liquity BOLD contract docs",
@@ -5663,9 +5718,67 @@
           "label": "Liquity V2 risk disclosure",
           "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
         }
+      ],
+      "branches": [
+        {
+          "id": "weth",
+          "label": "WETH branch",
+          "tier": "redundant-with-failover",
+          "summary": "WETH collateral uses Liquity V2 external feeds with response validation, last-good-price fallback, and branch shutdown if oracle checks fail.",
+          "collateralAssets": [
+            "WETH"
+          ],
+          "chains": [
+            "ethereum"
+          ],
+          "sources": [
+            {
+              "label": "Liquity BOLD contract docs",
+              "url": "https://github.com/liquity/bold/"
+            }
+          ]
+        },
+        {
+          "id": "wsteth",
+          "label": "wstETH branch",
+          "tier": "redundant-with-failover",
+          "summary": "wstETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+          "collateralAssets": [
+            "wstETH"
+          ],
+          "chains": [
+            "ethereum"
+          ],
+          "sources": [
+            {
+              "label": "Liquity V2 risk disclosure",
+              "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+            }
+          ]
+        },
+        {
+          "id": "reth",
+          "label": "rETH branch",
+          "tier": "redundant-with-failover",
+          "summary": "rETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+          "collateralAssets": [
+            "rETH"
+          ],
+          "chains": [
+            "ethereum"
+          ],
+          "sources": [
+            {
+              "label": "Liquity V2 risk disclosure",
+              "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+            }
+          ]
+        }
       ]
     },
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "wstETH (Lido)",
@@ -6474,7 +6587,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -7083,7 +7215,22 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for BTCfi Bitcoin USD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "BTCfi Bitcoin USD docs",
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -7399,6 +7546,19 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Bucket Protocol BUCK do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Bucket Protocol BUCK docs",
+          "url": "https://docs.bucketprotocol.io/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "SUI (native token CDPs)",
@@ -8386,7 +8546,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -8785,6 +8964,19 @@
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Enosys Loans uses Flare ecosystem price feeds for collateral valuation, but reviewed public docs do not show stronger failover or shutdown handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Enosys Loans docs",
+          "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Enosys Loans overcollateralized crypto positions",
@@ -8977,6 +9169,19 @@
     },
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Cod3x USD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Cod3x USD docs",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Facilitator-managed crypto and stablecoin collateral",
@@ -10095,7 +10300,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -10278,7 +10502,22 @@
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Yamato CJPY do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Yamato CJPY docs",
+          "url": "https://docs.yamato.fi/v/en"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "ETH",
@@ -10386,7 +10625,10 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0",
-            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
+            "owners": [
+              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+            ],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
@@ -10407,7 +10649,10 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0-L2",
-            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
+            "owners": [
+              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+            ],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
@@ -10428,7 +10673,10 @@
           "modulesOrGuardsStatus": "present",
           "safe": {
             "version": "1.3.0",
-            "owners": ["0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f", "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"],
+            "owners": [
+              "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+              "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+            ],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
@@ -10682,7 +10930,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -10922,6 +11189,23 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Curve crvUSD uses collateral price oracles for LLAMMA/loan health, but reviewed sources do not show an explicit redundant failover tier.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Curve crvUSD risk docs",
+          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        },
+        {
+          "label": "Curve stablecoin audit",
+          "url": "https://reports.chainsecurity.com/Curve/ChainSecurity_Curve_CurveStablecoin_Audit.pdf"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "WBTC / cbBTC",
@@ -11196,7 +11480,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills",
@@ -12205,6 +12491,23 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "medianized-with-delay",
+      "summary": "Maker/Sky collateral prices pass through whitelisted feed medianizers and the Oracle Security Module delay before core accounting consumes them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Maker Oracle Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        },
+        {
+          "label": "Maker Oracle Security Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Spark (lending)",
@@ -12405,6 +12708,23 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "canonical-bridge",
+    "oracleRisk": {
+      "tier": "oracleless-or-internal",
+      "summary": "dEURO follows the Frankencoin/dEURO auction-based collateral model, where auctions establish collateral value instead of an external liquidation oracle.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "dEURO docs",
+          "url": "https://docs.deuro.com/"
+        },
+        {
+          "label": "Frankencoin auction docs",
+          "url": "https://docs.frankencoin.com/positions/auctions"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "WFPS (Wrapped Frankencoin Pool Shares)",
@@ -12704,6 +13024,23 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Djed describe the reserve mechanism but do not identify the production oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "COTI Djed FAQ",
+          "url": "https://faq.coticommunity.com/djed-and-shen/djed"
+        },
+        {
+          "label": "IOG Djed design article",
+          "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "ADA reserves in the Cardano Djed contract",
@@ -12839,6 +13176,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Sovryn Dollar do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Sovryn Dollar docs",
+          "url": "https://sovryn.com/sovryn-dollar"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Sovryn Zero ZUSD",
@@ -13016,6 +13366,23 @@
     },
     "chainTier": "mature-alt-l1",
     "deploymentModel": "third-party-bridge",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Money On Chain uses a decentralized oracle/medianizer process for BTC/USD reference pricing, but reviewed sources do not show a stronger failover tier.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Money On Chain decentralized oracles",
+          "url": "https://moneyonchain.com/moc-decentralized-oracles/"
+        },
+        {
+          "label": "Money On Chain price feeder",
+          "url": "https://github.com/money-on-chain/price-feeder"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Rootstock BTC (rBTC) collateral",
@@ -13187,6 +13554,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Inverse FiRM uses Pessimistic Price Oracles for collateral valuation, but reviewed docs do not identify stronger failover or shutdown handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Inverse FiRM docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "sUSDe collateral",
@@ -13401,6 +13781,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Alto DUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Alto DUSD docs",
+          "url": "https://docs.alto.money/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "WETH / wstETH / rETH / mETH (ETH and ETH LSTs, mint markets)",
@@ -14113,7 +14506,22 @@
     },
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Ebisu ebUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Ebisu ebUSD docs",
+          "url": "https://ebisu.gitbook.io/ebisu-money"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "sUSDe (Ethena savings)",
@@ -15975,6 +16383,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for EURO3 do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "EURO3 docs",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Whitelisted vault crypto and stablecoin collateral",
@@ -18980,7 +19401,22 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Felix feUSD identify a Liquity-style CDP but do not identify the deployed oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Felix docs",
+          "url": "https://usefelix.gitbook.io/docs"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
@@ -20927,6 +21363,19 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Freedom Dollar do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Freedom Dollar docs",
+          "url": "https://www.freedomdollar.com/en/white-paper"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Zano ecosystem collateral and reserve mechanisms",
@@ -21073,6 +21522,23 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "single-source-or-laggy",
+      "summary": "Fathom public stablecoin code references a CentralizedOraclePriceFeed/FathomPriceOracle deployment path, with no redundant validation or failover verified.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Fathom docs",
+          "url": "https://docs.fathom.fi/"
+        },
+        {
+          "label": "Fathom stablecoin contracts",
+          "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "XDC and Fathom collateral-pool positions",
@@ -21188,6 +21654,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for fxSAVE do not identify a wrapper-specific oracle setup, and the underlying fxUSD oracle/failure handling remains unresolved.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        }
+      ]
+    },
     "variantOf": "fxusd-f-x-protocol",
     "variantKind": "strategy-vault",
     "reserves": [
@@ -21386,6 +21865,23 @@
       "evidence": "Inferred review retained: fxUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
+    },
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for fxUSD mention oracle-priced redemptions but do not identify the oracle provider set or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        },
+        {
+          "label": "f(x) Protocol site",
+          "url": "https://fx.aladdin.club/"
+        }
+      ]
     },
     "reserves": [
       {
@@ -21789,7 +22285,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -22473,6 +22988,23 @@
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "GHO minting follows Aave reserve collateralization, where each reserve has a governance-selected oracle contract for market prices.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Aave GHO docs",
+          "url": "https://aave.com/docs/ecosystem/gho"
+        },
+        {
+          "label": "Aave Oracle docs",
+          "url": "https://aave.com/docs/ecosystem/oracle"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "GhoDirectFacilitator GSMs Mainnet",
@@ -22679,7 +23211,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -24948,7 +25499,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for HLiquity HCHF identify a Liquity fork but do not identify the HBAR/CHF oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "HLiquity docs",
+          "url": "https://docs.hliquity.org/"
+        },
+        {
+          "label": "HLiquity repository",
+          "url": "https://github.com/SwisscoastAG/HLiquity"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "HBAR overcollateralized Troves",
@@ -25664,6 +26234,19 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Hydrated Dollar HOLLAR do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Hydrated Dollar HOLLAR docs",
+          "url": "https://docs.hydration.net/quick_start/hollar/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "DOT",
@@ -26257,6 +26840,19 @@
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Hylo hyUSD describe internal pool accounting but do not clearly identify whether collateral TVL uses external oracle feeds or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Hylo docs",
+          "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "JitoSOL",
@@ -27364,6 +27960,23 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Inter Protocol vaults receive collateral prices from the Flux Aggregator data feed, whose operators submit median prices by round.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Inter Protocol vault docs",
+          "url": "https://docs.inter.trade/inter-protocol-system-documentation/vaults"
+        },
+        {
+          "label": "Agoric vault implementation discussion",
+          "url": "https://community.agoric.com/t/inter-protocol-vaults-contract-implementations/261?page=2"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
@@ -27486,6 +28099,19 @@
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Indigo iUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Indigo iUSD docs",
+          "url": "https://docs.indigoprotocol.io/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Indigo overcollateralized Cardano vaults",
@@ -28740,7 +29366,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -29035,6 +29680,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Dephaser JPYT do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Dephaser JPYT docs",
+          "url": "https://docs.dephaser.com/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Locked USDT on Optimism and USDC on Base",
@@ -29619,6 +30277,19 @@
     "collateralQuality": "native",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Juice Dollar JUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Juice Dollar JUSD docs",
+          "url": "https://docs.juicedollar.com/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
@@ -30156,7 +30827,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -31101,7 +31791,10 @@
         "message": "Issuer commits to monthly third-party attestations starting 2025 but has not named an auditor or published a report. Proof-of-reserves is currently a self-reported on-chain dashboard."
       }
     ],
-    "tags": ["korea", "rwa"],
+    "tags": [
+      "korea",
+      "rwa"
+    ],
     "launchDate": "2025-09-18"
   },
   {
@@ -31265,6 +31958,19 @@
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Lista Multi-Oracle compares and validates prices from multiple sources before lisUSD collateral pricing uses them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Lista Multi-Oracle docs",
+          "url": "https://docs.bsc.lista.org/for-developer/multi-oracle"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "BNB (native)",
@@ -31681,7 +32387,26 @@
     },
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Liquity V1 uses a Chainlink primary feed with Tellor fallback and automated switching/last-good-price logic for LUSD collateral pricing.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Liquity price-oracle design",
+          "url": "https://www.liquity.org/blog/price-oracles-in-liquity"
+        },
+        {
+          "label": "Liquity V1 contracts",
+          "url": "https://github.com/liquity/dev"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "ETH",
@@ -32149,7 +32874,9 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-unregulated",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (30-90 day)",
@@ -32451,6 +33178,23 @@
     },
     "deploymentModel": "native-multichain",
     "governanceQuality": "multisig",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "QiDao MAI collateral vaults use Chainlink-priced collateral feeds, with no stronger reviewed failover tier found in public docs.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "QiDao Chainlink case study",
+          "url": "https://chain.link/case-studies/qidao"
+        },
+        {
+          "label": "Aave MAI listing discussion",
+          "url": "https://governance.aave.com/t/add-mai-on-aave-v3/7630"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "QiDao overcollateralized crypto vaults",
@@ -32949,7 +33693,22 @@
     },
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Mezo documents Skip Connect for BTC/USD and Pyth for additional market-data feeds, with no stronger reviewed failover tier for mUSD collateral pricing.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mezo oracle docs",
+          "url": "https://mezo.org/docs/developers/architecture/oracles/read-oracle/"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -32977,7 +33736,9 @@
         "risk": "medium",
         "probe": {
           "kind": "json-path",
-          "path": ["total_supply"]
+          "path": [
+            "total_supply"
+          ]
         }
       }
     },
@@ -33800,6 +34561,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Abracadabra Cauldrons use per-market external oracles connected to each market, but reviewed docs do not prove stronger failover controls.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Abracadabra architecture docs",
+          "url": "https://dev.abracadabra.money/getting-started/architecture-overview"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "yvDAI cauldron collateral",
@@ -34703,6 +35477,19 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for defi.money MONEY do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "defi.money MONEY docs",
+          "url": "https://docs.defi.money/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Approved crypto loan collateral",
@@ -35513,6 +36300,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Metronome msUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Metronome msUSD docs",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "USDC",
@@ -36264,7 +37064,9 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "U.S. Treasury bills (0-180 day maturity)",
@@ -37208,7 +38010,22 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Beraborrow publishes collateral oracle provider mappings such as RedStone, Chronicle, and eOracle, but reviewed docs do not show stronger failover handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Beraborrow pricing assets docs",
+          "url": "https://beraborrow.gitbook.io/docs/pricing-assets"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -38155,6 +38972,31 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
+    "bridgeRouteRisk": {
+      "tier": "liquidity-or-intent-route",
+      "summary": "NUSD is a legacy Synapse bridge-liquidity stable asset whose supply and peg mechanics depend on Synapse pool liquidity rather than issuer-native mint/redeem rails. L2BEAT's historical Synapse bridge coverage is kept as evidence, but Synapse is not present in the current Interop protocol snapshot, so Pharos scores the route through the liquidity-route tier.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex L2BEAT route review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "l2beat",
+          "name": "Synapse",
+          "url": "https://l2beat.com/bridges/projects/synapse",
+          "note": "Legacy L2BEAT bridge page referenced by the existing mint-authority review."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Synapse on L2BEAT",
+          "url": "https://l2beat.com/bridges/projects/synapse"
+        },
+        {
+          "label": "Synapse docs",
+          "url": "https://docs.synapseprotocol.com/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "DAI liquidity",
@@ -38366,7 +39208,9 @@
         "label": "Nest Credit API"
       },
       "scoring": {
-        "allowedDegradedWarningCodes": ["nest-nav-coverage-gap"]
+        "allowedDegradedWarningCodes": [
+          "nest-nav-coverage-gap"
+        ]
       },
       "adapter": "nest-vault-positions",
       "inputs": {
@@ -38525,6 +39369,19 @@
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Nereus NXUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Nereus NXUSD docs",
+          "url": "https://nereus.finance/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Nereus overcollateralized crypto positions including DAI collateral",
@@ -40557,7 +41414,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -40743,6 +41619,19 @@
     },
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for PHT Stablecoin do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "PHT Stablecoin docs",
+          "url": "https://docs.apacx.io/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "apcxUSDT custodial wrapper collateral",
@@ -41897,11 +42786,15 @@
         "risk": "very-low",
         "reserveProbe": {
           "kind": "json-path",
-          "path": ["totalFiatReserves"]
+          "path": [
+            "totalFiatReserves"
+          ]
         },
         "supplyProbe": {
           "kind": "json-path",
-          "path": ["totalSupply"]
+          "path": [
+            "totalSupply"
+          ]
         },
         "reserveSourceLabel": "Stablecorp balances API"
       }
@@ -42433,6 +43326,19 @@
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Resupply reUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Resupply reUSD docs",
+          "url": "https://docs.resupply.finance/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Curve Lend vault shares (crvUSD lending positions)",
@@ -43340,7 +44246,10 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -44348,7 +45257,22 @@
     "chainTier": "unproven",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "River satUSD uses DIA price feeds with documented MAIR pricing, deviation triggers, refresh frequency, and heartbeat parameters.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "River DIA oracle docs",
+          "url": "https://docs.river.inc/outro/satusd-oracle/dia-oracle"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "BTC (overcollateralized CDP)",
@@ -44988,7 +45912,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "BOLD wrapper vaults use internal share accounting but inherit Liquity V2 collateral-feed staleness checks and branch shutdown behavior from the underlying BOLD system.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        },
+        {
+          "label": "Liquity BOLD contracts",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "variantOf": "bold-liquity",
     "variantKind": "risk-absorption",
     "reserves": [
@@ -45127,6 +46070,23 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Savings crvUSD uses internal vault share accounting but inherits crvUSD collateral-oracle exposure from Curve controllers.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Curve crvUSD risk docs",
+          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        },
+        {
+          "label": "Savings crvUSD repository",
+          "url": "https://github.com/curvefi/scrvusd"
+        }
+      ]
+    },
     "variantOf": "crvusd-curve",
     "variantKind": "savings-passthrough",
     "reserves": [
@@ -45436,6 +46396,23 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "medianized-with-delay",
+      "summary": "Savings Dai/USDS wrappers use internal share accounting but inherit the parent Maker/Sky CDP oracle path of medianized feeds routed through the Oracle Security Module delay.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Maker Oracle Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        },
+        {
+          "label": "Maker Oracle Security Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        }
+      ]
+    },
     "variantOf": "dai-makerdao",
     "variantKind": "savings-passthrough",
     "reserves": [
@@ -45601,6 +46578,23 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "sDOLA uses internal staking-accounting exposure but inherits DOLA mint-market oracle risk from Inverse FiRM Pessimistic Price Oracles.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Inverse sDOLA docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+        },
+        {
+          "label": "Inverse FiRM docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+        }
+      ]
+    },
     "variantOf": "dola-inverse-finance",
     "variantKind": "savings-passthrough",
     "reserves": [
@@ -46138,6 +47132,23 @@
     "collateralQuality": "native",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "sGHO uses internal savings-token accounting but inherits GHO collateral-oracle risk from Aave reserve oracle contracts.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Aave sGHO guide",
+          "url": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        {
+          "label": "Aave Oracle docs",
+          "url": "https://aave.com/docs/ecosystem/oracle"
+        }
+      ]
+    },
     "variantOf": "gho-aave",
     "variantKind": "savings-passthrough",
     "reserves": [
@@ -46312,6 +47323,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Shade SILK do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Shade SILK docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)",
@@ -47352,7 +48376,10 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -49229,6 +50256,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Synthetix sUSD historically relies on Chainlink-decentralized price feeds for synth pricing, with no stronger failover tier verified here.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Synthetix Chainlink integration",
+          "url": "https://blog.synthetix.io/chainlink-decentralizes-first-wave-of-synthetix-price-feeds/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "SNX (via legacy V2 420 pool, 200% C-ratio)",
@@ -49607,7 +50647,10 @@
         "label": "USD.AI Reserves"
       },
       "scoring": {
-        "allowedDegradedWarningCodes": ["source-timestamp-spread", "usdai-share-coverage-gap"]
+        "allowedDegradedWarningCodes": [
+          "source-timestamp-spread",
+          "usdai-share-coverage-gap"
+        ]
       },
       "adapter": "usdai-proof-of-reserves",
       "inputs": {
@@ -50401,6 +51444,23 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "wrapper",
+    "oracleRisk": {
+      "tier": "medianized-with-delay",
+      "summary": "Savings Dai/USDS wrappers use internal share accounting but inherit the parent Maker/Sky CDP oracle path of medianized feeds routed through the Oracle Security Module delay.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Maker Oracle Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        },
+        {
+          "label": "Maker Oracle Security Module docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        }
+      ]
+    },
     "variantOf": "usds-sky",
     "variantKind": "savings-passthrough",
     "reserves": [
@@ -53762,7 +54822,22 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
-    "infrastructures": ["liquity-v1"],
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Bima discloses reliance on third-party oracle services for collateral price data, but public docs reviewed do not identify stronger failover handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Bima terms oracle-risk disclosure",
+          "url": "https://docs.bima.money/terms-of-use"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
@@ -55299,6 +56374,19 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Avalon USDa do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Avalon USDa docs",
+          "url": "https://docs.avalonfinance.xyz"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "FBTC (tokenized BTC via Cobo custody)",
@@ -55413,7 +56501,26 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "USDaf is documented as a Liquity V2 fork using Chainlink primary feeds with Curve fallback feeds for some collaterals.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Asymmetry docs",
+          "url": "https://docs.asymmetry.finance/"
+        },
+        {
+          "label": "Asymmetry USDaf v2 audit scope",
+          "url": "https://cantina.xyz/competitions/3765f098-ef5c-47be-beb9-3f4ce9dcb407"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "ysyBOLD (Yearn savings BOLD)",
@@ -55612,7 +56719,9 @@
               "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
             ],
             "threshold": 3,
-            "enabledModules": ["0x719fB18e31287aB36771aB3038575253502E41AB"],
+            "enabledModules": [
+              "0x719fB18e31287aB36771aB3038575253502E41AB"
+            ],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
             "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
@@ -55931,7 +57040,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -56086,6 +57197,31 @@
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "bridgeRouteRisk": {
+      "tier": "external-lock-mint",
+      "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted on Blast through the L1 bridge/yield-manager path. The route is reviewed as external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin/yield-manager controls, not on issuer-native burn/mint finality.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex L2BEAT route review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "manual",
+          "name": "Blast USDYieldManager",
+          "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438",
+          "note": "Route identified from existing Pharos mint-authority review and Blast/Metalayer contract docs."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Metalayer contracts",
+          "url": "https://metalayerlabs.mintlify.app/building/contracts"
+        },
+        {
+          "label": "Blast USDYieldManager (Etherscan)",
+          "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "MakerDAO DSR / DAI yield manager",
@@ -56746,6 +57882,47 @@
     },
     "deploymentModel": "native-multichain",
     "custodyModel": "institutional-top",
+    "bridgeRouteRisk": {
+      "tier": "issuer-native-burn-mint",
+      "summary": "USDC's cross-chain route is primarily issuer-native Circle infrastructure, including CCTP burn/mint and Circle Gateway surfaces tracked by L2BEAT Interop. Because the route is issuer-operated and burn/mint based, it is scored as a strong bridge-route profile; the penalty-only Safety Score blend cannot lift USDC's Decentralization score.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex L2BEAT route review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "l2beat",
+          "name": "CCTP v2",
+          "slug": "cctpv2",
+          "url": "https://l2beat.com/interop/protocols/cctpv2",
+          "bridgeTypes": [
+            "burnAndMint"
+          ]
+        },
+        {
+          "source": "l2beat",
+          "name": "Circle Gateway",
+          "slug": "circlegateway",
+          "url": "https://l2beat.com/interop/protocols/circlegateway",
+          "bridgeTypes": [
+            "burnAndMint"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "L2BEAT CCTP v2",
+          "url": "https://l2beat.com/interop/protocols/cctpv2"
+        },
+        {
+          "label": "L2BEAT Circle Gateway",
+          "url": "https://l2beat.com/interop/protocols/circlegateway"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "U.S. Treasuries",
@@ -57130,6 +58307,47 @@
     "collateralQuality": "native",
     "custodyModel": "institutional-top",
     "governanceQuality": "single-entity",
+    "bridgeRouteRisk": {
+      "tier": "issuer-native-burn-mint",
+      "summary": "USDCx is issued through Circle's xReserve architecture and transfers to USDC through Circle-controlled CCTP/Gateway rails. The route is reviewed as issuer-native burn/mint evidence; the penalty-only Safety Score blend can only drag weak routes and cannot lift USDCx's Decentralization score.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex L2BEAT route review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "l2beat",
+          "name": "CCTP v2",
+          "slug": "cctpv2",
+          "url": "https://l2beat.com/interop/protocols/cctpv2",
+          "bridgeTypes": [
+            "burnAndMint"
+          ]
+        },
+        {
+          "source": "l2beat",
+          "name": "Circle Gateway",
+          "slug": "circlegateway",
+          "url": "https://l2beat.com/interop/protocols/circlegateway",
+          "bridgeTypes": [
+            "burnAndMint"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "label": "Movement: Introducing USDCx",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+        },
+        {
+          "label": "Circle xReserve",
+          "url": "https://www.circle.com/xreserve"
+        },
+        {
+          "label": "L2BEAT CCTP v2",
+          "url": "https://l2beat.com/interop/protocols/cctpv2"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Circle USDC held in xReserve smart contract",
@@ -57357,6 +58575,19 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for USDD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "USDD docs",
+          "url": "https://docs.usdd.io"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "TRX",
@@ -59365,6 +60596,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Hubble USDH do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Hubble USDH docs",
+          "url": "https://docs.hubbleprotocol.io"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Hubble Protocol overcollateralized Solana crypto vaults (SOL, mSOL, BTC, ETH and other whitelisted assets)",
@@ -59857,7 +61101,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -59981,7 +61227,22 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Orki USDK do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Orki USDK docs",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "WETH",
@@ -60930,7 +62191,9 @@
     },
     "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
@@ -61314,7 +62577,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
@@ -62123,6 +63388,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Parallel USDp do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Parallel USDp docs",
+          "url": "https://docs.parallel.best/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "frxUSD (Ethereum branch)",
@@ -63133,7 +64411,22 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Quill USDQ do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Quill USDQ docs",
+          "url": "https://docs.quill.finance/faq/usdusdq"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "wETH",
@@ -63779,6 +65072,23 @@
     },
     "chainTier": "mature-alt-l1",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "RIF on Chain inherits the Money On Chain oracle/medianizer model for Rootstock collateral pricing, with no stronger failover tier verified in public docs.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "RIF on Chain docs",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+        },
+        {
+          "label": "Money On Chain decentralized oracles",
+          "url": "https://moneyonchain.com/moc-decentralized-oracles/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "RIF collateral locked in RIF On Chain smart contracts",
@@ -63998,6 +65308,9 @@
     "oracleRisk": {
       "tier": "medianized-with-delay",
       "summary": "Sky/Maker collateral prices use whitelisted feed medianizers and Oracle Security Module delays before prices reach the core accounting system; governance can still alter oracle authorization and parameters.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
       "sources": [
         {
           "label": "Maker Oracle Module docs",
@@ -64272,7 +65585,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -65975,6 +67290,23 @@
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Kava Mint depends on Kava price-feed oracles for collateral markets, but reviewed docs do not identify a stronger failover tier.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kava Mint docs",
+          "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+        },
+        {
+          "label": "Kava oracle bot docs",
+          "url": "https://docs.kava.io/docs/resources/oracle-bot/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Kava CDP collateral and protocol liquidity",
@@ -66052,7 +67384,10 @@
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
-            "owners": ["0x67a6d918c3adfc36b047a8684491481114f6b3a6", "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"],
+            "owners": [
+              "0x67a6d918c3adfc36b047a8684491481114f6b3a6",
+              "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"
+            ],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -66104,6 +67439,19 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Last USD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Last USD docs",
+          "url": "https://www.last.net/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "HYPE and HYPE LSTs (Hyperliquid native)",
@@ -66786,6 +68134,19 @@
       "reviewedAt": "2026-05-25"
     },
     "deploymentModel": "single-chain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Tangent USG do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Tangent USG docs",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)",
@@ -67233,7 +68594,9 @@
     "chainTier": "stage1-l2",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "tBTC",
@@ -67349,7 +68712,9 @@
           "safe": {
             "version": "1.3.0",
             "threshold": 3,
-            "enabledModules": ["0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"],
+            "enabledModules": [
+              "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
+            ],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
             "observedBlock": 25295316,
@@ -68723,6 +70088,19 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for dForce USX do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "dForce USX docs",
+          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "dForce stablecoin and crypto collateral pool",
@@ -69579,6 +70957,19 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Youves states uUSD uses the ubinetic oracle service with independent third-party transmitters and standardized oracle feeds.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Youves FAQ",
+          "url": "https://youves.com/faqs/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "XTZ (Tezos)",
@@ -70101,7 +71492,10 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.4.1+L2",
-            "owners": ["0x29Aa2eD8712072e918632259780E587698Ef58df", "0x8b01d375e274213c860eF6ac013DBDd5286CD816"],
+            "owners": [
+              "0x29Aa2eD8712072e918632259780E587698Ef58df",
+              "0x8b01d375e274213c860eF6ac013DBDd5286CD816"
+            ],
             "threshold": 1,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -70163,6 +71557,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for vCred do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "vCred docs",
+          "url": "https://vcred.trade/"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Hemi credit and crypto collateral",
@@ -71149,6 +72556,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Virtue USD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Virtue USD docs",
+          "url": "https://docs.virtue.money/overview/what-is-vusd"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "IOTA, stIOTA, and IBTC collateral",
@@ -72542,7 +73962,10 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "version": "1.3.0",
-            "owners": ["0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1", "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"],
+            "owners": [
+              "0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1",
+              "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"
+            ],
             "threshold": 2,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
@@ -72678,7 +74101,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "wrapper",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
@@ -73330,7 +74755,10 @@
       },
       "scoring": {
         "maxSourceAgeSec": 4000000,
-        "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
       },
       "adapter": "reservoir",
       "inputs": {
@@ -74231,6 +75659,23 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "standard-external",
+      "summary": "Silo routes market prices through SiloOracleRepository modules such as Chainlink, DIA, and Uniswap oracles, with no stronger XAI failover tier verified.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Silo oracle repository docs",
+          "url": "https://devdocs.silo.finance/"
+        },
+        {
+          "label": "Silo Chainlink integration",
+          "url": "https://medium.com/silo-protocol/silo-finance-integrates-chainlink-price-feeds-to-help-secure-pricing-on-isolated-lending-markets-a2271f4c22ce"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "USDC Silo credit-line collateral",
@@ -75408,7 +76853,9 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
@@ -75561,7 +77008,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -76689,7 +78155,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "wrapper",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "BOLD wrapper vaults use internal share accounting but inherit Liquity V2 collateral-feed staleness checks and branch shutdown behavior from the underlying BOLD system.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        },
+        {
+          "label": "Liquity BOLD contracts",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "variantOf": "bold-liquity",
     "variantKind": "strategy-vault",
     "reserves": [
@@ -77810,6 +79295,19 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Yuzu USD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Yuzu USD docs",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Pendle PT/LP positions (leveraged DeFi yield)",
@@ -78105,7 +79603,26 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v2"],
+    "oracleRisk": {
+      "tier": "redundant-with-failover",
+      "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        }
+      ]
+    },
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -78481,6 +79998,19 @@
     },
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "dao-governance",
+    "oracleRisk": {
+      "tier": "oracleless-or-internal",
+      "summary": "Frankencoin collateral valuation is auction-driven, freeing liquidations from dependence on an external price oracle.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Frankencoin auction docs",
+          "url": "https://docs.frankencoin.com/positions/auctions"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "BOSS (Boss Info AG corporate equity)",
@@ -78855,6 +80385,19 @@
     "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
     "governanceQuality": "single-entity",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for Goal3 zkUSD do not identify the collateral oracle setup or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Goal3 zkUSD docs",
+          "url": "https://x.com/Goal3_xyz"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Goal3 sportsbook collateral pool (composition not disclosed)",
@@ -78993,6 +80536,23 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public Zephyr docs mention a pricing oracle for ZSD but do not identify the oracle provider set or failure handling.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Zephyr documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "ZEPH protocol reserve collateral",
@@ -79136,6 +80696,23 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "Public docs reviewed for ZYS do not identify a yield-share-specific oracle setup, and the underlying Zephyr pricing-oracle failure handling remains unresolved.",
+      "reviewedAt": "2026-06-12",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "Zephyr documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
     "variantOf": "zsd-zephyr-protocol",
     "variantKind": "savings-passthrough",
     "reserves": [

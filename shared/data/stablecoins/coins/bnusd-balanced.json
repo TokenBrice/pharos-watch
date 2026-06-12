@@ -17,6 +17,23 @@
   "llamaId": "204",
   "detailProvider": "defillama",
   "geckoId": "balanced-dollars",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Balanced bnUSD loans depend on external collateral price feeds, with public sources tying Balanced oracle integration to Band but not showing stronger failover handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Balanced bnUSD overview",
+        "url": "https://balanced.network/stablecoin/"
+      },
+      {
+        "label": "Band Protocol Balanced partnership",
+        "url": "https://medium.com/bandprotocol/balanced-network-strategic-partnership-with-band-protocol-and-launch-review-1cfbde8adaef"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -17,6 +17,19 @@
   "llamaId": "226",
   "detailProvider": "defillama",
   "geckoId": "frankencoin",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "Frankencoin collateral valuation is auction-driven, freeing liquidations from dependence on an external price oracle.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frankencoin auction docs",
+        "url": "https://docs.frankencoin.com/positions/auctions"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

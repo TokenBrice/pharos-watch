@@ -17,6 +17,19 @@
   "llamaId": "113",
   "detailProvider": "defillama",
   "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Shade SILK do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Shade SILK docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -103,7 +116,10 @@
         "canRaiseCap": "unknown",
         "evidence": "ShadeLend issues SILK against overcollateralized user deposits (ATOM, SCRT, stables, SHD); the SILK minter is also permissioned to Shade bonds and Shade Arbitrage, so minting is mechanism-gated rather than fully permissionless.",
         "sources": [
-          { "label": "SILK docs", "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk" }
+          {
+            "label": "SILK docs",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+          }
         ]
       },
       {
@@ -115,7 +131,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "ShadeDAO governs via SHD tokenholders, representatives, and assembly multisigs with sanity-check votes; assemblies set collateral/peg parameters and historically held centralized control over bond/mint permissioning (Certik flagged) pending full governance rollout.",
         "sources": [
-          { "label": "ShadeDAO docs", "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao" }
+          {
+            "label": "ShadeDAO docs",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao"
+          }
         ]
       }
     ],
@@ -124,8 +143,14 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Governance docs", "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/governance" },
-        { "label": "GitHub (securesecrets/shade)", "url": "https://github.com/securesecrets/shade" }
+        {
+          "label": "Governance docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/governance"
+        },
+        {
+          "label": "GitHub (securesecrets/shade)",
+          "url": "https://github.com/securesecrets/shade"
+        }
       ],
       "sourceFreeRationale": "Mechanism established from Shade docs/audit coverage; Secret Network privacy precludes live verification of current minter admin keys and assembly multisig thresholds.",
       "unresolvedQuestions": [

@@ -18,6 +18,23 @@
   "detailProvider": "defillama",
   "geckoId": "dai",
   "pythFeedId": "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "Maker/Sky collateral prices pass through whitelisted feed medianizers and the Oracle Security Module delay before core accounting consumes them.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Maker Oracle Module docs",
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+      },
+      {
+        "label": "Maker Oracle Security Module docs",
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

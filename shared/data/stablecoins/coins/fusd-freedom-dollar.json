@@ -17,6 +17,19 @@
   "detailProvider": "coingecko",
   "geckoId": "freedom-dollar",
   "protocolSlug": "freedom-dollar",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Freedom Dollar do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Freedom Dollar docs",
+        "url": "https://www.freedomdollar.com/en/white-paper"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -62,7 +75,9 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sourceFreeRationale": "Mechanism description comes from Freedom Dollar project materials; the underlying Zano privacy chain provides no auditable contract surface to confirm or refute the autonomous, admin-keyless mint claim.",
-      "unresolvedQuestions": ["Zano is a privacy-chain using Confidential Assets with no auditable EVM contract surface; the FUSD mint authority and admin-keyless claim cannot be verified remotely. Resolution requires Zano-native tooling or direct issuer disclosure of collateral contract parameters."]
+      "unresolvedQuestions": [
+        "Zano is a privacy-chain using Confidential Assets with no auditable EVM contract surface; the FUSD mint authority and admin-keyless claim cannot be verified remotely. Resolution requires Zano-native tooling or direct issuer disclosure of collateral contract parameters."
+      ]
     }
   }
 }

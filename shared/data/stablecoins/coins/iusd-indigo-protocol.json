@@ -18,6 +18,19 @@
   "mechanismArchetype": "cdp",
   "geckoId": "iusd",
   "protocolSlug": "indigo-protocol",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Indigo iUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Indigo iUSD docs",
+        "url": "https://docs.indigoprotocol.io/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -17,6 +17,19 @@
   "llamaId": "20",
   "detailProvider": "defillama",
   "geckoId": "alchemix-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Alchemix V2 docs",
+        "url": "https://v2-docs.alchemix.fi/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

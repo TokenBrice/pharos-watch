@@ -17,6 +17,19 @@
   "llamaId": "253",
   "detailProvider": "defillama",
   "geckoId": "usbd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Bima discloses reliance on third-party oracle services for collateral price data, but public docs reviewed do not identify stronger failover handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bima terms oracle-risk disclosure",
+        "url": "https://docs.bima.money/terms-of-use"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -74,9 +87,7 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",

@@ -18,6 +18,23 @@
   "detailProvider": "defillama",
   "geckoId": "liquity-usd",
   "pythFeedId": "0xc9dc99720306ef43fd301396a6f8522c8be89c6c77e8c27d87966918a943fd20",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Liquity V1 uses a Chainlink primary feed with Tellor fallback and automated switching/last-good-price logic for LUSD collateral pricing.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity price-oracle design",
+        "url": "https://www.liquity.org/blog/price-oracles-in-liquity"
+      },
+      {
+        "label": "Liquity V1 contracts",
+        "url": "https://github.com/liquity/dev"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -132,9 +149,7 @@
   },
   "deploymentModel": "canonical-bridge",
   "governanceQuality": "immutable-code",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "ETH",

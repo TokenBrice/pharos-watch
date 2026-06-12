@@ -17,6 +17,19 @@
   "llamaId": "312",
   "detailProvider": "defillama",
   "geckoId": "hydrated-dollar",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Hydrated Dollar HOLLAR do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Hydrated Dollar HOLLAR docs",
+        "url": "https://docs.hydration.net/quick_start/hollar/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

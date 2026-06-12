@@ -37,6 +37,19 @@
     "reviewer": "Codex FreezeWatch audit",
     "reviewedAt": "2026-05-25"
   },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Orki USDK do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Orki USDK docs",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -61,9 +74,7 @@
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "WETH",

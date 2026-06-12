@@ -67,6 +67,23 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-crvusd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Savings crvUSD uses internal vault share accounting but inherits crvUSD collateral-oracle exposure from Curve controllers.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Curve crvUSD risk docs",
+        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+      },
+      {
+        "label": "Savings crvUSD repository",
+        "url": "https://github.com/curvefi/scrvusd"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

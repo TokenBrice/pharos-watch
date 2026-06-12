@@ -16,6 +16,19 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "launchDate": "2026-02-12",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Tangent USG do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Tangent USG docs",
+        "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

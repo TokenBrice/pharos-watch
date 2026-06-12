@@ -18,6 +18,23 @@
   "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
   "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
   "mechanismArchetype": "cdp",
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Fathom public stablecoin code references a CentralizedOraclePriceFeed/FathomPriceOracle deployment path, with no redundant validation or failover verified.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Fathom docs",
+        "url": "https://docs.fathom.fi/"
+      },
+      {
+        "label": "Fathom stablecoin contracts",
+        "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

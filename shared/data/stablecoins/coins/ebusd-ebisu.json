@@ -17,6 +17,19 @@
   "llamaId": "288",
   "detailProvider": "defillama",
   "geckoId": "ebusd-stablecoin",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Ebisu ebUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Ebisu ebUSD docs",
+        "url": "https://ebisu.gitbook.io/ebisu-money"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -129,9 +142,7 @@
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "sUSDe (Ethena savings)",

@@ -18,6 +18,19 @@
   "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
   "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
   "mechanismArchetype": "cdp",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Sovryn Dollar do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Sovryn Dollar docs",
+        "url": "https://sovryn.com/sovryn-dollar"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

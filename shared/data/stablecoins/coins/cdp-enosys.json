@@ -17,6 +17,19 @@
   "detailProvider": "coingecko",
   "geckoId": "enosys-loans-cdp",
   "protocolSlug": "enosys-loans",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Enosys Loans uses Flare ecosystem price feeds for collateral valuation, but reviewed public docs do not show stronger failover or shutdown handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Enosys Loans docs",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

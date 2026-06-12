@@ -30,6 +30,23 @@
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for ZYS do not identify a yield-share-specific oracle setup, and the underlying Zephyr pricing-oracle failure handling remains unresolved.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Zephyr documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr repository",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

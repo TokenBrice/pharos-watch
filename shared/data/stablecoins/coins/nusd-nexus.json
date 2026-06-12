@@ -53,6 +53,31 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "NUSD is a legacy Synapse bridge-liquidity stable asset whose supply and peg mechanics depend on Synapse pool liquidity rather than issuer-native mint/redeem rails. L2BEAT's historical Synapse bridge coverage is kept as evidence, but Synapse is not present in the current Interop protocol snapshot, so Pharos scores the route through the liquidity-route tier.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex L2BEAT route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Synapse",
+        "url": "https://l2beat.com/bridges/projects/synapse",
+        "note": "Legacy L2BEAT bridge page referenced by the existing mint-authority review."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Synapse on L2BEAT",
+        "url": "https://l2beat.com/bridges/projects/synapse"
+      },
+      {
+        "label": "Synapse docs",
+        "url": "https://docs.synapseprotocol.com/"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

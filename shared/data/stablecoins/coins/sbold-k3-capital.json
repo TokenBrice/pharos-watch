@@ -19,6 +19,23 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "sbold-by-k3-capital",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "BOLD wrapper vaults use internal share accounting but inherit Liquity V2 collateral-feed staleness checks and branch shutdown behavior from the underlying BOLD system.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      },
+      {
+        "label": "Liquity BOLD contracts",
+        "url": "https://github.com/liquity/bold/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -146,9 +163,7 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "BOLD deployed into Liquity V2 Stability Pools",

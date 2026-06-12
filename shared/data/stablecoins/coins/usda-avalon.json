@@ -18,6 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "usda-2",
   "cmcSlug": "usda-avalon-labs",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Avalon USDa do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Avalon USDa docs",
+        "url": "https://docs.avalonfinance.xyz"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

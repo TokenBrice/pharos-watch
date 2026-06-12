@@ -17,6 +17,19 @@
   "llamaId": "75",
   "detailProvider": "defillama",
   "geckoId": "youves-uusd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Youves states uUSD uses the ubinetic oracle service with independent third-party transmitters and standardized oracle feeds.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Youves FAQ",
+        "url": "https://youves.com/faqs/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

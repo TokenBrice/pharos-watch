@@ -18,6 +18,23 @@
   "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
   "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
   "mechanismArchetype": "cdp",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Djed describe the reserve mechanism but do not identify the production oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "COTI Djed FAQ",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed"
+      },
+      {
+        "label": "IOG Djed design article",
+        "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

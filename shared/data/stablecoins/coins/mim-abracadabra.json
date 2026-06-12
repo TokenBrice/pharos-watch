@@ -18,6 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "magic-internet-money",
   "pythFeedId": "0x7aa41f6ee464616f3cbc469fddfd7e63d8db319b7bd585cc95b24c29c9172916",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Abracadabra Cauldrons use per-market external oracles connected to each market, but reviewed docs do not prove stronger failover controls.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Abracadabra architecture docs",
+        "url": "https://dev.abracadabra.money/getting-started/architecture-overview"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -68,6 +68,23 @@
   "detailProvider": "coingecko",
   "geckoId": "savings-dai",
   "pythFeedId": "0x710659c5a68e2416ce4264ca8d50d34acc20041d91289110eea152c52ff3dc39",
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "Savings Dai/USDS wrappers use internal share accounting but inherit the parent Maker/Sky CDP oracle path of medianized feeds routed through the Oracle Security Module delay.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Maker Oracle Module docs",
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+      },
+      {
+        "label": "Maker Oracle Security Module docs",
+        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

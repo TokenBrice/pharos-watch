@@ -17,6 +17,19 @@
   "llamaId": "15",
   "detailProvider": "defillama",
   "geckoId": "dola-usd",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Inverse FiRM uses Pessimistic Price Oracles for collateral valuation, but reviewed docs do not identify stronger failover or shutdown handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse FiRM docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

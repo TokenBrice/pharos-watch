@@ -24,6 +24,19 @@
     "attestorTier": "self",
     "cadence": "ad-hoc"
   },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for USDD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "USDD docs",
+        "url": "https://docs.usdd.io"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

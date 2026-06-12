@@ -17,6 +17,23 @@
   "llamaId": "168",
   "detailProvider": "defillama",
   "geckoId": "f-x-protocol-fxusd",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for fxUSD mention oracle-priced redemptions but do not identify the oracle provider set or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "f(x) Protocol docs",
+        "url": "https://fxprotocol.gitbook.io/fx-docs"
+      },
+      {
+        "label": "f(x) Protocol site",
+        "url": "https://fx.aladdin.club/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

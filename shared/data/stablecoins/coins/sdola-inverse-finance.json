@@ -19,6 +19,23 @@
   "pegMechanism": "Deposit DOLA to mint sDOLA at the current vault exchange rate; the DOLA:sDOLA exchange rate rises as FiRM lending revenue is converted into DOLA, and holders can unwrap back to DOLA without a lock-up",
   "detailProvider": "coingecko",
   "geckoId": "sdola",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "sDOLA uses internal staking-accounting exposure but inherits DOLA mint-market oracle risk from Inverse FiRM Pessimistic Price Oracles.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse sDOLA docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Inverse FiRM docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

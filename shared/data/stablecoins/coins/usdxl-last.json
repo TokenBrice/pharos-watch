@@ -18,6 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "last-usd",
   "pythFeedId": "0xe10593860e9ee1c204e4f9569e877502f098dd1a4d84cc5bad06f23f77dcbfe2",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Last USD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Last USD docs",
+        "url": "https://www.last.net/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -120,10 +133,7 @@
         "signerCount": 2,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "owners": [
-            "0x67a6d918c3adfc36b047a8684491481114f6b3a6",
-            "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"
-          ],
+          "owners": ["0x67a6d918c3adfc36b047a8684491481114f6b3a6", "0xae04ce2f38377b3cc7273231cfafcbe1ca831545"],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",

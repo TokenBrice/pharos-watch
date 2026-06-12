@@ -17,6 +17,19 @@
   "llamaId": "256",
   "detailProvider": "defillama",
   "geckoId": "resupply-usd",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Resupply reUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Resupply reUSD docs",
+        "url": "https://docs.resupply.finance/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

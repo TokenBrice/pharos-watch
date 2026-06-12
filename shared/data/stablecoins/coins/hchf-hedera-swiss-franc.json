@@ -11,15 +11,30 @@
     "rwa": false,
     "navToken": false
   },
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "collateral": "HBAR locked in overcollateralized HLiquity Troves on Hedera, with a 110% minimum collateral ratio and Stability Pool liquidations",
   "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "hedera-swiss-franc",
   "llamaId": "200",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for HLiquity HCHF identify a Liquity fork but do not identify the HBAR/CHF oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "HLiquity docs",
+        "url": "https://docs.hliquity.org/"
+      },
+      {
+        "label": "HLiquity repository",
+        "url": "https://github.com/SwisscoastAG/HLiquity"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

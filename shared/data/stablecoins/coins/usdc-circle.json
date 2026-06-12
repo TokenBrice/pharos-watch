@@ -452,6 +452,43 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDC's cross-chain route is primarily issuer-native Circle infrastructure, including CCTP burn/mint and Circle Gateway surfaces tracked by L2BEAT Interop. Because the route is issuer-operated and burn/mint based, it is scored as a strong bridge-route profile; the penalty-only Safety Score blend cannot lift USDC's Decentralization score.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex L2BEAT route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "CCTP v2",
+        "slug": "cctpv2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2",
+        "bridgeTypes": ["burnAndMint"]
+      },
+      {
+        "source": "l2beat",
+        "name": "Circle Gateway",
+        "slug": "circlegateway",
+        "url": "https://l2beat.com/interop/protocols/circlegateway",
+        "bridgeTypes": ["burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Circle USDC docs",
+        "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+      },
+      {
+        "label": "L2BEAT CCTP v2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2"
+      },
+      {
+        "label": "L2BEAT Circle Gateway",
+        "url": "https://l2beat.com/interop/protocols/circlegateway"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

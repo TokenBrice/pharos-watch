@@ -17,6 +17,19 @@
   "llamaId": "218",
   "detailProvider": "defillama",
   "geckoId": "satoshi-stablecoin",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "River satUSD uses DIA price feeds with documented MAIR pricing, deviation triggers, refresh frequency, and heartbeat parameters.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "River DIA oracle docs",
+        "url": "https://docs.river.inc/outro/satusd-oracle/dia-oracle"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -93,9 +106,7 @@
   "chainTier": "unproven",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "BTC (overcollateralized CDP)",

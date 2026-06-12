@@ -17,6 +17,19 @@
   "llamaId": "65",
   "detailProvider": "defillama",
   "geckoId": "usdh",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Hubble USDH do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Hubble USDH docs",
+        "url": "https://docs.hubbleprotocol.io"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

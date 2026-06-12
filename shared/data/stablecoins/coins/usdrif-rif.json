@@ -17,6 +17,23 @@
   "llamaId": "159",
   "detailProvider": "defillama",
   "geckoId": "rif-us-dollar",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "RIF on Chain inherits the Money On Chain oracle/medianizer model for Rootstock collateral pricing, with no stronger failover tier verified in public docs.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RIF on Chain docs",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+      },
+      {
+        "label": "Money On Chain decentralized oracles",
+        "url": "https://moneyonchain.com/moc-decentralized-oracles/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

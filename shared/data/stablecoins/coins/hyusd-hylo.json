@@ -17,6 +17,19 @@
   "llamaId": "302",
   "detailProvider": "defillama",
   "geckoId": "hylo-usd",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Hylo hyUSD describe internal pool accounting but do not clearly identify whether collateral TVL uses external oracle feeds or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Hylo docs",
+        "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

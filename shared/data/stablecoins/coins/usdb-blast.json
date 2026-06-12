@@ -40,6 +40,31 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted on Blast through the L1 bridge/yield-manager path. The route is reviewed as external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin/yield-manager controls, not on issuer-native burn/mint finality.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex L2BEAT route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "manual",
+        "name": "Blast USDYieldManager",
+        "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438",
+        "note": "Route identified from existing Pharos mint-authority review and Blast/Metalayer contract docs."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Metalayer contracts",
+        "url": "https://metalayerlabs.mintlify.app/building/contracts"
+      },
+      {
+        "label": "Blast USDYieldManager (Etherscan)",
+        "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

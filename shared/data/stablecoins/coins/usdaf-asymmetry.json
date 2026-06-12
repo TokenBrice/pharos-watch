@@ -17,6 +17,23 @@
   "llamaId": "295",
   "detailProvider": "defillama",
   "geckoId": "asymmetry-usdaf-2",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "USDaf is documented as a Liquity V2 fork using Chainlink primary feeds with Curve fallback feeds for some collaterals.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Asymmetry docs",
+        "url": "https://docs.asymmetry.finance/"
+      },
+      {
+        "label": "Asymmetry USDaf v2 audit scope",
+        "url": "https://cantina.xyz/competitions/3765f098-ef5c-47be-beb9-3f4ce9dcb407"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -48,9 +65,7 @@
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "ysyBOLD (Yearn savings BOLD)",

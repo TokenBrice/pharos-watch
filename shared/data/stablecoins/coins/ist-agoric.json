@@ -18,6 +18,23 @@
   "detailProvider": "defillama",
   "geckoId": "inter-stable-token",
   "cmcSlug": "inter-stable-token",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Inter Protocol vaults receive collateral prices from the Flux Aggregator data feed, whose operators submit median prices by round.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inter Protocol vault docs",
+        "url": "https://docs.inter.trade/inter-protocol-system-documentation/vaults"
+      },
+      {
+        "label": "Agoric vault implementation discussion",
+        "url": "https://community.agoric.com/t/inter-protocol-vaults-contract-implementations/261?page=2"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

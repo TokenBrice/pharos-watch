@@ -18,6 +18,19 @@
   "detailProvider": "defillama",
   "geckoId": "mezo-usd",
   "pythFeedId": "0x0617a9b725011a126a2b9fd53563f4236501f32cf76d877644b943394606c6de",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Mezo documents Skip Connect for BTC/USD and Pyth for additional market-data feeds, with no stronger reviewed failover tier for mUSD collateral pricing.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mezo oracle docs",
+        "url": "https://mezo.org/docs/developers/architecture/oracles/read-oracle/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -215,9 +228,7 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -245,9 +256,7 @@
       "risk": "medium",
       "probe": {
         "kind": "json-path",
-        "path": [
-          "total_supply"
-        ]
+        "path": ["total_supply"]
       }
     }
   },

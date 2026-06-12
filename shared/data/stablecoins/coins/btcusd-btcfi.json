@@ -17,6 +17,19 @@
   "llamaId": "183",
   "detailProvider": "defillama",
   "geckoId": "bitcoin-usd-btcfi",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for BTCfi Bitcoin USD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "BTCfi Bitcoin USD docs",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -95,9 +108,7 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "infrastructures": [
-    "liquity-v1"
-  ],
+  "infrastructures": ["liquity-v1"],
   "reserves": [
     {
       "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",

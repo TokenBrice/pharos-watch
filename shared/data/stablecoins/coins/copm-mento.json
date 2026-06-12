@@ -24,6 +24,23 @@
     "attestorTier": "self",
     "cadence": "real-time"
   },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento V3 smart contracts docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+      },
+      {
+        "label": "Mento BreakerBox docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -160,8 +177,6 @@
       "weight": 1
     }
   ],
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "launchDate": "2024-10-11"
 }

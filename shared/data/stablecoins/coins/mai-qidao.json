@@ -18,6 +18,23 @@
   "geckoId": "mimatic",
   "cmcSlug": "mai",
   "protocolSlug": "qidao",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "QiDao MAI collateral vaults use Chainlink-priced collateral feeds, with no stronger reviewed failover tier found in public docs.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "QiDao Chainlink case study",
+        "url": "https://chain.link/case-studies/qidao"
+      },
+      {
+        "label": "Aave MAI listing discussion",
+        "url": "https://governance.aave.com/t/add-mai-on-aave-v3/7630"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

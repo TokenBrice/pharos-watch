@@ -17,6 +17,19 @@
   "detailProvider": "coingecko",
   "geckoId": "alto-dusd",
   "llamaId": "366",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Alto DUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Alto DUSD docs",
+        "url": "https://docs.alto.money/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

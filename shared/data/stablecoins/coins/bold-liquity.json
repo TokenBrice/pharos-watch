@@ -21,6 +21,9 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Liquity BOLD contract docs",
@@ -29,6 +32,50 @@
       {
         "label": "Liquity V2 risk disclosure",
         "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      }
+    ],
+    "branches": [
+      {
+        "id": "weth",
+        "label": "WETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "WETH collateral uses Liquity V2 external feeds with response validation, last-good-price fallback, and branch shutdown if oracle checks fail.",
+        "collateralAssets": ["WETH"],
+        "chains": ["ethereum"],
+        "sources": [
+          {
+            "label": "Liquity BOLD contract docs",
+            "url": "https://github.com/liquity/bold/"
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "wstETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "wstETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+        "collateralAssets": ["wstETH"],
+        "chains": ["ethereum"],
+        "sources": [
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ]
+      },
+      {
+        "id": "reth",
+        "label": "rETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "rETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+        "collateralAssets": ["rETH"],
+        "chains": ["ethereum"],
+        "sources": [
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ]
       }
     ]
   },

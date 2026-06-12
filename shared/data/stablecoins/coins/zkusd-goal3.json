@@ -16,6 +16,19 @@
   "mechanismArchetype": "cdp",
   "llamaId": "151",
   "detailProvider": "defillama",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Goal3 zkUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Goal3 zkUSD docs",
+        "url": "https://x.com/Goal3_xyz"
+      }
+    ]
+  },
   "links": [
     {
       "label": "X",

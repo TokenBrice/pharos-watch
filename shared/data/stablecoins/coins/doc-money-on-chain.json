@@ -17,6 +17,23 @@
   "llamaId": "30",
   "detailProvider": "defillama",
   "geckoId": "dollar-on-chain",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Money On Chain uses a decentralized oracle/medianizer process for BTC/USD reference pricing, but reviewed sources do not show a stronger failover tier.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Money On Chain decentralized oracles",
+        "url": "https://moneyonchain.com/moc-decentralized-oracles/"
+      },
+      {
+        "label": "Money On Chain price feeder",
+        "url": "https://github.com/money-on-chain/price-feeder"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

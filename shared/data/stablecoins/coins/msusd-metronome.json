@@ -19,6 +19,19 @@
   "geckoId": "metronome-synth-usd",
   "cmcSlug": "metronome-synth-usd",
   "pythFeedId": "0xc753c899ffdfcc8d1a02440fe380501b454b559122998bcd245d9063d07cc162",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Public docs reviewed for Metronome msUSD do not identify the collateral oracle setup or failure handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Metronome msUSD docs",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

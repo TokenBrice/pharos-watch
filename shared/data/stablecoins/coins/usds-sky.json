@@ -21,6 +21,9 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "Sky/Maker collateral prices use whitelisted feed medianizers and Oracle Security Module delays before prices reach the core accounting system; governance can still alter oracle authorization and parameters.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Maker Oracle Module docs",

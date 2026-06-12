@@ -17,6 +17,19 @@
   "llamaId": "329",
   "detailProvider": "defillama",
   "geckoId": "nectar",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Beraborrow publishes collateral oracle provider mappings such as RedStone, Chronicle, and eOracle, but reviewed docs do not show stronger failover handling.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Beraborrow pricing assets docs",
+        "url": "https://beraborrow.gitbook.io/docs/pricing-assets"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -51,9 +64,7 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "reserves": [
     {
       "name": "iBGT (Infrared liquid staked BGT)",
