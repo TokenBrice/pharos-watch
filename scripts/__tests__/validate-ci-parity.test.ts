@@ -470,6 +470,8 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("Apply production D1 migrations");
     expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
     expect(deployWorkerJob).toContain("needs.upload-worker-version.outputs.version_upload_unavailable != 'true'");
+    expect(deployWorkerJob).toContain("node .github/scripts/deploy-worker-version.mjs");
+    expect(deployWorkerJob).not.toContain("wrangler versions deploy");
     expect(deployWorkerJob).toContain("id: sync-worker-triggers");
     expect(deployWorkerJob).toContain("continue-on-error: true");
     expect(deployWorkerJob).toContain("Smoke production worker");

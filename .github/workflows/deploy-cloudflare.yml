@@ -221,12 +221,11 @@ jobs:
       - name: Promote uploaded worker version to production
         if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable != 'true' }}
         env:
+          WORKER_NAME: stablecoin-api
           WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.version_id }}
-          WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
         run: |
-          rm -f "$WRANGLER_OUTPUT_FILE_PATH"
-          cd worker
-          npx --no-install wrangler versions deploy "${WORKER_VERSION_ID}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
+          node .github/scripts/deploy-worker-version.mjs \
+            --message "GitHub Actions deploy ${GITHUB_SHA}"
       - name: Deploy worker with legacy Wrangler deploy fallback
         if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable == 'true' }}
         run: cd worker && npx --no-install wrangler deploy
