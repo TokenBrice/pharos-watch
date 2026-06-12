@@ -79,6 +79,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Reassess after the owning surface stabilizes."
   },
+  "shared/lib/chains/l2beat-risk.ts": {
+    "disposition": "deferred",
+    "notes": "Static L2BEAT chain-risk snapshot exceeded the file-line hotspot candidate threshold when Chain Health v1.4 landed. Keep it waived as a data snapshot module for this release; future snapshot refresh work should consider moving the raw payload under shared/data with a thin runtime adapter.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-12",
+    "reviewAfter": "2026-09-12",
+    "nextAction": "Reassess during the next L2BEAT snapshot refresh and move static payload data out of shared/lib if the snapshot grows again."
+  },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",

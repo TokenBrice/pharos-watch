@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 43,
+    "fileLines": 56,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -72,8 +72,8 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 134,
-    "maxFunctionLines": 113,
+    "fileLines": 135,
+    "maxFunctionLines": 114,
     "branchCount": 6,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -444,9 +444,9 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 102,
-    "maxFunctionLines": 64,
-    "branchCount": 5,
+    "fileLines": 101,
+    "maxFunctionLines": 59,
+    "branchCount": 1,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 132,
@@ -516,8 +516,8 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 266,
-    "maxFunctionLines": 132,
+    "fileLines": 250,
+    "maxFunctionLines": 126,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
