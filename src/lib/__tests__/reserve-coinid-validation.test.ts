@@ -140,6 +140,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "ntbill-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
     "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
   ],
+  [
+    "weusd-picwe::Disputed USDC versus USDT/MOVE backing disclosure::USDC",
+    "WEUSD's disclosure notes competing stablecoin exposures, and live adapter data is not yet granular enough to attribute a single upstream stablecoin coinId safely.",
+  ],
+  [
+    "weusd-picwe::Disputed USDC versus USDT/MOVE backing disclosure::USDT",
+    "WEUSD's disclosure notes competing stablecoin exposures, and live adapter data is not yet granular enough to attribute a single upstream stablecoin coinId safely.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
