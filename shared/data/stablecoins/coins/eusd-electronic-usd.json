@@ -13,7 +13,6 @@
   },
   "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
   "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
-  "mechanismArchetype": "cdp",
   "llamaId": "106",
   "detailProvider": "defillama",
   "geckoId": "electronic-usd",

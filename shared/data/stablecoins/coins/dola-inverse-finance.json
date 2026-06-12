@@ -76,7 +76,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DOLA minting is controlled by the token operator, a Compound Timelock (48h delay) administered by a Compound GovernorBravo using INV governance token. All DOLA supply changes require an on-chain INV vote followed by a 48-hour timelock execution delay.",
     "mintIncidents": [

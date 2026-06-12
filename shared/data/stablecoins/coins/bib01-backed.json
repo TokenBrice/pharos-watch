@@ -20,7 +20,7 @@
     "type": "real-time",
     "url": "https://app.backed.fi/issuance",
     "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
-    "attestorTier": "self",
+    "attestorTier": "niche",
     "cadence": "daily",
     "attestorJurisdiction": "Switzerland"
   },

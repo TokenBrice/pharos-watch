@@ -267,5 +267,13 @@
       "description": "Solana deployment in progress; retail rollout to SoFi's 13.7M members planned for 'coming months'.",
       "sourceUrl": "https://cryptobriefing.com/sofiusd-launch-solana/"
     }
-  ]
+  ],
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
+    "provider": "Deloitte & Touche LLP",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
+  }
 }

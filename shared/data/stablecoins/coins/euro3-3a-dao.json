@@ -112,7 +112,7 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Whitelisted vault crypto and stablecoin collateral",

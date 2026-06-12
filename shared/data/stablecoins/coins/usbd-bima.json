@@ -6,7 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "centralized-dependent",
+    "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
@@ -73,7 +73,7 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "single-entity",
   "infrastructures": [
     "liquity-v1"
   ],

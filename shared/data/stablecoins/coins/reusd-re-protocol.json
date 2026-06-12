@@ -40,9 +40,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "British Virgin Islands",
-    "regulator": "FSC",
-    "license": "BVI Securities and Investment Business Act"
+    "country": "Cayman Islands",
+    "license": "Exempted Limited Guarantee Foundation Company (IC-414560)"
   },
   "genius": {
     "applicability": "non-payment-token",

@@ -89,7 +89,7 @@
   },
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "tGBP is a TransparentUpgradeable proxy; the single owner EOA 0xAF4fCE...595C0 controls mint, burn, and upgrade via the ProxyAdmin contract it also owns.",

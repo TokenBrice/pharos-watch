@@ -281,7 +281,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
     "controls": [

@@ -7,7 +7,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
-    "governance": "centralized-dependent",
+    "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
@@ -77,10 +77,15 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "HLUSD governance", "url": "https://docs.helalabs.com/hlusd/stablecoin-governance" }
+        {
+          "label": "HLUSD governance",
+          "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+        }
       ],
       "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
-      "unresolvedQuestions": ["HLUSD's native HeLa chain has no accessible public RPC via standard providers (publicnode/ankr); mint role holder addresses (MintProposer, MintVoter, Admin) cannot be verified until the chain is modeled or a public RPC endpoint is documented."]
+      "unresolvedQuestions": [
+        "HLUSD's native HeLa chain has no accessible public RPC via standard providers (publicnode/ankr); mint role holder addresses (MintProposer, MintVoter, Admin) cannot be verified until the chain is modeled or a public RPC endpoint is documented."
+      ]
     }
   },
   "chainTier": "unproven",

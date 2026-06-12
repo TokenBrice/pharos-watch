@@ -5128,7 +5128,7 @@
       "type": "real-time",
       "url": "https://app.backed.fi/issuance",
       "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
-      "attestorTier": "self",
+      "attestorTier": "niche",
       "cadence": "daily",
       "attestorJurisdiction": "Switzerland"
     },
@@ -11248,7 +11248,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",
@@ -11984,7 +11984,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
@@ -13090,7 +13090,7 @@
     ],
     "mintAuthority": {
       "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "summary": "DOLA minting is controlled by the token operator, a Compound Timelock (48h delay) administered by a Compound GovernorBravo using INV governance token. All DOLA supply changes require an on-chain INV vote followed by a 48-hour timelock execution delay.",
       "mintIncidents": [
@@ -15981,7 +15981,7 @@
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
-    "governanceQuality": "dao-governance",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "Whitelisted vault crypto and stablecoin collateral",
@@ -17220,8 +17220,7 @@
     ],
     "jurisdiction": {
       "country": "Malta",
-      "regulator": "MFSA",
-      "license": "MiCA"
+      "regulator": "MFSA"
     },
     "mica": {
       "status": "non-compliant",
@@ -17817,7 +17816,6 @@
     },
     "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
     "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
-    "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
     "links": [
       {
@@ -20955,7 +20953,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -21075,7 +21073,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
-    "governanceQuality": "dao-governance",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "XDC and Fathom collateral-pool positions",
@@ -21843,7 +21841,7 @@
     },
     "collateral": "GBP share class of Spiko's Amundi-managed Smart Cash UCITS fund. Returns come from a fully collateralized total-return swap under which counterparty BNP Paribas pays SONIA + 0.27% daily; the swap is backed by a basket of listed equities marked to market daily, with CACEIS (Credit Agricole) acting as depositary.",
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-    "mechanismArchetype": "tbill",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -23441,9 +23439,8 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: gtUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -23607,9 +23604,8 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: gtUSDCp resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
       "reviewer": "Codex inferred-status backfill",
@@ -23675,12 +23671,12 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
     "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "gusd",
     "cmcSlug": "gusd",
     "proofOfReserves": {
@@ -25460,7 +25456,7 @@
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
-      "governance": "centralized-dependent",
+      "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -27506,7 +27502,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
@@ -31148,7 +31144,7 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "summary": "LISUSD uses a Maker-style wards() auth pattern with role values (1 = minter, 2 = manager). Confirmed minter wards: the 24h admin timelock and the HayJoin CDP exit adapter (the operational minter). A 3/6 manager Safe (wards = 2) can only set the supply cap. The timelock is the hardcoded DEFAULT_ADMIN gating rely/deny and owns the ProxyAdmin for both the token and HayJoin.",
@@ -32538,8 +32534,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -33042,8 +33038,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -33224,8 +33220,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -33941,8 +33937,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -34954,8 +34950,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -35195,7 +35191,7 @@
     },
     "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
     "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-usd",
     "links": [
       {
@@ -38436,7 +38432,7 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "user-collateralized-governed",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "summary": "NXUSD is a BoringOwnable CDP stablecoin; mint() is onlyOwner. The owner is a Gnosis Safe 1.3.0 with 2-of-3 threshold on Avalanche — no modules, no guard — that administers the NXUSD token and Nereus CDP parameters.",
@@ -42118,9 +42114,8 @@
       }
     ],
     "jurisdiction": {
-      "country": "British Virgin Islands",
-      "regulator": "FSC",
-      "license": "BVI Securities and Investment Business Act"
+      "country": "Cayman Islands",
+      "license": "Exempted Limited Guarantee Foundation Company (IC-414560)"
     },
     "genius": {
       "applicability": "non-payment-token",
@@ -43022,7 +43017,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
@@ -44079,7 +44074,7 @@
     },
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "concentrated-admin",
+      "authorityPosture": "unbounded-or-compromised",
       "confidence": "verified",
       "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID (UUPS proxy, ERC1967). Wrapper shares are minted against deposited AID only via deposit(); no privileged mint function. Upgrade authority and all admin roles (DEFAULT_ADMIN_ROLE, OPERATOR_ROLE, REWARDER_ROLE) held by a single deployer EOA (0x3885be...). Base issuance inherits the reviewed AID mint-authority profile.",
       "inheritedFrom": "aid-gaib",
@@ -45533,7 +45528,7 @@
     ],
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
       "inheritedFrom": "dola-inverse-finance",
@@ -46600,6 +46595,14 @@
     "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "sofiusd",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
+      "provider": "Deloitte & Touche LLP",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States"
+    },
     "links": [
       {
         "label": "Website",
@@ -47058,7 +47061,6 @@
     },
     "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
     "pegMechanism": "Two-token system: soul-bound sUSDC is minted 1:1 against USDC and accrues Venus lending yield for the original wallet; SPUSD (spUSD) is a 1:1 freely tradeable ERC-20 wrapper around sUSDC and is convertible 1:1 at the wrapper contract; Pharos has not source-reviewed a holder-exercisable USDC exit route for SPUSD, so no redemption backstop is modeled",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "soulpeg-usd",
     "protocolSlug": "soulpeg",
     "links": [
@@ -47417,7 +47419,7 @@
     ],
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
       "summary": "srUSDe is an ERC-4626 senior-risk wrapper over USDe; wrapper minting is deposit/share accounting while durable USDe mint authority is inherited from reviewed Ethena signed-order controls.",
       "inheritedFrom": "usde-ethena",
@@ -49844,7 +49846,7 @@
     ],
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "sUSDD is an immutable DSR-style savings wrapper (SavingsUsdd, forked from DAI Foundation) over USDD. The contract has no owner, no admin, no proxy — all parameters are immutable (pot, usddJoin set at constructor). Shares are minted/burned only by deposit/withdrawal of USDD. Base USDD mint authority is inherited from reviewed usdd-tron-dao-reserve.",
       "inheritedFrom": "usdd-tron-dao-reserve",
@@ -50015,7 +50017,7 @@
     ],
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
       "inheritedFrom": "usde-ethena",
@@ -50639,7 +50641,7 @@
     "pegReferenceId": "usn-noon",
     "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
     "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "staked-usn",
     "proofOfReserves": {
       "type": "real-time",
@@ -51843,7 +51845,7 @@
       "license": "Cryptoasset AML Registration (FRN: 928840)"
     },
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "tGBP is a TransparentUpgradeable proxy; the single owner EOA 0xAF4fCE...595C0 controls mint, burn, and upgrade via the ProxyAdmin contract it also owns.",
@@ -53622,7 +53624,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized-dependent",
+      "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -53767,7 +53769,7 @@
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
-    "governanceQuality": "dao-governance",
+    "governanceQuality": "single-entity",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -55494,7 +55496,7 @@
     "symbol": "USDai",
     "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -55586,7 +55588,7 @@
       "reviewedAt": "2026-06-07"
     },
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "USDai token (OToken implementation) only exposes mint()/burn() behind BRIDGE_ADMIN_ROLE; that role is held by a bridge contract (0xffa10065…). DEFAULT_ADMIN_ROLE (can grant any role) is held by a 3/3 Safe with a Zodiac Delay module (7-day timelock). The upgrade path runs through a ProxyAdmin whose owner contract is also controlled by the same 3/3 Safe. Same DEFAULT_ADMIN confirmed on Arbitrum, Base, and Plasma.",
@@ -57547,7 +57549,7 @@
     },
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
       "controls": [
@@ -58113,7 +58115,7 @@
       "reviewedAt": "2026-06-07"
     },
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "summary": "USDf uses AccessControl; DEFAULT_ADMIN_ROLE is a 4/6 Safe and MINTER_ROLE is held by a Falcon-owned PreCollateralizedMinter contract (also admin'd by the Safe). Both confirmed on-chain.",
@@ -63658,7 +63660,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -63799,7 +63801,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
@@ -65620,7 +65622,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
@@ -66851,7 +66853,7 @@
     },
     "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
     "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "noon-usn",
     "proofOfReserves": {
       "type": "real-time",
@@ -69321,7 +69323,6 @@
     },
     "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
     "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
-    "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd",
     "links": [
@@ -71039,7 +71040,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -71127,7 +71128,7 @@
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
-    "governanceQuality": "multisig",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "IOTA, stIOTA, and IBTC collateral",
@@ -71370,7 +71371,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brazilian-real",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
       "provider": "Local public accountants",
       "attestorTier": "niche",
@@ -72713,7 +72714,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mexican-peso",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
       "provider": "Local public accountants",
       "attestorTier": "niche",
@@ -74677,7 +74678,6 @@
     },
     "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
     "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "xdai",
     "protocolSlug": "gnosis-chain",
     "links": [
@@ -74808,7 +74808,6 @@
     },
     "collateral": "Reserve basket of dollar stablecoins used by Metal Dollar, including USDC, PYUSD, and Paxos-dollar components such as USDP / XPAX",
     "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
     "cmcSlug": "metal-dollar",
     "links": [
@@ -76013,7 +76012,6 @@
     },
     "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
     "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "xusd-babelfish",
     "cmcSlug": "xusd-babelfish",
     "links": [
@@ -76940,7 +76938,6 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
     "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "yield-optimizer-usd",
     "links": [
       {
@@ -77581,7 +77578,6 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
     "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",
-    "mechanismArchetype": "fiat-cash",
     "links": [
       {
         "label": "Website",
@@ -78877,7 +78873,7 @@
     },
     "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
     "pegMechanism": "Users mint or redeem ZSD against ZEPH through Zephyr's Djed-inspired reserve mechanism, with oracle pricing and reserve-ratio constraints maintaining the dollar target",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "zephyr-protocol-stable-dollar",
     "protocolSlug": "zephyr-protocol",
     "proofOfReserves": {
@@ -79032,7 +79028,7 @@
     "pegReferenceId": "zsd-zephyr-protocol",
     "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
     "pegMechanism": "ZYS is a NAV-style yield-share token rather than a flat one-dollar stablecoin. Its share price moves against ZSD as protocol yield accrues into the ZSD yield reserve.",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "protocolSlug": "zephyr-protocol",
     "proofOfReserves": {
       "type": "self-reported",

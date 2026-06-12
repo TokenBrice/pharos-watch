@@ -42,8 +42,8 @@
   ],
   "jurisdiction": {
     "country": "Germany",
-    "regulator": "Liechtenstein FMA",
-    "license": "EEA-restricted tokenized certificate"
+    "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+    "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
   },
   "contracts": [
     {

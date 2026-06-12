@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",

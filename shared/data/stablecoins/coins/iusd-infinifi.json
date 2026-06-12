@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",

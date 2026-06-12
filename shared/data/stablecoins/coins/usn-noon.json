@@ -13,7 +13,7 @@
   },
   "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
   "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
-  "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "230",
   "detailProvider": "defillama",
   "geckoId": "noon-usn",

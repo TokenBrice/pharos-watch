@@ -135,7 +135,7 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDf uses AccessControl; DEFAULT_ADMIN_ROLE is a 4/6 Safe and MINTER_ROLE is held by a Falcon-owned PreCollateralizedMinter contract (also admin'd by the Safe). Both confirmed on-chain.",

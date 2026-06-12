@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",

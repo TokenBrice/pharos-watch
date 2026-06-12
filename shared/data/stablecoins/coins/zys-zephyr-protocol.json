@@ -16,7 +16,7 @@
   "pegReferenceId": "zsd-zephyr-protocol",
   "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
   "pegMechanism": "ZYS is a NAV-style yield-share token rather than a flat one-dollar stablecoin. Its share price moves against ZSD as protocol yield accrues into the ZSD yield reserve.",
-  "mechanismArchetype": "algorithmic",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "protocolSlug": "zephyr-protocol",
   "proofOfReserves": {

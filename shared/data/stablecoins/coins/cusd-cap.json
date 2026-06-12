@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",

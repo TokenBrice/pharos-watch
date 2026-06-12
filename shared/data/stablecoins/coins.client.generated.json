@@ -3595,7 +3595,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "geckoId": "cap-usd",
@@ -3851,7 +3851,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "mechanismArchetype": "cdp",
@@ -4241,7 +4241,7 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "mintIncidents": [
         {
@@ -5888,7 +5888,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
     "launchDate": "2023-02-23",
     "genius": {
@@ -6899,7 +6898,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -7178,7 +7177,7 @@
       "rwa": true,
       "navToken": true
     },
-    "mechanismArchetype": "tbill",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "launchDate": "2026-02-26",
     "canBeBlacklisted": true,
@@ -7657,7 +7656,6 @@
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
     "launchDate": "2024-03-05",
-    "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
       "yieldType": "lending-vault"
@@ -7672,7 +7670,7 @@
       }
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": true,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -7710,7 +7708,6 @@
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
     "launchDate": "2024-06-03",
-    "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "Gauntlet USDC Prime MetaMorpho vault",
       "yieldType": "lending-vault"
@@ -7725,7 +7722,7 @@
       }
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": true,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -7756,10 +7753,10 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "gusd",
     "launchDate": "2025-08-28",
     "genius": {
@@ -8468,7 +8465,7 @@
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
-      "governance": "centralized-dependent",
+      "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -9149,7 +9146,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "geckoId": "infinifi-usd",
@@ -10450,7 +10447,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "mintIncidents": [
@@ -11601,7 +11598,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-usd",
     "launchDate": "2025-06-08",
     "reserves": [
@@ -12605,7 +12602,7 @@
     ],
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "user-collateralized-governed",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "mintIncidents": [
@@ -14189,7 +14186,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "mechanismArchetype": "rwa-credit-fund",
@@ -14583,7 +14580,7 @@
     "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "concentrated-admin",
+      "authorityPosture": "unbounded-or-compromised",
       "confidence": "verified",
       "inheritedFrom": "aid-gaib",
       "controls": [
@@ -15031,7 +15028,7 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
       "inheritedFrom": "dola-inverse-finance",
       "controls": [
@@ -15505,7 +15502,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "soulpeg-usd",
     "protocolSlug": "soulpeg",
     "launchDate": "2025-07-30",
@@ -15640,7 +15636,7 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
       "inheritedFrom": "usde-ethena",
       "controls": [
@@ -16459,7 +16455,7 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "inheritedFrom": "usdd-tron-dao-reserve",
       "controls": [
@@ -16513,7 +16509,7 @@
     "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "inheritedFrom": "usde-ethena",
       "controls": [
@@ -16653,7 +16649,7 @@
       "rwa": true,
       "navToken": true
     },
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "rwa-credit-fund",
     "archetypeOverride": true,
     "geckoId": "staked-usn",
     "variantOf": "usn-noon",
@@ -17015,7 +17011,7 @@
     ],
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "controls": [
@@ -17578,7 +17574,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized-dependent",
+      "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -18221,7 +18217,7 @@
     "symbol": "USDai",
     "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -18272,7 +18268,7 @@
     ],
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "controls": [
@@ -18931,7 +18927,7 @@
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "controls": [
         {
@@ -19086,7 +19082,7 @@
     "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
       "controls": [
@@ -21098,7 +21094,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -21143,7 +21139,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "mechanismArchetype": "cdp",
@@ -21750,7 +21746,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "mechanismArchetype": "fiat-cash",
@@ -22173,7 +22169,7 @@
       "rwa": true,
       "navToken": false
     },
-    "mechanismArchetype": "synthetic-delta-neutral",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "noon-usn",
     "launchDate": "2024-10-03",
     "canBeBlacklisted": "possible",
@@ -23007,7 +23003,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd",
     "launchDate": "2026-02-03",
@@ -23535,7 +23530,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -24580,7 +24575,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "xdai",
     "protocolSlug": "gnosis-chain",
     "canBeBlacklisted": "possible",
@@ -24623,7 +24617,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
     "canBeBlacklisted": "possible",
     "genius": {
@@ -25035,7 +25028,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "xusd-babelfish",
     "launchDate": "1970-01-01",
     "reserves": [
@@ -25353,7 +25345,6 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "yield-optimizer-usd",
     "launchDate": "2025-04-17",
     "canBeBlacklisted": true,
@@ -25558,7 +25549,6 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
     "launchDate": "2024-03-12",
@@ -25969,7 +25959,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "zephyr-protocol-stable-dollar",
     "protocolSlug": "zephyr-protocol",
     "reserves": [
@@ -26009,7 +25999,7 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "protocolSlug": "zephyr-protocol",
     "variantOf": "zsd-zephyr-protocol",
     "variantKind": "savings-passthrough",

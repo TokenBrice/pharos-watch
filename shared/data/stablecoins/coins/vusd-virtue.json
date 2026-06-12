@@ -7,7 +7,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
@@ -54,7 +54,7 @@
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "multisig",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "IOTA, stIOTA, and IBTC collateral",

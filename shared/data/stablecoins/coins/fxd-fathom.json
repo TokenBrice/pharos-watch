@@ -10,7 +10,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
@@ -128,7 +128,7 @@
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "XDC and Fathom collateral-pool positions",

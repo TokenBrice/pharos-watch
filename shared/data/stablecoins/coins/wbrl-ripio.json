@@ -16,7 +16,7 @@
   "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
     "provider": "Local public accountants",
     "attestorTier": "niche",

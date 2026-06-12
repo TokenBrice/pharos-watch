@@ -63,7 +63,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID (UUPS proxy, ERC1967). Wrapper shares are minted against deposited AID only via deposit(); no privileged mint function. Upgrade authority and all admin roles (DEFAULT_ADMIN_ROLE, OPERATOR_ROLE, REWARDER_ROLE) held by a single deployer EOA (0x3885be...). Base issuance inherits the reviewed AID mint-authority profile.",
     "inheritedFrom": "aid-gaib",

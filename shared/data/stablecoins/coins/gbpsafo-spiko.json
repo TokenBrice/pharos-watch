@@ -13,7 +13,7 @@
   },
   "collateral": "GBP share class of Spiko's Amundi-managed Smart Cash UCITS fund. Returns come from a fully collateralized total-return swap under which counterparty BNP Paribas pays SONIA + 0.27% daily; the swap is backed by a basket of listed equities marked to market daily, with CACEIS (Credit Agricole) acting as depositary.",
   "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-  "mechanismArchetype": "tbill",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
   "proofOfReserves": {

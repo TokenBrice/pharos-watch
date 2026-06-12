@@ -12,7 +12,7 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: gtUSDCp resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
     "reviewer": "Codex inferred-status backfill",
@@ -81,7 +81,6 @@
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
-  "canBeBlacklisted": true,
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "ERC-4626 MetaMorpho V2 vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",

@@ -4,7 +4,7 @@
   "symbol": "USDai",
   "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
@@ -122,7 +122,7 @@
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDai token (OToken implementation) only exposes mint()/burn() behind BRIDGE_ADMIN_ROLE; that role is held by a bridge contract (0xffa10065…). DEFAULT_ADMIN_ROLE (can grant any role) is held by a 3/3 Safe with a Zodiac Delay module (7-day timelock). The upgrade path runs through a ProxyAdmin whose owner contract is also controlled by the same 3/3 Safe. Same DEFAULT_ADMIN confirmed on Arbitrum, Base, and Plasma.",

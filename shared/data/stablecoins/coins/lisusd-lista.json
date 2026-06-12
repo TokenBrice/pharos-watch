@@ -51,7 +51,7 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "LISUSD uses a Maker-style wards() auth pattern with role values (1 = minter, 2 = manager). Confirmed minter wards: the 24h admin timelock and the HayJoin CDP exit adapter (the operational minter). A 3/6 manager Safe (wards = 2) can only set the supply cap. The timelock is the hardcoded DEFAULT_ADMIN gating rely/deny and owns the ProxyAdmin for both the token and HayJoin.",

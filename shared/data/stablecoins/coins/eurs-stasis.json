@@ -41,8 +41,7 @@
   ],
   "jurisdiction": {
     "country": "Malta",
-    "regulator": "MFSA",
-    "license": "MiCA"
+    "regulator": "MFSA"
   },
   "mica": {
     "status": "non-compliant",

@@ -13,7 +13,6 @@
   },
   "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
   "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
-  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xdai",
   "protocolSlug": "gnosis-chain",
