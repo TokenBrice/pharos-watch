@@ -478,9 +478,64 @@ export const ORACLE_RISK_TIER_VALUES = [
 ] as const;
 export type OracleRiskTier = (typeof ORACLE_RISK_TIER_VALUES)[number];
 
+export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited", "unknown"] as const;
+export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
+
+export interface OracleRiskBranch {
+  id: string;
+  label: string;
+  tier: OracleRiskTier;
+  summary: string;
+  collateralAssets?: string[];
+  chains?: string[];
+  sources?: StablecoinLink[];
+}
+
 export interface OracleRiskProfile {
   tier: OracleRiskTier;
   summary: string;
+  reviewedAt?: string;
+  reviewer?: string;
+  confidence?: OracleRiskConfidence;
+  sources?: StablecoinLink[];
+  branches?: OracleRiskBranch[];
+}
+
+export const BRIDGE_ROUTE_RISK_TIER_VALUES = [
+  "single-chain-or-native",
+  "issuer-native-burn-mint",
+  "canonical-rollup-bridge",
+  "issuer-native-lock-mint",
+  "external-validated-network",
+  "liquidity-or-intent-route",
+  "external-lock-mint",
+  "opaque-or-unknown",
+] as const;
+export type BridgeRouteRiskTier = (typeof BRIDGE_ROUTE_RISK_TIER_VALUES)[number];
+
+export const BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
+export type BridgeRouteRiskConfidence = (typeof BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES)[number];
+
+export const BRIDGE_ROUTE_RISK_SOURCE_VALUES = ["l2beat", "issuer", "docs", "explorer", "manual"] as const;
+export type BridgeRouteRiskSource = (typeof BRIDGE_ROUTE_RISK_SOURCE_VALUES)[number];
+
+export interface BridgeRouteProtocolEvidence {
+  source: BridgeRouteRiskSource;
+  name: string;
+  slug?: string;
+  url?: string;
+  bridgeTypes?: string[];
+  note?: string;
+}
+
+export interface BridgeRouteRiskProfile {
+  tier: BridgeRouteRiskTier;
+  summary: string;
+  reviewedAt: string;
+  reviewer: string;
+  confidence: BridgeRouteRiskConfidence;
+  protocols?: BridgeRouteProtocolEvidence[];
+  sourceFreeRationale?: string;
   sources?: StablecoinLink[];
 }
 
@@ -516,6 +571,10 @@ export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
 export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
+export const OracleRiskConfidenceSchema = z.enum(ORACLE_RISK_CONFIDENCE_VALUES);
+export const BridgeRouteRiskTierSchema = z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES);
+export const BridgeRouteRiskConfidenceSchema = z.enum(BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES);
+export const BridgeRouteRiskSourceSchema = z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
@@ -643,6 +702,7 @@ export interface StablecoinMeta {
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
   oracleRisk?: OracleRiskProfile;
+  bridgeRouteRisk?: BridgeRouteRiskProfile;
   infrastructures?: Infrastructure[];
   variantOf?: string;
   variantKind?: VariantKind;

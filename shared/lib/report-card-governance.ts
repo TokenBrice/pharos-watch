@@ -1,6 +1,8 @@
 import type {
+  BridgeRouteRiskTier,
   GovernanceQuality,
   GovernanceType,
+  OracleRiskBranch,
   OracleRiskTier,
   ReportCardDimension,
   ReportCardDetailItem,
@@ -19,7 +21,8 @@ import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./min
  * decentralization blend.
  */
 const MAS_BLEND_WEIGHT = 0.35;
-const ORACLE_RISK_BLEND_WEIGHT = 0.25;
+export const ORACLE_RISK_BLEND_WEIGHT = 0.25;
+export const BRIDGE_ROUTE_RISK_BLEND_WEIGHT = 0.2;
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -39,7 +42,7 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   wrapper: "Wrapper (inherits upstream)",
 };
 
-const ORACLE_RISK_SCORE: Record<OracleRiskTier, number> = {
+export const ORACLE_RISK_SCORE: Record<OracleRiskTier, number> = {
   "oracleless-or-internal": 100,
   "redundant-with-failover": 95,
   "medianized-with-delay": 85,
@@ -48,13 +51,35 @@ const ORACLE_RISK_SCORE: Record<OracleRiskTier, number> = {
   "opaque-or-unknown": 20,
 };
 
-const ORACLE_RISK_LABEL: Record<OracleRiskTier, string> = {
+export const ORACLE_RISK_LABEL: Record<OracleRiskTier, string> = {
   "oracleless-or-internal": "No external liquidation oracle",
   "redundant-with-failover": "Redundant feeds with failover",
   "medianized-with-delay": "Medianized feeds with delay",
   "standard-external": "Standard external feeds",
   "single-source-or-laggy": "Single-source or laggy feeds",
   "opaque-or-unknown": "Opaque or unknown setup",
+};
+
+export const BRIDGE_ROUTE_RISK_SCORE: Record<BridgeRouteRiskTier, number> = {
+  "single-chain-or-native": 100,
+  "issuer-native-burn-mint": 90,
+  "canonical-rollup-bridge": 85,
+  "issuer-native-lock-mint": 80,
+  "external-validated-network": 65,
+  "liquidity-or-intent-route": 55,
+  "external-lock-mint": 40,
+  "opaque-or-unknown": 20,
+};
+
+export const BRIDGE_ROUTE_RISK_LABEL: Record<BridgeRouteRiskTier, string> = {
+  "single-chain-or-native": "Single-chain or issuer-native route",
+  "issuer-native-burn-mint": "Issuer-native burn/mint route",
+  "canonical-rollup-bridge": "Canonical rollup bridge",
+  "issuer-native-lock-mint": "Issuer-native lock/mint route",
+  "external-validated-network": "External validated network",
+  "liquidity-or-intent-route": "Liquidity or intent route",
+  "external-lock-mint": "External lock/mint bridge",
+  "opaque-or-unknown": "Opaque or unknown bridge route",
 };
 
 export interface ScoreDecentralizationOptions {
@@ -84,19 +109,47 @@ export interface ResolvedOracleRiskScore {
   tier: OracleRiskTier;
   score: number;
   label: string;
+  selectedBranch?: OracleRiskBranch | null;
 }
 
-function isOracleRiskApplicable(meta: StablecoinMeta): boolean {
-  return meta.flags.backing === "crypto-backed" && meta.mechanismArchetype === "cdp";
+export interface ResolvedBridgeRouteRiskScore {
+  tier: BridgeRouteRiskTier;
+  score: number;
+  label: string;
+}
+
+export function isOracleRiskApplicable(meta: StablecoinMeta): boolean {
+  return meta.flags.backing === "crypto-backed" && meta.mechanismArchetype === "cdp" && !meta.variantOf;
 }
 
 export function resolveOracleRiskScore(meta?: StablecoinMeta): ResolvedOracleRiskScore | null {
   if (!meta?.oracleRisk || !isOracleRiskApplicable(meta)) return null;
-  const tier = meta.oracleRisk.tier;
+  let tier = meta.oracleRisk.tier;
+  let selectedBranch: OracleRiskBranch | null = null;
+
+  for (const branch of meta.oracleRisk.branches ?? []) {
+    if (ORACLE_RISK_SCORE[branch.tier] < ORACLE_RISK_SCORE[tier]) {
+      tier = branch.tier;
+      selectedBranch = branch;
+    }
+  }
+
   return {
     tier,
     score: ORACLE_RISK_SCORE[tier],
     label: ORACLE_RISK_LABEL[tier],
+    selectedBranch,
+  };
+}
+
+export function resolveBridgeRouteRiskScore(meta?: StablecoinMeta): ResolvedBridgeRouteRiskScore | null {
+  const tier = meta?.bridgeRouteRisk?.tier;
+  if (!tier) return null;
+
+  return {
+    tier,
+    score: BRIDGE_ROUTE_RISK_SCORE[tier],
+    label: BRIDGE_ROUTE_RISK_LABEL[tier],
   };
 }
 
@@ -167,6 +220,21 @@ export function scoreDecentralization(
     }
   }
 
+  // Penalty-only bridge-route blend:
+  // reviewed external bridge or intent-route risk can weaken a decentralization
+  // claim, but strong native/canonical routes never increase the score.
+  const bridgeRouteRisk = meta ? resolveBridgeRouteRiskScore(meta) : null;
+  let bridgeRouteRiskDrag = 0;
+  if (bridgeRouteRisk != null) {
+    const blended = Math.round(
+      score * (1 - BRIDGE_ROUTE_RISK_BLEND_WEIGHT) + bridgeRouteRisk.score * BRIDGE_ROUTE_RISK_BLEND_WEIGHT,
+    );
+    if (blended < score) {
+      bridgeRouteRiskDrag = blended - score;
+      score = blended;
+    }
+  }
+
   // Penalty-only Mint Authority blend:
   // privileged-mint risk can undermine a decentralization claim, never improve it.
   const mintAuthorityScore =
@@ -218,8 +286,15 @@ export function scoreDecentralization(
   if (oracleRisk != null) {
     detailItems.push({
       label: "Oracle setup",
-      value: `${oracleRisk.label} (${oracleRisk.score}/100)`,
+      value: `${oracleRisk.selectedBranch ? `${oracleRisk.selectedBranch.label}: ` : ""}${oracleRisk.label} (${oracleRisk.score}/100)`,
       detail: oracleRiskDrag < 0 ? `${oracleRiskDrag}` : `${oracleRisk.score}`,
+    });
+  }
+  if (bridgeRouteRisk != null) {
+    detailItems.push({
+      label: "Bridge route",
+      value: `${bridgeRouteRisk.label} (${bridgeRouteRisk.score}/100)`,
+      detail: bridgeRouteRiskDrag < 0 ? `${bridgeRouteRiskDrag}` : `${bridgeRouteRisk.score}`,
     });
   }
   if (mintAuthorityDrag < 0 && mintAuthorityScore != null) {

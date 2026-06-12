@@ -7,6 +7,7 @@ import { FullReserveCompositionSchema } from "../../types/reserves";
 import {
   CoinNoticeSchema,
   BlacklistabilityReviewSchema,
+  BridgeRouteRiskProfileSchema,
   ContractDeploymentSchema,
   DateHistoryEntrySchema,
   DependencyWeightSchema,
@@ -171,6 +172,7 @@ const StablecoinMetaAssetSchemaShape = {
   custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
   governanceQuality: StablecoinMetaEnumSchemas.governanceQuality.optional(),
   oracleRisk: OracleRiskProfileSchema.optional(),
+  bridgeRouteRisk: BridgeRouteRiskProfileSchema.optional(),
   infrastructures: StablecoinMetaEnumSchemas.infrastructures.optional(),
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),

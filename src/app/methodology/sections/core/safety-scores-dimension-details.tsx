@@ -65,7 +65,8 @@ export function SafetyScoresDimensionDetails() {
         <p>
           Base score from governance quality tier, then a chain-risk penalty for protocols on less decentralized chains
           &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns
-          &mdash; followed by a CDP-only oracle setup blend (v8.1) and the penalty-only Mint Authority blend (v8.0):
+          &mdash; followed by a branch-aware CDP-only oracle setup blend (v8.11), reviewed bridge-route blend (v8.12),
+          and the penalty-only Mint Authority blend (v8.0):
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>
@@ -95,7 +96,7 @@ export function SafetyScoresDimensionDetails() {
           wrappers subtract 3, strategy-vault and risk-absorption wrappers subtract 5, and bond-maturity wrappers
           subtract 8. For example, yBOLD and sBOLD inherit from BOLD, while sfrxUSD inherits from frxUSD.
         </p>
-        <p className="font-medium text-foreground mt-2">CDP oracle setup blend (v8.1):</p>
+        <p className="font-medium text-foreground mt-2">CDP oracle setup blend (v8.11):</p>
         <p>
           Crypto-backed CDP stablecoins can carry reviewed <code className="text-xs">oracleRisk</code> metadata. When
           present, the score applies{" "}
@@ -104,6 +105,25 @@ export function SafetyScoresDimensionDetails() {
           feeds can drag it down. Missing oracle reviews and non-CDP assets are unchanged. The current tier scores are
           oracleless/internal&nbsp;100, redundant failover&nbsp;95, medianized delay&nbsp;85, standard external&nbsp;75,
           single-source/laggy&nbsp;45, and opaque/unknown&nbsp;20.
+        </p>
+        <p className="text-xs">
+          Since v8.11, reviews can include provenance plus branch rows for collateral markets or chains. If branch rows
+          are present, the weakest branch/profile tier supplies the oracle score. Wrappers and savings variants display
+          inherited parent oracle exposure without adding a separate wrapper-side oracle penalty.
+        </p>
+        <p className="font-medium text-foreground mt-2">Bridge route blend (v8.12):</p>
+        <p>
+          Reviewed <code className="text-xs">bridgeRouteRisk</code> metadata can capture issuer-native, canonical,
+          external bridge, lockbox, liquidity, or intent routes. When present, the score applies{" "}
+          <span className="pharos-numeric">min(score, round(score &times; 0.80 + bridge &times; 0.20))</span> after
+          oracle scoring and before Mint Authority. Strong issuer-native or canonical routes never lift a score; missing
+          reviews stay neutral; weak external lock/mint, liquidity/intent, or opaque routes can drag it down.
+        </p>
+        <p className="text-xs">
+          Current tier scores are single-chain/native&nbsp;100, issuer burn/mint&nbsp;90, canonical bridge&nbsp;85,
+          issuer lock/mint&nbsp;80, external validated network&nbsp;65, liquidity/intent route&nbsp;55, external
+          lock/mint&nbsp;40, and opaque/unknown&nbsp;20. L2BEAT Interop is used as static review evidence, not as a live
+          scoring dependency.
         </p>
         <p className="font-medium text-foreground mt-2">Mint Authority blend (v8.0):</p>
         <p>

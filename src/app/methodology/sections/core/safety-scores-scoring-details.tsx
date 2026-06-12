@@ -136,10 +136,10 @@ export function SafetyScoresScoringDetails() {
               <TableCell className="py-2 pr-4 text-foreground">Decentralization</TableCell>
               <TableCell className="py-2 pr-4">15%</TableCell>
               <TableCell className="py-2 pr-4 whitespace-normal">
-                Governance type, chain risk, CDP oracle setup, mint authority
+                Governance type, chain risk, branch-aware CDP oracle setup, bridge route, mint authority
               </TableCell>
               <TableCell className="py-2 whitespace-normal">
-                Governance structure with chain-risk, oracle, and privileged-mint penalties
+                Governance structure with chain-risk, oracle, bridge-route, and privileged-mint penalties
               </TableCell>
             </TableRow>
             <TableRow>

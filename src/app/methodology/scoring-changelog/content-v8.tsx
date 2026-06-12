@@ -1,5 +1,56 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV812Entry() {
+  return (
+    <VersionCard entry={getScoringEntry("8.12")}>
+      <p>
+        Reviewed bridge-route profiles now feed Decentralization through a penalty-only blend after CDP oracle scoring
+        and before Mint Authority:{" "}
+        <span className="pharos-numeric">min(current, 0.80 x current + 0.20 x bridge route score)</span>.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs">bridgeRouteRisk</code> profiles record route tier, summary, provenance, confidence,
+          protocol evidence, and sources.
+        </li>
+        <li>
+          Missing bridge-route reviews remain neutral, and strong issuer-native or canonical routes never lift a score.
+        </li>
+        <li>
+          L2BEAT Interop data powers an advisory review queue, but live report-card scoring consumes only curated Pharos
+          metadata.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
+export function ScoringChangelogV811Entry() {
+  return (
+    <VersionCard entry={getScoringEntry("8.11")}>
+      <p>
+        Oracle-risk reviews now carry provenance and optional branch rows. When a CDP profile has branch-level oracle
+        tiers, the Decentralization blend uses the weakest branch/profile score so multi-collateral systems are scored
+        against their weakest verified price-feed path.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs">oracleRisk</code> profiles can include reviewed date, reviewer, confidence, source
+          links, and per-branch collateral/chains context.
+        </li>
+        <li>
+          Report-card payloads now expose an oracle setup presentation object, including inherited parent exposure for
+          wrappers and savings variants.
+        </li>
+        <li>
+          A warning-only coverage check and calibration report support the full CDP oracle-profile backfill and later
+          review of the 25% blend weight.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV81Entry() {
   return (
     <VersionCard entry={getScoringEntry("8.1")}>
@@ -59,6 +110,8 @@ export function ScoringChangelogV80Entry() {
 export function ScoringChangelogV8Entries() {
   return (
     <>
+      <ScoringChangelogV812Entry />
+      <ScoringChangelogV811Entry />
       <ScoringChangelogV81Entry />
       <ScoringChangelogV80Entry />
     </>

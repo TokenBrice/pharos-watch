@@ -83,6 +83,8 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
     { label: "Governance quality", value: rawInputs.governanceQuality },
     { label: "Oracle risk tier", value: rawInputs.oracleRiskTier ?? "—" },
     { label: "Oracle risk score", value: fmtNum(rawInputs.oracleRiskScore) },
+    { label: "Bridge route tier", value: rawInputs.bridgeRouteRiskTier ?? "—" },
+    { label: "Bridge route score", value: fmtNum(rawInputs.bridgeRouteRiskScore) },
     {
       label: "Blacklist exposure",
       value:
@@ -107,7 +109,7 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
   return {
     rows,
     formula:
-      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; decentralization may include chain, CDP oracle, and mint-authority penalties; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
+      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; decentralization may include chain, CDP oracle, bridge-route, and mint-authority penalties; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
     topic: "safetyScore",
   };
 }

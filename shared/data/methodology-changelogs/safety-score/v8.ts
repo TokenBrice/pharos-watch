@@ -2,6 +2,41 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.12",
+    title: "Bridge-route risk enters Decentralization",
+    date: "2026-06-12",
+    effectiveAt: 1781292600,
+    summary:
+      "Reviewed bridge-route profiles now feed the Decentralization dimension through a penalty-only blend after CDP oracle scoring and before Mint Authority. L2BEAT Interop data is used as static review evidence and queue material, while live scoring consumes only curated Pharos bridgeRouteRisk metadata.",
+    impact: [
+      "bridgeRouteRisk metadata can now record reviewed route tier, summary, provenance, confidence, protocol evidence, and sources",
+      "Penalty-only blend at weight 0.20: decentralization = min(current, 0.80 x current + 0.20 x bridge route score)",
+      "Missing bridge-route reviews remain neutral and strong issuer-native or canonical routes never lift a score",
+      "Weak external lock/mint, liquidity, intent, or opaque route reviews can drag Decentralization before the Mint Authority blend",
+      "The L2BEAT Interop candidate queue proposes review targets, but report-card scoring has no live L2BEAT dependency",
+      "Initial reviewed bridge-route profiles cover USDC, USDCx, USDB, and NUSD",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "8.11",
+    title: "Oracle-risk profiles gain provenance and branch handling",
+    date: "2026-06-12",
+    effectiveAt: 1781289000,
+    summary:
+      "Reviewed CDP oracle-risk profiles now carry review provenance, confidence, optional collateral-branch rows, and a report-card presentation object. When branch rows are present, the Decentralization oracle blend uses the weakest branch/profile score so multi-collateral CDPs cannot hide a weaker oracle path behind an aggregate label.",
+    impact: [
+      "oracleRisk metadata can now include reviewedAt, reviewer, confidence, and per-branch collateral/chains/source rows",
+      "Branch-aware scoring is conservative: the lowest-scoring branch/profile tier drives the same penalty-only v8.1 oracle blend",
+      "Report-card payloads expose a display-only oracleRisk object with summary, sources, selected branch, and inherited parent context for wrappers and variants",
+      "A warning-only oracle-risk coverage check and an oracle-risk calibration report help finish the CDP backfill and review the 25% blend after coverage is complete",
+      "BOLD now records WETH, wstETH, and rETH branch rows; USDS and BOLD profiles now carry review provenance",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.1",
     title: "CDP oracle setup enters Decentralization",
     date: "2026-06-12",

@@ -45,6 +45,158 @@ function dimensionHintTopic(dimKey: DimensionKey): "resilience" | "dependencyRis
   return null;
 }
 
+type OracleRiskDisplay = NonNullable<ReportCardType["oracleRisk"]>;
+type OracleRiskConfidence = NonNullable<OracleRiskDisplay["confidence"]>;
+type BridgeRouteRiskDisplay = NonNullable<ReportCardType["bridgeRouteRisk"]>;
+type BridgeRouteRiskConfidence = NonNullable<BridgeRouteRiskDisplay["confidence"]>;
+
+const ORACLE_RISK_CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
+  verified: "Verified",
+  probable: "Probable",
+  limited: "Limited",
+  unknown: "Unknown",
+};
+
+const BRIDGE_ROUTE_RISK_CONFIDENCE_LABELS: Record<BridgeRouteRiskConfidence, string> = {
+  verified: "Verified",
+  probable: "Probable",
+  "manual-review": "Manual review",
+  unknown: "Unknown",
+};
+
+function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
+  const sourceLinks = risk.sources ?? [];
+  const branchRows = risk.branches ?? [];
+
+  return (
+    <div className="border-l border-border/70 pl-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-foreground">Oracle setup</span>
+        <span className="font-mono tabular-nums text-foreground/80">{risk.score}/100</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <span>{risk.label}</span>
+        {risk.inheritedFrom ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>
+              inherited from{" "}
+              <Link
+                href={buildStablecoinUrl(risk.inheritedFrom.id)}
+                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2"
+              >
+                {risk.inheritedFrom.symbol}
+              </Link>
+            </span>
+          </>
+        ) : null}
+        {risk.confidence ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{ORACLE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
+          </>
+        ) : null}
+        {risk.reviewedAt ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>
+              reviewed {risk.reviewedAt}
+              {risk.reviewer ? ` by ${risk.reviewer}` : ""}
+            </span>
+          </>
+        ) : null}
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{risk.summary}</p>
+      {risk.selectedBranch ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Binding branch: <span className="text-foreground/80">{risk.selectedBranch.label}</span>
+        </p>
+      ) : null}
+      {branchRows.length > 0 ? (
+        <div className="mt-2 grid gap-1 text-xs">
+          {branchRows.map((branch) => (
+            <div key={branch.id} className="flex items-start justify-between gap-3">
+              <span className="min-w-0 text-muted-foreground">
+                {branch.label}
+                {branch.collateralAssets?.length ? ` (${branch.collateralAssets.join(", ")})` : ""}
+              </span>
+              <span className="shrink-0 font-mono tabular-nums text-foreground/80">{branch.score}/100</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {sourceLinks.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
+          {sourceLinks.map((source) => (
+            <a
+              key={source.url}
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {source.label}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BridgeRouteRiskPanel({ risk }: { risk: BridgeRouteRiskDisplay }) {
+  const sourceLinks = risk.sources ?? [];
+  const protocols = risk.protocols ?? [];
+
+  return (
+    <div className="border-l border-border/70 pl-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-foreground">Bridge route</span>
+        <span className="font-mono tabular-nums text-foreground/80">{risk.score}/100</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <span>{risk.label}</span>
+        <span aria-hidden="true">·</span>
+        <span>{BRIDGE_ROUTE_RISK_CONFIDENCE_LABELS[risk.confidence]}</span>
+        <span aria-hidden="true">·</span>
+        <span>
+          reviewed {risk.reviewedAt}
+          {risk.reviewer ? ` by ${risk.reviewer}` : ""}
+        </span>
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{risk.summary}</p>
+      {protocols.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1 text-xs">
+          {protocols.map((protocol) => (
+            <span
+              key={`${protocol.source}-${protocol.slug ?? protocol.name}`}
+              className="rounded border border-border/70 px-1.5 py-0.5 text-muted-foreground"
+            >
+              {protocol.name}
+              {protocol.bridgeTypes?.length ? ` (${protocol.bridgeTypes.join(", ")})` : ""}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {sourceLinks.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
+          {sourceLinks.map((source) => (
+            <a
+              key={source.url}
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {source.label}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 interface DimensionRowProps {
   dimKey: DimensionKey;
   dim: ReportCardType["dimensions"][DimensionKey];
@@ -100,12 +252,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <SafetyGradeBadge
-              grade={dim.grade}
-              size="sm"
-              versionTopic="safetyScore"
-              versionVariant="tooltip-only"
-            />
+            <SafetyGradeBadge grade={dim.grade} size="sm" versionTopic="safetyScore" versionVariant="tooltip-only" />
             {dim.score !== null ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -147,6 +294,11 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
               })}
             </div>
           )}
+
+          {dimKey === "decentralization" && card.oracleRisk ? <OracleRiskPanel risk={card.oracleRisk} /> : null}
+          {dimKey === "decentralization" && card.bridgeRouteRisk ? (
+            <BridgeRouteRiskPanel risk={card.bridgeRouteRisk} />
+          ) : null}
 
           {/* Live data indicator */}
           {dimKey === "resilience" && card.rawInputs.collateralFromLive && (

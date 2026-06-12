@@ -1,6 +1,9 @@
 import { z } from "zod";
 import {
   BluechipGradeSchema,
+  BridgeRouteRiskConfidenceSchema,
+  BridgeRouteRiskSourceSchema,
+  BridgeRouteRiskTierSchema,
   ChainTierSchema,
   CollateralQualitySchema,
   CustodyModelSchema,
@@ -8,11 +11,14 @@ import {
   DeploymentModelSchema,
   GovernanceQualitySchema,
   GovernanceTypeSchema,
+  OracleRiskConfidenceSchema,
   OracleRiskTierSchema,
   VARIANT_KIND_VALUES,
 } from "./core";
 import type {
   BluechipGrade,
+  BridgeRouteRiskConfidence,
+  BridgeRouteRiskTier,
   ChainTier,
   CollateralQuality,
   CustodyModel,
@@ -20,11 +26,13 @@ import type {
   DeploymentModel,
   GovernanceQuality,
   GovernanceType,
+  OracleRiskConfidence,
   OracleRiskTier,
+  StablecoinLink,
   VariantKind,
 } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
-import { DependencyWeightSchema } from "./stablecoin-meta-schemas";
+import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
 const REPORT_CARD_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const;
@@ -105,10 +113,14 @@ const RawDimensionInputsSchema = z.object({
   governanceQuality: GovernanceQualitySchema,
   /** Mint Authority Score input to the v8 decentralization blend; absent on pre-v8 cached snapshots. */
   mintAuthorityScore: z.number().nullable().optional(),
-  /** Oracle setup tier used by the CDP-only v8.1 decentralization blend; absent on pre-v8.1 cached snapshots. */
+  /** Oracle setup tier used by the branch-aware CDP-only v8.11 decentralization blend; absent on pre-v8.1 cached snapshots. */
   oracleRiskTier: OracleRiskTierSchema.nullable().optional(),
-  /** Oracle setup score used by the CDP-only v8.1 decentralization blend; absent on pre-v8.1 cached snapshots. */
+  /** Oracle setup score used by the branch-aware CDP-only v8.11 decentralization blend; absent on pre-v8.1 cached snapshots. */
   oracleRiskScore: z.number().nullable().optional(),
+  /** Reviewed bridge-route tier used by the v8.12 decentralization blend; absent on pre-v8.12 cached snapshots. */
+  bridgeRouteRiskTier: BridgeRouteRiskTierSchema.nullable().optional(),
+  /** Reviewed bridge-route score used by the v8.12 decentralization blend; absent on pre-v8.12 cached snapshots. */
+  bridgeRouteRiskScore: z.number().nullable().optional(),
   dependencies: z.array(DependencyWeightSchema),
   variantParentId: z.string().nullable().optional(),
   variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),
@@ -127,9 +139,83 @@ export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSch
   governanceQuality: GovernanceQuality;
   oracleRiskTier?: OracleRiskTier | null;
   oracleRiskScore?: number | null;
+  bridgeRouteRiskTier?: BridgeRouteRiskTier | null;
+  bridgeRouteRiskScore?: number | null;
   dependencies: DependencyWeight[];
   variantParentId?: string | null;
   variantKind?: VariantKind | null;
+}
+
+const ReportCardOracleRiskBranchSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  tier: OracleRiskTierSchema,
+  score: z.number(),
+  summary: z.string(),
+  collateralAssets: z.array(z.string()).optional(),
+  chains: z.array(z.string()).optional(),
+  sources: z.array(StablecoinLinkSchema).optional(),
+});
+
+const ReportCardOracleRiskSchema = z.object({
+  tier: OracleRiskTierSchema,
+  score: z.number(),
+  label: z.string(),
+  summary: z.string(),
+  reviewedAt: z.string().optional(),
+  reviewer: z.string().optional(),
+  confidence: OracleRiskConfidenceSchema.optional(),
+  sources: z.array(StablecoinLinkSchema).optional(),
+  inheritedFrom: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      symbol: z.string(),
+    })
+    .nullable()
+    .optional(),
+  selectedBranch: ReportCardOracleRiskBranchSchema.nullable().optional(),
+  branches: z.array(ReportCardOracleRiskBranchSchema).optional(),
+});
+
+const ReportCardBridgeRouteProtocolSchema = z.object({
+  source: BridgeRouteRiskSourceSchema,
+  name: z.string(),
+  slug: z.string().optional(),
+  url: z.string().optional(),
+  bridgeTypes: z.array(z.string()).optional(),
+  note: z.string().optional(),
+});
+
+const ReportCardBridgeRouteRiskSchema = z.object({
+  tier: BridgeRouteRiskTierSchema,
+  score: z.number(),
+  label: z.string(),
+  summary: z.string(),
+  reviewedAt: z.string(),
+  reviewer: z.string(),
+  confidence: BridgeRouteRiskConfidenceSchema,
+  protocols: z.array(ReportCardBridgeRouteProtocolSchema).optional(),
+  sources: z.array(StablecoinLinkSchema).optional(),
+});
+
+export interface ReportCardOracleRiskBranch extends z.infer<typeof ReportCardOracleRiskBranchSchema> {
+  tier: OracleRiskTier;
+  sources?: StablecoinLink[];
+}
+
+export interface ReportCardOracleRisk extends z.infer<typeof ReportCardOracleRiskSchema> {
+  tier: OracleRiskTier;
+  confidence?: OracleRiskConfidence;
+  sources?: StablecoinLink[];
+  selectedBranch?: ReportCardOracleRiskBranch | null;
+  branches?: ReportCardOracleRiskBranch[];
+}
+
+export interface ReportCardBridgeRouteRisk extends z.infer<typeof ReportCardBridgeRouteRiskSchema> {
+  tier: BridgeRouteRiskTier;
+  confidence: BridgeRouteRiskConfidence;
+  sources?: StablecoinLink[];
 }
 
 export const ReportCardSchema = z.object({
@@ -150,6 +236,8 @@ export const ReportCardSchema = z.object({
   }),
   ratedDimensions: z.number(),
   rawInputs: RawDimensionInputsSchema,
+  oracleRisk: ReportCardOracleRiskSchema.nullable().optional(),
+  bridgeRouteRisk: ReportCardBridgeRouteRiskSchema.nullable().optional(),
   isDefunct: z.boolean(),
 });
 
@@ -159,6 +247,8 @@ export interface ReportCard extends z.infer<typeof ReportCardSchema> {
   uncappedOverallScore?: number | null;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   rawInputs: RawDimensionInputs;
+  oracleRisk?: ReportCardOracleRisk | null;
+  bridgeRouteRisk?: ReportCardBridgeRouteRisk | null;
 }
 
 const ReportCardsMethodologySchema = z.object({

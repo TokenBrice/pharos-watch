@@ -16,6 +16,8 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   resolveOracleRiskScore,
+  resolveBridgeRouteRiskScore,
+  ORACLE_RISK_SCORE,
   type BlacklistStatus,
 } from "@shared/lib/report-cards";
 import { isRedemptionEligibleForLiquidity } from "@shared/lib/report-card-peg-liquidity";
@@ -24,9 +26,21 @@ import {
   stablecoinToMintAuthorityScoringInput,
   type MintAuthorityParentResolver,
 } from "@shared/lib/mint-authority-scoring";
-import type { StablecoinMeta, GovernanceType, ReserveSlice, DependencyWeight } from "@shared/types/core";
+import type {
+  StablecoinMeta,
+  GovernanceType,
+  ReserveSlice,
+  DependencyWeight,
+  StablecoinLink,
+} from "@shared/types/core";
 import type { DexLiquidityData, BluechipRating, PegSummaryCoin } from "@shared/types/market";
-import type { ReportCard, DimensionKey, RawDimensionInputs } from "@shared/types/report-cards";
+import type {
+  ReportCard,
+  DimensionKey,
+  RawDimensionInputs,
+  ReportCardBridgeRouteRisk,
+  ReportCardOracleRisk,
+} from "@shared/types/report-cards";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
 export interface ComputeCardInput {
@@ -144,6 +158,99 @@ function resolveMintAuthorityBlendScore(meta: StablecoinMeta): number | null {
   return computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(meta), mintAuthorityParentResolver).score;
 }
 
+function mergeOracleRiskSources(...groups: Array<readonly StablecoinLink[] | undefined>): StablecoinLink[] | undefined {
+  const links: StablecoinLink[] = [];
+  const seen = new Set<string>();
+
+  for (const group of groups) {
+    for (const link of group ?? []) {
+      if (seen.has(link.url)) continue;
+      seen.add(link.url);
+      links.push(link);
+    }
+  }
+
+  return links.length > 0 ? links : undefined;
+}
+
+function projectOracleRiskForReportCard(
+  meta: StablecoinMeta,
+  wrappedAssetDependency: DependencyWeight | null,
+): ReportCardOracleRisk | null {
+  const direct = resolveOracleRiskScore(meta);
+  if (direct) {
+    return {
+      tier: direct.tier,
+      score: direct.score,
+      label: direct.label,
+      summary: direct.selectedBranch?.summary ?? meta.oracleRisk?.summary ?? "",
+      reviewedAt: meta.oracleRisk?.reviewedAt,
+      reviewer: meta.oracleRisk?.reviewer,
+      confidence: meta.oracleRisk?.confidence,
+      sources: mergeOracleRiskSources(meta.oracleRisk?.sources, direct.selectedBranch?.sources),
+      inheritedFrom: null,
+      selectedBranch: direct.selectedBranch
+        ? {
+            ...direct.selectedBranch,
+            score: direct.score,
+          }
+        : null,
+      branches: meta.oracleRisk?.branches?.map((branch) => ({
+        ...branch,
+        score: ORACLE_RISK_SCORE[branch.tier],
+      })),
+    };
+  }
+
+  const inheritedId = meta.variantOf ?? wrappedAssetDependency?.id ?? null;
+  const parent = inheritedId ? (ACTIVE_META_BY_ID.get(inheritedId) ?? null) : null;
+  const inherited = parent ? resolveOracleRiskScore(parent) : null;
+  if (!parent || !inherited) return null;
+
+  return {
+    tier: inherited.tier,
+    score: inherited.score,
+    label: inherited.label,
+    summary: inherited.selectedBranch?.summary ?? parent.oracleRisk?.summary ?? "",
+    reviewedAt: parent.oracleRisk?.reviewedAt,
+    reviewer: parent.oracleRisk?.reviewer,
+    confidence: parent.oracleRisk?.confidence,
+    sources: mergeOracleRiskSources(parent.oracleRisk?.sources, inherited.selectedBranch?.sources),
+    inheritedFrom: {
+      id: parent.id,
+      name: parent.name,
+      symbol: parent.symbol,
+    },
+    selectedBranch: inherited.selectedBranch
+      ? {
+          ...inherited.selectedBranch,
+          score: inherited.score,
+        }
+      : null,
+    branches: parent.oracleRisk?.branches?.map((branch) => ({
+      ...branch,
+      score: ORACLE_RISK_SCORE[branch.tier],
+    })),
+  };
+}
+
+function projectBridgeRouteRiskForReportCard(meta: StablecoinMeta): ReportCardBridgeRouteRisk | null {
+  const resolved = resolveBridgeRouteRiskScore(meta);
+  if (!resolved || !meta.bridgeRouteRisk) return null;
+
+  return {
+    tier: resolved.tier,
+    score: resolved.score,
+    label: resolved.label,
+    summary: meta.bridgeRouteRisk.summary,
+    reviewedAt: meta.bridgeRouteRisk.reviewedAt,
+    reviewer: meta.bridgeRouteRisk.reviewer,
+    confidence: meta.bridgeRouteRisk.confidence,
+    protocols: meta.bridgeRouteRisk.protocols,
+    sources: meta.bridgeRouteRisk.sources,
+  };
+}
+
 function computeReportCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
@@ -220,6 +327,9 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
 
   const navToken = !!meta.flags.navToken;
   const oracleRisk = resolveOracleRiskScore(meta);
+  const bridgeRouteRisk = resolveBridgeRouteRiskScore(meta);
+  const oracleRiskProfile = projectOracleRiskForReportCard(meta, wrappedAssetDependency);
+  const bridgeRouteRiskProfile = projectBridgeRouteRiskForReportCard(meta);
   const overall = applyVariantOverallCap(
     computeOverallGrade(dimensions, { navToken, activeDepegBps }),
     meta.variantOf != null ? (overallScores.get(meta.variantOf) ?? null) : null,
@@ -251,6 +361,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     mintAuthorityScore,
     oracleRiskTier: oracleRisk?.tier ?? null,
     oracleRiskScore: oracleRisk?.score ?? null,
+    bridgeRouteRiskTier: bridgeRouteRisk?.tier ?? null,
+    bridgeRouteRiskScore: bridgeRouteRisk?.score ?? null,
     dependencies,
     variantParentId: meta.variantOf ?? null,
     variantKind: meta.variantKind ?? null,
@@ -271,6 +383,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,
+    oracleRisk: oracleRiskProfile,
+    bridgeRouteRisk: bridgeRouteRiskProfile,
     isDefunct: false,
   };
 }

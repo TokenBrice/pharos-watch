@@ -155,7 +155,7 @@ describe("scoreDecentralization mint-authority blend (v8)", () => {
   });
 });
 
-describe("scoreDecentralization oracle-risk blend (v8.1)", () => {
+describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
   const makeMeta = (overrides: Record<string, unknown> = {}) => ({
     flags: { backing: "crypto-backed" as const, governance: "decentralized" as const },
     mechanismArchetype: "cdp" as const,
@@ -209,6 +209,19 @@ describe("scoreDecentralization oracle-risk blend (v8.1)", () => {
     expect(result.detailItems?.some((item) => item.label === "Oracle setup")).toBe(false);
   });
 
+  it("skips direct oracle blending for tracked variants", () => {
+    const meta = makeMeta({
+      variantOf: "parent-cdp",
+      oracleRisk: {
+        tier: "opaque-or-unknown",
+        summary: "Variant inherits the parent CDP oracle exposure.",
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+    expect(result.score).toBe(100);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup")).toBe(false);
+  });
+
   it("applies oracle risk before the Mint Authority blend", () => {
     // dao-governance (85), single-source oracle = 75, MAS 20:
     // round(75*0.65 + 20*0.35) = 56
@@ -223,5 +236,119 @@ describe("scoreDecentralization oracle-risk blend (v8.1)", () => {
     expect(result.score).toBe(56);
     expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-10")).toBe(true);
     expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-19")).toBe(true);
+  });
+
+  it("uses the weakest branch score when branch-level oracle profiles are present", () => {
+    const meta = makeMeta({
+      oracleRisk: {
+        tier: "redundant-with-failover",
+        summary: "Most branches have redundant oracle failover.",
+        branches: [
+          {
+            id: "eth",
+            label: "ETH branch",
+            tier: "redundant-with-failover",
+            summary: "ETH branch has redundant failover.",
+          },
+          {
+            id: "lst",
+            label: "LST branch",
+            tier: "standard-external",
+            summary: "LST branch has standard external feeds.",
+          },
+        ],
+      },
+    });
+    const result = scoreDecentralization("decentralized", meta as never);
+
+    expect(result.score).toBe(94);
+    expect(result.detail).toContain("Oracle setup: LST branch: Standard external feeds");
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-6")).toBe(true);
+  });
+});
+
+describe("scoreDecentralization bridge-route blend (v8.12)", () => {
+  const makeMeta = (overrides: Record<string, unknown> = {}) => ({
+    flags: { backing: "crypto-backed" as const, governance: "decentralized" as const },
+    chainTier: "ethereum" as const,
+    deploymentModel: "single-chain" as const,
+    collateralQuality: "native" as const,
+    custodyModel: "onchain" as const,
+    governanceQuality: "dao-governance" as const,
+    ...overrides,
+  });
+
+  it("keeps missing bridge-route reviews neutral", () => {
+    const result = scoreDecentralization("decentralized", makeMeta() as never);
+    expect(result.score).toBe(85);
+    expect(result.detailItems?.some((item) => item.label === "Bridge route")).toBe(false);
+  });
+
+  it("never lifts the dimension when the reviewed route scores above the current score", () => {
+    const result = scoreDecentralization(
+      "centralized",
+      makeMeta({
+        governanceQuality: "single-entity",
+        bridgeRouteRisk: {
+          tier: "issuer-native-burn-mint",
+          summary: "Issuer-native burn/mint route.",
+          reviewedAt: "2026-06-12",
+          reviewer: "test",
+          confidence: "verified",
+        },
+      }) as never,
+    );
+
+    expect(result.score).toBe(20);
+    expect(result.detailItems?.some((item) => item.label === "Bridge route" && item.detail === "90")).toBe(true);
+  });
+
+  it("drags decentralization when a reviewed external lock/mint route undercuts it", () => {
+    // dao-governance (85), external lock/mint score 40:
+    // round(85*0.8 + 40*0.2) = 76
+    const result = scoreDecentralization(
+      "decentralized",
+      makeMeta({
+        bridgeRouteRisk: {
+          tier: "external-lock-mint",
+          summary: "External bridge route with lock/mint supply.",
+          reviewedAt: "2026-06-12",
+          reviewer: "test",
+          confidence: "verified",
+        },
+      }) as never,
+    );
+
+    expect(result.score).toBe(76);
+    expect(result.detail).toContain("Bridge route: External lock/mint bridge");
+    expect(result.detailItems?.some((item) => item.label === "Bridge route" && item.detail === "-9")).toBe(true);
+  });
+
+  it("applies bridge-route risk after oracle setup and before Mint Authority", () => {
+    // immutable-code 100 -> oracle single-source 86 -> bridge route 77 -> MAS 20 => 57.
+    const result = scoreDecentralization(
+      "decentralized",
+      makeMeta({
+        governanceQuality: "immutable-code",
+        mechanismArchetype: "cdp",
+        oracleRisk: {
+          tier: "single-source-or-laggy",
+          summary: "Single feed without reviewed failover.",
+        },
+        bridgeRouteRisk: {
+          tier: "external-lock-mint",
+          summary: "External bridge route with lock/mint supply.",
+          reviewedAt: "2026-06-12",
+          reviewer: "test",
+          confidence: "verified",
+        },
+      }) as never,
+      { mintAuthorityScore: 20 },
+    );
+
+    expect(result.score).toBe(57);
+    expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-14")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Bridge route" && item.detail === "-9")).toBe(true);
+    expect(result.detailItems?.some((item) => item.label === "Mint authority" && item.detail === "-20")).toBe(true);
   });
 });

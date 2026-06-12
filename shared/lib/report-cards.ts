@@ -30,6 +30,14 @@ export {
 } from "./report-card-resilience";
 export {
   GOVERNANCE_QUALITY_SCORE,
+  BRIDGE_ROUTE_RISK_BLEND_WEIGHT,
+  BRIDGE_ROUTE_RISK_LABEL,
+  BRIDGE_ROUTE_RISK_SCORE,
+  ORACLE_RISK_BLEND_WEIGHT,
+  ORACLE_RISK_LABEL,
+  ORACLE_RISK_SCORE,
+  isOracleRiskApplicable,
+  resolveBridgeRouteRiskScore,
   resolveGovernanceQuality,
   resolveOracleRiskScore,
   scoreDecentralization,

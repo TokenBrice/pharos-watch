@@ -27,6 +27,8 @@ export function createReportCardRawInputs(overrides: Partial<RawDimensionInputs>
     mintAuthorityScore: null,
     oracleRiskTier: null,
     oracleRiskScore: null,
+    bridgeRouteRiskTier: null,
+    bridgeRouteRiskScore: null,
     dependencies: [],
     variantParentId: null,
     variantKind: null,

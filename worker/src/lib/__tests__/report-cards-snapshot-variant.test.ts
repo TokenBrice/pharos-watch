@@ -160,6 +160,11 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
 
     expect(ybold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
     expect(sbold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
+    expect(bold?.rawInputs.oracleRiskTier).toBe("redundant-with-failover");
+    expect(bold?.oracleRisk?.branches?.map((branch) => branch.id)).toEqual(["weth", "wsteth", "reth"]);
+    expect(ybold?.rawInputs.oracleRiskTier ?? null).toBeNull();
+    expect(ybold?.oracleRisk?.inheritedFrom).toMatchObject({ id: "bold-liquity", symbol: "BOLD" });
+    expect(sbold?.oracleRisk?.inheritedFrom).toMatchObject({ id: "bold-liquity", symbol: "BOLD" });
     // v8: frxUSD blends from the 75 pre-blend decentralization score and its
     // verified MAS 64: round(75*0.65 + 64*0.35) = 71. Wrappers inherit the
     // parent's pre-blend score minus haircut, then take their own MAS drag once.
@@ -168,5 +173,27 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     expect(ybold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sbold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sfrxusd?.dimensions.decentralization.score).toBeGreaterThan(10);
+  });
+
+  it("projects reviewed bridge-route risk into report-card raw inputs and display payload", () => {
+    const { cards } = buildLiveReportCards({
+      pegDataById: new Map(),
+      activeDepegPeakBpsById: new Map(),
+      dexLiqMap: {},
+      redemptionBackstopMap: {},
+      bluechipMap: {},
+      resolvedBlacklistStatuses: new Map(),
+      liveReserveMap: new Map(),
+    });
+
+    const usdb = cards.find((card) => card.id === "usdb-blast");
+    expect(usdb?.rawInputs.bridgeRouteRiskTier).toBe("external-lock-mint");
+    expect(usdb?.rawInputs.bridgeRouteRiskScore).toBe(40);
+    expect(usdb?.bridgeRouteRisk).toMatchObject({
+      tier: "external-lock-mint",
+      score: 40,
+      confidence: "verified",
+    });
+    expect(usdb?.bridgeRouteRisk?.sources?.length).toBeGreaterThan(0);
   });
 });

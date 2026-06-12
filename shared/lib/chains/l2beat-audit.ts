@@ -1,5 +1,12 @@
-import type { ChainTier, ContractDeployment, DeploymentModel } from "../../types";
+import type { BridgeRouteRiskTier, ChainTier, ContractDeployment, DeploymentModel, StablecoinMeta } from "../../types";
 import { CHAIN_META } from "./index";
+import {
+  L2BEAT_INTEROP_SNAPSHOT_META,
+  L2BEAT_INTEROP_PROTOCOLS,
+  findL2BeatInteropProtocolReferences,
+  suggestBridgeRouteRiskTierFromL2BeatProtocol,
+  type L2BeatInteropProtocolSnapshot,
+} from "./l2beat-interop";
 import {
   L2BEAT_CHAIN_ALIASES,
   L2BEAT_CHAIN_RISK_FIELD_LABELS,
@@ -125,6 +132,47 @@ export interface L2BeatStablecoinSafetyAudit {
     reviewRowCount: number;
   };
   reviewRows: L2BeatStablecoinReviewRow[];
+}
+
+export type L2BeatBridgeRouteReviewReason =
+  | "l2beat-protocol-reference"
+  | "bridge-route-risk-missing"
+  | "third-party-bridge-review"
+  | "native-multichain-external-protocol"
+  | "reviewed-route-weaker-than-deployment-model"
+  | "legacy-l2beat-bridge-source";
+
+export interface L2BeatBridgeRouteReviewRow {
+  coinId: string;
+  symbol: string;
+  name?: string;
+  deploymentModel: DeploymentModel | null;
+  currentBridgeRouteTier: BridgeRouteRiskTier | null;
+  suggestedBridgeRouteTier: BridgeRouteRiskTier | null;
+  protocols: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    type: L2BeatInteropProtocolSnapshot["type"];
+    bridgeTypes: readonly string[];
+    suggestedTier: BridgeRouteRiskTier;
+    url: string;
+  }>;
+  reasons: L2BeatBridgeRouteReviewReason[];
+  notes: string[];
+}
+
+export interface L2BeatBridgeRouteReviewAudit {
+  generatedAt: string;
+  summary: {
+    stablecoinCount: number;
+    l2beatInteropProtocolCount: number;
+    protocolReferenceCount: number;
+    stablecoinsWithProtocolReferences: number;
+    stablecoinsWithBridgeRouteRisk: number;
+    reviewRowCount: number;
+  };
+  reviewRows: L2BeatBridgeRouteReviewRow[];
 }
 
 function riskSentimentCounts(projectId: L2BeatProjectId): Record<L2BeatRiskSentiment, number> {
@@ -422,6 +470,167 @@ export function buildL2BeatStablecoinSafetyAudit(options: {
       stablecoinsWithContracts,
       stablecoinsWithL2BeatDeployments: stablecoinsWithL2BeatDeployments.size,
       matchedDeploymentCount,
+      reviewRowCount: reviewRows.length,
+    },
+    reviewRows,
+  };
+}
+
+function stablecoinRouteSearchText(coin: StablecoinMeta): string {
+  const pieces: string[] = [
+    coin.id,
+    coin.symbol,
+    coin.name,
+    coin.oneLiner,
+    coin.collateral,
+    coin.pegMechanism,
+    coin.deploymentModel,
+    coin.bridgeRouteRisk?.summary,
+  ].filter((value): value is string => typeof value === "string");
+
+  for (const link of coin.links ?? []) {
+    pieces.push(link.label, link.url);
+  }
+  for (const notice of coin.notices ?? []) {
+    pieces.push(notice.title, notice.message);
+  }
+  if (coin.mintAuthority) {
+    pieces.push(
+      coin.mintAuthority.mintPath,
+      coin.mintAuthority.summary,
+      coin.mintAuthority.review.evidence,
+      ...(coin.mintAuthority.review.sources ?? []).flatMap((source) => [source.label, source.url]),
+    );
+    for (const control of coin.mintAuthority.controls ?? []) {
+      pieces.push(
+        control.label,
+        control.role,
+        control.authorityType,
+        control.evidence ?? "",
+        ...(control.sources ?? []).flatMap((source) => [source.label, source.url]),
+      );
+    }
+  }
+  for (const protocol of coin.bridgeRouteRisk?.protocols ?? []) {
+    pieces.push(protocol.name, protocol.slug ?? "", protocol.url ?? "", protocol.note ?? "");
+  }
+  for (const source of coin.bridgeRouteRisk?.sources ?? []) {
+    pieces.push(source.label, source.url);
+  }
+
+  return pieces.join("\n");
+}
+
+function weakestSuggestedBridgeTier(protocols: readonly L2BeatInteropProtocolSnapshot[]): BridgeRouteRiskTier | null {
+  const ordered: Record<BridgeRouteRiskTier, number> = {
+    "single-chain-or-native": 100,
+    "issuer-native-burn-mint": 90,
+    "canonical-rollup-bridge": 85,
+    "issuer-native-lock-mint": 80,
+    "external-validated-network": 65,
+    "liquidity-or-intent-route": 55,
+    "external-lock-mint": 40,
+    "opaque-or-unknown": 20,
+  };
+  let weakest: BridgeRouteRiskTier | null = null;
+  for (const protocol of protocols) {
+    const tier = suggestBridgeRouteRiskTierFromL2BeatProtocol(protocol);
+    if (!weakest || ordered[tier] < ordered[weakest]) weakest = tier;
+  }
+  return weakest;
+}
+
+function bridgeRouteReviewReasons(input: {
+  coin: StablecoinMeta;
+  protocols: readonly L2BeatInteropProtocolSnapshot[];
+}): L2BeatBridgeRouteReviewReason[] {
+  const reasons = new Set<L2BeatBridgeRouteReviewReason>();
+  const currentTier = input.coin.bridgeRouteRisk?.tier ?? null;
+  const hasProtocolReference = input.protocols.length > 0;
+  const hasLegacyBridgeSource = stablecoinRouteSearchText(input.coin).includes("l2beat.com/bridges/");
+  const externalProtocol = input.protocols.some((protocol) => protocol.type !== "canonical");
+
+  if (hasProtocolReference) reasons.add("l2beat-protocol-reference");
+  if ((hasProtocolReference || input.coin.deploymentModel === "third-party-bridge") && !currentTier) {
+    reasons.add("bridge-route-risk-missing");
+  }
+  if (input.coin.deploymentModel === "third-party-bridge") {
+    reasons.add("third-party-bridge-review");
+  }
+  if (input.coin.deploymentModel === "native-multichain" && externalProtocol) {
+    reasons.add("native-multichain-external-protocol");
+  }
+  if (
+    currentTier &&
+    input.coin.deploymentModel === "native-multichain" &&
+    (currentTier === "external-lock-mint" ||
+      currentTier === "liquidity-or-intent-route" ||
+      currentTier === "opaque-or-unknown")
+  ) {
+    reasons.add("reviewed-route-weaker-than-deployment-model");
+  }
+  if (hasLegacyBridgeSource) reasons.add("legacy-l2beat-bridge-source");
+
+  return [...reasons].sort();
+}
+
+export function buildL2BeatBridgeRouteReviewAudit(options: {
+  stablecoins: readonly StablecoinMeta[];
+  generatedAt?: string;
+}): L2BeatBridgeRouteReviewAudit {
+  const reviewRows: L2BeatBridgeRouteReviewRow[] = [];
+  let protocolReferenceCount = 0;
+  const stablecoinsWithProtocolReferences = new Set<string>();
+  const stablecoinsWithBridgeRouteRisk = new Set<string>();
+
+  for (const coin of options.stablecoins) {
+    if (coin.bridgeRouteRisk) stablecoinsWithBridgeRouteRisk.add(coin.id);
+    const protocols = findL2BeatInteropProtocolReferences(stablecoinRouteSearchText(coin));
+    protocolReferenceCount += protocols.length;
+    if (protocols.length > 0) stablecoinsWithProtocolReferences.add(coin.id);
+    const suggestedTier = weakestSuggestedBridgeTier(protocols);
+    const reasons = bridgeRouteReviewReasons({ coin, protocols });
+    if (reasons.length === 0) continue;
+
+    reviewRows.push({
+      coinId: coin.id,
+      symbol: coin.symbol,
+      name: coin.name,
+      deploymentModel: coin.deploymentModel ?? null,
+      currentBridgeRouteTier: coin.bridgeRouteRisk?.tier ?? null,
+      suggestedBridgeRouteTier: suggestedTier,
+      protocols: protocols.map((protocol) => ({
+        id: protocol.id,
+        slug: protocol.slug,
+        name: protocol.name,
+        type: protocol.type,
+        bridgeTypes: protocol.bridgeTypes,
+        suggestedTier: suggestBridgeRouteRiskTierFromL2BeatProtocol(protocol),
+        url: `https://l2beat.com/interop/protocols/${protocol.slug}`,
+      })),
+      reasons,
+      notes: [
+        "Reviewed bridgeRouteRisk can affect Safety Score v8.12; this queue only proposes review targets.",
+        protocols.length > 0
+          ? `L2BEAT Interop snapshot ${L2BEAT_INTEROP_SNAPSHOT_META.fetchedAt} matched ${protocols.length} protocol reference(s).`
+          : "No L2BEAT Interop protocol reference found; deploymentModel still implies bridge-route review.",
+      ],
+    });
+  }
+
+  reviewRows.sort((left, right) => (
+    (left.currentBridgeRouteTier ? 1 : 0) - (right.currentBridgeRouteTier ? 1 : 0) ||
+    left.coinId.localeCompare(right.coinId)
+  ));
+
+  return {
+    generatedAt: options.generatedAt ?? new Date().toISOString(),
+    summary: {
+      stablecoinCount: options.stablecoins.length,
+      l2beatInteropProtocolCount: L2BEAT_INTEROP_PROTOCOLS.length,
+      protocolReferenceCount,
+      stablecoinsWithProtocolReferences: stablecoinsWithProtocolReferences.size,
+      stablecoinsWithBridgeRouteRisk: stablecoinsWithBridgeRouteRisk.size,
       reviewRowCount: reviewRows.length,
     },
     reviewRows,

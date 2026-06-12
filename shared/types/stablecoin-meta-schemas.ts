@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type {
   BlacklistabilityReview,
+  BridgeRouteProtocolEvidence,
+  BridgeRouteRiskProfile,
   CoinNotice,
   ContractDeployment,
   DateHistoryEntry,
@@ -19,6 +21,7 @@ import type {
   MintAuthorityProfile,
   MintAuthorityReview,
   MintAuthorityRouteChecks,
+  OracleRiskBranch,
   OracleRiskProfile,
   MintAuthoritySafeState,
   ProofOfReserves,
@@ -29,6 +32,9 @@ import type {
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
+  BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES,
+  BRIDGE_ROUTE_RISK_SOURCE_VALUES,
+  BRIDGE_ROUTE_RISK_TIER_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   COLLATERAL_QUALITY_VALUES,
   CUSTODY_MODEL_VALUES,
@@ -59,6 +65,7 @@ import {
   MINT_AUTHORITY_SAFE_SOURCE_VALUES,
   MINT_AUTHORITY_TYPE_VALUES,
   MICA_AUTHORIZATION_TYPE_VALUES,
+  ORACLE_RISK_CONFIDENCE_VALUES,
   ORACLE_RISK_TIER_VALUES,
   MICA_STATUS_VALUES,
   MICA_TOKEN_TYPE_VALUES,
@@ -135,13 +142,64 @@ export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z
   })
   .strict();
 
+export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    tier: z.enum(ORACLE_RISK_TIER_VALUES),
+    summary: z.string().min(12),
+    collateralAssets: z.array(z.string().min(1)).min(1).optional(),
+    chains: z.array(z.string().min(1)).min(1).optional(),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  })
+  .strict();
+
 export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
   .object({
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
+    reviewedAt: ReviewDateSchema.optional(),
+    reviewer: z.string().min(1).optional(),
+    confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
+    branches: z.array(OracleRiskBranchSchema).min(1).optional(),
   })
   .strict();
+
+export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvidence> = z
+  .object({
+    source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
+    name: z.string().min(1),
+    slug: z.string().min(1).optional(),
+    url: z.string().url().optional(),
+    bridgeTypes: z.array(z.string().min(1)).min(1).optional(),
+    note: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
+  .object({
+    tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
+    summary: z.string().min(12),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    confidence: z.enum(BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES),
+    protocols: z.array(BridgeRouteProtocolEvidenceSchema).min(1).optional(),
+    sourceFreeRationale: z.string().min(1).optional(),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  })
+  .strict()
+  .superRefine((profile, ctx) => {
+    if ((profile.sources?.length ?? 0) > 0 || profile.sourceFreeRationale || (profile.protocols?.length ?? 0) > 0) {
+      return;
+    }
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "bridgeRouteRisk requires sources, protocols, or sourceFreeRationale",
+      path: ["sources"],
+    });
+  });
 
 export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z
   .object({
@@ -715,6 +773,7 @@ export const StablecoinMetaEnumSchemas = {
   custodyModel: z.enum(CUSTODY_MODEL_VALUES),
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES),
   oracleRiskTier: z.enum(ORACLE_RISK_TIER_VALUES),
+  bridgeRouteRiskTier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)),
   variantKind: z.enum(VARIANT_KIND_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
