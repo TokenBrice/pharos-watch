@@ -10,6 +10,11 @@ import {
   HEALTH_METHODOLOGY_VERSION,
   CHAIN_ENVIRONMENT_SCORES,
 } from "../chain-health";
+import {
+  getL2BeatChainEnvironmentAssessment,
+  getL2BeatSafetyScoreAudit,
+  resolveL2BeatProjectId,
+} from "../chains/l2beat-risk";
 
 describe("computeConcentrationScore", () => {
   it("returns 0 for a single-stablecoin chain", () => {
@@ -119,6 +124,39 @@ describe("computeChainEnvironmentScore", () => {
 
   it("returns 20 for tier 3", () => {
     expect(computeChainEnvironmentScore(3)).toBe(20);
+  });
+
+  it("uses L2BEAT chain-risk scoring for matched chains", () => {
+    const assessment = getL2BeatChainEnvironmentAssessment("base");
+
+    expect(assessment).toMatchObject({
+      projectId: "base",
+      stage: "Stage 1",
+      riskScore: 84,
+      score: 82,
+    });
+    expect(computeChainEnvironmentScore(2, "base")).toBe(82);
+  });
+
+  it("falls back to resilience tier scoring for unmatched chains", () => {
+    expect(getL2BeatChainEnvironmentAssessment("stable")).toBeNull();
+    expect(computeChainEnvironmentScore(3, "stable")).toBe(20);
+  });
+
+  it("resolves explicit Pharos to L2BEAT aliases", () => {
+    expect(resolveL2BeatProjectId("zksync")).toBe("zksync2");
+    expect(resolveL2BeatProjectId("polygon-zkevm")).toBe("polygonzkevm");
+    expect(resolveL2BeatProjectId("morph-l2")).toBe("morph");
+  });
+
+  it("provides Safety Score audit context without deployment-model mutation", () => {
+    const baseAudit = getL2BeatSafetyScoreAudit("base");
+    const scrollAudit = getL2BeatSafetyScoreAudit("scroll");
+
+    expect(baseAudit?.suggestedChainTier).toBe("stage1-l2");
+    expect(baseAudit?.suggestedDeploymentModel).toBeNull();
+    expect(scrollAudit?.suggestedChainTier).toBeNull();
+    expect(scrollAudit?.notes.join(" ")).toContain("deploymentModel remains an asset-level manual review");
   });
 });
 

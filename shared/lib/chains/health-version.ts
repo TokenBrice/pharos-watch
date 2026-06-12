@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "../methodology-version";
 
 const chainHealth = createMethodologyVersion({
-  currentVersion: "1.3",
+  currentVersion: "1.4",
   changelogPath: "/methodology/chain-health-changelog/",
   changelog: [
+    {
+      version: "1.4",
+      title: "L2BEAT chain-risk environment scoring",
+      date: "2026-06-12",
+      effectiveAt: 1781222400,
+      summary:
+        "Matched L2BEAT scaling projects now score the Chain Environment factor from a static L2BEAT stage and risk snapshot before falling back to the legacy Pharos tier model for unmatched chains.",
+      impact: [
+        "Added explicit Pharos chain ID to L2BEAT project aliases and a static L2BEAT snapshot sourced from the scaling summary API",
+        "Matched chains derive Chain Environment from L2BEAT stage plus Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure risk sentiments",
+        "Unmatched chains continue to use the existing tier mapping: tier 1 = 100, tier 2 = 60, tier 3 = 20",
+        "Safety Score chainTier and deploymentModel gain L2BEAT audit helpers only; live Safety Score outputs are unchanged",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.3",
       title: "Active-only inputs and stale report-card dependency",

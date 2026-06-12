@@ -172,7 +172,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       quality: computeQualityScore(qualityCoins),
       pegStability: computePegStabilityScore(pegCoins),
       backingDiversity: computeBackingDiversityScore(backingTotals),
-      chainEnvironment: computeChainEnvironmentScore(resilienceTier),
+      chainEnvironment: computeChainEnvironmentScore(resilienceTier, chainId),
     };
 
     const healthScore = computeHealthScore(healthFactors);

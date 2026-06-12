@@ -163,6 +163,26 @@ describe("aggregateChains", () => {
     expect(eth.healthFactors.chainEnvironment).toBe(100); // tier 1
   });
 
+  it("uses L2BEAT chain environment scoring for matched chains", () => {
+    const input = makeInput({
+      peggedAssets: [
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1.0,
+          pegType: "peggedUSD",
+          chainCirculating: {
+            base: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+          },
+        },
+      ],
+      safetyScores: { "usdc-circle": 88 },
+    });
+    const result = aggregateChains(input);
+    const base = result.chains.find((c) => c.id === "base")!;
+    expect(base.healthFactors.chainEnvironment).toBe(82);
+  });
+
   it("resolves DL chain names to CHAIN_META IDs", () => {
     const input = makeInput({
       peggedAssets: [{

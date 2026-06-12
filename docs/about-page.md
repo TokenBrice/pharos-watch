@@ -78,4 +78,5 @@ The page is organized into these sections, in order:
 - Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
 - DEX/yield source copy should describe source families and runtime blocking of dead/deprecated venues; detailed protocol lists belong in `docs/dex-liquidity.md` and `docs/yield-intelligence.md`.
 - The visible reference-source roster currently includes FRED DFF, Bank of England IADB `IUDZOS2`, CBR DailyInfo `KeyRateXML`, CBRT EVDS BIST TLREF `TP.BISTTLREF.ORAN`, and Midas NAV-oracle coverage for Yield Intelligence; keep those aligned with `docs/yield-intelligence.md` when benchmark or yield-oracle sources change.
+- L2BEAT is disclosed as a static Chain Health chain-risk snapshot source, not as a live worker fetch.
 - PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend.

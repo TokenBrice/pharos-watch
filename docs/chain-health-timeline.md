@@ -1,6 +1,15 @@
 # Chain Health Score Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.3`.
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.4`.
+
+---
+
+## v1.4 - L2BEAT chain-risk environment scoring (Jun 12, 2026)
+
+- Added a static L2BEAT scaling-summary snapshot with explicit Pharos chain ID to L2BEAT project aliases
+- Matched scaling projects now derive `chainEnvironment` from L2BEAT stage plus five risk fields: Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure
+- Unmatched chains continue to use the legacy Pharos resilience tier mapping (`1 -> 100`, `2 -> 60`, `3 -> 20`)
+- Safety Score chainTier and deploymentModel use L2BEAT only as audit/enrichment context in this release; live Safety Score outputs are unchanged
 
 ---
 

@@ -1,5 +1,6 @@
 import type { ChainResilienceTier } from "./index";
 import type { ChainHealthFactors, HealthBand } from "../../types/chains";
+import { getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
 
@@ -101,8 +102,12 @@ export function computeQualityScore(
   return Math.round(weightedSum / totalSupply);
 }
 
-/** Chain environment: maps resilience tier to a 0-100 score. */
-export function computeChainEnvironmentScore(tier: ChainResilienceTier): number {
+/** Chain environment: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */
+export function computeChainEnvironmentScore(tier: ChainResilienceTier, chainId?: string): number {
+  if (chainId) {
+    const l2beat = getL2BeatChainEnvironmentAssessment(chainId);
+    if (l2beat) return l2beat.score;
+  }
   return CHAIN_ENVIRONMENT_SCORES[tier];
 }
 
