@@ -1,53 +1,47 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { useEffect, useReducer, type ComponentType, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
-const { useStablecoinDetailViewModelMock, pendingDynamicLoads } = vi.hoisted(() => ({
+const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
   useStablecoinDetailViewModelMock: vi.fn(),
-  pendingDynamicLoads: [] as Promise<unknown>[],
 }));
 
-// Resolve dynamic() loaders so module-level vi.mocks take effect behind the
-// page's dynamic boundaries — but only swap in components explicitly marked
-// with RENDER_IN_DYNAMIC_STUB (set on test mocks whose content is asserted).
-// Real modules resolve too (their imports are drained in afterEach so they
-// don't outlive the environment) but keep rendering the opaque placeholder,
-// since they'd need providers (QueryClient etc.) this harness doesn't mount.
-// Await with findBy* when asserting marked sections' content.
-const RENDER_IN_DYNAMIC_STUB = "__renderInDynamicStub";
-
 vi.mock("next/dynamic", () => ({
-  default: (loader: () => Promise<ComponentType | { default: ComponentType }>) => {
-    let Resolved: ComponentType | null = null;
-    function DynamicStub(props: Record<string, unknown>) {
-      const [, force] = useReducer((x: number) => x + 1, 0);
-      useEffect(() => {
-        let mounted = true;
-        const load = Promise.resolve(loader()).then((mod) => {
-          const component = (typeof mod === "function" ? mod : mod.default) as ComponentType;
-          if ((component as unknown as Record<string, unknown>)[RENDER_IN_DYNAMIC_STUB] === true) {
-            Resolved = component;
-            if (mounted) force();
-          }
-        });
-        // Track in-flight module loads so afterEach can drain them before
-        // vitest tears the environment down (heavy unmocked modules would
-        // otherwise reject with EnvironmentTeardownError after the test).
-        pendingDynamicLoads.push(load.catch(() => undefined));
-        return () => {
-          mounted = false;
-        };
-      }, []);
-      if (!Resolved) return <div data-testid="dynamic-detail-section" />;
-      const Component = Resolved;
-      return <Component {...props} />;
+  default: (loader: () => Promise<unknown>) => {
+    const source = loader.toString();
+    if (source.includes("ReservePanel")) {
+      return function ReservePanelStub({
+        reserves,
+        onRetry,
+        isFetching,
+      }: {
+        reserves?: { mode?: string } | null;
+        onRetry?: () => Promise<unknown> | void;
+        isFetching?: boolean;
+      }) {
+        return (
+          <section id="reserves" data-testid="reserve-panel">
+            <span>{reserves?.mode ?? "no-reserves"}</span>
+            <button type="button" disabled={isFetching} onClick={() => { void onRetry?.(); }}>
+              Retry reserves
+            </button>
+          </section>
+        );
+      };
     }
-    return DynamicStub;
+    if (source.includes("ReportCardDetail")) {
+      return function ReportCardDetailStub({ rightColumn }: { rightColumn?: ReactNode }) {
+        return <div data-testid="report-card">{rightColumn}</div>;
+      };
+    }
+    return function DynamicPlaceholder() {
+      return <div data-testid="dynamic-detail-section" />;
+    };
   },
 }));
 
@@ -87,29 +81,6 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/reserve-panel", () => {
-  const ReservePanel = ({
-    reserves,
-    onRetry,
-    isFetching,
-  }: {
-    reserves?: { mode?: string } | null;
-    onRetry?: () => Promise<unknown> | void;
-    isFetching?: boolean;
-  }) => (
-    <section id="reserves" data-testid="reserve-panel">
-      <span>{reserves?.mode ?? "no-reserves"}</span>
-      <button type="button" disabled={isFetching} onClick={() => { void onRetry?.(); }}>
-        Retry reserves
-      </button>
-    </section>
-  );
-  // ReservePanel renders behind a dynamic() boundary; mark the mock so the
-  // next/dynamic stub swaps it in (see RENDER_IN_DYNAMIC_STUB above).
-  (ReservePanel as unknown as Record<string, unknown>).__renderInDynamicStub = true;
-  return { ReservePanel };
-});
-
 vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
   PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
 }));
@@ -122,10 +93,6 @@ vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
 
 vi.mock("@/components/ai-summary", () => ({
   AiSummary: () => null,
-}));
-
-vi.mock("@/components/dews-detail", () => ({
-  DEWSDetail: () => null,
 }));
 
 vi.mock("@/components/coin-notice", () => ({
@@ -154,12 +121,6 @@ vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
   // which would otherwise pull in the live useReportCards query.
   ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
     <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
-  ),
-}));
-
-vi.mock("@/components/report-card", () => ({
-  ReportCardDetail: ({ rightColumn }: { rightColumn?: ReactNode }) => (
-    <div data-testid="report-card">{rightColumn}</div>
   ),
 }));
 
@@ -236,9 +197,8 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     cleanup();
-    await Promise.allSettled(pendingDynamicLoads.splice(0));
   });
 
   it("renders static profile content in the loading fallback", () => {
