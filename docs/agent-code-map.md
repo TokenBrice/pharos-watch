@@ -382,14 +382,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/canonical-order.json` - 401 entries
 - `shared/data/stablecoins/coins.client.generated.json` - 401 entries
 - `shared/data/stablecoins/coins.generated.json` - 401 entries
-- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 23 keys
+- `shared/data/stablecoins/coins/a7a5-old-vector.json` - 24 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 27 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 27 keys
 - `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 24 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 25 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 20 keys
-- `shared/data/stablecoins/coins/apxusd-apyx.json` - 24 keys
+- `shared/data/stablecoins/coins/apxusd-apyx.json` - 25 keys
 - `shared/data/stablecoins/coins/apyusd-apyx.json` - 27 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
 - `shared/data/stablecoins/coins/asusdf-astherus.json` - 25 keys
