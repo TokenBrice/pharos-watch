@@ -162,6 +162,12 @@ function normalizeSearchText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9.+]+/g, " ");
 }
 
+function containsSearchTerm(normalizedText: string, term: string): boolean {
+  const normalizedTerm = normalizeSearchText(term).trim();
+  if (!normalizedTerm) return false;
+  return ` ${normalizedText.trim()} `.includes(` ${normalizedTerm} `);
+}
+
 export function getL2BeatInteropProtocol(id: string): L2BeatInteropProtocolSnapshot | null {
   return PROTOCOLS_BY_ID.get(id) ?? null;
 }
@@ -186,7 +192,7 @@ export function findL2BeatInteropProtocolReferences(text: string): L2BeatInterop
 
   for (const protocol of L2BEAT_INTEROP_PROTOCOLS) {
     const terms = [protocol.id, protocol.slug, protocol.name, ...(EXTRA_PROTOCOL_SEARCH_TERMS[protocol.id] ?? [])];
-    if (terms.some((term) => normalized.includes(normalizeSearchText(term)))) {
+    if (terms.some((term) => containsSearchTerm(normalized, term))) {
       matches.push(protocol);
     }
   }

@@ -5,6 +5,7 @@ import {
   buildL2BeatStablecoinSafetyAudit,
   getL2BeatInfrastructureContext,
 } from "../chains/l2beat-audit";
+import { findL2BeatInteropProtocolReferences } from "../chains/l2beat-interop";
 
 describe("L2BEAT audit helpers", () => {
   it("keeps explicit alias coverage internally consistent", () => {
@@ -124,5 +125,12 @@ describe("L2BEAT audit helpers", () => {
       reasons: ["bridge-route-risk-missing", "l2beat-protocol-reference", "third-party-bridge-review"],
     });
     expect(audit.reviewRows[0].protocols.map((protocol) => protocol.slug)).toContain("ccip");
+  });
+
+  it("does not match common protocol IDs as substrings inside ordinary prose", () => {
+    const matches = findL2BeatInteropProtocolReferences("Issuer route is burn/mint based and uses CCTP v2.");
+
+    expect(matches.map((protocol) => protocol.id)).toContain("cctpv2");
+    expect(matches.map((protocol) => protocol.id)).not.toContain("base");
   });
 });
