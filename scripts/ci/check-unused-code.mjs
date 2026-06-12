@@ -74,6 +74,16 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
   "shared/lib/chains/health-version.ts::getChainHealthMethodologyVersionAt",
   "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER",
+  // L2BEAT snapshot/audit helpers are consumed by advisory scripts and kept as
+  // an explicit methodology surface even when not imported by runtime pages.
+  "shared/lib/chains/l2beat-audit.ts::findL2BeatAliasIntegrityIssues",
+  "shared/lib/chains/l2beat-interop.ts::getL2BeatInteropProtocol",
+  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_SCORES",
+  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_SENTIMENT_SCORES",
+  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_WEIGHT",
+  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_WEIGHT",
+  "shared/lib/chains/l2beat-risk.ts::resolveL2BeatChainRisk",
+  "shared/lib/chains/l2beat-risk.ts::computeL2BeatRiskScore",
   // Backward-compatible type export for callers that imported the old lib path.
   "shared/lib/cause-of-death.ts::CauseOfDeath",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
@@ -85,6 +95,14 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
+  // Safety Score methodology constants are imported by calibration/advisory
+  // scripts outside this runtime-only scan and are kept public for review work.
+  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_BLEND_WEIGHT",
+  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_LABEL",
+  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_SCORE",
+  "shared/lib/report-cards.ts::ORACLE_RISK_BLEND_WEIGHT",
+  "shared/lib/report-cards.ts::ORACLE_RISK_LABEL",
+  "shared/lib/report-cards.ts::isOracleRiskApplicable",
   "shared/lib/report-cards.ts::chainInfraLabel",
   "shared/lib/report-cards.ts::inferResilienceDefaults",
   // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
@@ -97,6 +115,8 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/stablecoins/schema.ts::CanonicalOrderAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema",
+  "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema",
+  "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema",
   // Consumed by scripts/lib/stablecoin-catalog-sources.ts (out-of-scan-scope).
   "shared/lib/stablecoins/schema.ts::findDuplicateStablecoinCatalogIds",
   "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract",
