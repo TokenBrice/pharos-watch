@@ -20,9 +20,9 @@ Workers must update only their assigned row below after completing their batch. 
 | Worker | Status | Owned summary IDs | Notes |
 | --- | --- | --- | --- |
 | W1-live-drift | pending | P0 high/medium plus P3 low drift | Fix live contradictions and de-brittle volatile numbers. |
-| W2-very-thin-examples | complete | Named examples plus very thin entries not owned by W1 | Expanded assigned very-thin summaries and named examples; left `zchf-frankencoin` unchanged as exemplar. |
+| W2-very-thin-examples | complete | Named examples plus very thin entries not owned by W1 | Completed W2 expansions; `zchf-frankencoin` intentionally unchanged as exemplar. |
 | W3-thin-early | complete | Remaining thin entries, early slice | Expanded owned 50-64 word entries and cleaned steakUSDT/steakUSDC fragment openings. |
-| W4-thin-middle | pending | Remaining thin entries, middle slice | Expand 65-73 word entries not owned by W1/W2/W3. |
+| W4-thin-middle | complete | Remaining thin entries, middle slice | Expanded 12 assigned 65-73 word summaries; JSON/glossary checks passed. |
 | W5-thin-late | complete | Remaining thin entries, late slice | Expanded 13 owned 74-79 word summaries with June 12 metadata; wrappers now separate parent stablecoin risk from wrapper risk. |
 | W6-structure-cleanup | pending | Structural duplicate/fragment entries not owned by W1-W5 | Clean pasted/fractured openings and duplicate lead sentences. |
 
