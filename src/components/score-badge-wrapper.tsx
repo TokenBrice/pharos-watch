@@ -56,7 +56,7 @@ export function ScoreBadgeWrapper({
     <MethodologyHint topic={topic} asChild>
       <MethodologyTriggerButton
         topic={topic}
-        className="pharos-focus-ring inline-flex min-h-6 appearance-none items-center rounded-full border-0 bg-transparent p-0 text-inherit"
+        className="pharos-focus-ring inline-flex min-h-11 min-w-11 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-inherit sm:min-h-6 sm:min-w-0"
       >
         {children}
       </MethodologyTriggerButton>

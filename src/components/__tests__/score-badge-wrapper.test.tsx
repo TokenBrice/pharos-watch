@@ -21,7 +21,10 @@ describe("ScoreBadgeWrapper", () => {
 
     // Badge content reaches the DOM (rendered through Sheet + Tooltip triggers).
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /explain safety score/i }).length).toBeGreaterThan(0);
+    const trigger = screen.getAllByRole("button", { name: /explain safety score/i })[0];
+    expect(trigger).toBeTruthy();
+    expect(trigger.className).toContain("min-h-11");
+    expect(trigger.className).toContain("min-w-11");
 
     // Inline version suffix is rendered alongside the trigger.
     expect(screen.getByText(versionLabel as string)).toBeTruthy();
