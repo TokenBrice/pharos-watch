@@ -1,8 +1,16 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.1 (2026-02-25 → 2026-06-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.12 (2026-02-25 → 2026-06-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.12 — Bridge-route risk enters Decentralization (2026-06-12)
+
+Reviewed `bridgeRouteRisk` profiles now feed the Decentralization dimension through a penalty-only blend: `decentralization = min(current, 0.80 x current + 0.20 x bridgeRouteScore)`. The blend runs after CDP oracle scoring and before Mint Authority. Missing bridge-route reviews remain neutral, and strong issuer-native or canonical routes never lift a score, but weak external lock/mint, liquidity, intent, or opaque routes can drag the dimension down. L2BEAT Interop data is used as a static evidence source and review queue, while live report-card scoring consumes only curated Pharos metadata. Initial reviewed profiles cover USDC, USDCx, USDB, and NUSD.
+
+## v8.11 — Oracle-risk profiles gain provenance and branch handling (2026-06-12)
+
+Reviewed `oracleRisk` profiles now carry `reviewedAt`, `reviewer`, `confidence`, and optional collateral-branch rows. When branch rows are present, the Decentralization oracle blend uses the weakest branch/profile score, so multi-collateral CDPs are scored against their weakest verified price-feed path. Report-card payloads now expose a display-only oracle setup object with summary, source links, selected branch, and inherited parent context for wrappers/variants. A warning-only oracle-risk coverage check plus a calibration report support the full CDP backfill and later review of the 25% blend weight. USDS and BOLD profiles now carry review provenance, and BOLD records WETH, wstETH, and rETH branch rows.
 
 ## v8.1 — CDP oracle setup enters Decentralization (2026-06-12)
 

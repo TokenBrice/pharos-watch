@@ -623,27 +623,27 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 
 **`ChainSummary` fields:**
 
-| Field                | Type                                 | Description                                                                                                                  |
-| -------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `id`                 | `string`                             | Canonical chain identifier (DefiLlama chain name)                                                                            |
-| `name`               | `string`                             | Human-readable chain name                                                                                                    |
-| `logoPath`           | `string \| null`                     | Path to chain logo asset                                                                                                     |
-| `type`               | `"evm" \| "tron" \| "other"`         | Chain runtime family from `CHAIN_META`                                                                                       |
-| `totalUsd`           | `number`                             | Total stablecoin supply on this chain in USD                                                                                 |
-| `change24h`          | `number`                             | Absolute 24h supply change in USD                                                                                            |
-| `change24hPct`       | `number`                             | 24h supply change as a percentage                                                                                            |
-| `change7d`           | `number`                             | Absolute 7d supply change in USD                                                                                             |
-| `change7dPct`        | `number`                             | 7d supply change as a percentage                                                                                             |
-| `change30d`          | `number`                             | Absolute 30d supply change in USD                                                                                            |
-| `change30dPct`       | `number`                             | 30d supply change as a percentage                                                                                            |
-| `stablecoinCount`    | `number`                             | Number of distinct stablecoins on this chain                                                                                 |
-| `dominantStablecoin` | `{ id, symbol, share }`              | Largest stablecoin by supply on the chain                                                                                    |
-| `topStablecoins`     | `{ id, symbol, share, supplyUsd }[]` | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated       |
-| `dominanceShare`     | `number`                             | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                   |
-| `healthScore`        | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
-| `healthBand`         | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
-| `healthFactors`      | `ChainHealthFactors`                 | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
-| `chainEnvironmentEvidence` | `ChainEnvironmentEvidence`      | Provenance for `healthFactors.chainEnvironment`; either the consumed L2BEAT snapshot fields or the fallback Pharos resilience tier |
+| Field                      | Type                                 | Description                                                                                                                        |
+| -------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | `string`                             | Canonical chain identifier (DefiLlama chain name)                                                                                  |
+| `name`                     | `string`                             | Human-readable chain name                                                                                                          |
+| `logoPath`                 | `string \| null`                     | Path to chain logo asset                                                                                                           |
+| `type`                     | `"evm" \| "tron" \| "other"`         | Chain runtime family from `CHAIN_META`                                                                                             |
+| `totalUsd`                 | `number`                             | Total stablecoin supply on this chain in USD                                                                                       |
+| `change24h`                | `number`                             | Absolute 24h supply change in USD                                                                                                  |
+| `change24hPct`             | `number`                             | 24h supply change as a percentage                                                                                                  |
+| `change7d`                 | `number`                             | Absolute 7d supply change in USD                                                                                                   |
+| `change7dPct`              | `number`                             | 7d supply change as a percentage                                                                                                   |
+| `change30d`                | `number`                             | Absolute 30d supply change in USD                                                                                                  |
+| `change30dPct`             | `number`                             | 30d supply change as a percentage                                                                                                  |
+| `stablecoinCount`          | `number`                             | Number of distinct stablecoins on this chain                                                                                       |
+| `dominantStablecoin`       | `{ id, symbol, share }`              | Largest stablecoin by supply on the chain                                                                                          |
+| `topStablecoins`           | `{ id, symbol, share, supplyUsd }[]` | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated             |
+| `dominanceShare`           | `number`                             | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                         |
+| `healthScore`              | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                           |
+| `healthBand`               | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19)       |
+| `healthFactors`            | `ChainHealthFactors`                 | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                                  |
+| `chainEnvironmentEvidence` | `ChainEnvironmentEvidence`           | Provenance for `healthFactors.chainEnvironment`; either the consumed L2BEAT snapshot fields or the fallback Pharos resilience tier |
 
 **`ChainHealthFactors` fields:**
 
@@ -657,10 +657,10 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 
 **`ChainEnvironmentEvidence` variants:**
 
-| Variant | Fields | Description |
-| --- | --- | --- |
-| L2BEAT | `source: "l2beat"`, `score`, `projectId`, `slug`, `name`, `stage`, `isUnderReview`, `stageScore`, `riskScore`, `risks`, `snapshot` | Static L2BEAT snapshot evidence used for matched scaling projects. `risks` includes Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure values/sentiments. |
-| Pharos tier | `source: "pharos-chain-tier"`, `score`, `resilienceTier` | Fallback evidence for chains without an explicit L2BEAT alias. |
+| Variant     | Fields                                                                                                                             | Description                                                                                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| L2BEAT      | `source: "l2beat"`, `score`, `projectId`, `slug`, `name`, `stage`, `isUnderReview`, `stageScore`, `riskScore`, `risks`, `snapshot` | Static L2BEAT snapshot evidence used for matched scaling projects. `risks` includes Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure values/sentiments. |
+| Pharos tier | `source: "pharos-chain-tier"`, `score`, `resilienceTier`                                                                           | Fallback evidence for chains without an explicit L2BEAT alias.                                                                                                                                   |
 
 ---
 
@@ -2300,7 +2300,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "8.1",
+    "version": "8.11",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -2328,7 +2328,9 @@ When present, `collateralDriftCoins` lists live-reserve scoring deltas that exce
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 
-For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore` are populated only when a crypto-backed CDP has a reviewed `oracleRisk` profile. Missing reviews and non-CDP assets return `null` and do not receive an oracle penalty.
+For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore` are populated only when a direct non-variant crypto-backed CDP has a reviewed `oracleRisk` profile. Missing reviews, non-CDP assets, and resolvable tracked variants return `null` and do not receive a duplicate direct oracle penalty. Since Safety Score v8.11, cards can also carry an optional display-only `oracleRisk` object with the reviewed summary, source links, selected branch, branch rows, review provenance, and inherited parent context for wrappers/variants.
+
+For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore` are populated only when a coin has a reviewed `bridgeRouteRisk` profile. Missing route reviews return `null` and stay neutral. Since Safety Score v8.12, cards can also carry an optional display-only `bridgeRouteRisk` object with the reviewed summary, source links, protocol evidence, review provenance, and confidence. L2BEAT Interop is used only as static review evidence and candidate-queue material; the report-card API does not fetch L2BEAT live.
 
 `GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. The published envelope is also the preferred Safety Score source for yield hydration, while the smaller `report_card_cache` score map remains available for lightweight Chain Health/OG consumers and is rejected when its compact `methodologyVersion` does not match the current Safety Score methodology.
 
@@ -2351,7 +2353,13 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `dimensions`           | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                          |
 | `ratedDimensions`      | `number`                               | Number of dimensions with data (max 5)                                               |
 | `rawInputs`            | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)              |
+| `oracleRisk`           | `ReportCardOracleRisk \| null`         | Optional reviewed or inherited CDP oracle setup display payload                      |
+| `bridgeRouteRisk`      | `ReportCardBridgeRouteRisk \| null`    | Optional reviewed bridge-route risk display payload                                  |
 | `isDefunct`            | `boolean`                              | `true` for cemetery coins (permanent F grade)                                        |
+
+**`ReportCardOracleRisk`**: `{ tier, score, label, summary, reviewedAt?, reviewer?, confidence?, sources?, inheritedFrom?, selectedBranch?, branches? }`. `selectedBranch` and `branches[]` include `{ id, label, tier, score, summary, collateralAssets?, chains?, sources? }`. This object is for display and audit context; scoring inputs remain `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`.
+
+**`ReportCardBridgeRouteRisk`**: `{ tier, score, label, summary, reviewedAt?, reviewer?, confidence?, protocols?, sources? }`. `protocols[]` include `{ name, slug?, source?, bridgeTypes? }`. This object is for display and audit context; scoring inputs remain `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore`.
 
 **`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. When total dependency weight is ≤ 1.0, the remainder represents non-stablecoin collateral; when declared dependency weight exceeds 1.0, dependency scoring normalizes by raw total and uses no self-backed remainder.
 
@@ -2384,6 +2392,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `mintAuthorityScore`               | `number \| null`                                                                            |
 | `oracleRiskTier`                   | `OracleRiskTier \| null`                                                                    |
 | `oracleRiskScore`                  | `number \| null`                                                                            |
+| `bridgeRouteRiskTier`              | `BridgeRouteRiskTier \| null`                                                               |
+| `bridgeRouteRiskScore`             | `number \| null`                                                                            |
 | `dependencies`                     | `DependencyWeight[]`                                                                        |
 | `variantParentId`                  | `string \| null`                                                                            |
 | `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
@@ -2393,6 +2403,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 `rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the four-status model: `true` -> `Yes`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Admin mint authority is reviewed separately in Mint Authority and is not a FreezeWatch status. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
 
 `rawInputs.oracleRiskTier` is one of `"oracleless-or-internal"`, `"redundant-with-failover"`, `"medianized-with-delay"`, `"standard-external"`, `"single-source-or-laggy"`, `"opaque-or-unknown"`, or `null`.
+
+`rawInputs.bridgeRouteRiskTier` is one of `"single-chain-or-native"`, `"issuer-native-burn-mint"`, `"canonical-rollup-bridge"`, `"issuer-native-lock-mint"`, `"external-validated-network"`, `"liquidity-or-intent-route"`, `"external-lock-mint"`, `"opaque-or-unknown"`, or `null`.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 

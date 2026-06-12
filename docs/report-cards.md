@@ -6,12 +6,12 @@ The stablecoin registry currently contains 401 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.1`
+- **Current methodology version:** `v8.12`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.1)
+## Overall Grade (v8.12)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.1 adds a reviewed oracle setup input for crypto-backed CDP assets. When `oracleRisk` metadata is present, Decentralization applies a penalty-only oracle blend before Mint Authority: `decentralization = min(current, 0.75 x current + 0.25 x oracleScore)`. Robust oracle setups never lift the score, but single-source, stale, or opaque feeds can drag it down. The v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
+Current-version note: v8.12 adds reviewed bridge-route risk as a Safety Score input inside Decentralization. When `bridgeRouteRisk` metadata is present, Decentralization applies a penalty-only blend after the CDP oracle step and before Mint Authority: `decentralization = min(current, 0.80 x current + 0.20 x bridgeRouteScore)`. Strong issuer-native or canonical routes never lift a score, missing bridge-route reviews stay neutral, and weak external lock/mint, liquidity, or intent routes can drag the dimension down. L2BEAT Interop is used as a static review/evidence source and candidate queue; report-card scoring consumes only curated Pharos metadata. The v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -40,12 +40,12 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
 
 ### Base dimensions (weighted sum)
 
-| Dimension            | Weight | Source                                                                        | Scoring                                                                                                                                                                                                                                                                                                                                                                                                        |
-| -------------------- | ------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore`                                  | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                                                                                                     |
-| **Resilience**       | 20%    | Token metadata (2 sub-factors)                                                | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                                                                                                  |
-| **Decentralization** | 15%    | Governance quality + chain infrastructure + CDP oracle setup + mint authority | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based chain infrastructure penalty, then the penalty-only CDP oracle blend (v8.1), then the penalty-only Mint Authority blend (v8.0) |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                                                    | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                                                                                                  |
+| Dimension            | Weight | Source                                                                        | Scoring                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore`                                  | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                                                                                                                   |
+| **Resilience**       | 20%    | Token metadata (2 sub-factors)                                                | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                                                                                                                |
+| **Decentralization** | 15%    | Governance quality + chain infrastructure + CDP oracle setup + bridge-route risk + mint authority | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based chain infrastructure penalty, then the branch-aware penalty-only CDP oracle blend (v8.11), the reviewed bridge-route blend (v8.12), and finally the penalty-only Mint Authority blend (v8.0) |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                                                    | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                                                                                                                |
 
 ### Peg Stability (multiplier)
 
@@ -231,7 +231,7 @@ Data sources: `collateralQuality`, `custodyModel` optional fields on `Stablecoin
 
 ### Decentralization Details
 
-Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains, a CDP-only oracle setup blend (v8.1), and a penalty-only Mint Authority blend (v8.0). The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
+Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains, a branch-aware CDP-only oracle setup blend (v8.11, introduced in v8.1), a reviewed bridge-route risk blend (v8.12), and a penalty-only Mint Authority blend (v8.0). The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
 
 **Governance Quality Tiers:**
 
@@ -262,7 +262,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 
 `immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because resolvable wrappers inherit the wrapped asset's chain-adjusted Decentralization score, while unresolved wrappers keep a conservative fallback. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
 
-**CDP oracle setup blend (v8.1):** crypto-backed CDP assets can carry reviewed `oracleRisk` metadata. When present, Decentralization applies a penalty-only blend after governance and chain infrastructure but before Mint Authority: `score = min(score, round(score x 0.75 + oracleScore x 0.25))` (`ORACLE_RISK_BLEND_WEIGHT = 0.25` in `shared/lib/report-card-governance.ts`). This applies even to immutable-code CDPs because liquidation and redemption safety still depend on the collateral price-feed path. Missing oracle reviews are neutral rather than punitive. The current oracle tiers are:
+**CDP oracle setup blend (v8.1/v8.11):** crypto-backed CDP assets can carry reviewed `oracleRisk` metadata. When present on a direct non-variant CDP, Decentralization applies a penalty-only blend after governance and chain infrastructure but before bridge-route and Mint Authority scoring: `score = min(score, round(score x 0.75 + oracleScore x 0.25))` (`ORACLE_RISK_BLEND_WEIGHT = 0.25` in `shared/lib/report-card-governance.ts`). This applies even to immutable-code CDPs because liquidation and redemption safety still depend on the collateral price-feed path. Missing oracle reviews are neutral rather than punitive. The current oracle tiers are:
 
 | Tier                      | Score | Meaning                                                                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------------------------------------------------------- |
@@ -273,7 +273,24 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | `single-source-or-laggy`  | 45    | Single-source, lag-prone, or weakly-fresh feeds                                                             |
 | `opaque-or-unknown`       | 20    | Oracle setup is opaque, unresolved, or not source-verified                                                  |
 
-Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redundant-with-failover`). Other CDPs stay unchanged until a reviewed profile is curated.
+Since v8.11, `oracleRisk` profiles can include `reviewedAt`, `reviewer`, `confidence`, source links, and optional `branches[]` rows keyed by collateral branch or chain. If branches are present, scoring uses the lowest-scoring branch/profile tier as the oracle score. Report-card payloads also expose a display-only `oracleRisk` object with summary, sources, selected branch, and inherited parent context for wrappers/variants; raw scoring fields stay limited to `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`, and tracked variants with resolvable parents use the inherited parent oracle display instead of a duplicate direct blend. `npm run check:oracle-risk-coverage` reports missing/incomplete/stale CDP oracle reviews without failing, and `npm run check:oracle-risk-coverage:enforce` can become the CI gate once the CDP backfill is complete. `npm run calibrate:oracle-risk-score -- --report agents/oracle-risk-score-calibration.md` prints the direct non-variant CDP Decentralization movement table for blend/tier recalibration.
+
+Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redundant-with-failover`), with BOLD split into WETH, wstETH, and rETH branches. Other CDPs stay unchanged until a reviewed profile is curated.
+
+**Bridge-route risk blend (v8.12):** any asset can carry reviewed `bridgeRouteRisk` metadata when durable supply depends on cross-chain mint, lockbox, attestation, issuer-burn/mint, or liquidity/intent routes. When present, Decentralization applies a penalty-only blend after the CDP oracle step and before Mint Authority: `score = min(score, round(score x 0.80 + bridgeRouteScore x 0.20))` (`BRIDGE_ROUTE_RISK_BLEND_WEIGHT = 0.20` in `shared/lib/report-card-governance.ts`). Missing bridge-route reviews are neutral. Strong issuer-native and canonical routes cannot lift the dimension, but weak external lock/mint, liquidity, intent, or opaque routes can drag it down. The current tiers are:
+
+| Tier                         | Score | Meaning                                                                                      |
+| ---------------------------- | ----- | -------------------------------------------------------------------------------------------- |
+| `single-chain-or-native`     | 100   | No material bridge route, or issuance is native to the relevant chain                        |
+| `issuer-native-burn-mint`    | 90    | Issuer-operated burn/mint route with explicit settlement or attestation controls             |
+| `canonical-rollup-bridge`    | 85    | Canonical rollup bridge or equivalent base-layer route                                       |
+| `issuer-native-lock-mint`    | 80    | Issuer-operated lock/mint route with reviewed controls                                       |
+| `external-validated-network` | 65    | External validator or messaging network with reviewed validation assumptions                 |
+| `liquidity-or-intent-route`  | 55    | Liquidity-network, solver, or intent route where market/route execution is material          |
+| `external-lock-mint`         | 40    | External lock/mint bridge, lockbox, OFT, or synthetic route with third-party control surface |
+| `opaque-or-unknown`          | 20    | Route is unresolved, opaque, or lacks source-verified controls                               |
+
+L2BEAT Interop protocol data is an evidence source and queue generator for this review. The live report-card engine does not fetch L2BEAT; it consumes only curated `bridgeRouteRisk` metadata with reviewer, confidence, source, and optional protocol evidence.
 
 **Mint Authority blend (v8.0):** as the final stage, a rated Mint Authority Score applies a penalty-only blend: `score = min(score, round(score x 0.65 + MAS x 0.35))` (`MAS_BLEND_WEIGHT = 0.35` in `shared/lib/report-card-governance.ts`). The blend can only drag the dimension down — privileged-mint risk undermines a decentralization claim, but a clean mint topology never makes a centralized issuer decentralized. Coins without a rated MAS (`NR`) are unchanged, and there is no separate confidence gate because the MAS confidence caps (verified 100 / probable 90 / manual-review 85) already encode evidence quality. Wrappers inherit the parent's pre-Mint Authority score so the drag applies exactly once per coin (the wrapper's own MAS already folds the parent's mint risk), and a wrapper is additionally capped at its parent's final blended score. When the drag binds, the report card shows a `Mint authority` detail row with the MAS, band, and delta.
 
@@ -412,7 +429,9 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `depegEventCount`, `lastEventAt`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionModelConfidence`, `redemptionUsedForLiquidity`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `mintAuthorityScore`, `oracleRiskTier`, `oracleRiskScore`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `depegEventCount`, `lastEventAt`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionModelConfidence`, `redemptionUsedForLiquidity`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `mintAuthorityScore`, `oracleRiskTier`, `oracleRiskScore`, `bridgeRouteRiskTier`, `bridgeRouteRiskScore`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
+- **`ReportCard.oracleRisk`**: Optional display payload for reviewed or inherited oracle setup context (`tier`, `score`, `label`, `summary`, provenance, sources, selected branch, branch rows, and `inheritedFrom`). It is presentation evidence; scoring uses the raw oracle fields inside Decentralization.
+- **`ReportCard.bridgeRouteRisk`**: Optional display payload for reviewed bridge-route context (`tier`, `score`, `label`, `summary`, provenance, protocol evidence, and sources`). It is presentation evidence; scoring uses the raw bridge-route fields inside Decentralization.
 
 ## Portfolio Analyzer & Stress Test
 

@@ -263,6 +263,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
 - `mintAuthority` is curated metadata that feeds the Mint Authority Score, which since Safety Score v8.0 also drags the Decentralization report-card dimension through a penalty-only blend (a missing review never penalizes). It does not create selector exclusions. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review.
+- `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. Since Safety Score v8.12 it can drag Decentralization through a penalty-only blend, but missing reviews remain neutral. Use L2BEAT Interop candidate output only as review evidence; verify route docs, contracts, and source links before authoring a sourced profile.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
@@ -733,7 +734,7 @@ npm run test:merge-gate
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run check:redemption-backstops`
-- L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score` and `npm run check:l2beat-snapshot-coverage`
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score`, `npm run candidates:l2beat-bridge-routes`, and `npm run check:l2beat-snapshot-coverage`
 - dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:doc-counts`, `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
