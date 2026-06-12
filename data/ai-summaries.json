@@ -931,13 +931,13 @@
   },
   "vgbp-vnx": {
     "title": "The Loneliest Pound",
-    "text": "VNX's VGBP is on-chain British sterling on Base and Celo at 172K GBP circulating — a proof of concept that GBP can exist on-chain at all, under FMA TVTG licensing. VGBP occupies one of the emptiest niches in stablecoins: on-chain British sterling, where the competition is essentially nobody. At 172K GBP circulating on Base and Celo with $33K in DEX TVL, this is less a stablecoin and more a proof of concept that GBP can exist on-chain at all. The AREVA-audited GBP cash reserves at Swiss and Liechtenstein banks under FMA TVTG licensing provide more {{term:custody}}custody{{/term}} infrastructure and formal {{term:attestation}}attestation{{/term}} than the token's market presence would seem to justify, and same-day issuer {{term:redemption}}redemption{{/term}} adds a clean exit path nobody is using. DEWS Watch band at 18 flags thin-market fragility rather than reserve concern. The UK's stablecoin regulatory framework remains the wildcard — if it invites high-street banks to issue tokenized sterling, VGBP's first-mover advantage evaporates overnight. Until then, VNX holds the field by default in a market nobody has shown up to contest.",
-    "updatedAt": "2026-05-15",
+    "text": "VNX's VGBP is Liechtenstein-licensed on-chain British sterling, backed 1:1 by GBP deposits in Swiss and Liechtenstein bank accounts and redeemable through verified issuer accounts. The niche is almost empty: VGBP gives Base, Celo, and Solana users a pound unit, but its market depth is so small that the product still reads more like settlement infrastructure than a liquid trading asset. AREVA's ad-hoc audit and FMA TVTG licensing give the reserve story more formal {{term:attestation}}attestation{{/term}} and {{term:custody}}custody{{/term}} structure than the on-chain footprint suggests, while same-day issuer {{term:redemption}}redemption{{/term}} is the real exit path. Pharos now reads the live DEWS band as calm, but that calm is fragile because thin pools can move quickly without implying reserve failure. The UK regulatory wildcard remains existential: if banks or UK-regulated issuers bring serious sterling liquidity on-chain, VGBP's first-mover advantage could vanish.",
+    "updatedAt": "2026-06-12",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-06-12",
+    "factsAsOf": "2026-06-12"
   },
   "cusd-cap": {
     "title": "The Stablecoin Basket Case",

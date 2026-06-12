@@ -6,12 +6,13 @@ Scope: `data/ai-summaries.json` against `shared/data/stablecoins/coins/*.json` p
 ## Summary
 
 - Coverage is complete: 401 per-coin metadata files and 401 AI summaries; no missing or extra summary IDs.
-- Live staleness queue: 26 summaries have checkable drift from live Pharos data: 8 high, 10 medium, 8 low.
-- Text quality queue: 54 summaries are thin (`<80` words or `<3` sentences); 19 of those are very thin (`<50` words).
-- Structure queue: 23 summaries start with a visible lowercase/article fragment that reads like a pasted lead sentence rather than polished editorial copy.
-- Most summaries still use May facts: 293 summaries have `factsAsOf: 2026-05-15`; only 73 were refreshed on 2026-06-03 and 3 on 2026-06-07.
+- Initial live staleness queue: 26 summaries had checkable drift from live Pharos data: 8 high, 10 medium, 8 low.
+- Initial text quality queue: 54 summaries were thin (`<80` words or `<3` sentences); 19 of those were very thin (`<50` words).
+- Initial structure queue: 23 summaries started with a visible lowercase/article fragment that read like a pasted lead sentence rather than polished editorial copy.
+- Final coordinator audit: `npm run candidates:ai-summaries` reports 0 stale summaries, and the local quality scan reports 0 thin, 0 very thin, and 0 fragment-lead summaries.
+- Final provenance distribution after refresh: 114 summaries have `factsAsOf: 2026-06-12`; 62 remain at `2026-06-03`, 3 at `2026-06-07`, and 222 at May dates. This pass targeted live drift, thin copy, and structural issues rather than full-corpus reauthorship.
 
-Target quality bar: use `zchf-frankencoin` and `bold-liquity` as style exemplars. They interpret the reserve mix, peg mechanism, safety profile, and central tradeoff instead of only defining the asset. `bold-liquity` still needs a tiny de-brittling pass because it pins the old exact score (`94`, now `91`), but the narrative structure is otherwise a good model.
+Target quality bar: `zchf-frankencoin` and `bold-liquity` were used as style exemplars because they interpret the reserve mix, peg mechanism, safety profile, and central tradeoff instead of only defining the asset. `bold-liquity` was de-brittled during W1 to avoid pinning the old exact score.
 
 ## Swarm Execution Status
 
@@ -25,6 +26,14 @@ Workers must update only their assigned row below after completing their batch. 
 | W4-thin-middle | complete | Remaining thin entries, middle slice | Expanded 12 assigned 65-73 word summaries; JSON/glossary checks passed. |
 | W5-thin-late | complete | Remaining thin entries, late slice | Expanded 13 owned 74-79 word summaries with June 12 metadata; wrappers now separate parent stablecoin risk from wrapper risk. |
 | W6-structure-cleanup | complete | Structural duplicate/fragment entries not owned by W1-W5 | Cleaned owned pasted/fractured openings and duplicate lead sentences; metadata refreshed to 2026-06-12. |
+| Coordinator-final-audit | complete | `vgbp-vnx` plus whole-file verification | Patched post-swarm VGBP DEWS-band drift found by the final live audit; reran candidates with 0 stale findings. |
+
+## Final Verification
+
+- `npm run candidates:ai-summaries`: audited 401 summaries, 28 without live report cards; stale 0 (`high 0`, `medium 0`, `low 0`).
+- Local quality scan: 401 summaries; 0 thin, 0 very thin, 0 fragment-leading.
+- `npm run check:glossary-coverage`: 901 markers across 18 unique slugs OK.
+- `npm run typecheck`: passed.
 
 ## Evidence
 
