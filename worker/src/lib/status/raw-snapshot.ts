@@ -7,6 +7,12 @@ import { logWorkerEvent } from "../structured-log";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
+const SNAPSHOT_RECENT_RUN_LIMIT = 10;
+const SNAPSHOT_STALE_ARTIFACT_LIMIT = 8;
+const SNAPSHOT_METADATA_DEPTH_LIMIT = 5;
+const SNAPSHOT_METADATA_ARRAY_LIMIT = 40;
+const SNAPSHOT_METADATA_OBJECT_KEY_LIMIT = 80;
+const SNAPSHOT_STRING_LIMIT = 2_000;
 
 interface StatusRawSnapshotPayload {
   version: 1;
@@ -42,6 +48,81 @@ function isStatusLevel(value: unknown): value is StatusLevel {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit)}... [truncated ${value.length - limit} chars]`;
+}
+
+function compactSnapshotValue(value: unknown, depth = 0): unknown {
+  if (value == null) return value;
+  if (typeof value === "string") return truncateString(value);
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) {
+    if (depth >= SNAPSHOT_METADATA_DEPTH_LIMIT) return "[truncated-depth]";
+    return value
+      .slice(0, SNAPSHOT_METADATA_ARRAY_LIMIT)
+      .map((entry) => compactSnapshotValue(entry, depth + 1));
+  }
+  if (!isRecord(value)) return null;
+  if (depth >= SNAPSHOT_METADATA_DEPTH_LIMIT) return "[truncated-depth]";
+
+  const compacted: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value).slice(0, SNAPSHOT_METADATA_OBJECT_KEY_LIMIT)) {
+    compacted[key] = compactSnapshotValue(entry, depth + 1);
+  }
+  return compacted;
+}
+
+function compactCronRunForSnapshot(run: unknown, options: { includeMetadata: boolean }): unknown {
+  if (!isRecord(run)) return run;
+  const compacted: Record<string, unknown> = {};
+  for (const key of ["startedAt", "durationMs", "status", "itemCount"] as const) {
+    if (key in run) compacted[key] = run[key];
+  }
+  if (typeof run.error === "string") {
+    compacted.error = truncateString(run.error);
+  } else if (run.error != null) {
+    compacted.error = compactSnapshotValue(run.error);
+  }
+  if (options.includeMetadata && run.metadata != null) {
+    compacted.metadata = compactSnapshotValue(run.metadata);
+  }
+  return compacted;
+}
+
+function compactCronStatusForSnapshot(status: unknown): unknown {
+  if (!isRecord(status)) return status;
+  const compacted: Record<string, unknown> = { ...status };
+
+  if (status.lastRun != null) {
+    compacted.lastRun = compactCronRunForSnapshot(status.lastRun, { includeMetadata: true });
+  }
+  if (Array.isArray(status.recentRuns)) {
+    compacted.recentRuns = status.recentRuns
+      .slice(0, SNAPSHOT_RECENT_RUN_LIMIT)
+      .map((run, index) => compactCronRunForSnapshot(run, { includeMetadata: index === 0 }));
+  }
+  if (status.inFlight != null) {
+    compacted.inFlight = compactSnapshotValue(status.inFlight);
+  }
+  if (Array.isArray(status.staleArtifacts)) {
+    compacted.staleArtifacts = status.staleArtifacts
+      .slice(0, SNAPSHOT_STALE_ARTIFACT_LIMIT)
+      .map((artifact) => compactSnapshotValue(artifact));
+  }
+  return compacted;
+}
+
+function compactRawStatusForSnapshot(raw: RawStatusComputation): RawStatusComputation {
+  if (!isRecord(raw.crons)) return raw;
+  return {
+    ...raw,
+    crons: Object.fromEntries(
+      Object.entries(raw.crons).map(([job, status]) => [job, compactCronStatusForSnapshot(status)]),
+    ) as RawStatusComputation["crons"],
+  };
 }
 
 function hasRawStatusShape(value: unknown): value is RawStatusComputation {
@@ -148,7 +229,7 @@ export async function writeStatusRawSnapshot(
   const payload: StatusRawSnapshotPayload = {
     version: 1,
     producedAt: now,
-    raw,
+    raw: compactRawStatusForSnapshot(raw),
   };
 
   try {

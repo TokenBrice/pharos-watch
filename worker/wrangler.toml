@@ -1,7 +1,10 @@
 name = "stablecoin-api"
 main = "src/index.ts"
 compatibility_date = "2026-04-18"
-compatibility_flags = ["nodejs_compat"]
+# `status-self-check` probes the Worker through its public custom domains.
+# Without global fetch semantics those same-Worker self-fetches can return
+# Cloudflare 522s from inside the Worker even when external clients are healthy.
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
 
 [[rules]]

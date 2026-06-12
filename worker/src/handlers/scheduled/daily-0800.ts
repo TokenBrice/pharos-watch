@@ -22,6 +22,11 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
     minStablecoinsCacheUpdatedAtSec: runtime.slotStartedAt,
     freshnessGateLabel: "daily0800Utc",
   };
+  const publicSnapshotFreshnessGate = {
+    ...stablecoinsCacheFreshnessGate,
+    stablecoinsCacheRetryAttempts: 4,
+    stablecoinsCacheRetryDelayMs: 120_000,
+  };
 
   return [
     {
@@ -50,7 +55,7 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
             },
             {
               job: "snapshot-public-dataset",
-              run: (signal) => snapshotPublicDataset(runtime.db, signal, stablecoinsCacheFreshnessGate),
+              run: (signal) => snapshotPublicDataset(runtime.db, signal, publicSnapshotFreshnessGate),
             },
           ],
         },

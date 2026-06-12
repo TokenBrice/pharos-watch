@@ -717,6 +717,8 @@ describe("worker.scheduled", () => {
       {
         minStablecoinsCacheUpdatedAtSec: slotStartedAt,
         freshnessGateLabel: "daily0800Utc",
+        stablecoinsCacheRetryAttempts: 4,
+        stablecoinsCacheRetryDelayMs: 120_000,
       },
     );
     expect(cronMocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(

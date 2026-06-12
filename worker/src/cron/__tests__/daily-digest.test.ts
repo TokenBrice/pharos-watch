@@ -217,6 +217,19 @@ const ANTHROPIC_OK_TEXT = JSON.stringify({
   },
 });
 
+const ANTHROPIC_SOFT_WARNING_TEXT = JSON.stringify({
+  title: "Drift",
+  extended: VALID_DAILY_EXTENDED,
+  text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.",
+  meta: {
+    leadSignalId: "depeg:usdt-tether:active",
+    lead: "depeg",
+    tone: "dry",
+    coins: ["USDT", "USDC"],
+    usedCandidateIds: ["depeg:usdt-tether:active"],
+  },
+});
+
 /**
  * Build a canonical Anthropic SSE streaming Response body for `text` as a
  * single text-delta. Matches what Anthropic actually emits when we set
@@ -510,6 +523,36 @@ describe("generateDailyDigest", () => {
     const userPrompt = anthropicBody.messages[0].content;
     expect(userPrompt).not.toContain("Distribution: median");
     expect(userPrompt).not.toMatch(/\d+ above B/);
+  });
+
+  it("keeps soft-only digest quality issues out of cron degraded status", async () => {
+    vi.mocked(fetchWithRetry).mockImplementation(async () =>
+      mockAnthropicStreamResponse(ANTHROPIC_SOFT_WARNING_TEXT),
+    );
+    const db = mockD1(makeBaseTables());
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      {
+        apiKey: "x",
+        apiSecret: "y",
+        accessToken: "z",
+        accessTokenSecret: "w",
+      },
+      false,
+      {
+        botToken: "tg-token",
+        chatId: "tg-chat",
+      },
+    );
+
+    expect(result.itemCount).toBe(1);
+    expect(result.status).toBeUndefined();
+    expect(result.metadata).toContain("quality: title-word-count:soft");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
   });
 
   it("reports digest preflight and skipped progress when Anthropic is not configured", async () => {

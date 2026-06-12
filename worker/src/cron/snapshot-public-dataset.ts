@@ -16,7 +16,7 @@
  * Idempotent: keyed on the UTC ISO date, rows are write-once so dated public
  * snapshot URLs can be cached immutably without later same-day mutation.
  */
-import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -80,7 +80,13 @@ interface ExistingSnapshotRow {
 interface SnapshotPublicDatasetOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
   freshnessGateLabel?: string;
+  stablecoinsCacheRetryAttempts?: number;
+  stablecoinsCacheRetryDelayMs?: number;
 }
+
+const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
+const DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS = 120_000;
+const MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS = 4;
 
 function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
@@ -130,6 +136,7 @@ function buildStablecoinsCacheBeforeSlotResult(
   cacheUpdatedAt: number,
   requiredUpdatedAt: number,
   freshnessGateLabel?: string,
+  retry?: { attempts: number; firstCacheUpdatedAt: number },
 ): CronResult {
   return {
     status: "degraded",
@@ -139,8 +146,29 @@ function buildStablecoinsCacheBeforeSlotResult(
       cacheUpdatedAt,
       requiredUpdatedAt,
       freshnessGateLabel,
+      ...(retry && retry.attempts > 0
+        ? { retryAttempts: retry.attempts, firstCacheUpdatedAt: retry.firstCacheUpdatedAt }
+        : {}),
     }),
   };
+}
+
+function stablecoinsCachePredatesGate(
+  updatedAt: number,
+  options: SnapshotPublicDatasetOptions,
+): options is SnapshotPublicDatasetOptions & { minStablecoinsCacheUpdatedAtSec: number } {
+  return options.minStablecoinsCacheUpdatedAtSec != null && updatedAt < options.minStablecoinsCacheUpdatedAtSec;
+}
+
+function getStablecoinsCacheRetryAttempts(options: SnapshotPublicDatasetOptions): number {
+  const rawAttempts = options.stablecoinsCacheRetryAttempts ?? DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS;
+  if (!Number.isFinite(rawAttempts) || rawAttempts <= 0) return 0;
+  return Math.min(MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS, Math.floor(rawAttempts));
+}
+
+function getStablecoinsCacheRetryDelayMs(options: SnapshotPublicDatasetOptions): number {
+  const rawDelayMs = options.stablecoinsCacheRetryDelayMs ?? DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS;
+  return Number.isFinite(rawDelayMs) && rawDelayMs > 0 ? Math.floor(rawDelayMs) : 0;
 }
 
 export async function snapshotPublicDataset(
@@ -169,7 +197,7 @@ export async function snapshotPublicDataset(
   }
 
   // --- 1. Stablecoins (canonical market cache; required) ---
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  let stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     console.warn(`[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
@@ -182,14 +210,37 @@ export async function snapshotPublicDataset(
       }),
     };
   }
-  if (
-    options.minStablecoinsCacheUpdatedAtSec != null
-    && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
+  const firstStablecoinsCacheUpdatedAt = stablecoinsCache.updatedAt;
+  let stablecoinsCacheRetryAttempts = 0;
+  const maxStablecoinsCacheRetryAttempts = getStablecoinsCacheRetryAttempts(options);
+  const stablecoinsCacheRetryDelayMs = getStablecoinsCacheRetryDelayMs(options);
+  while (
+    stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)
+    && stablecoinsCacheRetryAttempts < maxStablecoinsCacheRetryAttempts
   ) {
+    stablecoinsCacheRetryAttempts += 1;
+    await sleepWithSignal(stablecoinsCacheRetryDelayMs, signal);
+    stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    throwIfAborted(signal);
+    if (stablecoinsCache.kind !== "ok") {
+      return {
+        status: "degraded",
+        itemCount: 0,
+        metadata: JSON.stringify({
+          reason: "stablecoins_cache_unavailable",
+          cacheKind: stablecoinsCache.kind,
+          retryAttempts: stablecoinsCacheRetryAttempts,
+          firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt,
+        }),
+      };
+    }
+  }
+  if (stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)) {
     return buildStablecoinsCacheBeforeSlotResult(
       stablecoinsCache.updatedAt,
       options.minStablecoinsCacheUpdatedAtSec,
       options.freshnessGateLabel,
+      { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
     );
   }
 
@@ -389,6 +440,13 @@ export async function snapshotPublicDataset(
       byteSize,
       compressedSize: payloadGz.byteLength,
       stablecoinCount: stablecoinsCache.payload.peggedAssets.length,
+      ...(stablecoinsCacheRetryAttempts > 0
+        ? {
+          stablecoinsCacheRetryAttempts,
+          firstStablecoinsCacheUpdatedAt,
+          finalStablecoinsCacheUpdatedAt: stablecoinsCache.updatedAt,
+        }
+        : {}),
       psiPresent: psiRow !== null,
       dewsCount: stressRows.length,
       liquidityCount: dexRows.length,

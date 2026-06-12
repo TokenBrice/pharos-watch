@@ -162,6 +162,42 @@ describe("snapshotPublicDataset", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
   });
 
+  it("retries a pre-slot stablecoins cache before degrading", async () => {
+    const staleForSlotUpdatedAt = NOW_SEC - 15 * 60;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: staleForSlotUpdatedAt },
+        ],
+      },
+    ]);
+
+    const resultPromise = snapshotPublicDataset(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: NOW_SEC,
+      freshnessGateLabel: "daily0800Utc",
+      stablecoinsCacheRetryAttempts: 2,
+      stablecoinsCacheRetryDelayMs: 1_000,
+    });
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    const result = await resultPromise;
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt: staleForSlotUpdatedAt,
+      requiredUpdatedAt: NOW_SEC,
+      freshnessGateLabel: "daily0800Utc",
+      retryAttempts: 2,
+      firstCacheUpdatedAt: staleForSlotUpdatedAt,
+    });
+    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM cache WHERE key"))).toHaveLength(3);
+    expect(getInsertBinds(db)).toBeUndefined();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stability_index"))).toBe(false);
+  });
+
   it("skips without recomputing when today's immutable snapshot already exists", async () => {
     const db = mockD1([
       {
