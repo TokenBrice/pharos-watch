@@ -39,3 +39,15 @@ Shared symlinked skills currently include `annotations-refresh`, `coingecko-id-v
 Claude-only Pharos skills currently include `ai-summaries-refresh`, `changelog-collect`, `funding-update`, `pre-launch-update`, and `write-ai-summaries`. If one becomes useful for Codex too, add a canonical `.codex/skills/<name>/SKILL.md` and replace the Claude copy with a symlink.
 
 `npm run check:agent-skill-symlinks` validates that skill symlinks are not broken. Symlinks that point outside this repository must be listed in `scripts/lib/agent-skill-symlink-waivers.json` with an owner, reason, and review date.
+
+## Claude Workflow Orchestrators
+
+Checked-in `.claude/workflows/*.mjs` files are saved Claude orchestration entrypoints, not product runtime code and not Codex skills. Keep only repeatable Pharos-specific workflows here.
+
+Current saved workflows:
+
+- `compliance-research` — broad MiCA + GENIUS compliance research and verification pass.
+- `code-health-broad` — broad code-health review pipeline that fans out domain finders, verifies findings, clusters them, and writes an `agents/code-health-report.md` scratch report.
+- `mixed-verify` — reusable mixed-model verification harness for static-data checks, audits, and reviews.
+
+Generated reports from these workflows should stay under ignored scratch paths such as `/agents/` unless their durable rules are distilled into `/docs/`.
