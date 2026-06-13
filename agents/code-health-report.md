@@ -662,6 +662,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`rbc-10` — RedemptionCostScenarioConfig interface and RedemptionCostShapeSchema mirror the same 7 fields without a cross-reference** `[maintainability | low | trivial | low]`
 - Problem: the interface (shared.ts:20-28) and `RedemptionCostShapeSchema` (schema.ts:91-99) both enumerate the same 7 optional fields with no structural link. A full `z.infer` would pull zod into the runtime type surface (schema.ts is test-only, shared.ts is runtime source of truth).
+- Done 2026-06-13: added cross-reference comments on the runtime `RedemptionCostScenarioConfig` and test-schema `RedemptionCostShapeSchema` declarations, preserving the runtime/validator separation.
 - Recommendation: LOW-risk option only — add a cross-ref comment on each side. Do NOT invert to `z.infer` (keeps runtime/validator separation). Comment-only.
 - Files: `shared/lib/redemption-backstop-configs/shared.ts:20-28`, `.../schema.ts:91-99`.
 - Verifier: field lists match, no cross-ref; rejected the z.infer path. Checks: redemption-backstop helper test.

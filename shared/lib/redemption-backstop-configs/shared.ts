@@ -17,6 +17,7 @@ import type {
   RedemptionSettlementModel,
 } from "../../types";
 
+// Keep the scenario fields in sync with RedemptionCostShapeSchema in schema.ts.
 interface RedemptionCostScenarioConfig {
   flatFeeUsd?: number;
   minFeeUsd?: number;

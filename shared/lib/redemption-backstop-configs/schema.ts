@@ -88,6 +88,7 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+// Mirrors RedemptionCostScenarioConfig in shared.ts; keep runtime and validation fields aligned.
 const RedemptionCostShapeSchema = {
   flatFeeUsd: NonNegativeNumberSchema.optional(),
   minFeeUsd: NonNegativeNumberSchema.optional(),
