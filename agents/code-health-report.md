@@ -680,7 +680,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-3` — Identical 7-element checkpoint array defined three times (DDR, DDRR, worker store)** `[duplication | low | trivial | low]`
 - Problem: `DDR_ASSESSMENT_CHECKPOINT_VALUES` (depeg-resolver.ts:159) and `DDRR_CHECKPOINT_VALUES` (depeg-resolver-review.ts:26) are byte-identical 7-element `as const` tuples. The worker file redefines the same set as a hand-written union (`DdrAssessmentCheckpoint`).
-- Recommendation: in the worker store, `import type { DdrAssessmentCheckpoint } from "@shared/types/depeg-resolver"`. For DDRR the dedup is optional/lower-value — if deduping, re-export `DDRR_CHECKPOINT_VALUES = DDR_ASSESSMENT_CHECKPOINT_VALUES` and add a comment (semantically distinct domains).
+- Done 2026-06-13: the worker store imports `DdrAssessmentCheckpoint` from `@shared/types/depeg-resolver`, and DDRR re-exports `DDRR_CHECKPOINT_VALUES = DDR_ASSESSMENT_CHECKPOINT_VALUES` with a semantic-domain comment.
 - Files: `shared/types/depeg-resolver.ts:159-168`, `shared/types/depeg-resolver-review.ts:26-35`, `worker/src/lib/depeg-resolver-assessment-store.ts:4-11`.
 - Verifier: all three byte-identical; worker import path verified; DDRR re-export is a tradeoff worth a comment. Checks: `npm run typecheck`, `npm run typecheck:worker`.
 
