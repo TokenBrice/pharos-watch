@@ -505,7 +505,6 @@ export function buildStatusDashboardData({
 
       return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
     });
-  const sections = baseSections;
 
   return {
     allTransitions,
@@ -526,7 +525,7 @@ export function buildStatusDashboardData({
     querySyncs: syncDetails,
     recommendedActions,
     runningCrons,
-    sections,
+    sections: baseSections,
     statusHoldingAge,
   };
 }

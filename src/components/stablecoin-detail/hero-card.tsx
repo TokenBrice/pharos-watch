@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
+import type { ReportCard } from "@shared/types";
 import type {
   HeroCardViewModel,
   HeroDewsDisplay,
@@ -13,11 +14,12 @@ import {
   HeroCardDesktopSection,
   HeroCardHeader,
   HeroCardMobileSection,
+  type HeroSectionBaseProps as HeroSectionBaseSharedProps,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
 import { HeroPassportStrip } from "./hero-passport-strip";
 
-type HeroSectionBaseProps = Omit<Parameters<typeof HeroCardMobileSection>[0], "tertiaryMetrics">;
+type HeroSectionBaseProps = HeroSectionBaseSharedProps & { reportCard: ReportCard | null };
 
 interface HeroCardProps {
   model: HeroCardViewModel;

@@ -66,9 +66,6 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-pharoswatchbot.png`,
 });
 
-const COIN_COUNT = TRACKED_STABLECOIN_COUNT;
-const BOT_URL = PHAROSWATCHBOT_BOT_URL;
-
 const MINI_APP_FEATURES = [
   { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
   { title: "Global alerts", detail: "DEWS, depeg, safety, and launches in one panel." },
@@ -124,8 +121,6 @@ const ACTION_ANCHORS = {
   digest: "channel",
   community: "community",
 } as const satisfies Record<TelegramActionKey, string>;
-
-const RECOMMENDED_FIRST_COMMAND = RECOMMENDED_SETUP_COMMAND;
 
 const RECOMMENDED_SETUPS = [
   {
@@ -433,7 +428,7 @@ export default function PharosWatchBotPage() {
                   does.
                 </h2>
                 <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-                  <TelegramLink href={BOT_URL}>@PharosWatchBot</TelegramLink> watches depegs, DEWS
+                  <TelegramLink href={PHAROSWATCHBOT_BOT_URL}>@PharosWatchBot</TelegramLink> watches depegs, DEWS
                   threat bands, safety-grade changes, and launch promotions across the tracked universe. Start with one
                   low-noise preset, then tune thresholds as your watchlist grows. Safety alerts include a reason line so
                   you know whether to look at liquidity, peg pressure, active-depeg caps, or parent caps first.
@@ -451,7 +446,7 @@ export default function PharosWatchBotPage() {
                   Tracked universe
                 </p>
                 <p className="mt-3 font-mono text-[3.5rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4.5rem] lg:text-[6rem]">
-                  {COIN_COUNT.toLocaleString("en-US")}
+                  {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")}
                 </p>
                 <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
                   tracked stablecoins across active, frozen, and pre-launch coverage
@@ -479,10 +474,10 @@ export default function PharosWatchBotPage() {
                       ▸
                     </span>
                     <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
-                      {RECOMMENDED_FIRST_COMMAND}
+                      {RECOMMENDED_SETUP_COMMAND}
                     </code>
                     <CopyButton
-                      text={RECOMMENDED_FIRST_COMMAND}
+                      text={RECOMMENDED_SETUP_COMMAND}
                       className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                     />
                   </div>
@@ -933,7 +928,7 @@ export default function PharosWatchBotPage() {
               </p>
             </div>
             <div className="space-y-3">
-              <CommandLine command={RECOMMENDED_FIRST_COMMAND} />
+              <CommandLine command={RECOMMENDED_SETUP_COMMAND} />
               <div className="flex flex-wrap gap-3">
                 <Button size="sm" asChild className="gap-2">
                   <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">

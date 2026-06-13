@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  TIER_BORDER,
   TIER_TEXT,
   deviationBgClass,
   deviationColorClass,
@@ -48,9 +47,6 @@ describe("severity-colors", () => {
     expect(getScoreColor(65)).toBe(TIER_TEXT.blue);
     expect(getScoreColor(45)).toBe(TIER_TEXT.amber);
     expect(getScoreColor(5)).toBe(TIER_TEXT.red);
-
-    expect(TIER_BORDER.green).toBe("border-l-emerald-500");
-    expect(TIER_BORDER.red).toBe("border-l-red-500");
   });
 
   it("maps peg and durability score thresholds", () => {

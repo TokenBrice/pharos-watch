@@ -22,9 +22,7 @@ const ALL_ENDPOINTS = [
   ...ENDPOINT_GROUPS.public,
   ...ENDPOINT_GROUPS.admin,
 ];
-const PUBLIC_ENDPOINTS = [
-  ...ENDPOINT_GROUPS.public,
-];
+const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;

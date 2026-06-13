@@ -81,13 +81,6 @@ export const TIER_TEXT: Record<ScoreTier, string> = {
   red: "text-red-700 dark:text-red-400",
 };
 
-export const TIER_BORDER: Record<ScoreTier, string> = {
-  green: "border-l-emerald-500",
-  blue: "border-l-blue-500",
-  amber: "border-l-amber-500",
-  red: "border-l-red-500",
-};
-
 interface ScoreColorThreshold {
   min: number;
   className: string;

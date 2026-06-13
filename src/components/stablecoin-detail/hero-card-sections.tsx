@@ -70,7 +70,7 @@ export function HeroCardHeader({
   );
 }
 
-interface HeroSectionBaseProps {
+export interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;

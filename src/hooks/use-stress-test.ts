@@ -63,8 +63,9 @@ export function useStressTest(
   reportData: ReportCardsResponse | undefined,
   mcapMap?: Map<string, number>,
 ): StressTestState {
-  const [targetCoinId, setTargetCoinId] = useState<string | null>(() => parseInitialStressSelection().coinId);
-  const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(() => parseInitialStressSelection().grade);
+  const [initial] = useState(parseInitialStressSelection);
+  const [targetCoinId, setTargetCoinId] = useState<string | null>(initial.coinId);
+  const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(initial.grade);
 
   // --- Card lookup ---
   const cardMap = useMemo(() => buildReportCardMap(reportData), [reportData]);

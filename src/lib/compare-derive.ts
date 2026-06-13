@@ -4,9 +4,14 @@
  */
 
 import { COMPARE_COLORS } from "@/lib/compare-config";
-import type { StablecoinData, ReportCard, SupplyHistoryPoint, ReportCardGrade } from "@shared/types";
-import type { MintBurnPerCoinResponse } from "@shared/types";
-import type { StablecoinMeta } from "@shared/types/core";
+import type {
+  MintBurnPerCoinResponse,
+  ReportCard,
+  ReportCardGrade,
+  StablecoinData,
+  StablecoinMeta,
+  SupplyHistoryPoint,
+} from "@shared/types";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
 export interface ComparisonCoinEntry {
