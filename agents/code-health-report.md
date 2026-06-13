@@ -222,7 +222,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fe-6` — Confidence label maps re-derive types instead of importing canonical core.ts types** `[type-safety | low | small | none]`
 - Problem: report-card.tsx locally derives `OracleRiskConfidence`/`BridgeRouteRiskConfidence` via `NonNullable<...>` off the display types, then keys `Record<...,string>` label maps. core.ts already exports both named types (482, 517) plus the `*_VALUES` tuples.
-- Recommendation: import both from `@shared/types` and delete the local derivations. Keep the two Record maps — once keyed on the imported union, adding a value to `*_VALUES` surfaces a compile error.
+- Done 2026-06-13: imported both confidence unions from `@shared/types` and removed the local `NonNullable<...>` derivations while keeping the keyed label maps.
 - Files: `src/components/report-card.tsx:48-65`, `shared/types/core.ts:481-482,516-517`.
 - Verifier: both types + tuples confirmed exported; type-hygiene not a runtime bug. Checks: `npm run typecheck`.
 
@@ -234,7 +234,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fe-10` — gradeBandLabel score-band helper lives in the component file** `[maintainability | low | trivial | none]`
 - Problem: `gradeBandLabel` encodes the 90/75/60/40 band thresholds, called 5x in report-card.tsx, with no component-scope dependencies. `src/lib/report-card-ui.ts` already owns related grade-band metadata.
-- Recommendation: move to `report-card-ui.ts` and import. Pure move; do NOT add a speculative "export for future reuse" rationale.
+- Done 2026-06-13: moved `gradeBandLabel` to `src/lib/report-card-ui.ts` and imported it from the report card component.
 - Files: `src/components/report-card.tsx:28-36`.
 - Verifier: confirmed 5 callsites + right home; trimmed speculative justification. Checks: `npm run typecheck`, `npm run lint`.
 

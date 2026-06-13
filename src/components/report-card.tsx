@@ -3,7 +3,12 @@
 import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
+import type {
+  BridgeRouteRiskConfidence,
+  DimensionKey,
+  OracleRiskConfidence,
+  ReportCard as ReportCardType,
+} from "@shared/types";
 import { DIMENSION_LABELS, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "@/components/radar-chart";
@@ -14,26 +19,12 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
-import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
+import { getSafetyGradeMetadata, gradeBandLabel } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
-
-// ---------------------------------------------------------------------------
-// Grade-band tooltip helper
-// ---------------------------------------------------------------------------
-
-function gradeBandLabel(score: number, metric?: string): string {
-  let band: string;
-  if (score >= 90) band = "Excellent — top of the grading scale";
-  else if (score >= 75) band = "Strong — production-ready";
-  else if (score >= 60) band = "Adequate — meaningful weaknesses present";
-  else if (score >= 40) band = "Weak — significant risks";
-  else band = "Poor — major risks";
-  return metric ? `${metric}: ${score} — ${band}` : `${score} — ${band}`;
-}
 
 // ---------------------------------------------------------------------------
 // Dimension Row Component
@@ -46,9 +37,7 @@ function dimensionHintTopic(dimKey: DimensionKey): "resilience" | "dependencyRis
 }
 
 type OracleRiskDisplay = NonNullable<ReportCardType["oracleRisk"]>;
-type OracleRiskConfidence = NonNullable<OracleRiskDisplay["confidence"]>;
 type BridgeRouteRiskDisplay = NonNullable<ReportCardType["bridgeRouteRisk"]>;
-type BridgeRouteRiskConfidence = NonNullable<BridgeRouteRiskDisplay["confidence"]>;
 type RiskSourceLink =
   | NonNullable<OracleRiskDisplay["sources"]>[number]
   | NonNullable<BridgeRouteRiskDisplay["sources"]>[number];
