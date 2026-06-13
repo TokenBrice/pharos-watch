@@ -692,7 +692,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-5` — ReportCardGrade hand-copies BluechipGrade values + "NR"; BLUECHIP_GRADE_VALUES not exported** `[duplication | low | trivial | none]`
 - Problem: `REPORT_CARD_GRADE_VALUES` is the 11 `BLUECHIP_GRADE_VALUES` + "NR", hand-copied; `ReportCardGrade` likewise restates the 11 members + "NR". `BLUECHIP_GRADE_VALUES` is file-private `const` in core.ts.
-- Recommendation: `export const BLUECHIP_GRADE_VALUES`, then `const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const` and `export type ReportCardGrade = BluechipGrade | "NR"`. No methodology label/version touched.
+- Done 2026-06-13: exported `BLUECHIP_GRADE_VALUES`, derived `REPORT_CARD_GRADE_VALUES` from it plus `"NR"`, and changed `ReportCardGrade` to `BluechipGrade | "NR"`. No methodology label/version touched.
 - Files: `shared/types/core.ts:777`, `shared/types/report-cards.ts:37-39`.
 - Verifier: const not `export const`; 11+NR superset exact; clean trivial. Checks: `npm run typecheck`, `npm run typecheck:worker`.
 

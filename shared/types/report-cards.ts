@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  BLUECHIP_GRADE_VALUES,
   BluechipGradeSchema,
   BridgeRouteRiskConfidenceSchema,
   BridgeRouteRiskSourceSchema,
@@ -34,8 +35,8 @@ import type {
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
 
-export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
-const REPORT_CARD_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const;
+export type ReportCardGrade = BluechipGrade | "NR";
+const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const;
 export const ReportCardGradeSchema = z.enum(REPORT_CARD_GRADE_VALUES);
 
 export type DimensionKey = "pegStability" | "liquidity" | "resilience" | "decentralization" | "dependencyRisk";

@@ -774,7 +774,7 @@ export interface PegAssetBase {
   circulating?: Record<string, number>;
 }
 
-const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
+export const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
 export type BluechipGrade = (typeof BLUECHIP_GRADE_VALUES)[number];
 export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
