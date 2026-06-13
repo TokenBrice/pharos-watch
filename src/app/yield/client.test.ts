@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildYieldStoryCallouts } from "@/app/yield/client";
+import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 function row(
