@@ -298,7 +298,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-stablecoin-detail-2` — Single-use one-letter alias `const s = DETAIL_SECTION_DEFS`** `[readability | low | trivial | none]`
 - Problem: line 309 `const s = DETAIL_SECTION_DEFS` exists only to shorten line 310's array literal; `s` is referenced solely on 310. Mildly cryptic.
-- Recommendation: optional — inline `DETAIL_SECTION_DEFS` directly or destructure. Near-cosmetic nit.
+- Done 2026-06-13: removed the single-use alias and referenced `DETAIL_SECTION_DEFS` directly in the detail-section array.
 - Files: `src/app/stablecoin/[id]/client.tsx:309-310`.
 - Verifier: verified `s` used only at 310. Checks: `npm run lint`, `npm run typecheck`.
 

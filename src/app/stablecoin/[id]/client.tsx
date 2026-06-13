@@ -306,8 +306,14 @@ export default function StablecoinDetailClient({
     ) : viewModel.childVariants.length > 0 ? (
       <ParentVariantsCard variants={viewModel.childVariants} />
     ) : null;
-  const s = DETAIL_SECTION_DEFS;
-  const detailSections = [s.overview, s.context, s.liquidity, s.activity, s.history, s.explore];
+  const detailSections = [
+    DETAIL_SECTION_DEFS.overview,
+    DETAIL_SECTION_DEFS.context,
+    DETAIL_SECTION_DEFS.liquidity,
+    DETAIL_SECTION_DEFS.activity,
+    DETAIL_SECTION_DEFS.history,
+    DETAIL_SECTION_DEFS.explore,
+  ];
   const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
   const hasReservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null;
   const reservesPanel = hasReservesPanel ? (
