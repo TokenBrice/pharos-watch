@@ -410,4 +410,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["gynusd-gyndore", "Gyndore", "gynUSD", "pre-launch"],
   ["gelt-tether", "Tether Georgian Lari Stablecoin", "GEL₮", "pre-launch"],
   ["tgld-tenbin", "Tenbin Gold", "tGLD", "pre-launch"],
+  ["ejpy-jbfd", "EJPY", "EJPY", "pre-launch"],
+  ["aed-rakbank", "RAKBank AED Stablecoin", "AED-RAKBANK", "pre-launch"],
+  ["bils-bitsofgold", "BILS", "BILS", "pre-launch"],
 ] as const satisfies readonly CommandPaletteStablecoinSearchItem[];
