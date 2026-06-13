@@ -8,12 +8,11 @@ import { toErrorMessage } from "./error-utils";
  * measure against leaking raw `D1Error` SQL or user-supplied content.
  */
 export function safeErrorMessage(error: unknown, maxLength: number = 200): string {
-  const rawMessage = toErrorMessage(error);
   if (error instanceof Error) {
-    return `${error.name}: ${sanitize(rawMessage, maxLength)}`;
+    return `${error.name}: ${sanitize(toErrorMessage(error), maxLength)}`;
   }
   if (typeof error === "string") {
-    return sanitize(rawMessage, maxLength);
+    return sanitize(toErrorMessage(error), maxLength);
   }
   return "Unknown error";
 }

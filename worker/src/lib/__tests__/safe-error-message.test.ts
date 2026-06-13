@@ -20,6 +20,16 @@ describe("safeErrorMessage", () => {
     expect(safeErrorMessage(42)).toBe("Unknown error");
   });
 
+  it("does not coerce non-Error objects while sanitizing", () => {
+    const value = {
+      toString() {
+        throw new Error("should not be called");
+      },
+    };
+    expect(safeErrorMessage(value)).toBe("Unknown error");
+    expect(safeErrorMessage(Object.create(null))).toBe("Unknown error");
+  });
+
   it("strips SQL fragments from Error messages", () => {
     const err = new Error("D1_ERROR: SELECT * FROM users WHERE id = 1");
     const safe = safeErrorMessage(err);
