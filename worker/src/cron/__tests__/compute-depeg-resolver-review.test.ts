@@ -896,6 +896,130 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.publicationFailedCount).toBe(1);
   });
 
+  it("classifies active eligible lock deferrals without public predictions", async () => {
+    const incident = {
+      incidentKey: "ddr2:active-lock-deferred",
+      eventId: 44,
+      currentEventId: 44,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+      lockState: {
+        eligibleAt: ELIGIBLE_AT,
+        lastState: "lock_deferred" as const,
+        lastDeferralReason: "strict_readiness_not_met",
+        deferralCount: 1,
+      },
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 44,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      predictionState: "lock_deferred",
+      coverageCause: "active_lock_deferred",
+      operationalCoverageCause: "system_deferral",
+      reason: "strict_readiness_not_met",
+    });
+    expect(snapshot.summary.headline.lockDeferredCount).toBe(1);
+  });
+
+  it("marks published sealed rows with unparsable payloads as data quality gaps", async () => {
+    const incident = {
+      incidentKey: "ddr2:published-bad-payload",
+      eventId: 45,
+      currentEventId: 45,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 45,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 11,
+          publicPredictionId: 11,
+          incidentKey: incident.incidentKey,
+          eventId: 45,
+          assessmentId: 92,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: ELIGIBLE_AT,
+          lockedAt: ELIGIBLE_AT,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "e".repeat(64),
+          sealedPayload: { symbol: "LUSD" },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 11,
+          incidentKey: incident.incidentKey,
+          snapshotToken: "ddr-public-bad-payload",
+          snapshotGeneration: 3,
+          publishedAt: ELIGIBLE_AT + 60,
+          firstPublished: true,
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      predictionState: "data_quality_gap",
+      coverageCause: "data_quality_gap",
+      outcomeQualityState: "data_quality_gap",
+      reason: "sealed_payload_parse_failed",
+      failedPublication: null,
+    });
+    expect(snapshot.summary.headline.dataQualityGapCount).toBe(1);
+  });
+
   it("emits invalidated prediction rows when sealed public rows have errata", async () => {
     const incident = {
       incidentKey: "ddr2:invalidated-public-prediction",

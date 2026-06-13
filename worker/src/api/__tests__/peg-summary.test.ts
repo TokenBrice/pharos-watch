@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { handlePegSummary } from "../peg-summary";
+import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -95,6 +95,41 @@ describe("handlePegSummary", () => {
     const db = mockD1();
     const res = await handlePegSummary(db);
     expect(res.status).toBe(503);
+  });
+
+  it("returns 503 when stablecoins cache payload is corrupt", async () => {
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: JSON.stringify({ nope: true }), updated_at: nowSec }],
+        first: { key: "stablecoins", value: JSON.stringify({ nope: true }), updated_at: nowSec },
+      },
+    ]);
+
+    const res = await handlePegSummary(db);
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      error: "Cached stablecoins data is corrupt",
+    });
+  });
+
+  it("derives DEX deviation from primary deviation when no peg reference is usable", () => {
+    expect(__pegSummaryTestHooks.deriveDexDeviationBps(
+      1.02,
+      null,
+      {},
+      undefined,
+      -100,
+      200,
+    )).toBe(98);
+    expect(__pegSummaryTestHooks.deriveDexDeviationBps(
+      1.02,
+      null,
+      {},
+      undefined,
+      null,
+      200,
+    )).toBeNull();
   });
 
   it("returns 200 with coins and summary", async () => {

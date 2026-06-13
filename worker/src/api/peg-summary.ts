@@ -82,6 +82,10 @@ function deriveDexDeviationBps(
   return null;
 }
 
+export const __pegSummaryTestHooks = {
+  deriveDexDeviationBps,
+};
+
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
