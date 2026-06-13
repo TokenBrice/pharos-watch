@@ -17,6 +17,7 @@ describe("show-your-work formatters", () => {
       liquidityScore: 72,
       effectiveExitScore: 70,
       collateralQuality: "rwa",
+      mintAuthorityScore: 64,
       oracleRiskTier: "medianized-with-delay",
       oracleRiskScore: 85,
       bridgeRouteRiskTier: "external-lock-mint",
@@ -24,6 +25,7 @@ describe("show-your-work formatters", () => {
     });
     const table = formatReportCard(rawInputs);
     expect(table.topic).toBe("safetyScore");
+    expect(table.rows.find((r) => r.label === "Mint authority score")?.value).toBe("64");
     const pegRow = table.rows.find((r) => r.label === "Peg score");
     expect(pegRow?.value).toBe("95");
     const liqRow = table.rows.find((r) => r.label === "Liquidity score");

@@ -31,10 +31,16 @@ process.stdout.write(
 if (result.findings.length > 0) {
   process.stdout.write("Findings:\n");
   for (const finding of result.findings) {
-    process.stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind} — ${finding.detail}\n`);
+    const tag = finding.kind === "stale-review" ? " (advisory)" : "";
+    process.stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind}${tag} — ${finding.detail}\n`);
   }
 }
 
-if (ENFORCE && result.findings.length > 0) {
+// Staleness is a maintenance reminder, not a structural gap — a review past the
+// window still scores. Enforce only on missing/incomplete profiles so the merge
+// gate cannot become a time-bomb that blocks unrelated work as reviews age.
+const blockingFindings = result.findings.filter((finding) => finding.kind !== "stale-review");
+
+if (ENFORCE && blockingFindings.length > 0) {
   process.exit(1);
 }

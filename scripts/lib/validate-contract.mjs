@@ -42,6 +42,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:sql-safety",
   "npm run check:stale-flags",
   "npm run check:stablecoin-data",
+  "npm run check:oracle-risk-coverage:enforce",
   "npm run check:supply-helper-usage",
   "npm run check:unused-code",
   "npm run check:verified-doc-links",

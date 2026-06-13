@@ -81,6 +81,7 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
     { label: "Custody model", value: rawInputs.custodyModel },
     { label: "Governance tier", value: rawInputs.governanceTier },
     { label: "Governance quality", value: rawInputs.governanceQuality },
+    { label: "Mint authority score", value: fmtNum(rawInputs.mintAuthorityScore) },
     { label: "Oracle risk tier", value: rawInputs.oracleRiskTier ?? "—" },
     { label: "Oracle risk score", value: fmtNum(rawInputs.oracleRiskScore) },
     { label: "Bridge route tier", value: rawInputs.bridgeRouteRiskTier ?? "—" },

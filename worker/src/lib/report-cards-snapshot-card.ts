@@ -9,7 +9,7 @@ import {
   scorePegStability,
   scoreLiquidity,
   scoreResilience,
-  scoreDecentralization,
+  scoreDecentralizationBreakdown,
   scoreDependencyRisk,
   computeOverallGrade,
   applyVariantOverallCap,
@@ -251,7 +251,7 @@ function projectBridgeRouteRiskForReportCard(meta: StablecoinMeta): ReportCardBr
   };
 }
 
-function computeReportCard(input: ComputeCardInput): ReportCard {
+function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMintAuthorityScore: number } {
   const {
     meta,
     pegDataById,
@@ -300,6 +300,17 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
       ? (input.blendedDecentralizationScores.get(wrappedAssetDependency.id) ?? null)
       : null;
 
+  // One pass produces both the blended decentralization dimension and the
+  // pre-Mint-Authority score that wrappers inherit (see `decentralizationScores`
+  // in buildLiveReportCards); no second scoreDecentralization call is needed.
+  const decentralization = scoreDecentralizationBreakdown(meta.flags.governance as GovernanceType, meta, {
+    wrappedAssetDecentralizationScore,
+    wrappedAssetId: wrappedAssetDependency?.id ?? null,
+    variantKind: wrappedAssetDependency?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
+    mintAuthorityScore,
+    wrappedAssetBlendedDecentralizationScore,
+  });
+
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta, {
       inheritedFromReference: resolvedPeg.inheritedFromReference,
@@ -307,13 +318,7 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     }),
     liquidity: scoreLiquidity(liq, redemption, { activeDepegBps }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
-    decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta, {
-      wrappedAssetDecentralizationScore,
-      wrappedAssetId: wrappedAssetDependency?.id ?? null,
-      variantKind: wrappedAssetDependency?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
-      mintAuthorityScore,
-      wrappedAssetBlendedDecentralizationScore,
-    }),
+    decentralization: decentralization.dimension,
     dependencyRisk: scoreDependencyRisk(
       {
         governance: meta.flags.governance as GovernanceType,
@@ -372,20 +377,23 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   };
 
   return {
-    id: meta.id,
-    name: meta.name,
-    symbol: meta.symbol,
-    overallGrade: overall.grade,
-    overallScore: overall.score,
-    baseScore: overall.baseScore,
-    overallCapped: overall.overallCapped,
-    uncappedOverallScore: overall.uncappedOverallScore,
-    dimensions,
-    ratedDimensions: overall.ratedDimensions,
-    rawInputs,
-    oracleRisk: oracleRiskProfile,
-    bridgeRouteRisk: bridgeRouteRiskProfile,
-    isDefunct: false,
+    card: {
+      id: meta.id,
+      name: meta.name,
+      symbol: meta.symbol,
+      overallGrade: overall.grade,
+      overallScore: overall.score,
+      baseScore: overall.baseScore,
+      overallCapped: overall.overallCapped,
+      uncappedOverallScore: overall.uncappedOverallScore,
+      dimensions,
+      ratedDimensions: overall.ratedDimensions,
+      rawInputs,
+      oracleRisk: oracleRiskProfile,
+      bridgeRouteRisk: bridgeRouteRiskProfile,
+      isDefunct: false,
+    },
+    preMintAuthorityScore: decentralization.preMintAuthorityScore,
   };
 }
 
@@ -425,7 +433,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
   const liveCards: ReportCard[] = [];
 
   for (const meta of sortedMetas) {
-    const card = computeReportCard({
+    const { card, preMintAuthorityScore } = computeReportCard({
       meta,
       pegDataById: input.pegDataById,
       activeDepegPeakBpsById: input.activeDepegPeakBpsById,
@@ -447,20 +455,11 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
     if (card.dimensions.decentralization.score !== null) {
       blendedDecentralizationScores.set(card.id, card.dimensions.decentralization.score);
     }
-    // Children inherit the pre-Mint Authority score (mint-authority drag
-    // applies once per coin), so recompute the dimension without the MAS blend
-    // for the map. Oracle risk remains in this score because it belongs to the
-    // parent CDP itself.
-    const wrappedDep = resolveWrappedAssetDependency(meta, dependenciesById.get(meta.id) ?? []);
-    const preBlend = scoreDecentralization(meta.flags.governance as GovernanceType, meta, {
-      wrappedAssetDecentralizationScore:
-        wrappedDep != null ? (decentralizationScores.get(wrappedDep.id) ?? null) : null,
-      wrappedAssetId: wrappedDep?.id ?? null,
-      variantKind: wrappedDep?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
-    }).score;
-    if (preBlend !== null) {
-      decentralizationScores.set(meta.id, preBlend);
-    }
+    // Children inherit the pre-Mint Authority score (mint-authority drag applies
+    // once per coin). The oracle/bridge blends remain in this score because they
+    // belong to the parent's own control surface; only the MAS blend and the
+    // wrapper ceiling are excluded.
+    decentralizationScores.set(meta.id, preMintAuthorityScore);
   }
 
   return {

@@ -210,7 +210,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-script-entrypoints.mjs` via `npm run check:script-entrypoints` (run by `validate:prebuild`)
 - `check-sql-interpolation-safety.mjs` via `npm run check:sql-safety`
 - `check-stablecoin-data.ts` via `npm run check:stablecoin-data`
-- `check-oracle-risk-coverage.ts` via `npm run check:oracle-risk-coverage` (warning-only until run with `--enforce`)
+- `check-oracle-risk-coverage.ts` via `npm run check:oracle-risk-coverage` (warning-only); the `--enforce` variant (`npm run check:oracle-risk-coverage:enforce`) runs in `validate:prebuild` and fails on missing/incomplete direct CDP oracle profiles (staleness stays advisory)
 - `check-supply-helper-usage.mjs` via `npm run check:supply-helper-usage`
 - `generate-dependency-coverage-audit.ts --check` via `npm run check:dependency-coverage`
 - `generate-l2beat-snapshot-coverage-audit.ts --check` via `npm run check:l2beat-snapshot-coverage`

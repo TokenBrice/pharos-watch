@@ -41,6 +41,7 @@ export {
   resolveGovernanceQuality,
   resolveOracleRiskScore,
   scoreDecentralization,
+  scoreDecentralizationBreakdown,
 } from "./report-card-governance";
 export { scoreDependencyRisk } from "./report-card-dependency";
 export { applyVariantOverallCap, computeOverallGrade, computeStressedGrades } from "./report-card-overall";

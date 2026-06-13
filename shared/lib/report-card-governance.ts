@@ -173,11 +173,21 @@ export function resolveGovernanceQuality(governance: GovernanceType, meta?: Stab
   return base;
 }
 
-export function scoreDecentralization(
+export interface DecentralizationBreakdown {
+  dimension: ReportCardDimension;
+  /**
+   * Decentralization score after the chain-infra, oracle, and bridge-route
+   * steps but BEFORE the Mint Authority blend and the wrapper ceiling. Wrappers
+   * inherit this value so each coin's mint-authority drag applies exactly once.
+   */
+  preMintAuthorityScore: number;
+}
+
+export function scoreDecentralizationBreakdown(
   governance: GovernanceType,
   meta?: StablecoinMeta,
   options: ScoreDecentralizationOptions = {},
-): ReportCardDimension {
+): DecentralizationBreakdown {
   const quality = resolveGovernanceQuality(governance, meta);
   let score = GOVERNANCE_QUALITY_SCORE[quality];
   const inheritedWrapperScore =
@@ -242,6 +252,10 @@ export function scoreDecentralization(
     }
   }
 
+  // Inheritance base: wrappers read this pre-Mint-Authority, pre-ceiling value
+  // so the parent's mint-authority drag is not applied a second time downstream.
+  const preMintAuthorityScore = score;
+
   // Penalty-only Mint Authority blend:
   // privileged-mint risk can undermine a decentralization claim, never improve it.
   const mintAuthorityScore =
@@ -304,6 +318,10 @@ export function scoreDecentralization(
       detail: bridgeRouteRiskDrag < 0 ? `${bridgeRouteRiskDrag}` : "0",
     });
   }
+  // Unlike the oracle/bridge rows (always shown when a reviewed profile is
+  // applicable), the Mint Authority row appears only when it actually drags the
+  // score: a rated MAS exists for nearly every coin and has its own dedicated
+  // surface, so a non-dragging "0" row here would be redundant noise.
   if (mintAuthorityDrag < 0 && mintAuthorityScore != null) {
     const band = resolveMintAuthorityScoreBand(mintAuthorityScore);
     detailItems.push({
@@ -313,5 +331,16 @@ export function scoreDecentralization(
     });
   }
 
-  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
+  return {
+    dimension: { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems },
+    preMintAuthorityScore,
+  };
+}
+
+export function scoreDecentralization(
+  governance: GovernanceType,
+  meta?: StablecoinMeta,
+  options: ScoreDecentralizationOptions = {},
+): ReportCardDimension {
+  return scoreDecentralizationBreakdown(governance, meta, options).dimension;
 }

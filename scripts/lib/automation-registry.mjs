@@ -187,6 +187,11 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
   },
   { command: "npm run check:stablecoin-data", deployImpact: "full", paths: ["scripts/ci/check-stablecoin-data.ts"] },
   {
+    command: "npm run check:oracle-risk-coverage:enforce",
+    deployImpact: "full",
+    paths: ["scripts/ci/check-oracle-risk-coverage.ts", "scripts/lib/oracle-risk-coverage.ts"],
+  },
+  {
     command: "npm run check:supply-helper-usage",
     deployImpact: "full",
     paths: ["scripts/ci/check-supply-helper-usage.mjs"],
