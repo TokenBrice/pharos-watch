@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check, Copy, ExternalLink, Globe } from "lucide-react";
@@ -38,6 +38,31 @@ import {
 } from "@/lib/stablecoin-taxonomy-urls";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
+
+function ClassificationBadgeLink({
+  href,
+  cls,
+  ariaLabel,
+  title,
+  children,
+}: {
+  href: string;
+  cls: string;
+  ariaLabel: string;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      title={title}
+      aria-label={ariaLabel}
+      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${cls}`}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function AttestorTierBadge({
   proofOfReserves,
@@ -194,32 +219,32 @@ export function KeyInfoCard({
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {gov && (
-              <Link
+              <ClassificationBadgeLink
                 href={governanceHref}
-                aria-label={`Browse ${governanceFullLabel} stablecoins`}
-                className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${gov.cls}`}
+                ariaLabel={`Browse ${governanceFullLabel} stablecoins`}
+                cls={gov.cls}
               >
                 {gov.label}
-              </Link>
+              </ClassificationBadgeLink>
             )}
             {backing && (
-              <Link
+              <ClassificationBadgeLink
                 href={backingHref}
-                aria-label={`Browse ${backingFullLabel} stablecoins`}
-                className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${backing.cls}`}
+                ariaLabel={`Browse ${backingFullLabel} stablecoins`}
+                cls={backing.cls}
               >
                 {backing.label}
-              </Link>
+              </ClassificationBadgeLink>
             )}
             {peg &&
               (pegHref ? (
-                <Link
+                <ClassificationBadgeLink
                   href={pegHref}
-                  aria-label={`Browse ${pegFullLabel} stablecoins`}
-                  className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${peg.cls}`}
+                  ariaLabel={`Browse ${pegFullLabel} stablecoins`}
+                  cls={peg.cls}
                 >
                   {peg.label}
-                </Link>
+                </ClassificationBadgeLink>
               ) : (
                 <span
                   className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
@@ -412,14 +437,14 @@ export function KeyInfoCard({
                     </span>
                   )}
                   {meta.mica && micaStatus && (
-                    <Link
+                    <ClassificationBadgeLink
                       href="/compliance/?regime=mica"
                       title={`${MICA_STATUS_DESCRIPTIONS[meta.mica.status]}${meta.status === "frozen" ? " Historical status retained for this frozen asset." : ""}`}
-                      aria-label={`${micaBadgePrefix} status: ${micaStatus.label} — view the Compliance Tracker`}
-                      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${micaStatus.cls}`}
+                      ariaLabel={`${micaBadgePrefix} status: ${micaStatus.label} — view the Compliance Tracker`}
+                      cls={micaStatus.cls}
                     >
                       {micaBadgePrefix}: {micaStatus.label}
-                    </Link>
+                    </ClassificationBadgeLink>
                   )}
                 </div>
               ) : (

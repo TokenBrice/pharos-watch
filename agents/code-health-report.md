@@ -194,6 +194,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: line + memory verified; demoted to low / medium confidence (taste call). Checks: `npm run check:lint`.
 
 **`sd-11` — Repeated inline badge pill class string in key-info-card JSX** `[duplication | low | medium | low]`
+- Status: Closed 2026-06-13. Extracted `ClassificationBadgeLink` for the cls-driven governance, backing, peg-link, and MiCA badge links only; static-color spans remain inline.
 - Problem: 12 occurrences of `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold`, but heterogeneous: 150/159/169/410 are `Link` with focus-ring + `transition-colors hover:brightness-110` + a `${cls}` color; 175 is a bare `span`; 195/200/257 are spans with fully STATIC inline color modifiers; 396/401 are jurisdiction spans with their own static colors; 209/251 are inside the IIFE (sd-1). The 7 static-color spans do NOT share enough to fold without prop-driven class assembly.
 - Recommendation: DOWNGRADE. Extract ONLY the cls-driven LINK badges (gov, backing, peg-with-href, mica) into `ClassificationBadgeLink({ href, cls, label, ariaLabel })` (static literal + `${cls}`). Do NOT unify the 7 static-color spans — bespoke literal colors would force FORBIDDEN dynamic Tailwind assembly. Realistic win is ~4-5 sites, not 12. Overlaps sd-1.
 - Files: `src/components/key-info-card.tsx:146-260,393-414`.
