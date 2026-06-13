@@ -1,3 +1,5 @@
+import { isRecord } from "@shared/lib/type-guards";
+
 export const YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY = "yield-history-cleanup:writer-pause";
 
 export interface YieldHistoryWriterPause {
@@ -7,9 +9,7 @@ export interface YieldHistoryWriterPause {
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
+  return isRecord(value) ? value : null;
 }
 
 export function parseYieldHistoryWriterPause(

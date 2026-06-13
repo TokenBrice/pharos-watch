@@ -2,6 +2,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { isRecord } from "@shared/lib/type-guards";
 import type { ApiDependencyMeta, ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { buildRequestUrl } from "@/lib/api-url";
@@ -134,10 +135,6 @@ function getBodyWarning(data: unknown): string | null {
 
   const warning = (data as { warning?: unknown }).warning;
   return typeof warning === "string" && warning.trim().length > 0 ? warning : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function normalizeApiDependencyMeta(value: unknown): ApiDependencyMeta | null {

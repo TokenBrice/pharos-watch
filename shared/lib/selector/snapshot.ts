@@ -1,5 +1,5 @@
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
-import { isFiniteNumber } from "../type-guards";
+import { isFiniteNumber, isRecord } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
 import { sha256Hex } from "../sha256";
 import {
@@ -113,7 +113,7 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
   if (!isSelectorSnapshotStructurallySafe(value)) {
     return { ok: false, error: "unsafe" };
   }
-  if (!isPlainObject(value)) {
+  if (!isRecord(value)) {
     return { ok: false, error: "shape" };
   }
   const snapshot = stripDebugFromSelectorSnapshot(value);
@@ -125,10 +125,6 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
 
 export function computeSelectorSnapshotSid(snapshot: unknown): string {
   return sha256Hex(canonicalizeForSid(snapshot)).slice(0, 32);
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -180,7 +176,7 @@ function isOptionalConfidenceReasons(value: unknown): boolean {
 
 function isOptionalRankRobustness(value: unknown): boolean {
   if (value === undefined) return true;
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     typeof value.label === "string"
     && RANK_ROBUSTNESS_LABELS.has(value.label)
@@ -189,7 +185,7 @@ function isOptionalRankRobustness(value: unknown): boolean {
 }
 
 function isSelectorInputShape(value: unknown, profile: string): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   const venueSet = VENUE_SETS_BY_PROFILE[profile];
   return (
     value.profile === profile
@@ -217,7 +213,7 @@ function isSelectorInputShape(value: unknown, profile: string): boolean {
 }
 
 function isUniverseShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isNonNegativeInteger(value.active)
     && isNonNegativeInteger(value.surviving)
@@ -226,7 +222,7 @@ function isUniverseShape(value: unknown): boolean {
 }
 
 function isSkippedCoinShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isNonEmptyString(value.id)
     && isNonEmptyString(value.symbol)
@@ -235,7 +231,7 @@ function isSkippedCoinShape(value: unknown): boolean {
 }
 
 function isCoverageWarningsShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isNonNegativeInteger(value.skippedForCoverageCount)
     && Array.isArray(value.skippedForCoverage)
@@ -248,7 +244,7 @@ function isCoverageWarningsShape(value: unknown): boolean {
 }
 
 function isComponentShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     typeof value.key === "string"
     && WEIGHT_KEY_SET.has(value.key)
@@ -261,7 +257,7 @@ function isComponentShape(value: unknown): boolean {
 }
 
 function isLowestSubDimensionShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     typeof value.key === "string"
     && LOWEST_SUB_DIMENSION_SET.has(value.key)
@@ -271,7 +267,7 @@ function isLowestSubDimensionShape(value: unknown): boolean {
 }
 
 function isChainHintsShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isStringArray(value.topByLiquidity)
     && isStringArray(value.topByYield)
@@ -280,8 +276,8 @@ function isChainHintsShape(value: unknown): boolean {
 }
 
 function isRecommendedSourceShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
-  if (!isPlainObject(value.freshness)) return false;
+  if (!isRecord(value)) return false;
+  if (!isRecord(value.freshness)) return false;
   return (
     isNonEmptyString(value.protocol)
     && isNonEmptyString(value.chain)
@@ -303,7 +299,7 @@ function isRecommendedSourceShape(value: unknown): boolean {
 }
 
 function isPerInputStalenessShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   const entries = Object.entries(value);
   return entries.length > 0
     && entries.every(([key, age]) => PER_INPUT_STALENESS_KEYS.has(key) && isNonNegativeNumber(age));
@@ -323,7 +319,7 @@ function isRecommendationSourceSlotsShape(value: Record<string, unknown>): boole
 }
 
 function isRecommendationShape(value: unknown, outputProfile: string): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     value.profile === outputProfile
     && isNonEmptyString(value.id)
@@ -355,7 +351,7 @@ function isRecommendationShape(value: unknown, outputProfile: string): boolean {
 }
 
 function isLowerRankedShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isNonEmptyString(value.id)
     && isNonEmptyString(value.symbol)
@@ -371,7 +367,7 @@ function isLowerRankedShape(value: unknown): boolean {
 }
 
 function isMethodologyVersionsShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     REQUIRED_METHODOLOGY_KEYS.every((key) => isNonEmptyString(value[key]))
     && Object.values(value).every(isNonEmptyString)
@@ -379,7 +375,7 @@ function isMethodologyVersionsShape(value: unknown): boolean {
 }
 
 function isExclusionSummaryItemShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     typeof value.reason === "string"
     && EXCLUSION_REASON_SET.has(value.reason)
@@ -391,7 +387,7 @@ function isExclusionSummaryItemShape(value: unknown): boolean {
 }
 
 function isClosestSurvivorShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     isNonEmptyString(value.id)
     && isNonEmptyString(value.symbol)
@@ -404,7 +400,7 @@ function isClosestSurvivorShape(value: unknown): boolean {
 }
 
 function isRelaxableConstraintShape(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   return (
     typeof value.key === "string"
     && RELAXABLE_CONSTRAINT_KEYS.has(value.key)
@@ -416,7 +412,7 @@ function isRelaxableConstraintShape(value: unknown): boolean {
 }
 
 function isSelectorOutputShape(value: unknown): value is SelectorOutput {
-  if (!isPlainObject(value)) return false;
+  if (!isRecord(value)) return false;
   const candidate = value as Record<string, unknown>;
   if (!isNonEmptyString(candidate.profile) || !SELECTOR_PROFILE_SET.has(candidate.profile)) {
     return false;

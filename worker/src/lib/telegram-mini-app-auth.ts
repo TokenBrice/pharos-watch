@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import { bytesToHex } from "./hash";
 
 export type TelegramMiniAppAuthErrorCode =
@@ -36,10 +37,6 @@ const START_PARAM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "supergroup", "channel"]);
 const warnedNovelMiniAppChatTypes = new Set<string>();
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

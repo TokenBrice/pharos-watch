@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { isRecord } from "@shared/lib/type-guards";
 import type { ApiMeta } from "@/lib/api";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
@@ -37,10 +38,6 @@ export interface HomepageBootstrapPayload {
   generatedAt: number;
   source: string | null;
   queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function normalizeTimestamp(value: unknown): number | null {

@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { DEPENDENCY_TYPE_VALUES } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -75,10 +76,6 @@ interface PdfLinkCandidate {
   href: string;
   text: string;
   date: ReportDateCandidate;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function decodeUrlish(value: string): string {

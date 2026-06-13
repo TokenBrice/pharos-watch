@@ -3,6 +3,7 @@ import type {
   StatusProbePlaneSummary,
   StatusProbeSummary,
 } from "@shared/types/status";
+import { isRecord } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "./cron-lease";
 import {
   buildStatusProbeRunIdempotencyKey,
@@ -29,10 +30,6 @@ const PROBE_COMPARISON_REASONS = new Set([
   "external-worse",
   "internal-worse",
 ]);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
 
 function readNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;

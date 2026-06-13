@@ -39,10 +39,21 @@ const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
 export type StatusHealthOrUnknown = StatusHealthValue | "unknown";
 
+export const CRON_RUN_STATUS_VALUES = [
+  "ok",
+  "degraded",
+  "error",
+  "skipped_locked",
+  "skipped_duplicate",
+  "skipped_running",
+] as const;
+export const CronRunStatusSchema = z.enum(CRON_RUN_STATUS_VALUES);
+export type CronRunStatus = z.infer<typeof CronRunStatusSchema>;
+
 export interface CronRun {
   startedAt: number;
   durationMs: number;
-  status: string;
+  status: CronRunStatus;
   error?: string;
   itemCount?: number;
   metadata?: Record<string, unknown>;

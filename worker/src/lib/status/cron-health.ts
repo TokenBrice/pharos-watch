@@ -1,5 +1,6 @@
 import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
@@ -103,6 +104,11 @@ function hasBlacklistMaintenanceDegradation(metadata: Record<string, unknown> | 
     || booleanFromMetadata(metadata, "runtimeBudgetReached")
     || booleanFromMetadata(metadata, "subrequestBudgetReached")
   );
+}
+
+function parseCronRunStatus(status: string): CronRun["status"] {
+  const parsed = CronRunStatusSchema.safeParse(status);
+  return parsed.success ? parsed.data : "error";
 }
 
 function buildCronHistoryQuery(jobCount: number): string {
@@ -369,13 +375,16 @@ export async function loadCronHealth(
     const runs = cronByJob.get(row.job) ?? [];
     if (runs.length < 10) {
       const parsedMeta = parseMetadataObject(row.metadata);
+      const parsedStatus = parseCronRunStatus(row.status);
       runs.push({
         startedAt: row.started_at,
         durationMs: row.duration_ms,
-        status: row.status,
+        status: parsedStatus,
         ...(row.error ? { error: row.error } : {}),
         ...(row.item_count != null ? { itemCount: row.item_count } : {}),
-        ...(parsedMeta ? { metadata: parsedMeta } : {}),
+        ...(parsedMeta || parsedStatus !== row.status
+          ? { metadata: { ...(parsedMeta ?? {}), ...(parsedStatus !== row.status ? { rawStatus: row.status } : {}) } }
+          : {}),
       });
       cronByJob.set(row.job, runs);
     }

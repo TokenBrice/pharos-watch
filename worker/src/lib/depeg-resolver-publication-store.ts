@@ -1,5 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import { isRecord } from "@shared/lib/type-guards";
 import { runChunkedInRead } from "./db";
 import {
   bindDdrAssessmentInsert,
@@ -382,7 +383,7 @@ function assertMatchingIdAndHashSets(ids: number[], rowHashes: Record<string, st
 }
 
 function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return isRecord(value) ? value : null;
 }
 
 function publicPredictionIdFromPayloadRow(row: unknown): number | null {

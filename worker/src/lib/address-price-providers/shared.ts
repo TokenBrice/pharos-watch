@@ -1,3 +1,4 @@
+export { isRecord } from "@shared/lib/type-guards";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
 import { parsePositiveNumber } from "../number-utils";
@@ -52,10 +53,6 @@ export { parsePositiveNumber };
 export function parseNonNegativeNumber(value: unknown): number | null {
   const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 export function chunk<T>(items: T[], size: number): T[][] {

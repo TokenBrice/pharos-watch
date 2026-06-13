@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { loadYieldHealthSummary } from "../yield-health";
-import type { CronStatus } from "@shared/types/status";
+import type { CronRunStatus, CronStatus } from "@shared/types/status";
 
 const NOW = 1_777_000_000;
 
-function cron(status = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
+function cron(status: CronRunStatus = "ok", ageSec = 120, metadata?: Record<string, unknown>): CronStatus {
   return {
     expectedIntervalSec: CRON_INTERVALS["sync-yield-data"],
     healthy: true,
