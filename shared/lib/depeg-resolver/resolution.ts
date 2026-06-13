@@ -22,6 +22,7 @@ const RISKY_MINT_PATHS = new Set([
 const RISKY_POSTURES = new Set(["concentrated-admin", "unbounded-or-compromised"]);
 const SEVERE_VERY_HIGH_RISK_RESERVE_PCT = 30;
 const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
+const HARD_COLLATERAL_RESERVE_PCT = 80;
 
 export const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
 export const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
@@ -118,7 +119,7 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   // R2 — hard collateral + redemption
   const veryLow = sumReserveRisk(coin, ["very-low", "low"]);
   const rcr = live.redemptionCapacityRatio;
-  const hardCollateral = coin.collateralQuality === "native" || veryLow >= 80;
+  const hardCollateral = coin.collateralQuality === "native" || veryLow >= HARD_COLLATERAL_RESERVE_PCT;
   const liveRedemptionRoute = rcr != null && rcr >= 0.1 && live.redemptionRouteFamily != null;
   if (hardCollateral && liveRedemptionRoute) {
     out.push({ code: "R2_hard_collateral_redemption", kind: "anchor", severity: "strong", label: "Hard collateral with a working redemption path" });

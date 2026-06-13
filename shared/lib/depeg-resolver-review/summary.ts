@@ -20,6 +20,9 @@ const RECOVERY_LIKELIHOOD_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
   "false_recoverable",
   "risk_noted_terminal",
 ]);
+// Headline-scope gate. Distinct from the UI's CALIBRATION_THRESHOLD=5 (calibrating-badge /
+// fraction-vs-percentage display gate); both read recoveryLikelihoodScoredCount but are
+// deliberately separate decisions — do not merge them.
 const HEADLINE_MIN_SCORED_OUTCOMES = 20;
 
 type DdrrDurationScoredPredictionRow = DdrrV2PredictionReviewRow & {

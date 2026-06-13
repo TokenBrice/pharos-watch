@@ -163,7 +163,7 @@ describe("forecastReadinessScore", () => {
     const ramp = forecastReadinessScore(readyInput({ ageSec: 3.5 * 3600 }));
     expect(ramp.components.find((component) => component.key === "observation_maturity")).toMatchObject({
       score: 0.5,
-      reason: "Incident has accumulated enough observation time for a forecast-readiness read.",
+      reason: "Incident is still accumulating observation time toward the 6h forecast-readiness point.",
     });
 
     const backstop = forecastReadinessScore(readyInput({ ageSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC }));

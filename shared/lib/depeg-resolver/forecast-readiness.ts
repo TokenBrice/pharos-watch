@@ -3,6 +3,7 @@ import {
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
 } from "../depeg-resolver-version";
+import { DDR_INSUFFICIENT_LIVE_PRICE_REASON } from "./resolution";
 import type {
   DdrCellState,
   DdrForecastReadiness,
@@ -42,8 +43,8 @@ function component(
 
 function inputCoverageComponent(input: DdrForecastReadinessInput): DdrForecastReadinessComponent {
   const missing = [...(input.resolution.insufficientReasons ?? [])];
-  if (input.currentDeviationBps == null && !missing.some((reason) => reason.toLowerCase().includes("live price"))) {
-    missing.push("No live price deviation for this event");
+  if (input.currentDeviationBps == null && !missing.includes(DDR_INSUFFICIENT_LIVE_PRICE_REASON)) {
+    missing.push(DDR_INSUFFICIENT_LIVE_PRICE_REASON);
   }
 
   if (missing.length === 0) {
@@ -174,12 +175,15 @@ function observationMaturityComponent(input: DdrForecastReadinessInput): DdrFore
     );
   }
   // Linear ramp between the first-hour floor and the full 6h observation point.
+  const ratio = (input.ageSec - OBSERVATION_FLOOR_SEC) / (FULL_OBSERVATION_SEC - OBSERVATION_FLOOR_SEC);
   return component(
     "observation_maturity",
     "Observation maturity",
-    (input.ageSec - OBSERVATION_FLOOR_SEC) / (FULL_OBSERVATION_SEC - OBSERVATION_FLOOR_SEC),
+    ratio,
     0.25,
-    "Incident has accumulated enough observation time for a forecast-readiness read.",
+    ratio >= 1
+      ? "Incident has accumulated enough observation time for a forecast-readiness read."
+      : "Incident is still accumulating observation time toward the 6h forecast-readiness point.",
   );
 }
 
