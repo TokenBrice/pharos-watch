@@ -13,7 +13,6 @@ export type ChainHealthFactors = z.infer<typeof ChainHealthFactorsSchema>;
 export const ChainEnvironmentRiskValueSchema = z.object({
   value: z.string(),
   sentiment: z.enum(["good", "warning", "bad", "UnderReview", "neutral"]),
-  warning: z.boolean().optional(),
 });
 
 export const L2BeatChainEnvironmentEvidenceSchema = z.object({

@@ -43,6 +43,7 @@ export const MINT_AUTHORITY_STATUS_VALUES = [
   "unknown",
 ] as const satisfies readonly MintAuthorityStatusKind[];
 
+// Screener filters use the same vocabulary as the cross-coin status classifier.
 export const MINT_AUTHORITY_FILTER_VALUES = MINT_AUTHORITY_STATUS_VALUES;
 
 export const MINT_AUTHORITY_SCORE_FILTER_VALUES = [
@@ -145,22 +146,27 @@ export const MINT_AUTHORITY_SCORE_FILTER_CONFIG: Record<
 > = {
   hardened: {
     label: MINT_AUTHORITY_SCORE_BANDS.hardened.label,
+    // Range source: MINT_AUTHORITY_SCORE_BANDS.hardened.min.
     detail: "Mint Authority Score is 80 or higher.",
   },
   governed: {
     label: MINT_AUTHORITY_SCORE_BANDS.governed.label,
+    // Range source: governed.min through hardened.min - 1.
     detail: "Mint Authority Score is 65 to 79.",
   },
   managed: {
     label: MINT_AUTHORITY_SCORE_BANDS.managed.label,
+    // Range source: managed.min through governed.min - 1.
     detail: "Mint Authority Score is 50 to 64.",
   },
   concentrated: {
     label: MINT_AUTHORITY_SCORE_BANDS.concentrated.label,
+    // Range source: concentrated.min through managed.min - 1.
     detail: "Mint Authority Score is 35 to 49.",
   },
   exposed: {
     label: MINT_AUTHORITY_SCORE_BANDS.exposed.label,
+    // Range source: below MINT_AUTHORITY_SCORE_BANDS.concentrated.min.
     detail: "Mint Authority Score is below 35.",
   },
   nr: {
@@ -216,17 +222,7 @@ function mintAuthoritySummaryToScoringInput(
     confidence: summary.confidence,
     inheritedFrom: summary.inheritedFrom,
     mintIncidents: summary.mintIncidents,
-    controls: summary.controls?.map((control) => ({
-      label: control.label,
-      authorityType: control.authorityType,
-      directMintAbility: control.directMintAbility,
-      threshold: control.threshold,
-      signerCount: control.signerCount,
-      timelockDelaySec: control.timelockDelaySec,
-      canRaiseCap: control.canRaiseCap,
-      modulesOrGuardsStatus: control.modulesOrGuardsStatus,
-      keyCustodyAttestation: control.keyCustodyAttestation,
-    })),
+    controls: summary.controls,
   };
 }
 

@@ -26,6 +26,7 @@ import type { BlacklistStablecoin } from "@shared/types";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   getCirculatingRaw,
   getPrevDayRawOrNull,
@@ -435,18 +436,6 @@ function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
   return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
 }
 
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function labelFromMap(value: unknown, labels: Readonly<Record<string, string>>): string {
   const key = stringValue(value);
   if (!key) return "Unknown";
@@ -625,7 +614,7 @@ function buildMintAuthorityControlViewModel(
     custodyLabel: custodyAttestationLabel
       ? custodyAttestationLabel
       : authorityTypeKey === "eoa"
-        ? "Single-key address - custody unverifiable"
+        ? formatMintAuthorityWeakestCustodyLabel("Single-key address - custody unverifiable")
         : null,
   };
 }

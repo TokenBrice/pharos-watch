@@ -155,6 +155,35 @@ const ABSOLUTE_CAPACITY_BREAKPOINTS = [
   { value: 250_000_000, score: 100 },
 ] as const;
 
+const SETTLEMENT_DELAY_PENALTY_TIERS = [
+  { maxSec: 3_600, multiplier: 1 },
+  { maxSec: 86_400, multiplier: 0.9 },
+  { maxSec: 604_800, multiplier: 0.75 },
+  { maxSec: Number.POSITIVE_INFINITY, multiplier: 0.6 },
+] as const;
+
+const QUEUE_BACKLOG_PENALTY_TIERS = [
+  { minRatio: 1, multiplier: 0.65 },
+  { minRatio: 0.5, multiplier: 0.8 },
+  { minRatio: 0, multiplier: 0.9 },
+] as const;
+
+const MIN_REDEEM_PENALTY_TIERS = [
+  { minUsd: 1_000_000, multiplier: 0.75 },
+  { minUsd: 10_000, multiplier: 0.9 },
+] as const;
+
+const LIVE_HOLDER_ELIGIBILITY_MULTIPLIERS: Record<RedemptionHolderEligibility, number> = {
+  "any-holder": 1,
+  "verified-customer": 0.9,
+  "whitelisted-primary": 0.85,
+  "pre-incident-holder": 0.85,
+  "issuer-discretionary": 0.6,
+  // Unknown live holder eligibility stays only mildly capacity-penalized here;
+  // model-confidence cohort breadth separately treats unknown as weak evidence.
+  unknown: 0.85,
+};
+
 function interpolateScore(
   value: number | null | undefined,
   breakpoints: readonly { value: number; score: number }[],
@@ -162,6 +191,8 @@ function interpolateScore(
   if (value == null || !Number.isFinite(value) || value < 0) return null;
   if (breakpoints.length === 0) return null;
   if (value <= breakpoints[0].value) return breakpoints[0].score;
+  const top = breakpoints[breakpoints.length - 1];
+  if (value >= top.value) return top.score;
 
   for (let index = 1; index < breakpoints.length; index++) {
     const prev = breakpoints[index - 1];
@@ -237,14 +268,7 @@ export function applyCapacityConstraintScoreEffects(args: {
   const capsApplied: string[] = [];
 
   if (args.settlementDelaySec != null) {
-    const delayMultiplier =
-      args.settlementDelaySec <= 3_600
-        ? 1
-        : args.settlementDelaySec <= 86_400
-          ? 0.9
-          : args.settlementDelaySec <= 604_800
-            ? 0.75
-            : 0.6;
+    const delayMultiplier = resolveSettlementDelayMultiplier(args.settlementDelaySec);
     if (delayMultiplier < 1) {
       score *= delayMultiplier;
       capsApplied.push("settlement-delay-penalty");
@@ -253,13 +277,13 @@ export function applyCapacityConstraintScoreEffects(args: {
 
   if (args.queueDepthUsd != null && args.queueDepthUsd > 0 && args.scoringCapacityUsd != null && args.scoringCapacityUsd > 0) {
     const backlogRatio = args.queueDepthUsd / args.scoringCapacityUsd;
-    const queueMultiplier = backlogRatio >= 1 ? 0.65 : backlogRatio >= 0.5 ? 0.8 : 0.9;
+    const queueMultiplier = resolveQueueBacklogMultiplier(backlogRatio);
     score *= queueMultiplier;
     capsApplied.push("queue-depth-penalty");
   }
 
   if (args.minRedeemUsd != null) {
-    const minRedeemMultiplier = args.minRedeemUsd > 1_000_000 ? 0.75 : args.minRedeemUsd > 10_000 ? 0.9 : 1;
+    const minRedeemMultiplier = resolveMinRedeemMultiplier(args.minRedeemUsd);
     if (minRedeemMultiplier < 1) {
       score *= minRedeemMultiplier;
       capsApplied.push("minimum-size-penalty");
@@ -280,20 +304,29 @@ export function applyCapacityConstraintScoreEffects(args: {
   };
 }
 
-function resolveLiveHolderEligibilityMultiplier(holderEligibility: RedemptionHolderEligibility): number {
-  switch (holderEligibility) {
-    case "any-holder":
-      return 1;
-    case "verified-customer":
-      return 0.9;
-    case "whitelisted-primary":
-    case "pre-incident-holder":
-      return 0.85;
-    case "issuer-discretionary":
-      return 0.6;
-    case "unknown":
-      return 0.85;
+function resolveSettlementDelayMultiplier(settlementDelaySec: number): number {
+  for (const tier of SETTLEMENT_DELAY_PENALTY_TIERS) {
+    if (settlementDelaySec <= tier.maxSec) return tier.multiplier;
   }
+  return 1;
+}
+
+function resolveQueueBacklogMultiplier(backlogRatio: number): number {
+  for (const tier of QUEUE_BACKLOG_PENALTY_TIERS) {
+    if (backlogRatio >= tier.minRatio) return tier.multiplier;
+  }
+  return 1;
+}
+
+function resolveMinRedeemMultiplier(minRedeemUsd: number): number {
+  for (const tier of MIN_REDEEM_PENALTY_TIERS) {
+    if (minRedeemUsd > tier.minUsd) return tier.multiplier;
+  }
+  return 1;
+}
+
+function resolveLiveHolderEligibilityMultiplier(holderEligibility: RedemptionHolderEligibility): number {
+  return LIVE_HOLDER_ELIGIBILITY_MULTIPLIERS[holderEligibility];
 }
 
 export function computeRedemptionBackstopScore(args: {
@@ -369,12 +402,10 @@ export function computeEffectiveExitScore(
 
   if (liquidity != null && roundedRedemption != null) {
     const bestPath = Math.max(liquidity, roundedRedemption);
-    const bonus =
-      options?.routeExitCorrelation === "independent-issuer-rail"
-        ? Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
-        : options
-          ? 0
-          : Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR;
+    const applyDiversificationBonus = !options || options.routeExitCorrelation === "independent-issuer-rail";
+    const bonus = applyDiversificationBonus
+      ? Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
+      : 0;
     return Math.round(Math.min(100, bestPath + bonus));
   }
 

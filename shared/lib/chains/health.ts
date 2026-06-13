@@ -12,6 +12,11 @@ export const BACKING_DIVERSITY_WEIGHT = 0.10;
 
 const DEFAULT_UNRATED_SAFETY_SCORE = 40;
 const QUALITY_COVERAGE_THRESHOLD = 0.5;
+const PEG_DEVIATION_SCORE_DIVISOR_BPS = 5;
+const ROBUST_HEALTH_BAND_MIN = 80;
+const HEALTHY_HEALTH_BAND_MIN = 60;
+const MIXED_HEALTH_BAND_MIN = 40;
+const FRAGILE_HEALTH_BAND_MIN = 20;
 
 /** Chain environment scores by resilience tier. */
 export const CHAIN_ENVIRONMENT_SCORES: Record<ChainResilienceTier, number> = {
@@ -55,7 +60,7 @@ interface PegStabilityCoin {
   supplyUsd: number;
 }
 
-/** Peg stability: supply-weighted average of per-coin peg proximity (100 - deviationBps/5). */
+/** Peg stability: supply-weighted average of per-coin peg proximity. */
 export function computePegStabilityScore(coins: PegStabilityCoin[]): number {
   let totalWeight = 0;
   let weightedSum = 0;
@@ -66,7 +71,7 @@ export function computePegStabilityScore(coins: PegStabilityCoin[]): number {
       coinScore = 50; // neutral for no-price
     } else {
       const deviationBps = Math.abs(coin.price - coin.pegRef) / coin.pegRef * 10_000;
-      coinScore = Math.max(0, 100 - deviationBps / 5);
+      coinScore = Math.max(0, 100 - deviationBps / PEG_DEVIATION_SCORE_DIVISOR_BPS);
     }
     weightedSum += coinScore * coin.supplyUsd;
     totalWeight += coin.supplyUsd;
@@ -135,7 +140,7 @@ export function computeChainEnvironmentAssessment(
   };
 }
 
-/** Chain environment: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */
+/** Numeric convenience wrapper for the chain-environment assessment. */
 export function computeChainEnvironmentScore(tier: ChainResilienceTier, chainId?: string): number {
   return computeChainEnvironmentAssessment(tier, chainId).score;
 }
@@ -155,9 +160,9 @@ export function computeHealthScore(factors: ChainHealthFactors): number | null {
 
 export function getHealthBand(score: number | null): HealthBand | null {
   if (score == null) return null;
-  if (score >= 80) return "robust";
-  if (score >= 60) return "healthy";
-  if (score >= 40) return "mixed";
-  if (score >= 20) return "fragile";
+  if (score >= ROBUST_HEALTH_BAND_MIN) return "robust";
+  if (score >= HEALTHY_HEALTH_BAND_MIN) return "healthy";
+  if (score >= MIXED_HEALTH_BAND_MIN) return "mixed";
+  if (score >= FRAGILE_HEALTH_BAND_MIN) return "fragile";
   return "concentrated";
 }

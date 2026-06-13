@@ -1,23 +1,9 @@
 import type { StablecoinMeta } from "@shared/types";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 
-type UnknownRecord = Record<string, unknown>;
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
 type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function stringValue(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["canRaiseCap"] | null {
   return value === true || value === false || value === "unknown" ? value : null;
@@ -73,6 +59,8 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   const directMintAbility = stringValue(value.directMintAbility);
   if (!label || !role || !authorityType || !directMintAbility) return null;
 
+  // Mint-authority metadata is Zod-validated during the stablecoin-data build;
+  // this client projection only strips malformed loose JSON before exposing it.
   const summary: MintAuthorityClientControlSummary = {
     label,
     role: role as MintAuthorityClientControlSummary["role"],
@@ -115,6 +103,8 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   const summaryText = stringValue(profile.summary);
   if (!mintPath || !authorityPosture || !confidence || !summaryText) return null;
 
+  // The source profile is build-validated; casts here keep the browser payload
+  // narrow without duplicating the full metadata schema in frontend code.
   const summary: MintAuthorityClientSummary = {
     mintPath: mintPath as MintAuthorityClientSummary["mintPath"],
     authorityPosture: authorityPosture as MintAuthorityClientSummary["authorityPosture"],

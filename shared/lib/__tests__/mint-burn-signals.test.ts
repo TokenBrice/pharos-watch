@@ -81,6 +81,17 @@ describe("mint-burn-signals", () => {
     ).toBe("burning-nr");
   });
 
+  it("pins pressure-shift state boundaries", () => {
+    expect(getPressureShiftState(-100)).toBe("worsening");
+    expect(getPressureShiftState(-70)).toBe("worsening");
+    expect(getPressureShiftState(-40)).toBe("worsening");
+    expect(getPressureShiftState(-10)).toBe("stable");
+    expect(getPressureShiftState(10)).toBe("stable");
+    expect(getPressureShiftState(40)).toBe("improving");
+    expect(getPressureShiftState(70)).toBe("improving");
+    expect(getPressureShiftState(100)).toBe("improving");
+  });
+
   it("computes literal minting pressure from raw 24h mint vs burn balance", () => {
     expect(
       getLiteralMintingPressureScore({

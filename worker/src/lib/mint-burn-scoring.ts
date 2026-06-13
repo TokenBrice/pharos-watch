@@ -2,8 +2,10 @@
  * Mint/Burn flow scoring — pure functions for Flow Intensity Score (FIS),
  * Bank Run Gauge composite, and flight-to-quality detection.
  *
- * No external dependencies; designed for easy unit testing.
+ * Runtime-neutral shared helper imports only; designed for easy unit testing.
  */
+
+import { clamp } from "@shared/lib/math";
 
 // ---------------------------------------------------------------------------
 // Flow Intensity Score (FIS)
@@ -19,13 +21,15 @@ export interface FlowIntensityInput {
   /** How many days of flow history we have */
   dataAgeDays: number;
   /** Current 24 h absolute flow (|mint| + |burn|), USD — used for activity gate */
-  currentDailyAbs?: number;
+  currentDailyAbs: number;
 }
 
-const DENOM_SCALE = 0.3;
-const DENOM_FLOOR = 1_000_000; // $1 M minimum denominator
-const Z_MULTIPLIER = 50;
-const MIN_DATA_DAYS = 7;
+const FLOW_INTENSITY_DENOMINATOR_SCALE = 0.3;
+const FLOW_INTENSITY_DENOMINATOR_FLOOR_USD = 1_000_000;
+const FLOW_INTENSITY_Z_MULTIPLIER = 50;
+const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
+const FLOW_INTENSITY_MIN = -100;
+const FLOW_INTENSITY_MAX = 100;
 export const MIN_ACTIVITY_USD = 50_000;
 
 /**
@@ -42,16 +46,17 @@ export const MIN_ACTIVITY_USD = 50_000;
 export function computeFlowIntensity(
   input: FlowIntensityInput
 ): number | null {
-  if (input.currentDailyAbs !== undefined && input.currentDailyAbs < MIN_ACTIVITY_USD) return null;
-  if (input.dataAgeDays < MIN_DATA_DAYS) return null;
+  if (input.currentDailyAbs < MIN_ACTIVITY_USD) return null;
+  if (input.dataAgeDays < FLOW_INTENSITY_MIN_DATA_DAYS) return null;
 
   const denominator = Math.max(
-    input.baselineDailyAbs * DENOM_SCALE,
-    DENOM_FLOOR
+    input.baselineDailyAbs * FLOW_INTENSITY_DENOMINATOR_SCALE,
+    FLOW_INTENSITY_DENOMINATOR_FLOOR_USD
   );
   const z = (input.currentDailyNet - input.baselineDailyNet) / denominator;
-  const raw = z * Z_MULTIPLIER;
-  return Math.max(-100, Math.min(100, raw));
+  const raw = z * FLOW_INTENSITY_Z_MULTIPLIER;
+  // Aggregate callers pass finite SQL/Zod-normalized values; clamp is the signed score range guard.
+  return clamp(raw, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
 }
 
 // ---------------------------------------------------------------------------
@@ -62,17 +67,17 @@ export interface GaugeBand {
   min: number;
   max: number;
   label: string;
-  color: string;
 }
 
 const GAUGE_BANDS: GaugeBand[] = [
-  { min: -100, max: -70, label: "CRISIS", color: "red" },
-  { min: -70, max: -40, label: "STRESS", color: "orange" },
-  { min: -40, max: -10, label: "CAUTIOUS", color: "amber" },
-  { min: -10, max: 10, label: "NEUTRAL", color: "gray" },
-  { min: 10, max: 40, label: "HEALTHY", color: "light-green" },
-  { min: 40, max: 70, label: "CONFIDENT", color: "green" },
-  { min: 70, max: 100, label: "SURGE", color: "bright-green" },
+  // Score-visible [min, max) assignments; boundary tests pin these labels.
+  { min: -100, max: -70, label: "CRISIS" },
+  { min: -70, max: -40, label: "STRESS" },
+  { min: -40, max: -10, label: "CAUTIOUS" },
+  { min: -10, max: 10, label: "NEUTRAL" },
+  { min: 10, max: 40, label: "HEALTHY" },
+  { min: 40, max: 70, label: "CONFIDENT" },
+  { min: 70, max: 100, label: "SURGE" },
 ];
 
 /**
@@ -81,14 +86,14 @@ const GAUGE_BANDS: GaugeBand[] = [
  */
 export function getGaugeBand(
   score: number
-): { label: string; color: string } {
+): { label: string } {
   for (const band of GAUGE_BANDS) {
     if (score >= band.min && (score < band.max || band.max === 100)) {
-      return { label: band.label, color: band.color };
+      return { label: band.label };
     }
   }
   // Fallback — should never happen with -100..100 input
-  return { label: "NEUTRAL", color: "gray" };
+  return { label: "NEUTRAL" };
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +142,8 @@ export interface FlightToQualityResult {
   intensity: number;
 }
 
-const FTQ_THRESHOLD = 1e8; // $100 M
+const FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD = 100_000_000;
+const FLIGHT_TO_QUALITY_FULL_INTENSITY_USD = 1_000_000_000;
 
 /**
  * Detect flight-to-quality: risky stablecoins losing supply while safe ones
@@ -150,10 +156,14 @@ export function detectFlightToQuality(
   input: FlightToQualityInput
 ): FlightToQualityResult {
   const active =
-    input.riskyNet24h < -FTQ_THRESHOLD && input.safeNet24h > FTQ_THRESHOLD;
+    input.riskyNet24h < -FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD
+    && input.safeNet24h > FLIGHT_TO_QUALITY_FLOW_THRESHOLD_USD;
 
   if (!active) return { active: false, intensity: 0 };
 
-  const intensity = Math.min(100, (Math.abs(input.riskyNet24h) / 1e9) * 100);
+  const intensity = Math.min(
+    100,
+    (Math.abs(input.riskyNet24h) / FLIGHT_TO_QUALITY_FULL_INTENSITY_USD) * 100,
+  );
   return { active: true, intensity };
 }

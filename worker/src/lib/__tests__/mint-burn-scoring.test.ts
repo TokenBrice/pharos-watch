@@ -14,6 +14,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyNet: 0,
         baselineDailyAbs: 1e9,
         dataAgeDays: 5,
+        currentDailyAbs: 100_000_000,
       })
     ).toBeNull();
   });
@@ -40,23 +41,13 @@ describe("computeFlowIntensity", () => {
     expect(result).not.toBeNull();
   });
 
-  it("skips activity gate when currentDailyAbs is undefined (backward compat)", () => {
-    const result = computeFlowIntensity({
-      currentDailyNet: 100_000,
-      baselineDailyNet: 50_000,
-      baselineDailyAbs: 200_000,
-      dataAgeDays: 30,
-      // no currentDailyAbs - legacy callers
-    });
-    expect(result).not.toBeNull();
-  });
-
   it("returns exactly 0 when current equals baseline (neutral)", () => {
     const result = computeFlowIntensity({
       currentDailyNet: 1e8,
       baselineDailyNet: 1e8,
       baselineDailyAbs: 5e8,
       dataAgeDays: 30,
+      currentDailyAbs: 200_000_000,
     });
     expect(result).toBe(0);
   });
@@ -70,6 +61,7 @@ describe("computeFlowIntensity", () => {
       baselineDailyNet: 0,
       baselineDailyAbs: 2e8,
       dataAgeDays: 30,
+      currentDailyAbs: 100_000_000,
     });
     expect(result).toBeCloseTo(-25, 1);
   });
@@ -82,6 +74,7 @@ describe("computeFlowIntensity", () => {
       baselineDailyNet: 0,
       baselineDailyAbs: 2e8,
       dataAgeDays: 30,
+      currentDailyAbs: 100_000_000,
     });
     expect(result).toBeCloseTo(50, 1);
   });
@@ -93,6 +86,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyNet: 0,
         baselineDailyAbs: 1e8,
         dataAgeDays: 30,
+        currentDailyAbs: 1_000_000_000_000,
       })
     ).toBe(-100);
   });
@@ -104,6 +98,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyNet: 0,
         baselineDailyAbs: 1e8,
         dataAgeDays: 30,
+        currentDailyAbs: 1_000_000_000_000,
       })
     ).toBe(100);
   });
@@ -117,6 +112,7 @@ describe("computeFlowIntensity", () => {
       baselineDailyNet: 0,
       baselineDailyAbs: 100,
       dataAgeDays: 30,
+      currentDailyAbs: 2_000_000,
     });
     expect(result).toBeCloseTo(-100, 1);
   });
@@ -128,6 +124,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyNet: 5e7,
         baselineDailyAbs: 3e8,
         dataAgeDays: 30,
+        currentDailyAbs: 100_000_000,
       })
     ).toBe(0);
 
@@ -140,6 +137,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyNet: 5e7,
         baselineDailyAbs: 3e8,
         dataAgeDays: 30,
+        currentDailyAbs: 100_000_000,
       })
     ).toBeCloseTo(-33.33, 0);
   });
@@ -147,13 +145,24 @@ describe("computeFlowIntensity", () => {
 
 describe("getGaugeBand", () => {
   it("returns CRISIS for -100 to -70", () => {
-    expect(getGaugeBand(-80)).toEqual({ label: "CRISIS", color: "red" });
+    expect(getGaugeBand(-80).label).toBe("CRISIS");
   });
   it("returns NEUTRAL for -10 to 10", () => {
-    expect(getGaugeBand(0)).toEqual({ label: "NEUTRAL", color: "gray" });
+    expect(getGaugeBand(0).label).toBe("NEUTRAL");
   });
   it("returns SURGE for 70-100", () => {
-    expect(getGaugeBand(95)).toEqual({ label: "SURGE", color: "bright-green" });
+    expect(getGaugeBand(95).label).toBe("SURGE");
+  });
+
+  it("pins inclusive lower-bound gauge assignments", () => {
+    expect(getGaugeBand(-100).label).toBe("CRISIS");
+    expect(getGaugeBand(-70).label).toBe("STRESS");
+    expect(getGaugeBand(-40).label).toBe("CAUTIOUS");
+    expect(getGaugeBand(-10).label).toBe("NEUTRAL");
+    expect(getGaugeBand(10).label).toBe("HEALTHY");
+    expect(getGaugeBand(40).label).toBe("CONFIDENT");
+    expect(getGaugeBand(70).label).toBe("SURGE");
+    expect(getGaugeBand(100).label).toBe("SURGE");
   });
 });
 

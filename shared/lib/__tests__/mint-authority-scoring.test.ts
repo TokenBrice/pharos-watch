@@ -107,6 +107,17 @@ describe("Mint Authority Score", () => {
     expect(defi.capsApplied).toContain("eoa-cap");
     expect(defi.score).toBeLessThanOrEqual(MINT_AUTHORITY_CAPS.eoa);
 
+    const canAuthorize = computeMintAuthorityScore(input({
+      mintPath: "permissioned-minter",
+      controls: [{ label: "Authorizer key", authorityType: "eoa", directMintAbility: "can-authorize" }],
+    }));
+    expect(canAuthorize.weakestControl).toMatchObject({
+      label: "Authorizer key",
+      directMintAbility: "can-authorize",
+    });
+    expect(canAuthorize.capsApplied).toContain("eoa-cap");
+    expect(canAuthorize.score).toBeLessThanOrEqual(MINT_AUTHORITY_CAPS.eoa);
+
     const attested = computeMintAuthorityScore(input({
       mintPath: "permissioned-minter",
       controls: [
@@ -123,7 +134,7 @@ describe("Mint Authority Score", () => {
     }));
     expect(attested.components.controller).toBe(40);
     expect(attested.capsApplied).not.toContain("eoa-cap");
-    expect(attested.weakestControl?.custodyLabel).toBe("single-key address - MPC-attested");
+    expect(attested.weakestControl?.custodyLabel).toBe("Single-key address - MPC-attested");
   });
 
   it("scores bounds from cap-limited controls and cap-raise authority", () => {

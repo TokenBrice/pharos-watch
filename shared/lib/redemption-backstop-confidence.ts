@@ -81,6 +81,8 @@ export function deriveModelConfidence(args: {
   freshnessKind?: RedemptionLiveFreshnessKind;
   now?: number;
 }): RedemptionModelConfidence {
+  // Allocation fast path: unresolved routes are always low-confidence and do
+  // not need the five detail scorers unless a caller asks for details.
   if (args.resolutionState !== "resolved") return "low";
   return deriveModelConfidenceWithDetails(args).modelConfidence;
 }
@@ -213,12 +215,42 @@ function scoreSourceQuality(
   sourceMode: RedemptionSourceMode | undefined,
   freshnessKind: RedemptionLiveFreshnessKind | undefined,
 ): number {
-  if (freshnessKind === "verified-source-timestamp" || freshnessKind === "same-run-onchain") return 100;
-  if (freshnessKind === "same-run-api") return 90;
-  if (sourceMode === "dynamic") return 75;
-  if (sourceMode === "estimated") return 50;
-  if (sourceMode === "static") return 40;
-  return 50;
+  return scoreFreshnessKind(freshnessKind) ?? scoreSourceMode(sourceMode);
+}
+
+function scoreFreshnessKind(freshnessKind: RedemptionLiveFreshnessKind | undefined): number | null {
+  if (freshnessKind == null) return null;
+  switch (freshnessKind) {
+    case "verified-source-timestamp":
+    case "same-run-onchain":
+      return 100;
+    case "same-run-api":
+      return 90;
+    case "reviewed-static":
+    case "unverified":
+      // These freshness states preserve the source-mode/default fallback.
+      return null;
+    default: {
+      const exhaustive: never = freshnessKind;
+      return exhaustive;
+    }
+  }
+}
+
+function scoreSourceMode(sourceMode: RedemptionSourceMode | undefined): number {
+  if (sourceMode == null) return 50;
+  switch (sourceMode) {
+    case "dynamic":
+      return 75;
+    case "estimated":
+      return 50;
+    case "static":
+      return 40;
+    default: {
+      const exhaustive: never = sourceMode;
+      return exhaustive;
+    }
+  }
 }
 
 function hasCurrentRouteStatusEvidence(source: RedemptionRouteStatusSource | undefined): boolean {

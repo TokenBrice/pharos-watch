@@ -1,41 +1,20 @@
 import { clamp } from "./math";
+import type {
+  CoinFlowCompositeState,
+  NetFlowDirection24h,
+  PressureShiftState,
+} from "../types/mint-burn-signals";
 
-export const NET_FLOW_DIRECTION_24H_VALUES = [
-  "minting",
-  "burning",
-  "flat",
-  "inactive",
-] as const;
-
-export type NetFlowDirection24h = (typeof NET_FLOW_DIRECTION_24H_VALUES)[number];
-
-export const PRESSURE_SHIFT_STATE_VALUES = [
-  "improving",
-  "stable",
-  "worsening",
-  "nr",
-] as const;
-
-export type PressureShiftState = (typeof PRESSURE_SHIFT_STATE_VALUES)[number];
-
-export const COIN_FLOW_COMPOSITE_STATE_VALUES = [
-  "minting-improving",
-  "minting-stable",
-  "minting-worsening",
-  "minting-nr",
-  "burning-improving",
-  "burning-stable",
-  "burning-worsening",
-  "burning-nr",
-  "flat-improving",
-  "flat-stable",
-  "flat-worsening",
-  "flat-nr",
-  "inactive",
-] as const;
-
-export type CoinFlowCompositeState =
-  (typeof COIN_FLOW_COMPOSITE_STATE_VALUES)[number];
+export {
+  COIN_FLOW_COMPOSITE_STATE_VALUES,
+  NET_FLOW_DIRECTION_24H_VALUES,
+  PRESSURE_SHIFT_STATE_VALUES,
+} from "../types/mint-burn-signals";
+export type {
+  CoinFlowCompositeState,
+  NetFlowDirection24h,
+  PressureShiftState,
+} from "../types/mint-burn-signals";
 
 export const PRESSURE_SHIFT_STABLE_BAND_MAX = 10;
 
@@ -95,5 +74,6 @@ export function getCoinFlowCompositeState(input: {
     return "inactive";
   }
   const pressureState = getPressureShiftState(input.pressureShiftScore);
-  return `${direction}-${pressureState}` as CoinFlowCompositeState;
+  const composite: CoinFlowCompositeState = `${direction}-${pressureState}`;
+  return composite;
 }

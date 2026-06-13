@@ -48,6 +48,42 @@ const MINT_CONTROLLER_BASE_SCORES = {
   unknown: 25,
 } as const satisfies Record<Exclude<MintAuthorityType, "safe" | "multisig">, number>;
 
+const MINT_MULTISIG_THRESHOLD_SCORES = {
+  unknown: 40,
+  singleSigner: 20,
+  twoSigner: 40,
+  thresholdThreePlus: 60,
+} as const;
+
+const MINT_MULTISIG_BONUSES = {
+  thresholdFourPlus: 5,
+  thresholdAtLeastHalfSignerSet: 5,
+  noModulesOrGuardsDetected: 10,
+} as const;
+
+const MINT_MULTISIG_MAX_SCORE = 80;
+
+const MINT_CONTROLLER_BONUSES = {
+  timelockDelaySec: 86_400,
+  timelock: 10,
+  capLimited: 10,
+  upgradeOnly: 5,
+} as const;
+
+const MINT_AUTHORITY_INHERITANCE_BLEND = {
+  parentWeight: 0.6,
+  wrapperWeight: 0.4,
+} as const;
+
+const MINT_BOUNDS_SCORES = {
+  noneResolved: 100,
+  noMintCapableControls: 50,
+  noCappedControls: 30,
+  allNonUpgradeControlsCapped: 75,
+  partiallyCappedControls: 55,
+  immutableCapBonus: 10,
+} as const;
+
 export const MINT_AUTHORITY_CAPS = {
   /** Most recent recorded mint incident is under 2 years old. */
   incidentRecent: 10,
@@ -108,17 +144,16 @@ const MINT_CAPABLE_ABILITIES = new Set<MintAuthorityDirectMintAbility>(MINT_AUTH
 const ISSUER_CONTEXT_PATHS = new Set<MintAuthorityMintPath>(MINT_AUTHORITY_ISSUER_CONTEXT_PATHS);
 
 export type MintAuthorityScoreBand = "hardened" | "governed" | "managed" | "concentrated" | "exposed";
-export type MintAuthorityScoreTone = "emerald" | "blue" | "amber" | "orange" | "red";
 
 export const MINT_AUTHORITY_SCORE_BANDS: Record<
   MintAuthorityScoreBand,
-  { min: number; label: string; tone: MintAuthorityScoreTone }
+  { min: number; label: string }
 > = {
-  hardened: { min: 80, label: "Hardened", tone: "emerald" },
-  governed: { min: 65, label: "Governed", tone: "blue" },
-  managed: { min: 50, label: "Managed", tone: "amber" },
-  concentrated: { min: 35, label: "Concentrated", tone: "orange" },
-  exposed: { min: Number.NEGATIVE_INFINITY, label: "Exposed", tone: "red" },
+  hardened: { min: 80, label: "Hardened" },
+  governed: { min: 65, label: "Governed" },
+  managed: { min: 50, label: "Managed" },
+  concentrated: { min: 35, label: "Concentrated" },
+  exposed: { min: Number.NEGATIVE_INFINITY, label: "Exposed" },
 };
 
 export type MintAuthorityCapKind = "incident-cap" | "unbounded-cap" | "eoa-cap" | "confidence-cap";
@@ -151,7 +186,7 @@ export interface MintAuthorityWeakestControlResult {
   score: number;
   authorityType: MintAuthorityType;
   directMintAbility: MintAuthorityDirectMintAbility;
-  custodyLabel: "single-key address - custody unverifiable" | "single-key address - MPC-attested" | "single-key address - HSM-attested" | null;
+  custodyLabel: "Single-key address - custody unverifiable" | "Single-key address - MPC-attested" | "Single-key address - HSM-attested" | null;
 }
 
 export interface MintAuthorityScoreComponents {
@@ -258,10 +293,8 @@ function hasKeyCustodyAttestation(control: MintAuthorityScoringControlInput): bo
 }
 
 function resolveConfidenceCap(confidence: MintAuthorityConfidence): number | null {
-  if (confidence === "verified" || confidence === "probable" || confidence === "manual-review") {
-    return MINT_AUTHORITY_CONFIDENCE_CAPS[confidence];
-  }
-  return null;
+  const caps: Partial<Record<MintAuthorityConfidence, number>> = MINT_AUTHORITY_CONFIDENCE_CAPS;
+  return caps[confidence] ?? null;
 }
 
 function isIssuerContextPath(path: MintAuthorityMintPath): boolean {
@@ -273,32 +306,35 @@ function scoreMultisigControl(control: MintAuthorityScoringControlInput): number
   let score: number;
 
   if (threshold == null) {
-    score = 40;
+    // Unknown Safe topology keeps the historical 2-of-N-equivalent score.
+    score = MINT_MULTISIG_THRESHOLD_SCORES.unknown;
   } else if (threshold <= 1) {
-    score = 20;
+    score = MINT_MULTISIG_THRESHOLD_SCORES.singleSigner;
   } else if (threshold === 2) {
-    score = 40;
+    score = MINT_MULTISIG_THRESHOLD_SCORES.twoSigner;
   } else {
-    score = 60 + (threshold >= 4 ? 5 : 0);
+    score =
+      MINT_MULTISIG_THRESHOLD_SCORES.thresholdThreePlus +
+      (threshold >= 4 ? MINT_MULTISIG_BONUSES.thresholdFourPlus : 0);
   }
 
   if (threshold != null && control.signerCount != null && control.signerCount > 0 && threshold / control.signerCount >= 0.5) {
-    score += 5;
+    score += MINT_MULTISIG_BONUSES.thresholdAtLeastHalfSignerSet;
   }
   if (control.modulesOrGuardsStatus === "none-detected") {
-    score += 10;
+    score += MINT_MULTISIG_BONUSES.noModulesOrGuardsDetected;
   }
 
-  return Math.min(score, 80);
+  return Math.min(score, MINT_MULTISIG_MAX_SCORE);
 }
 
 function getEoaCustodyLabel(
   control: MintAuthorityScoringControlInput,
 ): MintAuthorityWeakestControlResult["custodyLabel"] {
   if (control.authorityType !== "eoa") return null;
-  if (control.keyCustodyAttestation?.kind === "mpc") return "single-key address - MPC-attested";
-  if (control.keyCustodyAttestation?.kind === "hsm") return "single-key address - HSM-attested";
-  return "single-key address - custody unverifiable";
+  if (control.keyCustodyAttestation?.kind === "mpc") return "Single-key address - MPC-attested";
+  if (control.keyCustodyAttestation?.kind === "hsm") return "Single-key address - HSM-attested";
+  return "Single-key address - custody unverifiable";
 }
 
 export function scoreMintAuthorityControl(
@@ -315,14 +351,14 @@ export function scoreMintAuthorityControl(
     base = MINT_CONTROLLER_BASE_SCORES[control.authorityType] ?? MINT_CONTROLLER_BASE_SCORES.unknown;
   }
 
-  if ((control.timelockDelaySec ?? 0) >= 86_400) {
-    base += 10;
+  if ((control.timelockDelaySec ?? 0) >= MINT_CONTROLLER_BONUSES.timelockDelaySec) {
+    base += MINT_CONTROLLER_BONUSES.timelock;
   }
   if (control.directMintAbility === "cap-limited") {
-    base += 10;
+    base += MINT_CONTROLLER_BONUSES.capLimited;
   }
   if (control.directMintAbility === "upgrade-only") {
-    base += 5;
+    base += MINT_CONTROLLER_BONUSES.upgradeOnly;
   }
 
   return Math.max(0, Math.min(100, base));
@@ -356,19 +392,26 @@ export function scoreMintAuthorityBounds(
   controls: readonly MintAuthorityScoringControlInput[],
   posture: MintAuthorityPosture,
 ): number {
-  if (posture === "none-resolved") return 100;
+  if (posture === "none-resolved") return MINT_BOUNDS_SCORES.noneResolved;
 
   const mintCapable = controls.filter((control) => isMintCapableAbility(control.directMintAbility));
-  if (mintCapable.length === 0) return 50;
+  if (mintCapable.length === 0) return MINT_BOUNDS_SCORES.noMintCapableControls;
 
   const capped = mintCapable.filter((control) => control.directMintAbility === "cap-limited");
-  if (capped.length === 0) return 30;
+  if (capped.length === 0) return MINT_BOUNDS_SCORES.noCappedControls;
 
+  // Upgrade-only controls do not mint directly, so they stay out of the
+  // "every active minter is capped" denominator.
   const nonUpgradeMintCapable = mintCapable.filter((control) => control.directMintAbility !== "upgrade-only");
   const allNonUpgradeControlsAreCapped = capped.length === nonUpgradeMintCapable.length;
   const capCanBeRaised = capped.some((control) => control.canRaiseCap === true);
 
-  return (allNonUpgradeControlsAreCapped ? 75 : 55) + (capCanBeRaised ? 0 : 10);
+  return (
+    (allNonUpgradeControlsAreCapped
+      ? MINT_BOUNDS_SCORES.allNonUpgradeControlsCapped
+      : MINT_BOUNDS_SCORES.partiallyCappedControls) +
+    (capCanBeRaised ? 0 : MINT_BOUNDS_SCORES.immutableCapBonus)
+  );
 }
 
 function hasEoaCapTrigger(input: MintAuthorityScoringInput): boolean {
@@ -452,7 +495,13 @@ function computeInheritedScore(
   const rawScore =
     weakestWrapperControl == null
       ? parentResult.score
-      : Math.min(parentResult.score, Math.round(parentResult.score * 0.6 + weakestWrapperControl.score * 0.4));
+      : Math.min(
+          parentResult.score,
+          Math.round(
+            parentResult.score * MINT_AUTHORITY_INHERITANCE_BLEND.parentWeight +
+              weakestWrapperControl.score * MINT_AUTHORITY_INHERITANCE_BLEND.wrapperWeight,
+          ),
+        );
   const capsApplied = [...parentResult.capsApplied];
   const cappedScore = applyCaps(rawScore, input, confidenceCap, capsApplied, nowMs);
 

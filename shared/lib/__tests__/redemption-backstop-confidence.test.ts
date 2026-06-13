@@ -113,6 +113,23 @@ describe("resolveFeeModelKind", () => {
 });
 
 describe("deriveModelConfidence", () => {
+  type ConfidenceArgs = Parameters<typeof deriveModelConfidenceWithDetails>[0];
+  const baseResolvedArgs: ConfidenceArgs = {
+    resolutionState: "resolved",
+    capacityConfidence: "live-direct",
+    feeConfidence: "fixed",
+    routeStatus: "open",
+    routeStatusSource: "onchain",
+    holderEligibility: "any-holder",
+    sourceMode: "dynamic",
+    freshnessKind: "same-run-onchain",
+  };
+  const detailsFor = (overrides: Partial<ConfidenceArgs> = {}) =>
+    deriveModelConfidenceWithDetails({
+      ...baseResolvedArgs,
+      ...overrides,
+    }).confidenceDetails;
+
   it("returns low when resolution state is not resolved", () => {
     expect(
       deriveModelConfidence({
@@ -402,6 +419,90 @@ describe("deriveModelConfidence", () => {
         sourceMode: "static",
       }).confidenceDetails.sourceQuality,
     ).toBe(40);
+  });
+
+  it("keeps reviewed-static and unverified freshness on source-mode/default quality fallbacks", () => {
+    const withoutSourceMode: ConfidenceArgs = { ...baseResolvedArgs };
+    delete withoutSourceMode.sourceMode;
+    expect(
+      deriveModelConfidenceWithDetails({
+        ...baseResolvedArgs,
+        sourceMode: "static",
+        freshnessKind: "reviewed-static",
+      }).confidenceDetails.sourceQuality,
+    ).toBe(40);
+    expect(
+      deriveModelConfidenceWithDetails({
+        ...withoutSourceMode,
+        freshnessKind: "unverified",
+      }).confidenceDetails.sourceQuality,
+    ).toBe(50);
+  });
+
+  it("pins capacity evidence detail scores", () => {
+    const cases = [
+      ["live-direct", 100],
+      ["live-proxy", 80],
+      ["dynamic", 65],
+      ["documented-bound", 60],
+      ["heuristic", 25],
+    ] as const;
+
+    for (const [capacityConfidence, expected] of cases) {
+      expect(
+        detailsFor({
+          capacityConfidence,
+          routeStatus: capacityConfidence === "heuristic" ? "open" : "unknown",
+        }).capacityEvidenceQuality,
+        capacityConfidence,
+      ).toBe(expected);
+    }
+  });
+
+  it("pins fee evidence detail scores", () => {
+    const cases = [
+      ["fixed", 100],
+      ["formula", 80],
+      ["undisclosed-reviewed", 45],
+    ] as const;
+
+    for (const [feeConfidence, expected] of cases) {
+      expect(detailsFor({ feeConfidence }).feeEvidenceQuality, feeConfidence).toBe(expected);
+    }
+  });
+
+  it("pins route-status freshness detail scores", () => {
+    const cases = [
+      [{ routeStatus: "open", routeStatusSource: "protocol-api" }, 100],
+      [{ routeStatus: "open", routeStatusSource: "static-config" }, 70],
+      [{ routeStatus: "unknown", routeStatusSource: "static-config" }, 30],
+      [{ routeStatus: "paused", routeStatusSource: "onchain" }, 20],
+    ] as const;
+
+    for (const [overrides, expected] of cases) {
+      expect(detailsFor(overrides).routeStatusFreshness, JSON.stringify(overrides)).toBe(expected);
+    }
+
+    const withoutRouteStatus: ConfidenceArgs = { ...baseResolvedArgs };
+    delete withoutRouteStatus.routeStatus;
+    delete withoutRouteStatus.routeStatusSource;
+    expect(deriveModelConfidenceWithDetails(withoutRouteStatus).confidenceDetails.routeStatusFreshness).toBe(50);
+  });
+
+  it("pins holder cohort breadth detail scores", () => {
+    const cases = [
+      ["any-holder", 100],
+      ["verified-customer", 75],
+      ["whitelisted-primary", 55],
+      ["pre-incident-holder", 55],
+      ["issuer-discretionary", 25],
+      ["unknown", 30],
+      [undefined, 60],
+    ] as const;
+
+    for (const [holderEligibility, expected] of cases) {
+      expect(detailsFor({ holderEligibility }).holderCohortBreadth, holderEligibility ?? "default").toBe(expected);
+    }
   });
 });
 

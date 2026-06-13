@@ -31,7 +31,6 @@ export type L2BeatScalingLayer = "layer2" | "layer3";
 export interface L2BeatRiskValue {
   value: string;
   sentiment: L2BeatRiskSentiment;
-  warning?: boolean;
 }
 
 export interface L2BeatChainRiskSnapshot {
@@ -46,10 +45,9 @@ export interface L2BeatChainRiskSnapshot {
   risks: Record<L2BeatRiskField, L2BeatRiskValue>;
 }
 
-const r = (value: string, sentiment: L2BeatRiskSentiment, warning?: boolean): L2BeatRiskValue => ({
+const r = (value: string, sentiment: L2BeatRiskSentiment): L2BeatRiskValue => ({
   value,
   sentiment,
-  ...(warning ? { warning: true } : {}),
 });
 
 export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
@@ -658,10 +656,10 @@ export const L2BEAT_CHAIN_RISK_SNAPSHOT = {
     stage: "Stage 0",
     isUnderReview: false,
     risks: {
-      sequencerFailure: r("Self sequence", "good", true),
+      sequencerFailure: r("Self sequence", "good"),
       stateValidation: r("Validity proofs (ST, SN)", "good"),
       dataAvailability: r("Onchain", "good"),
-      exitWindow: r("None", "bad", true),
+      exitWindow: r("None", "bad"),
       proposerFailure: r("Cannot withdraw", "bad"),
     },
   },
@@ -765,6 +763,7 @@ export const L2BEAT_STAGE_SCORES: Record<L2BeatStage, number> = {
   "Stage 1": 80,
   "Stage 0": 55,
   "Not applicable": 50,
+  // L2BEAT can publish projects before a stage verdict has settled; keep this neutral.
   "Under review": 50,
 };
 
@@ -772,6 +771,7 @@ export const L2BEAT_RISK_SENTIMENT_SCORES: Record<L2BeatRiskSentiment, number> =
   good: 100,
   warning: 60,
   bad: 20,
+  // Forward-compatible L2BEAT ingestion guard: provisional/unknown sentiments are neutral, not bad.
   UnderReview: 50,
   neutral: 50,
 };
@@ -841,7 +841,7 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stageScore = L2BEAT_STAGE_SCORES[snapshot.stage];
   const riskScore = computeL2BeatRiskScore(snapshot);
-  const score = Math.round(stageScore * L2BEAT_STAGE_WEIGHT + riskScore * L2BEAT_RISK_WEIGHT);
+  const score = computeL2BeatChainEnvironmentScore(snapshot);
 
   return {
     source: "l2beat",

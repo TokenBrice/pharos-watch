@@ -1,6 +1,6 @@
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 
-const MINT_BURN_MAJOR_SYMBOLS = [
+const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = [
   "USDT",
   "USDC",
   "DAI",
@@ -11,12 +11,17 @@ const MINT_BURN_MAJOR_SYMBOLS = [
   "reUSD",
 ] as const;
 
-const MINT_BURN_STALE_WARN_SEC = 6 * 3600;
-const MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
-const MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
+const SECONDS_PER_HOUR = 3600;
+const DEFAULT_MINT_BURN_STALE_WARN_SEC = 6 * SECONDS_PER_HOUR;
+const DEFAULT_MINT_BURN_STALE_CRIT_SEC = 24 * SECONDS_PER_HOUR;
+const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = SECONDS_PER_HOUR;
 const MINT_BURN_CRITICAL_LANE_INTERVAL_SEC = 30 * 60;
+// Public freshness tolerates one missed critical-lane run; the next half-window is degraded.
+const MINT_BURN_PUBLIC_FRESHNESS_ALLOWED_MISSED_RUNS = 2;
+const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
 
-export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC = MINT_BURN_CRITICAL_LANE_INTERVAL_SEC * 2;
+export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC =
+  MINT_BURN_CRITICAL_LANE_INTERVAL_SEC * MINT_BURN_PUBLIC_FRESHNESS_ALLOWED_MISSED_RUNS;
 
 export interface MintBurnFreshnessConfig {
   majorSymbols: string[];
@@ -49,10 +54,13 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 export function resolveMintBurnFreshnessConfig(env?: MintBurnFreshnessEnv): MintBurnFreshnessConfig {
   const envMajorSymbols = parseCsvSymbols(env?.MINT_BURN_MAJOR_SYMBOLS);
   return {
-    majorSymbols: envMajorSymbols.length > 0 ? envMajorSymbols : [...MINT_BURN_MAJOR_SYMBOLS],
-    staleWarnSec: parsePositiveInt(env?.MINT_BURN_STALE_WARN_SEC, MINT_BURN_STALE_WARN_SEC),
-    staleCritSec: parsePositiveInt(env?.MINT_BURN_STALE_CRIT_SEC, MINT_BURN_STALE_CRIT_SEC),
-    alertCooldownSec: parsePositiveInt(env?.MINT_BURN_ALERT_COOLDOWN_SEC, MINT_BURN_ALERT_COOLDOWN_SEC),
+    majorSymbols: envMajorSymbols.length > 0 ? envMajorSymbols : [...DEFAULT_MINT_BURN_MAJOR_SYMBOLS],
+    staleWarnSec: parsePositiveInt(env?.MINT_BURN_STALE_WARN_SEC, DEFAULT_MINT_BURN_STALE_WARN_SEC),
+    staleCritSec: parsePositiveInt(env?.MINT_BURN_STALE_CRIT_SEC, DEFAULT_MINT_BURN_STALE_CRIT_SEC),
+    alertCooldownSec: parsePositiveInt(
+      env?.MINT_BURN_ALERT_COOLDOWN_SEC,
+      DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC,
+    ),
   };
 }
 
@@ -71,7 +79,7 @@ export function computeMintBurnSyncFreshnessStatus(
   const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
   const ratio = ageSec / MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC;
   if (ratio <= 1) return "fresh";
-  if (ratio <= 1.5) return "degraded";
+  if (ratio <= MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO) return "degraded";
   return "stale";
 }
 

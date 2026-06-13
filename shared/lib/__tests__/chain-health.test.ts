@@ -11,10 +11,40 @@ import {
   CHAIN_ENVIRONMENT_SCORES,
 } from "../chain-health";
 import {
+  computeL2BeatChainEnvironmentScore,
+  computeL2BeatRiskScore,
   getL2BeatChainEnvironmentAssessment,
   getL2BeatSafetyScoreAudit,
   resolveL2BeatProjectId,
+  type L2BeatChainRiskSnapshot,
+  type L2BeatRiskSentiment,
+  type L2BeatStage,
 } from "../chains/l2beat-risk";
+
+function l2beatSnapshotFixture(input: {
+  stage?: L2BeatStage;
+  sentiments?: L2BeatRiskSentiment[];
+} = {}): L2BeatChainRiskSnapshot {
+  const sentiments = input.sentiments ?? ["neutral", "neutral", "neutral", "neutral", "neutral"];
+  const [sequencerFailure, stateValidation, dataAvailability, exitWindow, proposerFailure] = sentiments;
+  return {
+    id: "fixture",
+    slug: "fixture",
+    name: "Fixture",
+    type: "layer2",
+    category: "Other",
+    hostChain: "Ethereum",
+    stage: input.stage ?? "Stage 1",
+    isUnderReview: input.stage === "Under review",
+    risks: {
+      sequencerFailure: { value: "fixture", sentiment: sequencerFailure! },
+      stateValidation: { value: "fixture", sentiment: stateValidation! },
+      dataAvailability: { value: "fixture", sentiment: dataAvailability! },
+      exitWindow: { value: "fixture", sentiment: exitWindow! },
+      proposerFailure: { value: "fixture", sentiment: proposerFailure! },
+    },
+  };
+}
 
 describe("computeConcentrationScore", () => {
   it("returns 0 for a single-stablecoin chain", () => {
@@ -160,6 +190,36 @@ describe("computeChainEnvironmentScore", () => {
   });
 });
 
+describe("L2BEAT risk scoring", () => {
+  it("scores all-good, all-bad, and mixed risk sentiment snapshots", () => {
+    expect(computeL2BeatRiskScore(l2beatSnapshotFixture({
+      sentiments: ["good", "good", "good", "good", "good"],
+    }))).toBe(100);
+    expect(computeL2BeatRiskScore(l2beatSnapshotFixture({
+      sentiments: ["bad", "bad", "bad", "bad", "bad"],
+    }))).toBe(20);
+    expect(computeL2BeatRiskScore(l2beatSnapshotFixture({
+      sentiments: ["good", "warning", "bad", "UnderReview", "neutral"],
+    }))).toBe(56);
+  });
+
+  it("keeps UnderReview and neutral sentiments score-neutral for forward compatibility", () => {
+    expect(computeL2BeatRiskScore(l2beatSnapshotFixture({
+      sentiments: ["UnderReview", "neutral", "UnderReview", "neutral", "UnderReview"],
+    }))).toBe(50);
+  });
+});
+
+describe("computeL2BeatChainEnvironmentScore", () => {
+  it("pins stage tier scores with neutral risk sentiment", () => {
+    expect(computeL2BeatChainEnvironmentScore(l2beatSnapshotFixture({ stage: "Stage 2" }))).toBe(70);
+    expect(computeL2BeatChainEnvironmentScore(l2beatSnapshotFixture({ stage: "Stage 1" }))).toBe(62);
+    expect(computeL2BeatChainEnvironmentScore(l2beatSnapshotFixture({ stage: "Stage 0" }))).toBe(52);
+    expect(computeL2BeatChainEnvironmentScore(l2beatSnapshotFixture({ stage: "Not applicable" }))).toBe(50);
+    expect(computeL2BeatChainEnvironmentScore(l2beatSnapshotFixture({ stage: "Under review" }))).toBe(50);
+  });
+});
+
 describe("computeHealthScore", () => {
   it("computes weighted composite", () => {
     const score = computeHealthScore({
@@ -197,16 +257,16 @@ describe("getHealthBand", () => {
   it("maps score ranges correctly", () => {
     expect(getHealthBand(100)).toBe("robust");
     expect(getHealthBand(80)).toBe("robust");
-    expect(getHealthBand(79.999)).toBe("healthy");
+    expect(getHealthBand(79)).toBe("healthy");
     expect(getHealthBand(85)).toBe("robust");
     expect(getHealthBand(60)).toBe("healthy");
-    expect(getHealthBand(59.999)).toBe("mixed");
+    expect(getHealthBand(59)).toBe("mixed");
     expect(getHealthBand(65)).toBe("healthy");
     expect(getHealthBand(40)).toBe("mixed");
-    expect(getHealthBand(39.999)).toBe("fragile");
+    expect(getHealthBand(39)).toBe("fragile");
     expect(getHealthBand(45)).toBe("mixed");
     expect(getHealthBand(20)).toBe("fragile");
-    expect(getHealthBand(19.999)).toBe("concentrated");
+    expect(getHealthBand(19)).toBe("concentrated");
     expect(getHealthBand(25)).toBe("fragile");
     expect(getHealthBand(10)).toBe("concentrated");
     expect(getHealthBand(null)).toBeNull();
