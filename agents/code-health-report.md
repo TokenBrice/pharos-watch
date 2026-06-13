@@ -798,6 +798,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`wapi-6` — AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT and AUDIT_DEPEG_HISTORY_MAX_LIMIT are identical (both 25)** `[naming | low | trivial | none]`
 - Problem: both constants are 25, used only together in `parseAuditRequest`. A reader cannot tell whether default==max is a deliberate hard cap or accidental drift.
+- Done 2026-06-13: added a one-line comment documenting that default and max intentionally match because audit history is capped at 25 events per request.
 - Recommendation: lowest-risk action is a one-line comment stating the endpoint deliberately fixes default and max to the same 25-event cap. Collapsing to one constant is optional; prefer the comment.
 - Files: `worker/src/api/audit-depeg-history.ts:31-32`.
 - Verifier: both equal 25, referenced only in parseAuditRequest; leaning comment over collapse. Checks: `npm run lint:typed`.

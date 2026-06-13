@@ -28,6 +28,7 @@ type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
 const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
+// Default and max intentionally match: audit history is capped at 25 events per request.
 const AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT = 25;
 const AUDIT_DEPEG_HISTORY_MAX_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
