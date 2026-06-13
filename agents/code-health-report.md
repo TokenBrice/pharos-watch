@@ -154,6 +154,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 ### Stablecoin Detail (`sd-*`)
 
 **`sd-1` — IIFE for PoR attestor-tier badge in key-info-card** `[readability | low | small | none]`
+- Status: Closed 2026-06-13. Extracted `AttestorTierBadge({ proofOfReserves })` with the same pill class, pill text, Popover details, and fallback span behavior.
 - Problem: the PoR attestor-tier pill is built with a raw IIFE inside JSX (207-248) deriving `tierStyle`, `pillClass`, `pillText`, a `details[]` array, then branching between a plain `<span>` and a Popover. Densest block in the file, nested ~5 conditionals deep, cannot be named or unit-tested.
 - Recommendation: extract a named local `AttestorTierBadge({ proofOfReserves })`. Reproduce `pillClass`/`pillText` verbatim; keep `POR_TIER_STYLES` imported from `@shared/lib/classification` (hard rule). Pure JSX refactor.
 - Files: `src/components/key-info-card.tsx:206-248`.
