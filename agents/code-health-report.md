@@ -343,7 +343,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`vm-10` — formatTimestampSeconds and formatTimestampMs differ only by unit + null-guard style** `[duplication | low | trivial | low]`
 - Problem: `formatTimestampSeconds` (`seconds == null` guard) and `formatTimestampMs` (`!ms` guard, non-nullable param) are the same `toLocaleString` call modulo `*1000`. The `!ms` guard treats `ms===0` (epoch) as missing.
-- Recommendation: optional. If unified, make `formatTimestampMs(ms: number | null | undefined)` with `== null` and define `formatTimestampSeconds` as a delegate. NOTE behavior change: literal `ms===0` would format as 1970-01-01 instead of "—". Only caller (public-status-hero.tsx:192) never passes 0, so safe, but NOT strictly behavior-preserving; line 172 comments these are status-dashboard-scoped.
+- Done 2026-06-13: added private `formatLocaleTimestampMs(ms)` and routed both public helpers through it while preserving the existing `seconds == null` and `!ms` sentinel guards.
 - Files: `src/lib/status-dashboard-model.ts:173-181`.
 - Verifier: confirmed the `!ms` vs `== null` divergence; corrected behaviorPreserving=false. Checks: `npm run lint:typed`, `npm run test`.
 
@@ -393,7 +393,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`frontend-12` — formatTimestampSeconds / formatTimestampMs differ only by *1000, but null guards differ** `[duplication | low | trivial | low]`
 - Problem: both share the same `toLocaleString(undefined, { timeZoneName: 'short' })` and differ only by `* 1000`. The file comment says "Not a candidate for shared extraction", but in-file dedup is possible. Guards are NOT identical: `formatTimestampSeconds` returns "—" for `null | undefined`; `formatTimestampMs` returns "—" for any falsy including `0`.
-- Recommendation: if touched, normalize at the call site OR add a private `formatLocaleTimestampMs(ms)` core. Any merge must preserve both sentinel behaviors. Marginal — keep as a trivial in-file tidy. (Same as `vm-10` from a different scan.)
+- Done 2026-06-13: same closure as `vm-10`; the shared private formatter removes the duplicated locale call while preserving both sentinel behaviors.
 - Files: `src/lib/status-dashboard-model.ts:172-181`.
 - Verifier: shared options confirmed; guards differ. Checks: `npm run test:merge-gate`.
 

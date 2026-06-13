@@ -170,14 +170,18 @@ export function buildBrowserProbeSummary(
 }
 
 /** Status-dashboard-scoped timestamp formatter. Not a candidate for shared extraction. */
+function formatLocaleTimestampMs(ms: number): string {
+  return new Date(ms).toLocaleString(undefined, { timeZoneName: 'short' });
+}
+
 export function formatTimestampSeconds(seconds: number | null | undefined): string {
   if (seconds == null) return "—";
-  return new Date(seconds * 1000).toLocaleString(undefined, { timeZoneName: 'short' });
+  return formatLocaleTimestampMs(seconds * 1000);
 }
 
 export function formatTimestampMs(ms: number): string {
   if (!ms) return "—";
-  return new Date(ms).toLocaleString(undefined, { timeZoneName: 'short' });
+  return formatLocaleTimestampMs(ms);
 }
 
 export function formatTransitionLabel(transition: StatusResponse["timeline"][number] | null): string {
