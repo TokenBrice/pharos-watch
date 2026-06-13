@@ -39,6 +39,10 @@ import {
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_DAYS = 30;
 const MAX_BACKFILL_WINDOW_DAYS = 90;
+const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
+  "autousd-auto-finance",
+  "eearn-ember",
+]);
 
 interface TokenEntry {
   date: number; // unix seconds
@@ -141,6 +145,13 @@ function firstEvmContract(contracts?: ContractDeployment[]): ContractDeployment 
   return contracts?.find((c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron") ?? null;
 }
 
+function selectSingleHistoricalEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
+  const supportedContracts = contracts?.filter((c) =>
+    c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron"
+  ) ?? [];
+  return supportedContracts.length === 1 ? supportedContracts[0] : null;
+}
+
 function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWindow): boolean {
   if (window?.startDay != null && snapshotDate < window.startDay) return false;
   if (window?.endDay != null && snapshotDate > window.endDay) return false;
@@ -159,6 +170,21 @@ function backfillWindowToFetchRange(
 
 function getLastCompletedUtcDay(nowSec = Math.floor(Date.now() / 1000)): number {
   return Math.floor((nowSec - DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+}
+
+function normalizeCoinGeckoDailyPrices(prices: [number, number][]): TimestampedRatePoint[] {
+  const priceBySnapshotDate = new Map<number, number>();
+  for (const [timestampMs, price] of prices) {
+    if (!Number.isFinite(timestampMs) || !Number.isFinite(price) || price <= 0) continue;
+    const snapshotDate = Math.floor(timestampMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+    if (!priceBySnapshotDate.has(snapshotDate)) {
+      priceBySnapshotDate.set(snapshotDate, price);
+    }
+  }
+
+  return Array.from(priceBySnapshotDate.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([timestamp, rate]) => ({ timestamp, rate }));
 }
 
 function buildSupplyBackfillCursor(cursor: SupplyBackfillContinuationCursor): string {
@@ -414,6 +440,147 @@ async function backfillHistoricalOnChainSupply(
   return { rows: stmts.length };
 }
 
+async function backfillHistoricalTotalSupply(
+  db: D1Database,
+  meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
+  options: {
+    chainRpcs?: Map<string, ChainRpcConfig>;
+    priceSeries?: TimestampedRatePoint[];
+    requirePrice: boolean;
+    window?: SupplyBackfillWindow;
+    signal?: AbortSignal;
+  },
+): Promise<{ rows: number; error?: string }> {
+  if (meta.flags.pegCurrency !== "USD") {
+    return { rows: 0, error: "historical totalSupply backfill currently supports USD-pegged assets only" };
+  }
+
+  const contract = selectSingleHistoricalEvmContract(meta.contracts);
+  if (!contract) {
+    return { rows: 0, error: "historical totalSupply backfill requires exactly one supported EVM contract" };
+  }
+
+  const priceSeries = options.priceSeries ?? [];
+  if (options.requirePrice && priceSeries.length === 0) {
+    return { rows: 0, error: "historical totalSupply backfill requires CoinGecko price history" };
+  }
+
+  const lastCompletedDay = getLastCompletedUtcDay();
+  const firstPriceDay = priceSeries[0]?.timestamp ?? null;
+  const lastPriceDay = priceSeries[priceSeries.length - 1]?.timestamp ?? null;
+  const endDay = Math.min(options.window?.endDay ?? lastPriceDay ?? lastCompletedDay, lastCompletedDay);
+  const defaultStartDay = Math.max(0, endDay - (DEFAULT_BACKFILL_WINDOW_DAYS - 1) * DAY_SECONDS);
+  const startDay = options.window?.startDay ?? firstPriceDay ?? defaultStartDay;
+  if (startDay > endDay) {
+    return { rows: 0, error: "no completed UTC days in historical totalSupply backfill window" };
+  }
+
+  function findHistoricalPrice(snapshotDate: number): number | null {
+    if (priceSeries.length === 0) return null;
+    const first = priceSeries[0];
+    const last = priceSeries[priceSeries.length - 1];
+    if (snapshotDate < first.timestamp || snapshotDate > last.timestamp) return null;
+    const exact = priceSeries.find((point) => point.timestamp === snapshotDate);
+    if (exact) return exact.rate;
+    const interpolated = interpolateRateAtTimestamp(priceSeries, snapshotDate);
+    return interpolated && interpolated > 0 ? interpolated : null;
+  }
+
+  const blockSearchCache: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
+  const stmts: D1PreparedStatement[] = [];
+  let blockMisses = 0;
+  let supplyMisses = 0;
+  let priceMisses = 0;
+
+  for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
+    throwIfAborted(options.signal);
+    if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
+
+    const price = findHistoricalPrice(snapshotDate);
+    if (options.requirePrice && price == null) {
+      priceMisses += 1;
+      continue;
+    }
+
+    const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
+    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
+      contract.chain,
+      targetTimestamp,
+      blockSearchCache,
+      {
+        chainRpcs: options.chainRpcs,
+        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        timeoutMs: 15_000,
+        signal: options.signal,
+      },
+    );
+    if (blockNumber == null) {
+      blockMisses += 1;
+      continue;
+    }
+
+    const raw = await fetchEvmUint256AtBlock(
+      contract.chain,
+      contract.address,
+      TOTAL_SUPPLY_SELECTOR,
+      blockNumber,
+      {
+        chainRpcs: options.chainRpcs,
+        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        timeoutMs: 15_000,
+        signal: options.signal,
+      },
+    );
+    if (raw == null || raw <= 0n) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    const supply = rawTokenAmountToNumber(raw, contract.decimals ?? 18);
+    if (supply == null) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    const circulatingUsd = price != null ? supply * price : supply;
+    if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    stmts.push(
+      db
+        .prepare(
+          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+        )
+        .bind(meta.id, snapshotDate, circulatingUsd, price),
+    );
+  }
+
+  if (stmts.length === 0) {
+    return {
+      rows: 0,
+      error: `historical totalSupply backfill wrote 0 rows (blockMisses=${blockMisses}, supplyMisses=${supplyMisses}, priceMisses=${priceMisses})`,
+    };
+  }
+
+  await batchExecute(db, stmts);
+  if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
+    console.warn(
+      JSON.stringify({
+        scope: "backfill-supply",
+        message: "historical totalSupply backfill skipped partial reads",
+        stablecoinId: meta.id,
+        symbol: meta.symbol,
+        blockMisses,
+        supplyMisses,
+        priceMisses,
+      }),
+    );
+  }
+  return { rows: stmts.length };
+}
+
 async function backfillCommodity(
   db: D1Database,
   id: string,
@@ -626,6 +793,45 @@ async function executeBackfillSupplyHistory(
         errors.push(`${meta.symbol}: ${historicalOnChainResult.error}`);
       } else {
         totalRows += historicalOnChainResult.rows;
+      }
+      return;
+    }
+
+    if (HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS.has(meta.id)) {
+      try {
+        const marketHistory = meta.geckoId
+          ? await fetchCoinGeckoMarketHistory(meta.geckoId, {
+              apiKey: cgApiKey ?? null,
+              signal,
+              range: supplyBackfillWindow ? backfillWindowToFetchRange(supplyBackfillWindow) : undefined,
+              onCoinDetailFailure: (status) => {
+                console.warn(
+                  JSON.stringify({
+                    scope: "backfill-supply",
+                    message: "CoinGecko coin detail fetch failed; using market_chart prices only",
+                    stablecoinId: meta.id,
+                    geckoId: meta.geckoId,
+                    status,
+                  }),
+                );
+              },
+            })
+          : null;
+        const result = await backfillHistoricalTotalSupply(db, meta, {
+          chainRpcs,
+          priceSeries: marketHistory ? normalizeCoinGeckoDailyPrices(marketHistory.prices) : [],
+          requirePrice: Boolean(meta.geckoId),
+          window: supplyBackfillWindow,
+          signal,
+        });
+        if (result.error) {
+          errors.push(`${meta.symbol}: ${result.error}`);
+        } else {
+          totalRows += result.rows;
+        }
+      } catch (err) {
+        rethrowIfAborted(err, signal);
+        errors.push(`${meta.symbol}: historical totalSupply backfill failed — ${err}`);
       }
       return;
     }
