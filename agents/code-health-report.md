@@ -237,6 +237,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: confirmed 5 callsites + right home; trimmed speculative justification. Checks: `npm run typecheck`, `npm run lint`.
 
 **`fe-11` — Amount source/status badge pair duplicated between desktop row and mobile card in blacklist-table** `[duplication | low | small | low]`
+- Status: Closed 2026-06-13. Extracted `AmountBadges({ event, badgeClassName })` and kept the desktop/mobile badge class strings at their call sites.
 - Problem: the `amountSource`/`amountStatus` Tooltip badge pair renders in both `BlacklistAmount` (283-312) and `BlacklistEventCard` (368-401), same guards and same `AMOUNT_SOURCE_LABELS`/`AMOUNT_SOURCE_TOOLTIPS`/`AMOUNT_STATUS_TOOLTIPS` lookups; only the badge span className differs.
 - Recommendation: extract `AmountBadges({ event, badgeClassName })`; pass distinct static className strings per caller. `formatBlacklistAmountCell(evt)` stays outside the component.
 - Files: `src/components/blacklist-table.tsx:283-312,368-401`.

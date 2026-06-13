@@ -275,18 +275,27 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
 }
 
 function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
-  const sourceTooltip = AMOUNT_SOURCE_TOOLTIPS[evt.amountSource];
-  const statusTooltip = AMOUNT_STATUS_TOOLTIPS[evt.amountStatus];
   return (
     <>
       {formatBlacklistAmountCell(evt)}
+      <AmountBadges
+        event={evt}
+        badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+      />
+    </>
+  );
+}
+
+function AmountBadges({ event: evt, badgeClassName }: { event: BlacklistEvent; badgeClassName: string }) {
+  const sourceTooltip = AMOUNT_SOURCE_TOOLTIPS[evt.amountSource];
+  const statusTooltip = AMOUNT_STATUS_TOOLTIPS[evt.amountStatus];
+
+  return (
+    <>
       {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span
-              className="ml-1 inline-flex cursor-help rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-              aria-label={sourceTooltip ?? undefined}
-            >
+            <span className={badgeClassName} aria-label={sourceTooltip ?? undefined}>
               {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
             </span>
           </TooltipTrigger>
@@ -295,13 +304,10 @@ function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
           ) : null}
         </Tooltip>
       ) : null}
-      {evt.amountStatus !== "resolved" && (
+      {evt.amountStatus !== "resolved" ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span
-              className="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-              aria-label={statusTooltip ?? undefined}
-            >
+            <span className={badgeClassName} aria-label={statusTooltip ?? undefined}>
               {evt.amountStatus.replace(/_/g, " ")}
             </span>
           </TooltipTrigger>
@@ -309,7 +315,7 @@ function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
             <TooltipContent className="max-w-[260px] text-[11px]">{statusTooltip}</TooltipContent>
           ) : null}
         </Tooltip>
-      )}
+      ) : null}
     </>
   );
 }
@@ -365,40 +371,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-          {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="cursor-help rounded border border-border px-1.5 py-1"
-                  aria-label={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource] ?? undefined}
-                >
-                  {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
-                </span>
-              </TooltipTrigger>
-              {AMOUNT_SOURCE_TOOLTIPS[evt.amountSource] ? (
-                <TooltipContent className="max-w-[260px] text-[11px]">
-                  {AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
-          ) : null}
-          {evt.amountStatus !== "resolved" ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="cursor-help rounded border border-border px-1.5 py-1"
-                  aria-label={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus] ?? undefined}
-                >
-                  {evt.amountStatus.replace(/_/g, " ")}
-                </span>
-              </TooltipTrigger>
-              {AMOUNT_STATUS_TOOLTIPS[evt.amountStatus] ? (
-                <TooltipContent className="max-w-[260px] text-[11px]">
-                  {AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
-          ) : null}
+          <AmountBadges event={evt} badgeClassName="cursor-help rounded border border-border px-1.5 py-1" />
         </div>
         <BlacklistTxLink event={evt} />
       </div>
