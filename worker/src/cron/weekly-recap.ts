@@ -1,6 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
-import { THREAT_BAND_ORDER } from "@shared/lib/classification";
 import { round1 } from "@shared/lib/math";
 import {
   getDepegEditorialImpactScore,
@@ -23,6 +22,7 @@ import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
 import { rollupDigestInputs } from "./daily-digest/collectors-shared";
+import { DEWS_BAND_RANK } from "./daily-digest/digest-intelligence-utils";
 
 const WEEKLY_SYSTEM_PROMPT = [
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
@@ -72,8 +72,6 @@ const WEEKLY_SYSTEM_PROMPT = [
 ].join("\n");
 
 type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
-
-const DEWS_BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
 interface WeeklyDepegSignal {
   id: string;

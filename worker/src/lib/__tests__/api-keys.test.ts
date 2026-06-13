@@ -739,6 +739,23 @@ describe("api key helpers", () => {
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 602)?.status).toBe(429);
   });
 
+  it("prunes isolate-local fallback limiter buckets once per minute", () => {
+    const state = getApiKeyRuntimeState();
+    state.apiKeyFallbackRateLimitById.set(99, { bucketStart: 540, count: 1 });
+
+    expect(checkIsolateLocalApiKeyRateLimit(7, 120, 600)).toBeNull();
+    expect(state.apiKeyFallbackRateLimitById.has(99)).toBe(false);
+    expect(state.lastApiKeyFallbackRateLimitPruneBucket).toBe(600);
+
+    state.apiKeyFallbackRateLimitById.set(100, { bucketStart: 540, count: 1 });
+    expect(checkIsolateLocalApiKeyRateLimit(8, 120, 601)).toBeNull();
+    expect(state.apiKeyFallbackRateLimitById.has(100)).toBe(true);
+
+    expect(checkIsolateLocalApiKeyRateLimit(9, 120, 660)).toBeNull();
+    expect(state.apiKeyFallbackRateLimitById.has(100)).toBe(false);
+    expect(state.lastApiKeyFallbackRateLimitPruneBucket).toBe(660);
+  });
+
   it("opens and resets the API key rate-limit dependency circuit", () => {
     expect(isApiKeyRateLimitDependencyCircuitOpen(1_000)).toBe(false);
 

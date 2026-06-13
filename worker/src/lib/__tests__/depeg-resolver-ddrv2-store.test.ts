@@ -281,12 +281,17 @@ describe("DDRv2 storage migrations and stores", () => {
     try {
       const incident = await ensureIncident(db);
 
-      expect(incident.incidentKey).toMatch(/^ddr2:[0-9a-f]{32}$/);
+      expect(incident.sourceFingerprint).toBe("57575ce509837e748c284019c4ce62a0941aece26a0106ede5775b736270184e");
+      expect(incident.incidentKey).toBe("ddr2:2867d8491b313b47ae432676cf15acbb");
       expect(incident.policyMembership?.policyUniverseIncluded).toBe(true);
       expect(incident.policyMembership?.policyUniverseReason).toBe("post_effective_public_tracked");
       expect(() =>
         db.sqlite.exec("UPDATE depeg_resolver_incident_event_links SET relation = 'merged' WHERE event_id = 1"),
       ).toThrow(/incident event links are append-only/);
+      const stored = db.sqlite
+        .prepare("SELECT source_fingerprint FROM depeg_resolver_incidents WHERE incident_key = ?")
+        .get(incident.incidentKey) as { source_fingerprint: string };
+      expect(stored.source_fingerprint).toBe(incident.sourceFingerprint);
 
       const [again] = await ensureCanonicalIncidents(
         db,
@@ -304,6 +309,7 @@ describe("DDRv2 storage migrations and stores", () => {
         { nowSec: 200100, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 },
       );
       expect(again?.incidentKey).toBe(incident.incidentKey);
+      expect(again?.sourceFingerprint).toBe(incident.sourceFingerprint);
     } finally {
       db.close();
     }

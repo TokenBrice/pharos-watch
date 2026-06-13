@@ -65,6 +65,7 @@ export async function runAlchemyAddressProvider(
     });
     const rows = isRecord(json) && Array.isArray(json.data) ? json.data : null;
     if (rows) {
+      const matchedCountBefore = quotes.length;
       const targetByKey = new Map(batch.map((target) => [`${target.providerChainId}:${target.address.toLowerCase()}`, target]));
       for (const row of rows) {
         if (!isRecord(row)) continue;
@@ -91,7 +92,7 @@ export async function runAlchemyAddressProvider(
         });
       }
       diagnostic.responseRowCount = rows.length;
-      diagnostic.matchedCount = quotes.filter((quote) => quote.source === "alchemy-address").length;
+      diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {

@@ -54,6 +54,7 @@ export async function runBirdeyeAddressProvider(
     });
     const data = isRecord(json) && isRecord(json.data) ? json.data : null;
     if (data) {
+      const matchedCountBefore = quotes.length;
       const priceUsd = parsePositiveNumber(data.value);
       const liquidityUsd = parseNonNegativeNumber(data.liquidity);
       if (!priceUsd) {
@@ -78,7 +79,7 @@ export async function runBirdeyeAddressProvider(
         });
       }
       diagnostic.responseRowCount = 1;
-      diagnostic.matchedCount = quotes.filter((quote) => quote.source === "birdeye-address").length;
+      diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {

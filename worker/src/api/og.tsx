@@ -24,6 +24,7 @@ import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-cards";
+import { getVariantDisplay } from "@shared/lib/variant-display";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -274,15 +275,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     pegScore = pegAnalytics.pegDataById.get(id)?.pegScore ?? null;
   }
   const liq = dexLiqMap[id];
-  const variantLabel = meta?.variantKind === "savings-passthrough"
-    ? "Savings"
-    : meta?.variantKind === "strategy-vault"
-      ? "Strategy"
-    : meta?.variantKind === "risk-absorption"
-      ? "Risk-Abs"
-      : meta?.variantKind === "bond-maturity"
-        ? "Bond"
-        : null;
+  const variantLabel = meta?.variantKind ? getVariantDisplay(meta.variantKind).shortLabel : null;
   const variantParentSymbol = meta?.variantOf
     ? (TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf)
     : null;

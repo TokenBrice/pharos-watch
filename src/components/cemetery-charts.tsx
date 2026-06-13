@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import {
   PieChart,
   Pie,
@@ -408,6 +408,8 @@ function filterCollidingInflections(
 }
 
 function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
+  const rawGradientId = useId();
+  const destroyedGradientId = `destroyed-${rawGradientId.replace(/:/g, "")}`;
   const [logScale, setLogScale] = useState(false);
 
   const data = useMemo<CumulativePoint[]>(() => {
@@ -463,7 +465,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={chartData} margin={{ top: 24, right: 12, bottom: 20, left: 5 }}>
               <defs>
-                <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={destroyedGradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={CHART_RED} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
                 </linearGradient>
@@ -514,7 +516,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
                 dataKey="cumulative"
                 stroke={CHART_RED}
                 strokeWidth={2}
-                fill="url(#destroyedGradient)"
+                fill={`url(#${destroyedGradientId})`}
               />
               {inflectionPoints.map((p) => (
                 <ReferenceDot

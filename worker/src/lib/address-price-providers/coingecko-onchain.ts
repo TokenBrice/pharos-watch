@@ -49,6 +49,7 @@ export async function runCoingeckoOnchainAddressProvider(
       });
       const data = isRecord(json) && Array.isArray(json.data) ? json.data : null;
       if (data) {
+        const matchedCountBefore = quotes.length;
         const byAddress = new Map<string, Record<string, unknown>>();
         for (const entry of data) {
           if (!isRecord(entry) || !isRecord(entry.attributes)) continue;
@@ -87,7 +88,7 @@ export async function runCoingeckoOnchainAddressProvider(
           });
         }
         diagnostic.responseRowCount = data.length;
-        diagnostic.matchedCount = quotes.filter((quote) => quote.source === "coingecko-onchain-address").length;
+        diagnostic.matchedCount = quotes.length - matchedCountBefore;
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {

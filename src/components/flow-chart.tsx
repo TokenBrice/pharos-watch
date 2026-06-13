@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -18,6 +18,7 @@ import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@
 import type { MintBurnHourlyBucket } from "@shared/types";
 import { DAY_HOURS, HOUR_MS, HOUR_SECONDS } from "@/lib/constants";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 interface FlowChartProps {
   hourly: MintBurnHourlyBucket[];
@@ -62,24 +63,6 @@ const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
 const DAY_SECONDS = DAY_HOURS * 60 * 60;
 const WATERFALL_BUCKET_THRESHOLD_HOURS = 7 * DAY_HOURS;
 const ENTRANCE_DURATION_FALLBACK_MS = 400;
-
-/** Watch for `(prefers-reduced-motion: reduce)` so we can disable Recharts' bar entrance. */
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-  });
-
-  useEffect(() => {
-    const mql = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!mql) return;
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
-
-  return reduced;
-}
 
 /**
  * Resolve the entrance duration from the `--motion-duration-entrance` token at

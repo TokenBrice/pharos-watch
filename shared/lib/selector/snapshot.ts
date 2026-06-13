@@ -1,4 +1,4 @@
-import { YIELD_TYPE_VALUES } from "../../types/core";
+import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
 import { canonicalizeForSid } from "./canonicalize";
 import { sha256Hex } from "../sha256";
 import {
@@ -66,7 +66,7 @@ const RANK_ROBUSTNESS_LABELS = new Set([
   "narrow-margin",
   "concentration-adjusted",
 ]);
-const BLUECHIP_GRADES = new Set(["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"]);
+const BLUECHIP_GRADES = new Set<string>(BluechipGradeSchema.options);
 const SAFETY_GRADES = new Set([...BLUECHIP_GRADES, "NR"]);
 const REQUIRED_METHODOLOGY_KEYS = [
   "safetyScore",

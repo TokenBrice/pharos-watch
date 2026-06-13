@@ -16,7 +16,7 @@ import { mapPegMetadata, PEG_METADATA } from "./pegs";
 
 /** Governance badge colors used in the main table. */
 export const GOVERNANCE_COLORS: Record<GovernanceType, string> = {
-  centralized: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+  centralized: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
   "centralized-dependent": "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
   decentralized: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
 };

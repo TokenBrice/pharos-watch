@@ -182,6 +182,7 @@ const _ak = new IsolateLocalState(() => ({
     openUntilMs: 0,
   } as ApiKeyRateLimitDependencyCircuitState,
   lastApiKeyRateLimitPruneBucket: null as number | null,
+  lastApiKeyFallbackRateLimitPruneBucket: null as number | null,
   pendingApiKeyPrune: null as Promise<void> | null,
 }));
 

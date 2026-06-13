@@ -6,6 +6,10 @@ import type {
   SelectorRankRobustness,
 } from "./types";
 import { round1 } from "../math";
+import {
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+  getReportCardGradeRank,
+} from "../report-card-core";
 
 export function dedupVariants(
   entries: ScoredEntry[],
@@ -35,20 +39,12 @@ export function dedupVariants(
   return out.sort((a, b) => b.score - a.score);
 }
 
-const GRADE_RANK: Record<ReportCardGrade, number> = {
-  "A+": 0,
-  "A": 1,
-  "A-": 2,
-  "B+": 3,
-  "B": 4,
-  "B-": 5,
-  "C+": 6,
-  "C": 7,
-  "C-": 8,
-  "D": 9,
-  "F": 10,
-  "NR": 11,
-};
+const MISSING_SELECTOR_GRADE_RANK = 99;
+
+function selectorGradeRank(grade: ReportCardGrade | null | undefined): number {
+  if (grade == null) return MISSING_SELECTOR_GRADE_RANK;
+  return -(getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK);
+}
 
 export function compareScored(a: ScoredEntry, b: ScoredEntry): number {
   const diff = b.score - a.score;
@@ -56,8 +52,8 @@ export function compareScored(a: ScoredEntry, b: ScoredEntry): number {
   if (b.row.supplyUsd !== a.row.supplyUsd) {
     return b.row.supplyUsd - a.row.supplyUsd;
   }
-  const aGrade = a.row.safetyGrade != null ? GRADE_RANK[a.row.safetyGrade] : 99;
-  const bGrade = b.row.safetyGrade != null ? GRADE_RANK[b.row.safetyGrade] : 99;
+  const aGrade = selectorGradeRank(a.row.safetyGrade);
+  const bGrade = selectorGradeRank(b.row.safetyGrade);
   if (aGrade !== bGrade) return aGrade - bGrade;
   const aLiq = a.row.liquidityScore ?? -1;
   const bLiq = b.row.liquidityScore ?? -1;

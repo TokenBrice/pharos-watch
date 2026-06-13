@@ -7,6 +7,7 @@ import {
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
+import { parsePositiveNumber } from "./number-utils";
 import { cancelResponseBodyQuietly } from "./response-body";
 
 const CEX_ORDERBOOK_TIMEOUT_MS = 7_500;
@@ -41,11 +42,6 @@ export interface DirectCexOrderbookDepthSummary {
   observations: number;
   maxDepthDown2PctUsdBySymbol: Record<string, number>;
   maxDepthUp2PctUsdBySymbol: Record<string, number>;
-}
-
-function parsePositiveNumber(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function normalizeLevels(rows: unknown): OrderbookLevel[] {

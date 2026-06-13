@@ -6,6 +6,7 @@ import {
 } from "../address-price-providers";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
+import { emptyProviderResult } from "../address-price-providers/shared";
 import type { AddressPriceTarget } from "../address-price-providers";
 
 afterEach(() => {
@@ -301,6 +302,27 @@ describe("address price providers", () => {
         errorClass: "blocked",
         success: false,
       },
+    ]);
+  });
+
+  it("marks empty provider results as unsuccessful diagnostics without request attempts", () => {
+    const result = emptyProviderResult("moralis-address", 2, "missing-provider");
+
+    expect(result).toMatchObject({
+      quotes: [],
+      attemptedRequests: 0,
+      successfulRequests: 0,
+      attemptedTargets: 0,
+      matchedTargets: 0,
+    });
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        source: "moralis-address",
+        ok: false,
+        success: false,
+        candidateCount: 2,
+        rejectionReasonCounts: { "missing-provider": 2 },
+      }),
     ]);
   });
 });

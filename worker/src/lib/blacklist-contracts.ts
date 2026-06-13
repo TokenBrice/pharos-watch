@@ -681,7 +681,7 @@ function resolveBlacklistContractConfig(
   });
 
   return {
-    configKey: `${spec.chain.chainId}-${resolvedContract.contractAddress.toLowerCase()}`,
+    configKey: buildBlacklistConfigKey(spec.chain.chainId, resolvedContract.contractAddress),
     chain: spec.chain,
     stablecoinId: spec.stablecoinId,
     stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
@@ -883,7 +883,7 @@ export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map
 
 const CONTRACT_CONFIG_BY_KEY = new Map(CONTRACT_CONFIGS.map((config) => [config.configKey, config]));
 const CONTRACT_CONFIG_BY_CHAIN_AND_ADDRESS = new Map(
-  CONTRACT_CONFIGS.map((config) => [`${config.chain.chainId}-${config.contractAddress.toLowerCase()}`, config]),
+  CONTRACT_CONFIGS.map((config) => [buildBlacklistConfigKey(config.chain.chainId, config.contractAddress), config]),
 );
 
 function buildBlacklistConfigKey(chainId: string, contractAddress: string): string {

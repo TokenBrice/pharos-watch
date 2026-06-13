@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { AreaChart, Area, ReferenceDot } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -62,6 +62,8 @@ export function McapChart({
   cardClassName,
   embedded = false,
 }: McapChartProps) {
+  const rawGradientId = useId();
+  const mcapGradientId = `mcap-${rawGradientId.replace(/:/g, "")}`;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
@@ -214,7 +216,7 @@ export function McapChart({
               onMouseLeave={handleMouseLeave}
             >
               <defs>
-                <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={mcapGradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                 </linearGradient>
@@ -234,7 +236,7 @@ export function McapChart({
                 allowDataOverflow={useLog}
               />
               <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
-              <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
+              <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill={`url(#${mcapGradientId})`} strokeWidth={2} />
               {readout ? (
                 <ReferenceDot
                   x={readout.ts}

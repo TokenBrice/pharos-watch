@@ -12,6 +12,7 @@ import {
   gradeRange,
   GRADE_RADAR_COLORS,
 } from "@shared/lib/report-cards";
+import { median } from "@shared/lib/stats";
 
 // ---------------------------------------------------------------------------
 // Cohort median helpers (D10)
@@ -20,13 +21,6 @@ import {
 export type CompareRadarCohort = "peg" | "mechanism" | "all";
 
 const COHORT_MIN_MEMBERS = 3;
-
-function computeMedian(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-}
 
 function computeCohortMedians(cards: readonly ReportCard[]): Record<DimensionKey, number> | null {
   if (cards.length < COHORT_MIN_MEMBERS) return null;
@@ -37,9 +31,9 @@ function computeCohortMedians(cards: readonly ReportCard[]): Record<DimensionKey
       const score = card.dimensions[key].score;
       if (score != null && Number.isFinite(score)) values.push(score);
     }
-    const median = computeMedian(values);
-    if (median == null) return null;
-    medians[key] = median;
+    const dimensionMedian = median(values);
+    if (dimensionMedian == null) return null;
+    medians[key] = dimensionMedian;
   }
   return medians;
 }

@@ -869,7 +869,7 @@ export async function loadFirstPublicationMembership(
   db: D1Database,
   filters: LoadSealedPublicPredictionsFilters = {},
 ): Promise<DdrFirstPublicationMembership[]> {
-  const readRows = async (whereSql: string, binds: unknown[]) => {
+  const readRows = async (filterSql: string, binds: unknown[]) => {
     const result = await db
       .prepare(
         `SELECT r.public_prediction_id,
@@ -884,7 +884,7 @@ export async function loadFirstPublicationMembership(
          JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
          JOIN depeg_resolver_public_predictions p ON p.id = r.public_prediction_id
          WHERE r.first_published = 1
-         ${whereSql}
+         ${filterSql}
          ORDER BY s.snapshot_sequence ASC, r.public_prediction_id ASC`,
       )
       .bind(...binds)

@@ -37,6 +37,7 @@ export async function runDexPaprikaAddressProvider(
       signal,
     });
     if (isRecord(json)) {
+      const matchedCountBefore = quotes.length;
       const responseAddress = getTokenAddressFromRecord(json);
       if (responseAddress && responseAddress.toLowerCase() !== target.address.toLowerCase()) {
         incrementReason(rejectedTargets, "invalid-shape");
@@ -68,7 +69,7 @@ export async function runDexPaprikaAddressProvider(
         }
       }
       diagnostic.responseRowCount = 1;
-      diagnostic.matchedCount = quotes.filter((quote) => quote.source === "dexpaprika-address").length;
+      diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {

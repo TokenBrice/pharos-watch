@@ -11,6 +11,7 @@ import {
   buildTradingSnapshotRecommendation,
   buildYieldSnapshotRecommendation,
 } from "./snapshot-fixture";
+import { BluechipGradeSchema } from "../../../types/core";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -45,6 +46,21 @@ describe("selector snapshot contract", () => {
     const output = buildSelectorSnapshotOutput();
     const input = { ...(output.input as Record<string, unknown>), pegCurrency: "EUR" };
     expectValid(buildSelectorSnapshotOutput({ input }));
+  });
+
+  it("validates bluechip grades from the shared schema and keeps NR safety-only", () => {
+    for (const bluechipGrade of BluechipGradeSchema.options) {
+      expectValid(buildSelectorSnapshotOutput({
+        recommended: [buildSnapshotRecommendation({ bluechipGrade })],
+      }));
+    }
+
+    expectInvalid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({ bluechipGrade: "NR" })],
+    }));
+    expectValid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({ bluechipGrade: null, safetyGrade: "NR" })],
+    }));
   });
 
   it("accepts engine prose and relaxed-fallback output fields", () => {

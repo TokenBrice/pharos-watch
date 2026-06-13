@@ -55,7 +55,7 @@ export function MobileRiskSnapshot({ reportCard }: MobileRiskSnapshotProps) {
     : "No rated dimension is available yet.";
 
   return (
-    <Card className="border-l-[3px] border-l-frost-blue lg:hidden" aria-labelledby="mobile-risk-snapshot-heading">
+    <Card className="lg:hidden" aria-labelledby="mobile-risk-snapshot-heading">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between gap-3">
           <DetailSectionTitle id="mobile-risk-snapshot-heading">Risk Snapshot</DetailSectionTitle>

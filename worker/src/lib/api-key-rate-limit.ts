@@ -118,9 +118,12 @@ export function checkIsolateLocalApiKeyRateLimit(
   const bucketStart = nowSec - (nowSec % 60);
   const retryAfterSec = bucketStart + 60 - nowSec;
   const state = getApiKeyRuntimeState();
-  for (const [keyId, entry] of state.apiKeyFallbackRateLimitById) {
-    if (entry.bucketStart !== bucketStart) {
-      state.apiKeyFallbackRateLimitById.delete(keyId);
+  if (state.lastApiKeyFallbackRateLimitPruneBucket !== bucketStart) {
+    state.lastApiKeyFallbackRateLimitPruneBucket = bucketStart;
+    for (const [keyId, entry] of state.apiKeyFallbackRateLimitById) {
+      if (entry.bucketStart !== bucketStart) {
+        state.apiKeyFallbackRateLimitById.delete(keyId);
+      }
     }
   }
   const existing = state.apiKeyFallbackRateLimitById.get(apiKeyId);

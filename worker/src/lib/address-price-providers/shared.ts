@@ -1,5 +1,6 @@
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
+import { parsePositiveNumber } from "../number-utils";
 import {
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
@@ -46,10 +47,7 @@ export function parseObservedAt(value: unknown): number | null {
   return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
 }
 
-export function parsePositiveNumber(value: unknown): number | null {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
+export { parsePositiveNumber };
 
 export function parseNonNegativeNumber(value: unknown): number | null {
   const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
@@ -170,8 +168,8 @@ export function emptyProviderResult(
       stage: "primary",
       endpoint: provider,
       status: null,
-      ok: true,
-      success: true,
+      ok: false,
+      success: false,
       candidateCount,
       rejectionReasonCounts: { [reason]: candidateCount },
     }],

@@ -239,6 +239,15 @@ describe("buildYieldViewModel", () => {
       description: "Reset one or more filters to broaden the comparable set.",
     });
     expect(model.stats.avgApy).toBe(0);
+    expect(model.stats.medianApy).toBe(0);
+  });
+
+  it("keeps empty payload median APY at zero", () => {
+    const model = buildYieldViewModel([], {});
+
+    expect(model.visibleRows).toEqual([]);
+    expect(model.stats.avgApy).toBe(0);
+    expect(model.stats.medianApy).toBe(0);
   });
 
   it("filters by URL-backed source depth lens", () => {

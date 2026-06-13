@@ -67,6 +67,7 @@ export async function runMoralisAddressProvider(
             ? json.data
             : null;
       if (rows) {
+        const matchedCountBefore = quotes.length;
         const targetByAddress = new Map(batch.map((target) => [target.address.toLowerCase(), target]));
         for (const row of rows) {
           if (!isRecord(row)) continue;
@@ -108,7 +109,7 @@ export async function runMoralisAddressProvider(
           });
         }
         diagnostic.responseRowCount = rows.length;
-        diagnostic.matchedCount = quotes.filter((quote) => quote.source === "moralis-address").length;
+        diagnostic.matchedCount = quotes.length - matchedCountBefore;
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {

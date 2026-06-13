@@ -6,6 +6,7 @@ import {
   type YieldSourceDepthLens,
 } from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { median } from "@shared/lib/stats";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import {
@@ -868,11 +869,11 @@ function buildStats(
     if (row.sourceTvlUsd === null) nullTvlCount += 1;
   }
 
-  const median = computeMedian(apys);
+  const medianApy = median(apys) ?? 0;
 
   return {
     avgApy: rows.length === 0 ? 0 : tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rows.length,
-    medianApy: median,
+    medianApy,
     topYield,
     bestPys,
     warningRowCount,
@@ -880,13 +881,6 @@ function buildStats(
     nullTvlCount,
     ...benchmarkFrame,
   };
-}
-
-function computeMedian(values: readonly number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableSet[] {

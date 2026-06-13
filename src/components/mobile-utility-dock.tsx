@@ -4,27 +4,12 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronUp, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 const FeedbackModal = dynamic(
   () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
   { ssr: false },
 );
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  });
-
-  useEffect(() => {
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
-
-  return reduced;
-}
 
 export function MobileUtilityDock() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useCallback } from "react";
+import { useId, useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -49,6 +49,8 @@ export function ScoreChart({
   excludeEvents?: string[];
   showHeader?: boolean;
 }) {
+  const rawGradientId = useId();
+  const psiScoreGradientId = `psi-score-${rawGradientId.replace(/:/g, "")}`;
   const chartRef = useRef<HTMLDivElement>(null);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
@@ -141,7 +143,7 @@ export function ScoreChart({
                   margin={chartMargin}
                 >
                   <defs>
-                    <linearGradient id="psiScoreGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={psiScoreGradientId} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
                       <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                     </linearGradient>
@@ -211,7 +213,7 @@ export function ScoreChart({
                     type="monotone"
                     dataKey="score"
                     stroke={CHART_BLUE}
-                    fill="url(#psiScoreGradient)"
+                    fill={`url(#${psiScoreGradientId})`}
                     strokeWidth={2}
                     onAnimationEnd={handleAnimationEnd}
                     {...animProps}

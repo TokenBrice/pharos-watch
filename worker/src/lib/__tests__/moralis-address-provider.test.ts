@@ -61,5 +61,6 @@ describe("runMoralisAddressProvider", () => {
       attemptedTargets: 300,
       matchedTargets: 300,
     });
+    expect(result.diagnostics.map((diagnostic) => diagnostic.matchedCount)).toEqual([100, 100, 100]);
   });
 });

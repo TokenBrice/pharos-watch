@@ -379,7 +379,7 @@ export const PEG_METADATA = {
       label: "CPI Peg",
       cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
     },
-    chart: { label: "CPI", textColor: "text-slate-700 dark:text-slate-400", bgColor: "bg-slate-500", hex: "#64748b" },
+    chart: { label: "CPI", textColor: "text-sky-700 dark:text-sky-400", bgColor: "bg-sky-500", hex: "#0ea5e9" },
   },
   OTHER: {
     label: "Other",

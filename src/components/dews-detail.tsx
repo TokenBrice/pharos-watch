@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { AreaChart, Area, ReferenceLine } from "recharts";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
@@ -109,6 +109,8 @@ interface DEWSDetailProps {
 }
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
+  const rawGradientId = useId();
+  const dewsGradientId = `dews-${rawGradientId.replace(/:/g, "")}`;
   const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
@@ -321,7 +323,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
                 >
                   <defs>
-                    <linearGradient id="dewsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={dewsGradientId} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={bandHex} stopOpacity={0.3} />
                       <stop offset="95%" stopColor={bandHex} stopOpacity={0.05} />
                     </linearGradient>
@@ -359,7 +361,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                       />
                     ))
                   ) : (
-                    <Area type="monotone" dataKey="score" stroke={bandHex} fill="url(#dewsGrad)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="score" stroke={bandHex} fill={`url(#${dewsGradientId})`} strokeWidth={2} />
                   )}
                 </AreaChart>
               ) : (

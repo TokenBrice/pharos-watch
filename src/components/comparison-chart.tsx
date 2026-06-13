@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -45,24 +45,17 @@ export function ComparisonChart({
     [series],
   );
 
-  const { range: localRange, setRange: setLocalRange, filteredData, options } = useTimeRangeFilter(
+  const { range: activeRange, setRange: setLocalRange, filteredData, options } = useTimeRangeFilter(
     mergedData,
-    "ts"
+    "ts",
+    undefined,
+    { externalRange: range },
   );
 
-  // Support controlled range from parent
-  const activeRange = range ?? localRange;
   const handleRangeChange = useCallback((r: TimeRangeOption) => {
     setLocalRange(r);
     onRangeChange?.(r);
   }, [setLocalRange, onRangeChange]);
-
-  // Sync external range prop into local state
-  useEffect(() => {
-    if (range != null) {
-      setLocalRange(range);
-    }
-  }, [range, setLocalRange]);
 
   // Normalize: percent change from first available value per series
   const displayData = useMemo(() => {
