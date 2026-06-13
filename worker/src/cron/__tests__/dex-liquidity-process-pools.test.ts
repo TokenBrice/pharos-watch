@@ -599,6 +599,12 @@ describe("processPoolMetrics", () => {
     expect(usdc?.protocolTvl.curve).toBe(60_000_000);
     // Top-pool row mirrors the metapool-adjusted TVL — not the raw $100M DL number
     expect(usdc?.topPools[0]?.tvlUsd).toBe(60_000_000);
+    // Score parity guard: pool quality intentionally keeps the raw DL TVL
+    // base, while effective TVL uses Curve's base-pool-adjusted row value.
+    expect(usdc?.qualityAdjustedTvl).toBe(85_000_000);
+    expect(usdc?.effectiveTvl).toBe(51_000_000);
+    expect(usdc?.topPools[0]?.extra?.qualityAdjustedTvl).toBe(85_000_000);
+    expect(usdc?.topPools[0]?.extra?.effectiveTvl).toBe(51_000_000);
   });
 
   it("F18 balance ratio: pathological >1.0 ratio does not inflate quality via Math.pow", () => {

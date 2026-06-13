@@ -8,6 +8,7 @@ import {
   getQualityMultiplier,
   normalizeProtocol,
   computePoolPairQuality,
+  computePoolQualityContribution,
   computePoolStress,
   initMetrics,
   isCryptoSwap,
@@ -99,7 +100,6 @@ export function processPoolMetrics(
       let resolvedPoolType = poolType;
       let feeTierForExtra: number | undefined;
       let balanceRatio = 1;
-      let balanceHealth = 1;
       let poolMaturityDays = 0;
       let organicFraction = 0.5; // neutral default
       let hasMeasuredOrganicFraction = false;
@@ -108,7 +108,6 @@ export function processPoolMetrics(
 
       if (curveData) {
         balanceRatio = curveData.balanceRatio;
-        balanceHealth = Math.pow(balanceRatio, 1.5);
         balanceDetails = curveData.balanceDetails;
         // v2: CryptoSwap vs StableSwap
         if (isCryptoSwap(curveData.registryId)) {
@@ -196,10 +195,17 @@ export function processPoolMetrics(
         // Per-stablecoin pair quality
         const coinPairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
 
-        // Combined pool quality (mechanism × balance × pair)
-        const combinedQuality = qualMult * balanceHealth * coinPairQuality;
-        const poolQualityAdjustedTvl = pool.tvlUsd * qualMult * balanceHealth;
-        const poolEffTvl = effectivePoolTvl * combinedQuality;
+        const {
+          qualityAdjustedTvl: poolQualityAdjustedTvl,
+          effectiveTvl: poolEffTvl,
+        } = computePoolQualityContribution({
+          qualityTvlUsd: pool.tvlUsd,
+          effectiveTvlUsd: effectivePoolTvl,
+          qualityMultiplier: qualMult,
+          balanceRatio,
+          pairQuality: coinPairQuality,
+          hasMeasuredBalance: curveData != null,
+        });
 
         // Pool stress for this pool
         const stressIdx = computePoolStress(balanceRatio, organicFraction, poolMaturityDays, coinPairQuality);

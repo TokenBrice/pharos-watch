@@ -35,7 +35,9 @@ export function computePegStability(
 ): PegStabilityMetrics | null {
   const nowSec = now ?? Math.floor(Date.now() / 1000);
 
-  // Determine tracking start
+  // Display uses the full available chart/event history. Do not route this
+  // through coinTrackingStart(), which applies PegScore's 4-year scoring clamp
+  // and would shorten visible tracking spans for older coins.
   const earliestSec = earliestDate != null
     ? Math.floor(earliestDate)
     : events.length > 0

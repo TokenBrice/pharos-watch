@@ -179,6 +179,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
 
     const asset = priceById.get(meta.id);
     const currentBps = isNavToken ? null : pegData.currentDeviationBps;
+    // NAV score fields are normalized at the peg-analytics source via
+    // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
 
     // Build DEX price check if available (only for coins with meaningful
@@ -228,7 +230,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       currentDeviationBps: currentBps,
       pegReferenceUnavailable: pegData.pegReferenceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
-      pegScore: isNavToken ? null : pegData.pegScore,
+      pegScore: pegData.pegScore,
       priceSource: asset?.priceSource,
       priceConfidence: asset?.priceConfidence ?? null,
       priceObservedAt: asset?.priceObservedAt ?? null,
@@ -238,14 +240,14 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       consensusSources: asset?.consensusSources,
       agreeSources: asset?.agreeSources,
       primaryTrust,
-      pegPct: isNavToken ? 100 : pegData.pegPct,
-      severityScore: isNavToken ? 100 : pegData.severityScore,
-      spreadPenalty: isNavToken ? 0 : pegData.spreadPenalty,
-      eventCount: isNavToken ? 0 : pegData.eventCount,
-      worstDeviationBps: isNavToken ? null : pegData.worstDeviationBps,
-      activeDepeg: isNavToken ? false : pegData.activeDepeg,
-      lastEventAt: isNavToken ? null : pegData.lastEventAt,
-      trackingSpanDays: isNavToken ? 0 : pegData.trackingSpanDays,
+      pegPct: pegData.pegPct,
+      severityScore: pegData.severityScore,
+      spreadPenalty: pegData.spreadPenalty,
+      eventCount: pegData.eventCount,
+      worstDeviationBps: pegData.worstDeviationBps,
+      activeDepeg: pegData.activeDepeg,
+      lastEventAt: pegData.lastEventAt,
+      trackingSpanDays: pegData.trackingSpanDays,
       methodologyVersion,
       dexPriceCheck: dexPriceCheck ?? undefined,
     });

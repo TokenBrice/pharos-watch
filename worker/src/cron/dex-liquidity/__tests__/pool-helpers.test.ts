@@ -3,6 +3,7 @@ import {
   classifyPoolType,
   computeDurabilityScore,
   computeLiquidityScore,
+  computePoolQualityContribution,
   computePoolStress,
   initMetrics,
   normalizeProtocol,
@@ -30,6 +31,40 @@ describe("classifyPoolType ordering", () => {
     expect(classifyPoolType("aerodrome-slipstream-base")).toBe("aerodrome-slipstream-5bp");
     expect(classifyPoolType("velodrome-slipstream")).toBe("velodrome-slipstream-5bp");
     expect(classifyPoolType("aerodrome")).toBe("aerodrome-volatile");
+  });
+});
+
+describe("computePoolQualityContribution", () => {
+  it("keeps raw quality TVL separate from Curve-adjusted effective TVL", () => {
+    const contribution = computePoolQualityContribution({
+      qualityTvlUsd: 100_000_000,
+      effectiveTvlUsd: 60_000_000,
+      qualityMultiplier: 0.85,
+      balanceRatio: 1,
+      pairQuality: 1,
+    });
+
+    expect(contribution).toEqual({
+      balanceHealth: 1,
+      combinedQuality: 0.85,
+      qualityAdjustedTvl: 85_000_000,
+      effectiveTvl: 51_000_000,
+    });
+  });
+
+  it("uses neutral balance health when balance is unmeasured", () => {
+    const contribution = computePoolQualityContribution({
+      qualityTvlUsd: 100_000,
+      effectiveTvlUsd: 100_000,
+      qualityMultiplier: 0.85,
+      balanceRatio: 0.5,
+      pairQuality: 0.8,
+      hasMeasuredBalance: false,
+    });
+
+    expect(contribution.balanceHealth).toBe(1);
+    expect(contribution.qualityAdjustedTvl).toBe(85_000);
+    expect(contribution.effectiveTvl).toBe(68_000);
   });
 });
 

@@ -919,4 +919,11 @@ describe("computePegStability", () => {
     expect(result).not.toBeNull();
     expect(result!.trackingSpan).toBe("2y");
   });
+
+  it("keeps full display history beyond the 4-year PegScore clamp", () => {
+    const earliestDate = NOW - 5 * 366 * DAY_SECONDS;
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.trackingSpan).toBe("5y");
+  });
 });

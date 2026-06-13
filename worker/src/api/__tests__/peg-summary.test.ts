@@ -397,9 +397,13 @@ describe("handlePegSummary", () => {
         id: string;
         currentDeviationBps: number | null;
         pegScore: number | null;
+        pegPct: number;
+        severityScore: number;
+        spreadPenalty: number;
         activeDepeg: boolean;
         eventCount: number;
         worstDeviationBps: number | null;
+        lastEventAt: number | null;
         trackingSpanDays: number;
       }>;
     };
@@ -407,9 +411,13 @@ describe("handlePegSummary", () => {
     expect(fpi).toMatchObject({
       currentDeviationBps: null,
       pegScore: null,
+      pegPct: 100,
+      severityScore: 100,
+      spreadPenalty: 0,
       activeDepeg: false,
       eventCount: 0,
       worstDeviationBps: null,
+      lastEventAt: null,
       trackingSpanDays: 0,
     });
   });

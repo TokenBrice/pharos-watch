@@ -2,6 +2,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import type { LiquidityMetrics, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,
+  computePoolQualityContribution,
   computePoolStress,
   initMetrics,
   normalizeProtocol,
@@ -34,16 +35,20 @@ export function addSecondaryPoolContribution(
   const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
   const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
   const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;
-  const balanceHealth = hasMeasuredBalance ? Math.pow(balanceRatio, 1.5) : 1;
   const pairQuality = pool.pairQualityOverride != null && Number.isFinite(pool.pairQualityOverride)
     ? pool.pairQualityOverride
     : computePoolPairQuality(
       (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
       stablecoinSymbol,
     );
-  const combinedQuality = pool.qualityMultiplier * balanceHealth * pairQuality;
-  const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
-  const effectiveTvl = pool.tvlUsd * combinedQuality;
+  const { qualityAdjustedTvl, effectiveTvl } = computePoolQualityContribution({
+    qualityTvlUsd: pool.tvlUsd,
+    effectiveTvlUsd: pool.tvlUsd,
+    qualityMultiplier: pool.qualityMultiplier,
+    balanceRatio,
+    pairQuality,
+    hasMeasuredBalance,
+  });
   const stressIndex = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, pairQuality);
   const chainDisplay = toChainDisplay(pool.chain);
   const protocol = normalizeProtocol(pool.dexId);

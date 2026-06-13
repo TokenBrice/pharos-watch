@@ -72,6 +72,40 @@ export function getGtDexQuality(dexId: string): number {
   return QUALITY_MULTIPLIERS["generic"]!;
 }
 
+export interface PoolQualityContributionInput {
+  qualityTvlUsd: number;
+  effectiveTvlUsd: number;
+  qualityMultiplier: number;
+  balanceRatio: number;
+  pairQuality: number;
+  hasMeasuredBalance?: boolean;
+}
+
+export interface PoolQualityContribution {
+  balanceHealth: number;
+  combinedQuality: number;
+  qualityAdjustedTvl: number;
+  effectiveTvl: number;
+}
+
+export function computePoolQualityContribution({
+  qualityTvlUsd,
+  effectiveTvlUsd,
+  qualityMultiplier,
+  balanceRatio,
+  pairQuality,
+  hasMeasuredBalance = true,
+}: PoolQualityContributionInput): PoolQualityContribution {
+  const balanceHealth = hasMeasuredBalance ? Math.pow(balanceRatio, 1.5) : 1;
+  const combinedQuality = qualityMultiplier * balanceHealth * pairQuality;
+  return {
+    balanceHealth,
+    combinedQuality,
+    qualityAdjustedTvl: qualityTvlUsd * qualityMultiplier * balanceHealth,
+    effectiveTvl: effectiveTvlUsd * combinedQuality,
+  };
+}
+
 /**
  * Compute durability score for a stablecoin (0-100).
  * 15% organic fraction (sqrt curve), 35% TVL stability, 25% volume consistency, 25% maturity.
