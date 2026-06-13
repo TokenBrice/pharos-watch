@@ -3,8 +3,8 @@
  *
  * Most flags default to `false` when the env var is unset. To enable those,
  * set the matching `NEXT_PUBLIC_PHAROS_*` env var to the literal string
- * `"true"`. `heroVerdict` is default-on and disables only when explicitly set
- * to `"false"`.
+ * `"true"`. `heroVerdict`, `depegResolver`, and `depegResolverReviewer` are
+ * default-on and disable only when explicitly set to `"false"`.
  *
  * See `docs/process/feature-flags.md` for the flag table, defaults, flip
  * readiness gates, and how to toggle them in local dev and on Cloudflare Pages.

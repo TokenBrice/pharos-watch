@@ -300,7 +300,7 @@ Critical gate coverage is intentionally smaller than the full suite:
 
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
 - `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`.
-- `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the four-shard `test:noncritical` complement.
+- `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the two-shard `test:noncritical` complement.
 
 Lane ownership is script-owned, not prose-owned. Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep `test:noncritical` as the complement generated from that critical coverage test list; and keep targeted contract-runner membership in `scripts/lib/critical-test-files.mjs`. Do not duplicate either file list in this document; use the scripts when you need the live membership.
 

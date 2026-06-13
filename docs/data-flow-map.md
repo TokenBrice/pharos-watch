@@ -49,7 +49,7 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts (every 4h)
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, and launch promotions), degradation watchdog, expired disambiguation cleanup, and Telegram pulse snapshot publication
 - `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
-- `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + Telegram inactive cleanup + Telegram retention cleanup (daily housekeeping)
+- `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + detail-cache prune + Telegram inactive cleanup + Telegram retention cleanup + mint/burn growth watchdog + cron-duration watchdog (daily housekeeping)
 - `0 8 * * *`: snapshot-supply fallback plus safety-grade snapshot, PSI daily snapshot, and snapshot-public-dataset; the write-once supply/public dataset artifacts require a stablecoins cache written at or after the 08:00 slot start, and the public dataset waits/reloads boundedly for that cache before also freshness-gating report-card and PSI inputs; plus T-bill rate then USDS status
 - `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays)
 - `10 8 * * *`: discovery scan (Mondays)

@@ -118,8 +118,13 @@ These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). Th
 
 | Endpoint | Description |
 | --- | --- |
+| `GET /_site-data/*` | Pages Function (`functions/_site-data/[[path]].ts`): same-origin website data lane. It validates the caller origin, signs the server-to-server hop with `SITE_API_SHARED_SECRET`, forwards allowed read requests to `SITE_API_ORIGIN`, and records site-data attribution when the `DB` binding is present. |
 | `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a semantically validated `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, debug-stripped, 5-year TTL. See [Screener Picker Page](./screener-picker-page.md). |
 | `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored frozen `SelectorOutput` or `404`. It recomputes the canonical sid before replay, returns `502` for corrupt/mismatched stored values, and uses `private, no-store` so public shared caches cannot bypass the origin gate. |
+| `GET /stablecoin/:legacy-id` | Pages Function (`functions/stablecoin/[[path]].ts`): redirect shim for legacy stablecoin IDs before the App Router handles canonical detail routes. |
+| `GET /admin/*`, `GET /admin-api/*` | Pages Functions (`functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts`): operator-host asset gates for the Access-protected admin surfaces on `ops.pharos.watch`. |
+| `/api/admin/*` | Pages Function (`functions/api/admin/[[path]].ts`): same-origin operator proxy to `ops-api.pharos.watch`, using Cloudflare Access service-token bindings and the shared proxy helpers. |
+| `functions/_middleware.ts` | Pages middleware: applies host and noindex policy before route-specific Pages Functions run. |
 
 ### Static feed route handlers
 
