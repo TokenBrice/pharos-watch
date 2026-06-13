@@ -407,7 +407,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-hooks-4` — parseInitialStressSelection() called twice in separate useState initializers** `[simplification | low | trivial | none]`
 - Problem: two lazy useState initializers each call `parseInitialStressSelection()` (reads/parses `window.location.search`). Both run once on mount but parse the same search string twice.
-- Recommendation: simplest behavior-preserving form: `const [initial] = useState(parseInitialStressSelection); const [targetCoinId,setTargetCoinId]=useState(initial.coinId); const [targetGrade,setTargetGrade]=useState(initial.grade);`. Do NOT move the call into the render body unguarded (would parse every render).
+- Done 2026-06-13: source already uses the behavior-preserving single lazy initializer form (`const [initial] = useState(parseInitialStressSelection)`) and initializes both target states from that value.
 - Files: `src/hooks/use-stress-test.ts:66-67`.
 - Verifier: two lazy initializers re-parsing confirmed; flagged the render-body trap. Checks: `npm run typecheck`, `npm run test -- use-stress-test`.
 
