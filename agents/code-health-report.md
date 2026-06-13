@@ -419,7 +419,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-hooks-7` — PUBLIC_ENDPOINTS is an unnecessary spread of ENDPOINT_GROUPS.public** `[dead-code | low | trivial | none]`
 - Problem: `PUBLIC_ENDPOINTS` spreads `ENDPOINT_GROUPS.public` with no transformation, used once. The candidate's "readonly tuple" evidence is WRONG: `getProbePaths` returns a fresh mutable `string[]`, so the spread is redundant because the source is already fresh. `collectEndpointProbes` accepts `readonly string[]`.
-- Recommendation: replace with `const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;` or inline at 292. Leave `ALL_ENDPOINTS` (legitimately spreads two groups).
+- Done 2026-06-13: source already uses `const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;`; `ALL_ENDPOINTS` still legitimately combines the public and admin groups.
 - Files: `src/hooks/use-endpoint-probes.ts:25-27`.
 - Verifier: single redundant spread + single consumer; corrected evidence. Checks: `npm run typecheck`.
 
