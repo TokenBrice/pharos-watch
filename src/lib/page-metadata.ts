@@ -201,10 +201,11 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 }
 
 export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
+  const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
+
   if (coin.status === "pre-launch") {
-    const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
-    const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
-    const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
     const structure =
       coin.flags.backing === "algorithmic"
         ? `planned ${pegLabel} peg, ${governancePhrase} ${backingPhrase}`
@@ -219,9 +220,6 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     return trimTextAtWordBoundary(description, 160);
   }
 
-  const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
-  const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
   const structure =
     coin.flags.backing === "algorithmic"
       ? `${governancePhrase} ${backingPhrase} pegged to ${pegLabel}`

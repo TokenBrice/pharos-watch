@@ -357,7 +357,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`frontend-3` — Duplicated flag-derivation in buildStablecoinDetailDescription pre-launch branch** `[duplication | low | trivial | none]`
 - Problem: `governancePhrase`, `pegLabel`, `backingPhrase` are derived with character-identical statements in both the pre-launch early-return branch (205-207) and the main branch (222-224). The early return hides the duplication.
-- Recommendation: hoist the three const declarations above the `if (coin.status === 'pre-launch')` block. Template strings below stay branch-specific.
+- Done 2026-06-13: hoisted the three const declarations above the `if (coin.status === "pre-launch")` block. Template strings below stayed branch-specific.
 - Files: `src/lib/page-metadata.ts:205-207,222-224`.
 - Verifier: identical confirmed; both branches read `coin.flags` identically, neither mutates. Checks: `npm run test:merge-gate`.
 
