@@ -173,6 +173,7 @@ function observationMaturityComponent(input: DdrForecastReadinessInput): DdrFore
       "Incident is still inside the first hour observation floor.",
     );
   }
+  // Linear ramp between the first-hour floor and the full 6h observation point.
   return component(
     "observation_maturity",
     "Observation maturity",

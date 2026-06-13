@@ -17,6 +17,12 @@ const RECOVERY_LIKELIHOOD_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
   "false_recoverable",
   "risk_noted_terminal",
 ]);
+const HEADLINE_MIN_SCORED_OUTCOMES = 20;
+
+type DdrrDurationScoredPredictionRow = DdrrV2PredictionReviewRow & {
+  signedDurationErrorSec: number;
+  absoluteDurationErrorSec: number;
+};
 
 function mean(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -79,6 +85,10 @@ function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Re
   );
 }
 
+function isDurationScoredPredictionRow(row: DdrrV2PredictionReviewRow): row is DdrrDurationScoredPredictionRow {
+  return row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null;
+}
+
 export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMetrics {
   const predictionRows = rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
   const noCallRows = rows.filter((row) => row.kind === "no_call_review");
@@ -91,11 +101,9 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
     RECOVERY_LIKELIHOOD_SCORED_VERDICTS.has(row.verdictReview),
   ).length;
 
-  const durationRows = predictionRows.filter(
-    (row) => row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null,
-  );
-  const signedErrors = durationRows.map((row) => row.signedDurationErrorSec as number);
-  const absoluteErrors = durationRows.map((row) => row.absoluteDurationErrorSec as number);
+  const durationRows = predictionRows.filter(isDurationScoredPredictionRow);
+  const signedErrors = durationRows.map((row) => row.signedDurationErrorSec);
+  const absoluteErrors = durationRows.map((row) => row.absoluteDurationErrorSec);
 
   const pendingLockCount = coverageRows.filter((row) => row.predictionState === "pending_lock").length;
   const lockDeferredCount = coverageRows.filter((row) => row.predictionState === "lock_deferred").length;
@@ -236,9 +244,9 @@ export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
   );
   const currentPolicyMetrics = summarizeDdrrMetrics(currentPolicyRows);
   const headlineScope =
-    currentPolicyMetrics.recoveryLikelihoodScoredCount >= 20
+    currentPolicyMetrics.recoveryLikelihoodScoredCount >= HEADLINE_MIN_SCORED_OUTCOMES
       ? "current_policy"
-      : allMetrics.recoveryLikelihoodScoredCount >= 20
+      : allMetrics.recoveryLikelihoodScoredCount >= HEADLINE_MIN_SCORED_OUTCOMES
         ? "all_ddrv2"
         : "insufficient_data";
   const headline =
@@ -266,6 +274,8 @@ export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
     headlineScope,
     headlineLabel,
     headline,
+    // Public segmentation keeps prediction-policy rows separate from coverage
+    // debt so accuracy and accountability can be inspected independently.
     byPredictionPolicy: [
       ...[...segments.entries()].map(([key, segmentRows]) => {
         const [predictionMethodologyVersion, predictionPolicyVersion] = key.split("\u0000");

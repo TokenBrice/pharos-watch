@@ -5,7 +5,77 @@ import {
   DDR_FORECAST_READINESS_VERSION,
 } from "../../depeg-resolver-version";
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "../hash";
-import { attachDdrPublicRowHash, buildDdrManifestBasePayload, computeDdrPublicRowHash } from "../public-contract";
+import {
+  attachDdrPublicRowHash,
+  buildDdrManifestBasePayload,
+  computeDdrPublicRowHash,
+  validateDdrPublicCacheContract,
+} from "../public-contract";
+
+function validPublicPredictionResponse() {
+  const baseRow = {
+    stablecoinId: "lusd-liquity",
+    symbol: "LUSD",
+    name: "Liquity USD",
+    pegCurrency: "USD",
+    governance: "decentralized",
+    status: null,
+    eventId: 1,
+    incidentKey: "ddr2:validator",
+    startedAt: 100,
+    direction: "below",
+    kind: "prediction",
+    prediction: {
+      state: "frozen",
+      publicPredictionId: 7,
+      incidentKey: "ddr2:validator",
+      eligibleAt: 200,
+      lockedAt: 200,
+      eventAgeAtLockSec: 100,
+      lockTiming: "on_time",
+      policyDelaySec: 100,
+      predictionPolicyVersion: "sticky-24h-v1",
+      predictionMethodologyVersion: "2.0",
+      predictionMethodologyVersionLabel: "v2.0",
+      resolutionRubricVersion: "resolution-v1",
+      durationModelVersion: "duration-v1",
+      incidentGroupingVersion: "incident-v1",
+      supportRulesVersion: "support-v1",
+      rowHash: null,
+    },
+    frozen: { resolution: { tier: "at_risk", factors: [] } },
+    live: {
+      currentEventId: 1,
+      ageSec: 100,
+      peakDeviationBps: -200,
+      currentDeviationBps: -150,
+      eventState: "active",
+      updatedAt: 250,
+      stale: false,
+      degradedReason: null,
+    },
+  };
+  const rowHash = computeDdrPublicRowHash(baseRow);
+  const row = attachDdrPublicRowHash(baseRow, rowHash);
+
+  return {
+    _meta: {
+      schemaVersion: 2,
+      snapshotGeneration: 2,
+      publicPredictionIds: [7],
+      publicPredictionRowHashes: { "7": rowHash },
+      basePayloadHash: null,
+      publicWarning: "warning",
+      resolutionRubricVersion: "resolution-v1",
+      durationModelVersion: "duration-v1",
+      incidentGroupingVersion: "incident-v1",
+      supportRulesVersion: "support-v1",
+      lineage: null,
+    },
+    rows: [row],
+    methodology: { version: "2.0" },
+  } as unknown as Parameters<typeof validateDdrPublicCacheContract>[0];
+}
 
 describe("stableJsonStringifyV1", () => {
   it("sorts object keys and omits undefined object fields", () => {
@@ -99,6 +169,79 @@ describe("stableJsonStringifyV1", () => {
           replacementRowHash: null,
           createdBy: "operator",
         },
+        errataCount: 1,
+        errataHistory: [],
+      },
+    })).toBe(hash);
+  });
+
+  it("hashes no-call rows with the same volatile-field exclusions as prediction rows", () => {
+    const row = {
+      stablecoinId: "lusd-liquity",
+      symbol: "LUSD",
+      name: "Liquity USD",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      status: null,
+      eventId: 1,
+      incidentKey: "ddr2:nocall",
+      startedAt: 100,
+      direction: "below",
+      kind: "no_call",
+      prediction: {
+        incidentKey: "ddr2:nocall",
+        eligibleAt: 200,
+        lockedAt: 200,
+        eventAgeAtLockSec: 100,
+        lockTiming: "on_time",
+        policyDelaySec: 100,
+        predictionPolicyVersion: "sticky-24h-v1",
+        predictionMethodologyVersion: "2.0",
+        predictionMethodologyVersionLabel: "v2.0",
+        resolutionRubricVersion: "resolution-v1",
+        durationModelVersion: "duration-v1",
+        incidentGroupingVersion: "incident-v1",
+        supportRulesVersion: "support-v1",
+      },
+      noCall: {
+        lockedAt: 200,
+        eventAgeAtLockSec: 100,
+        missingReasons: ["No reviewed mint authority"],
+        relatedContext: {
+          dewsBand: null,
+          dewsScore: null,
+          liquidityScore: null,
+          safetyGrade: null,
+          safetyScore: null,
+          supplyChange7dPct: null,
+          supplyChange30dPct: null,
+          mintSurge: null,
+        },
+      },
+      frozen: null,
+    };
+    const hash = computeDdrPublicRowHash(row);
+    const published = attachDdrPublicRowHash({
+      ...row,
+      prediction: {
+        ...row.prediction,
+        publicPredictionId: 17,
+        publishedAt: 300,
+        publicationSnapshotToken: "ddrpub:nocall",
+        snapshotGeneration: 2,
+      },
+    }, hash);
+
+    expect(computeDdrPublicRowHash(published)).toBe(hash);
+    expect(computeDdrPublicRowHash({
+      ...published,
+      kind: "invalidated_prediction",
+      originalKind: "no_call",
+      originalOutcome: published.noCall,
+      prediction: {
+        ...published.prediction,
+        state: "invalidated",
+        source: "erratum",
         errataCount: 1,
         errataHistory: [],
       },
@@ -250,5 +393,71 @@ describe("stableJsonStringifyV1", () => {
     expect(payload.rows[0]?.prediction).not.toHaveProperty("lockTrigger");
     expect(payload.rows[0]?.prediction).not.toHaveProperty("readiness");
     expect(payload.rows[0]?.prediction).not.toHaveProperty("backstop");
+  });
+});
+
+describe("validateDdrPublicCacheContract", () => {
+  it("accepts a valid public prediction manifest and returns the base payload hash", () => {
+    const result = validateDdrPublicCacheContract(validPublicPredictionResponse());
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.basePayloadHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it.each([
+    [
+      "schema-version-mismatch",
+      () => {
+        const response = validPublicPredictionResponse();
+        return { ...response, _meta: { ...response._meta, schemaVersion: 1 } };
+      },
+    ],
+    [
+      "public-prediction-id-set-mismatch",
+      () => {
+        const response = validPublicPredictionResponse();
+        return { ...response, _meta: { ...response._meta, publicPredictionIds: [8] } };
+      },
+    ],
+    [
+      "public-prediction-row-hash-missing",
+      () => {
+        const response = validPublicPredictionResponse();
+        return {
+          ...response,
+          rows: response.rows.map((row) => ({
+            ...row,
+            prediction: { ...row.prediction, rowHash: null },
+          })),
+        };
+      },
+    ],
+    [
+      "public-prediction-row-hash-key-set-mismatch",
+      () => {
+        const response = validPublicPredictionResponse();
+        return { ...response, _meta: { ...response._meta, publicPredictionRowHashes: {} } };
+      },
+    ],
+    [
+      "public-prediction-row-hash-map-mismatch",
+      () => {
+        const response = validPublicPredictionResponse();
+        return {
+          ...response,
+          _meta: { ...response._meta, publicPredictionRowHashes: { "7": "b".repeat(64) } },
+        };
+      },
+    ],
+    [
+      "base-payload-hash-mismatch",
+      () => {
+        const response = validPublicPredictionResponse();
+        return { ...response, _meta: { ...response._meta, basePayloadHash: "b".repeat(64) } };
+      },
+    ],
+  ])("reports %s", (reason, buildResponse) => {
+    expect(validateDdrPublicCacheContract(buildResponse() as Parameters<typeof validateDdrPublicCacheContract>[0]))
+      .toEqual({ ok: false, reason });
   });
 });

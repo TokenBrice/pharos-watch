@@ -85,6 +85,7 @@ const ddr = createMethodologyVersion({
     },
   ],
 });
+const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 
 /** Canonical DDR methodology version (no "v" prefix). */
 export const DDR_METHODOLOGY_VERSION = ddr.currentVersion;
@@ -123,7 +124,7 @@ export const DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC = 72 * 3600;
 export const DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
 
 /** May 27, 2026 00:00:00 UTC. */
-export const DDR_V2_EFFECTIVE_AT = 1779897600;
+export const DDR_V2_EFFECTIVE_AT = ddrV2ChangelogEntry?.effectiveAt ?? 1779897600;
 
 /** DDRv2 freezes public predictions after the 24h landmark. */
 export const DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;

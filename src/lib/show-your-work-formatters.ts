@@ -131,11 +131,11 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
   if (current.amplifiers) {
     rows.push({
       label: "PSI amplifier",
-      value: current.amplifiers.psi.toFixed(2) + "x",
+      value: `${current.amplifiers.psi.toFixed(2)}x`,
     });
     rows.push({
       label: "Contagion amplifier",
-      value: current.amplifiers.contagion.toFixed(2) + "x",
+      value: `${current.amplifiers.contagion.toFixed(2)}x`,
     });
   }
 

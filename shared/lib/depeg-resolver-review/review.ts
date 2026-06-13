@@ -64,6 +64,8 @@ export function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDeri
     return "false_recoverable";
   }
 
+  // Exhaustive for current DDRR_ACTUAL_OUTCOME_VALUES; retained as a defensive
+  // fallback if the public enum grows before this reviewer is updated.
   return "data_issue";
 }
 
@@ -186,14 +188,6 @@ export function reviewHorizons(
   });
 }
 
-function fallbackIncidentKey(assessment: DdrrAssessmentInput): string {
-  return assessment.incidentKey ?? `legacy-event:${assessment.eventId}`;
-}
-
-function fallbackEligibleAt(assessment: DdrrAssessmentInput): number {
-  return assessment.eligibleAt ?? assessment.startedAt;
-}
-
 function fallbackPublicPredictionId(assessment: DdrrAssessmentInput): number {
   return assessment.publicPredictionId ?? assessment.eventId;
 }
@@ -214,7 +208,7 @@ function baseRowFromAssessment(assessment: DdrrAssessmentInput, outcome: DdrrDer
   return {
     eventId: assessment.eventId,
     currentEventId: assessment.currentEventId ?? assessment.eventId,
-    incidentKey: fallbackIncidentKey(assessment),
+    incidentKey: assessment.incidentKey ?? `legacy-event:${assessment.eventId}`,
     stablecoinId: assessment.stablecoinId,
     symbol: assessment.symbol,
     name: assessment.name,
@@ -222,7 +216,7 @@ function baseRowFromAssessment(assessment: DdrrAssessmentInput, outcome: DdrrDer
     governance: assessment.governance,
     direction: assessment.direction,
     startedAt: assessment.startedAt,
-    eligibleAt: fallbackEligibleAt(assessment),
+    eligibleAt: assessment.eligibleAt ?? assessment.startedAt,
     sourceEventState: outcome.sourceEventState,
     terminalEvidenceAt: outcome.terminalEvidenceAt,
     terminalEvidenceInterval: outcome.terminalEvidenceInterval,

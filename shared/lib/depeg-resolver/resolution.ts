@@ -20,6 +20,12 @@ const RISKY_MINT_PATHS = new Set([
   "facilitator-bucket-mint",
 ]);
 const RISKY_POSTURES = new Set(["concentrated-admin", "unbounded-or-compromised"]);
+const SEVERE_VERY_HIGH_RISK_RESERVE_PCT = 30;
+const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
+
+export const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
+export const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
+export const DDR_INSUFFICIENT_LIVE_PRICE_REASON = "No live price deviation for this event";
 
 function sumReserveRisk(coin: DdrCoinStructural, risks: string[]): number {
   if (!coin.reserves?.length) return 0;
@@ -60,9 +66,9 @@ function killSignals(
   // K2 — backing impairment
   const veryHigh = sumReserveRisk(coin, ["very-high"]);
   const highish = sumReserveRisk(coin, ["high", "very-high"]);
-  if (coin.dependencyImpaired === true || veryHigh >= 30) {
+  if (coin.dependencyImpaired === true || veryHigh >= SEVERE_VERY_HIGH_RISK_RESERVE_PCT) {
     out.push({ code: "K2_backing_impairment", kind: "kill", severity: "severe", label: coin.dependencyImpaired ? "Depends on a frozen/dead collateral asset" : "Reserves concentrated in very-high-risk assets" });
-  } else if (coin.collateralQuality === "exotic" || highish >= 40) {
+  } else if (coin.collateralQuality === "exotic" || highish >= ELEVATED_HIGH_RISK_RESERVE_PCT) {
     out.push({ code: "K2_backing_impairment", kind: "kill", severity: "elevated", label: "Exotic or high-risk collateral base" });
   }
 
@@ -154,9 +160,9 @@ export function resolveOutlook(
 ): DdrResolution {
   const insufficientReasons: string[] = [];
   const missingMintAuthority = coin.authorityPosture == null || coin.authorityPosture === "unknown";
-  if (missingMintAuthority) insufficientReasons.push("No reviewed mint authority");
-  if (!supply.covered) insufficientReasons.push("No usable supply history for this coin");
-  if (active.currentDeviationBps == null) insufficientReasons.push("No live price deviation for this event");
+  if (missingMintAuthority) insufficientReasons.push(DDR_INSUFFICIENT_MINT_AUTHORITY_REASON);
+  if (!supply.covered) insufficientReasons.push(DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON);
+  if (active.currentDeviationBps == null) insufficientReasons.push(DDR_INSUFFICIENT_LIVE_PRICE_REASON);
 
   // Frozen/dead coin sitting in an open event is terminal context by definition.
   const frozenTerminal = coin.status === "frozen";

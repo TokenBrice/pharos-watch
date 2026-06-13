@@ -23,6 +23,15 @@ export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
 const Z90 = 1.64;
 const MIN_TRAINING_DURATION_SEC = 30 * 60;
 const MIN_TRAINING_PEAK_BPS = 250;
+const STRATUM_MIN_COMPARABLE_INCIDENTS = 10;
+const STRATUM_MIN_UNIQUE_COINS = 5;
+const BENCHMARKED_MIN_COMPARABLE_INCIDENTS = 30;
+const BENCHMARKED_MIN_UNIQUE_COINS = 10;
+const BENCHMARKED_MIN_EFFECTIVE_N = 10;
+const BENCHMARKED_MIN_WEIGHTED_CLOSURES = 5;
+const BENCHMARKED_MIN_WEIGHTED_NON_CLOSURES = 5;
+const THIN_SUPPORT_MIN_EFFECTIVE_N = 5;
+const THIN_SUPPORT_MIN_WEIGHTED_CLOSURES = 1;
 
 function percentile(sortedAsc: number[], p: number): number {
   if (sortedAsc.length === 0) return 0;
@@ -117,11 +126,11 @@ function selectStratum(
       fallbackMatched = matched;
       fallbackComparableCount = comparable.length;
     }
-    if (comparable.length >= 10 && uniqueCoins >= 5) {
+    if (comparable.length >= STRATUM_MIN_COMPARABLE_INCIDENTS && uniqueCoins >= STRATUM_MIN_UNIQUE_COINS) {
       return { matched, key: cand, label: stratumLabel(cand) };
     }
   }
-  const key = fallbackKey ?? candidateStrata(activeKey)[0];
+  const key = fallbackKey ?? candidates[0];
   return { matched: fallbackMatched, key, label: stratumLabel(key) };
 }
 
@@ -141,7 +150,8 @@ export function computeDuration(
   const comparableRemainingDur = comparable.map((m) => (m.durationSec as number) - ageSec).sort((a, b) => a - b);
   const uniqueCoinsComparable = new Set(comparable.map((m) => m.stablecoinId)).size;
 
-  // age status from the full matched-stratum distribution
+  // Age status uses the full matched-stratum duration distribution, not only
+  // incidents still comparable at the current landmark age.
   const p90 = percentile(durationsAll, 0.9);
   const p99 = percentile(durationsAll, 0.99);
   let ageStatus: DdrDuration["ageStatus"] = durationsAll.length === 0 ? "data_issue" : "ordinary";
@@ -163,13 +173,18 @@ export function computeDuration(
     if (n === 0) state = "unsupported";
     else if (ageStatus === "chronic_tail") state = "chronic_tail";
     else if (
-      n >= 30 &&
-      uniqueCoinsComparable >= 10 &&
-      weighted.effectiveN >= 10 &&
-      effectiveClosures >= 5 &&
-      effectiveNonClosures >= 5
+      n >= BENCHMARKED_MIN_COMPARABLE_INCIDENTS &&
+      uniqueCoinsComparable >= BENCHMARKED_MIN_UNIQUE_COINS &&
+      weighted.effectiveN >= BENCHMARKED_MIN_EFFECTIVE_N &&
+      effectiveClosures >= BENCHMARKED_MIN_WEIGHTED_CLOSURES &&
+      effectiveNonClosures >= BENCHMARKED_MIN_WEIGHTED_NON_CLOSURES
     ) state = "benchmarked";
-    else if (n >= 10 && uniqueCoinsComparable >= 5 && weighted.effectiveN >= 5 && effectiveClosures >= 1) state = "thin_support";
+    else if (
+      n >= STRATUM_MIN_COMPARABLE_INCIDENTS &&
+      uniqueCoinsComparable >= STRATUM_MIN_UNIQUE_COINS &&
+      weighted.effectiveN >= THIN_SUPPORT_MIN_EFFECTIVE_N &&
+      effectiveClosures >= THIN_SUPPORT_MIN_WEIGHTED_CLOSURES
+    ) state = "thin_support";
     else if (closures === 0) state = "no_comparable_closures";
     else state = "unsupported";
 
@@ -185,12 +200,16 @@ export function computeDuration(
       probabilityInterval: interval,
       rawAtRisk: n,
       uniqueCoins: uniqueCoinsComparable,
+      // Raw interval counts preserve historical row volume; support gates above
+      // use coin-capped weighted counts to avoid one flappy coin dominating.
       intervalClosures: closures,
       intervalNonClosures: nonClosures,
     };
   });
 
-  const hasSupport = comparable.length >= 10 && uniqueCoinsComparable >= 5;
+  const hasSupport =
+    comparable.length >= STRATUM_MIN_COMPARABLE_INCIDENTS &&
+    uniqueCoinsComparable >= STRATUM_MIN_UNIQUE_COINS;
 
   return {
     suppressed: !hasSupport,

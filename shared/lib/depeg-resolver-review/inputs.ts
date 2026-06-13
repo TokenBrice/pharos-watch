@@ -11,15 +11,13 @@ import type {
   DdrrTerminalEvidencePrecision,
 } from "../../types/depeg-resolver-review";
 
+/** Runtime-neutral DDRR assessment payload consumed by shared review logic. */
 export type DdrrAssessmentInput = DdrrAssessment;
+
+/** Canonical source-event outcome payload used to review one DDR assessment. */
 export type DdrrActualEventInput = DdrrActualEvent;
 
-export interface DdrrReviewInput {
-  assessment: DdrrAssessmentInput;
-  actualEvent: DdrrActualEventInput | null;
-  nowSec: number;
-}
-
+/** Event-id keyed lookup accepted by batch review helpers. */
 export type DdrrActualEventLookup =
   | ReadonlyMap<number, DdrrActualEventInput | null | undefined>
   | Record<number, DdrrActualEventInput | null | undefined>;

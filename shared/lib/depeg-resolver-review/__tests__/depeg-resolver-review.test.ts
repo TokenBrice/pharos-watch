@@ -8,7 +8,13 @@ import {
   type DdrrV2CoverageInput,
   type DdrrV2InvalidatedPredictionInput,
 } from "../index";
-import { buildDdrrCoverageRow, reviewDdrrV2Rows, reviewDepegResolverAssessment, summarizeDdrrRows } from "../index";
+import {
+  buildDdrrCoverageRow,
+  deriveActualOutcome,
+  reviewDdrrV2Rows,
+  reviewDepegResolverAssessment,
+  summarizeDdrrRows,
+} from "../index";
 
 const STARTED_AT = 90_000;
 const LOCKED_AT = STARTED_AT + 24 * 3_600;
@@ -189,6 +195,39 @@ describe("DDRR v2 row contract", () => {
 });
 
 describe("DDRR v2 scoring", () => {
+  it.each([
+    ["malformed_assessment_timestamp", { lockedAt: Number.NaN }, actualEvent()],
+    ["assessment_before_event_start", { lockedAt: STARTED_AT - 1 }, actualEvent()],
+    ["source_event_missing", {}, null],
+    ["event_id_mismatch", {}, actualEvent({ eventId: 2 })],
+    ["malformed_event_start", {}, actualEvent({ startedAt: Number.NaN })],
+    ["malformed_event_end", {}, actualEvent({ endedAt: Number.NaN })],
+    ["malformed_recovery_price", {}, actualEvent({ endedAt: LOCKED_AT + 100, recoveryPrice: 0 })],
+    ["recovery_price_without_event_end", {}, actualEvent({ endedAt: null, recoveryPrice: 1 })],
+    ["event_end_before_event_start", {}, actualEvent({ endedAt: STARTED_AT - 1, recoveryPrice: null })],
+    ["event_end_before_review_anchor", {}, actualEvent({ endedAt: LOCKED_AT - 1, recoveryPrice: 1 })],
+  ])("pins data issue reason %s", (reason, assessmentOverrides, eventInput) => {
+    const outcome = deriveActualOutcome(
+      assessment(assessmentOverrides as Partial<DdrrAssessmentInput>),
+      eventInput,
+    );
+
+    expect(outcome.dataIssueReason).toBe(reason);
+  });
+
+  it("classifies orphan-closed source rows as visible data issues, not terminal wins", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment(),
+      actualEvent({ endedAt: LOCKED_AT + 3_600, recoveryPrice: null, stablecoinStatus: "active" }),
+      REVIEWED_AT,
+    );
+
+    expect(row.actual.kind).toBe("orphan_closed");
+    expect(row.actual.actualEndedAt).toBe(LOCKED_AT + 3_600);
+    expect(row.verdictReview).toBe("data_issue");
+    expect(row.durationReview).toBe("data_issue");
+  });
+
   it("computes duration errors from lockedAt instead of an earlier diagnostic assessment time", () => {
     const row = reviewDepegResolverAssessment(
       assessment({
@@ -246,6 +285,58 @@ describe("DDRR v2 scoring", () => {
     expect(row.actual.kind).toBe("terminal");
     expect(row.verdictReview).toBe("correct_terminal");
     expect(row.durationReview).toBe("duration_unscored");
+  });
+
+  it("reviews horizons as hit, miss, pending, or unscored from lock-time horizons", () => {
+    const hit = reviewDepegResolverAssessment(
+      assessment({ horizonCells: [horizonCell("6h")] }),
+      actualEvent({ endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 }),
+      REVIEWED_AT,
+    );
+    expect(hit.horizonReviews[0]).toMatchObject({
+      horizon: "6h",
+      result: "hit",
+      horizonElapsed: true,
+      resolvedWithinHorizon: true,
+    });
+
+    const miss = reviewDepegResolverAssessment(
+      assessment({ horizonCells: [horizonCell("6h")] }),
+      actualEvent({ endedAt: null, recoveryPrice: null }),
+      LOCKED_AT + 7 * 3_600,
+    );
+    expect(miss.horizonReviews[0]).toMatchObject({
+      horizon: "6h",
+      result: "miss",
+      horizonElapsed: true,
+      resolvedWithinHorizon: false,
+    });
+
+    const pending = reviewDepegResolverAssessment(
+      assessment({ horizonCells: [horizonCell("6h")] }),
+      actualEvent({ endedAt: null, recoveryPrice: null }),
+      LOCKED_AT + 3_600,
+    );
+    expect(pending.horizonReviews[0]).toMatchObject({
+      horizon: "6h",
+      result: "pending",
+      horizonElapsed: false,
+      resolvedWithinHorizon: false,
+    });
+
+    const unscored = reviewDepegResolverAssessment(
+      assessment({
+        horizonCells: [horizonCell("6h", { state: "unsupported", probability: null, probabilityDisplay: null })],
+      }),
+      actualEvent({ endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 }),
+      REVIEWED_AT,
+    );
+    expect(unscored.horizonReviews[0]).toMatchObject({
+      horizon: "6h",
+      result: "unscored",
+      horizonElapsed: true,
+      resolvedWithinHorizon: true,
+    });
   });
 });
 
@@ -416,5 +507,133 @@ describe("DDRR v2 coverage metrics", () => {
     expect(summary.headline.invalidatedByReason).toEqual({ event_identity_error: 1 });
     expect(summary.headline.predictionRatePct).toBe(0.5);
     expect(summary.headline.invalidationAdjustedPredictionRatePct).toBe(1);
+  });
+
+  it("pins headline and segment metrics for mixed DDRR row structures", () => {
+    const { summary } = reviewDdrrV2Rows({
+      assessments: [
+        assessment({ eventId: 1, incidentKey: "ddr2:correct", publicPredictionId: 1 }),
+        assessment({
+          eventId: 2,
+          incidentKey: "ddr2:false-terminal",
+          publicPredictionId: 2,
+          resolutionTier: "recovery_unlikely",
+          durationSuppressed: true,
+          durationSuppressedReason: "verdict_terminal",
+          predictedRemainingSec: null,
+          iqrRemainingSec: null,
+        }),
+      ],
+      noCalls: [
+        assessment({
+          eventId: 3,
+          incidentKey: "ddr2:no-call",
+          publicPredictionId: 3,
+          resolutionTier: "insufficient_signal",
+          durationSuppressed: true,
+          durationSuppressedReason: "insufficient_signal",
+          predictedRemainingSec: null,
+          iqrRemainingSec: null,
+        }),
+      ],
+      invalidatedPredictions: [invalidated({ incidentKey: "ddr2:invalidated", publicPredictionId: 4 })],
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:pending",
+          predictionState: "pending_lock",
+          coverageCause: "active_pending_lock",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+      ],
+      actualEventsById: new Map([
+        [1, actualEvent({ eventId: 1, endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 })],
+        [2, actualEvent({ eventId: 2, endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 })],
+        [3, actualEvent({ eventId: 3, endedAt: null, recoveryPrice: null })],
+      ]),
+      nowSec: REVIEWED_AT,
+    });
+
+    const projection = {
+      headlineScope: summary.headlineScope,
+      headline: {
+        policyUniverseIncidentCount: summary.headline.policyUniverseIncidentCount,
+        lockedPredictionCount: summary.headline.lockedPredictionCount,
+        noCallCount: summary.headline.noCallCount,
+        invalidatedPredictionCount: summary.headline.invalidatedPredictionCount,
+        pendingLockCount: summary.headline.pendingLockCount,
+        recoveryLikelihoodCorrectCount: summary.headline.recoveryLikelihoodCorrectCount,
+        recoveryLikelihoodScoredCount: summary.headline.recoveryLikelihoodScoredCount,
+        durationScoredCount: summary.headline.durationScoredCount,
+        predictionRatePct: summary.headline.predictionRatePct,
+        invalidationAdjustedPredictionRatePct: summary.headline.invalidationAdjustedPredictionRatePct,
+        decisionProgressPct: summary.headline.decisionProgressPct,
+        stateAssignedPct: summary.headline.stateAssignedPct,
+        finalizedCoveragePct: summary.headline.finalizedCoveragePct,
+      },
+      segments: summary.byPredictionPolicy.map((segment) => ({
+        segmentKind: segment.segmentKind,
+        predictionMethodologyVersion: segment.predictionMethodologyVersion,
+        predictionPolicyVersion: segment.predictionPolicyVersion,
+        policyUniverseIncidentCount: segment.metrics.policyUniverseIncidentCount,
+        lockedPredictionCount: segment.metrics.lockedPredictionCount,
+        noCallCount: segment.metrics.noCallCount,
+        invalidatedPredictionCount: segment.metrics.invalidatedPredictionCount,
+        pendingLockCount: segment.metrics.pendingLockCount,
+      })),
+    };
+
+    expect(projection).toMatchInlineSnapshot(`
+      {
+        "headline": {
+          "decisionProgressPct": 1,
+          "durationScoredCount": 1,
+          "finalizedCoveragePct": 0.8,
+          "invalidatedPredictionCount": 1,
+          "invalidationAdjustedPredictionRatePct": 0.75,
+          "lockedPredictionCount": 2,
+          "noCallCount": 1,
+          "pendingLockCount": 1,
+          "policyUniverseIncidentCount": 5,
+          "predictionRatePct": 0.5,
+          "recoveryLikelihoodCorrectCount": 1,
+          "recoveryLikelihoodScoredCount": 2,
+          "stateAssignedPct": 1,
+        },
+        "headlineScope": "insufficient_data",
+        "segments": [
+          {
+            "invalidatedPredictionCount": 1,
+            "lockedPredictionCount": 2,
+            "noCallCount": 1,
+            "pendingLockCount": 0,
+            "policyUniverseIncidentCount": 4,
+            "predictionMethodologyVersion": "2.0",
+            "predictionPolicyVersion": "sticky-24h-v1",
+            "segmentKind": "prediction_policy",
+          },
+          {
+            "invalidatedPredictionCount": 0,
+            "lockedPredictionCount": 0,
+            "noCallCount": 0,
+            "pendingLockCount": 1,
+            "policyUniverseIncidentCount": 1,
+            "predictionMethodologyVersion": null,
+            "predictionPolicyVersion": null,
+            "segmentKind": "coverage",
+          },
+          {
+            "invalidatedPredictionCount": 1,
+            "lockedPredictionCount": 2,
+            "noCallCount": 1,
+            "pendingLockCount": 1,
+            "policyUniverseIncidentCount": 5,
+            "predictionMethodologyVersion": null,
+            "predictionPolicyVersion": null,
+            "segmentKind": "all",
+          },
+        ],
+      }
+    `);
   });
 });

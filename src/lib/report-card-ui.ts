@@ -1,7 +1,7 @@
-import { REPORT_CARD_GRADE_COLORS, gradeRange } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS, gradeRange, type ReportCardGradeRange } from "@shared/lib/report-cards";
 import type { ReportCardGrade } from "@shared/types";
 
-export type SafetyGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
+export type SafetyGradeRange = ReportCardGradeRange;
 
 export interface SafetyGradeRangeMetadata {
   barClassName: string;
@@ -21,8 +21,6 @@ export interface SafetyGradeRangeMetadata {
 }
 
 export const SAFETY_GRADE_RANGES = ["A", "B", "C", "D", "F", "NR"] as const satisfies readonly SafetyGradeRange[];
-
-const SAFETY_GRADE_BADGE_CLASSES: Record<ReportCardGrade, string> = REPORT_CARD_GRADE_COLORS;
 
 const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMetadata> = {
   A: {
@@ -124,7 +122,7 @@ const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMeta
 };
 
 export function getSafetyGradeRange(grade: ReportCardGrade): SafetyGradeRange {
-  return gradeRange(grade) as SafetyGradeRange;
+  return gradeRange(grade);
 }
 
 export function getSafetyGradeMetadata(grade: ReportCardGrade | SafetyGradeRange): SafetyGradeRangeMetadata {
@@ -133,7 +131,7 @@ export function getSafetyGradeMetadata(grade: ReportCardGrade | SafetyGradeRange
 }
 
 export function getSafetyGradeBadgeClassName(grade: ReportCardGrade): string {
-  return SAFETY_GRADE_BADGE_CLASSES[grade];
+  return REPORT_CARD_GRADE_COLORS[grade];
 }
 
 export function createSafetyGradeRangeCounts(): Record<SafetyGradeRange, number> {

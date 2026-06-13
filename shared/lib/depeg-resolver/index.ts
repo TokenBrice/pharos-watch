@@ -26,6 +26,8 @@ export interface DdrResolveInput {
 }
 
 function suppressDuration(duration: DdrDuration, reason: string): DdrDuration {
+  // Suppressed public rows intentionally drop stratum/horizon details so
+  // terminal and insufficient-signal outcomes cannot look like duration calls.
   return {
     ...duration,
     suppressed: true,

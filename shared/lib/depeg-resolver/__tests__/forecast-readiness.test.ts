@@ -98,6 +98,80 @@ describe("forecastReadinessScore", () => {
     expect(readiness.strictEarlyLockReady).toBe(false);
     expect(readiness.reasons.join(" ")).toContain("Missing forecast-readiness inputs");
   });
+
+  it("pins duration-support branches that can suppress early readiness", () => {
+    const terminal = forecastReadinessScore(readyInput({
+      resolution: {
+        tier: "recovery_unlikely",
+        factors: [
+          {
+            code: "K5_exit_collapse",
+            kind: "kill",
+            severity: "severe",
+            label: "Exit collapsed",
+          },
+        ],
+      },
+      duration: {
+        ...readyInput().duration,
+        suppressed: true,
+        suppressedReason: "verdict_terminal",
+        medianSec: null,
+        iqrSec: null,
+        horizons: [],
+      },
+    }));
+    expect(terminal.components.find((component) => component.key === "duration_support")).toMatchObject({
+      score: 0.9,
+      reason: "Duration is intentionally suppressed for a terminal-leaning outlook.",
+    });
+
+    const genericSuppressed = forecastReadinessScore(readyInput({
+      duration: {
+        ...readyInput().duration,
+        suppressed: true,
+        suppressedReason: "insufficient_support",
+        medianSec: null,
+        iqrSec: null,
+        horizons: [],
+      },
+    }));
+    expect(genericSuppressed.components.find((component) => component.key === "duration_support")).toMatchObject({
+      score: 0.35,
+      reason: "Duration is suppressed for this row.",
+    });
+
+    const noHorizons = forecastReadinessScore(readyInput({
+      duration: {
+        ...readyInput().duration,
+        horizons: [],
+      },
+    }));
+    expect(noHorizons.components.find((component) => component.key === "duration_support")).toMatchObject({
+      score: 0.25,
+      reason: "Duration estimate has no horizon cells.",
+    });
+  });
+
+  it("pins observation maturity before the floor, on the ramp, and at the backstop", () => {
+    const early = forecastReadinessScore(readyInput({ ageSec: 30 * 60 }));
+    expect(early.components.find((component) => component.key === "observation_maturity")).toMatchObject({
+      score: 0,
+      reason: "Incident is still inside the first hour observation floor.",
+    });
+
+    const ramp = forecastReadinessScore(readyInput({ ageSec: 3.5 * 3600 }));
+    expect(ramp.components.find((component) => component.key === "observation_maturity")).toMatchObject({
+      score: 0.5,
+      reason: "Incident has accumulated enough observation time for a forecast-readiness read.",
+    });
+
+    const backstop = forecastReadinessScore(readyInput({ ageSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC }));
+    expect(backstop.components.find((component) => component.key === "observation_maturity")).toMatchObject({
+      score: 1,
+      reason: "Incident has reached the 72h forecast-readiness backstop.",
+    });
+  });
 });
 
 describe("forecast readiness lock helpers", () => {

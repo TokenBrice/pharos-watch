@@ -63,8 +63,8 @@ export function currencyClass(pegCurrency: string): DdrCurrencyClass {
 
 /** Human label for a stratum, used in the payload for transparency. */
 export function stratumLabel(key: DdrStratumKey | DdrStratumCandidate): string {
-  const structural = (key.structural as string) === STRATUM_ANY ? "any" : key.structural;
-  const currency = (key.currency as string) === STRATUM_ANY ? "any" : key.currency;
+  const structural = key.structural === STRATUM_ANY ? "any" : key.structural;
+  const currency = key.currency === STRATUM_ANY ? "any" : key.currency;
   const depths = "depths" in key ? key.depths : [key.depth];
   const depthLabel = depths.length === 1 ? depths[0] : depths.join("+");
   return `${key.direction} · ${depthLabel} · ${structural} · ${currency}`;
@@ -116,7 +116,7 @@ export function stratumMatches(
 ): boolean {
   if (candidate.direction !== incident.direction) return false;
   if (!candidate.depths.includes(incident.depth)) return false;
-  if ((candidate.structural as string) !== STRATUM_ANY && candidate.structural !== incident.structural) return false;
-  if ((candidate.currency as string) !== STRATUM_ANY && candidate.currency !== incident.currency) return false;
+  if (candidate.structural !== STRATUM_ANY && candidate.structural !== incident.structural) return false;
+  if (candidate.currency !== STRATUM_ANY && candidate.currency !== incident.currency) return false;
   return true;
 }

@@ -15,6 +15,7 @@ import {
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import {
   DDRR_PUBLIC_WARNING,
@@ -106,16 +107,8 @@ interface DdrrActualEventWithTerminalEvidence extends DdrrActualEvent {
   terminalEvidenceSourceDate: string | null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+function payloadStringValue(value: unknown): string | null {
+  return stringValue(value, { trim: false });
 }
 
 function recordValue(value: unknown): Record<string, unknown> {
@@ -265,10 +258,10 @@ function registryTerminalEvidence(stablecoinId: string): TerminalEvidence | null
 function tapeTerminalEvidence(row: TapeTerminalEvidenceRow): TerminalEvidence | null {
   const payload = recordValue(tryJsonParse(row.payload_json));
   if (row.type === "lifecycle.tracked.frozen") {
-    return dateIntervalFromSourceDate(stringValue(payload.frozenAt)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
+    return dateIntervalFromSourceDate(payloadStringValue(payload.frozenAt)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
   }
   if (row.type === "cemetery.entry.added") {
-    return dateIntervalFromSourceDate(stringValue(payload.deathDate)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
+    return dateIntervalFromSourceDate(payloadStringValue(payload.deathDate)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
   }
   return null;
 }
@@ -478,10 +471,10 @@ function baseFieldsForIncident(incident: DdrCanonicalIncident, payload: Record<s
     currentEventId: incident.currentEventId,
     incidentKey: incident.incidentKey,
     stablecoinId: incident.stablecoinId,
-    symbol: stringValue(payload.symbol) ?? meta?.symbol ?? incident.stablecoinId,
-    name: stringValue(payload.name) ?? meta?.name ?? stringValue(payload.symbol) ?? incident.stablecoinId,
-    pegCurrency: stringValue(payload.pegCurrency) ?? incident.pegCurrency,
-    governance: stringValue(payload.governance) ?? meta?.flags.governance ?? "unknown",
+    symbol: payloadStringValue(payload.symbol) ?? meta?.symbol ?? incident.stablecoinId,
+    name: payloadStringValue(payload.name) ?? meta?.name ?? payloadStringValue(payload.symbol) ?? incident.stablecoinId,
+    pegCurrency: payloadStringValue(payload.pegCurrency) ?? incident.pegCurrency,
+    governance: payloadStringValue(payload.governance) ?? meta?.flags.governance ?? "unknown",
     direction: incident.direction,
     startedAt: incident.startedAt,
     eligibleAt: incident.eligibleAt,
@@ -550,11 +543,11 @@ function assessmentFromPrediction(
     predictionPolicyVersion: sealed.predictionPolicyVersion,
     resolutionTier: resolution.tier,
     durationSuppressed: duration.suppressed === true,
-    durationSuppressedReason: stringValue(duration.suppressedReason),
+    durationSuppressedReason: payloadStringValue(duration.suppressedReason),
     predictedRemainingSec: numberValue(duration.medianSec),
     iqrRemainingSec: iqr.length === 2 && typeof iqr[0] === "number" && typeof iqr[1] === "number" ? [iqr[0], iqr[1]] : null,
     horizonCells: arrayValue(duration.horizons),
-    stratum: stringValue(duration.stratum),
+    stratum: payloadStringValue(duration.stratum),
     factors: arrayValue(resolution.factors),
   });
   return parsed.success ? parsed.data : null;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMethodologyVersion } from "../methodology-version";
+import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
 
 describe("createMethodologyVersion", () => {
   it("resolves to the higher version when two entries share effectiveAt", () => {
@@ -44,5 +45,14 @@ describe("createMethodologyVersion", () => {
     });
     expect(methodology.getVersionAt(1000)).toBe("3.9");
     expect(methodology.getVersionAt(999)).toBe("3.7");
+  });
+});
+
+describe("DDR methodology version constants", () => {
+  it("derives the v2 effective timestamp from the changelog entry", () => {
+    const v2 = DDR_METHODOLOGY_CHANGELOG.find((entry) => entry.version === "2.0");
+
+    expect(DDR_V2_EFFECTIVE_AT).toBe(1_779_897_600);
+    expect(DDR_V2_EFFECTIVE_AT).toBe(v2?.effectiveAt);
   });
 });
