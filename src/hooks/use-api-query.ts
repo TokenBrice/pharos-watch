@@ -13,7 +13,7 @@ import type { SchemaLike } from "@/lib/schema-like";
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 
-interface PollingQueryControlOptions {
+export interface PollingQueryControlOptions {
   enabled?: boolean;
   retry?: number | boolean;
   retryDelay?: (attempt: number) => number;

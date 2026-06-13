@@ -29,6 +29,7 @@ import {
   createApiPollingQueryOptions,
   createApiPollingQueryOptionsWithMeta,
   createStaticQueryOptions,
+  type PollingQueryControlOptions,
   useApiQuery,
   useApiQueryWithMeta,
 } from "./use-api-query";
@@ -42,12 +43,7 @@ import {
 export type { StabilityContributor };
 export type { NonUsdSharePoint } from "@/lib/api-query-runtime-registry";
 
-export interface QueryControlOverrides {
-  enabled?: boolean;
-  retry?: number | boolean;
-  retryDelay?: (attempt: number) => number;
-  keepPreviousData?: boolean;
-}
+export type QueryControlOverrides = PollingQueryControlOptions;
 
 export function useRegisteredApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T>,

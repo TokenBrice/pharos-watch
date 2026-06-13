@@ -401,7 +401,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-hooks-1` — QueryControlOverrides duplicates PollingQueryControlOptions exactly** `[duplication | low | small | none]`
 - Problem: `QueryControlOverrides` (api-hooks.ts:45-50) and `PollingQueryControlOptions` (use-api-query.ts:16-27) declare the identical four optional fields with identical types. api-hooks.ts already imports from ./use-api-query. PollingQueryControlOptions carries a JSDoc the duplicate lacks.
-- Recommendation: export `PollingQueryControlOptions` and change `QueryControlOverrides` to `export type QueryControlOverrides = PollingQueryControlOptions`. Verify the re-export keeps the `keepPreviousData` JSDoc visible.
+- Done 2026-06-13: exported `PollingQueryControlOptions` from `use-api-query.ts` and made `QueryControlOverrides` a direct alias, preserving the canonical `keepPreviousData` JSDoc at the exported interface.
 - Files: `src/hooks/api-hooks.ts:45-50`, `src/hooks/use-api-query.ts:16-27`.
 - Verifier: field-for-field match; both within src/. Checks: `npm run typecheck`, `npm run lint`.
 
