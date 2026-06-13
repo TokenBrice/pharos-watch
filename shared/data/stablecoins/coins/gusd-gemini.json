@@ -65,7 +65,8 @@
     "reserveDisclosureUrl": "https://www.gemini.com/dollar",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "latestReportDate": "2025-07-31",
+    "latestReportDate": "2026-03-31",
+    "notes": "GUSD is NYDFS-approved/greenlisted as a New York virtual currency stablecoin, but no GENIUS PPSI approval, state-qualified GENIUS approval, official application, or issuer-announced GENIUS pathway was found.",
     "references": [
       {
         "label": "NYDFS virtual currency business activity",
@@ -76,6 +77,13 @@
         "label": "Gemini Dollar page",
         "url": "https://www.gemini.com/dollar",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "GUSD March 2026 reserve report",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1JdC9ew8EmQ4012ccmltre/49990b73c12899feaf354ffb29be15e9/Gemini_-_GUSD_Reserves_Report_-_March_2026.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-03-31",
+        "accessedAt": "2026-06-13"
       }
     ],
     "negativeEvidenceReview": {
@@ -86,12 +94,12 @@
         "Gemini Dollar disclosures",
         "Web search for Gemini GENIUS Act issuer intent 2026"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for GUSD. Gemini commentary focuses on NYDFS standing and yield-ban posture; no formal GENIUS pathway announcement found as of 2026-06-07.",
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, official application, or foreign exception source was located for GUSD. Gemini disclosures focus on NYDFS standing and reserve reporting; no formal GENIUS pathway announcement found as of 2026-06-13.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-13"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-13"
   },
   "mica": {
     "status": "non-compliant",

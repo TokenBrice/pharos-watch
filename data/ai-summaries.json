@@ -4006,5 +4006,35 @@
     "authoredBy": "ai",
     "model": "claude-opus-4-7",
     "factsAsOf": "2026-05-27"
+  },
+  "ejpy-jbfd": {
+    "title": "The Trust-Bank Yen That Skips the Cap",
+    "text": "EJPY is Japan Blockchain Foundation's pre-launch yen stablecoin, and its whole pitch is a legal classification: a trust-type Type III electronic payment instrument that escapes the ¥1M-per-transaction ceiling JPYC has spent years working around. JBFD — the consortium operator behind Japan Open Chain — would be the settlor, with reserves parked in a licensed trust bank that, as of the May 2026 announcement, it is still negotiating with and has not named. That gap is the tell: trust-segregated {{term:custody}}custody{{/term}} and statutory {{term:redemption}}redemption{{/term}} rights are the entire value proposition, yet the trustee, the reserve mix, and the launch date are all blank. The plan is to issue on Japan Open Chain first and Ethereum next, sometime within fiscal 2026 (which runs through March 2027), aimed squarely at B2B settlement rather than retail DeFi. EJPY is a credible institutional play in a market suddenly crowded with yen-stablecoin contenders — JPYSC, JPYC, and a megabank consortium all circling the same FSA framework — but right now it is a decision to issue, not a token you can hold.",
+    "updatedAt": "2026-06-13",
+    "authoredBy": "ai",
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-13",
+    "factsAsOf": "2026-06-13"
+  },
+  "aed-rakbank": {
+    "title": "The First Commercial-Bank Dirham",
+    "text": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, notable less for what it is than for who is issuing it: the first conventional commercial bank to win CBUAE in-principle approval for an AED payment token, as opposed to the digital-bank and sovereign-wealth vehicles (Zand AED, AE Coin, the FAB/ADQ/IHC effort) that got there first. The January 2026 nod arrives under the UAE's Payment Token Services Regulation, which permits payment use only for dirham-backed tokens and demands a published white paper plus full reserves. RAKBank's plan ticks the regulatory boxes — 1:1 dirhams in segregated regulated accounts, full par {{term:redemption}}redemption{{/term}}, audited contracts, real-time reserve {{term:attestation}}attestation{{/term}} — but 'in-principle' is doing heavy lifting: no ticker, no chain, no issuing subsidiary, and no launch date have been disclosed, and the regulation may force RAKBank into a separate licensed issuer it hasn't confirmed. Pharos tracks the AED peg as OTHER until dirham support is built. A pilot is promised 'in due course,' which in regulatory dialect means watch this space.",
+    "updatedAt": "2026-06-13",
+    "authoredBy": "ai",
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-13",
+    "factsAsOf": "2026-06-13"
+  },
+  "bils-bitsofgold": {
+    "title": "Israel's First Regulated Shekel",
+    "text": "BILS is the first shekel stablecoin to clear an Israeli regulator, and unlike most entries on this list it is approved rather than merely announced — Bits of Gold spent two years in a sandbox before the Capital Market, Insurance and Savings Authority signed off in April 2026. The conditions are unusually concrete for a pre-launch asset: 1:1 New Israeli Shekel backing held in segregated bank accounts inside Israel (foreign custody explicitly barred), an Ernst & Young audit, Fireblocks issuance infrastructure, and QEDIT zero-knowledge privacy, all on Solana via token extensions. What is missing is reach — the regulator is requiring a deliberately gradual, small-scale rollout, likely to institutions first, with no firm public-launch date and no DefiLlama or CoinGecko footprint yet. That throttled debut, plus a peg Pharos doesn't yet price (tracked as OTHER until shekel support lands), is exactly why it sits in pre-launch rather than the live table. Note the regulatory lane: this is a CMISA rulebook approval, not the broader Israeli Stablecoin Law, which is still stuck in draft. A real, audited, regulator-blessed shekel — just not one you can buy in size yet.",
+    "updatedAt": "2026-06-13",
+    "authoredBy": "ai",
+    "model": "claude-opus-4-8",
+    "reviewedBy": "Pharos pre-launch update",
+    "reviewedAt": "2026-06-13",
+    "factsAsOf": "2026-06-13"
   }
 }

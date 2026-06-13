@@ -769,6 +769,123 @@
     "launchDate": "2025-01-29"
   },
   {
+    "id": "aed-rakbank",
+    "detailProvider": "defillama",
+    "name": "RAKBank AED Stablecoin",
+    "symbol": "AED-RAKBANK",
+    "oneLiner": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, granted CBUAE in-principle approval in January 2026, to be backed 1:1 by segregated AED reserves.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Planned 1:1 AED reserves held in segregated, regulated accounts supporting full redemption at par, governed by audited smart contracts with real-time reserve attestations; custodian and reserve composition not yet disclosed",
+    "pegMechanism": "Pre-launch AED-backed payment token under the CBUAE Payment Token Services Regulation; designed for 1:1 dirham redemption from segregated reserves with real-time on-chain attestations, though chains, contracts, issuing-entity structure, and launch timing remain unannounced pending completion of regulatory and operational requirements",
+    "mechanismArchetype": "fiat-cash",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.rakbank.ae"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/RAKBANKlive"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United Arab Emirates",
+      "regulator": "Central Bank of the UAE (CBUAE)",
+      "license": "In-principle approval under the Payment Token Services Regulation, 2026-01-07"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "AED-RAKBANK is a pre-launch dirham-backed payment token planned for 1:1 AED redemption under CBUAE oversight."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "The National Bank of Ras Al Khaimah P.S.C. (RAKBank)",
+      "issuerDomicile": "United Arab Emirates",
+      "licensingRegulator": "Central Bank of the UAE",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "RAKBank has announced CBUAE in-principle approval for an AED payment token, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "RAKBank in-principle approval announcement",
+          "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-01-07",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Treasury foreign-comparability materials",
+          "RAKBank AED stablecoin announcement and public materials"
+        ],
+        "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for AED-RAKBANK or RAKBank.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+      "evidence": "AED-RAKBANK resolves to Yes because it is a centralized, bank-issued fiat-referenced payment token under CBUAE oversight, and no manual override narrows that status.",
+      "reviewer": "Pharos pre-launch addition",
+      "reviewedAt": "2026-06-13"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-01",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "RAKBank (The National Bank of Ras Al Khaimah P.S.C.) received in-principle approval from the Central Bank of the UAE on January 7 2026 to issue an AED-backed payment token (stablecoin), subject to completion of regulatory and operational requirements under the CBUAE Payment Token Services Regulation. Planned to be fully backed 1:1 by dirhams in segregated, regulated accounts with full redemption at par, audited smart contracts, and real-time reserve attestations, targeting digital payments, asset tokenization, and cross-border settlements. The first conventional commercial-bank AED payment token under the CBUAE regime — distinct from Zand AED, AE Coin (Al Maryah), and the FAB/ADQ/IHC dirham initiative. Ticker, chains, issuing-entity structure, and launch timing not yet announced; a pilot phase will follow in due course. Pharos tracks the AED peg as OTHER until dirham peg support is built.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.thenationalnews.com/business/money/2026/01/07/rakbank-receives-initial-approval-to-launch-dirham-backed-stablecoin-in-uae/",
+        "title": "RAKBank receives initial approval to launch dirham-backed stablecoin in UAE",
+        "source": "The National"
+      },
+      {
+        "type": "article",
+        "url": "https://www.ledgerinsights.com/rakbank-receives-approval-to-issue-dirham-stablecoin/",
+        "title": "RAKBANK receives approval to issue dirham stablecoin",
+        "source": "Ledger Insights"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-07",
+        "type": "regulatory",
+        "title": "CBUAE grants RAKBank in-principle approval to issue an AED-backed stablecoin",
+        "description": "The Central Bank of the UAE grants RAKBank in-principle approval to issue a dirham-backed payment token under the Payment Token Services Regulation, subject to completing regulatory and operational requirements.",
+        "sourceUrl": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+      }
+    ]
+  },
+  {
     "id": "aeur-anchored-coins",
     "llamaId": "147",
     "detailProvider": "defillama",
@@ -5401,6 +5518,131 @@
       "yieldType": "nav-appreciation"
     },
     "launchDate": "2023-03-02"
+  },
+  {
+    "id": "bils-bitsofgold",
+    "detailProvider": "defillama",
+    "name": "BILS",
+    "symbol": "BILS",
+    "oneLiner": "BILS is Bits of Gold's regulator-approved Israeli shekel stablecoin on Solana, backed 1:1 by segregated shekel reserves and pending a gradual limited launch.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "1:1 New Israeli Shekel reserves held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with custody and issuance infrastructure provided by Fireblocks",
+    "pegMechanism": "Regulator-approved shekel stablecoin on Solana (token extensions) issued by Bits of Gold under the Capital Market, Insurance and Savings Authority framework; redeemable 1:1 for shekels from segregated Israeli reserves, with QEDIT zero-knowledge privacy and a deliberately gradual, limited initial rollout",
+    "mechanismArchetype": "fiat-cash",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://bitsofgold.co.il"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BitsofGold_LTD"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Israel",
+      "regulator": "Capital Market, Insurance and Savings Authority (CMISA)",
+      "license": "Regulatory approval for limited launch, 2026-04-28"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "BILS is a regulator-approved shekel stablecoin designed for 1:1 NIS redemption from segregated Israeli reserves."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Bits of Gold",
+      "issuerDomicile": "Israel",
+      "licensingRegulator": "Capital Market, Insurance and Savings Authority",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "BILS has Israeli regulatory approval for a limited stablecoin launch, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "CoinDesk — Israel approves Bits of Gold BILS stablecoin",
+          "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin",
+          "sourceKind": "news",
+          "sourceDate": "2026-04-28",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Treasury foreign-comparability materials",
+          "Bits of Gold BILS launch and approval coverage"
+        ],
+        "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for BILS or Bits of Gold.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+      "evidence": "BILS resolves to Yes because it is a centralized, single-issuer fiat-referenced stablecoin under CMISA oversight, and no manual override narrows that status.",
+      "reviewer": "Pharos pre-launch addition",
+      "reviewedAt": "2026-06-13"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2024-03",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "Bits of Gold, a Tel Aviv-based licensed crypto broker/custodian operating since 2013, received full regulatory approval on April 28 2026 from Israel's Capital Market, Insurance and Savings Authority (CMISA) to issue BILS, the first regulated shekel-pegged stablecoin, following a two-year sandbox pilot approved in March 2024. Backed 1:1 by New Israeli Shekels held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with Fireblocks custody/issuance infrastructure and QEDIT zero-knowledge privacy, issued on Solana via token extensions. The regulator mandates a deliberately gradual, small-scale rollout (likely institutional/qualified participants first) before wide availability; no firm public-launch date set. Distinct from Israel's broader Stablecoin Law, which remains in draft/public-comment stage. Pharos tracks the ILS peg as OTHER until shekel peg support is built.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin",
+        "title": "A digital shekel is here: Israel approves its first-ever regulated stablecoin",
+        "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://www.ynetnews.com/business/article/r1xsovtp11e",
+        "title": "Israel approves first shekel-backed stablecoin for limited launch",
+        "source": "Ynetnews"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2024-03-13",
+        "type": "regulatory",
+        "title": "Israel's Capital Market Authority approves Bits of Gold shekel stablecoin sandbox pilot",
+        "description": "CMISA approves a regulatory sandbox pilot for a shekel-pegged stablecoin issued by Bits of Gold, to be launched on Solana via token extensions.",
+        "sourceUrl": "https://www.calcalistech.com/ctechnews/article/hj9ovv06p"
+      },
+      {
+        "date": "2026-04-28",
+        "type": "regulatory",
+        "title": "CMISA grants full approval for BILS limited launch",
+        "description": "After a two-year pilot, the Capital Market, Insurance and Savings Authority grants Bits of Gold full approval to issue BILS under conditions including 1:1 backing, segregated Israeli reserves, and an EY audit, with a gradual small-scale rollout.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin"
+      }
+    ]
   },
   {
     "id": "bnusd-balanced",
@@ -14652,6 +14894,124 @@
     "launchDate": "2025-06-05"
   },
   {
+    "id": "ejpy-jbfd",
+    "detailProvider": "defillama",
+    "name": "EJPY",
+    "symbol": "EJPY",
+    "oneLiner": "EJPY is Japan Blockchain Foundation's pre-launch trust-type yen stablecoin, planned for Japan Open Chain and Ethereum with 1:1 JPY trust backing.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Planned 1:1 JPY backing held in trust under a trust-type scheme with Japan Blockchain Foundation as settlor; trust assets bankruptcy-remote; specific reserve composition and trustee not yet disclosed",
+    "pegMechanism": "Pre-launch trust-type (Type III electronic payment instrument) yen stablecoin under Japan's Payment Services Act; designed for 1:1 JPY redemption with reserves held by a licensed trust bank, issued on Japan Open Chain first and Ethereum next, with trustee selection and launch timing still pending",
+    "mechanismArchetype": "fiat-cash",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.jbfd.org"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Japanopenchain0"
+      },
+      {
+        "label": "Announcement",
+        "url": "https://www.jbfd.org/en/news/joc-ejpy"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Japan",
+      "regulator": "Financial Services Agency (FSA)"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "EJPY is a pre-launch trust-type yen stablecoin planned for 1:1 JPY redemption under Japan's Payment Services Act framework."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Japan Blockchain Foundation Co., Ltd.",
+      "issuerDomicile": "Japan",
+      "licensingRegulator": "Financial Services Agency",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "EJPY is planned as a Japanese trust-type stablecoin, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Japan Blockchain Foundation EJPY announcement",
+          "url": "https://www.jbfd.org/en/news/joc-ejpy",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-13",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Treasury foreign-comparability materials",
+          "Japan Blockchain Foundation EJPY announcement and public materials"
+        ],
+        "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for EJPY or Japan Blockchain Foundation.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+      "evidence": "EJPY resolves to Yes because it is a centralized, single-issuer trust-type fiat-referenced stablecoin under FSA oversight, and no manual override narrows that status.",
+      "reviewer": "Pharos pre-launch addition",
+      "reviewedAt": "2026-06-13"
+    },
+    "custodyModel": "institutional-regulated",
+    "status": "pre-launch",
+    "announcedDate": "2026-05",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Announced May 13 2026 by Japan Blockchain Foundation Co., Ltd. (JBFD), operator of Japan Open Chain (JOC), as a trust-type JPY-pegged stablecoin. Structured as a Type III electronic payment instrument under Japan's Payment Services Act — exempt from the ¥1M/transaction cap that constrains fund-transfer-type issuers such as JPYC — with JBFD as settlor and reserves to be held by a licensed trust bank (trustee in active negotiation, not yet named). Targeted for issuance and circulation on JOC within FY2026 (through March 2027), with Ethereum next and broader multi-chain expansion under consideration; actual issuance and handling dates to be formally announced once determined. Aimed at B2B payments, remittances, and settlement. Reserve composition not yet disclosed.",
+    "featuredContent": [
+      {
+        "type": "blog",
+        "url": "https://www.jbfd.org/en/news/joc-ejpy",
+        "title": "Japan Blockchain Foundation to Issue Trust-Type JPY-Pegged Stablecoin EJPY",
+        "description": "JBFD decides to issue EJPY, a trust-type yen stablecoin, on Japan Open Chain and Ethereum, targeting issuance within FY2026.",
+        "source": "Japan Blockchain Foundation"
+      },
+      {
+        "type": "article",
+        "url": "https://www.theblock.co/post/401075/japan-yen-stablecoin-ejpy",
+        "title": "Japan's enterprise-led blockchain to issue yen stablecoin for B2B settlements",
+        "source": "The Block"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-05-13",
+        "type": "announcement",
+        "title": "Japan Blockchain Foundation decides to issue trust-type yen stablecoin EJPY",
+        "description": "JBFD announces a trust-type JPY-pegged stablecoin for Japan Open Chain and Ethereum, with the trust scheme structure clarified and a trustee under negotiation; issuance targeted within FY2026.",
+        "sourceUrl": "https://www.jbfd.org/en/news/joc-ejpy"
+      }
+    ]
+  },
+  {
     "id": "emxn-telcoin",
     "detailProvider": "coingecko",
     "name": "Telcoin MXN",
@@ -14940,6 +15300,27 @@
     ],
     "jurisdiction": {
       "country": "Netherlands"
+    },
+    "mica": {
+      "status": "pending",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "DNB",
+      "authorizedEntity": "Qivalis B.V.",
+      "references": [
+        {
+          "label": "Qivalis — MiCA-compliant euro stablecoin pending DNB EMI license",
+          "url": "https://qivalis.eu"
+        },
+        {
+          "label": "BNP Paribas joins Qivalis euro-backed stablecoin consortium",
+          "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — Qivalis not yet listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -15508,6 +15889,63 @@
           "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
         }
       ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "EURC is a euro-referenced Circle stablecoin issued as a MiCA e-money token by Circle Internet Financial Europe SAS with 1:1 euro redemption and monthly reserve attestations."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Circle Internet Financial Europe SAS",
+      "issuerDomicile": "France",
+      "licensingRegulator": "ACPR / MiCA electronic money institution",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.circle.com/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe.",
+      "references": [
+        {
+          "label": "Circle EURC page",
+          "url": "https://www.circle.com/eurc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Circle EURC terms",
+          "url": "https://www.circle.com/legal/eurc-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Circle MiCA redemption policy",
+          "url": "https://www.circle.com/legal/mica-redemption-policy",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS NPRM",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Federal Register OCC foreign payment stablecoin issuer registration proposal",
+          "Circle EURC, Circle EEA/MiCA, redemption, transparency, and GENIUS Act pages"
+        ],
+        "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was located for EURC or Circle Europe.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -17666,8 +18104,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "MFSA",
-      "authorizedEntity": "STSS (Malta) Limited",
       "references": [
         {
           "label": "ESMA interim MiCA register — EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",
@@ -19074,6 +19510,24 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — First Digital/FDUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "First Digital Labs FDUSD",
+          "url": "https://www.firstdigitallabs.com/fdusd"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -19836,7 +20290,7 @@
     "custodyModel": "institutional-regulated",
     "status": "pre-launch",
     "announcedDate": "2025-06",
-    "expectedLaunchDate": "2026",
+    "expectedLaunchDate": "2026-07",
     "launchPhase": "beta",
     "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch; Bank of North Dakota's Roughrider Coin white-label is expected to begin its state-bank pilot in September 2026",
     "featuredContent": [
@@ -19914,6 +20368,12 @@
         "title": "CEO Lyons confirms FIUSD goes live in July 2026 at Bernstein conference",
         "description": "At the Bernstein Strategic Decisions conference, CEO Michael Lyons stated 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch.",
         "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026",
+        "setOn": "2026-06-13"
       }
     ]
   },
@@ -24567,7 +25027,8 @@
       "reserveDisclosureUrl": "https://www.gemini.com/dollar",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2025-07-31",
+      "latestReportDate": "2026-03-31",
+      "notes": "GUSD is NYDFS-approved/greenlisted as a New York virtual currency stablecoin, but no GENIUS PPSI approval, state-qualified GENIUS approval, official application, or issuer-announced GENIUS pathway was found.",
       "references": [
         {
           "label": "NYDFS virtual currency business activity",
@@ -24578,6 +25039,13 @@
           "label": "Gemini Dollar page",
           "url": "https://www.gemini.com/dollar",
           "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "GUSD March 2026 reserve report",
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1JdC9ew8EmQ4012ccmltre/49990b73c12899feaf354ffb29be15e9/Gemini_-_GUSD_Reserves_Report_-_March_2026.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-03-31",
+          "accessedAt": "2026-06-13"
         }
       ],
       "negativeEvidenceReview": {
@@ -24588,12 +25056,12 @@
           "Gemini Dollar disclosures",
           "Web search for Gemini GENIUS Act issuer intent 2026"
         ],
-        "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for GUSD. Gemini commentary focuses on NYDFS standing and yield-ban posture; no formal GENIUS pathway announcement found as of 2026-06-07.",
+        "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, official application, or foreign exception source was located for GUSD. Gemini disclosures focus on NYDFS standing and reserve reporting; no formal GENIUS pathway announcement found as of 2026-06-13.",
         "reviewer": "Pharos compliance research",
-        "reviewedAt": "2026-06-07"
+        "reviewedAt": "2026-06-13"
       },
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-13"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -25586,10 +26054,6 @@
         "url": "https://www.hsbc.com.hk"
       },
       {
-        "label": "Twitter",
-        "url": "https://x.com/HSBC_HK"
-      },
-      {
         "label": "License announcement",
         "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
@@ -25598,6 +26062,52 @@
       "country": "Hong Kong",
       "regulator": "HKMA (Stablecoins Ordinance)",
       "license": "Stablecoin issuer licence FRS02, effective 2026-04-10"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "HKD-HSBC is a pre-launch HKD fiat-referenced stablecoin licensed by HKMA and planned for 1:1 HKD redemption."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "The Hongkong and Shanghai Banking Corporation Limited",
+      "issuerDomicile": "Hong Kong",
+      "licensingRegulator": "Hong Kong Monetary Authority",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "HSBC holds an HKMA stablecoin issuer licence for a planned HKD stablecoin, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "HKMA stablecoin issuer licence announcement",
+          "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/",
+          "sourceKind": "news",
+          "sourceDate": "2026-04-10",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Treasury foreign-comparability materials",
+          "HKMA stablecoin issuer licence materials",
+          "HSBC HKD stablecoin public materials"
+        ],
+        "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for HKD-HSBC or HSBC Hong Kong.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -25668,6 +26178,59 @@
       "country": "Hong Kong",
       "regulator": "HKMA (Stablecoins Ordinance)",
       "license": "Stablecoin issuer licence FRS01, effective 2026-04-10"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "HKDAP is a pre-launch HKD fiat-referenced stablecoin licensed by HKMA and planned for 1:1 HKD redemption."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Anchorpoint Financial Limited",
+      "issuerDomicile": "Hong Kong",
+      "licensingRegulator": "Hong Kong Monetary Authority",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "Anchorpoint holds an HKMA stablecoin issuer licence for HKDAP, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "HKMA stablecoin issuer licence announcement",
+          "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/",
+          "sourceKind": "news",
+          "sourceDate": "2026-04-10",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Standard Chartered Anchorpoint licence announcement",
+          "url": "https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-10",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Treasury foreign-comparability materials",
+          "HKMA stablecoin issuer licence materials",
+          "Anchorpoint and Standard Chartered HKDAP public materials"
+        ],
+        "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for HKDAP or Anchorpoint Financial Limited.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -43658,6 +44221,24 @@
       "regulator": "NYDFS",
       "license": "Trust Charter"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Kraken EEA stablecoin restrictions — RLUSD delisted for EEA clients",
+          "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — Ripple/RLUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Ripple USD product page",
+          "url": "https://ripple.com/solutions/stablecoin/"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -43881,6 +44462,57 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "Roughrider Coin is a pre-launch USD bank-to-bank payment stablecoin pilot announced by Bank of North Dakota with Fiserv infrastructure."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Bank of North Dakota / Fiserv",
+      "issuerDomicile": "United States",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "Bank of North Dakota and Fiserv publicly announced Roughrider as a USD-backed stablecoin pilot and reference the U.S. stablecoin framework, but no token-specific GENIUS PPSI approval, state-qualified approval, or official application was found. The issuer pathway remains unknown because the public materials do not identify a final PPSI route for the BND/Fiserv deployment.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Bank of North Dakota Roughrider announcement",
+          "url": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-08",
+          "accessedAt": "2026-06-13"
+        },
+        {
+          "label": "Fiserv Roughrider partnership announcement",
+          "url": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-08",
+          "accessedAt": "2026-06-13"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS NPRM and reporting-form notices",
+          "Bank of North Dakota Roughrider materials",
+          "Fiserv Roughrider and FIUSD materials"
+        ],
+        "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or final issuer-pathway source was located for Roughrider Coin.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-06-13"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -53860,6 +54492,24 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — TUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "Kraken EEA stablecoin restrictions — TUSD delisted for EEA clients",
+          "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — TrueUSD/TUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -53870,38 +54520,38 @@
       "issuerEntity": "Techteryx",
       "issuerDomicile": "British Virgin Islands",
       "foreignExceptionStatus": "unknown",
-      "enforcementStatus": "no-public-action-found",
+      "enforcementStatus": "warning-or-notice",
       "daspOfferSaleStatus": "not-yet-restricted",
       "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://tusd.io/transparency",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "notes": "Techteryx (current TUSD issuer, BVI-incorporated) has no confirmed U.S. GENIUS approval, application, or foreign-issuer exception. Note: the SEC settled charges in September 2024 against prior TUSD operators TrueCoin LLC and TrustToken Inc. (not Techteryx) for fraudulent unregistered sales and false reserve representations through April 2023; enforcementStatus here reflects Techteryx's own posture as current issuer. Ongoing civil litigation in Hong Kong and Dubai (worldwide asset freeze of $456M tied to First Digital Trust/Aria Commodities reserve dispute) does not constitute a U.S. enforcement action against Techteryx. TUSD delisted from EEA-regulated venues by Q1 2025 (Kraken, Binance) and several Binance spot pairs delisted April 2026.",
+      "notes": "Techteryx (current TUSD issuer, BVI-incorporated) has no confirmed U.S. GENIUS approval, application, or foreign-issuer exception. The SEC settled charges in September 2024 against prior TUSD operators TrueCoin LLC and TrustToken Inc. for false reserve representations through April 2023; Techteryx was not named, so this is tracked as a warning/notice posture rather than a prohibited/revoked current-issuer action. Ongoing civil litigation in Hong Kong and Dubai (worldwide asset freeze of $456M tied to First Digital Trust/Aria Commodities reserve dispute) does not constitute a U.S. enforcement action against Techteryx. TUSD delisted from EEA-regulated venues by Q1 2025 (Kraken, Binance) and several Binance spot pairs delisted April 2026.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         },
         {
           "label": "SEC Press Release 2024-145 — TrueCoin/TrustToken settled charges",
           "url": "https://www.sec.gov/newsroom/press-releases/2024-145",
           "sourceKind": "federal-regulator",
           "sourceDate": "2024-09-24",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         },
         {
           "label": "TUSD transparency",
           "url": "https://tusd.io/transparency",
           "sourceKind": "auditor-report",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         },
         {
           "label": "TrueUSD white paper",
           "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         }
       ],
       "negativeEvidenceReview": {
@@ -53913,12 +54563,12 @@
           "FinCEN/OFAC enforcement pages — no Techteryx-specific action found",
           "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025) — civil litigation, not U.S. enforcement"
         ],
-        "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD/Techteryx. SEC action against prior operators TrueCoin/TrustToken (settled Sep 2024) does not constitute a Techteryx enforcement action. No FinCEN or OFAC action against Techteryx found.",
+        "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD/Techteryx. SEC action against prior operators TrueCoin/TrustToken (settled Sep 2024) supports a warning/notice posture for TUSD reserve representations but does not constitute a Techteryx prohibited/revoked action. No FinCEN or OFAC action against Techteryx found.",
         "reviewer": "Pharos compliance research",
-        "reviewedAt": "2026-06-07"
+        "reviewedAt": "2026-06-13"
       },
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-13"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -55090,8 +55740,8 @@
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "Coindoo: Europe still has just 17 authorized EMT issuers (2026)",
-          "url": "https://coindoo.com/mica-stablecoin-update-europe-still-has-just-17-authorized-issuers-in-2026/"
+          "label": "ESMA MiCA register landing page — authorized EMT issuer register",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
           "label": "Cryptonomist: France launch of USD0, Usual Protocol",
@@ -62734,13 +63384,13 @@
       "applicabilityBasis": {
         "summary": "USDO is a rebasing yield-bearing stablecoin: it distributes yield as additional tokens to holders daily. The GENIUS Act defines payment stablecoin to exclude instruments that pay interest or yield (Sec. 4(a)(11)) and prohibits PPSI issuers from paying any yield. USDOs core design is therefore incompatible with the payment stablecoin definition. Additionally, OpenEden explicitly geo-blocks US persons and states the token may not be offered or sold in the US, removing it further from GENIUS Act scope."
       },
-      "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "foreign-registered",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
       "issuerEntity": "OpenEden Digital (OED)",
       "issuerDomicile": "Bermuda",
       "foreignExceptionStatus": "not-applicable",
       "enforcementStatus": "no-public-action-found",
-      "daspOfferSaleStatus": "not-yet-restricted",
+      "daspOfferSaleStatus": "not-applicable",
       "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
       "redemptionPolicyPresent": true,
@@ -62757,13 +63407,13 @@
           "url": "https://www.wilmerhale.com/en/insights/client-alerts/20250718-what-the-genius-act-means-for-payment-stablecoin-issuers-banks-and-custodians",
           "sourceKind": "news",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         },
         {
           "label": "OpenEden USDO launch US person exclusion",
           "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-06-13"
         },
         {
           "label": "OpenEden USDO FAQ",
@@ -62776,20 +63426,8 @@
           "sourceKind": "issuer-disclosure"
         }
       ],
-      "negativeEvidenceReview": {
-        "sourcesChecked": [
-          "OCC GENIUS Act proposed rule and public releases",
-          "Issuer disclosures, token documentation, and launch announcements",
-          "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-          "OpenEden USDO launch announcement US person access restriction confirmed",
-          "WilmerHale GENIUS Act analysis yield prohibition and payment stablecoin definition"
-        ],
-        "summary": "USDO is a yield-bearing rebasing stablecoin explicitly excluded from the GENIUS Act payment stablecoin definition by its yield mechanism; US persons are geo-blocked from access. No PPSI application, foreign-exception registration, or authorization found in any public source.",
-        "reviewer": "Pharos compliance research",
-        "reviewedAt": "2026-06-07"
-      },
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
+      "reviewedAt": "2026-06-13"
     },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
@@ -65538,8 +66176,8 @@
           "sourceKind": "news"
         },
         {
-          "label": "M0 Startale USDSC docs",
-          "url": "https://docs.m0.org/home/build-with-m0/m-extensions/startale-usdsc",
+          "label": "M0 extensions documentation",
+          "url": "https://docs.m0.org/raw/protocol/extensions.md",
           "sourceKind": "issuer-disclosure"
         },
         {
@@ -71341,8 +71979,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "FMA Liechtenstein",
-      "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
           "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026) – VNX Commodities AG not listed",
@@ -72383,7 +73019,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "ART",
-      "competentAuthority": "FMA Liechtenstein",
       "references": [
         {
           "label": "ESMA Interim MiCA Register – ART issuers (ARTZZ.csv) – VNX not listed",
@@ -77888,6 +78523,24 @@
       "country": "Singapore",
       "regulator": "MAS",
       "license": "Major Payment Institution"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — XUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — StraitsX/XUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "StraitsX XUSD product page",
+          "url": "https://www.straitsx.com/xusd"
+        }
+      ]
     },
     "genius": {
       "applicability": "apparent-payment-stablecoin",

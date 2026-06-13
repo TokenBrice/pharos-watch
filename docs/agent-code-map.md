@@ -379,13 +379,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 401 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 401 entries
-- `shared/data/stablecoins/coins.generated.json` - 401 entries
+- `shared/data/stablecoins/canonical-order.json` - 404 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 404 entries
+- `shared/data/stablecoins/coins.generated.json` - 404 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 24 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 27 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 27 keys
+- `shared/data/stablecoins/coins/aed-rakbank.json` - 20 keys
 - `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 24 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 25 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 21 keys
@@ -408,6 +409,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 28 keys
 - `shared/data/stablecoins/coins/bfusd-binance.json` - 24 keys
 - `shared/data/stablecoins/coins/bib01-backed.json` - 28 keys
+- `shared/data/stablecoins/coins/bils-bitsofgold.json` - 21 keys
 - `shared/data/stablecoins/coins/bnusd-balanced.json` - 24 keys
 - `shared/data/stablecoins/coins/bold-liquity.json` - 26 keys
 - `shared/data/stablecoins/coins/brd-volpon.json` - 21 keys
@@ -417,9 +419,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 26 keys
 - `shared/data/stablecoins/coins/brlm-mento.json` - 27 keys
 - `shared/data/stablecoins/coins/brlv-crown.json` - 25 keys
-- `shared/data/stablecoins/coins/brz-transfero.json` - 22 keys
-- `shared/data/stablecoins/coins/btcusd-btcfi.json` - 22 keys
-- ... 371 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 374 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -680,7 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 222 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 223 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

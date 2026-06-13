@@ -50,11 +50,11 @@
     },
     "issuerEntity": "OpenEden Digital (OED)",
     "issuerDomicile": "Bermuda",
-    "issuerPathway": "foreign-registered",
-    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "not-applicable",
+    "authorizationStatus": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
+    "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
     "redemptionPolicyPresent": true,
@@ -71,13 +71,13 @@
         "url": "https://www.wilmerhale.com/en/insights/client-alerts/20250718-what-the-genius-act-means-for-payment-stablecoin-issuers-banks-and-custodians",
         "sourceKind": "news",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-06-13"
       },
       {
         "label": "OpenEden USDO launch US person exclusion",
         "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-06-13"
       },
       {
         "label": "OpenEden USDO FAQ",
@@ -90,20 +90,8 @@
         "sourceKind": "issuer-disclosure"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures, token documentation, and launch announcements",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OpenEden USDO launch announcement US person access restriction confirmed",
-        "WilmerHale GENIUS Act analysis yield prohibition and payment stablecoin definition"
-      ],
-      "summary": "USDO is a yield-bearing rebasing stablecoin explicitly excluded from the GENIUS Act payment stablecoin definition by its yield mechanism; US persons are geo-blocked from access. No PPSI application, foreign-exception registration, or authorization found in any public source.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-07"
-    },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-06-13"
   },
   "contracts": [
     {

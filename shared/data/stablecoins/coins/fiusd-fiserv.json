@@ -91,7 +91,13 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-06",
-  "expectedLaunchDate": "2026",
+  "expectedLaunchDate": "2026-07",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-06-13"
+    }
+  ],
   "launchPhase": "beta",
   "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch; Bank of North Dakota's Roughrider Coin white-label is expected to begin its state-bank pilot in September 2026",
   "featuredContent": [

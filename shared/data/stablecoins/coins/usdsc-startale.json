@@ -75,8 +75,8 @@
         "sourceKind": "news"
       },
       {
-        "label": "M0 Startale USDSC docs",
-        "url": "https://docs.m0.org/home/build-with-m0/m-extensions/startale-usdsc",
+        "label": "M0 extensions documentation",
+        "url": "https://docs.m0.org/raw/protocol/extensions.md",
         "sourceKind": "issuer-disclosure"
       },
       {

@@ -32,6 +32,10 @@ export const GENIUS_REGIME_STATE = {
       url: "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
     },
     {
+      label: "OCC Bulletin 2026-24 reporting forms proposal",
+      url: "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-24.html",
+    },
+    {
       label: "FDIC proposed PPSI application procedures",
       url: "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
     },
@@ -60,7 +64,7 @@ export const GENIUS_REGIME_STATE = {
       url: "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards",
     },
   ],
-  reviewedAt: "2026-06-07",
+  reviewedAt: "2026-06-13",
 } as const satisfies GeniusRegimeState;
 
 export function isGeniusRegimeEffective(state: GeniusRegimeState = GENIUS_REGIME_STATE): boolean {

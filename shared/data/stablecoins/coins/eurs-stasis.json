@@ -46,8 +46,6 @@
   "mica": {
     "status": "non-compliant",
     "tokenType": "EMT",
-    "competentAuthority": "MFSA",
-    "authorizedEntity": "STSS (Malta) Limited",
     "references": [
       {
         "label": "ESMA interim MiCA register — EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",

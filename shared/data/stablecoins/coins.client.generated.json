@@ -234,6 +234,53 @@
     "liveReserveAdapter": "chainlink-nav"
   },
   {
+    "id": "aed-rakbank",
+    "name": "RAKBank AED Stablecoin",
+    "symbol": "AED-RAKBANK",
+    "oneLiner": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, granted CBUAE in-principle approval in January 2026, to be backed 1:1 by segregated AED reserves.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "mechanismArchetype": "fiat-cash",
+    "status": "pre-launch",
+    "announcedDate": "2026-01",
+    "launchPhase": "announced",
+    "milestones": [
+      {
+        "date": "2026-01-07",
+        "type": "regulatory",
+        "title": "CBUAE grants RAKBank in-principle approval to issue an AED-backed stablecoin",
+        "description": "The Central Bank of the UAE grants RAKBank in-principle approval to issue a dirham-backed payment token under the Payment Token Services Regulation, subject to completing regulatory and operational requirements.",
+        "sourceUrl": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+      }
+    ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "The National Bank of Ras Al Khaimah P.S.C. (RAKBank)",
+      "issuerDomicile": "United Arab Emirates",
+      "licensingRegulator": "Central Bank of the UAE",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "RAKBank in-principle approval announcement",
+          "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+        }
+      ]
+    },
+    "blacklistStatus": true
+  },
+  {
     "id": "aeur-anchored-coins",
     "name": "Anchored Coins AEUR",
     "symbol": "AEUR",
@@ -1675,6 +1722,61 @@
       ]
     },
     "liveReserveAdapter": "chainlink-por"
+  },
+  {
+    "id": "bils-bitsofgold",
+    "name": "BILS",
+    "symbol": "BILS",
+    "oneLiner": "BILS is Bits of Gold's regulator-approved Israeli shekel stablecoin on Solana, backed 1:1 by segregated shekel reserves and pending a gradual limited launch.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "OTHER",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "mechanismArchetype": "fiat-cash",
+    "status": "pre-launch",
+    "announcedDate": "2024-03",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "launching-soon",
+    "milestones": [
+      {
+        "date": "2024-03-13",
+        "type": "regulatory",
+        "title": "Israel's Capital Market Authority approves Bits of Gold shekel stablecoin sandbox pilot",
+        "description": "CMISA approves a regulatory sandbox pilot for a shekel-pegged stablecoin issued by Bits of Gold, to be launched on Solana via token extensions.",
+        "sourceUrl": "https://www.calcalistech.com/ctechnews/article/hj9ovv06p"
+      },
+      {
+        "date": "2026-04-28",
+        "type": "regulatory",
+        "title": "CMISA grants full approval for BILS limited launch",
+        "description": "After a two-year pilot, the Capital Market, Insurance and Savings Authority grants Bits of Gold full approval to issue BILS under conditions including 1:1 backing, segregated Israeli reserves, and an EY audit, with a gradual small-scale rollout.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin"
+      }
+    ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Bits of Gold",
+      "issuerDomicile": "Israel",
+      "licensingRegulator": "Capital Market, Insurance and Savings Authority",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "CoinDesk — Israel approves Bits of Gold BILS stablecoin",
+          "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin"
+        }
+      ]
+    },
+    "blacklistStatus": true
   },
   {
     "id": "bnusd-balanced",
@@ -4636,6 +4738,54 @@
     "liveReserveAdapter": "liquity-v2-branches"
   },
   {
+    "id": "ejpy-jbfd",
+    "name": "EJPY",
+    "symbol": "EJPY",
+    "oneLiner": "EJPY is Japan Blockchain Foundation's pre-launch trust-type yen stablecoin, planned for Japan Open Chain and Ethereum with 1:1 JPY trust backing.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "mechanismArchetype": "fiat-cash",
+    "status": "pre-launch",
+    "announcedDate": "2026-05",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "announced",
+    "milestones": [
+      {
+        "date": "2026-05-13",
+        "type": "announcement",
+        "title": "Japan Blockchain Foundation decides to issue trust-type yen stablecoin EJPY",
+        "description": "JBFD announces a trust-type JPY-pegged stablecoin for Japan Open Chain and Ethereum, with the trust scheme structure clarified and a trustee under negotiation; issuance targeted within FY2026.",
+        "sourceUrl": "https://www.jbfd.org/en/news/joc-ejpy"
+      }
+    ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Japan Blockchain Foundation Co., Ltd.",
+      "issuerDomicile": "Japan",
+      "licensingRegulator": "Financial Services Agency",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Japan Blockchain Foundation EJPY announcement",
+          "url": "https://www.jbfd.org/en/news/joc-ejpy"
+        }
+      ]
+    },
+    "blacklistStatus": true
+  },
+  {
     "id": "emxn-telcoin",
     "name": "Telcoin MXN",
     "symbol": "eMXN",
@@ -4801,6 +4951,27 @@
         "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
       }
     ],
+    "mica": {
+      "status": "pending",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "DNB",
+      "authorizedEntity": "Qivalis B.V.",
+      "references": [
+        {
+          "label": "Qivalis — MiCA-compliant euro stablecoin pending DNB EMI license",
+          "url": "https://qivalis.eu"
+        },
+        {
+          "label": "BNP Paribas joins Qivalis euro-backed stablecoin consortium",
+          "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — Qivalis not yet listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
+    },
     "blacklistStatus": true
   },
   {
@@ -4974,6 +5145,34 @@
         {
           "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license #17788",
           "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
+        }
+      ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Circle Internet Financial Europe SAS",
+      "issuerDomicile": "France",
+      "licensingRegulator": "ACPR / MiCA electronic money institution",
+      "reserveDisclosureUrl": "https://www.circle.com/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "Circle EURC page",
+          "url": "https://www.circle.com/eurc"
+        },
+        {
+          "label": "Circle EURC terms",
+          "url": "https://www.circle.com/legal/eurc-terms"
+        },
+        {
+          "label": "Circle MiCA redemption policy",
+          "url": "https://www.circle.com/legal/mica-redemption-policy"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS NPRM",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         }
       ]
     },
@@ -5728,8 +5927,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "MFSA",
-      "authorizedEntity": "STSS (Malta) Limited",
       "references": [
         {
           "label": "ESMA interim MiCA register — EMTWP.csv (EMT issuer white papers); STASIS/STSS not present in 20-issuer list",
@@ -6118,6 +6315,24 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "first-digital-usd",
     "launchDate": "2023-04-28",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — First Digital/FDUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "First Digital Labs FDUSD",
+          "url": "https://www.firstdigitallabs.com/fdusd"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -6340,7 +6555,7 @@
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
     "announcedDate": "2025-06",
-    "expectedLaunchDate": "2026",
+    "expectedLaunchDate": "2026-07",
     "launchPhase": "beta",
     "milestones": [
       {
@@ -6407,6 +6622,12 @@
         "title": "CEO Lyons confirms FIUSD goes live in July 2026 at Bernstein conference",
         "description": "At the Bernstein Strategic Decisions conference, CEO Michael Lyons stated 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch.",
         "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026",
+        "setOn": "2026-06-13"
       }
     ],
     "genius": {
@@ -7899,6 +8120,10 @@
         {
           "label": "Gemini Dollar page",
           "url": "https://www.gemini.com/dollar"
+        },
+        {
+          "label": "GUSD March 2026 reserve report",
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1JdC9ew8EmQ4012ccmltre/49990b73c12899feaf354ffb29be15e9/Gemini_-_GUSD_Reserves_Report_-_March_2026.pdf"
         }
       ]
     },
@@ -8271,6 +8496,25 @@
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "The Hongkong and Shanghai Banking Corporation Limited",
+      "issuerDomicile": "Hong Kong",
+      "licensingRegulator": "Hong Kong Monetary Authority",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "HKMA stablecoin issuer licence announcement",
+          "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+        }
+      ]
+    },
     "blacklistStatus": true
   },
   {
@@ -8313,6 +8557,29 @@
         "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
       }
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "foreign-registered",
+      "issuerEntity": "Anchorpoint Financial Limited",
+      "issuerDomicile": "Hong Kong",
+      "licensingRegulator": "Hong Kong Monetary Authority",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "HKMA stablecoin issuer licence announcement",
+          "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+        },
+        {
+          "label": "Standard Chartered Anchorpoint licence announcement",
+          "url": "https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/"
+        }
+      ]
+    },
     "blacklistStatus": true
   },
   {
@@ -14051,6 +14318,24 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "ripple-usd",
     "launchDate": "2024-08-09",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Kraken EEA stablecoin restrictions — RLUSD delisted for EEA clients",
+          "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — Ripple/RLUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Ripple USD product page",
+          "url": "https://ripple.com/solutions/stablecoin/"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "issuer-announced-intent",
@@ -14189,6 +14474,28 @@
         "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
       }
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Bank of North Dakota / Fiserv",
+      "issuerDomicile": "United States",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Bank of North Dakota Roughrider announcement",
+          "url": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/"
+        },
+        {
+          "label": "Fiserv Roughrider partnership announcement",
+          "url": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+        }
+      ]
+    },
     "blacklistStatus": true
   },
   {
@@ -17324,6 +17631,24 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "true-usd",
     "launchDate": "2018-12-31",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — TUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "Kraken EEA stablecoin restrictions — TUSD delisted for EEA clients",
+          "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — TrueUSD/TUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",
@@ -17692,8 +18017,8 @@
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         },
         {
-          "label": "Coindoo: Europe still has just 17 authorized EMT issuers (2026)",
-          "url": "https://coindoo.com/mica-stablecoin-update-europe-still-has-just-17-authorized-issuers-in-2026/"
+          "label": "ESMA MiCA register landing page — authorized EMT issuer register",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
           "label": "Cryptonomist: France launch of USD0, Usual Protocol",
@@ -20236,8 +20561,8 @@
     "launchDate": "2024-09-26",
     "genius": {
       "applicability": "non-payment-token",
-      "authorizationStatus": "no-public-authorization-found",
-      "issuerPathway": "foreign-registered",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
       "issuerEntity": "OpenEden Digital (OED)",
       "issuerDomicile": "Bermuda",
       "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
@@ -21284,8 +21609,8 @@
           "url": "https://startale.com/blog/startale-launches-usdsc"
         },
         {
-          "label": "M0 Startale USDSC docs",
-          "url": "https://docs.m0.org/home/build-with-m0/m-extensions/startale-usdsc"
+          "label": "M0 extensions documentation",
+          "url": "https://docs.m0.org/raw/protocol/extensions.md"
         },
         {
           "label": "Startale USD FAQ",
@@ -23186,8 +23511,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "EMT",
-      "competentAuthority": "FMA Liechtenstein",
-      "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
           "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026) – VNX Commodities AG not listed",
@@ -23490,7 +23813,6 @@
     "mica": {
       "status": "non-compliant",
       "tokenType": "ART",
-      "competentAuthority": "FMA Liechtenstein",
       "references": [
         {
           "label": "ESMA Interim MiCA Register – ART issuers (ARTZZ.csv) – VNX not listed",
@@ -25130,6 +25452,24 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "straitsx-xusd",
     "launchDate": "2024-02-01",
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance EEA MiCA restrictions — XUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+          "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register — StraitsX/XUSD not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "StraitsX XUSD product page",
+          "url": "https://www.straitsx.com/xusd"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "authorizationStatus": "no-public-authorization-found",

@@ -46,6 +46,63 @@
     "regulator": "ACPR",
     "license": "EMI (MiCA)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EURC is a euro-referenced Circle stablecoin issued as a MiCA e-money token by Circle Internet Financial Europe SAS with 1:1 euro redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "foreign-registered",
+    "issuerEntity": "Circle Internet Financial Europe SAS",
+    "issuerDomicile": "France",
+    "licensingRegulator": "ACPR / MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.circle.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe.",
+    "references": [
+      {
+        "label": "Circle EURC page",
+        "url": "https://www.circle.com/eurc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "Circle EURC terms",
+        "url": "https://www.circle.com/legal/eurc-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "Circle MiCA redemption policy",
+        "url": "https://www.circle.com/legal/mica-redemption-policy",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS NPRM",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-13"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS NPRM and reporting-form notices",
+        "Federal Register OCC foreign payment stablecoin issuer registration proposal",
+        "Circle EURC, Circle EEA/MiCA, redemption, transparency, and GENIUS Act pages"
+      ],
+      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was located for EURC or Circle Europe.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-13"
+  },
   "mica": {
     "status": "authorized",
     "tokenType": "EMT",

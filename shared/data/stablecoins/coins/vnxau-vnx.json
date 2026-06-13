@@ -48,7 +48,6 @@
   "mica": {
     "status": "non-compliant",
     "tokenType": "ART",
-    "competentAuthority": "FMA Liechtenstein",
     "references": [
       {
         "label": "ESMA Interim MiCA Register – ART issuers (ARTZZ.csv) – VNX not listed",

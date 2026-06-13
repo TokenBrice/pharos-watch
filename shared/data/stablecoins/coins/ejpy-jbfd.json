@@ -1,0 +1,118 @@
+{
+  "id": "ejpy-jbfd",
+  "name": "EJPY",
+  "symbol": "EJPY",
+  "oneLiner": "EJPY is Japan Blockchain Foundation's pre-launch trust-type yen stablecoin, planned for Japan Open Chain and Ethereum with 1:1 JPY trust backing.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Planned 1:1 JPY backing held in trust under a trust-type scheme with Japan Blockchain Foundation as settlor; trust assets bankruptcy-remote; specific reserve composition and trustee not yet disclosed",
+  "pegMechanism": "Pre-launch trust-type (Type III electronic payment instrument) yen stablecoin under Japan's Payment Services Act; designed for 1:1 JPY redemption with reserves held by a licensed trust bank, issued on Japan Open Chain first and Ethereum next, with trustee selection and launch timing still pending",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.jbfd.org"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Japanopenchain0"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.jbfd.org/en/news/joc-ejpy"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Japan",
+    "regulator": "Financial Services Agency (FSA)"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EJPY is a pre-launch trust-type yen stablecoin planned for 1:1 JPY redemption under Japan's Payment Services Act framework."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "foreign-registered",
+    "issuerEntity": "Japan Blockchain Foundation Co., Ltd.",
+    "issuerDomicile": "Japan",
+    "licensingRegulator": "Financial Services Agency",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "EJPY is planned as a Japanese trust-type stablecoin, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "Japan Blockchain Foundation EJPY announcement",
+        "url": "https://www.jbfd.org/en/news/joc-ejpy",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-13",
+        "accessedAt": "2026-06-13"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS NPRM and reporting-form notices",
+        "Treasury foreign-comparability materials",
+        "Japan Blockchain Foundation EJPY announcement and public materials"
+      ],
+      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for EJPY or Japan Blockchain Foundation.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-13"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+    "evidence": "EJPY resolves to Yes because it is a centralized, single-issuer trust-type fiat-referenced stablecoin under FSA oversight, and no manual override narrows that status.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-06-13"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-05",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Announced May 13 2026 by Japan Blockchain Foundation Co., Ltd. (JBFD), operator of Japan Open Chain (JOC), as a trust-type JPY-pegged stablecoin. Structured as a Type III electronic payment instrument under Japan's Payment Services Act — exempt from the ¥1M/transaction cap that constrains fund-transfer-type issuers such as JPYC — with JBFD as settlor and reserves to be held by a licensed trust bank (trustee in active negotiation, not yet named). Targeted for issuance and circulation on JOC within FY2026 (through March 2027), with Ethereum next and broader multi-chain expansion under consideration; actual issuance and handling dates to be formally announced once determined. Aimed at B2B payments, remittances, and settlement. Reserve composition not yet disclosed.",
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://www.jbfd.org/en/news/joc-ejpy",
+      "title": "Japan Blockchain Foundation to Issue Trust-Type JPY-Pegged Stablecoin EJPY",
+      "description": "JBFD decides to issue EJPY, a trust-type yen stablecoin, on Japan Open Chain and Ethereum, targeting issuance within FY2026.",
+      "source": "Japan Blockchain Foundation"
+    },
+    {
+      "type": "article",
+      "url": "https://www.theblock.co/post/401075/japan-yen-stablecoin-ejpy",
+      "title": "Japan's enterprise-led blockchain to issue yen stablecoin for B2B settlements",
+      "source": "The Block"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-05-13",
+      "type": "announcement",
+      "title": "Japan Blockchain Foundation decides to issue trust-type yen stablecoin EJPY",
+      "description": "JBFD announces a trust-type JPY-pegged stablecoin for Japan Open Chain and Ethereum, with the trust scheme structure clarified and a trustee under negotiation; issuance targeted within FY2026.",
+      "sourceUrl": "https://www.jbfd.org/en/news/joc-ejpy"
+    }
+  ]
+}

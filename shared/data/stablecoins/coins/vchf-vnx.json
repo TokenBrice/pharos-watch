@@ -39,8 +39,6 @@
   "mica": {
     "status": "non-compliant",
     "tokenType": "EMT",
-    "competentAuthority": "FMA Liechtenstein",
-    "authorizedEntity": "VNX Commodities AG",
     "references": [
       {
         "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026) – VNX Commodities AG not listed",

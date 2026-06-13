@@ -1,0 +1,117 @@
+{
+  "id": "aed-rakbank",
+  "name": "RAKBank AED Stablecoin",
+  "symbol": "AED-RAKBANK",
+  "oneLiner": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, granted CBUAE in-principle approval in January 2026, to be backed 1:1 by segregated AED reserves.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Planned 1:1 AED reserves held in segregated, regulated accounts supporting full redemption at par, governed by audited smart contracts with real-time reserve attestations; custodian and reserve composition not yet disclosed",
+  "pegMechanism": "Pre-launch AED-backed payment token under the CBUAE Payment Token Services Regulation; designed for 1:1 dirham redemption from segregated reserves with real-time on-chain attestations, though chains, contracts, issuing-entity structure, and launch timing remain unannounced pending completion of regulatory and operational requirements",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.rakbank.ae"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/RAKBANKlive"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "Central Bank of the UAE (CBUAE)",
+    "license": "In-principle approval under the Payment Token Services Regulation, 2026-01-07"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AED-RAKBANK is a pre-launch dirham-backed payment token planned for 1:1 AED redemption under CBUAE oversight."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "foreign-registered",
+    "issuerEntity": "The National Bank of Ras Al Khaimah P.S.C. (RAKBank)",
+    "issuerDomicile": "United Arab Emirates",
+    "licensingRegulator": "Central Bank of the UAE",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "RAKBank has announced CBUAE in-principle approval for an AED payment token, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "RAKBank in-principle approval announcement",
+        "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-01-07",
+        "accessedAt": "2026-06-13"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS NPRM and reporting-form notices",
+        "Treasury foreign-comparability materials",
+        "RAKBank AED stablecoin announcement and public materials"
+      ],
+      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for AED-RAKBANK or RAKBank.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-13"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-13"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+    "evidence": "AED-RAKBANK resolves to Yes because it is a centralized, bank-issued fiat-referenced payment token under CBUAE oversight, and no manual override narrows that status.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-06-13"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-01",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "RAKBank (The National Bank of Ras Al Khaimah P.S.C.) received in-principle approval from the Central Bank of the UAE on January 7 2026 to issue an AED-backed payment token (stablecoin), subject to completion of regulatory and operational requirements under the CBUAE Payment Token Services Regulation. Planned to be fully backed 1:1 by dirhams in segregated, regulated accounts with full redemption at par, audited smart contracts, and real-time reserve attestations, targeting digital payments, asset tokenization, and cross-border settlements. The first conventional commercial-bank AED payment token under the CBUAE regime — distinct from Zand AED, AE Coin (Al Maryah), and the FAB/ADQ/IHC dirham initiative. Ticker, chains, issuing-entity structure, and launch timing not yet announced; a pilot phase will follow in due course. Pharos tracks the AED peg as OTHER until dirham peg support is built.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.thenationalnews.com/business/money/2026/01/07/rakbank-receives-initial-approval-to-launch-dirham-backed-stablecoin-in-uae/",
+      "title": "RAKBank receives initial approval to launch dirham-backed stablecoin in UAE",
+      "source": "The National"
+    },
+    {
+      "type": "article",
+      "url": "https://www.ledgerinsights.com/rakbank-receives-approval-to-issue-dirham-stablecoin/",
+      "title": "RAKBANK receives approval to issue dirham stablecoin",
+      "source": "Ledger Insights"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-07",
+      "type": "regulatory",
+      "title": "CBUAE grants RAKBank in-principle approval to issue an AED-backed stablecoin",
+      "description": "The Central Bank of the UAE grants RAKBank in-principle approval to issue a dirham-backed payment token under the Payment Token Services Regulation, subject to completing regulatory and operational requirements.",
+      "sourceUrl": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-hs531zi2"
+    }
+  ]
+}

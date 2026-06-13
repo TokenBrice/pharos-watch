@@ -109,6 +109,24 @@
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-07"
   },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken EEA stablecoin restrictions — RLUSD delisted for EEA clients",
+        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register — Ripple/RLUSD not listed",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Ripple USD product page",
+        "url": "https://ripple.com/solutions/stablecoin/"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",
