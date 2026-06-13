@@ -79,14 +79,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Reassess after the owning surface stabilizes."
   },
-  "shared/lib/chains/l2beat-risk.ts": {
-    "disposition": "deferred",
-    "notes": "Static L2BEAT chain-risk snapshot exceeded the file-line hotspot candidate threshold when Chain Health v1.4 landed. Keep it waived as a data snapshot module for this release; future snapshot refresh work should consider moving the raw payload under shared/data with a thin runtime adapter.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-12",
-    "reviewAfter": "2026-09-12",
-    "nextAction": "Reassess during the next L2BEAT snapshot refresh and move static payload data out of shared/lib if the snapshot grows again."
-  },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
@@ -198,5 +190,13 @@
     "createdAt": "2026-06-11",
     "reviewAfter": "2026-09-11",
     "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
+  },
+  "worker/src/lib/cron-lease.ts": {
+    "disposition": "queued-p4",
+    "notes": "Cron lease orchestration now combines worker-specific connection budgeting, timeout handling, and backoff metadata shaping for multiple cron lanes. Keep this explicitly waived for this release while lease policy work stabilizes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-13",
+    "reviewAfter": "2026-09-13",
+    "nextAction": "Split connection-budget accounting and lease backoff/state-machine transitions into focused helpers under a shared cron-lease contract."
   }
 }
