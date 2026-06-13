@@ -797,18 +797,4 @@ export const StressSignalDetailResponseSchema = z.object({
   methodology: MethodologyEnvelopeSchema,
 });
 
-export interface StressSignalDetailResponse {
-  current: StressSignalEntry | null;
-  history: {
-    date: number;
-    score: number;
-    band: string;
-    signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
-    amplifiers?: { psi: number; contagion: number };
-    methodologyVersion: string;
-  }[];
-  malformedRows?: number;
-  currentStatus?: StressSignalDataStatus;
-  currentReasons?: StressSignalDataReason[];
-  methodology: DepegDewsMethodology;
-}
+export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>;

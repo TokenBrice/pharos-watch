@@ -698,7 +698,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-6` — StressSignalDetailResponse interface manually restates its own Zod-inferred shape** `[simplification | low | trivial | none]`
 - Problem: `StressSignalDetailResponseSchema` and the hand-written interface describe the same shape; `history[].signals` matches `SignalDetailSchema` (passthrough index signature), `amplifiers` matches `AmplifiersSchema`, `methodology` resolves to `MethodologyEnvelope`. `z.infer` is structurally identical.
-- Recommendation: replace the manual interface with `export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>`. The schema is the runtime authority; consumers use it as a type param only.
+- Done 2026-06-13: replaced the manual interface with `export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>`. The schema remains the runtime authority.
 - Files: `shared/types/market.ts:791-814`.
 - Verifier: field-by-field verified; switching to z.infer cannot change wire behavior; demoted medium->low. Checks: `npm run typecheck`, `npm run typecheck:worker`.
 
