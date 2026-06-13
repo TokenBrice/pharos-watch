@@ -12,6 +12,7 @@ export type ChainHealthFactors = z.infer<typeof ChainHealthFactorsSchema>;
 
 export const ChainEnvironmentRiskValueSchema = z.object({
   value: z.string(),
+  // "UnderReview"/"neutral" retained for live L2BEAT API ingestion (forward-compat).
   sentiment: z.enum(["good", "warning", "bad", "UnderReview", "neutral"]),
 });
 
@@ -21,6 +22,7 @@ export const L2BeatChainEnvironmentEvidenceSchema = z.object({
   projectId: z.string(),
   slug: z.string(),
   name: z.string(),
+  // "Under review" retained for live L2BEAT API ingestion (forward-compat).
   stage: z.enum(["Stage 0", "Stage 1", "Stage 2", "Not applicable", "Under review"]),
   isUnderReview: z.boolean(),
   stageScore: z.number(),

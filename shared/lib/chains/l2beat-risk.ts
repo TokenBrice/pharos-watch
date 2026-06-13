@@ -24,7 +24,9 @@ export const L2BEAT_CHAIN_RISK_FIELD_LABELS: Record<L2BeatRiskField, string> = {
 };
 
 export type L2BeatRiskField = (typeof L2BEAT_CHAIN_RISK_FIELDS)[number];
+// "UnderReview"/"neutral" retained for live L2BEAT API ingestion (forward-compat; some snapshots carry them).
 export type L2BeatRiskSentiment = "good" | "warning" | "bad" | "UnderReview" | "neutral";
+// "Under review" retained for live L2BEAT API ingestion (forward-compat).
 export type L2BeatStage = "Stage 0" | "Stage 1" | "Stage 2" | "Not applicable" | "Under review";
 export type L2BeatScalingLayer = "layer2" | "layer3";
 
@@ -812,8 +814,7 @@ export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHA
   if (chainId in L2BEAT_CHAIN_RISK_SNAPSHOT) {
     return chainId as keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT;
   }
-  const aliases: Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>> = L2BEAT_CHAIN_ALIASES;
-  return aliases[chainId] ?? null;
+  return (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null;
 }
 
 export function resolveL2BeatChainRisk(chainId: string): L2BeatChainRiskSnapshot | null {
@@ -841,7 +842,8 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stageScore = L2BEAT_STAGE_SCORES[snapshot.stage];
   const riskScore = computeL2BeatRiskScore(snapshot);
-  const score = computeL2BeatChainEnvironmentScore(snapshot);
+  // Same formula as computeL2BeatChainEnvironmentScore(snapshot), reusing the values already computed above.
+  const score = Math.round(stageScore * L2BEAT_STAGE_WEIGHT + riskScore * L2BEAT_RISK_WEIGHT);
 
   return {
     source: "l2beat",
