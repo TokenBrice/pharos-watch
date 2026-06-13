@@ -1,6 +1,7 @@
 import type { ChainResilienceTier } from "./index";
 import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
+import { BPS_PER_UNIT } from "../math";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
 
@@ -70,7 +71,7 @@ export function computePegStabilityScore(coins: PegStabilityCoin[]): number {
     if (coin.price == null || coin.pegRef <= 0) {
       coinScore = 50; // neutral for no-price
     } else {
-      const deviationBps = Math.abs(coin.price - coin.pegRef) / coin.pegRef * 10_000;
+      const deviationBps = Math.abs(coin.price - coin.pegRef) / coin.pegRef * BPS_PER_UNIT;
       coinScore = Math.max(0, 100 - deviationBps / PEG_DEVIATION_SCORE_DIVISOR_BPS);
     }
     weightedSum += coinScore * coin.supplyUsd;

@@ -1,3 +1,4 @@
+import { BPS_PER_UNIT } from "@shared/lib/math";
 import type { PriceReferenceType } from "./price-validation";
 import { fetchCurrentNativePegQuotes, type NativePegQuoteFetchOptions } from "./native-peg-quotes";
 
@@ -38,7 +39,7 @@ export function computePriceDivergenceBps(left: number, right: number): number |
   }
   const mid = (left + right) / 2;
   if (!Number.isFinite(mid) || mid <= 0) return null;
-  return Math.round((Math.abs(left - right) / mid) * 10_000);
+  return Math.round((Math.abs(left - right) / mid) * BPS_PER_UNIT);
 }
 
 export async function fetchCurrentNativePegImpliedUsdQuotes(

@@ -1,7 +1,4 @@
-import { DAY_SECONDS } from "./time-constants";
-
-const MINUTE_SECONDS = 60;
-const HOUR_SECONDS = 3600;
+import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 
 type RelativeUnitStyle = "compact" | "short" | "long";
 type RelativeRounding = "floor" | "round";
@@ -56,7 +53,7 @@ export function formatRelativeAgeSeconds(ageSeconds: number, options: RelativeAg
     unitStyle = "compact",
     rounding = "floor",
     nowLabel,
-    nowThresholdSec = MINUTE_SECONDS,
+    nowThresholdSec = SECONDS_PER_MINUTE,
     dayThresholdSec = DAY_SECONDS,
     maxDays,
     invalidFallback = "N/A",
@@ -66,11 +63,11 @@ export function formatRelativeAgeSeconds(ageSeconds: number, options: RelativeAg
   const safeSeconds = Math.max(0, ageSeconds);
   if (nowLabel != null && safeSeconds < nowThresholdSec) return nowLabel;
 
-  if (safeSeconds < MINUTE_SECONDS) {
+  if (safeSeconds < SECONDS_PER_MINUTE) {
     return appendSuffix(joinValueUnit(Math.max(secondsMin, Math.floor(safeSeconds)), "second", unitStyle), suffix);
   }
   if (safeSeconds < HOUR_SECONDS) {
-    return appendSuffix(joinValueUnit(Math.max(1, roundValue(safeSeconds / MINUTE_SECONDS, rounding)), "minute", unitStyle), suffix);
+    return appendSuffix(joinValueUnit(Math.max(1, roundValue(safeSeconds / SECONDS_PER_MINUTE, rounding)), "minute", unitStyle), suffix);
   }
   if (safeSeconds < dayThresholdSec) {
     return appendSuffix(joinValueUnit(Math.max(1, roundValue(safeSeconds / HOUR_SECONDS, rounding)), "hour", unitStyle), suffix);
@@ -98,15 +95,15 @@ export function formatApproxDurationSeconds(
   if (!Number.isFinite(seconds) || seconds < 0) return invalidFallback;
 
   if (style === "long") {
-    if (seconds < MINUTE_SECONDS) return `${Math.max(1, Math.round(seconds))}s`;
-    const minutes = Math.round(seconds / MINUTE_SECONDS);
+    if (seconds < SECONDS_PER_MINUTE) return `${Math.max(1, Math.round(seconds))}s`;
+    const minutes = Math.round(seconds / SECONDS_PER_MINUTE);
     if (minutes < 60) return `${minutes} min`;
     const hours = minutes / 60;
     if (hours < 24) return `${hours.toFixed(1)} hr`;
     return `${(hours / 24).toFixed(1)} days`;
   }
 
-  if (seconds < HOUR_SECONDS) return `${Math.max(1, Math.round(seconds / MINUTE_SECONDS))}m`;
+  if (seconds < HOUR_SECONDS) return `${Math.max(1, Math.round(seconds / SECONDS_PER_MINUTE))}m`;
   if (seconds < DAY_SECONDS) {
     const hours = seconds / HOUR_SECONDS;
     return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
@@ -118,7 +115,7 @@ export function formatApproxDurationSeconds(
 export function formatStalenessDurationSeconds(seconds: number | null): string {
   if (seconds == null) return "missing";
   if (seconds >= HOUR_SECONDS) return `${(seconds / HOUR_SECONDS).toFixed(1)}h`;
-  return `${Math.max(1, Math.round(seconds / MINUTE_SECONDS))}m`;
+  return `${Math.max(1, Math.round(seconds / SECONDS_PER_MINUTE))}m`;
 }
 
 /**

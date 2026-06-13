@@ -15,6 +15,7 @@ import {
   type ApiKeyDb,
   type AuthenticatedApiKey,
 } from "./api-key-core";
+import { D1_INT32_MAX } from "./d1-constants";
 import { errorResponse } from "./api-response";
 
 const API_KEY_RATE_LIMIT_CIRCUIT_COOLDOWN_MS = API_KEY_DEPENDENCY_RETRY_AFTER_SEC * 1000;
@@ -77,7 +78,7 @@ export async function checkApiKeyRateLimit(
     `INSERT INTO api_key_rate_limit (api_key_id, bucket_start, count, last_seen_at)
      VALUES (?, ?, 1, ?)
      ON CONFLICT(api_key_id, bucket_start)
-     DO UPDATE SET count = MIN(count + 1, 2147483647), last_seen_at = excluded.last_seen_at
+     DO UPDATE SET count = MIN(count + 1, ${D1_INT32_MAX}), last_seen_at = excluded.last_seen_at
      RETURNING count`,
   )
     .bind(apiKeyId, bucketStart, nowSec)
@@ -134,7 +135,7 @@ export function checkIsolateLocalApiKeyRateLimit(
     return null;
   }
 
-  existing.count = Math.min(existing.count + 1, 2147483647);
+  existing.count = Math.min(existing.count + 1, D1_INT32_MAX);
   state.apiKeyFallbackRateLimitById.delete(apiKeyId);
   state.apiKeyFallbackRateLimitById.set(apiKeyId, existing);
   if (existing.count > limit) {

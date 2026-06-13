@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { D1_INT32_MAX } from "./d1-constants";
 import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
@@ -17,7 +18,7 @@ function recordJsonParseFailure(context: string, message: string): void {
   const previous = counters.get(context);
   counters.delete(context);
   counters.set(context, {
-    count: Math.min((previous?.count ?? 0) + 1, 2147483647),
+    count: Math.min((previous?.count ?? 0) + 1, D1_INT32_MAX),
     lastMessage: message,
   });
   while (counters.size > CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES) {

@@ -1,3 +1,5 @@
+export const BPS_PER_UNIT = 10_000;
+
 /** Clamp a number to [min, max]. NaN → min, ±Infinity → nearest bound. */
 export function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {

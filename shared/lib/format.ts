@@ -1,6 +1,6 @@
-import { DAY_SECONDS } from "./time-constants";
+import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
+import { BPS_PER_UNIT } from "./math";
 export { formatCompactUsdShort } from "./format-compact-usd-short";
-const BPS_PER_UNIT = 10_000;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -178,11 +178,11 @@ export function formatDuration(startSec: number, endSec: number | null): string 
   if (!Number.isFinite(startSec) || !Number.isFinite(endSec)) return "N/A";
   const totalSeconds = endSec - startSec;
   if (totalSeconds < 0) return "N/A";
-  if (totalSeconds < 60) return "< 1m";
+  if (totalSeconds < SECONDS_PER_MINUTE) return "< 1m";
 
   const days = Math.floor(totalSeconds / DAY_SECONDS);
-  const hours = Math.floor((totalSeconds % DAY_SECONDS) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const hours = Math.floor((totalSeconds % DAY_SECONDS) / HOUR_SECONDS);
+  const minutes = Math.floor((totalSeconds % HOUR_SECONDS) / SECONDS_PER_MINUTE);
 
   if (days > 0) {
     return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
@@ -207,11 +207,11 @@ export function formatDeathDate(d: string): string {
 /** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
 export function formatElapsedSeconds(seconds: number): string {
   if (!Number.isFinite(seconds)) return "N/A";
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < SECONDS_PER_MINUTE) return `${Math.floor(seconds)}s`;
+  if (seconds < HOUR_SECONDS) return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`;
   if (seconds < DAY_SECONDS) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
+    const h = Math.floor(seconds / HOUR_SECONDS);
+    const m = Math.floor((seconds % HOUR_SECONDS) / SECONDS_PER_MINUTE);
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
   return `${Math.floor(seconds / DAY_SECONDS)}d`;
@@ -220,7 +220,7 @@ export function formatElapsedSeconds(seconds: number): string {
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
 export function timeAgo(epochSec: number): string {
   if (!Number.isFinite(epochSec)) return "N/A";
-  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / 60);
+  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / SECONDS_PER_MINUTE);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffH = Math.floor(diffMin / 60);
