@@ -337,7 +337,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`vm-9` — Split @shared/types vs @shared/types/core type-imports in compare-derive.ts** `[consistency | low | trivial | none]`
 - Problem: lines 7-9 are three separate `import type` lines: 7 pulls four types from the barrel, 8 pulls `MintBurnPerCoinResponse` from the same barrel, 9 pulls `StablecoinMeta` from the `@shared/types/core` sub-path. The barrel re-exports `./core`, so the sub-path is inconsistent. Lines 7 AND 8 also both merge.
-- Recommendation: merge 7-9 into one barrel `import type`. All three are `import type`, so `check:shared-types-imports` (restricts only runtime VALUE imports) is satisfied.
+- Done 2026-06-13: source already uses one `import type { ... } from "@shared/types"` block for the compare-derive types, including `StablecoinMeta`.
 - Files: `src/lib/compare-derive.ts:7-9`.
 - Verifier: barrel re-export + type-only confirmed; corrected candidate's overlooking line 8. Checks: `npm run lint:typed`, `npm run check:shared-types-imports`.
 
