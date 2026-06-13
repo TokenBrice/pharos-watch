@@ -686,7 +686,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-4` — Three DDRR review row schemas repeat ~5 identical publication fields** `[duplication | low | small | low]`
 - Problem: the three row schemas each repeat publicPredictionId, assessmentId, predictionMethodologyVersion, predictionPolicyVersion, lockedAt. The "7-8 shared fields" count is OVERSTATED: `predictionState` differs per row, and `publishedAt`/`publicationSnapshotToken` are nullable in the invalidated row — only 5 fields are genuinely identical.
-- Recommendation: optionally extract `DdrrPublicationCoreSchema` (the 5 truly-identical fields) and `.extend(...)` in each row; keep the 3 per-row divergent fields. Low value — weigh against no-speculative-abstraction. Defensible to keep as-is.
+- Done 2026-06-13: extracted private `DdrrPublicationCoreSchema` for the five truly-identical fields and spread it into the three row schemas. The per-row divergent fields stayed inline.
 - Files: `shared/types/depeg-resolver-review.ts:238-259,262-277,305-321`.
 - Verifier: shared set is 5 fields, not 7-8; borderline against the simplicity rule; demoted medium->low. Checks: `npm run typecheck`, `npx vitest run shared/lib/depeg-resolver-review/__tests__/depeg-resolver-review.test.ts`.
 
