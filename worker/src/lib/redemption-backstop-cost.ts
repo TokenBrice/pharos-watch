@@ -112,6 +112,20 @@ function resolveRedemptionCost(
 ): ResolvedRedemptionCost {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
+  const buildCost = (fields: {
+    score: number;
+    feeBps: number | null;
+    costScenarioScores: ResolvedRedemptionCost["costScenarioScores"];
+    notes: string[];
+  }): ResolvedRedemptionCost => ({
+    score: fields.score,
+    feeBps: fields.feeBps,
+    feeConfidence,
+    feeModelKind,
+    costScenarioScores: fields.costScenarioScores,
+    ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+    notes: fields.notes,
+  });
   const resolvedLiveMetadata =
     liveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
 
@@ -122,31 +136,25 @@ function resolveRedemptionCost(
     feeConfidence === "formula"
   ) {
     const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
-    return {
+    return buildCost({
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
-      feeConfidence,
-      feeModelKind,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes: [],
-    };
+    });
   }
 
   if (resolvedLiveMetadata.canUseFee && resolvedLiveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
     const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
-    return {
+    return buildCost({
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
-      feeConfidence,
-      feeModelKind,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes:
         feeBps !== Math.max(0, costModel.feeBps)
           ? ["Using fresh live redemption fee telemetry in place of the reviewed fallback bound"]
           : [],
-    };
+    });
   }
 
   if (costModel.kind === "dynamic-or-unclear") {
@@ -154,31 +162,25 @@ function resolveRedemptionCost(
     const score =
       scenarioScores?.activeUser ??
       (costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40);
-    return {
+    return buildCost({
       score,
       feeBps: null,
-      feeConfidence,
-      feeModelKind,
       costScenarioScores: scenarioScores,
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes:
         feeConfidence === "formula" && resolvedLiveMetadata.updatedAt != null && resolvedLiveMetadata.feeReason
           ? [resolvedLiveMetadata.feeReason]
           : [],
-    };
+    });
   }
 
   const feeBps = Math.max(0, costModel.feeBps);
   const costScenarioScores = resolveCostScenarioScores(costModel, feeBps);
-  return {
+  return buildCost({
     score: costScenarioScores?.activeUser ?? resolveBoundedFeeScore(feeBps),
     feeBps,
-    feeConfidence,
-    feeModelKind,
     costScenarioScores,
-    ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
     notes: [],
-  };
+  });
 }
 
 export function resolveRedemptionStaticFields(

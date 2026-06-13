@@ -23,22 +23,20 @@ export async function resolveSupplyRatioCapacity(
       capacitySemantics,
     );
   }
+  const immediateUsd = supplyUsd * model.ratio;
+  const scoringUsd = model.dailyLimitUsd != null ? Math.min(immediateUsd, model.dailyLimitUsd) : immediateUsd;
   return {
-    immediateCapacityUsd: supplyUsd * model.ratio,
+    immediateCapacityUsd: immediateUsd,
     immediateCapacityRatio: model.ratio,
-    scoringCapacityUsd:
-      model.dailyLimitUsd != null ? Math.min(supplyUsd * model.ratio, model.dailyLimitUsd) : supplyUsd * model.ratio,
+    scoringCapacityUsd: scoringUsd,
     scoringCapacityRatio:
       model.dailyLimitUsd != null && supplyUsd > 0
         ? Math.min(model.ratio, model.dailyLimitUsd / supplyUsd)
         : model.ratio,
     capacityProfile: {
-      immediateUsd: supplyUsd * model.ratio,
+      immediateUsd,
       ...(model.dailyLimitUsd != null ? { dailyLimitUsd: model.dailyLimitUsd } : {}),
-      scoringUsd:
-        model.dailyLimitUsd != null
-          ? Math.min(supplyUsd * model.ratio, model.dailyLimitUsd)
-          : supplyUsd * model.ratio,
+      scoringUsd,
       scoringHorizon: model.dailyLimitUsd != null ? "daily" : "immediate",
       capacityProfileConfidence: capacityConfidence,
     },

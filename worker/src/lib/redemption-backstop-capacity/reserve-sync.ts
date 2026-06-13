@@ -128,6 +128,8 @@ function buildReserveSyncFallbackFields(
         .defaultSourceMode,
     resolutionState: "resolved",
     capacityConfidence,
+    // routeFamily=null: redemption-backstop-sources.ts recomputes capacityBasis with the real
+    // routeFamily; the value set here is not consumed downstream of reserve-sync.
     capacityBasis: resolveCapacityBasis(null, model, capacityConfidence),
     capacitySemantics,
     ...pickRouteStatusFields(liveMetadata),
@@ -200,6 +202,7 @@ export async function resolveReserveSyncCapacity(
           .defaultSourceMode,
       resolutionState: "resolved",
       capacityConfidence: liveMetadata.capacityConfidence,
+      // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
       capacityBasis: resolveCapacityBasis(null, model, liveMetadata.capacityConfidence),
       capacitySemantics,
       ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
@@ -284,6 +287,7 @@ export async function resolveReserveSyncCapacity(
     sourceMode: "static",
     resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
     capacityConfidence: liveCapacityConfidence,
+    // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
     capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
     capacitySemantics,
     ...pickRouteStatusFields(liveMetadata),

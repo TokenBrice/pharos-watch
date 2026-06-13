@@ -20,10 +20,11 @@ export async function resolveFixedUsdCapacity(
   const rawCapacityUsd = Math.max(0, model.amountUsd);
   const immediateCapacityUsd = supplyUsd != null ? Math.min(supplyUsd, rawCapacityUsd) : rawCapacityUsd;
   const immediateCapacityRatio = hasPositiveSupply ? Math.min(1, immediateCapacityUsd / supplyUsd) : null;
-  const dailyLimitCapsCapacity = model.dailyLimitUsd != null && model.dailyLimitUsd < immediateCapacityUsd;
-  const scoringCapacityUsd = dailyLimitCapsCapacity
-    ? Math.max(0, model.dailyLimitUsd as number)
-    : immediateCapacityUsd;
+  const dailyLimitUsd = model.dailyLimitUsd;
+  const dailyLimitCapsCapacity = dailyLimitUsd != null && dailyLimitUsd < immediateCapacityUsd;
+  // Equivalent to capping at the daily limit only when it is below immediate capacity; avoids a cast.
+  const scoringCapacityUsd =
+    dailyLimitUsd != null ? Math.max(0, Math.min(dailyLimitUsd, immediateCapacityUsd)) : immediateCapacityUsd;
   const scoringCapacityRatio = hasPositiveSupply ? Math.min(1, scoringCapacityUsd / supplyUsd) : null;
   return {
     immediateCapacityUsd,
@@ -33,7 +34,7 @@ export async function resolveFixedUsdCapacity(
     capacityScoreMode: hasPositiveSupply ? "interpolated" : "tier-floor",
     capacityProfile: {
       immediateUsd: immediateCapacityUsd,
-      ...(model.dailyLimitUsd != null ? { dailyLimitUsd: model.dailyLimitUsd } : {}),
+      ...(dailyLimitUsd != null ? { dailyLimitUsd } : {}),
       scoringUsd: scoringCapacityUsd,
       scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
       capacityProfileConfidence: capacityConfidence,
