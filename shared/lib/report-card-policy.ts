@@ -136,10 +136,11 @@ export const CHAIN_TIER_LABEL: Record<ChainTier, string> = {
 };
 
 export const DEPLOYMENT_MODEL_LABEL: Record<DeploymentModel, string> = {
+  // Empty string intentionally suppresses the suffix in chainInfraLabel().
   "single-chain": "",
   "canonical-bridge": "canonical bridge",
-  "third-party-bridge": "third-party bridge",
   "native-multichain": "native multichain",
+  "third-party-bridge": "third-party bridge",
 };
 
 export const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {

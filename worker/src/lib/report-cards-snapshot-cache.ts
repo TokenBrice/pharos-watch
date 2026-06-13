@@ -1,5 +1,5 @@
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
-import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import {
   loadVersionedSnapshotCache,
   writeVersionedSnapshotCache,
@@ -30,7 +30,7 @@ const REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<
   cacheKey: REPORT_CARDS_SNAPSHOT_CACHE_KEY,
   label: "report-cards",
   generation: REPORT_CARDS_SNAPSHOT_CACHE_GENERATION,
-  methodologyVersion: METHODOLOGY_VERSION,
+  methodologyVersion: SAFETY_SCORE_VERSION,
   schema: ReportCardsResponseSchema,
   reasons: {
     missingCache: "missing-cache",
@@ -42,11 +42,11 @@ const REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<
   },
   getUpdatedAt: (payload) => payload.updatedAt,
   validatePayload: (payload) => (
-    payload.methodology.version === METHODOLOGY_VERSION
+    payload.methodology.version === SAFETY_SCORE_VERSION
       ? null
       : {
           reason: "methodology-mismatch",
-          message: `Report-cards snapshot methodology ${payload.methodology.version} does not match ${METHODOLOGY_VERSION}`,
+          message: `Report-cards snapshot methodology ${payload.methodology.version} does not match ${SAFETY_SCORE_VERSION}`,
         }
   ),
 };

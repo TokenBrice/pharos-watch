@@ -6,8 +6,9 @@ import type {
   VariantKind,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
-import { detailItemsFromParts, joinReportCardDetail } from "./report-card-detail";
+import { detailItemsFromParts, joinReportCardDetail, plural } from "./report-card-detail";
 import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
+import { roundScore } from "./math";
 
 const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
   decentralized: 90,
@@ -119,16 +120,16 @@ export function scoreDependencyRisk(
     score = Math.min(score, ceiling);
   }
 
-  score = Math.round(Math.max(0, Math.min(100, score)));
+  score = roundScore(score);
 
   const parts: string[] = [];
   parts.push(
-    `Upstream: ${resolved.length} upstream dep${resolved.length === 1 ? "" : "s"} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
+    `Upstream: ${plural(resolved.length, "upstream dep")} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
   );
   parts.push(`Declared dependency weight: ${Math.round(Math.min(1, declaredWeight) * 100)}%`);
   if (missingDependencies.length > 0) {
     parts.push(
-      `Unavailable upstream scores: ${missingDependencies.length} dep${missingDependencies.length === 1 ? "" : "s"} (${Math.round(missingWeight * 100)}% weight, scored at ${UNAVAILABLE_DEPENDENCY_SCORE})`,
+      `Unavailable upstream scores: ${plural(missingDependencies.length, "dep")} (${Math.round(missingWeight * 100)}% weight, scored at ${UNAVAILABLE_DEPENDENCY_SCORE})`,
     );
   }
   if (resolvedWeight !== rawTotal) {
@@ -137,7 +138,7 @@ export function scoreDependencyRisk(
   parts.push(`Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfBackedScore})`);
   if (weakDependencies.length > 0) {
     parts.push(
-      `Penalty: ${weakDependencies.length} weak dep${weakDependencies.length === 1 ? "" : "s"} below 75 (-10)`,
+      `Penalty: ${plural(weakDependencies.length, "weak dep")} below 75 (-10)`,
     );
   }
   if (ceiling < Infinity) {

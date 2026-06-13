@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
 import { writeReportCardCache } from "../lib/report-card-cache";
@@ -23,6 +24,35 @@ function hasDegradedReportCardInputs(snapshot: ReportCardsSnapshot): boolean {
   );
 }
 
+function buildHistoryInsert(
+  db: D1Database,
+  input: {
+    stablecoinId: string;
+    snapshotDay: number;
+    grade: ReportCardGrade;
+    score: number | null;
+    prevGrade: ReportCardGrade | null;
+    prevScore: number | null;
+    methodologyVersion: string;
+  },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT OR IGNORE INTO safety_grade_history
+       (stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      input.stablecoinId,
+      input.snapshotDay,
+      input.grade,
+      input.score,
+      input.prevGrade,
+      input.prevScore,
+      input.methodologyVersion,
+    );
+}
+
 export async function snapshotSafetyGradeHistory(
   db: D1Database,
   signal?: AbortSignal,
@@ -32,7 +62,7 @@ export async function snapshotSafetyGradeHistory(
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const snapshotDay = Math.floor(nowSec / 86_400) * 86_400;
+  const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
   const methodologyVersion = SAFETY_SCORE_VERSION;
 
   let snapshot;
@@ -91,21 +121,15 @@ export async function snapshotSafetyGradeHistory(
       }
       seeded++;
       stmts.push(
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO safety_grade_history
-             (stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(
-            card.id,
-            snapshotDay,
-            card.overallGrade,
-            card.overallScore,
-            null,
-            null,
-            methodologyVersion,
-          ),
+        buildHistoryInsert(db, {
+          stablecoinId: card.id,
+          snapshotDay,
+          grade: card.overallGrade,
+          score: card.overallScore,
+          prevGrade: null,
+          prevScore: null,
+          methodologyVersion,
+        }),
       );
       continue;
     }
@@ -117,21 +141,15 @@ export async function snapshotSafetyGradeHistory(
       }
       changed++;
       stmts.push(
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO safety_grade_history
-             (stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(
-            card.id,
-            snapshotDay,
-            card.overallGrade,
-            card.overallScore,
-            latest.grade,
-            latest.score,
-            methodologyVersion,
-          ),
+        buildHistoryInsert(db, {
+          stablecoinId: card.id,
+          snapshotDay,
+          grade: card.overallGrade,
+          score: card.overallScore,
+          prevGrade: latest.grade,
+          prevScore: latest.score,
+          methodologyVersion,
+        }),
       );
       continue;
     }

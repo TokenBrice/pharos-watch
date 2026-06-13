@@ -4,6 +4,10 @@
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  getReportCardGradeRank,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "@shared/lib/report-card-core";
+import {
   buildTapeEventId,
   deriveIssuerId,
   severityForScoreDowngrade,
@@ -27,17 +31,12 @@ interface SafetyGradeSourceRow {
   rowid: number;
 }
 
-// Same numeric scale as tape-event-helpers.gradeRank, duplicated to avoid
-// exporting that internal helper.
-const GRADE_ORDER: Record<string, number> = {
-  "A+": 12, "A": 11, "A-": 10,
-  "B+": 9, "B": 8, "B-": 7,
-  "C+": 6, "C": 5, "C-": 4,
-  "D": 3, "F": 2, "NR": 1,
-};
-
 function coinSourceUrl(coinId: string): string {
   return `/stablecoin/${encodeURIComponent(coinId)}/#report-card`;
+}
+
+function gradeRank(grade: string): number {
+  return getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK;
 }
 
 async function projectScoreByVariant(
@@ -68,9 +67,10 @@ async function projectScoreByVariant(
   const events: TapeEventInsert[] = [];
   let maxCursor = since;
   for (const row of rows) {
+    if (row.recorded_at > maxCursor) maxCursor = row.recorded_at;
     if (!row.prev_grade) continue;
-    const prevRank = GRADE_ORDER[row.prev_grade] ?? 0;
-    const newRank = GRADE_ORDER[row.grade] ?? 0;
+    const prevRank = gradeRank(row.prev_grade);
+    const newRank = gradeRank(row.grade);
     if (prevRank === newRank) continue;
     const isUpgrade = newRank > prevRank;
     if (variant === "upgraded" && !isUpgrade) continue;
@@ -114,7 +114,6 @@ async function projectScoreByVariant(
       sourceUrl: coinSourceUrl(row.stablecoin_id),
       methodologyVersion: row.methodology_version,
     });
-    if (row.recorded_at > maxCursor) maxCursor = row.recorded_at;
   }
 
   if (!dryRun) {

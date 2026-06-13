@@ -1,6 +1,11 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
 import { setCache } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import {
+  getReportCardGradeRank,
+  REPORT_CARD_GRADE_RANK,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "@shared/lib/report-card-core";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import type {
   AlertSafetySnapshotEnvelope,
@@ -19,20 +24,7 @@ export const SNAPSHOT_KEYS = {
 
 export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 
-export const SAFETY_GRADE_RANK: Record<string, number> = {
-  NR: 0,
-  F: 1,
-  D: 2,
-  "C-": 3,
-  C: 4,
-  "C+": 5,
-  "B-": 6,
-  B: 7,
-  "B+": 8,
-  "A-": 9,
-  A: 10,
-  "A+": 11,
-};
+export const SAFETY_GRADE_RANK: Readonly<Record<string, number>> = REPORT_CARD_GRADE_RANK;
 
 // ---------- Types ----------
 
@@ -182,8 +174,8 @@ export function extractTopSignals(signalsJson: string | null): Array<{ name: str
 // ---------- Safety Grade Helpers ----------
 
 export function isSafetyDeescalation(oldGrade: string, newGrade: string): boolean {
-  const oldRank = SAFETY_GRADE_RANK[oldGrade];
-  const newRank = SAFETY_GRADE_RANK[newGrade];
+  const oldRank = getReportCardGradeRank(oldGrade, UNKNOWN_REPORT_CARD_GRADE_RANK);
+  const newRank = getReportCardGradeRank(newGrade, UNKNOWN_REPORT_CARD_GRADE_RANK);
   if (oldRank == null || newRank == null) return false;
   return newRank > oldRank;
 }

@@ -16,6 +16,7 @@ import { inferGovernanceQuality } from "./report-card-policy";
 import { chainInfraLabel, chainInfraScore, resolveResilienceFactors } from "./report-card-resilience";
 import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./mint-authority-scoring";
+import { roundScore } from "./math";
 
 /**
  * Safety Score v8: weight of the Mint Authority Score in the penalty-only
@@ -24,6 +25,14 @@ import { MINT_AUTHORITY_SCORE_BANDS, resolveMintAuthorityScoreBand } from "./min
 const MAS_BLEND_WEIGHT = 0.35;
 export const ORACLE_RISK_BLEND_WEIGHT = 0.25;
 export const BRIDGE_ROUTE_RISK_BLEND_WEIGHT = 0.2;
+
+const INFRA_PENALTY_BANDS: readonly [minScore: number, penalty: number][] = [
+  [80, 0],
+  [60, -10],
+  [40, -25],
+  [20, -40],
+  [0, -60],
+];
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -173,6 +182,32 @@ export function resolveGovernanceQuality(governance: GovernanceType, meta?: Stab
   return base;
 }
 
+function infrastructurePenalty(infraScore: number): number {
+  for (const [minScore, penalty] of INFRA_PENALTY_BANDS) {
+    if (infraScore >= minScore) return penalty;
+  }
+  return -60;
+}
+
+function qualityTakesInfraPenalty(quality: GovernanceQuality): boolean {
+  return (
+    quality !== "immutable-code" &&
+    quality !== "single-entity" &&
+    quality !== "regulated-entity" &&
+    quality !== "wrapper"
+  );
+}
+
+function applyPenaltyBlend(
+  currentScore: number,
+  penaltyScore: number,
+  weight: number,
+): { score: number; drag: number } {
+  const blended = Math.round(currentScore * (1 - weight) + penaltyScore * weight);
+  if (blended >= currentScore) return { score: currentScore, drag: 0 };
+  return { score: blended, drag: blended - currentScore };
+}
+
 export interface DecentralizationBreakdown {
   dimension: ReportCardDimension;
   /**
@@ -192,13 +227,7 @@ export function scoreDecentralizationBreakdown(
   let score = GOVERNANCE_QUALITY_SCORE[quality];
   const inheritedWrapperScore =
     quality === "wrapper" && typeof options.wrappedAssetDecentralizationScore === "number"
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            Math.round(options.wrappedAssetDecentralizationScore - wrapperPenaltyForVariant(options.variantKind)),
-          ),
-        )
+      ? roundScore(options.wrappedAssetDecentralizationScore - wrapperPenaltyForVariant(options.variantKind))
       : null;
   if (inheritedWrapperScore != null) {
     score = inheritedWrapperScore;
@@ -207,20 +236,9 @@ export function scoreDecentralizationBreakdown(
   const factors = meta ? resolveResilienceFactors(meta) : undefined;
   const infraScore = factors ? chainInfraScore(factors.chainTier, factors.deploymentModel) : 100;
 
-  let penalty = 0;
-  if (infraScore >= 80) penalty = 0;
-  else if (infraScore >= 60) penalty = -10;
-  else if (infraScore >= 40) penalty = -25;
-  else if (infraScore >= 20) penalty = -40;
-  else penalty = -60;
-
-  if (
-    quality !== "immutable-code" &&
-    quality !== "single-entity" &&
-    quality !== "regulated-entity" &&
-    quality !== "wrapper" &&
-    penalty < 0
-  ) {
+  const penalty = infrastructurePenalty(infraScore);
+  const penaltyAppliesToQuality = qualityTakesInfraPenalty(quality);
+  if (penaltyAppliesToQuality && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 
@@ -230,11 +248,9 @@ export function scoreDecentralizationBreakdown(
   const oracleRisk = meta ? resolveOracleRiskScore(meta) : null;
   let oracleRiskDrag = 0;
   if (oracleRisk != null) {
-    const blended = Math.round(score * (1 - ORACLE_RISK_BLEND_WEIGHT) + oracleRisk.score * ORACLE_RISK_BLEND_WEIGHT);
-    if (blended < score) {
-      oracleRiskDrag = blended - score;
-      score = blended;
-    }
+    const blended = applyPenaltyBlend(score, oracleRisk.score, ORACLE_RISK_BLEND_WEIGHT);
+    score = blended.score;
+    oracleRiskDrag = blended.drag;
   }
 
   // Penalty-only bridge-route blend:
@@ -243,13 +259,9 @@ export function scoreDecentralizationBreakdown(
   const bridgeRouteRisk = meta ? resolveBridgeRouteRiskScore(meta) : null;
   let bridgeRouteRiskDrag = 0;
   if (bridgeRouteRisk != null) {
-    const blended = Math.round(
-      score * (1 - BRIDGE_ROUTE_RISK_BLEND_WEIGHT) + bridgeRouteRisk.score * BRIDGE_ROUTE_RISK_BLEND_WEIGHT,
-    );
-    if (blended < score) {
-      bridgeRouteRiskDrag = blended - score;
-      score = blended;
-    }
+    const blended = applyPenaltyBlend(score, bridgeRouteRisk.score, BRIDGE_ROUTE_RISK_BLEND_WEIGHT);
+    score = blended.score;
+    bridgeRouteRiskDrag = blended.drag;
   }
 
   // Inheritance base: wrappers read this pre-Mint-Authority, pre-ceiling value
@@ -260,15 +272,13 @@ export function scoreDecentralizationBreakdown(
   // privileged-mint risk can undermine a decentralization claim, never improve it.
   const mintAuthorityScore =
     typeof options.mintAuthorityScore === "number" && Number.isFinite(options.mintAuthorityScore)
-      ? Math.max(0, Math.min(100, Math.round(options.mintAuthorityScore)))
+      ? roundScore(options.mintAuthorityScore)
       : null;
   let mintAuthorityDrag = 0;
   if (mintAuthorityScore != null) {
-    const blended = Math.round(score * (1 - MAS_BLEND_WEIGHT) + mintAuthorityScore * MAS_BLEND_WEIGHT);
-    if (blended < score) {
-      mintAuthorityDrag = blended - score;
-      score = blended;
-    }
+    const blended = applyPenaltyBlend(score, mintAuthorityScore, MAS_BLEND_WEIGHT);
+    score = blended.score;
+    mintAuthorityDrag = blended.drag;
   }
   if (
     inheritedWrapperScore != null &&
@@ -279,12 +289,7 @@ export function scoreDecentralizationBreakdown(
   }
 
   const governanceScore = inheritedWrapperScore ?? GOVERNANCE_QUALITY_SCORE[quality];
-  const penaltyApplied =
-    penalty < 0 &&
-    quality !== "immutable-code" &&
-    quality !== "single-entity" &&
-    quality !== "regulated-entity" &&
-    quality !== "wrapper";
+  const penaltyApplied = penalty < 0 && penaltyAppliesToQuality;
 
   const detailItems: ReportCardDetailItem[] = [
     { label: "Governance", value: GOVERNANCE_QUALITY_LABEL[quality], detail: `${governanceScore}` },

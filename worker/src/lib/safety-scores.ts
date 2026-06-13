@@ -46,21 +46,32 @@ export type SafetyScoresResultFull = {
 
 export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresResultFull;
 
+function buildResultBase(
+  kind: "ok" | "degraded",
+  scores: Map<string, SafetyResult>,
+  trackedCount: number,
+  reason?: string,
+): Omit<SafetyScoresResultMap, "mode"> {
+  const coveredCount = scores.size;
+  return {
+    kind,
+    ...(reason ? { reason } : {}),
+    coveredCount,
+    trackedCount,
+    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
+    scores,
+  };
+}
+
 function toMapResult(
   kind: "ok" | "degraded",
   scores: Map<string, SafetyResult>,
   trackedCount: number,
   reason?: string,
 ): SafetyScoresResultMap {
-  const coveredCount = scores.size;
   return {
-    kind,
+    ...buildResultBase(kind, scores, trackedCount, reason),
     mode: "map",
-    ...(reason ? { reason } : {}),
-    coveredCount,
-    trackedCount,
-    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
-    scores,
   };
 }
 
@@ -71,15 +82,9 @@ function toFullResult(
   trackedCount: number,
   reason?: string,
 ): SafetyScoresResultFull {
-  const coveredCount = scores.size;
   return {
-    kind,
+    ...buildResultBase(kind, scores, trackedCount, reason),
     mode: "full-grades",
-    ...(reason ? { reason } : {}),
-    coveredCount,
-    trackedCount,
-    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
-    scores,
     grades,
   };
 }

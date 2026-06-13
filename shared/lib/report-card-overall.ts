@@ -12,7 +12,7 @@ import {
 } from "./report-card-core";
 import { activeDepegCapScore } from "./report-card-active-depeg";
 import { scoreDependencyRisk } from "./report-card-dependency";
-import { round1 } from "./math";
+import { round1, roundScore } from "./math";
 
 interface OverallComputation {
   grade: ReportCardGrade;
@@ -64,7 +64,7 @@ export function computeOverallGrade(
     score = Math.min(score, capScore);
   }
 
-  const clamped = Math.max(0, Math.min(100, Math.round(score)));
+  const clamped = roundScore(score);
   const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);
 
   return { grade: scoreToGrade(clamped), score: clamped, baseScore, ratedDimensions };

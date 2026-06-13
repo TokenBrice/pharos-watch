@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
@@ -21,7 +21,7 @@ describe("report-cards snapshot cache", () => {
     mockGetCache.mockResolvedValue({
       value: JSON.stringify({
         generation: 2,
-        methodologyVersion: METHODOLOGY_VERSION,
+        methodologyVersion: SAFETY_SCORE_VERSION,
         payload: {},
       }),
       updatedAt: 1_700_000_000,

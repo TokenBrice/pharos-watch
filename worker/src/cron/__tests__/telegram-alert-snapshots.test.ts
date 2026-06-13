@@ -227,8 +227,9 @@ describe("isSafetyDeescalation", () => {
     expect(isSafetyDeescalation("A", "B")).toBe(false);
   });
 
-  it("returns false for unknown grades", () => {
-    expect(isSafetyDeescalation("X", "A")).toBe(false);
+  it("treats unknown grades as lower than NR when comparing deescalation", () => {
+    expect(isSafetyDeescalation("X", "NR")).toBe(true);
+    expect(isSafetyDeescalation("NR", "X")).toBe(false);
   });
 
   it("returns false for equal grades", () => {

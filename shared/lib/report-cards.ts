@@ -10,14 +10,10 @@ export {
   DIMENSION_WEIGHTS,
   PEG_MULTIPLIER_EXPONENT,
   NO_LIQUIDITY_PENALTY,
-  DIMENSION_LABELS,
-  DIMENSION_SHORT_LABELS,
-  GRADE_THRESHOLDS,
-  REPORT_CARD_GRADE_COLORS,
-  DIMENSION_ORDER,
-  GRADE_RADAR_COLORS,
-  scoreToGrade,
-  gradeRange,
+  DIMENSION_LABELS, DIMENSION_SHORT_LABELS, DIMENSION_ORDER,
+  GRADE_THRESHOLDS, REPORT_CARD_GRADE_RANK, UNKNOWN_REPORT_CARD_GRADE_RANK,
+  getReportCardGradeRank, REPORT_CARD_GRADE_COLORS, GRADE_RADAR_COLORS,
+  scoreToGrade, gradeRange, type ReportCardGradeRange,
 } from "./report-card-core";
 export { scorePegStability, scoreLiquidity } from "./report-card-peg-liquidity";
 export {

@@ -7,13 +7,10 @@ import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice, formatScore, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
-
-const SAFETY_GRADE_ORDER: Record<ReportCardGrade, number> = {
-  "A+": 12, A: 11, "A-": 10,
-  "B+": 9,  B: 8,  "B-": 7,
-  "C+": 6,  C: 5,  "C-": 4,
-  D: 3, F: 2, NR: 1,
-};
+import {
+  getReportCardGradeRank,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "@shared/lib/report-card-core";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   MatrixTable,
@@ -82,14 +79,14 @@ function bestHighestIndex(values: (number | null)[]): number | null {
   return bestIdx;
 }
 
-/** Find index of coin with best safety grade (highest SAFETY_GRADE_ORDER value). */
+/** Find index of coin with best safety grade; unknown-like values sort below NR. */
 function bestGradeIndex(grades: (ReportCardGrade | null)[]): number | null {
   let bestIdx: number | null = null;
-  let bestOrder = -1;
+  let bestOrder = UNKNOWN_REPORT_CARD_GRADE_RANK;
   for (let i = 0; i < grades.length; i++) {
     const g = grades[i];
     if (g == null) continue;
-    const order = SAFETY_GRADE_ORDER[g] ?? 0;
+    const order = getReportCardGradeRank(g, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK;
     if (order > bestOrder) {
       bestOrder = order;
       bestIdx = i;

@@ -3,6 +3,7 @@ import { clampScore } from "./math";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 
 export const METHODOLOGY_VERSION = SAFETY_SCORE_VERSION;
+export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0,
@@ -60,9 +61,14 @@ export const REPORT_CARD_GRADE_RANK: Record<ReportCardGrade, number> = {
   "A+": 10,
 };
 
-export function getReportCardGradeRank(grade: string | null | undefined): number | null {
-  if (!grade) return null;
-  return (REPORT_CARD_GRADE_RANK as Record<string, number | undefined>)[grade] ?? null;
+export const UNKNOWN_REPORT_CARD_GRADE_RANK = -2;
+
+export function getReportCardGradeRank(
+  grade: string | null | undefined,
+  fallback: number | null = null,
+): number | null {
+  if (!grade) return fallback;
+  return (REPORT_CARD_GRADE_RANK as Record<string, number | undefined>)[grade] ?? fallback;
 }
 
 export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
@@ -106,7 +112,10 @@ export function scoreToGrade(score: number | null): ReportCardGrade {
   return "F";
 }
 
-export function gradeRange(grade: ReportCardGrade): string {
+export function gradeRange(grade: ReportCardGrade): ReportCardGradeRange {
   if (grade === "NR") return "NR";
-  return grade.charAt(0);
+  if (grade === "A+" || grade === "A" || grade === "A-") return "A";
+  if (grade === "B+" || grade === "B" || grade === "B-") return "B";
+  if (grade === "C+" || grade === "C" || grade === "C-") return "C";
+  return grade;
 }

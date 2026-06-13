@@ -1,3 +1,4 @@
+import { formatCompactUsdShort } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
@@ -5,11 +6,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 function formatUsdCompact(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "n/a";
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
+  return formatCompactUsdShort(value);
 }
 
 export async function buildAlertContextLines(

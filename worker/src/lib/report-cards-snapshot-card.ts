@@ -37,6 +37,7 @@ import type { DexLiquidityData, BluechipRating, PegSummaryCoin } from "@shared/t
 import type {
   ReportCard,
   DimensionKey,
+  ReportCardDimension,
   RawDimensionInputs,
   ReportCardBridgeRouteRisk,
   ReportCardOracleRisk,
@@ -311,7 +312,7 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     wrappedAssetBlendedDecentralizationScore,
   });
 
-  const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
+  const dimensions: Record<DimensionKey, ReportCardDimension> = {
     pegStability: scorePegStability(peg, meta, {
       inheritedFromReference: resolvedPeg.inheritedFromReference,
       pegReferenceMeta: resolvedPeg.pegReferenceMeta,

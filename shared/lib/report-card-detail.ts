@@ -12,6 +12,10 @@ export function joinReportCardDetail(items: readonly ReportCardDetailItem[]): st
   return items.map(formatReportCardDetailItem).join(". ");
 }
 
+export function plural(count: number, word: string, pluralWord = `${word}s`): string {
+  return `${count} ${count === 1 ? word : pluralWord}`;
+}
+
 export function detailItemsFromParts(parts: readonly string[]): ReportCardDetailItem[] {
   return parts.map((part) => {
     const separator = part.indexOf(": ");

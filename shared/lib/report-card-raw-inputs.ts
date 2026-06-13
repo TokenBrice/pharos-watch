@@ -37,6 +37,5 @@ export function createReportCardRawInputs(overrides: Partial<RawDimensionInputs>
     dependencyFromLive: false,
     ...overrides,
   };
-  inputs.dependencies = overrides.dependencies ?? [];
   return inputs;
 }

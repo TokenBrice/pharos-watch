@@ -40,7 +40,6 @@ export type ReportCardCacheLoadResult =
 
 export interface LoadReportCardCacheOptions {
   maxAgeMs?: number;
-  expectedMethodologyVersion?: string;
 }
 
 export interface WriteReportCardCacheOptions {
@@ -133,13 +132,12 @@ export async function loadReportCardCache(
     return { kind: "error", reason: decoded.reason, updatedAt: decoded.updatedAt };
   }
 
-  const expectedMethodologyVersion = options.expectedMethodologyVersion ?? SAFETY_SCORE_VERSION;
-  if (decoded.payload.methodologyVersion !== expectedMethodologyVersion) {
+  if (decoded.payload.methodologyVersion !== SAFETY_SCORE_VERSION) {
     return { kind: "error", reason: "methodology-mismatch", updatedAt: decoded.payload.updatedAt };
   }
   const payload: ReportCardCachePayload = {
     ...decoded.payload,
-    methodologyVersion: expectedMethodologyVersion,
+    methodologyVersion: SAFETY_SCORE_VERSION,
   };
 
   if (options.maxAgeMs != null) {

@@ -1,7 +1,7 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import {
-  METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
   PEG_MULTIPLIER_EXPONENT,
   GRADE_THRESHOLDS,
@@ -23,7 +23,7 @@ import type { CollateralDriftEntry } from "./collateral-drift";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
 export function buildDefunctReportCards(): ReportCard[] {
-  const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
+  const nrDim = Object.freeze({ grade: "F" as const, score: 0, detail: "Defunct stablecoin" });
 
   const toDefunctCard = (coin: { id: string; name: string; symbol: string }): ReportCard => ({
     id: coin.id,
@@ -71,7 +71,7 @@ export function buildReportCardsSnapshotEnvelope(input: {
   return {
     cards: input.cards,
     methodology: {
-      version: METHODOLOGY_VERSION,
+      version: SAFETY_SCORE_VERSION,
       weights: DIMENSION_WEIGHTS,
       pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
       activeDepegSeveritySource: ACTIVE_DEPEG_SEVERITY_SOURCE,

@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { scoreToGrade, GRADE_THRESHOLDS, PEG_MULTIPLIER_EXPONENT } from "../report-cards";
+import {
+  getReportCardGradeRank,
+  GRADE_THRESHOLDS,
+  PEG_MULTIPLIER_EXPONENT,
+  REPORT_CARD_GRADE_RANK,
+  scoreToGrade,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "../report-cards";
 
 describe("scoreToGrade", () => {
   it("returns NR for null", () => {
@@ -31,5 +38,19 @@ describe("scoreToGrade", () => {
 describe("PEG_MULTIPLIER_EXPONENT", () => {
   it("is 0.4", () => {
     expect(PEG_MULTIPLIER_EXPONENT).toBe(0.4);
+  });
+});
+
+describe("getReportCardGradeRank", () => {
+  it("orders unknown grades below NR when the unknown sentinel fallback is requested", () => {
+    expect(UNKNOWN_REPORT_CARD_GRADE_RANK).toBeLessThan(REPORT_CARD_GRADE_RANK.NR);
+    expect(getReportCardGradeRank("mystery", UNKNOWN_REPORT_CARD_GRADE_RANK)).toBe(
+      UNKNOWN_REPORT_CARD_GRADE_RANK,
+    );
+  });
+
+  it("preserves nullable semantics by default for absent or unknown grades", () => {
+    expect(getReportCardGradeRank(undefined)).toBeNull();
+    expect(getReportCardGradeRank("mystery")).toBeNull();
   });
 });

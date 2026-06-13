@@ -11,8 +11,10 @@ import {
   REDEMPTION_ROUTE_FAMILY_LABELS,
 } from "./redemption-backstop-scoring";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
+import { formatCompactUsdShort } from "./format";
 import { scoreToGrade } from "./report-card-core";
-import { detailItemsFromParts, joinReportCardDetail } from "./report-card-detail";
+import { detailItemsFromParts, joinReportCardDetail, plural } from "./report-card-detail";
+import { roundScore } from "./math";
 
 interface PegStabilityFacts {
   score: number;
@@ -25,7 +27,7 @@ interface PegStabilityFacts {
 
 function buildPegStabilityFacts(peg: PegSummaryCoin, meta: StablecoinMeta, label: string): PegStabilityFacts {
   return {
-    score: Math.round(Math.max(0, Math.min(100, peg.pegScore ?? 0))),
+    score: roundScore(peg.pegScore ?? 0),
     label,
     activeDepeg: peg.activeDepeg,
     eventCount: peg.eventCount,
@@ -44,7 +46,7 @@ function buildPegStabilityDimension(peg: PegSummaryCoin, meta: StablecoinMeta, l
   if (facts.eventCount === 0) {
     parts.push("No depeg events recorded");
   } else {
-    parts.push(`${facts.eventCount} depeg event${facts.eventCount === 1 ? "" : "s"}`);
+    parts.push(plural(facts.eventCount, "depeg event"));
   }
   if (facts.worstDeviationBps !== null) {
     parts.push(`worst deviation: ${facts.worstDeviationBps} bps`);
@@ -133,13 +135,6 @@ type RedemptionLiquidityInput = Pick<
       | "settlementModel"
     >
   >;
-
-function formatCapacityUsd(value: number): string {
-  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${Math.round(value)}`;
-}
 
 function hasStrongLiveDirectRoute(redemption: RedemptionLiquidityInput): boolean {
   if (
@@ -289,6 +284,23 @@ function buildLiquidityScoringFacts(
   };
 }
 
+function describeUnavailableLiquidity(facts: LiquidityScoringFacts): string {
+  if (!facts.hasConfiguredRedemption) return "No DEX liquidity data";
+  if (facts.hasImpairedRedemption) {
+    return "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence";
+  }
+  if (facts.hasLowConfidenceRedemption) {
+    return "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves";
+  }
+  if (!facts.hasResolvedRedemption) {
+    return "DEX liquidity unavailable. Redemption route is configured but currently unrated";
+  }
+  if (facts.redemptionExclusionReason) {
+    return `DEX liquidity unavailable. Redemption route is configured but not used for Safety Score liquidity (${facts.redemptionExclusionReason})`;
+  }
+  return "DEX liquidity unavailable. Redemption route is configured but currently unrated";
+}
+
 export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
   redemption?: RedemptionLiquidityInput,
@@ -297,17 +309,7 @@ export function scoreLiquidity(
   const facts = buildLiquidityScoringFacts(liq, redemption, options);
 
   if (facts.effectiveScore === null) {
-    const detail = facts.hasConfiguredRedemption
-      ? facts.hasImpairedRedemption
-        ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
-        : facts.hasLowConfidenceRedemption
-          ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
-          : !facts.hasResolvedRedemption
-            ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
-            : facts.redemptionExclusionReason
-              ? `DEX liquidity unavailable. Redemption route is configured but not used for Safety Score liquidity (${facts.redemptionExclusionReason})`
-              : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
-      : "No DEX liquidity data";
+    const detail = describeUnavailableLiquidity(facts);
     return {
       grade: "NR",
       score: null,
@@ -316,17 +318,17 @@ export function scoreLiquidity(
     };
   }
 
-  const score = Math.round(Math.max(0, Math.min(100, facts.effectiveScore)));
+  const score = roundScore(facts.effectiveScore);
   const parts: string[] = [];
   parts.push(`Effective exit score: ${score}/100`);
   if (facts.dexScore !== null) {
-    parts.push(`DEX liquidity ${Math.round(Math.max(0, Math.min(100, facts.dexScore)))}/100`);
+    parts.push(`DEX liquidity ${roundScore(facts.dexScore)}/100`);
   } else {
     parts.push("DEX liquidity unavailable");
   }
   if (liq) {
     parts.push(
-      `${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`,
+      `${plural(liq.poolCount, "pool")} across ${plural(liq.chainCount, "chain")}`,
     );
   }
   if (liq?.concentrationHhi != null && liq.concentrationHhi > 0.5) {
@@ -351,7 +353,7 @@ export function scoreLiquidity(
     } else if (redemption?.capacitySemantics === "eventual-only") {
       parts.push("eventual redeemability modeled; immediate buffer not separately quantified");
     } else if (redemption?.immediateCapacityUsd != null) {
-      parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
+      parts.push(`immediate capacity ${formatCompactUsdShort(redemption.immediateCapacityUsd)}`);
     }
   } else if (facts.hasConfiguredRedemption && facts.hasImpairedRedemption) {
     parts.push("Redemption route configured but currently impaired");

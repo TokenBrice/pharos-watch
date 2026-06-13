@@ -290,6 +290,8 @@ export function isBlacklistable(
   const context = blacklistableIds
     ? {
         blacklistableIds,
+        // Single-coin callers only pass ids, not the tracked metadata required
+        // to build symbol matchers. Bulk resolution supplies the full context.
         symbolMatchers: [],
       }
     : undefined;

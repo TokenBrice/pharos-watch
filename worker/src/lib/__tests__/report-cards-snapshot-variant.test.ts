@@ -165,11 +165,12 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     expect(ybold?.rawInputs.oracleRiskTier ?? null).toBeNull();
     expect(ybold?.oracleRisk?.inheritedFrom).toMatchObject({ id: "bold-liquity", symbol: "BOLD" });
     expect(sbold?.oracleRisk?.inheritedFrom).toMatchObject({ id: "bold-liquity", symbol: "BOLD" });
-    // v8: frxUSD blends from the 75 pre-blend decentralization score and its
-    // verified MAS 64: round(75*0.65 + 64*0.35) = 71. Wrappers inherit the
-    // parent's pre-blend score minus haircut, then take their own MAS drag once.
-    expect(frxusd?.dimensions.decentralization.score).toBe(71);
-    expect(sfrxusd?.dimensions.decentralization.score).toBe(69);
+    // v8.11: frxUSD starts at 75 after its third-party bridge infra penalty,
+    // then the reviewed external-lock/mint bridge route drags it to 68 before
+    // MAS 64 applies once: round(68*0.65 + 64*0.35) = 67. Wrappers inherit the
+    // parent's pre-MAS score minus haircut, then take their own MAS drag once.
+    expect(frxusd?.dimensions.decentralization.score).toBe(67);
+    expect(sfrxusd?.dimensions.decentralization.score).toBe(65);
     expect(ybold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sbold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sfrxusd?.dimensions.decentralization.score).toBeGreaterThan(10);

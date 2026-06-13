@@ -1,4 +1,8 @@
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import {
+  getReportCardGradeRank,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "@shared/lib/report-card-core";
 import type { TapeEventRow } from "./tape-event-types";
 
 /** Stable per-row hash for the wire `event_id`. djb2 → 8 hex chars. */
@@ -61,15 +65,8 @@ export function severityForFreezeDestroyed(amountUsd: number | null): TapeEventS
   return "warning";
 }
 
-const GRADE_ORDER: Record<string, number> = {
-  "A+": 12, "A": 11, "A-": 10,
-  "B+": 9, "B": 8, "B-": 7,
-  "C+": 6, "C": 5, "C-": 4,
-  "D": 3, "F": 2, "NR": 1,
-};
-
 function gradeRank(grade: string): number {
-  return GRADE_ORDER[grade] ?? 0;
+  return getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK;
 }
 
 export function severityForScoreDowngrade(prevGrade: string, newGrade: string): TapeEventSeverity {
