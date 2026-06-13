@@ -328,13 +328,15 @@ function scoreMultisigControl(control: MintAuthorityScoringControlInput): number
   return Math.min(score, MINT_MULTISIG_MAX_SCORE);
 }
 
+export const EOA_UNVERIFIED_CUSTODY_LABEL = "Single-key address - custody unverifiable";
+
 function getEoaCustodyLabel(
   control: MintAuthorityScoringControlInput,
 ): MintAuthorityWeakestControlResult["custodyLabel"] {
   if (control.authorityType !== "eoa") return null;
   if (control.keyCustodyAttestation?.kind === "mpc") return "Single-key address - MPC-attested";
   if (control.keyCustodyAttestation?.kind === "hsm") return "Single-key address - HSM-attested";
-  return "Single-key address - custody unverifiable";
+  return EOA_UNVERIFIED_CUSTODY_LABEL;
 }
 
 export function scoreMintAuthorityControl(

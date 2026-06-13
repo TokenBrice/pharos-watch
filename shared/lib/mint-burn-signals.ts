@@ -7,7 +7,6 @@ import type {
 
 export {
   COIN_FLOW_COMPOSITE_STATE_VALUES,
-  NET_FLOW_DIRECTION_24H_VALUES,
   PRESSURE_SHIFT_STATE_VALUES,
 } from "../types/mint-burn-signals";
 export type {

@@ -7,7 +7,3 @@ export function formatMintAuthorityCustodyAttestation(value: unknown): string | 
   if (kind === "hsm") return "HSM-attested custody";
   return null;
 }
-
-export function formatMintAuthorityWeakestCustodyLabel(value: string | null | undefined): string | null {
-  return value || null;
-}

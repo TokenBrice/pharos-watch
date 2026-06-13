@@ -56,10 +56,8 @@ import {
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
-import {
-  formatMintAuthorityCustodyAttestation,
-  formatMintAuthorityWeakestCustodyLabel,
-} from "@/lib/stablecoin-detail-mint-authority-format";
+import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
+import { EOA_UNVERIFIED_CUSTODY_LABEL } from "@shared/lib/mint-authority-scoring";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
@@ -571,7 +569,7 @@ function buildMintAuthorityScoreViewModel(
     weakestControlScoreLabel: result.weakestControl
       ? formatMintAuthorityScoreValue(result.weakestControl.score)
       : null,
-    weakestControlCustodyLabel: formatMintAuthorityWeakestCustodyLabel(result.weakestControl?.custodyLabel),
+    weakestControlCustodyLabel: result.weakestControl?.custodyLabel ?? null,
     capsApplied: result.capsApplied.map(formatMintAuthorityCap),
     unresolvedReasonLabel: formatMintAuthorityUnresolvedReason(result.unresolvedReason),
   };
@@ -614,7 +612,7 @@ function buildMintAuthorityControlViewModel(
     custodyLabel: custodyAttestationLabel
       ? custodyAttestationLabel
       : authorityTypeKey === "eoa"
-        ? formatMintAuthorityWeakestCustodyLabel("Single-key address - custody unverifiable")
+        ? EOA_UNVERIFIED_CUSTODY_LABEL
         : null,
   };
 }

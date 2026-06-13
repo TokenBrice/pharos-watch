@@ -24,8 +24,10 @@ export interface FlowIntensityInput {
   currentDailyAbs: number;
 }
 
+// Calibrated so the denominator approximates a normal ~30% daily swing in baseline absolute flow.
 const FLOW_INTENSITY_DENOMINATOR_SCALE = 0.3;
 const FLOW_INTENSITY_DENOMINATOR_FLOOR_USD = 1_000_000;
+// Calibrated so z ≈ 2 (a ~2σ flow move) maps to the ±100 score bound.
 const FLOW_INTENSITY_Z_MULTIPLIER = 50;
 const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
 const FLOW_INTENSITY_MIN = -100;
@@ -38,7 +40,7 @@ export const MIN_ACTIVITY_USD = 50_000;
  * Formula:
  *   denominator = max(baselineDailyAbs * 0.3, 1_000_000)
  *   z = (currentDailyNet − baselineDailyNet) / denominator
- *   intensity = clamp(-100, 100, z * 50)
+ *   intensity = clamp(-100, 100, z * 50)   (see FLOW_INTENSITY_* constants for authoritative values)
  *
  * Returns `null` when 24h absolute flow is below MIN_ACTIVITY_USD,
  * or when we have fewer than 7 days of data.
@@ -71,6 +73,8 @@ export function getGaugeBand(
   score: number
 ): { label: string } {
   // Score-visible [min, max) assignments; boundary tests pin these labels.
+  // Out-of-range/NaN sentinel (distinct from the real [-10,10) NEUTRAL band below);
+  // unreachable for mcap-weighted intensity inputs, which are already clamped to [-100,100].
   if (Number.isNaN(score) || score < -100) return { label: "NEUTRAL" };
   if (score < -70) return { label: "CRISIS" };
   if (score < -40) return { label: "STRESS" };
