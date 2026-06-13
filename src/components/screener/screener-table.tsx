@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   DataTableEmptyRow,
@@ -12,9 +12,9 @@ import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
-import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
@@ -180,16 +180,7 @@ export function ScreenerTable({
   // P8 — numeric column sort: providers broadcast the Nth column on keys 1-9.
   // Map it to the matching desktop column and toggle its sort if sortable.
   const toggleSort = sort.toggleSort;
-  useEffect(() => {
-    function handleSortColumn(event: Event) {
-      const columnNumber = (event as CustomEvent<SortColumnEventDetail>).detail?.columnNumber;
-      if (!columnNumber) return;
-      const target = COLUMNS[columnNumber - 1];
-      if (target?.sortKey) toggleSort(target.sortKey);
-    }
-    window.addEventListener(SORT_COLUMN_EVENT, handleSortColumn);
-    return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
-  }, [toggleSort]);
+  useSortColumnEvent(COLUMNS, toggleSort);
 
   if (!layoutResolved) {
     return <ScreenerLayoutPending />;

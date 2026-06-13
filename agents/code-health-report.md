@@ -205,7 +205,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fe-1` — SORT_COLUMN_EVENT handler duplicated across stablecoin-table and screener-table** `[duplication | low | small | low]`
 - Problem: both tables wire a useEffect on `SORT_COLUMN_EVENT` that reads `detail.columnNumber`, indexes a column-def array, and calls `toggleSort`. NOT verbatim: stablecoin-table filters `STABLECOIN_HEADER_DEFS` by `visibleSet` then indexes the visible subset; screener-table indexes the static `COLUMNS`. Listener registration/cleanup and the `columnNumber` guard are identical.
-- Recommendation: extract `useSortColumnEvent(resolvedColumns, toggleSort)`. Each caller passes its already-resolved ordered defs (the visible-vs-static difference moves to the call site). Deps `[resolvedColumns, toggleSort]`.
+- Done 2026-06-13: extracted `useSortColumnEvent(resolvedColumns, toggleSort)` in `src/hooks/use-sort-column-event.ts`; stablecoin-table now passes its memoized visible headers, and screener-table passes its static `COLUMNS`.
 - Files: `src/components/stablecoin-table.tsx:432-443`, `src/components/screener/screener-table.tsx:183-192`.
 - Verifier: confirmed only these two callsites; corrected "identical" claim. Checks: `npm run typecheck`, `npm run lint`.
 

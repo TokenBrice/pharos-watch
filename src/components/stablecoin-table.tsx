@@ -35,9 +35,9 @@ import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-state";
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
 import { useRowCursor } from "@/hooks/use-row-cursor";
+import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
-import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
@@ -303,6 +303,10 @@ export function StablecoinTable({
     });
   }, [deviceDefault, setVisibleColumns]);
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
+  const visibleSortColumns = useMemo(
+    () => STABLECOIN_HEADER_DEFS.filter((column) => visibleSet.has(column.id)),
+    [visibleSet],
+  );
   const showPinnedControls = typeof onTogglePinnedStablecoin === "function";
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
   const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
@@ -429,18 +433,7 @@ export function StablecoinTable({
 
   // P8 — numeric column sort: providers broadcast the Nth visible column on
   // keys 1-9; map it to the matching sortable header and toggle its sort.
-  useEffect(() => {
-    function handleSortColumn(event: Event) {
-      const detail = (event as CustomEvent<SortColumnEventDetail>).detail;
-      const columnNumber = detail?.columnNumber;
-      if (!columnNumber) return;
-      const visibleDefs = STABLECOIN_HEADER_DEFS.filter((column) => visibleSet.has(column.id));
-      const target = visibleDefs[columnNumber - 1];
-      if (target?.sortKey) toggleSort(target.sortKey);
-    }
-    window.addEventListener(SORT_COLUMN_EVENT, handleSortColumn);
-    return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
-  }, [visibleSet, toggleSort]);
+  useSortColumnEvent(visibleSortColumns, toggleSort);
 
   if (isLoading) {
     return (
