@@ -176,6 +176,7 @@ Large cache-backed endpoints can opt into a response-ready companion cache when 
 | Ops admin proxy reads               | `20_000 ms` for `/api/status` and `/api/status-history`; `45_000 ms` for `/api/audit-depeg-history` | `functions/api/admin/[[path]].ts` |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
+| Public dataset snapshot outer deadline | `10 * 60_000 ms`          | `worker/src/lib/public-dataset-snapshot-budget.ts`, `worker/src/lib/cron-lease.ts` | Covers the 4 × 120s stablecoins-cache retry window plus D1 read/compress/insert tail room |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
 | Daily digest LLM call (outer)       | `12 * 60_000 ms`             | `worker/src/lib/constants.ts`                              |
 | Daily digest per-attempt fetch      | `11 * 60_000 ms`             | `worker/src/cron/digest/platform.ts` (`DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS`) |

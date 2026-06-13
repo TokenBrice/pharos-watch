@@ -1,0 +1,8 @@
+export const PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS = 4;
+export const PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS = 120_000;
+export const PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS =
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS * PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS;
+
+// The stablecoins-cache retry window is 8 minutes; keep 2 minutes for D1 reads,
+// gzip/hash work, and the immutable insert before the platform wall-clock limit.
+export const PUBLIC_DATASET_CRON_TIMEOUT_MS = PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS + 2 * 60_000;

@@ -11,6 +11,10 @@ import { snapshotSafetyGradeHistory } from "../../cron/snapshot-safety-grade-his
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
+import {
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
+} from "../../lib/public-dataset-snapshot-budget";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slot-groups";
@@ -24,8 +28,8 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
   };
   const publicSnapshotFreshnessGate = {
     ...stablecoinsCacheFreshnessGate,
-    stablecoinsCacheRetryAttempts: 4,
-    stablecoinsCacheRetryDelayMs: 120_000,
+    stablecoinsCacheRetryAttempts: PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+    stablecoinsCacheRetryDelayMs: PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
   };
 
   return [

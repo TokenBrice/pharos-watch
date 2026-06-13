@@ -17,6 +17,10 @@
  * snapshot URLs can be cached immutably without later same-day mutation.
  */
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
+import {
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
+} from "../lib/public-dataset-snapshot-budget";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -85,8 +89,8 @@ interface SnapshotPublicDatasetOptions {
 }
 
 const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
-const DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS = 120_000;
-const MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS = 4;
+const DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS = PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS;
+const MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS = PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS;
 
 function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);

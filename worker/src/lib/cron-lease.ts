@@ -1,3 +1,5 @@
+import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
+
 // --- Per-job cron timeout configuration ---
 
 export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
@@ -35,7 +37,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "snapshot-safety-grade-history": DEFAULT_CRON_TIMEOUT_MS,
   "fetch-tbill-rate": DEFAULT_CRON_TIMEOUT_MS,
   "snapshot-psi": DEFAULT_CRON_TIMEOUT_MS,
-  "snapshot-public-dataset": DEFAULT_CRON_TIMEOUT_MS,
+  "snapshot-public-dataset": PUBLIC_DATASET_CRON_TIMEOUT_MS,
   "sync-usds-status": DEFAULT_CRON_TIMEOUT_MS,
   "sync-redemption-backstops": DEFAULT_CRON_TIMEOUT_MS,
   "sync-kinesis-supply": DEFAULT_CRON_TIMEOUT_MS,

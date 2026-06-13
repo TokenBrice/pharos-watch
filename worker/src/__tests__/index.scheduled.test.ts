@@ -235,6 +235,10 @@ vi.mock("../lib/coingecko", async (importOriginal) => {
 });
 
 import worker from "../index";
+import {
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
+} from "../lib/public-dataset-snapshot-budget";
 
 function makeCtx() {
   const waits: Promise<unknown>[] = [];
@@ -717,8 +721,8 @@ describe("worker.scheduled", () => {
       {
         minStablecoinsCacheUpdatedAtSec: slotStartedAt,
         freshnessGateLabel: "daily0800Utc",
-        stablecoinsCacheRetryAttempts: 4,
-        stablecoinsCacheRetryDelayMs: 120_000,
+        stablecoinsCacheRetryAttempts: PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+        stablecoinsCacheRetryDelayMs: PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
       },
     );
     expect(cronMocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(

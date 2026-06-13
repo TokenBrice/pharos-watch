@@ -11,6 +11,10 @@ import {
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CRON_TIMEOUT_MS } from "../../../lib/cron-lease";
+import {
+  PUBLIC_DATASET_CRON_TIMEOUT_MS,
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
+} from "../../../lib/public-dataset-snapshot-budget";
 import { SLOT_RUNNER_BY_KEY } from "../../scheduled";
 
 function sorted(values: Iterable<string>): string[] {
@@ -50,6 +54,13 @@ describe("scheduled runner contract", () => {
       expect(Number.isFinite(timeoutMs), `${job} duration budget must be finite`).toBe(true);
       expect(timeoutMs, `${job} duration budget must be positive`).toBeGreaterThan(0);
     }
+  });
+
+  it("keeps the public dataset cache-wait budget inside its cron timeout", () => {
+    const timeoutMs = CRON_TIMEOUT_MS["snapshot-public-dataset"];
+    expect(timeoutMs).toBe(PUBLIC_DATASET_CRON_TIMEOUT_MS);
+    expect(timeoutMs).toBeGreaterThan(PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS);
+    expect(timeoutMs - PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS).toBeGreaterThanOrEqual(2 * 60_000);
   });
 
   it("keeps shared cron job identities explicit", () => {
