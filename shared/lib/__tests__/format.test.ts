@@ -14,6 +14,7 @@ import {
   formatCurrency,
   formatCompactCount,
   formatCompactUsd,
+  formatCompactUsdShort,
   formatBps,
   formatDeathDate,
   formatEventDate,
@@ -179,6 +180,31 @@ describe("formatCompactUsd", () => {
   it("formats negative sub-thousand", () => expect(formatCompactUsd(-42)).toBe("-$42"));
   it("returns N/A for NaN", () => expect(formatCompactUsd(NaN)).toBe("N/A"));
   it("returns N/A for Infinity", () => expect(formatCompactUsd(Infinity)).toBe("N/A"));
+});
+
+describe("formatCompactUsdShort", () => {
+  it("formats billions, millions, and thousands with one decimal", () => {
+    expect(formatCompactUsdShort(4.321e9)).toBe("$4.3B");
+    expect(formatCompactUsdShort(8.76e6)).toBe("$8.8M");
+    expect(formatCompactUsdShort(12_345)).toBe("$12.3K");
+    expect(formatCompactUsdShort(1_000)).toBe("$1.0K");
+  });
+
+  it("rounds sub-thousand values without decimals", () => {
+    expect(formatCompactUsdShort(999)).toBe("$999");
+    expect(formatCompactUsdShort(999.6)).toBe("$1000");
+    expect(formatCompactUsdShort(0)).toBe("$0");
+  });
+
+  it("preserves the existing short-surface negative sign placement", () => {
+    expect(formatCompactUsdShort(-2.5e9)).toBe("$-2.5B");
+    expect(formatCompactUsdShort(-42)).toBe("$-42");
+  });
+
+  it("returns N/A for non-finite values", () => {
+    expect(formatCompactUsdShort(NaN)).toBe("N/A");
+    expect(formatCompactUsdShort(Infinity)).toBe("N/A");
+  });
 });
 
 describe("formatCompactCount", () => {

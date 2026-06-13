@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clamp, clampScore, round1 } from "../math";
+import { bandFromThresholds, clamp, clampScore, round1, round4, roundScore, roundTo } from "../math";
 
 describe("clamp", () => {
   it("returns value when within range", () => {
@@ -37,5 +37,55 @@ describe("round1", () => {
   it("rounds to one decimal", () => {
     expect(round1(72.456)).toBe(72.5);
     expect(round1(72.44)).toBe(72.4);
+  });
+});
+
+describe("roundScore", () => {
+  it("clamps and rounds into the score range", () => {
+    expect(roundScore(72.5)).toBe(73);
+    expect(roundScore(-4)).toBe(0);
+    expect(roundScore(120)).toBe(100);
+  });
+
+  it("hardens non-finite score input through clampScore", () => {
+    expect(roundScore(NaN)).toBe(0);
+    expect(roundScore(Infinity)).toBe(100);
+    expect(roundScore(-Infinity)).toBe(0);
+  });
+});
+
+describe("roundTo", () => {
+  it("rounds to the requested decimal places", () => {
+    expect(roundTo(1.2345, 2)).toBe(1.23);
+    expect(roundTo(1.235, 2)).toBe(1.24);
+  });
+
+  it("supports coarser negative places", () => {
+    expect(roundTo(1234, -2)).toBe(1200);
+  });
+});
+
+describe("round4", () => {
+  it("rounds to four decimal places", () => {
+    expect(round4(1.23456)).toBe(1.2346);
+    expect(round4(1.23454)).toBe(1.2345);
+  });
+});
+
+describe("bandFromThresholds", () => {
+  const bands = [
+    { min: 80, label: "high" },
+    { min: 50, label: "medium" },
+    { min: 0, label: "low" },
+  ] as const;
+
+  it("returns the first matching descending-min band", () => {
+    expect(bandFromThresholds(75, bands, bands[2]).label).toBe("medium");
+    expect(bandFromThresholds(80, bands, bands[2]).label).toBe("high");
+  });
+
+  it("returns the fallback when no band matches", () => {
+    expect(bandFromThresholds(-1, bands, bands[2]).label).toBe("low");
+    expect(bandFromThresholds(NaN, bands, bands[2]).label).toBe("low");
   });
 });

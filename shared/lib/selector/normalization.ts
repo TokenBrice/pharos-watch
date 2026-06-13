@@ -5,6 +5,7 @@
  *
  * Binding: `agents/impl-plan-drafts/02-engine.md` §5.
  */
+import { clamp } from "../math";
 import type { BluechipGrade } from "../../types";
 
 const BLUECHIP_LADDER: Record<BluechipGrade, number> = {
@@ -20,12 +21,6 @@ const BLUECHIP_LADDER: Record<BluechipGrade, number> = {
   "D": 40,
   "F": 10,
 };
-
-function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
-}
 
 /** Identity for 0–100 scores. Clamps but passes null through. */
 export function identity(x: number | null): number | null {

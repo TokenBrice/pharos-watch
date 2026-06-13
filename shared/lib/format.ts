@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "./time-constants";
-
+export { formatCompactUsdShort } from "./format-compact-usd-short";
 const BPS_PER_UNIT = 10_000;
 
 function isFiniteNumber(value: unknown): value is number {

@@ -16,6 +16,7 @@ describe("identity", () => {
   it("null → null", () => expect(identity(null)).toBeNull());
   it("clamps negatives to 0", () => expect(identity(-5)).toBe(0));
   it("clamps >100 to 100", () => expect(identity(125)).toBe(100));
+  it("clamps NaN to 0", () => expect(identity(NaN)).toBe(0));
 });
 
 describe("invert100", () => {
