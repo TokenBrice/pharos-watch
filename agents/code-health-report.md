@@ -282,7 +282,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-pharoswatchbot-3` — 41-line inline <style> block for the Mini App carousel could be a colocated CSS file** `[maintainability | low | small | low]`
 - Problem: a single inline `<style>` block (636-677) defines carousel keyframes/classes; the only inline style block in the file. The codebase has colocated `.css` files for complex animations, so a `.css` home is established. This is a server component, so it can import a `.css` file directly.
-- Recommendation: optional — extract to `telegram-carousel.css` and `import './telegram-carousel.css'`. Class names are unique and globally scoped, so no scoping change. Pure taste; weigh against the surgical-changes bias.
+- Done 2026-06-13: moved the Mini App carousel keyframes/classes to `telegram-carousel.css` and imported it from the PharosWatchBot page. Class names and animation declarations are unchanged.
 - Files: `src/app/pharoswatchbot/page.tsx:636-677`.
 - Verifier: verified the only inline style + sibling .css pattern; demoted medium->low. Checks: `npm run lint`, `npm run build`.
 

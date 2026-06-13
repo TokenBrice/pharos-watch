@@ -36,6 +36,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { cn } from "@/lib/utils";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import "./telegram-carousel.css";
 import {
   TELEGRAM_ACTIONS,
   TELEGRAM_ALERT_EXAMPLES,
@@ -628,48 +629,6 @@ export default function PharosWatchBotPage() {
                     <span className="telegram-mini-app-dot telegram-mini-app-dot-4 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
                   </div>
                 </div>
-                <style>
-                  {`
-                    @keyframes telegramMiniAppCarousel {
-                      0%, 19% { transform: translateX(0); }
-                      25%, 44% { transform: translateX(-100%); }
-                      50%, 69% { transform: translateX(-200%); }
-                      75%, 94% { transform: translateX(-300%); }
-                      100% { transform: translateX(0); }
-                    }
-                    @keyframes telegramMiniAppDotA { 0%, 19% { opacity: 1; } 25%, 94% { opacity: 0.32; } 100% { opacity: 1; } }
-                    @keyframes telegramMiniAppDotB { 0%, 19% { opacity: 0.32; } 25%, 44% { opacity: 1; } 50%, 100% { opacity: 0.32; } }
-                    @keyframes telegramMiniAppDotC { 0%, 44% { opacity: 0.32; } 50%, 69% { opacity: 1; } 75%, 100% { opacity: 0.32; } }
-                    @keyframes telegramMiniAppDotD { 0%, 69% { opacity: 0.32; } 75%, 94% { opacity: 1; } 100% { opacity: 0.32; } }
-
-                    .telegram-mini-app-carousel-track {
-                      animation: telegramMiniAppCarousel 20s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-                    }
-                    .telegram-mini-app-dot {
-                      animation-duration: 20s;
-                      animation-iteration-count: infinite;
-                      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
-                      opacity: 0.32;
-                    }
-                    .telegram-mini-app-dot-1 { animation-name: telegramMiniAppDotA; background: oklch(0.72 0.14 248 / 0.85); }
-                    .telegram-mini-app-dot-2 { animation-name: telegramMiniAppDotB; background: oklch(0.72 0.14 248 / 0.85); }
-                    .telegram-mini-app-dot-3 { animation-name: telegramMiniAppDotC; background: oklch(0.72 0.14 248 / 0.85); }
-                    .telegram-mini-app-dot-4 { animation-name: telegramMiniAppDotD; background: oklch(0.72 0.14 248 / 0.85); }
-
-                    .telegram-mini-app-stage:hover .telegram-mini-app-carousel-track,
-                    .telegram-mini-app-stage:hover .telegram-mini-app-dot {
-                      animation-play-state: paused;
-                    }
-
-                    @media (prefers-reduced-motion: reduce) {
-                      .telegram-mini-app-carousel-track,
-                      .telegram-mini-app-dot {
-                        animation: none;
-                      }
-                      .telegram-mini-app-dot-1 { opacity: 1; }
-                    }
-                  `}
-                </style>
               </div>
             </div>
           </div>
