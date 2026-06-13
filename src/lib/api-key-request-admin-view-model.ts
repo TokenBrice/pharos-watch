@@ -1,4 +1,5 @@
 import type { ApiKeySelfServeRequestAdminSummary, ApiKeySelfServeStatus } from "@shared/types";
+import { formatEpochSecondsLocale } from "./api-key-format";
 
 export const API_KEY_REQUEST_STATUS_FILTERS: readonly ("all" | ApiKeySelfServeStatus)[] = [
   "all",
@@ -59,7 +60,7 @@ export function statusClassName(status: ApiKeySelfServeStatus): string {
 
 export function formatApiKeyRequestTime(epochSeconds: number | null): string {
   if (epochSeconds == null) return "never";
-  return new Date(epochSeconds * 1000).toLocaleString();
+  return formatEpochSecondsLocale(epochSeconds);
 }
 
 export function formatApiKeyRequestRelativeTime(epochSeconds: number | null, nowSeconds: number): string {

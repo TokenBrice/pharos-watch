@@ -14,6 +14,7 @@ import type {
   ApiKeySelfServePendingResponse,
   ApiKeySelfServeRequest,
 } from "@shared/types";
+import { formatEpochSecondsLocale } from "./api-key-format";
 
 export const EMAIL_MAX_LENGTH = 200;
 export const NAME_MAX_LENGTH = 80;
@@ -167,7 +168,7 @@ export function endpointId(path: string): string {
 
 export function formatSelfServeExpiry(epochSeconds: number | null): string {
   if (epochSeconds == null) return "No expiry";
-  return new Date(epochSeconds * 1000).toLocaleString();
+  return formatEpochSecondsLocale(epochSeconds);
 }
 
 export function buildCurlCommand(token: string): string {

@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
+import { formatEpochSecondsLocale } from "./api-key-format";
 
 export interface EditableKeyState {
   name: string;
@@ -138,7 +139,7 @@ export function formatExpirySummary(key: ApiKeySummary, nowSeconds: number): str
   if (key.expiresAt == null) {
     return "Non-expiring exception";
   }
-  const absolute = new Date(key.expiresAt * 1000).toLocaleString();
+  const absolute = formatEpochSecondsLocale(key.expiresAt);
   if (key.expiresAt <= nowSeconds) {
     return `Expired ${formatElapsedSeconds(nowSeconds - key.expiresAt)} ago at ${absolute}`;
   }

@@ -351,8 +351,8 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`frontend-2` — Triplicated epoch-to-locale-string helper across three API-key view models** `[duplication | low | trivial | none]`
 - Problem: `new Date(epochSeconds * 1000).toLocaleString()` is inlined at three sites: `formatApiKeyRequestTime` (62), `formatSelfServeExpiry` (170), and inside `formatExpirySummary` (141).
-- Recommendation: extract `formatEpochSecondsLocale(epochSeconds: number)`. The two standalone helpers share a null guard with different sentinels ('never' vs 'No expiry'), so the shared helper takes a non-null number and each caller keeps its own null sentinel.
-- Files: `src/lib/api-key-request-admin-view-model.ts:60-63`, `src/lib/api-key-request-form-view-model.ts:168-171`, `src/lib/api-key-admin-view-model.ts:137-146`.
+- Done 2026-06-13: extracted `formatEpochSecondsLocale(epochSeconds: number)` into `src/lib/api-key-format.ts`; the three callers now share the epoch-to-locale conversion while keeping their existing null sentinel wording (`"never"`, `"No expiry"`, and `"Non-expiring exception"`).
+- Files: `src/lib/api-key-format.ts`, `src/lib/api-key-request-admin-view-model.ts:60-63`, `src/lib/api-key-request-form-view-model.ts:168-171`, `src/lib/api-key-admin-view-model.ts:137-146`.
 - Verifier: all three sites verified; corrected the admin-view-model location (inside formatExpirySummary). Checks: `npm run test:merge-gate`.
 
 **`frontend-3` — Duplicated flag-derivation in buildStablecoinDetailDescription pre-launch branch** `[duplication | low | trivial | none]`
