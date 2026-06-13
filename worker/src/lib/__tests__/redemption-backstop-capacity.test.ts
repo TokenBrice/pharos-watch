@@ -300,6 +300,79 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes).toContain("Live redemption daily limit caps usable scoring capacity");
   });
 
+  it("preserves exact live reserve-sync capacity output when ratio telemetry overrides derived ratio", async () => {
+    const db = {} as D1Database;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 800_000,
+            capacityRatioOfSupply: 0.9,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            sourceTimestamp: now - 30,
+            sourceUrls: ["https://example.com/reserves"],
+            settlementDelaySec: 3_600,
+            queueDepthUsd: 50_000,
+            dailyLimitUsd: 250_000,
+            minRedeemUsd: 100,
+            routeStatus: "open",
+            routeStatusSource: "onchain",
+            routeStatusReason: "Vault open",
+            routeStatusReviewedAt: "2026-05-17",
+          },
+        }),
+      },
+    );
+
+    expect(result).toEqual({
+      immediateCapacityUsd: 800_000,
+      immediateCapacityRatio: 0.9,
+      scoringCapacityUsd: 250_000,
+      scoringCapacityRatio: 0.25,
+      eventualCapacityUsd: 1_000_000,
+      eventualCapacityRatio: 1,
+      capacityProfile: {
+        immediateUsd: 800_000,
+        dailyLimitUsd: 250_000,
+        queuedUsd: 50_000,
+        eventualUsd: 1_000_000,
+        scoringUsd: 250_000,
+        scoringHorizon: "daily",
+        capacityProfileConfidence: "live-direct",
+      },
+      provider: "reserve-sync-metadata",
+      sourceMode: "dynamic",
+      resolutionState: "resolved",
+      capacityConfidence: "live-direct",
+      capacityBasis: "live-direct-telemetry",
+      capacitySemantics: "immediate-bounded",
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      sourceTimestamp: now - 30,
+      sourceUrls: ["https://example.com/reserves"],
+      settlementDelaySec: 3_600,
+      queueDepthUsd: 50_000,
+      dailyLimitUsd: 250_000,
+      minRedeemUsd: 100,
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      routeStatusReason: "Vault open",
+      routeStatusReviewedAt: "2026-05-17",
+      notes: [
+        "Live redemption daily limit caps usable scoring capacity",
+        "Live redemption queue depth is surfaced as a route constraint",
+        "Live redemption settlement delay is surfaced as a route constraint",
+      ],
+    });
+  });
+
   it("blocks unverified nested redemption freshness unless a route is explicitly allowlisted", async () => {
     const db = {} as D1Database;
     const result = await resolveRedemptionCapacity(
@@ -364,6 +437,49 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
       );
     },
   );
+
+  it("preserves exact fallback USD output and the positive-capacity daily-limit guard", async () => {
+    const db = {} as D1Database;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata", fallbackUsd: 0 },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: {
+            dailyLimitUsd: 250_000,
+          },
+        }),
+      },
+    );
+
+    expect(result).toEqual({
+      immediateCapacityUsd: 0,
+      immediateCapacityRatio: 0,
+      scoringCapacityUsd: 0,
+      scoringCapacityRatio: 0,
+      capacityScoreMode: "interpolated",
+      capacityProfile: {
+        immediateUsd: 0,
+        dailyLimitUsd: 250_000,
+        scoringUsd: 0,
+        scoringHorizon: "immediate",
+        capacityProfileConfidence: "heuristic",
+      },
+      provider: "reserve-sync-fallback",
+      sourceMode: "estimated",
+      resolutionState: "resolved",
+      capacityConfidence: "heuristic",
+      capacityBasis: "hot-buffer",
+      capacitySemantics: "immediate-bounded",
+      notes: [
+        "Live reserve metadata lacks redeemable-capacity amount; using configured fallback USD capacity",
+      ],
+    });
+  });
 
   it("clamps live capacity to zero when supplyUsd is zero", async () => {
     const db = {} as D1Database;

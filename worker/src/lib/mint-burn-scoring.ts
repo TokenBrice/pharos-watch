@@ -63,37 +63,22 @@ export function computeFlowIntensity(
 // Gauge bands
 // ---------------------------------------------------------------------------
 
-export interface GaugeBand {
-  min: number;
-  max: number;
-  label: string;
-}
-
-const GAUGE_BANDS: GaugeBand[] = [
-  // Score-visible [min, max) assignments; boundary tests pin these labels.
-  { min: -100, max: -70, label: "CRISIS" },
-  { min: -70, max: -40, label: "STRESS" },
-  { min: -40, max: -10, label: "CAUTIOUS" },
-  { min: -10, max: 10, label: "NEUTRAL" },
-  { min: 10, max: 40, label: "HEALTHY" },
-  { min: 40, max: 70, label: "CONFIDENT" },
-  { min: 70, max: 100, label: "SURGE" },
-];
-
 /**
- * Return the `{ label, color }` for the band that contains `score`.
+ * Return the label for the band that contains `score`.
  * Boundary convention: each band is [min, max).  The last band includes 100.
  */
 export function getGaugeBand(
   score: number
 ): { label: string } {
-  for (const band of GAUGE_BANDS) {
-    if (score >= band.min && (score < band.max || band.max === 100)) {
-      return { label: band.label };
-    }
-  }
-  // Fallback — should never happen with -100..100 input
-  return { label: "NEUTRAL" };
+  // Score-visible [min, max) assignments; boundary tests pin these labels.
+  if (Number.isNaN(score) || score < -100) return { label: "NEUTRAL" };
+  if (score < -70) return { label: "CRISIS" };
+  if (score < -40) return { label: "STRESS" };
+  if (score < -10) return { label: "CAUTIOUS" };
+  if (score < 10) return { label: "NEUTRAL" };
+  if (score < 40) return { label: "HEALTHY" };
+  if (score < 70) return { label: "CONFIDENT" };
+  return { label: "SURGE" };
 }
 
 // ---------------------------------------------------------------------------

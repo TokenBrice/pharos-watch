@@ -20,6 +20,12 @@ type ParsedReportCardCachePayload = Omit<ReportCardCachePayload, "methodologyVer
   methodologyVersion?: string;
 };
 
+interface ParsedReportCardCacheEnvelope {
+  generation: number;
+  methodologyVersion: string;
+  payload: ParsedReportCardCachePayload;
+}
+
 export interface ReportCardCacheInputStatus {
   inputsStale: boolean;
   liquidityStale: boolean;
@@ -31,6 +37,8 @@ export type ReportCardCacheFailureReason =
   | "missing-cache"
   | "json-parse-failed"
   | "invalid-payload"
+  | "invalid-envelope"
+  | "generation-mismatch"
   | "methodology-mismatch"
   | "stale-cache";
 
@@ -50,9 +58,15 @@ export interface WriteReportCardCacheOptions {
 
 /** Shared max-age budget for report-card-dependent read paths. */
 export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+export const REPORT_CARD_CACHE_GENERATION = 1;
+const REPORT_CARD_CACHE_KEY = "report_card_cache";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
 
 function isValidReportCardCachePayload(value: unknown): value is ParsedReportCardCachePayload {
-  if (!value || typeof value !== "object") return false;
+  if (!isRecord(value)) return false;
   const parsed = value as {
     scores?: unknown;
     updatedAt?: unknown;
@@ -88,6 +102,46 @@ function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardC
     && parsed.staleInputs.every((entry) => typeof entry === "string");
 }
 
+function isReportCardCacheEnvelope(value: unknown): value is ParsedReportCardCacheEnvelope {
+  if (!isRecord(value) || !("payload" in value)) return false;
+  const parsed = value as {
+    generation?: unknown;
+    methodologyVersion?: unknown;
+    payload?: unknown;
+  };
+  return typeof parsed.generation === "number"
+    && Number.isInteger(parsed.generation)
+    && typeof parsed.methodologyVersion === "string"
+    && parsed.methodologyVersion.length > 0
+    && isValidReportCardCachePayload(parsed.payload);
+}
+
+function normalizeReportCardCacheJson(
+  parsed: unknown,
+):
+  | { ok: true; payload: ParsedReportCardCachePayload }
+  | { ok: false; reason: ReportCardCacheFailureReason } {
+  if (isRecord(parsed) && "payload" in parsed) {
+    if (!isReportCardCacheEnvelope(parsed)) {
+      return { ok: false, reason: "invalid-envelope" };
+    }
+    if (parsed.generation !== REPORT_CARD_CACHE_GENERATION) {
+      return { ok: false, reason: "generation-mismatch" };
+    }
+    return {
+      ok: true,
+      payload: {
+        ...parsed.payload,
+        methodologyVersion: parsed.methodologyVersion,
+      },
+    };
+  }
+
+  return isValidReportCardCachePayload(parsed)
+    ? { ok: true, payload: parsed }
+    : { ok: false, reason: "invalid-payload" };
+}
+
 function buildReportCardCacheInputStatus(
   options: WriteReportCardCacheOptions = {},
 ): ReportCardCacheInputStatus {
@@ -116,16 +170,12 @@ export async function loadReportCardCache(
   options: LoadReportCardCacheOptions = {},
 ): Promise<ReportCardCacheLoadResult> {
   const decoded = decodeCachedJson<ParsedReportCardCachePayload, ReportCardCacheFailureReason>(
-    await getCache(db, "report_card_cache"),
+    await getCache(db, REPORT_CARD_CACHE_KEY),
     {
       mode: "strict",
       missingReason: "missing-cache",
       parseErrorReason: "json-parse-failed",
-      normalize: (parsed) => (
-        isValidReportCardCachePayload(parsed)
-          ? { ok: true, payload: parsed }
-          : { ok: false, reason: "invalid-payload" }
-      ),
+      normalize: normalizeReportCardCacheJson,
     },
   );
   if (!decoded.ok) {
@@ -167,7 +217,7 @@ export async function writeReportCardCache(
 
   await setCache(
     db,
-    "report_card_cache",
+    REPORT_CARD_CACHE_KEY,
     JSON.stringify({
       scores,
       updatedAt,

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { loadReportCardCache, writeReportCardCache } from "../report-card-cache";
+import { loadReportCardCache, REPORT_CARD_CACHE_GENERATION, writeReportCardCache } from "../report-card-cache";
 
 function makeReportCardDb(value: string | null, updatedAt = 1_700_000_000): D1Database {
   if (value == null) {
@@ -164,6 +164,66 @@ describe("loadReportCardCache", () => {
         staleInputs: ["redemptionBackstops"],
       });
     }
+  });
+
+  it("accepts the future versioned score-cache envelope without changing the load result shape", async () => {
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        generation: REPORT_CARD_CACHE_GENERATION,
+        methodologyVersion: SAFETY_SCORE_VERSION,
+        payload: {
+          scores: {
+            "usdt-tether": { score: 71, grade: "B" },
+          },
+          updatedAt: 1_700_000_000,
+          degradedInputs: {
+            inputsStale: true,
+            liquidityStale: true,
+            redemptionStale: false,
+            staleInputs: ["dexLiquidity"],
+          },
+        },
+      })),
+    );
+
+    expect(result).toEqual({
+      kind: "ok",
+      payload: {
+        scores: {
+          "usdt-tether": { score: 71, grade: "B" },
+        },
+        updatedAt: 1_700_000_000,
+        methodologyVersion: SAFETY_SCORE_VERSION,
+        degradedInputs: {
+          inputsStale: true,
+          liquidityStale: true,
+          redemptionStale: false,
+          staleInputs: ["dexLiquidity"],
+        },
+      },
+      updatedAt: 1_700_000_000,
+    });
+  });
+
+  it("rejects future versioned score-cache envelopes from other generations", async () => {
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        generation: REPORT_CARD_CACHE_GENERATION + 1,
+        methodologyVersion: SAFETY_SCORE_VERSION,
+        payload: {
+          scores: {
+            "usdt-tether": { score: 71, grade: "B" },
+          },
+          updatedAt: 1_700_000_000,
+        },
+      })),
+    );
+
+    expect(result).toEqual({
+      kind: "error",
+      reason: "generation-mismatch",
+      updatedAt: 1_700_000_000,
+    });
   });
 });
 

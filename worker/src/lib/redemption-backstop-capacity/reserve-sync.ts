@@ -19,6 +19,75 @@ import {
 
 type ReserveSyncModel = Extract<RedemptionCapacityModel, { kind: "reserve-sync-metadata" }>;
 
+type ReserveSyncCapacityFields = Pick<
+  CapacityResolution,
+  "immediateCapacityUsd" | "immediateCapacityRatio" | "scoringCapacityUsd" | "scoringCapacityRatio" | "capacityProfile"
+> & {
+  hasSupplyCeiling: boolean;
+  hasPositiveSupply: boolean;
+  capacityExceedsSupply: boolean;
+  dailyLimitCapsCapacity: boolean;
+};
+
+function clampUnitInterval(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function buildReserveSyncCapacityFields(params: {
+  rawCapacityUsd: number;
+  reportedCapacityRatio?: number | null;
+  supplyUsd: number | null;
+  dailyLimitUsd?: number | null;
+  queueDepthUsd?: number | null;
+  capacityProfileConfidence: RedemptionBackstopEntry["capacityConfidence"];
+  applyDailyLimit: boolean;
+  includeEventualSupplyInProfile?: boolean;
+}): ReserveSyncCapacityFields {
+  const hasSupplyCeiling = params.supplyUsd != null;
+  const hasPositiveSupply = hasSupplyCeiling && (params.supplyUsd as number) > 0;
+  const capacityExceedsSupply = hasSupplyCeiling && params.rawCapacityUsd > (params.supplyUsd as number);
+  const immediateCapacityUsd = hasSupplyCeiling
+    ? Math.max(0, Math.min(params.supplyUsd as number, params.rawCapacityUsd))
+    : Math.max(0, params.rawCapacityUsd);
+  const immediateCapacityRatio =
+    params.reportedCapacityRatio != null
+      ? clampUnitInterval(params.reportedCapacityRatio)
+      : hasPositiveSupply
+        ? clampUnitInterval(immediateCapacityUsd / (params.supplyUsd as number))
+        : null;
+  const dailyLimitCapsCapacity =
+    params.applyDailyLimit && params.dailyLimitUsd != null
+      ? params.dailyLimitUsd < immediateCapacityUsd
+      : false;
+  const scoringCapacityUsd = dailyLimitCapsCapacity
+    ? Math.max(0, params.dailyLimitUsd as number)
+    : immediateCapacityUsd;
+  const scoringCapacityRatio =
+    dailyLimitCapsCapacity && hasPositiveSupply
+      ? clampUnitInterval(scoringCapacityUsd / (params.supplyUsd as number))
+      : immediateCapacityRatio;
+
+  return {
+    immediateCapacityUsd,
+    immediateCapacityRatio,
+    scoringCapacityUsd,
+    scoringCapacityRatio,
+    capacityProfile: {
+      immediateUsd: immediateCapacityUsd,
+      ...(params.dailyLimitUsd != null ? { dailyLimitUsd: params.dailyLimitUsd } : {}),
+      ...(params.queueDepthUsd != null ? { queuedUsd: params.queueDepthUsd } : {}),
+      ...(params.includeEventualSupplyInProfile && hasSupplyCeiling ? { eventualUsd: params.supplyUsd as number } : {}),
+      scoringUsd: scoringCapacityUsd,
+      scoringHorizon: dailyLimitCapsCapacity ? "daily" : params.queueDepthUsd != null ? "queued" : "immediate",
+      capacityProfileConfidence: params.capacityProfileConfidence,
+    },
+    hasSupplyCeiling,
+    hasPositiveSupply,
+    capacityExceedsSupply,
+    dailyLimitCapsCapacity,
+  };
+}
+
 function pickRouteStatusFields(
   liveMetadata: RedemptionBackstopLiveMetadata,
 ): Partial<
@@ -94,27 +163,22 @@ export async function resolveReserveSyncCapacity(
       liveMetadata.immediateRedeemableUsd != null
         ? liveMetadata.immediateRedeemableUsd
         : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
-    const hasSupplyCeiling = supplyUsd != null;
-    const hasPositiveSupply = hasSupplyCeiling && (supplyUsd as number) > 0;
-    const capacityExceedsSupply = hasSupplyCeiling && rawCapacityUsd > (supplyUsd as number);
-    const immediateCapacityUsd = hasSupplyCeiling
-      ? Math.max(0, Math.min(supplyUsd as number, rawCapacityUsd))
-      : Math.max(0, rawCapacityUsd);
-    const derivedRatio =
-      liveMetadata.immediateRedeemableRatio != null
-        ? Math.max(0, Math.min(1, liveMetadata.immediateRedeemableRatio))
-        : hasPositiveSupply
-          ? Math.max(0, Math.min(1, immediateCapacityUsd / (supplyUsd as number)))
-          : null;
-    const dailyLimitCapsCapacity =
-      liveMetadata.dailyLimitUsd != null && liveMetadata.dailyLimitUsd < immediateCapacityUsd;
-    const scoringCapacityUsd = dailyLimitCapsCapacity
-      ? Math.max(0, liveMetadata.dailyLimitUsd as number)
-      : immediateCapacityUsd;
-    const scoringCapacityRatio =
-      dailyLimitCapsCapacity && hasPositiveSupply
-        ? Math.max(0, Math.min(1, scoringCapacityUsd / (supplyUsd as number)))
-        : derivedRatio;
+    const {
+      hasSupplyCeiling,
+      hasPositiveSupply,
+      capacityExceedsSupply,
+      dailyLimitCapsCapacity,
+      ...capacityFields
+    } = buildReserveSyncCapacityFields({
+      rawCapacityUsd,
+      reportedCapacityRatio: liveMetadata.immediateRedeemableRatio,
+      supplyUsd,
+      dailyLimitUsd: liveMetadata.dailyLimitUsd,
+      queueDepthUsd: liveMetadata.queueDepthUsd,
+      capacityProfileConfidence: liveMetadata.capacityConfidence,
+      applyDailyLimit: true,
+      includeEventualSupplyInProfile: true,
+    });
     const clampNote = capacityExceedsSupply
       ? "Live reserve redemption capacity exceeds current supply; clamped to supply for scoring"
       : null;
@@ -127,21 +191,9 @@ export async function resolveReserveSyncCapacity(
         : null;
 
     return {
-      immediateCapacityUsd,
-      immediateCapacityRatio: derivedRatio,
-      scoringCapacityUsd,
-      scoringCapacityRatio,
+      ...capacityFields,
       eventualCapacityUsd: hasSupplyCeiling ? supplyUsd : undefined,
       eventualCapacityRatio: hasPositiveSupply ? 1 : undefined,
-      capacityProfile: {
-        immediateUsd: immediateCapacityUsd,
-        ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
-        ...(liveMetadata.queueDepthUsd != null ? { queuedUsd: liveMetadata.queueDepthUsd } : {}),
-        ...(hasSupplyCeiling ? { eventualUsd: supplyUsd as number } : {}),
-        scoringUsd: scoringCapacityUsd,
-        scoringHorizon: dailyLimitCapsCapacity ? "daily" : liveMetadata.queueDepthUsd != null ? "queued" : "immediate",
-        capacityProfileConfidence: liveMetadata.capacityConfidence,
-      },
       provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
       sourceMode:
         REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]
@@ -196,37 +248,20 @@ export async function resolveReserveSyncCapacity(
   }
 
   if (model.fallbackUsd != null) {
-    const hasSupplyCeiling = supplyUsd != null;
-    const hasPositiveSupply = hasSupplyCeiling && (supplyUsd as number) > 0;
-    const immediateCapacityUsd = hasSupplyCeiling
-      ? Math.max(0, Math.min(supplyUsd as number, model.fallbackUsd))
-      : Math.max(0, model.fallbackUsd);
-    const dailyLimitCapsCapacity =
-      model.fallbackUsd > 0 && liveMetadata.dailyLimitUsd != null
-        ? liveMetadata.dailyLimitUsd < immediateCapacityUsd
-        : false;
-    const scoringCapacityUsd = dailyLimitCapsCapacity
-      ? Math.max(0, liveMetadata.dailyLimitUsd as number)
-      : immediateCapacityUsd;
-    const scoringCapacityRatio = hasPositiveSupply
-      ? Math.max(0, Math.min(1, scoringCapacityUsd / (supplyUsd as number)))
-      : null;
-    const immediateCapacityRatio = hasPositiveSupply
-      ? Math.max(0, Math.min(1, immediateCapacityUsd / (supplyUsd as number)))
-      : null;
+    const capacityFields = buildReserveSyncCapacityFields({
+      rawCapacityUsd: model.fallbackUsd,
+      supplyUsd,
+      dailyLimitUsd: liveMetadata.dailyLimitUsd,
+      capacityProfileConfidence: fallbackCapacityConfidence,
+      applyDailyLimit: model.fallbackUsd > 0,
+    });
     return {
-      immediateCapacityUsd,
-      immediateCapacityRatio,
-      scoringCapacityUsd,
-      scoringCapacityRatio,
-      capacityScoreMode: hasPositiveSupply ? "interpolated" : "tier-floor",
-      capacityProfile: {
-        immediateUsd: immediateCapacityUsd,
-        ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
-        scoringUsd: scoringCapacityUsd,
-        scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
-        capacityProfileConfidence: fallbackCapacityConfidence,
-      },
+      immediateCapacityUsd: capacityFields.immediateCapacityUsd,
+      immediateCapacityRatio: capacityFields.immediateCapacityRatio,
+      scoringCapacityUsd: capacityFields.scoringCapacityUsd,
+      scoringCapacityRatio: capacityFields.scoringCapacityRatio,
+      capacityScoreMode: capacityFields.hasPositiveSupply ? "interpolated" : "tier-floor",
+      capacityProfile: capacityFields.capacityProfile,
       ...buildReserveSyncFallbackFields(model, liveMetadata, {
         capacityConfidence: fallbackCapacityConfidence,
         capacitySemantics,

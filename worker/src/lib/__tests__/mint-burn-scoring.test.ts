@@ -164,6 +164,15 @@ describe("getGaugeBand", () => {
     expect(getGaugeBand(70).label).toBe("SURGE");
     expect(getGaugeBand(100).label).toBe("SURGE");
   });
+
+  it("pins exclusive upper-bound gauge assignments", () => {
+    expect(getGaugeBand(-70.000001).label).toBe("CRISIS");
+    expect(getGaugeBand(-40.000001).label).toBe("STRESS");
+    expect(getGaugeBand(-10.000001).label).toBe("CAUTIOUS");
+    expect(getGaugeBand(9.999999).label).toBe("NEUTRAL");
+    expect(getGaugeBand(39.999999).label).toBe("HEALTHY");
+    expect(getGaugeBand(69.999999).label).toBe("CONFIDENT");
+  });
 });
 
 describe("computeGaugeScore", () => {
