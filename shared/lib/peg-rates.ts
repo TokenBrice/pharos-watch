@@ -75,10 +75,8 @@ export function derivePegRates(
   const sources: Record<string, PegRateSource> = {};
   const counts: Record<string, number> = {};
   for (const [peg, prices] of Object.entries(groups)) {
-    // Guard: skip empty groups (shouldn't happen since we only push non-empty,
-    // but defends the median indexing below against an empty array).
-    if (prices.length === 0) continue;
     // Keep the scoring reference unrounded; display medians round at the API edge.
+    // medianOf() returns null for empty groups, so no separate empty-array guard is needed.
     const median = medianOf(prices);
     if (median == null) continue;
 

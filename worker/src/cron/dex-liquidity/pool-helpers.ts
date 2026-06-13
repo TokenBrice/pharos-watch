@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { clampScore } from "@shared/lib/math";
+import { clamp, clampScore } from "@shared/lib/math";
 import { DURABILITY_COMPONENT_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol } from "../../lib/dex-cron-constants";
@@ -96,7 +96,8 @@ export function computePoolQualityContribution({
   pairQuality,
   hasMeasuredBalance = true,
 }: PoolQualityContributionInput): PoolQualityContribution {
-  const balanceHealth = hasMeasuredBalance ? Math.pow(balanceRatio, 1.5) : 1;
+  // Clamp to [0,1] so a stray NaN/negative balanceRatio can't propagate NaN into the score.
+  const balanceHealth = hasMeasuredBalance ? Math.pow(clamp(balanceRatio, 0, 1), 1.5) : 1;
   const combinedQuality = qualityMultiplier * balanceHealth * pairQuality;
   return {
     balanceHealth,

@@ -66,6 +66,23 @@ describe("computePoolQualityContribution", () => {
     expect(contribution.qualityAdjustedTvl).toBe(85_000);
     expect(contribution.effectiveTvl).toBe(68_000);
   });
+
+  it("clamps a non-finite or negative balanceRatio instead of propagating NaN", () => {
+    for (const balanceRatio of [NaN, -0.5]) {
+      const contribution = computePoolQualityContribution({
+        qualityTvlUsd: 100_000,
+        effectiveTvlUsd: 100_000,
+        qualityMultiplier: 0.85,
+        balanceRatio,
+        pairQuality: 0.8,
+      });
+
+      // clamp(NaN|-0.5, 0, 1) === 0 → balanceHealth = 0 ** 1.5 = 0, never NaN.
+      expect(contribution.balanceHealth).toBe(0);
+      expect(contribution.qualityAdjustedTvl).toBe(0);
+      expect(contribution.effectiveTvl).toBe(0);
+    }
+  });
 });
 
 describe("computeLiquidityScore", () => {

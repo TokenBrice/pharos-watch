@@ -413,6 +413,8 @@ function median(values: number[]): number {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 }
 
+// Display path: soft `?? 0` fallbacks. Intentionally NOT unified with the confidence-weighted
+// median in scoring.ts (which hard-indexes adjustedObs[0].price); unifying would move outputs.
 function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number {
   const sorted = [...observations].sort((left, right) => left.price - right.price);
   const totalTvl = sorted.reduce((sum, observation) => sum + observation.tvl, 0);
