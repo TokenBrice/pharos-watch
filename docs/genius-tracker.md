@@ -169,7 +169,7 @@ After `genius` metadata edits:
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 node scripts/build-data/build-client-registry.mjs
 npm run check:stablecoin-data
 npm run check:generated-artifacts

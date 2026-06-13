@@ -4,7 +4,7 @@ Feature flags gate the riskiest of the May 2026 detail-page changes. Most defaul
 
 To enable a default-off flag locally: `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev`.
 
-To disable the default-on Hero Verdict locally: `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false npm run dev`.
+To disable a default-on flag locally, set that flag to the literal string `false`, for example `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false npm run dev`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER=false npm run dev`, or `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER=false npm run dev`.
 
 To enable in prod: set the env var as a GitHub repository Variable. The Pages build runs in GitHub Actions, so Cloudflare Pages dashboard variables are runtime-only for this app and are not inlined into the static bundle.
 

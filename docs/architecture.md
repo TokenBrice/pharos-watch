@@ -84,7 +84,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 ### Runtime host and env rules
 
-- `src/lib/api.ts` is the frontend runtime source of truth for API origin selection.
+- `src/lib/api-url.ts` is the frontend runtime source of truth for API origin selection; `src/lib/api.ts` re-exports those helpers and layers request/freshness handling on top.
 - `NEXT_PUBLIC_API_BASE` is an optional explicit override, mainly for local `next dev` against `wrangler dev`.
 - When `NEXT_PUBLIC_API_BASE` is unset, `buildRequestUrl()` maps public browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` to same-origin `/_site-data/*`, while `buildApiUrl()` still points explicit public-API callsites (for example feedback, API-key self-serve, and OG fetches) at `https://api.pharos.watch`.
 - `functions/_site-data/[[path]].ts` is the browser-facing proxy contract for the website data lane. It accepts only `GET`, allowlists public-read routes through `shared/lib/site-data-lane.ts`, and requires `SITE_API_ORIGIN` on every Pages host (production and preview); when that binding is missing the proxy returns `500`. The lane also gates on the caller's `Origin` header (or `Referer` as a fallback) — only `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev` are accepted. All site-data upstream requests use `SITE_API_SHARED_SECRET` against `site-api.pharos.watch` or a Worker preview URL.

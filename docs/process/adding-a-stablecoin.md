@@ -15,7 +15,7 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 | File                                                                                                            | Purpose                                                                                                      |
 | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for active and pre-launch stablecoin metadata                                       |
-| `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries                                                    |
 | `shared/data/stablecoins/canonical-order.json`                                                                  | Canonical tracked order used to build `TRACKED_STABLECOINS`                                                  |
 | `shared/data/stablecoins/AGENTS.md`                                                                             | Agent notes pinned to the registry directory                                                                 |
@@ -467,7 +467,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 ### Current registry editing checklist
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
@@ -603,7 +603,7 @@ When authoring `mintAuthority`, verify:
 If you use the local scanner POC, run it as a candidate producer only:
 
 ```bash
-tsx scripts/maintenance/audit-mint-authority.ts --coin <stablecoin-id>
+npx tsx scripts/maintenance/audit-mint-authority.ts --coin <stablecoin-id>
 ```
 
 The scanner writes to `agents/mint-authority-candidates/` and never updates stablecoin metadata. Treat its output as a review queue, not evidence ready for publication.
@@ -720,7 +720,7 @@ Before running commands, confirm the addition-specific artifacts:
 For a normal stablecoin addition, run at least:
 
 ```bash
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run validate:prebuild
 npm test
@@ -729,7 +729,7 @@ cd worker && npx tsc --noEmit
 npm run test:merge-gate
 ```
 
-`validate:prebuild` is the aggregated gate: it runs lint, typecheck, and every `check:*` script in parallel, including `check:stablecoin-data`, `check:redemption-backstops`, `check:doc-counts`, `check:verified-doc-links`, and `check:doc-sync`. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff.
+`validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the registered prebuild checks in parallel, including `check:stablecoin-data`, `check:redemption-backstops`, `check:doc-counts`, `check:verified-doc-links`, and `check:doc-sync`. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff.
 
 You can also run the individual checks directly when iterating:
 

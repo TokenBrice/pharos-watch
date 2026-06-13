@@ -23,7 +23,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 The editable stablecoin catalog lives in per-coin files under `shared/data/stablecoins/coins/*.json`. `shared/data/stablecoins/coins.generated.json` is the checked-in full runtime aggregate; do not edit it by hand. Regenerate it after catalog edits with:
 
 ```bash
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 ```
 
 Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
@@ -58,7 +58,7 @@ Scanner output is not curated metadata. The local scanner POC writes candidate a
 Run these after metadata edits:
 
 ```bash
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run check:generated-artifacts
 npm run check:doc-counts

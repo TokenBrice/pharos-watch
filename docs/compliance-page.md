@@ -77,7 +77,7 @@ Do not list `/mica/` in the sitemap, nav, command palette, or product links.
 After compliance metadata edits:
 
 ```bash
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
+npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run check:generated-artifacts
 npm run check:doc-counts
