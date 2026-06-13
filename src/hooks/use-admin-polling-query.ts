@@ -3,14 +3,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
-import { usePollingQuery } from "./use-api-query";
-import type { SchemaLike } from "@/lib/schema-like";
+import { usePollingQuery, type ApiQueryOptions } from "./use-api-query";
 
-interface AdminPollingOptions<T> {
-  enabled?: boolean;
-  retry?: number | boolean;
-  schema?: SchemaLike<T>;
-}
+type AdminPollingOptions<T> = Pick<ApiQueryOptions<T>, "enabled" | "retry" | "schema">;
 
 const ADMIN_QUERY_SCOPE = "ops-proxy";
 

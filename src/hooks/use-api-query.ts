@@ -26,7 +26,7 @@ export interface PollingQueryControlOptions {
   keepPreviousData?: boolean;
 }
 
-interface ApiQueryOptions<T> extends PollingQueryControlOptions {
+export interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   schema?: SchemaLike<T>;
   fetchInit?: RequestInit;
   metaMaxAgeSec?: number;

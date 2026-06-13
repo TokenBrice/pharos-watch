@@ -425,7 +425,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-hooks-9` — AdminPollingOptions duplicates a subset of ApiQueryOptions/PollingQueryControlOptions fields** `[duplication | low | small | low]`
 - Problem: `AdminPollingOptions<T>` declares `enabled?`, `retry?`, `schema?`. enabled/retry overlap `PollingQueryControlOptions`; schema overlaps `ApiQueryOptions`. Caller count corrected to 6 (excludes use-endpoint-probes). PRECONDITION: neither `ApiQueryOptions` nor `PollingQueryControlOptions` is currently exported from use-api-query.ts.
-- Recommendation: export `ApiQueryOptions`, then replace `AdminPollingOptions<T>` with `Pick<ApiQueryOptions<T>, 'enabled' | 'retry' | 'schema'>`. The Pick form is the cleaner behavior-match (the `extends` form pulls in keepPreviousData/retryDelay that the hook ignores).
+- Done 2026-06-13: exported `ApiQueryOptions` and replaced `AdminPollingOptions<T>` with `Pick<ApiQueryOptions<T>, "enabled" | "retry" | "schema">`, keeping the admin hook's accepted option surface unchanged.
 - Files: `src/hooks/use-admin-polling-query.ts:9-13`, `src/hooks/use-api-query.ts:16-34`.
 - Verifier: duplication confirmed; caller count + export precondition corrected. Checks: `npm run typecheck`, `npm run lint`.
 
