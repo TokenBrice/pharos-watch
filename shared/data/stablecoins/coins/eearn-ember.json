@@ -1,0 +1,110 @@
+{
+  "id": "eearn-ember",
+  "name": "Ember Earn",
+  "symbol": "eEARN",
+  "oneLiner": "eEARN is Ember's yield-bearing USDC vault token on Ethereum, with Royco Dawn tranche markets wrapping its vault shares.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "eEARN is a USDC vault/share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
+    "reviewer": "Codex Royco coverage addition",
+    "reviewedAt": "2026-06-13"
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into Ember Earn's Ethereum vault token; Royco Dawn wraps eEARN into senior and junior tranche vaults for structured yield exposure",
+  "pegMechanism": "ERC-4626-style shares redeem against the vault's USDC asset at the current share price; the token is a NAV wrapper over USDC rather than a fiat-issuer stablecoin",
+  "detailProvider": "coingecko",
+  "geckoId": "ember-earn",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://trade.bluefin.io/ember/eEARN"
+    },
+    {
+      "label": "Royco Dawn",
+      "url": "https://dawn.royco.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/bluefinapp"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "eEARN has one tracked Ethereum vault contract used by Royco Dawn. No separate bridge route is modeled for Pharos, so the asset is reviewed as a native single-chain vault token.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex Royco coverage addition",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Royco Dawn",
+        "url": "https://dawn.royco.org/"
+      },
+      {
+        "label": "Ethereum eEARN contract",
+        "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+      }
+    ]
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC deposited into Ember Earn's Ethereum vault",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Ember Earn vault",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eearn-ember",
+    "display": {
+      "url": "https://trade.bluefin.io/ember/eEARN",
+      "label": "Ember Earn eEARN"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC deposited into Ember Earn's Ethereum vault",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "id": "autousd-auto-finance",
+  "name": "Auto Finance autoUSD",
+  "symbol": "autoUSD",
+  "oneLiner": "autoUSD is Auto Finance's yield-bearing USDC autopool token on Ethereum, rebalancing across DeFi destinations while Royco Dawn lists tranche markets.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "autoUSD is a USDC autopool share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
+    "reviewer": "Codex Royco coverage addition",
+    "reviewedAt": "2026-06-13"
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into Auto Finance's autoUSD autopool, with protocol-managed allocation across DeFi liquidity and yield destinations",
+  "pegMechanism": "Autopool receipt-token share price appreciates as earnings auto-compound; withdrawals redeem shares for USDC subject to autopool liquidity and destination unwinds",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.auto.finance/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.auto.finance/"
+    },
+    {
+      "label": "Contracts",
+      "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+    },
+    {
+      "label": "Royco Dawn",
+      "url": "https://dawn.royco.org/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "autoUSD has one tracked Ethereum autopool contract and no modeled bridge route in Pharos. The Royco Dawn market wraps that Ethereum vault token into senior and junior tranche vaults.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex Royco coverage addition",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Auto Finance contract addresses",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Royco Dawn",
+        "url": "https://dawn.royco.org/"
+      }
+    ]
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Auto Finance autoUSD autopool",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "autousd-auto-finance",
+    "display": {
+      "url": "https://app.auto.finance/",
+      "label": "Auto Finance autoUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  }
+}

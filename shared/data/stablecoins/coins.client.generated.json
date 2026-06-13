@@ -1220,6 +1220,38 @@
     "liveReserveAdapter": "evm-branch-balances"
   },
   {
+    "id": "autousd-auto-finance",
+    "name": "Auto Finance autoUSD",
+    "symbol": "autoUSD",
+    "oneLiner": "autoUSD is Auto Finance's yield-bearing USDC autopool token on Ethereum, rebalancing across DeFi destinations while Royco Dawn lists tranche markets.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "yieldConfig": {
+      "yieldSource": "Auto Finance autoUSD autopool",
+      "yieldType": "nav-appreciation"
+    },
+    "reserves": [
+      {
+        "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
+    "liveReserveAdapter": "erc4626-single-asset"
+  },
+  {
     "id": "avusd-avant",
     "name": "Avant USD",
     "symbol": "avUSD",
@@ -4736,6 +4768,39 @@
       ]
     },
     "liveReserveAdapter": "liquity-v2-branches"
+  },
+  {
+    "id": "eearn-ember",
+    "name": "Ember Earn",
+    "symbol": "eEARN",
+    "oneLiner": "eEARN is Ember's yield-bearing USDC vault token on Ethereum, with Royco Dawn tranche markets wrapping its vault shares.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "geckoId": "ember-earn",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "yieldConfig": {
+      "yieldSource": "Ember Earn vault",
+      "yieldType": "nav-appreciation"
+    },
+    "reserves": [
+      {
+        "name": "USDC deposited into Ember Earn's Ethereum vault",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
+    "liveReserveAdapter": "erc4626-single-asset"
   },
   {
     "id": "ejpy-jbfd",

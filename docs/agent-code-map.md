@@ -375,13 +375,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
 - `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
-- ... 249 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 251 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 404 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 404 entries
-- `shared/data/stablecoins/coins.generated.json` - 404 entries
+- `shared/data/stablecoins/canonical-order.json` - 406 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 406 entries
+- `shared/data/stablecoins/coins.generated.json` - 406 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 25 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 28 keys
@@ -401,6 +401,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 26 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 25 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 26 keys
+- `shared/data/stablecoins/coins/autousd-auto-finance.json` - 23 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 23 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys
 - `shared/data/stablecoins/coins/aznd-mu-digital.json` - 26 keys
@@ -418,8 +419,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
 - `shared/data/stablecoins/coins/brla-brla-digital.json` - 27 keys
 - `shared/data/stablecoins/coins/brlm-mento.json` - 28 keys
-- `shared/data/stablecoins/coins/brlv-crown.json` - 26 keys
-- ... 374 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 376 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 

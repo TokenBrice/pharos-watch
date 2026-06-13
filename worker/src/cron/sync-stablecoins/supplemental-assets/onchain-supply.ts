@@ -19,6 +19,11 @@ export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; r
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
 };
+const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
+  // CoinGecko's ember-earn market row resolves the Sui token, while Pharos
+  // tracks the Ethereum eEARN vault token used by Royco Dawn.
+  "eearn-ember",
+]);
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<string, readonly { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }[]> = {
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
@@ -57,6 +62,10 @@ export function selectSupplementalOnChainSupplyContract(
   }
 
   return selectSingleOnChainSupplyContract(meta);
+}
+
+export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
+  return PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
 }
 
 function buildProbeInput(chain: string): LiveReserveInput {

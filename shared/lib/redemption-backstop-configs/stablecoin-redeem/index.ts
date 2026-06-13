@@ -1,9 +1,11 @@
 import { applyTrackedReviewedDocs, type RedemptionBackstopConfig } from "../shared";
 import { AA_FALCONX_MEV_CAPITAL_STABLECOIN_REDEEM_CONFIG } from "./aa-falconx-mev-capital";
 import { AID_GAIB_STABLECOIN_REDEEM_CONFIG } from "./aid-gaib";
+import { AUTOUSD_AUTO_FINANCE_STABLECOIN_REDEEM_CONFIG } from "./autousd-auto-finance";
 import { APXUSD_APYX_STABLECOIN_REDEEM_CONFIG } from "./apxusd-apyx";
 import { CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG } from "./cusdo-openeden";
 import { DUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG } from "./dusd-dtrinity";
+import { EEARN_EMBER_STABLECOIN_REDEEM_CONFIG } from "./eearn-ember";
 import { FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG } from "./frxusd-frax";
 import { FTUSD_FLYING_TULIP_STABLECOIN_REDEEM_CONFIG } from "./ftusd-flying-tulip";
 import { FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG } from "./fxsave-f-x-protocol";
@@ -129,6 +131,8 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "usdb-blast": USDB_BLAST_STABLECOIN_REDEEM_CONFIG,
   "usdv-solomon": USDV_SOLOMON_STABLECOIN_REDEEM_CONFIG,
   "weusd-picwe": WEUSD_PICWE_STABLECOIN_REDEEM_CONFIG,
+  "autousd-auto-finance": AUTOUSD_AUTO_FINANCE_STABLECOIN_REDEEM_CONFIG,
+  "eearn-ember": EEARN_EMBER_STABLECOIN_REDEEM_CONFIG,
 };
 
 applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, ["ousg-ondo-finance", "u-united-stables", "usd0-usual"]);

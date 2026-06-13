@@ -4036,5 +4036,25 @@
     "reviewedBy": "Pharos pre-launch update",
     "reviewedAt": "2026-06-13",
     "factsAsOf": "2026-06-13"
+  },
+  "autousd-auto-finance": {
+    "title": "An Autopool Dollar Wrapper",
+    "text": "autoUSD is Auto Finance's USDC autopool share token on Ethereum: holders own a vault receipt rather than a fiat-reserve stablecoin, and the share price is expected to rise as strategy earnings auto-compound. The protocol documentation describes autopools that rebalance across eligible DeFi destinations in search of stronger risk-adjusted returns, so the dollar anchor comes from USDC as the vault asset while the extra risk comes from destination selection, liquidity, and controller operations. Pharos tracks the Ethereum autoUSD contract directly, with market-cap coverage from on-chain supply and price coverage from the contract quote path, while Royco Dawn adds the senior/junior tranche market that motivated this listing. The result is useful yield coverage, but the reserve model stays conservative: this is a strategy wrapper over USDC, not a redeemable issuer dollar.",
+    "updatedAt": "2026-06-13",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex Royco coverage addition",
+    "reviewedAt": "2026-06-13",
+    "factsAsOf": "2026-06-13"
+  },
+  "eearn-ember": {
+    "title": "Ember's Royco-Listed Vault Share",
+    "text": "eEARN is Ember's yield-bearing USDC vault share tracked on Ethereum for Royco Dawn coverage. The token behaves like a NAV wrapper: deposits mint vault shares, withdrawals return the vault asset, and market value should follow the USDC-denominated share price rather than a flat issuer redemption claim. CoinGecko currently exposes the Ember Earn market through its Sui-side row, so Pharos uses that as a price source while forcing market cap through the Ethereum token's on-chain supply to avoid mixing chains. Royco Dawn then wraps the same eEARN deposit token into senior and junior tranche vaults, which is valuable yield context but also why the reserve and governance posture stay high-risk and wrapper-focused.",
+    "updatedAt": "2026-06-13",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex Royco coverage addition",
+    "reviewedAt": "2026-06-13",
+    "factsAsOf": "2026-06-13"
   }
 }

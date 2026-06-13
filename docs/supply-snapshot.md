@@ -25,7 +25,7 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
 3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 371 entries: 369 active tracked + 2 shadow)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 373 entries: 371 active tracked + 2 shadow)
 5. Check the once-per-UTC-date guard before building write statements:
    - read cache key `snapshot-supply:last-write`
    - if the marker's stored `snapshotDate` equals today's UTC date, skip with `reason: "already_written_today"` (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)

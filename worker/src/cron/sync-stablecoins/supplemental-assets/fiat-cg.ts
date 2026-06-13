@@ -8,7 +8,7 @@ import {
   fetchZephyrProtocolStats,
   isZephyrScannerAssetId,
 } from "../zephyr-zsd";
-import { fetchOnChainMcap } from "./onchain-supply";
+import { fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   getSupplementalChainLabels,
@@ -84,12 +84,13 @@ export async function fetchFiatCoinGeckoTokens(
           return buildZephyrProtocolPeggedAsset(meta, zephyrProtocolStats, priceResolution, nowSec);
         }
 
-        let mcap = mcapMap[meta.id];
+        const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
+        let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only fiat assets in supply coverage without inventing a live market quote.
-        if (!mcap && priceForSupply != null) {
+        if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (onChainMcap) {
             mcap = onChainMcap.mcap;

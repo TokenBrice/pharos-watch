@@ -4346,6 +4346,119 @@
     "launchDate": "2024-03-11"
   },
   {
+    "id": "autousd-auto-finance",
+    "detailProvider": "coingecko",
+    "name": "Auto Finance autoUSD",
+    "symbol": "autoUSD",
+    "oneLiner": "autoUSD is Auto Finance's yield-bearing USDC autopool token on Ethereum, rebalancing across DeFi destinations while Royco Dawn lists tranche markets.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into Auto Finance's autoUSD autopool, with protocol-managed allocation across DeFi liquidity and yield destinations",
+    "pegMechanism": "Autopool receipt-token share price appreciates as earnings auto-compound; withdrawals redeem shares for USDC subject to autopool liquidity and destination unwinds",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.auto.finance/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.auto.finance/"
+      },
+      {
+        "label": "Contracts",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Royco Dawn",
+        "url": "https://dawn.royco.org/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "autoUSD is a USDC autopool share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
+      "reviewer": "Codex Royco coverage addition",
+      "reviewedAt": "2026-06-13"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "bridgeRouteRisk": {
+      "tier": "single-chain-or-native",
+      "summary": "autoUSD has one tracked Ethereum autopool contract and no modeled bridge route in Pharos. The Royco Dawn market wraps that Ethereum vault token into senior and junior tranche vaults.",
+      "reviewedAt": "2026-06-13",
+      "reviewer": "Codex Royco coverage addition",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Auto Finance contract addresses",
+          "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+        },
+        {
+          "label": "Royco Dawn",
+          "url": "https://dawn.royco.org/"
+        }
+      ]
+    },
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "autousd-auto-finance",
+      "display": {
+        "url": "https://app.auto.finance/",
+        "label": "Auto Finance autoUSD"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
+          "risk": "high",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Auto Finance autoUSD autopool",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "avusd-avant",
     "llamaId": "271",
     "detailProvider": "defillama",
@@ -16213,6 +16326,116 @@
       }
     },
     "launchDate": "2025-06-05"
+  },
+  {
+    "id": "eearn-ember",
+    "detailProvider": "coingecko",
+    "name": "Ember Earn",
+    "symbol": "eEARN",
+    "oneLiner": "eEARN is Ember's yield-bearing USDC vault token on Ethereum, with Royco Dawn tranche markets wrapping its vault shares.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into Ember Earn's Ethereum vault token; Royco Dawn wraps eEARN into senior and junior tranche vaults for structured yield exposure",
+    "pegMechanism": "ERC-4626-style shares redeem against the vault's USDC asset at the current share price; the token is a NAV wrapper over USDC rather than a fiat-issuer stablecoin",
+    "geckoId": "ember-earn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://trade.bluefin.io/ember/eEARN"
+      },
+      {
+        "label": "Royco Dawn",
+        "url": "https://dawn.royco.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/bluefinapp"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "eEARN is a USDC vault/share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
+      "reviewer": "Codex Royco coverage addition",
+      "reviewedAt": "2026-06-13"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "bridgeRouteRisk": {
+      "tier": "single-chain-or-native",
+      "summary": "eEARN has one tracked Ethereum vault contract used by Royco Dawn. No separate bridge route is modeled for Pharos, so the asset is reviewed as a native single-chain vault token.",
+      "reviewedAt": "2026-06-13",
+      "reviewer": "Codex Royco coverage addition",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Royco Dawn",
+          "url": "https://dawn.royco.org/"
+        },
+        {
+          "label": "Ethereum eEARN contract",
+          "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+        }
+      ]
+    },
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "reserves": [
+      {
+        "name": "USDC deposited into Ember Earn's Ethereum vault",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eearn-ember",
+      "display": {
+        "url": "https://trade.bluefin.io/ember/eEARN",
+        "label": "Ember Earn eEARN"
+      },
+      "adapter": "erc4626-single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC deposited into Ember Earn's Ethereum vault",
+          "risk": "high",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Ember Earn vault",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "ejpy-jbfd",
