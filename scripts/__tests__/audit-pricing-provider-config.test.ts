@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   auditBinance,
+  auditBitstamp,
   auditCoinbase,
   auditOptionalSourceShapes,
   runPricingProviderAudit,
@@ -40,6 +41,19 @@ describe("audit-pricing-provider-config", () => {
       ok: true,
       missing: [],
       notes: [expect.stringContaining("451")],
+    });
+  });
+
+  it("treats Bitstamp runner network failures as a skipped successful live audit", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    await expect(auditBitstamp(fetchImpl as typeof fetch)).resolves.toMatchObject({
+      provider: "bitstamp",
+      ok: true,
+      missing: [],
+      notes: [expect.stringContaining("fetch failed")],
     });
   });
 

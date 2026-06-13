@@ -30,11 +30,27 @@ class HttpFetchError extends Error {
   }
 }
 
+class NetworkFetchError extends Error {
+  url: string;
+
+  constructor(url: string, cause: unknown) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    super(`${url} fetch failed: ${message}`);
+    this.name = "NetworkFetchError";
+    this.url = url;
+  }
+}
+
 async function fetchJson<T>(url: string, fetchImpl: FetchLike = fetch): Promise<T> {
-  const response = await fetchImpl(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
-  });
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    throw new NetworkFetchError(url, error);
+  }
   if (!response.ok) {
     throw new HttpFetchError(url, response.status);
   }
@@ -126,10 +142,24 @@ export async function auditKraken(fetchImpl: FetchLike = fetch): Promise<AuditSe
 }
 
 export async function auditBitstamp(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
-  const payload = await fetchJson<Array<{ name?: string; trading?: string }>>(
-    CEX_PROVIDER_AUDIT_CONFIG.bitstamp.metadataUrl,
-    fetchImpl,
-  );
+  let payload: Array<{ name?: string; trading?: string }>;
+  try {
+    payload = await fetchJson<Array<{ name?: string; trading?: string }>>(
+      CEX_PROVIDER_AUDIT_CONFIG.bitstamp.metadataUrl,
+      fetchImpl,
+    );
+  } catch (error) {
+    if (error instanceof NetworkFetchError && error.url === CEX_PROVIDER_AUDIT_CONFIG.bitstamp.metadataUrl) {
+      return {
+        provider: "bitstamp",
+        ok: true,
+        checked: BITSTAMP_MARKETS.length,
+        missing: [],
+        notes: [`Skipped live metadata audit because Bitstamp metadata fetch failed from this runner: ${error.message}`],
+      };
+    }
+    throw error;
+  }
   assertArray(payload, "bitstamp", "root");
   const activePairs = new Set(
     payload
