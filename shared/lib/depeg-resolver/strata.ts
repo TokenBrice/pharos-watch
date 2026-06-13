@@ -88,22 +88,24 @@ export function candidateStrata(active: DdrStratumKey): DdrStratumCandidate[] {
     active.depth === "minor"
       ? ["minor"]
       : ["moderate", "severe", "catastrophic"];
+  const collapsedAddsDepthCoverage = collapsed.length > exact.length || collapsed[0] !== exact[0];
+  const broadAddsDepthCoverage = broad.length > collapsed.length || broad.some((d) => !collapsed.includes(d));
 
   const out: DdrStratumCandidate[] = [
     { direction: active.direction, depths: exact, structural: active.structural, currency: active.currency },
     { direction: active.direction, depths: exact, structural: active.structural, currency: STRATUM_ANY },
   ];
-  if (collapsed.length > exact.length || collapsed[0] !== exact[0]) {
+  if (collapsedAddsDepthCoverage) {
     out.push({ direction: active.direction, depths: collapsed, structural: active.structural, currency: STRATUM_ANY });
   }
-  if (broad.length > collapsed.length || broad.some((d) => !collapsed.includes(d))) {
+  if (broadAddsDepthCoverage) {
     out.push({ direction: active.direction, depths: broad, structural: active.structural, currency: STRATUM_ANY });
   }
   out.push({ direction: active.direction, depths: exact, structural: STRATUM_ANY, currency: STRATUM_ANY });
-  if (collapsed.length > exact.length || collapsed[0] !== exact[0]) {
+  if (collapsedAddsDepthCoverage) {
     out.push({ direction: active.direction, depths: collapsed, structural: STRATUM_ANY, currency: STRATUM_ANY });
   }
-  if (broad.length > collapsed.length || broad.some((d) => !collapsed.includes(d))) {
+  if (broadAddsDepthCoverage) {
     out.push({ direction: active.direction, depths: broad, structural: STRATUM_ANY, currency: STRATUM_ANY });
   }
   return out;

@@ -493,6 +493,150 @@ describe("DDRR v2 coverage metrics", () => {
     expect(summary.headline.operationalMissRatePct).toBe(1);
   });
 
+  it("pins coverage state counts separately from operational-cause filters", () => {
+    const { summary } = reviewDdrrV2Rows({
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:pending",
+          predictionState: "pending_lock",
+          coverageCause: "active_pending_lock",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+        coverage({
+          incidentKey: "ddr2:deferred",
+          predictionState: "lock_deferred",
+          coverageCause: "active_lock_deferred",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+        coverage({ incidentKey: "ddr2:resolved", predictionState: "resolved_before_prediction" }),
+        coverage({
+          incidentKey: "ddr2:terminal",
+          predictionState: "terminal_before_prediction",
+          coverageCause: "pre_lock_terminal",
+          sourceEventState: "terminal",
+          actualEndedAt: null,
+        }),
+        coverage({
+          incidentKey: "ddr2:data-quality-operational",
+          predictionState: "data_quality_gap",
+          coverageCause: "data_quality_gap",
+          operationalCoverageCause: "cron_gap",
+          outcomeQualityState: "data_quality_gap",
+        }),
+        coverage({
+          incidentKey: "ddr2:data-quality-confirmation",
+          predictionState: "data_quality_gap",
+          coverageCause: "data_quality_gap",
+          operationalCoverageCause: "confirmation_time_unknown",
+          outcomeQualityState: "data_quality_gap",
+        }),
+        coverage({
+          incidentKey: "ddr2:orphan-operational",
+          predictionState: "orphan_closed",
+          coverageCause: "orphan_closed",
+          operationalCoverageCause: "system_deferral",
+          sourceEventState: "orphan_closed",
+          outcomeQualityState: "orphan_closed",
+        }),
+        coverage({
+          incidentKey: "ddr2:orphan-source",
+          predictionState: "orphan_closed",
+          coverageCause: "orphan_closed",
+          sourceEventState: "orphan_closed",
+          outcomeQualityState: "orphan_closed",
+        }),
+        coverage({
+          incidentKey: "ddr2:missed-recovered",
+          predictionState: "missed_lock_recovered",
+          coverageCause: "lock_missed",
+          operationalCoverageCause: "lock_missed",
+        }),
+        coverage({
+          incidentKey: "ddr2:missed-terminal",
+          predictionState: "missed_lock_terminal",
+          coverageCause: "terminal_time_unknown",
+          operationalCoverageCause: "lock_missed",
+          sourceEventState: "terminal",
+          actualEndedAt: null,
+        }),
+        coverage({
+          incidentKey: "ddr2:failed",
+          predictionState: "publication_failed",
+          coverageCause: "publication_failed",
+          failedPublication: {
+            publicPredictionId: 11,
+            assessmentId: 12,
+            lockedAt: LOCKED_AT,
+            outcomeKind: "prediction",
+            rowHash: "failed-hash",
+            sealedPayloadRedacted: true,
+            lastAttemptedAt: LOCKED_AT + 60,
+          },
+        }),
+        coverage({
+          incidentKey: "ddr2:retry",
+          predictionState: "publication_retry_pending",
+          coverageCause: "publication_retry_pending",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+      ],
+      nowSec: REVIEWED_AT,
+    });
+
+    expect({
+      policyUniverseIncidentCount: summary.headline.policyUniverseIncidentCount,
+      activeEligibleIncidentCount: summary.headline.activeEligibleIncidentCount,
+      pendingLockCount: summary.headline.pendingLockCount,
+      lockDeferredCount: summary.headline.lockDeferredCount,
+      resolvedBeforePredictionCount: summary.headline.resolvedBeforePredictionCount,
+      terminalBeforePredictionCount: summary.headline.terminalBeforePredictionCount,
+      dataQualityGapCount: summary.headline.dataQualityGapCount,
+      orphanClosedCount: summary.headline.orphanClosedCount,
+      missedLockRecoveredCount: summary.headline.missedLockRecoveredCount,
+      missedLockTerminalCount: summary.headline.missedLockTerminalCount,
+      missedLockOrphanClosedCount: summary.headline.missedLockOrphanClosedCount,
+      missedLockDataQualityGapCount: summary.headline.missedLockDataQualityGapCount,
+      missedNoPredictionCount: summary.headline.missedNoPredictionCount,
+      publicationFailedCount: summary.headline.publicationFailedCount,
+      publicationRetryPendingCount: summary.headline.publicationRetryPendingCount,
+      confirmationTimeUnknownCount: summary.headline.confirmationTimeUnknownCount,
+      missedOperationalLockCount: summary.headline.missedOperationalLockCount,
+      currentEligibleOpportunityCount: summary.headline.currentEligibleOpportunityCount,
+      finalizedOpportunityCount: summary.headline.finalizedOpportunityCount,
+      stateAssignedPct: summary.headline.stateAssignedPct,
+      finalizedCoveragePct: summary.headline.finalizedCoveragePct,
+      operationalMissRatePct: summary.headline.operationalMissRatePct,
+    }).toMatchInlineSnapshot(`
+      {
+        "activeEligibleIncidentCount": 3,
+        "confirmationTimeUnknownCount": 1,
+        "currentEligibleOpportunityCount": 7,
+        "dataQualityGapCount": 2,
+        "finalizedCoveragePct": 0.9166666666666666,
+        "finalizedOpportunityCount": 5,
+        "lockDeferredCount": 1,
+        "missedLockDataQualityGapCount": 1,
+        "missedLockOrphanClosedCount": 1,
+        "missedLockRecoveredCount": 1,
+        "missedLockTerminalCount": 1,
+        "missedNoPredictionCount": 4,
+        "missedOperationalLockCount": 4,
+        "operationalMissRatePct": 0.7142857142857143,
+        "orphanClosedCount": 2,
+        "pendingLockCount": 1,
+        "policyUniverseIncidentCount": 12,
+        "publicationFailedCount": 1,
+        "publicationRetryPendingCount": 1,
+        "resolvedBeforePredictionCount": 1,
+        "stateAssignedPct": 1.1666666666666667,
+        "terminalBeforePredictionCount": 1,
+      }
+    `);
+  });
+
   it("tracks invalidations separately and includes them in trust denominators", () => {
     const { rows, summary } = reviewDdrrV2Rows({
       assessments: [assessment({ incidentKey: "ddr2:locked" })],

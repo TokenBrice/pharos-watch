@@ -393,6 +393,13 @@ export const DdrrV2SummarySegmentSchema = z.object({
 });
 export type DdrrV2SummarySegment = z.infer<typeof DdrrV2SummarySegmentSchema>;
 
+/**
+ * Public DDRR summary contract.
+ *
+ * `byPredictionPolicy` is intentionally retained as a forward-compatible
+ * inspection surface while generation-2 cached payloads are valid. Removing it
+ * requires a DDRR cache-generation bump plus worker-before-client sequencing.
+ */
 export const DdrrSummarySchema = z.object({
   headlineScope: z.enum(["current_policy", "all_ddrv2", "insufficient_data"]),
   headlineLabel: z.string(),

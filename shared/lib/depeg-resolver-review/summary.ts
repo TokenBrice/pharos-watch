@@ -1,9 +1,12 @@
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../depeg-resolver-version";
-import type {
+import {
+  DDRR_COVERAGE_PREDICTION_STATE_VALUES,
+  type DdrrCoveragePredictionState,
   DdrrHorizonHitRate,
   DdrrRow,
   DdrrSummary,
+  DdrrV2CoverageRow,
   DdrrV2PredictionReviewRow,
   DdrrV2SummaryMetrics,
   DdrrVerdictReview,
@@ -85,6 +88,17 @@ function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Re
   );
 }
 
+function countCoveragePredictionStates(rows: readonly DdrrV2CoverageRow[]): Record<DdrrCoveragePredictionState, number> {
+  const counts = Object.fromEntries(DDRR_COVERAGE_PREDICTION_STATE_VALUES.map((state) => [state, 0])) as Record<
+    DdrrCoveragePredictionState,
+    number
+  >;
+  for (const row of rows) {
+    counts[row.predictionState] += 1;
+  }
+  return counts;
+}
+
 function isDurationScoredPredictionRow(row: DdrrV2PredictionReviewRow): row is DdrrDurationScoredPredictionRow {
   return row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null;
 }
@@ -95,6 +109,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
   const coverageRows = rows.filter((row) => row.kind === "coverage");
   const invalidatedRows = rows.filter((row) => row.kind === "invalidated_prediction");
   const verdicts = countPredictionVerdicts(predictionRows);
+  const coverageStateCounts = countCoveragePredictionStates(coverageRows);
 
   const recoveryLikelihoodCorrectCount = verdicts.correct_recoverable + verdicts.correct_terminal;
   const recoveryLikelihoodScoredCount = predictionRows.filter((row) =>
@@ -105,28 +120,22 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
   const signedErrors = durationRows.map((row) => row.signedDurationErrorSec);
   const absoluteErrors = durationRows.map((row) => row.absoluteDurationErrorSec);
 
-  const pendingLockCount = coverageRows.filter((row) => row.predictionState === "pending_lock").length;
-  const lockDeferredCount = coverageRows.filter((row) => row.predictionState === "lock_deferred").length;
-  const resolvedBeforePredictionCount = coverageRows.filter(
-    (row) => row.predictionState === "resolved_before_prediction",
-  ).length;
-  const terminalBeforePredictionCount = coverageRows.filter(
-    (row) => row.predictionState === "terminal_before_prediction",
-  ).length;
-  const dataQualityGapCount = coverageRows.filter((row) => row.predictionState === "data_quality_gap").length;
-  const orphanClosedCount = coverageRows.filter((row) => row.predictionState === "orphan_closed").length;
-  const missedLockRecoveredCount = coverageRows.filter((row) => row.predictionState === "missed_lock_recovered").length;
-  const missedLockTerminalCount = coverageRows.filter((row) => row.predictionState === "missed_lock_terminal").length;
+  const pendingLockCount = coverageStateCounts.pending_lock;
+  const lockDeferredCount = coverageStateCounts.lock_deferred;
+  const resolvedBeforePredictionCount = coverageStateCounts.resolved_before_prediction;
+  const terminalBeforePredictionCount = coverageStateCounts.terminal_before_prediction;
+  const dataQualityGapCount = coverageStateCounts.data_quality_gap;
+  const orphanClosedCount = coverageStateCounts.orphan_closed;
+  const missedLockRecoveredCount = coverageStateCounts.missed_lock_recovered;
+  const missedLockTerminalCount = coverageStateCounts.missed_lock_terminal;
   const missedLockOrphanClosedCount = coverageRows.filter(
     (row) => row.predictionState === "orphan_closed" && isOperationalMissCause(row.operationalCoverageCause),
   ).length;
   const missedLockDataQualityGapCount = coverageRows.filter(
     (row) => row.predictionState === "data_quality_gap" && isOperationalMissCause(row.operationalCoverageCause),
   ).length;
-  const publicationFailedCount = coverageRows.filter((row) => row.predictionState === "publication_failed").length;
-  const publicationRetryPendingCount = coverageRows.filter(
-    (row) => row.predictionState === "publication_retry_pending",
-  ).length;
+  const publicationFailedCount = coverageStateCounts.publication_failed;
+  const publicationRetryPendingCount = coverageStateCounts.publication_retry_pending;
   const confirmationTimeUnknownCount = coverageRows.filter(
     (row) => row.operationalCoverageCause === "confirmation_time_unknown",
   ).length;

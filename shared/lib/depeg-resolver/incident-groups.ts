@@ -142,7 +142,7 @@ export function groupIncidents(
   return incidents;
 }
 
-function median(values: number[]): number {
+function averageMiddleMedian(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -163,7 +163,9 @@ export function quarantinedCoins(incidents: DdrIncident[]): Set<string> {
   }
   const out = new Set<string>();
   for (const [coin, durations] of byCoin) {
-    if (durations.length > QUARANTINE_MIN_INCIDENTS && median(durations) < QUARANTINE_MEDIAN_DURATION_SEC) {
+    // Quarantine uses the conventional average-of-middle median; Stage 2 p50
+    // remains duration.ts's nearest-rank percentile for public estimates.
+    if (durations.length > QUARANTINE_MIN_INCIDENTS && averageMiddleMedian(durations) < QUARANTINE_MEDIAN_DURATION_SEC) {
       out.add(coin);
     }
   }

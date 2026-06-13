@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeDuration,
+  candidateStrata,
   depthBucket,
   groupIncidents,
   quarantinedCoins,
@@ -186,6 +187,19 @@ describe("resolveOutlook — acceptance cases", () => {
 
 describe("incident grouping + quarantine", () => {
   const usd = () => "USD";
+  const incidentForQuarantine = (stablecoinId: string, durationSec: number, i: number): DdrIncident => ({
+    stablecoinId,
+    direction: "below",
+    peakDeviationBps: -120,
+    depth: "minor",
+    currency: "USD",
+    structural: "fragile",
+    startedAt: i * 10000,
+    endedAt: i * 10000 + durationSec,
+    durationSec,
+    recovered: true,
+  });
+
   it("merges fragments within 6h and splits beyond", () => {
     const events: DdrHistoricalEvent[] = [
       { stablecoinId: "a", direction: "below", peakDeviationBps: -300, startedAt: 0, endedAt: 3600, recoveryPrice: 1 },
@@ -228,6 +242,22 @@ describe("incident grouping + quarantine", () => {
     expect(q.has("flapper")).toBe(true);
     expect(q.has("calm")).toBe(false);
   });
+
+  it("keeps the average-of-middle quarantine median boundary stable", () => {
+    const borderline = [
+      ...Array.from({ length: 26 }, (_, i) => incidentForQuarantine("borderline", 1799, i)),
+      ...Array.from({ length: 26 }, (_, i) => incidentForQuarantine("borderline", 1801, i + 26)),
+    ];
+    const justBelow = [
+      ...Array.from({ length: 26 }, (_, i) => incidentForQuarantine("just-below", 1798, i)),
+      ...Array.from({ length: 26 }, (_, i) => incidentForQuarantine("just-below", 1800, i + 26)),
+    ];
+
+    const q = quarantinedCoins([...borderline, ...justBelow]);
+
+    expect(q.has("borderline")).toBe(false);
+    expect(q.has("just-below")).toBe(true);
+  });
 });
 
 describe("computeDuration", () => {
@@ -246,6 +276,18 @@ describe("computeDuration", () => {
     }));
 
   const key: DdrStratumKey = { direction: "below", depth: "moderate", structural: "robust", currency: "USD" };
+
+  it("emits candidate strata in most-dependable-first order", () => {
+    expect(candidateStrata({ ...key, depth: "severe" })).toEqual([
+      { direction: "below", depths: ["severe"], structural: "robust", currency: "USD" },
+      { direction: "below", depths: ["severe"], structural: "robust", currency: "__any__" },
+      { direction: "below", depths: ["severe", "catastrophic"], structural: "robust", currency: "__any__" },
+      { direction: "below", depths: ["moderate", "severe", "catastrophic"], structural: "robust", currency: "__any__" },
+      { direction: "below", depths: ["severe"], structural: "__any__", currency: "__any__" },
+      { direction: "below", depths: ["severe", "catastrophic"], structural: "__any__", currency: "__any__" },
+      { direction: "below", depths: ["moderate", "severe", "catastrophic"], structural: "__any__", currency: "__any__" },
+    ]);
+  });
 
   it("returns a supported median + monotonic horizon probabilities with enough data", () => {
     // 40 incidents across 12 coins, total duration ~24h
@@ -312,6 +354,26 @@ describe("computeDuration", () => {
     const d = computeDuration({ ...key, depth: "severe" }, 2 * 3600, incidents, new Set());
     expect(d.stratum).not.toBe("below · severe · robust · USD");
     expect(d.stratum).toContain("moderate+severe+catastrophic");
+  });
+
+  it("selects the structural-preserving broad stratum before dropping structure", () => {
+    const incidents: DdrIncident[] = Array.from({ length: 12 }, (_, i) => ({
+      stablecoinId: `broad-${i}`,
+      direction: "below" as const,
+      peakDeviationBps: -500,
+      depth: "moderate" as const,
+      currency: i % 2 === 0 ? "USD" as const : "non-USD" as const,
+      structural: "robust" as const,
+      startedAt: i * 100000,
+      endedAt: i * 100000 + 14 * 3600,
+      durationSec: 14 * 3600,
+      recovered: true,
+    }));
+
+    const d = computeDuration({ ...key, depth: "severe" }, 0, incidents, new Set());
+
+    expect(d.suppressed).toBe(false);
+    expect(d.stratum).toBe("below · moderate+severe+catastrophic · robust · any");
   });
 });
 
