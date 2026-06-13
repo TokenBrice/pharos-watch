@@ -668,7 +668,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-1` — StatusHealthValue type not exported; status-health literal union repeated across status.ts** `[duplication | medium | small | low]`
 - Problem: `StatusHealthValueSchema = z.enum(["healthy","degraded","stale"])` is defined (880) but its inferred type is never exported. The literal `"healthy" | "degraded" | "stale"` appears 16 times: 13 as the bare 3-member union, 3 embedded in a 4-member `... | "unknown"` union (one of which is the already-named `YieldHealthFieldStatus`).
-- Recommendation: `export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>`. Replace the 13 bare unions; for the 4-member fields reuse `YieldHealthFieldStatus` or add `export type StatusHealthOrUnknown = StatusHealthValue | "unknown"`. Type-only; the Zod schemas (runtime authority) are untouched.
+- Done 2026-06-13: exported `StatusHealthValue = z.infer<typeof StatusHealthValueSchema>`, added `StatusHealthOrUnknown`, and replaced the repeated status-health unions. Type-only; the Zod schemas remain the runtime authority.
 - Files: `shared/types/status.ts:115-116,142,154,199-201,545,796-799,865,1059,1085,1158,880`.
 - Verifier: schema is const not exported; no type exists; 16 hits verified; demoted high->medium (cosmetic). Checks: `npm run typecheck`, `npm run typecheck:worker`, `npm run lint`.
 

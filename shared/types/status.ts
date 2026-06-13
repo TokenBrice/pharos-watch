@@ -35,6 +35,10 @@ const CacheStatusSchema = z.object({
 });
 export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 
+const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
+export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
+export type StatusHealthOrUnknown = StatusHealthValue | "unknown";
+
 export interface CronRun {
   startedAt: number;
   durationMs: number;
@@ -112,8 +116,8 @@ export interface StatusCause {
 
 export interface StatusStateInfo {
   scope: "global";
-  currentStatus: "healthy" | "degraded" | "stale";
-  rawStatus: "healthy" | "degraded" | "stale";
+  currentStatus: StatusHealthValue;
+  rawStatus: StatusHealthValue;
   lastEvaluatedAt: number;
   lastChangedAt: number;
   minDwellSec: number;
@@ -139,7 +143,7 @@ export interface StatusStaleness {
 
 export interface StatusProbeSummary {
   timestamp: number | null;
-  status: "healthy" | "degraded" | "stale" | "unknown";
+  status: StatusHealthOrUnknown;
   sampleCount: number;
   passCount: number;
   failCount: number;
@@ -151,7 +155,7 @@ export interface StatusProbeSummary {
 }
 
 export interface StatusProbePlaneSummary {
-  status: "healthy" | "degraded" | "stale" | "unknown";
+  status: StatusHealthOrUnknown;
   sampleCount: number;
   passCount: number;
   failCount: number;
@@ -196,9 +200,9 @@ export interface StatusDiscrepancy {
 export interface StatusTransition {
   id: number;
   scope: "global";
-  from: "healthy" | "degraded" | "stale" | null;
-  to: "healthy" | "degraded" | "stale";
-  rawStatus: "healthy" | "degraded" | "stale";
+  from: StatusHealthValue | null;
+  to: StatusHealthValue;
+  rawStatus: StatusHealthValue;
   transitionType: "degrade" | "recover" | "init";
   reason: string;
   confidence: number;
@@ -542,7 +546,7 @@ export interface LiquidityHealth {
   previousCoverageClasses: Record<LiquidityCoverageClass, number>;
 }
 
-export type YieldHealthFieldStatus = "healthy" | "degraded" | "stale" | "unknown";
+export type YieldHealthFieldStatus = StatusHealthOrUnknown;
 
 export type YieldSourceRiskCoverageField =
   | "sourceRiskScore"
@@ -793,10 +797,10 @@ export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSection
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
-  availabilityStatus: "healthy" | "degraded" | "stale";
-  dataQualityStatus: "healthy" | "degraded" | "stale";
-  rawOverallStatus: "healthy" | "degraded" | "stale";
-  overallStatus: "healthy" | "degraded" | "stale";
+  availabilityStatus: StatusHealthValue;
+  dataQualityStatus: StatusHealthValue;
+  rawOverallStatus: StatusHealthValue;
+  overallStatus: StatusHealthValue;
   confidence: number;
   causes: {
     availability: StatusCause[];
@@ -862,7 +866,7 @@ export interface StatusResponse {
 }
 
 export type StatusReserveComposition = ReserveCompositionOverview & {
-  status: "healthy" | "degraded" | "stale";
+  status: StatusHealthValue;
   freshCoverageRatio: number;
   authoritativeFreshCoverageRatio: number;
 };
@@ -877,7 +881,6 @@ export interface StatusHistoryResponse {
   reserveComposition: StatusResponse["reserveComposition"] | null;
 }
 
-const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 const StatusJsonObjectSchema = z.object({}).passthrough();
 
 const StatusCauseSchema = z.object({
@@ -1056,7 +1059,7 @@ export type PublicStatusHistoryWindow = (typeof PUBLIC_STATUS_HISTORY_WINDOWS)[n
 
 export interface PublicStatusHistoryResponse {
   timestamp: number;
-  currentStatus: "healthy" | "degraded" | "stale";
+  currentStatus: StatusHealthValue;
   lastChangedAt: number | null;
   transitions: PublicStatusTransition[];
 }
@@ -1082,7 +1085,7 @@ export interface TelegramHealthSummary {
 }
 
 export interface HealthResponse {
-  status: "healthy" | "degraded" | "stale";
+  status: StatusHealthValue;
   timestamp: number;
   warnings: string[];
   caches: Record<string, CacheStatus>;
@@ -1155,7 +1158,7 @@ export interface EndpointProbeResult {
   status: number | null;
   latencyMs: number;
   error?: string;
-  semanticStatus?: "healthy" | "degraded" | "stale";
+  semanticStatus?: StatusHealthValue;
   semanticDetail?: string | null;
   semanticScope?: "health" | "status" | "freshness";
 }
