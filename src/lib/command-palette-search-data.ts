@@ -300,6 +300,8 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["fusd-finchain", "FinChain Dollar", "FUSD"],
   ["zsd-zephyr-protocol", "Zephyr Stable Dollar", "ZSD"],
   ["zys-zephyr-protocol", "Zephyr Yield Share", "ZYS"],
+  ["autousd-auto-finance", "Auto Finance autoUSD", "autoUSD"],
+  ["eearn-ember", "Ember Earn", "eEARN"],
   ["yusd-yieldfi", "YieldFi yUSD", "YUSD"],
   ["spusd-soulpeg", "SoulPeg USD", "spUSD"],
   ["uusd-anything-labs", "Unity USD", "UUSD"],
