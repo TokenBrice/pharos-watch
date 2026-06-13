@@ -31,6 +31,10 @@ import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
 
+function shouldShowVerdict(verdict: StablecoinVerdict): boolean {
+  return isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
+}
+
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
 
@@ -334,8 +338,7 @@ export function HeroVerdict({
   coinId: string;
   verdict: StablecoinVerdict;
 }) {
-  if (!isHeroVerdictEnabled()) return null;
-  if (verdict.archetype === "uncategorized") return null;
+  if (!shouldShowVerdict(verdict)) return null;
   return (
     <div className="mt-3">
       <VerdictPill id={`hero-verdict-${coinId}`} verdict={verdict} />
@@ -352,8 +355,7 @@ export function HeroMobileIdentity({
   verdict,
   condensed = false,
 }: HeroIdentityProps & { condensed?: boolean }) {
-  const heroVerdictEnabled = isHeroVerdictEnabled();
-  const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
+  const showVerdict = shouldShowVerdict(verdict);
   const verdictId = `hero-verdict-${coin.id}`;
   return (
     <div className="min-w-0 flex-1">
@@ -424,8 +426,7 @@ export function HeroDesktopIdentity({
   infrastructures,
   verdict,
 }: HeroIdentityProps) {
-  const heroVerdictEnabled = isHeroVerdictEnabled();
-  const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
+  const showVerdict = shouldShowVerdict(verdict);
   const verdictId = `hero-verdict-${coin.id}`;
   return (
     <div className="flex items-center gap-4">

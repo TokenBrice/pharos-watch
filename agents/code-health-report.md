@@ -178,6 +178,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: verified identical shells. Checks: `npm run check:lint`, `npm run check:types`.
 
 **`sd-6` — isHeroVerdictEnabled() called and showVerdict computed twice (three sites total)** `[duplication | low | trivial | low]`
+- Status: Closed 2026-06-13. Added the local `shouldShowVerdict(verdict)` helper and routed the standalone, mobile, and desktop hero verdict checks through it.
 - Problem: `HeroMobileIdentity` (355-356) and `HeroDesktopIdentity` (427-428) each run `const heroVerdictEnabled = isHeroVerdictEnabled(); const showVerdict = heroVerdictEnabled && verdict.archetype !== 'uncategorized';`. The standalone `HeroVerdict` (337-338) applies the same two guards inline — a third site. The flag is build-inlined, so no perf angle.
 - Recommendation: a tiny local helper `shouldShowVerdict(verdict)` used at all three sites. Threading a prop from hero-card-sections is over-engineered.
 - Files: `src/components/stablecoin-detail/hero-card-identity.tsx:337-338,355-356,427-428`.
