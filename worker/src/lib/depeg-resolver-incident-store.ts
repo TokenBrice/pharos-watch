@@ -45,6 +45,7 @@ export type DdrLockAuditAction =
 
 const DEFAULT_DDR_V2_EFFECTIVE_AT = DDR_V2_EFFECTIVE_AT;
 const DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;
+// Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
 const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";

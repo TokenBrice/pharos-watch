@@ -1083,6 +1083,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`worker-store-7` — REPAIR_AUTHORIZATION_LONG_EXPIRY_AT magic number undocumented** `[readability | low | trivial | none]`
 - Problem: `REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800` is an opaque Unix timestamp (2100-01-01Z) used as a non-expiring sentinel for automated sealed-tail repair authorizations. No comment.
+- Done 2026-06-13: documented the 2100-01-01 Unix timestamp sentinel and its effectively non-expiring repair-authorization purpose.
 - Recommendation: add a single-line comment: `// Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring`. Comment-only.
 - Files: `worker/src/lib/depeg-resolver-incident-store.ts:46`.
 - Verifier: constant + uses + the 2100-01-01Z arithmetic verified (also reused in the test fixture). Checks: `npm run test:merge-gate`.
