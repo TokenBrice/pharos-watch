@@ -230,14 +230,18 @@ export const DdrrFrozenPredictionReviewSchema = z.object({
 });
 export type DdrrFrozenPredictionReview = z.infer<typeof DdrrFrozenPredictionReviewSchema>;
 
-export const DdrrV2PredictionReviewRowSchema = DdrrV2BaseRowSchema.extend({
-  kind: z.literal("prediction_review"),
+const DdrrPublicationCoreSchema = z.object({
   publicPredictionId: z.number().int().nonnegative(),
   assessmentId: z.number().int().nonnegative(),
-  predictionState: z.literal("frozen"),
   predictionMethodologyVersion: z.string(),
   predictionPolicyVersion: z.string(),
   lockedAt: z.number().int().nonnegative(),
+});
+
+export const DdrrV2PredictionReviewRowSchema = DdrrV2BaseRowSchema.extend({
+  kind: z.literal("prediction_review"),
+  ...DdrrPublicationCoreSchema.shape,
+  predictionState: z.literal("frozen"),
   publishedAt: z.number().int().nonnegative(),
   publicationSnapshotToken: z.string(),
   frozen: DdrrFrozenPredictionReviewSchema,
@@ -256,12 +260,8 @@ export type DdrrV2PredictionReviewRow = z.infer<typeof DdrrV2PredictionReviewRow
 
 export const DdrrV2NoCallReviewRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("no_call_review"),
-  publicPredictionId: z.number().int().nonnegative(),
-  assessmentId: z.number().int().nonnegative(),
+  ...DdrrPublicationCoreSchema.shape,
   predictionState: z.literal("no_call"),
-  predictionMethodologyVersion: z.string(),
-  predictionPolicyVersion: z.string(),
-  lockedAt: z.number().int().nonnegative(),
   publishedAt: z.number().int().nonnegative(),
   publicationSnapshotToken: z.string(),
   missingReasons: z.array(z.string()),
@@ -299,12 +299,8 @@ export type DdrrV2CoverageRow = z.infer<typeof DdrrV2CoverageRowSchema>;
 
 export const DdrrV2InvalidatedPredictionRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("invalidated_prediction"),
-  publicPredictionId: z.number().int().nonnegative(),
-  assessmentId: z.number().int().nonnegative(),
+  ...DdrrPublicationCoreSchema.shape,
   predictionState: z.literal("invalidated"),
-  predictionMethodologyVersion: z.string(),
-  predictionPolicyVersion: z.string(),
-  lockedAt: z.number().int().nonnegative(),
   publishedAt: z.number().int().nonnegative().nullable(),
   publicationSnapshotToken: z.string().nullable(),
   originalKind: z.enum(["prediction", "no_call"]),
