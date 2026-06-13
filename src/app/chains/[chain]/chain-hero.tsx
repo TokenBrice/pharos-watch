@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import { CHAIN_META } from "@shared/lib/chains";
+import type { ChainMeta } from "@shared/lib/chains";
 import {
   BACKING_DIVERSITY_WEIGHT,
   CHAIN_ENVIRONMENT_WEIGHT,
@@ -27,8 +27,6 @@ import {
   trendColor,
 } from "@/lib/chain-ui";
 import { cn } from "@/lib/utils";
-
-type ChainMeta = (typeof CHAIN_META)[string];
 
 type TrendKey = "change24hPct" | "change7dPct" | "change30dPct";
 

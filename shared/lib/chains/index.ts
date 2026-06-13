@@ -8,7 +8,7 @@ export interface ChainProviders {
   birdeye?: string;
 }
 
-interface ChainMeta {
+export interface ChainMeta {
   name: string;
   explorerUrl: string;
   evmChainId: number | null;

@@ -496,7 +496,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`chains-9` — ChainMeta interface not exported — chain-hero.tsx re-derives it locally** `[maintainability | low | trivial | low]`
 - Problem: chains/index.ts:11 declares `interface ChainMeta` without export; chain-hero.tsx:31 derives `type ChainMeta = (typeof CHAIN_META)[string]` locally. The "diverges if changed to a class" justification is overstated — today no correctness risk, but exporting is cleaner.
-- Recommendation: add `export` to the interface and import it directly, deleting the local re-derivation.
+- Done 2026-06-13: exported `ChainMeta` from `shared/lib/chains` and imported it directly in the chain hero, deleting the local `(typeof CHAIN_META)[string]` re-derivation.
 - Files: `shared/lib/chains/index.ts:11-20`, `src/app/chains/[chain]/chain-hero.tsx:31`.
 - Verifier: unexported interface + local re-derivation verified; correctness risk overstated; cleanup valid. Checks: `npm run typecheck`, `npm run check:unused-code`.
 
