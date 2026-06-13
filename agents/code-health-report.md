@@ -496,9 +496,9 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`chains-7` — ACTIVE_BACKING_DIVERSITY_TYPES duplicated between health.ts and aggregator.ts** `[duplication | low | trivial | low]`
 - Problem: health.ts:37 defines `ACTIVE_BACKING_DIVERSITY_TYPES = ['rwa-backed','crypto-backed']` (used in `computeBackingDiversityScore`), while aggregator.ts:147 hardcodes `backingTotals = { 'rwa-backed': 0, 'crypto-backed': 0 }` independently. aggregator already imports from ./health, so adding a third backing type would silently leave aggregator seeding it to 0.
-- Recommendation: export `ACTIVE_BACKING_DIVERSITY_TYPES` and build `backingTotals` via `Object.fromEntries(ACTIVE_BACKING_DIVERSITY_TYPES.map((t) => [t, 0]))`. Runs at Worker runtime — keep allocation-light.
+- Done 2026-06-13: exported `ACTIVE_BACKING_DIVERSITY_TYPES` from `health.ts` and derive aggregator `backingTotals` from that tuple via `Object.fromEntries(...)`.
 - Files: `shared/lib/chains/health.ts:37`, `shared/lib/chains/aggregator.ts:147`.
-- Verifier: both definitions + the existing import confirmed; genuine single-source-of-truth fix. Checks: `npm run typecheck`, `npx vitest run shared/lib/chains`, `npm run check:duplicate-exports`.
+- Verifier: both definitions + the existing import confirmed; genuine single-source-of-truth fix. Checks: `npm run typecheck`, `npx vitest run shared/lib/__tests__/chain-health.test.ts shared/lib/__tests__/chain-aggregator.test.ts`, `npm run check:duplicate-exports`.
 
 **`chains-8` — Four separate reduce() passes over the accumulator map in aggregator.ts Phase 2** `[simplification | low | trivial | low]`
 - Problem: 110-113 run four separate `Array.from(accumulators.values()).reduce(...)` passes (totalUsd/prevDay/prevWeek/prevMonth), each re-materializing the values array. On a runtime path, but the map holds at most ~40 chains, so cost is negligible.

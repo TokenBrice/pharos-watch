@@ -4,6 +4,7 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { sumPegBuckets } from "../supply";
 import {
+  ACTIVE_BACKING_DIVERSITY_TYPES,
   computeConcentrationScore,
   computeBackingDiversityScore,
   computePegStabilityScore,
@@ -150,7 +151,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     const shares = acc.coins.map((c) => c.supplyUsd / acc.totalUsd);
 
     // Backing distribution
-    const backingTotals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0 };
+    const backingTotals: Record<string, number> = Object.fromEntries(
+      ACTIVE_BACKING_DIVERSITY_TYPES.map((type) => [type, 0]),
+    );
     for (const coin of acc.coins) {
       if (coin.backing && coin.backing in backingTotals) {
         backingTotals[coin.backing] += coin.supplyUsd;

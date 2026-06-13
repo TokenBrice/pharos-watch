@@ -35,7 +35,7 @@ export function computeConcentrationScore(shares: number[]): number {
   return Math.round(100 * (1 - hhi));
 }
 
-const ACTIVE_BACKING_DIVERSITY_TYPES = ["rwa-backed", "crypto-backed"] as const;
+export const ACTIVE_BACKING_DIVERSITY_TYPES = ["rwa-backed", "crypto-backed"] as const;
 
 /** Backing diversity: normalized Shannon entropy across the active RWA/crypto backing split. */
 export function computeBackingDiversityScore(
