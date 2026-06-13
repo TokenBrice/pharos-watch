@@ -24,3 +24,20 @@ export type WebhookCommandHandler = (
   ctx: WebhookCommandContext,
   args: string,
 ) => Promise<void>;
+
+/**
+ * Sends `message`, attaching the mini-app `markup` only in private chats. In
+ * group/supergroup chats the inline mini-app keyboard is omitted (Telegram
+ * mini-apps are DM-only), so the plain reply is used instead.
+ */
+export async function replyWithOptionalMiniApp(
+  ctx: WebhookCommandContext,
+  message: string,
+  markup: unknown,
+): Promise<void> {
+  if (ctx.chatType === "private") {
+    await ctx.replyToChatWithMarkup(message, { replyMarkup: markup });
+    return;
+  }
+  await ctx.replyToChat(message);
+}

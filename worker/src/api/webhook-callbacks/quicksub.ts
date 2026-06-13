@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { answerCallbackQuery } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { logTelegramEvent } from "../../lib/telegram-log";
 import { upsertSubscriberAndSubscriptions } from "../telegram-webhook-store";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
@@ -49,7 +50,13 @@ export const handleQuickSubCallback: CallbackHandler = async ({ db, botToken, cb
       outcome: "success",
     });
   } catch (err) {
-    console.error("[telegram-webhook] quicksub write failed:", err);
+    logTelegramEvent({
+      message: "quicksub write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "quicksub",
+      err: err instanceof Error ? err.message : String(err),
+    });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save subscription. Please try again.",
     });

@@ -89,7 +89,7 @@ Status legend: `[ ]` not started · `[x]` done · `[G]` guarded (needs before/af
 | `[x]` Inline clamp -> shared clampScore (non-score UI) | `f-xcut-5` | Done 2026-06-13: replaced the non-score UI/view-model clamp sites with `clampScore` from `@shared/lib/math`, including the extra `telegram-pulse-strip.tsx` site found during implementation. Score-compute and worker runtime clamps stayed out of scope. | small | none |
 | `[x]` Cross-component JSX/markup extraction | `sd-5`, `fe-4`, `fe-11`, `sd-2`, `sd-11`, `sd-1`, `sd-6` | `ScoringBreakdownDisclosure`, `RiskSourceLinks`, `AmountBadges`, `deriveContractInfo` (plain fn, not a hook), `AttestorTierBadge`, `shouldShowVerdict`. SCOPE DOWN sd-11 to ~4-5 cls-driven Link badges only (static-color spans must NOT be unified). | small | low |
 | `[x]` RSS/route/event-handler boilerplate | `f-feed-1`, `fe-1`, `frontend-2`, `frontend-3`, `frontend-1` | `rssResponse(feed)`, `useSortColumnEvent(resolvedColumns, toggleSort)`, `formatEpochSecondsLocale`, hoist page-metadata derivations, export `normalizeWhitespace` ONLY (summarizeText diverges via stripTermMarkup). | small | low |
-| `[ ]` Telegram command/callback boilerplate | `tw-1`, `tw-2`, `tw-3`, `tw-5`, `w-dispatch-4`, `w-cron-5` | Delete passthrough wrappers (replyToChat, isGroupChat), `replyWithOptionalMiniApp(ctx, msg, markup)` (accept markup), route quicksub console.error to logTelegramEvent, `runTelegramReconciliation` extractor. LEAVE the 3 cron progress wrappers (w-dispatch-4). | small | low |
+| `[x]` Telegram command/callback boilerplate | `tw-1`, `tw-2`, `tw-3`, `tw-5`, `w-dispatch-4`, `w-cron-5` | Delete passthrough wrappers (replyToChat, isGroupChat), `replyWithOptionalMiniApp(ctx, msg, markup)` (accept markup), route quicksub console.error to logTelegramEvent, `runTelegramReconciliation` extractor. LEAVE the 3 cron progress wrappers (w-dispatch-4). | small | low |
 | `[ ]` Scheduled-handler dispatch consolidation | `w-cron-4`, `w-cron-1`, `w-cron-7`, `w-cron-9`, `w-cron-10`, `wrouter-1` | Migrate 4 single-task handlers to `runSingleScheduledJob`; export `cacheKeySegment` from cron-lease; drop mint-burn wrapper; CronResult casts; migrate 2 admin routes (accept route-* label change). DO NOT auto-migrate pattern-(c) error-propagating handlers. | small | low |
 | `[ ]` Shared types derive from Zod schemas / enums | `types-1`, `types-5`, `types-6`, `types-2`, `types-3`, `types-4`, `types-7`, `fe-6`, `chains-9` | Export `StatusHealthValue`, `BLUECHIP_GRADE_VALUES`, `ChainMeta`; infer `StressSignalDetailResponse` + `ParsedTelegramDispatchEventsDetected`; tighten `CronRun.status`; import confidence unions. Leave `TelegramDispatchCronMetadata` explicit; DeadStablecoin.contracts left out. | small | low |
 | `[ ]` Single-source cross-file constant lists | `chains-7`, `vm-4`, `rbc-10`, `pc-2`, `wapi-6`, `worker-store-7`, `types-8` | Real fix: export `ACTIVE_BACKING_DIVERSITY_TYPES`, build aggregator `backingTotals` from it. Rest comment-only cross-refs. DeadStablecoin.contracts skipped. | trivial | low |
@@ -516,7 +516,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`api-1` — isHtmlResponse duplicated between _middleware.ts and ops-asset-host-gate.ts** `[duplication | low | trivial | none]`
 - Problem: `isHtmlResponse` is byte-identical in both files (`response.headers.get("Content-Type")?.toLowerCase().includes("text/html") ?? false`). Genuine duplication of a trivial guard.
-- Recommendation: add `export function isHtmlResponse(...)` to `functions/lib/proxy-utils.ts` (already exports `jsonError`/`buildProxyResponse`) and import in both, deleting the copies.
+- Done 2026-06-13: added `isHtmlResponse(response)` to `functions/lib/proxy-utils.ts` and imported it from both Pages Functions CSP paths, deleting the duplicate local copies.
 - Files: `functions/_middleware.ts:137-139`, `functions/lib/ops-asset-host-gate.ts:16-18`.
 - Verifier: identical confirmed; proxy-utils.ts is the existing shared module; `check:duplicate-exports` only catches same-file dupes. Checks: `npm run lint`, `npm run check:unused-code`, `npm run check:duplicate-exports`.
 
@@ -824,24 +824,28 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 ### Telegram Webhook (`tw-*`)
 
 **`tw-1` — Duplicate same-signature replyToChat wrapper in action-runner and telegram-webhook** `[duplication | low | small | low]`
+- Done 2026-06-13: deleted both private `replyToChat` passthrough wrappers and routed their call sites directly to `sendAuditedTelegramReply`.
 - Problem: both files define a private `replyToChat(db, chatId, message, botToken, options)` that is a pure passthrough to `sendAuditedTelegramReply`, which both already import. Identical arity — saves no arguments, pure indirection.
 - Recommendation: delete both wrappers and inline `sendAuditedTelegramReply`. NOT one-line deletions: ~6 call-site edits (action-runner 306/309/338/360, telegram-webhook 342/345) plus 2 deletions.
 - Files: `worker/src/api/webhook-commands/action-runner.ts:388-396`, `worker/src/api/telegram-webhook.ts:977-985`.
 - Verifier: both pure passthroughs; corrected the "trivial" framing (6 call sites); demoted medium->low. Checks: `typecheck:worker`, `lint`.
 
 **`tw-2` — Repeated private-chat conditional mini-app-keyboard idiom across 7+ command handlers** `[duplication | low | small | low]`
+- Done 2026-06-13: added `replyWithOptionalMiniApp(ctx, message, markup)` and replaced the seven structurally-identical mini-app keyboard branches in mute, unsnooze, help, why, coverage, unmutehours, and timezone.
 - Problem: 7+ handlers repeat `if (ctx.chatType === 'private') { await ctx.replyToChatWithMarkup(msg, { replyMarkup: <builder> }); return; } await ctx.replyToChat(msg)`. The branch decision is duplicated; a change must touch every file.
 - Recommendation: add `replyWithOptionalMiniApp(ctx, message, markup)` performing the branch, taking the already-built markup as a parameter (the builder differs per handler). Replace the 7+ sites.
 - Files: `worker/src/api/webhook-commands/{mute,unsnooze,help,why,coverage,unmutehours,timezone}.ts`.
 - Verifier: idiom real, branch structurally identical, markup differs per handler so the helper must accept markup; demoted medium->low. Checks: `typecheck:worker`, `lint`.
 
 **`tw-3` — isGroupChat local wrapper is a pure passthrough over imported isGroupChatType** `[dead-code | low | trivial | none]`
+- Done 2026-06-13: removed the local `isGroupChat` wrapper and changed the four call sites to call `isGroupChatType` directly.
 - Problem: `isGroupChat` returns `isGroupChatType(chatType)` with no transformation; `isGroupChatType` is already imported. 4 call sites.
 - Recommendation: delete `isGroupChat` and replace its 4 call sites (360, 525, 530, 649) with direct `isGroupChatType(chatType)`.
 - Files: `worker/src/api/telegram-webhook.ts:701-703`.
 - Verifier: pure passthrough; 4 sites confirmed. Checks: `typecheck:worker`, `lint`.
 
 **`tw-5` — console.error in quicksub callback bypasses the structured logTelegramEvent convention** `[consistency | low | trivial | none]`
+- Done 2026-06-13: routed the quicksub write-failure path through `logTelegramEvent` with chat/user/action/error metadata instead of `console.error`.
 - Problem: quicksub.ts:52 uses `console.error(...)` on the D1-write failure path — the only `console.error` among webhook-callbacks. Every other mutating callback routes failures through `logTelegramEvent`. quicksub doesn't use `runCallbackMutation`, so it logs out-of-band, invisible to the structured layer.
 - Recommendation: replace `console.error` with `logTelegramEvent({ message: 'quicksub write failed', chatId, userId: cb.from?.id ?? null, action: 'quicksub', err: ... })`. Mirror `_shared.ts:180-186`. Optional additive telemetry gated on owner intent.
 - Files: `worker/src/api/webhook-callbacks/quicksub.ts:52`.
@@ -1009,6 +1013,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: each has exactly one `job:`; the rest are multi-job; output preserved; demoted medium->low. Checks: `npm run typecheck:worker`, `npm run check:cron-abort-contract`, `npm run check:cron-connections`.
 
 **`w-cron-5` — Four copy-pasted try/catch reconciliation blocks in five-minute-telegram.ts** `[duplication | low | small | low]`
+- Done 2026-06-13: extracted `runTelegramReconciliation(action, fn, onSuccessDetails?)` and routed command, profile, menu, and webhook reconciliation through it while preserving per-action success metadata.
 - Problem: four structurally identical try/catch blocks (commands, profile, menu, webhook) each call a `reconcile*` fn, log success via `logReconciliationSuccess` when `result.attempted`, and on catch call `logTelegramEvent` with a constant message + action slug.
 - Recommendation: extract `runTelegramReconciliation(action, fn, onSuccessDetails?)`. NOT fully identical: menu and webhook success calls pass extra result-derived details, and the webhook fn takes additional options — so the helper must accept a success-details extractor `(result) => Record<string,unknown>`, not a fixed shape.
 - Files: `worker/src/handlers/scheduled/five-minute-telegram.ts:113-177`.

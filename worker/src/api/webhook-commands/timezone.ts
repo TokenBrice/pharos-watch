@@ -7,7 +7,7 @@ import {
 } from "../telegram-webhook-store";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { isGroupChatType } from "../telegram-webhook-auth";
-import type { WebhookCommandHandler } from "./context";
+import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
 /**
  * Subset of IANA zones surfaced as a fallback inline keyboard when `/timezone`
@@ -110,11 +110,9 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
   const message = escapeHtml(
     `Timezone set to ${trimmed}. Quiet hours from /mute will now be interpreted in this zone.`,
   );
-  if (ctx.chatType === "private") {
-    await ctx.replyToChatWithMarkup(message, {
-      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
-    });
-    return;
-  }
-  await ctx.replyToChat(message);
+  await replyWithOptionalMiniApp(
+    ctx,
+    message,
+    buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
+  );
 };

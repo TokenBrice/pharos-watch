@@ -339,10 +339,10 @@ async function handleTelegramMessageUpdate(args: {
   if (!chatId || !text) return finishOk();
 
   const reply: ReplyFn = async (message) => {
-    await replyToChat(db, chatId, message, botToken);
+    await sendAuditedTelegramReply(db, chatId, message, botToken);
   };
   const replyWithMarkup: ReplyWithMarkupFn = async (message, options) => {
-    await replyToChat(db, chatId, message, botToken, options);
+    await sendAuditedTelegramReply(db, chatId, message, botToken, options);
   };
   const commandContext: WebhookCommandContext = {
     db,
@@ -357,7 +357,7 @@ async function handleTelegramMessageUpdate(args: {
 
   try {
     const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
-    if (parsedCommand && isGroupChat(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
+    if (parsedCommand && isGroupChatType(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
       return finishOk();
     }
 
@@ -522,12 +522,12 @@ async function handlePendingActionBeforeDispatch(args: {
 
   if (!parsedCommand) {
     if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
-      if (isGroupChat(chatType) && !canActOnPending(pendingAction, actorUserId)) return "finished";
+      if (isGroupChatType(chatType) && !canActOnPending(pendingAction, actorUserId)) return "finished";
       await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
       return "finished";
     }
     if (!canActOnPending(pendingAction, actorUserId)) {
-      if (isGroupChat(chatType) && !looksLikeDisambiguationSelection(text)) {
+      if (isGroupChatType(chatType) && !looksLikeDisambiguationSelection(text)) {
         return "finished";
       }
       await reply("Only the user who started this pending selection can complete it.");
@@ -646,7 +646,7 @@ async function dispatchParsedTelegramCommand(args: {
   }
 
   if (
-    isGroupChat(chatType) &&
+    isGroupChatType(chatType) &&
     commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
   ) {
     const proceed = await maybeGateNonAdminGroupActor(
@@ -696,10 +696,6 @@ async function dispatchParsedTelegramCommand(args: {
     outcome: "unknown",
   });
   await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "unknown_command");
-}
-
-function isGroupChat(chatType: string): boolean {
-  return isGroupChatType(chatType);
 }
 
 function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string {
@@ -972,16 +968,6 @@ async function handleDisambiguationReply(
     return;
   }
   await executePendingDisambiguationSelection(db, botToken, chatId, username, pending, selectedIndices);
-}
-
-async function replyToChat(
-  db: D1Database,
-  chatId: string,
-  message: string,
-  botToken: string,
-  options: { replyMarkup?: unknown } = {},
-): Promise<void> {
-  await sendAuditedTelegramReply(db, chatId, message, botToken, options);
 }
 
 function isBotAddedTransition(

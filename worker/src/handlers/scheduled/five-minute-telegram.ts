@@ -44,6 +44,26 @@ function logReconciliationSuccess(
   });
 }
 
+async function runTelegramReconciliation<T extends { attempted: boolean }>(
+  action: string,
+  fn: () => Promise<T>,
+  onSuccessDetails?: (result: T) => Record<string, unknown>,
+): Promise<void> {
+  try {
+    const result = await fn();
+    if (result.attempted) {
+      logReconciliationSuccess(action, onSuccessDetails ? onSuccessDetails(result) : undefined);
+    }
+  } catch (err) {
+    logTelegramEvent({
+      message: "registration reconciliation failed",
+      action,
+      module: "five-minute-telegram",
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
   return [
@@ -110,71 +130,37 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 1 });
   }
 
-  try {
-    const commandsResult = await reconcileTelegramCommandRegistration(runtime.db, {
+  await runTelegramReconciliation("reconcile-commands", () =>
+    reconcileTelegramCommandRegistration(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-    });
-    if (commandsResult.attempted) {
-      logReconciliationSuccess("reconcile-commands");
-    }
-  } catch (err) {
-    logTelegramEvent({
-      message: "registration reconciliation failed",
-      action: "reconcile-commands",
-      module: "five-minute-telegram",
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+    }),
+  );
 
-  try {
-    const profileResult = await reconcileTelegramProfileRegistration(runtime.db, {
+  await runTelegramReconciliation("reconcile-profile", () =>
+    reconcileTelegramProfileRegistration(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-    });
-    if (profileResult.attempted) {
-      logReconciliationSuccess("reconcile-profile");
-    }
-  } catch (err) {
-    logTelegramEvent({
-      message: "registration reconciliation failed",
-      action: "reconcile-profile",
-      module: "five-minute-telegram",
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+    }),
+  );
 
-  try {
-    const menuResult = await reconcileTelegramMenuButton(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-    });
-    if (menuResult.attempted) {
-      logReconciliationSuccess("reconcile-menu", { miniAppUrl: menuResult.miniAppUrl });
-    }
-  } catch (err) {
-    logTelegramEvent({
-      message: "registration reconciliation failed",
-      action: "reconcile-menu",
-      module: "five-minute-telegram",
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+  await runTelegramReconciliation(
+    "reconcile-menu",
+    () =>
+      reconcileTelegramMenuButton(runtime.db, {
+        botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      }),
+    (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
+  );
 
-  try {
-    const result = await reconcileTelegramWebhookRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-      webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-      selfUrl: runtime.env.SELF_URL,
-    });
-    if (result.attempted) {
-      logReconciliationSuccess("reconcile-webhook", { expectedUrl: result.expectedUrl });
-    }
-  } catch (err) {
-    logTelegramEvent({
-      message: "registration reconciliation failed",
-      action: "reconcile-webhook",
-      module: "five-minute-telegram",
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+  await runTelegramReconciliation(
+    "reconcile-webhook",
+    () =>
+      reconcileTelegramWebhookRegistration(runtime.db, {
+        botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+        webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+        selfUrl: runtime.env.SELF_URL,
+      }),
+    (result) => ({ expectedUrl: result.expectedUrl }),
+  );
 
   const summary = await runScheduledSlotGroups(runtime, "five-minute telegram slot", buildTelegramSlotGroups(runtime));
   return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 1 });

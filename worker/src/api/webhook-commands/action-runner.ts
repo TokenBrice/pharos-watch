@@ -303,10 +303,10 @@ async function persistAndPromptBulkConfirm(
     initiatorUserId: context.initiatorUserId,
   });
   if (!persisted) {
-    await replyToChat(context.db, context.chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken);
+    await sendAuditedTelegramReply(context.db, context.chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken);
     return GATED_SENTINEL;
   }
-  await replyToChat(
+  await sendAuditedTelegramReply(
     context.db,
     context.chatId,
     buildBulkConfirmMessage(
@@ -335,7 +335,7 @@ export function makeActionRunner(
     if (message === GATED_SENTINEL) return;
     const replyMarkup = nextReplyMarkup;
     nextReplyMarkup = undefined;
-    await replyToChat(
+    await sendAuditedTelegramReply(
       context.db,
       context.chatId,
       message,
@@ -357,7 +357,7 @@ export function makeActionRunner(
       resolutionScope,
       reply,
       replyWithMarkup: async (message, options) => {
-        await replyToChat(
+        await sendAuditedTelegramReply(
           context.db,
           context.chatId,
           message,
@@ -378,19 +378,4 @@ export function makeActionRunner(
         return message;
       },
     });
-}
-
-/**
- * Reply helper used by the action runner internals. Mirrors the behavior of
- * the helper in telegram-webhook.ts so that the action runner can send
- * messages without needing the chat-scoped helpers from the dispatch context.
- */
-async function replyToChat(
-  db: D1Database,
-  chatId: string,
-  message: string,
-  botToken: string,
-  options: { replyMarkup?: unknown } = {},
-): Promise<void> {
-  await sendAuditedTelegramReply(db, chatId, message, botToken, options);
 }

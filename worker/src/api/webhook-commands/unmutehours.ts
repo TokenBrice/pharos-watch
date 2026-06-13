@@ -1,7 +1,7 @@
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
-import type { WebhookCommandHandler } from "./context";
+import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
 export const handleUnmuteHours: WebhookCommandHandler = async (ctx) => {
   const { db, chatId, username } = ctx;
@@ -16,11 +16,9 @@ export const handleUnmuteHours: WebhookCommandHandler = async (ctx) => {
     actionDetail: "unmutehours",
     outcome: "disabled",
   });
-  if (ctx.chatType === "private") {
-    await ctx.replyToChatWithMarkup("Quiet hours disabled.", {
-      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
-    });
-    return;
-  }
-  await ctx.replyToChat("Quiet hours disabled.");
+  await replyWithOptionalMiniApp(
+    ctx,
+    "Quiet hours disabled.",
+    buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
+  );
 };
