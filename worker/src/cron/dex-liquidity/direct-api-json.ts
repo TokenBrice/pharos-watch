@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 export type DexApiJsonResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
@@ -11,7 +12,7 @@ export async function readDexApiJson<T>(response: Response, context: string): Pr
   try {
     data = await response.json();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     return { ok: false, error: `${context} returned invalid JSON: ${message}` };
   }
 

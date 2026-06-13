@@ -23,6 +23,7 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
+import { toErrorMessage } from "../lib/error-utils";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
@@ -97,7 +98,7 @@ async function loadDexAvailability(
         ((row.source_pool_count ?? 0) > 0 || (row.source_total_tvl ?? 0) > 0),
     ]));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading DEX availability:", msg);
     }
@@ -125,7 +126,7 @@ async function loadPoolAvailability(
       row.has_rows === 1 && isFreshTimestamp(row.snapshot_at, nowSec, DEX_FRESHNESS_SEC),
     ]));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading pool availability:", msg);
     }
@@ -190,7 +191,7 @@ async function loadActiveIncidentProjections(
     }
     return { projections, available: true };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[depeg-events] Unexpected error loading active incident projections:", msg);
     }

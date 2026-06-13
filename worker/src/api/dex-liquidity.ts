@@ -21,6 +21,7 @@ import {
   type DexLiquidityRow,
   type DexPriceRow,
 } from "./dex-liquidity-response";
+import { toErrorMessage } from "../lib/error-utils";
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, latestCron, latestSuccessfulCron] = await Promise.all([
@@ -42,7 +43,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
       .all<DexHistoryRow>(),
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices").all<DexPriceRow>().catch((err) => {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = toErrorMessage(err);
       if (isMissingTableError(err)) {
         return { results: [] as DexPriceRow[] };
       }

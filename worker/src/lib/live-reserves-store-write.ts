@@ -2,6 +2,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
 import { buildInClause } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
+import { toErrorMessage } from "./error-utils";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
@@ -133,7 +134,7 @@ export async function finalizeReserveSyncSuccess(
     return {
       finalized: true,
       historyRecorded: false,
-      historyError: error instanceof Error ? error.message : String(error),
+      historyError: toErrorMessage(error),
     };
   }
 

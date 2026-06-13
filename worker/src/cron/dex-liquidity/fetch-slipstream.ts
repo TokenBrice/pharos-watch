@@ -6,6 +6,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const PAGE_SIZE = 500;
@@ -285,7 +286,7 @@ export async function fetchSlipstreamPools(
     }
     return makeDexApiFetchResult(pools, { ok: true, degraded: false, errors });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     errors.push(message);
     console.warn("[fetch-slipstream]", protocol, message);
     return makeDexApiFetchResult([], { ok: false, degraded: true, errors });

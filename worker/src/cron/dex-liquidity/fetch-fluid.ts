@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
@@ -207,7 +208,7 @@ export async function fetchFluidPools(
       }
       results.push(...pools);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = toErrorMessage(error);
       errors.push(reason);
       console.warn("[fetch-fluid] Chain fetch failed:", reason);
     }

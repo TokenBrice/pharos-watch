@@ -7,6 +7,7 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "../benchmarks";
+import { toErrorMessage } from "../../../lib/error-utils";
 
 // ---------------------------------------------------------------------------
 // Coercion primitives shared by every cache submodule.
@@ -317,7 +318,7 @@ export function parseRiskFreeRatesCache(
       SGD: parseOptional("SGD"),
     };
   } catch (err) {
-    console.warn(`[yield-sync] Failed to parse bundled benchmarks cache: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`[yield-sync] Failed to parse bundled benchmarks cache: ${toErrorMessage(err)}`);
     return null;
   }
 }

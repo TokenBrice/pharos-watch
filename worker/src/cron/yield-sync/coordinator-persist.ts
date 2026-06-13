@@ -1,6 +1,7 @@
 import { toYieldBenchmarkRegistry, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   attachYieldPublicationMetadata,
   buildYieldPublicationGenerationId,
@@ -18,7 +19,7 @@ import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
 function getD1FailureReason(prefix: string, error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   return message ? `${prefix}:${message.slice(0, 120)}` : prefix;
 }
 

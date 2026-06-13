@@ -1,5 +1,5 @@
-import type {
-  RedemptionBackstopEntry,
+import { toErrorMessage } from "./error-utils";
+import type {  RedemptionBackstopEntry,
   RedemptionBackstopDetails,
   RedemptionBackstopMap,
   RedemptionBackstopsResponse,
@@ -562,7 +562,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         map = result.map;
         source = result.source;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = toErrorMessage(error);
         rejectionReasons.push(`${run.run_id}: query failed (${message})`);
         continue;
       }

@@ -15,6 +15,7 @@ import {
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "./persistence";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
 
@@ -289,7 +290,7 @@ export async function syncDexDiscovery(
           try {
             await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
           } catch (err) {
-            console.warn(`[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${err instanceof Error ? err.message : String(err)}`);
+            console.warn(`[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${toErrorMessage(err)}`);
           }
         }
       }
@@ -331,7 +332,7 @@ export async function syncDexDiscovery(
       }),
     };
   } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
+    const error = toErrorMessage(err);
     recordCronFailure("dex-discovery", err, { metadata: { stage: "orchestrator", fatal: true, runSeq } });
     return {
       status: "error",

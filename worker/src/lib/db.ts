@@ -1,6 +1,7 @@
 import { D1_BATCH_SIZE } from "./constants";
 import { chunkArray } from "./collections";
 import { runWithOverloadRetry } from "./cron-lease";
+import { toErrorMessage } from "./error-utils";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;
 export { D1_SAFE_IN_CLAUSE_BIND_LIMIT, chunkArray } from "./collections";
@@ -11,7 +12,7 @@ export interface BatchExecuteOptions {
 }
 
 function d1ErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 export function isMissingTableError(error: unknown): boolean {

@@ -6,6 +6,7 @@ import {
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export interface PaginatedFetchOptions<TRow> {
   source: string;
@@ -70,7 +71,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
         signal: buildDirectApiRequestSignal(signal, timeoutMs),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorMessage(err);
       errors.push(`${source} page ${page} request failed: ${message}`);
       break;
     }

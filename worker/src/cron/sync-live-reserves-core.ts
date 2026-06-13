@@ -4,6 +4,7 @@ import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,
@@ -293,7 +294,7 @@ export async function syncReserveCoin(args: {
     }
     await recordFailure(
       "error",
-      error instanceof Error ? error.message : String(error),
+      toErrorMessage(error),
       "adapter-exception",
       [],
       Object.keys(extras).length > 0 ? extras : undefined,

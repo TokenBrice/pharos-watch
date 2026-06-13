@@ -3,6 +3,7 @@ import { jsonResponse } from "../lib/api-utils";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   buildBackfillDeleteStmt,
   loadSealedBackfillReplayConflicts,
@@ -126,7 +127,7 @@ export async function applyBackfillEvents(
           "incomplete",
           Math.floor(Date.now() / 1000),
           insertedCount,
-          error instanceof Error ? error.message : String(error),
+          toErrorMessage(error),
         ).run();
       } catch (markError) {
         console.error(`[backfill-depegs] failed to mark incomplete run ${run.runId}:`, markError);

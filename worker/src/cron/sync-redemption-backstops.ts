@@ -3,6 +3,7 @@ import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-acti
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
@@ -133,7 +134,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     dexLiquidityMap = dexSnapshot.map;
     latestUpdatedAt = dexSnapshot.latestUpdatedAt;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     console.warn("[sync-redemption-backstops] DEX liquidity preload failed; continuing without DEX input:", error);
     preloadWarnings.push(`dex-liquidity:${message}`);
   }
@@ -142,7 +143,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   try {
     reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     console.warn(
       "[sync-redemption-backstops] Reserve metadata preload failed; live capacity will fail closed to static/fallback rows:",
       error,

@@ -2,6 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
@@ -92,7 +93,7 @@ async function fetchJupUsdJson<T>(
     if (deadline.aborted) {
       throw new Error(`jupusd ${label} fetch timed out after ${budget.totalTimeoutMs}ms: ${url}`);
     }
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = toErrorMessage(error);
     throw new Error(`jupusd ${label} fetch failed: ${detail}`);
   }
 }

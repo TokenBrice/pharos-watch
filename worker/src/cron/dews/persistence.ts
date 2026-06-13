@@ -7,6 +7,7 @@ import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { writeDewsPublishedGeneration } from "../../lib/dews-publication-pointer";
 import type { DewsComputedRow } from "./contracts";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const DEWS_TABLES = new Set([
@@ -75,7 +76,7 @@ async function deleteOrphansForTable(
 }
 
 function isMissingStressLatestTableError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   return message.includes("no such table: stress_signals_latest");
 }
 

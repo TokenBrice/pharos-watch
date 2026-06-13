@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   decimalNumberFromBigInt,
   fetchPrimaryHtmlInput,
@@ -114,7 +115,7 @@ function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChai
   } catch (error) {
     throw htmlParseError(
       "re-metrics",
-      `initialChainBreakdowns JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+      `initialChainBreakdowns JSON is malformed: ${toErrorMessage(error)}`,
     );
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -132,7 +133,7 @@ function parseSeries(html: string): ReMetricsSeries[] {
   } catch (error) {
     throw htmlParseError(
       "re-metrics",
-      `series JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+      `series JSON is malformed: ${toErrorMessage(error)}`,
     );
   }
   if (!Array.isArray(parsed)) {
@@ -150,7 +151,7 @@ function parseInitialTvlData(html: string): ReMetricsTvlPoint[] {
   } catch (error) {
     throw htmlParseError(
       "re-metrics",
-      `initialTvlData JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+      `initialTvlData JSON is malformed: ${toErrorMessage(error)}`,
     );
   }
   if (!Array.isArray(parsed)) {

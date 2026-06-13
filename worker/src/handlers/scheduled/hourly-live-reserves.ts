@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *):
  *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → collateral drift check (0)
@@ -54,7 +55,7 @@ async function sendReserveSyncAlert(
       metadata: {
         alertType,
         deliveryTargetClass: reserveAlertTargetClass(runtime),
-        error: err instanceof Error ? err.message : String(err),
+        error: toErrorMessage(err),
         ...metadata,
       },
     });

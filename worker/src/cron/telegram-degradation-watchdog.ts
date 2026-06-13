@@ -15,6 +15,7 @@ import {
   PENDING_OLD_AGE_ALERT_SEC,
 } from "../lib/telegram-constants";
 import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending-queue";
+import { toErrorMessage } from "../lib/error-utils";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -72,7 +73,7 @@ async function readPendingCapacity(db: D1Database, nowSec: number): Promise<Pend
       message: "pending capacity unavailable",
       action: "read-pending-capacity",
       module: "telegram-degradation-watchdog",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     return null;
   }
@@ -95,7 +96,7 @@ async function readLatestDispatchMetadata(db: D1Database) {
       message: "dispatch metadata unavailable",
       action: "read-dispatch-metadata",
       module: "telegram-degradation-watchdog",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     return null;
   }

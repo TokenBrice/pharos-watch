@@ -5,6 +5,7 @@ import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * 86_400;
@@ -600,7 +601,7 @@ export async function persistScores(
           db,
           generationId,
           nowSec,
-          err instanceof Error ? err.message : String(err),
+          toErrorMessage(err),
         );
       } catch {
         // Best-effort diagnostics only; preserve the original publication error.

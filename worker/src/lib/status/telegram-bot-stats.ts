@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { TelegramBotStats } from "@shared/types/status";
+import { toErrorMessage } from "../error-utils";
 import {
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
@@ -300,7 +301,7 @@ function estimateDrainTimeSec(messageCount: number): number {
 }
 
 function formatTelemetryError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 async function loadOptionalTelegramTelemetry<T>(

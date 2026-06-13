@@ -19,6 +19,7 @@ import {
   type FreshnessSentinelValidationReason,
   validateFreshnessSentinelPayload,
 } from "./freshness-sentinels";
+import { toErrorMessage } from "./error-utils";
 
 export type { CacheStatus };
 export type { FreshnessStatus };
@@ -156,7 +157,7 @@ async function loadProducerCronFallbacks(
     console.warn("[api-freshness] Failed to read producer cron fallbacks", error);
     return {
       timestampsByKey: new Map(),
-      errorMessage: error instanceof Error ? error.message : String(error),
+      errorMessage: toErrorMessage(error),
     };
   }
 }
@@ -237,7 +238,7 @@ async function resolveSentinelBackedFreshness(params: {
     failures.push({
       key: params.key,
       source: "table-freshness",
-      message: error instanceof Error ? error.message : String(error),
+      message: toErrorMessage(error),
     });
   }
 
@@ -325,7 +326,7 @@ export async function buildCacheStatuses(
       failures.push({
         key: "__cache__",
         source: "cache-table",
-        message: err instanceof Error ? err.message : String(err),
+        message: toErrorMessage(err),
       });
       cacheRows = { results: [] };
     }

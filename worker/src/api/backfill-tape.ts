@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../lib/error-utils";
 /**
  * POST /api/backfill-tape
  *
@@ -101,7 +102,7 @@ export async function handleBackfillTape(
         perClass[job.name] = result.projected;
         total += result.projected;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = toErrorMessage(err);
         perClass[job.name] = -1;
         errors.push({ name: job.name, message });
       }

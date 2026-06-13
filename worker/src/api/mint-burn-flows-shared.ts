@@ -5,6 +5,7 @@ import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { toErrorMessage } from "../lib/error-utils";
 
 export interface HourlyRow {
   stablecoin_id: string;
@@ -171,7 +172,7 @@ function logMintBurnFallbackFailure(
   cacheKey: string,
   error: unknown,
 ): void {
-  const summary = error instanceof Error ? error.message : String(error);
+  const summary = toErrorMessage(error);
   console.error(
     `[mint-burn-flows] scope=${scope} event=live-query-failed cacheKey=${cacheKey} fallback=cache summary=${summary}`,
     error,

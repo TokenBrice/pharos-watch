@@ -37,6 +37,7 @@ import {
 import type { DexPriceObs, LiquidityMetrics, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY } from "../direct-api-policy";
+import { toErrorMessage } from "../../../lib/error-utils";
 
 export interface DirectApiFetcher {
   name: string;
@@ -252,7 +253,7 @@ export async function runDirectApiFetchPhase(
           result: makeDexApiFetchResult([], {
             ok: false,
             degraded: true,
-            errors: [err instanceof Error ? err.message : String(err)],
+            errors: [toErrorMessage(err)],
           }),
         },
       };

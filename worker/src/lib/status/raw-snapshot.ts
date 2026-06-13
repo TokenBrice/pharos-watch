@@ -1,4 +1,6 @@
+import { isRecord } from "@shared/lib/type-guards";
 import type { RawStatusComputation } from "../status-evaluation";
+import { toErrorMessage } from "../error-utils";
 import {
   STATUS_SYSTEM_FRESHNESS_SEC,
   type StatusLevel,
@@ -38,16 +40,12 @@ interface UnavailableStatusRawSnapshot {
 
 export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusRawSnapshot;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isStatusLevel(value: unknown): value is StatusLevel {
   return value === "healthy" || value === "degraded" || value === "stale";
 }
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {

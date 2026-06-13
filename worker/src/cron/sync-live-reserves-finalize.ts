@@ -1,4 +1,5 @@
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   filterStaleLiveReserveCircuitStates,
   getCircuitStates,
@@ -85,7 +86,7 @@ async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promi
     );
     return { cursorPersistFailed: false, cursorPersistError: null };
   } catch (error) {
-    const cursorPersistError = error instanceof Error ? error.message : String(error);
+    const cursorPersistError = toErrorMessage(error);
     await logCronEvent(args.db, {
       job: "sync-live-reserves",
       eventType: "live-reserve-cursor-finalize-failed",
@@ -133,7 +134,7 @@ async function recordFinalizationWarning(
   message: string,
   error: unknown,
 ): Promise<LiveReserveFinalizationWarning> {
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorMessage = toErrorMessage(error);
   await logCronEvent(db, {
     job: "sync-live-reserves",
     eventType,

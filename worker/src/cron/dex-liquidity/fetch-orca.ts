@@ -11,6 +11,7 @@ import {
   DIRECT_API_DEFAULT_MAX_PAGES,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
 const ORCA_RATE_LIMIT_RETRIES = 3;
@@ -60,7 +61,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
           signal: buildDirectApiRequestSignal(signal),
         });
       } catch (err) {
-        pageError = err instanceof Error ? err.message : String(err);
+        pageError = toErrorMessage(err);
         break;
       }
 

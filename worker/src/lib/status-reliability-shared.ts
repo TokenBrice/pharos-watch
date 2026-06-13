@@ -1,5 +1,5 @@
-import type {
-  StatusCause,
+import { toErrorMessage } from "./error-utils";
+import type {  StatusCause,
   StatusSectionError,
   StatusStateInfo,
 } from "@shared/types/status";
@@ -145,7 +145,7 @@ export function buildStatusProbeRunIdempotencyKey(input: {
 }
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 export function reportStatusPersistenceIssue(

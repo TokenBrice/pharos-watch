@@ -23,6 +23,7 @@ import {
   type CallbackHandler,
   type TelegramCallbackQuery,
 } from "./_shared";
+import { toErrorMessage } from "../../lib/error-utils";
 
 type ConfirmablePendingAction<T extends PendingActionType> = Extract<PendingAction, { actionType: T }>;
 
@@ -103,7 +104,7 @@ async function handleForgetConfirmCallback(
       chatId,
       userId: cb.from?.id ?? null,
       action: "forget-confirm",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await answerCallbackQuery(cb.id, botToken, { text: "Could not delete data. Please try again." });
     return;
@@ -230,7 +231,7 @@ async function handleBulkConfirmCallback(
       chatId,
       userId: cb.from?.id ?? null,
       action: "confirm-bulk",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await answerCallbackQuery(cb.id, botToken, { text: "Could not apply changes. Please try again." });
     return;

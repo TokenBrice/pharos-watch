@@ -1,3 +1,4 @@
+import { toErrorMessage } from "./error-utils";
 export function buildOnChainSourceKey(stablecoinId: string): string {
   return `onchain:${stablecoinId}`;
 }
@@ -26,7 +27,7 @@ export function parseYieldWarningSignals(raw: unknown): string[] {
     }
     return parsed.filter((value): value is string => typeof value === "string");
   } catch (e) {
-    console.warn("[yield-sync] failed to parse warning_signals:", e instanceof Error ? e.message : String(e));
+    console.warn("[yield-sync] failed to parse warning_signals:", toErrorMessage(e));
     return [];
   }
 }

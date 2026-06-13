@@ -1,3 +1,5 @@
+import { toErrorMessage } from "./error-utils";
+
 export type PricingProviderDiagnosticSource =
   | "binance"
   | "kraken"
@@ -77,7 +79,7 @@ export function errorClassFor(error: unknown): string {
 }
 
 export function errorMessageFor(error: unknown): string {
-  const raw = error instanceof Error ? error.message : String(error);
+  const raw = toErrorMessage(error);
   return sanitizeSnippet(raw);
 }
 

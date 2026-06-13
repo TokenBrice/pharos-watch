@@ -4,6 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,
@@ -113,7 +114,7 @@ async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?:
   } catch (error) {
     throw new Error(
       `invalid-json: ${
-        error instanceof Error ? error.message : String(error)
+        toErrorMessage(error)
       }; body=${summarizeBodySnippet(rawBody)}`,
     );
   }
@@ -175,7 +176,7 @@ export async function fetchPancakeSwapPools(
             }
           } catch (error) {
             failedHourDataBatches++;
-            const message = error instanceof Error ? error.message : String(error);
+            const message = toErrorMessage(error);
             console.warn(
               "[fetch-pancakeswap]",
               chain,
@@ -239,7 +240,7 @@ export async function fetchPancakeSwapPools(
         successfulChains++;
       }
     } catch (error) {
-      errors.push(`${chain}: ${error instanceof Error ? error.message : String(error)}`);
+      errors.push(`${chain}: ${toErrorMessage(error)}`);
       console.warn("[fetch-pancakeswap]", chain, error);
     }
   }

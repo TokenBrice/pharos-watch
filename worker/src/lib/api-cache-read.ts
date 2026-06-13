@@ -5,6 +5,7 @@ import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
+import { toErrorMessage } from "./error-utils";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
 const RESPONSE_READY_CACHE_VERSION = 1;
@@ -42,7 +43,7 @@ export function safeJsonParse<T>(json: string | null | undefined, fallback: T, c
   try {
     return JSON.parse(json) as T;
   } catch (err) {
-    recordJsonParseFailure(context, err instanceof Error ? err.message : String(err));
+    recordJsonParseFailure(context, toErrorMessage(err));
     return fallback;
   }
 }
@@ -56,7 +57,7 @@ export function safeJsonParseWithContext<T>(
   try {
     return JSON.parse(json) as T;
   } catch (err) {
-    recordJsonParseFailure(context, err instanceof Error ? err.message : String(err));
+    recordJsonParseFailure(context, toErrorMessage(err));
     return fallback;
   }
 }
@@ -78,7 +79,7 @@ export function readCachedJson<T>(
   try {
     return { status: "ok", data: JSON.parse(cached.value) as T };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = toErrorMessage(err);
     recordJsonParseFailure(`${endpoint}:${cacheKey}`, message);
     return { status: "malformed", message };
   }
@@ -121,7 +122,7 @@ async function getResponseReadyCache(
   } catch (error) {
     console.warn(
       `[cache] Failed to read response-ready companion for "${cacheKey}":`,
-      error instanceof Error ? error.message : String(error),
+      toErrorMessage(error),
     );
     return null;
   }

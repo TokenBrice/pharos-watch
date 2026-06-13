@@ -1,4 +1,5 @@
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export function reserveInfoWarning(code: string, message: string): LiveReserveWarning {
   return { code, message, severity: "info", effect: "info" };
@@ -51,7 +52,7 @@ export async function catchAndWarn<T>(
   try {
     return await promise;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = toErrorMessage(error);
     warnings.push(reserveInfoWarning(code, redactUrlSecrets(`${label}: ${detail}`)));
     return null;
   }

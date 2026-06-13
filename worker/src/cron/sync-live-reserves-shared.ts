@@ -3,6 +3,7 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
+import { toErrorMessage } from "../lib/error-utils";
 
 export const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
 export type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
@@ -186,7 +187,7 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
 }
 
 function toAttemptMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 function describeReserveInput(

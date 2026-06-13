@@ -1,5 +1,6 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
 import { bytesToHex } from "../../lib/hash";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
@@ -161,7 +162,7 @@ export function placeholders(n: number): string {
 }
 
 export function formatDdrrFailure(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }
 
 export function publicationSnapshotToken(runId: string, publishedAt: number): string {

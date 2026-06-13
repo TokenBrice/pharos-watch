@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
+import { toErrorMessage } from "../../../lib/error-utils";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
@@ -76,7 +77,7 @@ describe("adapter registry completeness", () => {
       try {
         parseLiveReserveAdapterParams(key, {});
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = toErrorMessage(error);
         expect(message).not.toContain("unknown adapter");
       }
     },

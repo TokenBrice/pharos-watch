@@ -2,6 +2,7 @@ import { buildInClause, chunkArray, batchExecute } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { sendToChat } from "../../lib/telegram";
 import { SNOOZE_REPLY_MARKUP } from "../../lib/telegram-alerts";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   PENDING_MAX_ATTEMPTS,
   PENDING_BACKOFF_SCHEDULE_SEC,
@@ -221,7 +222,7 @@ async function deleteSentPendingAlerts(
   try {
     await deletePendingAlertsByIds(db, sentIdsToDelete);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
       message: `Failed to delete sent pending alerts: ${message}`,

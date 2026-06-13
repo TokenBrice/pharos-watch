@@ -12,6 +12,7 @@ import {
 } from "./depeg-signals";
 import { isMissingTableError } from "./db";
 import { logMalformedJsonPath } from "./json-decode-observability";
+import { toErrorMessage } from "./error-utils";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -83,7 +84,7 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
       .all<DexPriceRow>();
     return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row]));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (isMissingTableError(err)) {
       return new Map<string, DexPriceRow>();
     }
@@ -312,7 +313,7 @@ export async function loadDexPriceSources(
     }
     return result;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[depeg-helpers] Unexpected error loading dex price sources:", msg);
     }

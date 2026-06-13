@@ -1,5 +1,6 @@
 import { sleep } from "./abort";
 import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
+import { toErrorMessage } from "./error-utils";
 
 // --- Per-job cron timeout configuration ---
 
@@ -184,7 +185,7 @@ export class CronJobAbandonedError extends Error {
   readonly metadata: CronJobAbandonedMetadata;
 
   constructor(job: string, stopError: unknown, metadata: Omit<CronJobAbandonedMetadata, "reason" | "job" | "stopError">) {
-    const stopMessage = stopError instanceof Error ? stopError.message : String(stopError);
+    const stopMessage = toErrorMessage(stopError);
     super(`Cron job "${job}" was abandoned after abort; lease left to expire by TTL (${stopMessage})`);
     this.name = "CronJobAbandonedError";
     this.metadata = {
@@ -697,7 +698,7 @@ export async function runScheduledSlotWithFence(
       owner,
       "error",
       JSON.stringify({
-        error: err instanceof Error ? err.message : String(err),
+        error: toErrorMessage(err),
       }),
     ).catch((finishErr) => {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);

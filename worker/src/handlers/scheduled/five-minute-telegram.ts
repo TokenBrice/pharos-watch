@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial:
@@ -59,7 +60,7 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
       message: "registration reconciliation failed",
       action,
       module: "five-minute-telegram",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
   }
 }

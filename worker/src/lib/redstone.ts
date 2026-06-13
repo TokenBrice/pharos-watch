@@ -4,6 +4,7 @@ import {
 } from "@shared/lib/pricing-provider-config";
 import { median } from "@shared/lib/stats";
 import { sleepWithSignal, throwIfAborted } from "./abort";
+import { toErrorMessage } from "./error-utils";
 import { fetchWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
@@ -244,5 +245,5 @@ export async function fetchRedstonePrices(
 }
 
 function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  return toErrorMessage(err);
 }

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../lib/error-utils";
 import {
   buildMethodologyEnvelope,
   cacheControlForDegradedPayload,
@@ -195,7 +196,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
   try {
     errata = errataByPredictionId(await loadPredictionErrata(db, { publicPredictionIds }));
   } catch (error) {
-    console.warn(`[depeg-resolver] errata overlay unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    console.warn(`[depeg-resolver] errata overlay unavailable: ${toErrorMessage(error)}`);
     return response;
   }
   if (errata.size === 0) return response;
@@ -293,7 +294,7 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
       .all<DdrApiLockDeferralRow>();
     return result.results ?? [];
   } catch (error) {
-    console.warn(`[depeg-resolver] lock deferral overlay unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    console.warn(`[depeg-resolver] lock deferral overlay unavailable: ${toErrorMessage(error)}`);
     return [];
   }
 }

@@ -4,6 +4,7 @@ import { throwIfAborted } from "../lib/abort";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
 import { rotateFromCursor } from "./shared/cursor-rotation";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
@@ -141,7 +142,7 @@ export async function recordDeferredTail(
       severity: "warning",
       message: "Failed to read previous deferred reserve cursor state; truncation count will restart from one.",
       metadata: {
-        error: error instanceof Error ? error.message : String(error),
+        error: toErrorMessage(error),
       },
     });
   }
@@ -207,7 +208,7 @@ export async function recordDeferredTail(
     try {
       await batchExecute(db, statements, { signal });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       if (cursorBaseState) {
         const failedAt = Math.floor(Date.now() / 1000);
         try {

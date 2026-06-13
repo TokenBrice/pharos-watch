@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/r
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 import { writePegAnalyticsCache } from "./peg-analytics-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { toErrorMessage } from "./error-utils";
 import {
   summarizeCollateralDriftFromLiveReserveMap,
   type CollateralDriftEntry,
@@ -118,7 +119,7 @@ export async function buildReportCardsSnapshot(
     } catch (error) {
       console.warn(
         "[report-cards-snapshot] peg-analytics cache publish failed (read paths fall back to direct compute):",
-        error instanceof Error ? error.message : String(error),
+        toErrorMessage(error),
       );
     }
   }

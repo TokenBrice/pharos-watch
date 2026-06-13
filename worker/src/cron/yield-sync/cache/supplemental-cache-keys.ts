@@ -10,6 +10,7 @@ import {
   summarizeInvalidRows,
   toNonNegativeInteger,
 } from "./normalization";
+import { toErrorMessage } from "../../../lib/error-utils";
 
 export const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 
@@ -150,7 +151,7 @@ export function parseYieldSupplementalSourcesCache(
       };
     }
   } catch (err) {
-    console.warn(`[yield-sync] Failed to parse supplemental sources cache: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`[yield-sync] Failed to parse supplemental sources cache: ${toErrorMessage(err)}`);
     return null;
   }
 

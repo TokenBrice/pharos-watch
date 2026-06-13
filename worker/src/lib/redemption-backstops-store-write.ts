@@ -2,6 +2,7 @@ import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { runWithOverloadRetry } from "./cron-lease";
 import { batchExecute } from "./db";
+import { toErrorMessage } from "./error-utils";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
@@ -427,7 +428,7 @@ export async function pruneRedemptionBackstopRunRetention(
       if (deletedRuns < batchSize) break;
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     warnings.push(`Run manifest retention prune failed: ${message}`);
   }
 
@@ -438,7 +439,7 @@ export async function pruneRedemptionBackstopRunRetention(
       if (deletedRows < batchSize) break;
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     warnings.push(`Run-row retention prune failed: ${message}`);
   }
 
@@ -597,7 +598,7 @@ export async function upsertRedemptionBackstopSnapshots(
       retentionRunsDeletedCount = retention.runsDeletedCount;
       warnings.push(...retention.warnings);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       warnings.push(`Run retention prune failed after completed snapshot write: ${message}`);
     }
 
@@ -620,7 +621,7 @@ export async function upsertRedemptionBackstopSnapshots(
         }),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       warnings.push(`Completed run metadata refresh failed after retention prune: ${message}`);
     }
 
@@ -636,7 +637,7 @@ export async function upsertRedemptionBackstopSnapshots(
     };
   } catch (error) {
     if (runStarted) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       try {
         await runWithOverloadRetry(() =>
           buildRunFailedUpdate(db, {

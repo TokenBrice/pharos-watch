@@ -32,6 +32,7 @@ import {
   recordApiErrorConfig,
   recordProcessedRows,
 } from "./blacklist/sync-support";
+import { toErrorMessage } from "../lib/error-utils";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
@@ -521,7 +522,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         message: "Failed to materialize blacklist producer snapshots",
         metadata: {
           producerSnapshotError,
-          errorMessage: err instanceof Error ? err.message : String(err),
+          errorMessage: toErrorMessage(err),
         },
       }, budget);
     }

@@ -44,6 +44,7 @@ import {
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { toErrorMessage } from "../lib/error-utils";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -233,7 +234,7 @@ export const handleTelegramWebhook = withErrorHandler(
           level: "warn",
           message: "processed webhook update prune failed",
           action: "processed-update-prune",
-          err: err instanceof Error ? err.message : String(err),
+          err: toErrorMessage(err),
         });
       }
     }
@@ -260,7 +261,7 @@ export const handleTelegramWebhook = withErrorHandler(
             chatId: update.callback_query.message?.chat?.id ?? null,
             userId: update.callback_query.from?.id ?? null,
             action: "callback_query",
-            err: err instanceof Error ? err.message : String(err),
+            err: toErrorMessage(err),
           });
           callbackErrorClass = "callback_query";
         }
@@ -277,7 +278,7 @@ export const handleTelegramWebhook = withErrorHandler(
             chatId: update.my_chat_member.chat?.id ?? null,
             userId: update.my_chat_member.from?.id ?? null,
             action: "my_chat_member",
-            err: err instanceof Error ? err.message : String(err),
+            err: toErrorMessage(err),
           });
           myChatMemberErrorClass = "my_chat_member";
         }
@@ -302,7 +303,7 @@ export const handleTelegramWebhook = withErrorHandler(
             chatId: migration.newChatId,
             oldChatId: migration.oldChatId,
             action: "chat-migration",
-            err: err instanceof Error ? err.message : String(err),
+            err: toErrorMessage(err),
           });
           migrationErrorClass = "chat-migration";
         }
@@ -427,7 +428,7 @@ async function handleTelegramMessageUpdate(args: {
       chatId,
       userId: actorUserId,
       action: "command-dispatch",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await reply("Something went wrong, please try again.");
     return finishOk("command-dispatch");
@@ -612,7 +613,7 @@ async function dispatchParsedTelegramCommand(args: {
       chatId,
       action: "command-flood",
       command: parsedCommand.command,
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
   }
   if (flood && !flood.allowed) {
@@ -626,7 +627,7 @@ async function dispatchParsedTelegramCommand(args: {
           chatId,
           action: "command-flood",
           command: parsedCommand.command,
-          err: err instanceof Error ? err.message : String(err),
+          err: toErrorMessage(err),
         });
       }
     }
@@ -639,7 +640,7 @@ async function dispatchParsedTelegramCommand(args: {
         chatId,
         action: "command-flood",
         command: parsedCommand.command,
-        err: err instanceof Error ? err.message : String(err),
+        err: toErrorMessage(err),
       });
     }
     return;
@@ -780,7 +781,7 @@ async function enforceCommandCooldown(
       chatId,
       action: "command-cooldown",
       command,
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await reply("Command traffic is busy. Please try again shortly.");
     return { allowed: false, outcome: "failure", failureClass: "cooldown-store-error" };
@@ -860,7 +861,7 @@ async function maybeGateNonAdminGroupActor(
       userId: actorUserId,
       action: "group-admin-diagnostics",
       command,
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await reply("Group permission checks are busy. Please try again shortly.");
     return false;

@@ -1,4 +1,5 @@
 import type { DigestMeta } from "./prompt";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export interface RecentDigestMetaEntry {
   meta: DigestMeta | null;
@@ -19,7 +20,7 @@ export function buildRecentDigestMeta(
       try {
         meta = JSON.parse(row.digest_meta) as DigestMeta;
       } catch (err) {
-        console.warn(`[daily-digest] Failed to parse digest_meta: ${err instanceof Error ? err.message : String(err)}`);
+        console.warn(`[daily-digest] Failed to parse digest_meta: ${toErrorMessage(err)}`);
       }
     }
 

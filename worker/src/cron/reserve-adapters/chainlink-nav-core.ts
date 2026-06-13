@@ -2,6 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   DECIMALS_SELECTOR,
   LATEST_ROUND_DATA_SELECTOR,
@@ -240,7 +241,7 @@ export async function fetchChainlinkNavCore(
           warnings.push(reserveDegradedWarning(
             "chainlink-nav-wrapper-oracle-malformed",
             `chainlink-nav wrapper oracle at ${wrapperAddress} returned malformed getPriceData(): ${
-              error instanceof Error ? error.message : String(error)
+              toErrorMessage(error)
             }`,
           ));
         }

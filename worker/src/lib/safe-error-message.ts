@@ -1,3 +1,5 @@
+import { toErrorMessage } from "./error-utils";
+
 /**
  * Returns a sanitized error message safe to emit in Workers logs.
  *
@@ -6,11 +8,12 @@
  * measure against leaking raw `D1Error` SQL or user-supplied content.
  */
 export function safeErrorMessage(error: unknown, maxLength: number = 200): string {
+  const rawMessage = toErrorMessage(error);
   if (error instanceof Error) {
-    return `${error.name}: ${sanitize(error.message, maxLength)}`;
+    return `${error.name}: ${sanitize(rawMessage, maxLength)}`;
   }
   if (typeof error === "string") {
-    return sanitize(error, maxLength);
+    return sanitize(rawMessage, maxLength);
   }
   return "Unknown error";
 }

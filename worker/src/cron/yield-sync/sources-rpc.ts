@@ -10,6 +10,7 @@ import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { createOptionalSourceBudget } from "./sources-helpers";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import type { ResolvedYield } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
@@ -634,7 +635,7 @@ export async function fetchAaveV3SupplyRates(
             }
             console.warn(
               `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
-              err instanceof Error ? err.message : String(err),
+              toErrorMessage(err),
             );
             recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "rpc-exception");
             accountedTargets.add(targetLabel);

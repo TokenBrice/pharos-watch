@@ -12,6 +12,7 @@ import {
   type CallbackHandler,
   type TelegramCallbackQuery,
 } from "./_shared";
+import { toErrorMessage } from "../../lib/error-utils";
 
 // Best-effort: scan the current message's inline keyboard for the latest
 // `manage:page:N` callback (Prev/Next buttons) and infer the active page. The
@@ -87,7 +88,7 @@ async function handleManageUnsub(
       chatId,
       userId: cb.from?.id ?? null,
       action: "unsub",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",

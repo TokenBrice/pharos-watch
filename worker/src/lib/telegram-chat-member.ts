@@ -1,6 +1,7 @@
 import { getCache, setCache } from "./db-cache";
 import { drainResponseBody } from "./response-body";
 import { postTelegramBotApi } from "./telegram";
+import { toErrorMessage } from "./error-utils";
 
 const CHAT_MEMBER_CACHE_TTL_SEC = 5 * 60;
 
@@ -101,7 +102,7 @@ export async function getCachedChatMember(
   } catch (err) {
     console.warn(
       `[telegram-chat-member] getChatMember fetch failed for chat ${chatId} user ${userId}:`,
-      err instanceof Error ? err.message : String(err),
+      toErrorMessage(err),
     );
     return null;
   }
@@ -151,7 +152,7 @@ export async function getCachedChatAdministrators(
   } catch (err) {
     console.warn(
       `[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`,
-      err instanceof Error ? err.message : String(err),
+      toErrorMessage(err),
     );
     return null;
   }

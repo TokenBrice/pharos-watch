@@ -1,5 +1,6 @@
 import { jsonResponse, parseOptionalPositiveIntegerParam } from "../lib/api-utils";
 import { runAdminRoute } from "../lib/route-wrappers";
+import { toErrorMessage } from "../lib/error-utils";
 
 interface AuditLogRow {
   id: number;
@@ -20,7 +21,7 @@ function parseAuditDetail(row: AuditLogRow): unknown {
   } catch (error) {
     console.warn(
       `[api-key-audit-log] Failed to parse detail_json for row ${row.id}:`,
-      error instanceof Error ? error.message : String(error),
+      toErrorMessage(error),
     );
     return null;
   }

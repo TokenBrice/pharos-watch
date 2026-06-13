@@ -6,6 +6,7 @@ import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
 import { CoinGeckoSimplePriceSchema } from "./upstream-schemas";
+import { toErrorMessage } from "./error-utils";
 
 const PRIMARY_CG_BATCH_SIZE = 250;
 
@@ -81,7 +82,7 @@ export async function fetchCoingeckoSimplePrices(
     return {
       kind: "upstream-error",
       value: prices,
-      reason: err instanceof Error ? err.message : String(err),
+      reason: toErrorMessage(err),
     };
   }
 

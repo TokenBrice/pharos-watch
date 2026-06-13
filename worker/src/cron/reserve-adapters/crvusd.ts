@@ -1,6 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type {
-  LiveReserveSnapshotMetadata,
+import { toErrorMessage } from "../../lib/error-utils";
+import type {  LiveReserveSnapshotMetadata,
   LiveReserveWarning,
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
@@ -573,7 +573,7 @@ async function fetchOptionalYieldBasisMarketExposures(
     return { markets, warnings: [] };
   } catch (error) {
     if (signal.aborted) throw signal.reason ?? error;
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     return {
       markets: [],
       warnings: [

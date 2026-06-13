@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
@@ -145,7 +146,7 @@ export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntr
     parsed = JSON.parse(quoteUnsafeIntegerWeightFields(raw)) as unknown;
   } catch (error) {
     throw new Error(
-      `usdai-proof-of-reserves payload is malformed: ${error instanceof Error ? error.message : String(error)}`,
+      `usdai-proof-of-reserves payload is malformed: ${toErrorMessage(error)}`,
     );
   }
 
@@ -406,7 +407,7 @@ async function fetchUsdAiProofPageTimestamp(
       summary: null,
       fallbackWarning: reserveInfoWarning(
         "usdai-proof-html-fetch-failed",
-        `USD.AI proof-of-reserves page fetch failed (${url}): ${error instanceof Error ? error.message : String(error)}`,
+        `USD.AI proof-of-reserves page fetch failed (${url}): ${toErrorMessage(error)}`,
       ),
     };
   }

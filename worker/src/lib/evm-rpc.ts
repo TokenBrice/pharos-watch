@@ -3,6 +3,7 @@ import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchWithRetry } from "./fetch-retry";
 import { rethrowIfAborted } from "./abort";
+import { toErrorMessage } from "./error-utils";
 
 interface JsonRpcEnvelope<T> {
   result?: T;
@@ -260,7 +261,7 @@ async function fetchJsonRpcResult<T>(
       return body.result as T;
     } catch (err) {
       rethrowIfAborted(err, options?.signal);
-      failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
+      failures.push(`${rpcUrl}: ${toErrorMessage(err)}`);
       continue;
     }
   }

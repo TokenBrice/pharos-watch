@@ -3,6 +3,7 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
+import { toErrorMessage } from "../lib/error-utils";
 
 export type DispatchAlertType = "dews" | "depeg" | "safety" | "launch";
 
@@ -240,7 +241,7 @@ export async function loadPresetSubscriberRowsBatch(
       failureKind: "query-failed",
       alertType: type,
       requestedStablecoinCount: stablecoinIds.length,
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     return { kind: "query-failed", error: err };
   }

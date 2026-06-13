@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   fetchJsonWithRetry,
   fetchTextWithRetry,
@@ -469,7 +470,7 @@ async function fetchMentoDashboardTimestamp(
   } catch (error) {
     warnings.push(reserveInfoWarning(
       "mento-dashboard-timestamp-failed",
-      `Mento dashboard timestamp fetch failed (${url}): ${error instanceof Error ? error.message : String(error)}`,
+      `Mento dashboard timestamp fetch failed (${url}): ${toErrorMessage(error)}`,
     ));
     return null;
   }

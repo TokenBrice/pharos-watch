@@ -1,6 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   API_ORIGIN,
   OPS_API_ORIGIN,
@@ -407,7 +408,7 @@ async function probePathExternally(
       startedAt,
       status: 0,
       ok: false,
-      error: timeout.isTimedOut() ? "timeout" : (error instanceof Error ? error.message : String(error)),
+      error: timeout.isTimedOut() ? "timeout" : (toErrorMessage(error)),
     });
   } finally {
     timeout.dispose();
@@ -491,7 +492,7 @@ async function probePathInternally(
       startedAt,
       status: 0,
       ok: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: toErrorMessage(error),
     });
   }
 }

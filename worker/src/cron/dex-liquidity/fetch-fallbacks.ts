@@ -28,6 +28,7 @@ import {
   type KnownPoolIdentityIndex,
   type PoolIdentity,
 } from "./pool-identity";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const WEAK_COVERAGE_MIN_POOL_COUNT = 3;
 const WEAK_COVERAGE_MIN_PROTOCOL_COUNT = 2;
@@ -204,7 +205,7 @@ export async function fetchDsFallbackPools(
             stablecoinId: meta.id,
             symbol: meta.symbol,
             chain: contract.chain,
-            error: err instanceof Error ? err.message : String(err),
+            error: toErrorMessage(err),
           },
         });
         continue;
@@ -521,7 +522,7 @@ export async function fetchCgTickersFallback(
         metadata: {
           stablecoinId: meta.id,
           symbol: meta.symbol,
-          error: err instanceof Error ? err.message : String(err),
+          error: toErrorMessage(err),
         },
       });
     }

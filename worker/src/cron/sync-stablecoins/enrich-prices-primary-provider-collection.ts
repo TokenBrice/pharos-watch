@@ -48,6 +48,7 @@ import { normalizePegTypeFromCurrency } from "../../lib/price-validation";
 import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { isUsableGeckoId } from "./enrich-prices-primary-shared";
+import { toErrorMessage } from "../../lib/error-utils";
 
 // crvUSD PriceAggregator contract. Consulted as a regular primary-consensus
 // source by the Curve oracle fetch path; kept local because the caller is
@@ -236,7 +237,7 @@ async function loadReserveNavPriceQuotes(params: {
     }
     return quotes;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     console.warn(`[primary-prices] Failed to load reserve NAV telemetry: ${msg}`);
     return new Map();
   }

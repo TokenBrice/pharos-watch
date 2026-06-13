@@ -14,6 +14,7 @@ import {
   canCarryForwardFxRates,
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
+import { toErrorMessage } from "../lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;
@@ -780,7 +781,7 @@ export async function runOpenExchangeRatesOverlay(
       eventType: "openexchange-rates-fetch-failed",
       severity: "warning",
       message: "Open Exchange Rates realtime fetch failed.",
-      metadata: { error: err instanceof Error ? err.message : String(err) },
+      metadata: { error: toErrorMessage(err) },
     });
     await runBestEffort("recordOutcome:fx-realtime-failure", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
@@ -837,7 +838,7 @@ export async function runChainlinkOverlay(
       eventType: "chainlink-reference-feeds-failed",
       severity: "warning",
       message: "Chainlink reference feeds failed.",
-      metadata: { error: err instanceof Error ? err.message : String(err) },
+      metadata: { error: toErrorMessage(err) },
     });
     await runBestEffort("recordOutcome:chainlink-feeds-failure", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);

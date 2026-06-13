@@ -9,6 +9,7 @@ import {
   requireAdminForMutatingCallback,
   type CallbackHandler,
 } from "./_shared";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export const handleTimezoneCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
   // Zone strings never legitimately contain `:` (IANA names use `/`), but use
@@ -46,7 +47,7 @@ export const handleTimezoneCallback: CallbackHandler = async ({ db, botToken, cb
       chatId,
       userId: cb.from?.id ?? null,
       action: "tz",
-      err: err instanceof Error ? err.message : String(err),
+      err: toErrorMessage(err),
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save timezone. Please try again.",

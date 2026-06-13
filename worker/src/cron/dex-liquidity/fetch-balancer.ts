@@ -6,6 +6,7 @@ import {
   DIRECT_API_DEFAULT_MAX_PAGES,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
+import { toErrorMessage } from "../../lib/error-utils";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -142,7 +143,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         signal: buildDirectApiRequestSignal(signal),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorMessage(err);
       errors.push(`request failed on page ${page}: ${message}`);
       break;
     }

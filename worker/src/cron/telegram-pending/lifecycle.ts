@@ -1,5 +1,6 @@
 import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
+import { toErrorMessage } from "../../lib/error-utils";
 
 /**
  * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
@@ -43,7 +44,7 @@ export async function registerSubscriberBlockAndShouldDisable(
       .run();
     return nextCount >= 2;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       message: `Failed to register block strike: ${message}`,
       chatId,
@@ -98,7 +99,7 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       .bind(chatId)
       .run();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       message: `Failed to reset block count: ${message}`,
       chatId,
@@ -152,7 +153,7 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
     ]);
     return true;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       message: `Failed to disable blocked subscriber: ${message}`,
       chatId,

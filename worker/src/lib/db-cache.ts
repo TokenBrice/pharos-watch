@@ -7,6 +7,7 @@ import {
   getFreshnessSentinelProducerJob,
   type FreshnessSentinelBackedCacheKey,
 } from "./freshness-sentinels";
+import { toErrorMessage } from "./error-utils";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await runWithOverloadRetry(() =>
@@ -174,7 +175,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
     return map;
   } catch (err) {
     if (!isMissingColumnError(err)) {
-      console.warn("[db-cache] Full-column price_cache query failed:", err instanceof Error ? err.message : String(err));
+      console.warn("[db-cache] Full-column price_cache query failed:", toErrorMessage(err));
       throw err;
     }
     console.warn("[db-cache] price_cache metadata columns missing; trying core-only fallback");
@@ -200,7 +201,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       });
     }
   } catch (err) {
-    console.warn("[db-cache] Failed to load price_cache:", err instanceof Error ? err.message : String(err));
+    console.warn("[db-cache] Failed to load price_cache:", toErrorMessage(err));
   }
   return map;
 }

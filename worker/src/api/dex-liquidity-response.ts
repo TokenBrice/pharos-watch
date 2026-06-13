@@ -1,6 +1,7 @@
 import { safeJsonParse } from "../lib/api-utils";
 import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import { toErrorMessage } from "../lib/error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -177,7 +178,7 @@ export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null)
       qualityDriftSeverity = parsed.sourceCoverage.qualityDriftSeverity ?? "none";
       qualityDriftFlags = parsed.sourceCoverage.qualityDriftFlags ?? [];
     } catch (err) {
-      console.info("[dex-liquidity] Malformed cron metadata:", err instanceof Error ? err.message : String(err));
+      console.info("[dex-liquidity] Malformed cron metadata:", toErrorMessage(err));
     }
   }
 

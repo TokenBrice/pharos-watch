@@ -1,5 +1,6 @@
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
 import type { RedemptionBackstopConfig, RedemptionCostModel } from "@shared/lib/redemption-backstops";
+import { BPS_PER_UNIT } from "@shared/lib/math";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
 import {
@@ -97,9 +98,9 @@ function resolveScenarioScore(
   fixedCostUsd: number,
   minFeeUsd: number | undefined,
 ): number | null {
-  const percentageFeeUsd = feeBps != null ? (scenarioSizeUsd * Math.max(0, feeBps)) / 10_000 : 0;
+  const percentageFeeUsd = feeBps != null ? (scenarioSizeUsd * Math.max(0, feeBps)) / BPS_PER_UNIT : 0;
   const variableCostUsd = Math.max(percentageFeeUsd, minFeeUsd ?? 0);
-  const effectiveFeeBps = ((variableCostUsd + fixedCostUsd) / scenarioSizeUsd) * 10_000;
+  const effectiveFeeBps = ((variableCostUsd + fixedCostUsd) / scenarioSizeUsd) * BPS_PER_UNIT;
   return resolveBoundedFeeScore(effectiveFeeBps);
 }
 

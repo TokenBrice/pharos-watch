@@ -1,5 +1,6 @@
 import type { PerAlertTypeDelivery, TelegramAlertType } from "@shared/types/status";
 import { batchExecute } from "../lib/db";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
@@ -109,7 +110,7 @@ export async function persistTelegramAlertJobManifests(
 
       manifests.push({ jobId, alertType, targetCount: messages.length });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       logTelegramEvent({
         level: "warn",
         message: `Failed to persist Telegram alert job manifest: ${message}`,
@@ -167,7 +168,7 @@ export async function finalizeTelegramAlertJobManifests(
         );
     }));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
       message: `Failed to finalize Telegram alert job manifests: ${message}`,

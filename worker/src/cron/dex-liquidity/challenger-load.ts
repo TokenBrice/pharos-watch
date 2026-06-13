@@ -7,6 +7,7 @@ import type {
   DexPriceChallengerLoadDiagnostics,
   DexPriceChallengerLoadResult,
 } from "./challenger-types";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export type {
   DexPriceChallengerLoadRow,
@@ -87,7 +88,7 @@ export async function loadPublishedDexPoolChallengers(
       }>();
     snapshotRows = snapshots.results ?? [];
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
     }
@@ -130,7 +131,7 @@ export async function loadPublishedDexPoolChallengers(
       }>();
     challengerRows = challengers.results ?? [];
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
       console.error("[challenger-persistence] Unexpected error loading challenger rows:", msg);
     }

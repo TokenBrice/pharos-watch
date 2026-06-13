@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 // Digest trigger poll slot (every 5 minutes, cron "*/5 * * * *"):
 //   If `digest:force-run-request` cache key is set, run daily-digest under
 //   scheduled-event wall-clock (15 min). The `daily-digest` lease serializes
@@ -98,7 +99,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   let errorMessage: string | null = null;
   if (caught) {
     outcome = "error";
-    errorMessage = caught instanceof Error ? caught.message : String(caught);
+    errorMessage = toErrorMessage(caught);
   } else if (leaseLocked) {
     outcome = "skipped_locked";
   } else {

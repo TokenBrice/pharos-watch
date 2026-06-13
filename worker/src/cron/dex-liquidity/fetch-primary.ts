@@ -35,6 +35,7 @@ import {
 import type {
   ProviderChainAddress,
 } from "./token-batch-runner";
+import { toErrorMessage } from "../../lib/error-utils";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -92,7 +93,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
         }
       } catch (e) {
-        console.warn("[dex-liquidity] DeFiLlama yields response parse failed:", e instanceof Error ? e.message : String(e));
+        console.warn("[dex-liquidity] DeFiLlama yields response parse failed:", toErrorMessage(e));
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
       }
     } else {
@@ -143,7 +144,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
         }
       } catch (e) {
-        console.warn("[dex-liquidity] DeFiLlama protocols response parse failed:", e instanceof Error ? e.message : String(e));
+        console.warn("[dex-liquidity] DeFiLlama protocols response parse failed:", toErrorMessage(e));
         await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
       }
     } else {

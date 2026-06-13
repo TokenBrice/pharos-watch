@@ -30,6 +30,7 @@ import {
   rotateArray,
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
+import { toErrorMessage } from "../lib/error-utils";
 
 const MAX_SCAN_RANGE = 50_000;
 const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
@@ -249,7 +250,7 @@ export async function syncMintBurn(
         await recalcAffectedHours(db, affectedHours);
       } catch (e) {
         recalcFailed = true;
-        recalcError = e instanceof Error ? e.message : String(e);
+        recalcError = toErrorMessage(e);
         console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", e);
       }
     }

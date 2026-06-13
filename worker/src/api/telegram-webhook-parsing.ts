@@ -1,5 +1,6 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { isDepegStepValue } from "../lib/telegram-constants";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
@@ -15,7 +16,7 @@ import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 
 function logPendingParseWarning(pending: PendingDisambiguationRow, field: string, error: unknown): void {
   const actionType = pending.action_type ?? "unknown";
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   console.warn(
     `[telegram-webhook] malformed pending field action=${actionType} ambiguous=${pending.ambiguous_ticker} field=${field} error=${message}`,
   );

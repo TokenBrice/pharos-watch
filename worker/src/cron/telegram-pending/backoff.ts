@@ -1,4 +1,5 @@
 import { getCache, setCache } from "../../lib/db-cache";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_TTL_SEC,
@@ -26,7 +27,7 @@ export async function setTelegramGlobalBackoff(db: D1Database, notBeforeAt: numb
     const existing = await readTelegramGlobalBackoff(db, nowSec);
     await setCache(db, TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.max(existing ?? 0, notBeforeAt)));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
       message: `Failed to set global Telegram backoff: ${message}`,
@@ -43,7 +44,7 @@ export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number):
     const parsed = Number(cached.value);
     return Number.isFinite(parsed) && parsed > nowSec ? Math.floor(parsed) : null;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
       message: `Failed to read global Telegram backoff: ${message}`,

@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../lib/error-utils";
 /**
  * Monthly yield coverage audit.
  *
@@ -717,7 +718,7 @@ async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<Map<stri
       severity: "warning",
       message: "Failed to parse stablecoins cache for lending size gates; falling back to absolute TVL floors.",
       metadata: {
-        error: error instanceof Error ? error.message : String(error),
+        error: toErrorMessage(error),
       },
     });
     return new Map();

@@ -4,6 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput } from "./input-guards";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
+import { toErrorMessage } from "../../lib/error-utils";
 
 export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
@@ -41,7 +42,7 @@ function summarizeResponseBody(raw: string, limit = 120): string {
 function buildJsonParseError(url: string, res: Response, raw: string, error: unknown): Error {
   const contentType = res.headers.get("content-type") ?? "unknown";
   const snippet = summarizeResponseBody(raw);
-  const detail = error instanceof Error ? error.message : String(error);
+  const detail = toErrorMessage(error);
   return new Error(
     `JSON parse failed for ${url} (${contentType}): ${detail}${snippet ? `; body starts with: ${snippet}` : ""}`,
   );

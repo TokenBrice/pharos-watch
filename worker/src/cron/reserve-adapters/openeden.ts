@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
@@ -192,7 +193,7 @@ export async function fetchOpenEdenUsdoReserves(
         `openeden-usdo reserve composition fetch timed out after ${OPENEDEN_TOTAL_TIMEOUT_MS}ms: ${primaryInput.url}`,
       );
     }
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = toErrorMessage(error);
     throw new Error(`openeden-usdo reserve composition fetch failed: ${detail}`);
   }
   return adaptOpenEdenReserveComposition(payload);

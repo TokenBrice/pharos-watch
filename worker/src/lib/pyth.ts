@@ -2,6 +2,7 @@ import { z } from "zod";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 import type { FetcherOutcome } from "./fetcher-result";
+import { toErrorMessage } from "./error-utils";
 
 const HERMES_BASE = "https://hermes.pyth.network";
 
@@ -112,7 +113,7 @@ export async function fetchPythPrices(
     return {
       kind: "upstream-error",
       value: results,
-      reason: err instanceof Error ? err.message : String(err),
+      reason: toErrorMessage(err),
     };
   }
 

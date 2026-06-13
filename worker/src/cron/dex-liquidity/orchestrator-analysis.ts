@@ -10,6 +10,7 @@ import {
   round4,
   type DexLiquidityDriftSummary,
 } from "./orchestrator-drift";
+import { toErrorMessage } from "../../lib/error-utils";
 
 type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
 
@@ -44,7 +45,7 @@ function parseDexLiquidityCronMetadata(metadata: string | null): DexLiquidityCro
   } catch (err) {
     console.warn(
       "[dex-liquidity] Failed to parse previous cron metadata:",
-      err instanceof Error ? err.message : String(err),
+      toErrorMessage(err),
     );
     return null;
   }

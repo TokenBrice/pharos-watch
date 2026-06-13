@@ -1,3 +1,4 @@
+import { toErrorMessage } from "../../lib/error-utils";
 import {
   attachDdrPublicRowHash,
   computeDdrPublicRowHash,
@@ -76,7 +77,7 @@ function decodeJsonObject(value: string | null | undefined, context: Omit<DdrSto
     failStorageDecode({
       ...context,
       kind: "malformed_json",
-      message: error instanceof Error ? error.message : String(error),
+      message: toErrorMessage(error),
     });
   }
   const record = recordValue(parsed);
