@@ -4,12 +4,9 @@
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
-  getReportCardGradeRank,
-  UNKNOWN_REPORT_CARD_GRADE_RANK,
-} from "@shared/lib/report-card-core";
-import {
   buildTapeEventId,
   deriveIssuerId,
+  gradeRank,
   severityForScoreDowngrade,
 } from "../tape-event-helpers";
 import {
@@ -33,10 +30,6 @@ interface SafetyGradeSourceRow {
 
 function coinSourceUrl(coinId: string): string {
   return `/stablecoin/${encodeURIComponent(coinId)}/#report-card`;
-}
-
-function gradeRank(grade: string): number {
-  return getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK;
 }
 
 async function projectScoreByVariant(

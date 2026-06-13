@@ -4,6 +4,7 @@ import {
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 
 interface SafetyScoreHistoryRow {
@@ -56,7 +57,7 @@ export const handleSafetyScoreHistory = withErrorHandler("safety-score-history",
         "snapshot-safety-grade-history",
         latestTs,
       );
-      return { updatedAt, maxAgeSec: 86_400 };
+      return { updatedAt, maxAgeSec: DAY_SECONDS };
     },
   });
 });

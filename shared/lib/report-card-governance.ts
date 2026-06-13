@@ -34,6 +34,8 @@ const INFRA_PENALTY_BANDS: readonly [minScore: number, penalty: number][] = [
   [0, -60],
 ];
 
+const MIN_INFRA_PENALTY = INFRA_PENALTY_BANDS[INFRA_PENALTY_BANDS.length - 1][1];
+
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
   "dao-governance": 85,
@@ -186,7 +188,7 @@ function infrastructurePenalty(infraScore: number): number {
   for (const [minScore, penalty] of INFRA_PENALTY_BANDS) {
     if (infraScore >= minScore) return penalty;
   }
-  return -60;
+  return MIN_INFRA_PENALTY;
 }
 
 function qualityTakesInfraPenalty(quality: GovernanceQuality): boolean {

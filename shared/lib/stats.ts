@@ -25,6 +25,7 @@ export function median(values: readonly number[]): number | null {
 
 /**
  * Nearest-rank percentile on a 0-100 percentile scale. Returns null for empty finite input.
+ * Non-finite samples (NaN/Infinity) are silently dropped before computing.
  */
 export function percentileNearestRank(values: readonly number[], percentile: number): number | null {
   const samples = finiteSorted(values);
@@ -39,6 +40,7 @@ export function percentileNearestRank(values: readonly number[], percentile: num
 /**
  * Linearly interpolated percentile on a 0-100 percentile scale.
  * Returns null for empty finite input.
+ * Non-finite samples (NaN/Infinity) are silently dropped before computing.
  */
 export function percentileLinear(values: readonly number[], percentile: number): number | null {
   const samples = finiteSorted(values);
@@ -55,6 +57,8 @@ export function percentileLinear(values: readonly number[], percentile: number):
 
 /**
  * Percentage helper: numerator / denominator * 100.
+ * Returns a 0-100 percentage (not a 0-1 ratio); do not adopt for ratio-based callers
+ * such as depeg-resolver-review/summary.ts's local `pct`, which returns num/den.
  * Returns null when either input is non-finite or the denominator is zero.
  */
 export function pct(numerator: number, denominator: number): number | null {

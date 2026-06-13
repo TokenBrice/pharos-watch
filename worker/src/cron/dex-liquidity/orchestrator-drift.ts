@@ -1,5 +1,9 @@
+import { round4 } from "@shared/lib/math";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult, LiquidityMetrics } from "./types";
+
+// Re-exported so existing `./orchestrator-drift` consumers keep their import path.
+export { round4 };
 
 export const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "usds-sky", "usde-ethena"] as const;
 
@@ -12,10 +16,6 @@ export type PreviousDexLiquiditySummary = {
 };
 
 type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
-
-export function round4(value: number): number {
-  return Math.round(value * 10_000) / 10_000;
-}
 
 function pctDelta(current: number, previous: number): number | null {
   if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;

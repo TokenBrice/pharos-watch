@@ -65,7 +65,7 @@ export function severityForFreezeDestroyed(amountUsd: number | null): TapeEventS
   return "warning";
 }
 
-function gradeRank(grade: string): number {
+export function gradeRank(grade: string): number {
   return getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK;
 }
 

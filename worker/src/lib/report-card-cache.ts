@@ -1,5 +1,6 @@
 import { getCache, setCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
+import { isRecord } from "@shared/lib/type-guards";
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
@@ -60,10 +61,6 @@ export interface WriteReportCardCacheOptions {
 export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 export const REPORT_CARD_CACHE_GENERATION = 1;
 const REPORT_CARD_CACHE_KEY = "report_card_cache";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
 
 function isValidReportCardCachePayload(value: unknown): value is ParsedReportCardCachePayload {
   if (!isRecord(value)) return false;
