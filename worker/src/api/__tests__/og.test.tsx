@@ -18,9 +18,9 @@ vi.mock("satori/standalone", () => ({
   init: vi.fn(),
   default: vi.fn(async () => "<svg></svg>"),
 }));
-import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
+import { StabilityIndexCard, type StabilityIndexCardData } from "../../lib/og-templates/stability-index-card";
 import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
-import { DepegCard } from "../../lib/og-templates/depeg-card";
+import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card";
 import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
 
 describe("stablecoin OG card data", () => {
@@ -278,6 +278,142 @@ describe("chain OG route", () => {
   it("returns 404 for an id outside CHAIN_META", async () => {
     const res = await handleOg(mockD1([]), "/api/og/chain/not-a-chain");
     expect(res?.status).toBe(404);
+  });
+});
+
+describe("depeg OG handler aggregation", () => {
+  function captureDepegData(db: D1Database) {
+    return (async () => {
+      const satoriMock = vi.mocked(satoriStandalone);
+      satoriMock.mockClear();
+      const res = await handleOg(db, "/api/og/depeg");
+      expect(res?.status).toBe(200);
+      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+        data: DepegCardData;
+      }>;
+      expect(element.type).toBe(DepegCard);
+      return element.props.data;
+    })();
+  }
+
+  it("maps stress bands to the DEWS distribution and counts daily flux", async () => {
+    const db = mockD1([
+      // active-depeg COUNT(*) (ended_at IS NULL)
+      { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 1 } },
+      { match: "stability_index_samples", rows: [], first: { score: 88.2, band: "BEDROCK" } },
+      {
+        match: "stress_signals",
+        rows: [
+          { band: "DANGER" },
+          { band: "ALERT" },
+          { band: "WARNING" },
+          { band: "CALM" }, // default branch → normal
+          { band: "WATCH" }, // default branch → normal
+        ],
+      },
+      // active-depeg details (peak_deviation_bps)
+      {
+        match: "peak_deviation_bps",
+        rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", peak_deviation_bps: -150 }],
+      },
+      // recovered today (ended_at IS NOT NULL)
+      { match: "ended_at IS NOT NULL", rows: [], first: { count: 3 } },
+      // new today (started_at > ?)
+      { match: "started_at >", rows: [], first: { count: 4 } },
+    ]);
+
+    const data = await captureDepegData(db);
+    expect(data.dewsDistribution).toEqual({ danger: 1, alert: 1, warning: 1, normal: 2 });
+    expect(data.totalCoins).toBe(5);
+    expect(data.activeDepegCount).toBe(1);
+    expect(data.coinsAtPeg).toBe(4); // 5 - 1
+    expect(data.recoveredToday).toBe(3);
+    expect(data.newToday).toBe(4);
+    expect(data.psiScore).toBe(88.2);
+    expect(data.activeDepegs).toEqual([
+      { symbol: "USDT", name: "Tether", deviationBps: -150 },
+    ]);
+  });
+
+  it("clamps coinsAtPeg to zero when active depegs exceed tracked coins", async () => {
+    const db = mockD1([
+      { match: "COUNT(*) as count FROM depeg_events WHERE ended_at IS NULL", rows: [], first: { count: 5 } },
+      { match: "stability_index_samples", rows: [], first: null }, // psi fallbacks
+      { match: "stress_signals", rows: [{ band: "DANGER" }, { band: "ALERT" }] },
+      { match: "peak_deviation_bps", rows: [] },
+      { match: "ended_at IS NOT NULL", rows: [], first: { count: 0 } },
+      { match: "started_at >", rows: [], first: { count: 0 } },
+    ]);
+
+    const data = await captureDepegData(db);
+    expect(data.totalCoins).toBe(2);
+    expect(data.activeDepegCount).toBe(5);
+    expect(data.coinsAtPeg).toBe(0); // max(0, 2 - 5)
+    expect(data.psiScore).toBe(0); // psiRow null → 0
+    expect(data.psiBand).toBe("BEDROCK"); // psiRow null → default band
+  });
+});
+
+describe("stability-index OG handler aggregation", () => {
+  function captureStabilityData(db: D1Database) {
+    return (async () => {
+      const satoriMock = vi.mocked(satoriStandalone);
+      satoriMock.mockClear();
+      const res = await handleOg(db, "/api/og/stability-index");
+      expect(res?.status).toBe(200);
+      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+        data: StabilityIndexCardData;
+      }>;
+      expect(element.type).toBe(StabilityIndexCard);
+      return element.props.data;
+    })();
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  it("pads a short sparkline and falls back to psiScore for avg/ATH/ATL", async () => {
+    const db = mockD1([
+      {
+        match: "stored_at DESC LIMIT 1",
+        rows: [],
+        first: { score: 73.5, band: "STEADY", stored_at: nowSec },
+      },
+      // avg24h and avg7d share SQL; both resolve to null so they exercise the
+      // psiScore fallback together — a single shared match is sufficient.
+      { match: "AVG(score)", rows: [], first: { avg: null } },
+      // single history row → sparkline padded to length 2 with psiScore.
+      { match: "FROM stability_index ORDER BY computed_at", rows: [{ score: 80 }] },
+      { match: "MAX(score)", rows: [], first: { max: null } },
+      { match: "MIN(score)", rows: [], first: { min: null } },
+    ]);
+
+    const data = await captureStabilityData(db);
+    expect(data.psiScore).toBe(73.5);
+    expect(data.psiBand).toBe("STEADY");
+    expect(data.delta24h).toBe(0); // avg24h falls back to psiScore → delta 0
+    expect(data.avg7d).toBe(73.5); // avg7d null → psiScore
+    expect(data.allTimeHigh).toBe(73.5); // max null → psiScore
+    expect(data.allTimeLow).toBe(73.5); // min null → psiScore
+    // 1 history row reversed → [80], then padded with psiScore twice.
+    expect(data.sparklineData).toEqual([80, 73.5, 73.5]);
+    expect(data.bands.find((b) => b.name === "STEADY")?.active).toBe(true);
+  });
+
+  it("falls back to a derived band and zero score when no sample exists", async () => {
+    const db = mockD1([
+      { match: "stored_at DESC LIMIT 1", rows: [], first: null },
+      { match: "AVG(score)", rows: [], first: { avg: null } },
+      { match: "FROM stability_index ORDER BY computed_at", rows: [] },
+      { match: "MAX(score)", rows: [], first: { max: null } },
+      { match: "MIN(score)", rows: [], first: { min: null } },
+    ]);
+
+    const data = await captureStabilityData(db);
+    expect(data.psiScore).toBe(0);
+    // Empty history → sparkline padded entirely from psiScore (0, 0).
+    expect(data.sparklineData).toEqual([0, 0]);
+    expect(data.allTimeHigh).toBe(0);
+    expect(data.allTimeLow).toBe(0);
   });
 });
 

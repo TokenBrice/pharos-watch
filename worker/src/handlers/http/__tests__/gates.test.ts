@@ -135,6 +135,18 @@ describe("evaluateAccessGate", () => {
     expect(result.isSiteProxy).toBe(false);
   });
 
+  it("grants the site-api lane to allowed preview (*.workers.dev) GETs with the site-proxy secret", async () => {
+    const request = new Request("https://pharos-watch-preview.workers.dev/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+
+    expect(result.isSiteProxy).toBe(true);
+    expect(result.requestLane).toBe("site-api");
+    expect(result.response).toBeNull();
+  });
+
   it("authenticates protected public API requests and records usage", async () => {
     apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
     apiKeyMocks.checkApiKeyRateLimit.mockResolvedValueOnce(null);

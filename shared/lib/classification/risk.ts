@@ -68,6 +68,7 @@ export function getDewsRiskLevel(bands: ThreatBand[]): DewsRiskLevel {
   if (maxOrder >= THREAT_BAND_ORDER.DANGER) return "danger";
   if (maxOrder >= THREAT_BAND_ORDER.WARNING) return "warning";
   if (maxOrder >= THREAT_BAND_ORDER.ALERT) return "alert";
+  // WATCH (order 1) intentionally collapses into "calm": DewsRiskLevel has no "watch" tier.
   return "calm";
 }
 
