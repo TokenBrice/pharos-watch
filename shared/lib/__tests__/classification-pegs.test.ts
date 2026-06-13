@@ -4,7 +4,7 @@ import {
   PEG_LABELS,
   PEG_FILTER_OPTIONS,
   mapPegMetadata,
-} from "@shared/lib/classification-pegs";
+} from "@shared/lib/classification/pegs";
 import type { PegCurrency } from "../../types";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 

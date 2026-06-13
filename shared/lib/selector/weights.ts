@@ -190,33 +190,3 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
   assertWeightsSumTo100(input.profile, vector);
   return vector as WeightVector;
 }
-
-/**
- * Pro-rata redistribute the slots whose raw value is null across the
- * non-null slots in the same vector. Returns the new weights in the same
- * key order as `presentKeys`.
- */
-export function redistributeWeights(
-  vector: WeightVector,
-  presentKeys: readonly WeightKey[],
-): Map<WeightKey, number> {
-  const present = new Map<WeightKey, number>();
-  let totalPresent = 0;
-  for (const key of presentKeys) {
-    const weight = vector[key];
-    if (typeof weight === "number") {
-      present.set(key, weight);
-      totalPresent += weight;
-    }
-  }
-
-  if (totalPresent === 0) {
-    return present; // caller treats this as degenerate
-  }
-
-  const redistributed = new Map<WeightKey, number>();
-  for (const [key, weight] of present) {
-    redistributed.set(key, (weight / totalPresent) * 100);
-  }
-  return redistributed;
-}

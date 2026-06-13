@@ -116,21 +116,6 @@ export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string;
 };
 
 // ---------------------------------------------------------------------------
-// Governance chart/stat card colors (text + bg pairs for bar segments & legends)
-// ---------------------------------------------------------------------------
-
-interface TierColors {
-  text: string;
-  bg: string;
-}
-
-export const GOVERNANCE_TIER_COLORS: Record<GovernanceType, TierColors> = {
-  centralized: { text: "text-yellow-700 dark:text-yellow-400", bg: "bg-yellow-500" },
-  "centralized-dependent": { text: "text-orange-700 dark:text-orange-400", bg: "bg-orange-500" },
-  decentralized: { text: "text-green-700 dark:text-green-400", bg: "bg-green-500" },
-};
-
-// ---------------------------------------------------------------------------
 // Blacklist event badge styles
 // ---------------------------------------------------------------------------
 

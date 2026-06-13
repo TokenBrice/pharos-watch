@@ -55,29 +55,23 @@ export interface ScoreRowResult {
 
 type MissingPolicy = "penalty" | "ignore";
 
-const CRITICAL_SIGNALS_BY_PROFILE: Readonly<Record<SelectorProfile, readonly WeightKey[]>> = {
-  treasury: [
+const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
+  treasury: new Set([
     "safetyOverall",
     "resilience",
     "dependencyRisk",
     "pegStabilityHistory",
     "dewsInverted",
-  ],
-  yield: [
+  ]),
+  yield: new Set([
     "pharosYieldScore",
     "yieldVariance",
     "safetyOverall",
     "sourceRiskInverted",
     "pegStabilityLive",
     "liquidity",
-  ],
-  trading: ["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"],
-};
-
-const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
-  treasury: new Set(CRITICAL_SIGNALS_BY_PROFILE.treasury),
-  yield: new Set(CRITICAL_SIGNALS_BY_PROFILE.yield),
-  trading: new Set(CRITICAL_SIGNALS_BY_PROFILE.trading),
+  ]),
+  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"]),
 };
 
 function rawValueFor(

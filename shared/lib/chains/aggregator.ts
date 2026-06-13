@@ -107,10 +107,16 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   }
 
   // Phase 2: compute summaries
-  const chainAttributedTotalUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.totalUsd, 0);
-  const chainPrevDayUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevDay, 0);
-  const chainPrevWeekUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevWeek, 0);
-  const chainPrevMonthUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevMonth, 0);
+  let chainAttributedTotalUsd = 0;
+  let chainPrevDayUsd = 0;
+  let chainPrevWeekUsd = 0;
+  let chainPrevMonthUsd = 0;
+  for (const a of accumulators.values()) {
+    chainAttributedTotalUsd += a.totalUsd;
+    chainPrevDayUsd += a.prevDay;
+    chainPrevWeekUsd += a.prevWeek;
+    chainPrevMonthUsd += a.prevMonth;
+  }
   const useAggregateSupply = hasAggregateSupply && aggregateTotalUsd > 0;
   const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : chainAttributedTotalUsd;
   const globalPrevDayUsd = useAggregateSupply ? aggregatePrevDayUsd : chainPrevDayUsd;

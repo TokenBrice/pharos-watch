@@ -521,21 +521,22 @@ function stablecoinRouteSearchText(coin: StablecoinMeta): string {
   return pieces.join("\n");
 }
 
+const BRIDGE_ROUTE_RISK_TIER_RANK: Record<BridgeRouteRiskTier, number> = {
+  "single-chain-or-native": 100,
+  "issuer-native-burn-mint": 90,
+  "canonical-rollup-bridge": 85,
+  "issuer-native-lock-mint": 80,
+  "external-validated-network": 65,
+  "liquidity-or-intent-route": 55,
+  "external-lock-mint": 40,
+  "opaque-or-unknown": 20,
+};
+
 function weakestSuggestedBridgeTier(protocols: readonly L2BeatInteropProtocolSnapshot[]): BridgeRouteRiskTier | null {
-  const ordered: Record<BridgeRouteRiskTier, number> = {
-    "single-chain-or-native": 100,
-    "issuer-native-burn-mint": 90,
-    "canonical-rollup-bridge": 85,
-    "issuer-native-lock-mint": 80,
-    "external-validated-network": 65,
-    "liquidity-or-intent-route": 55,
-    "external-lock-mint": 40,
-    "opaque-or-unknown": 20,
-  };
   let weakest: BridgeRouteRiskTier | null = null;
   for (const protocol of protocols) {
     const tier = suggestBridgeRouteRiskTierFromL2BeatProtocol(protocol);
-    if (!weakest || ordered[tier] < ordered[weakest]) weakest = tier;
+    if (!weakest || BRIDGE_ROUTE_RISK_TIER_RANK[tier] < BRIDGE_ROUTE_RISK_TIER_RANK[weakest]) weakest = tier;
   }
   return weakest;
 }

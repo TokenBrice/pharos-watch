@@ -14,7 +14,6 @@ export {
   WEIGHT_VECTORS,
   assertWeightsSumTo100,
   getWeightVectorForInput,
-  redistributeWeights,
 } from "./weights";
 export { whyKeysByProfile, WHY_KEYS, WHY_KEYS_SET } from "./why-keys";
 export {
@@ -62,7 +61,6 @@ export {
   canonicalizeForDatasetHash,
   canonicalizeForSid,
 } from "./canonicalize";
-export { sha256Hex } from "../sha256";
 export {
   SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
   SELECTOR_SNAPSHOT_SID_PATTERN,

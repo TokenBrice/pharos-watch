@@ -315,7 +315,7 @@ function buildRecommendationPhase(
   for (let i = 0; i < ranked.length; i += 1) {
     const entry = ranked[i]!;
     if (recommended.length >= 3) {
-      continue;
+      break;
     }
     const rank = (recommended.length + 1) as 1 | 2 | 3;
     const rec = buildRecommendation(

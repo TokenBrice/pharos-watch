@@ -1,14 +1,8 @@
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import type { DdrAssessmentCheckpoint } from "@shared/types/depeg-resolver";
 import { batchExecute } from "./db";
 
-export type DdrAssessmentCheckpoint =
-  | "first"
-  | "age_1h"
-  | "age_6h"
-  | "age_24h"
-  | "age_7d"
-  | "latest"
-  | "public_prediction";
+export type { DdrAssessmentCheckpoint };
 
 const AGE_CHECKPOINTS: Array<{ checkpoint: DdrAssessmentCheckpoint; minAgeSec: number }> = [
   { checkpoint: "age_1h", minAgeSec: 3600 },

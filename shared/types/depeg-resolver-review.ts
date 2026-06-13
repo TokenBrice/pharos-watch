@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  DDR_ASSESSMENT_CHECKPOINT_VALUES,
   DDR_CELL_STATE_VALUES,
   DDR_HORIZON_VALUES,
   DDR_RESOLUTION_TIER_VALUES,
@@ -23,15 +24,9 @@ export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
 export const DDRR_PUBLIC_WARNING =
   "Reviews compare frozen DDR predictions Pharos published with later Pharos event data. Coverage rows are not scored as predictions.";
 
-export const DDRR_CHECKPOINT_VALUES = [
-  "first",
-  "age_1h",
-  "age_6h",
-  "age_24h",
-  "age_7d",
-  "latest",
-  "public_prediction",
-] as const;
+// DDRR and DDR checkpoints are semantically distinct domains (review vs.
+// assessment) but currently share the same 7-member tuple.
+export const DDRR_CHECKPOINT_VALUES = DDR_ASSESSMENT_CHECKPOINT_VALUES;
 export type DdrrCheckpoint = (typeof DDRR_CHECKPOINT_VALUES)[number];
 
 export const DDRR_SOURCE_EVENT_STATE_VALUES = [
