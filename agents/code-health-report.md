@@ -160,6 +160,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: verified IIFE; demoted medium->low. Checks: `npm run check:lint`, `npm run check:types`.
 
 **`sd-2` — Duplicate chain-meta lookup and copy-icon markup in ContractDetailRow vs ContractLabeledRow** `[duplication | low | small | low]`
+- Status: Closed 2026-06-13. Added a plain `deriveContractInfo(contract)` helper for chain metadata, chain display name, and explorer URL derivation while leaving the intentionally different button shells inline.
 - Problem: `ContractDetailRow` (521-527) and `ContractLabeledRow` (588-594) each compute `CHAIN_META[contract.chain]`, `chainName`, and the identical `buildExplorerUrl(...)` — character-for-character. Copy/Check icon-toggle markup repeats at 552-557 and 627-632, but the buttons differ in icon size (h-4 vs h-3.5), container classes, and the mobile variant's extra wrapper span. Only the inner Copy/Check pair + pharos-copy-ring is truly shared.
 - Recommendation: extract a PLAIN function `deriveContractInfo(contract)` (NOT a hook — the "useDerivedContractInfo" framing is wrong and would trip rules-of-hooks lint). Optionally `CopyCheckIcons({ copied, size })` with a static-string size prop from a fixed map. Keep the differing button shells inline.
 - Files: `src/components/key-info-card.tsx:521-527,552-557,588-594,627-632`.

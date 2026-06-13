@@ -518,13 +518,7 @@ function ContractDetailRow({
   label?: string;
   onCopy: (chain: string, address: string) => void;
 }) {
-  const chain = CHAIN_META[contract.chain];
-  const chainName = chain?.name ?? contract.chain;
-  const explorerUrl = buildExplorerUrl({
-    chainKey: contract.chain,
-    entityType: "contract",
-    value: contract.address,
-  });
+  const { chain, chainName, explorerUrl } = deriveContractInfo(contract);
 
   return (
     <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
@@ -585,13 +579,7 @@ function ContractLabeledRow({
   copied: boolean;
   onCopy: (chain: string, address: string) => void;
 }) {
-  const chain = CHAIN_META[contract.chain];
-  const chainName = chain?.name ?? contract.chain;
-  const explorerUrl = buildExplorerUrl({
-    chainKey: contract.chain,
-    entityType: "contract",
-    value: contract.address,
-  });
+  const { chain, chainName, explorerUrl } = deriveContractInfo(contract);
 
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-background/40 py-1 pl-2.5 pr-1">
@@ -645,6 +633,18 @@ function ContractLabeledRow({
       ) : null}
     </div>
   );
+}
+
+function deriveContractInfo(contract: ContractDeployment) {
+  const chain = CHAIN_META[contract.chain];
+  const chainName = chain?.name ?? contract.chain;
+  const explorerUrl = buildExplorerUrl({
+    chainKey: contract.chain,
+    entityType: "contract",
+    value: contract.address,
+  });
+
+  return { chain, chainName, explorerUrl };
 }
 
 function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]): string | null {
