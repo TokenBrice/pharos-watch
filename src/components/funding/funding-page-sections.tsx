@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
+import { clampScore } from "@shared/lib/math";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
@@ -55,7 +56,7 @@ export interface FundingKpiRowProps {
 
 export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }: FundingKpiRowProps) {
   const rawCoveragePct = monthlyTargetUsd > 0 ? (summary.currentMonthCommunityUsd / monthlyTargetUsd) * 100 : 0;
-  const progressPct = Math.max(0, Math.min(100, rawCoveragePct));
+  const progressPct = clampScore(rawCoveragePct);
   const ariaCoveragePct = Math.round(progressPct);
   const coveragePctLabel = formatCoveragePct(summary.currentMonthCommunityUsd, monthlyTargetUsd);
   const ariaCoverageText =

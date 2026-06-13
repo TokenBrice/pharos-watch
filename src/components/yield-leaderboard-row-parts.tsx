@@ -17,6 +17,7 @@ import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import { clampScore } from "@shared/lib/math";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
@@ -45,7 +46,7 @@ type AvailableYieldSource = {
 function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number; max: number }) {
   const span = Math.max(0, max - min);
   // WHY: zero-width spans collapse the dot onto the bar's left edge; bias to centered.
-  const position = span === 0 ? 50 : Math.max(0, Math.min(100, ((apy30d - min) / span) * 100));
+  const position = span === 0 ? 50 : clampScore(((apy30d - min) / span) * 100);
   return (
     <div
       className="relative inline-flex h-4 w-14 items-center"

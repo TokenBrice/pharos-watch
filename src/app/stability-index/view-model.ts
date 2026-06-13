@@ -1,4 +1,5 @@
 import { formatScore } from "@shared/lib/format";
+import { clampScore } from "@shared/lib/math";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import type { PsiChartPoint } from "@shared/lib/psi-view-model";
 import type { StabilityContributor } from "@/hooks/api-hooks";
@@ -72,7 +73,7 @@ const PSI_BEAM_DIMMER_DETAIL: Record<PsiBeamDimmerKey, { label: string; max: num
 
 function clampPct(value: number, max: number): number {
   if (max <= 0) return 0;
-  return Math.max(0, Math.min(100, (value / max) * 100));
+  return clampScore((value / max) * 100);
 }
 
 export function buildPsiComponentData(

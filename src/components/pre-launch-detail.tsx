@@ -10,6 +10,7 @@ import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
 import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { clampScore } from "@shared/lib/math";
 import {
   LAUNCH_PHASE_LABELS,
   PHASE_BADGE,
@@ -95,7 +96,7 @@ function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: str
 
   const totalMs = end.getTime() - start.getTime();
   const elapsedMs = now.getTime() - start.getTime();
-  const pct = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
+  const pct = clampScore((elapsedMs / totalMs) * 100);
 
   // ARIA values for accessibility
   const ariaValueNow = Math.round(pct);

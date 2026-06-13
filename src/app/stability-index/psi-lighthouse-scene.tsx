@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
+import { clampScore } from "@shared/lib/math";
 import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
 import "./psi-lighthouse-scene.css";
 
@@ -31,7 +32,7 @@ const BEAM_Y = BRAZIER_BOTTOM - 5; // 41
 const HALO_CY = BRAZIER_BOTTOM - 9; // 37
 
 function scoreDynamics(score: number) {
-  const clamped = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
+  const clamped = clampScore(Number.isFinite(score) ? score : 0);
   const t = clamped / 100;
   return {
     reach: 0.4 + 0.6 * t,

@@ -7,6 +7,7 @@ import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { clampScore } from "@shared/lib/math";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
@@ -66,7 +67,7 @@ function formatCapacityUsage(activeWatchers: number): string {
 }
 
 function capacityUsagePercent(activeWatchers: number): number {
-  return Math.max(0, Math.min(100, Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100)));
+  return clampScore(Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100));
 }
 
 function formatShare(value: number, total: number): string {

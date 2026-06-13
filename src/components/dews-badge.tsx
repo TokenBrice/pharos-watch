@@ -2,6 +2,7 @@
 
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { THREAT_BAND_HEX } from "@/lib/chart-colors";
+import { clampScore } from "@shared/lib/math";
 import type { ThreatBand } from "@shared/lib/classification";
 import { ScoreBadgeWrapper, type ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
 import { getTopDewsContributors } from "@/lib/dews-signal-utils";
@@ -42,9 +43,8 @@ export function DewsBandStrip({
   className,
   ariaLabel,
 }: DewsBandStripProps) {
-  const clamp = (n: number) => Math.max(0, Math.min(100, n));
-  const scoreX = (clamp(score) / 100) * width;
-  const prevX = prevScore !== undefined ? (clamp(prevScore) / 100) * width : null;
+  const scoreX = (clampScore(score) / 100) * width;
+  const prevX = prevScore !== undefined ? (clampScore(prevScore) / 100) * width : null;
   const railY1 = height * 0.22;
   const railY2 = height * 0.78;
   const computedAria =

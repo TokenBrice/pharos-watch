@@ -12,6 +12,7 @@ import { compareDepegTrackerRows, type DepegTableSortKey } from "@/components/de
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { cn } from "@/lib/utils";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
+import { clampScore } from "@shared/lib/math";
 import type { PegSummaryStats } from "@shared/types";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/classification";
@@ -54,7 +55,7 @@ const METRIC_HELP = {
 };
 
 function clampPercent(value: number): number {
-  return Math.max(0, Math.min(100, value));
+  return clampScore(value);
 }
 
 function statusLabel(row: DepegTrackerRow): string {
