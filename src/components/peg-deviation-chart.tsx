@@ -6,7 +6,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
   AnnotationDensityStrip,
@@ -267,7 +267,7 @@ export function PegDeviationChart({
     return null;
   }
 
-  const chartHeightClass = "h-[250px] sm:h-[350px]";
+  const chartHeightClass = CHART_HEIGHT;
 
   // Available plot-area width inside the chart's left axis + right margin.
   // Used by the density strip so its bars share the x-pixel domain.

@@ -135,7 +135,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fviz-4` — CHART_HEIGHT re-declared or hard-coded across chart files** `[consistency | low | trivial | none]`
 - Problem: chart-colors.ts exports `CHART_HEIGHT = 'h-[250px] sm:h-[350px]'`. mcap-chart hardcodes the literal twice (186, 267); cemetery-charts (41) and peg-deviation-chart (270) re-declare local consts; psi-history-chart (104) hardcodes it conditionally. flow-chart already imports the shared constant. psi-history-chart's non-header branch uses a DIFFERENT value (`h-[250px] sm:h-[336px]`).
-- Recommendation: import `CHART_HEIGHT` in mcap-chart, cemetery-charts, peg-deviation-chart where the value is exactly `h-[250px] sm:h-[350px]`. Do NOT touch psi-history-chart's `sm:h-[336px]` branch (deliberate divergent height).
+- Done 2026-06-13: imported `CHART_HEIGHT` in mcap-chart, cemetery-charts, and peg-deviation-chart for the exact `h-[250px] sm:h-[350px]` sites. Left psi-history-chart's deliberate `sm:h-[336px]` branch untouched.
 - Files: `src/components/mcap-chart.tsx:186,267`, `src/components/cemetery-charts.tsx:41`, `src/components/psi-history-chart.tsx:104`, `src/components/peg-deviation-chart.tsx:270`, `src/lib/chart-colors.ts:43`.
 - Verifier: corrected scope; severity/effort/risk confirmed. Checks: `npm run typecheck`, `npm run lint`.
 
@@ -207,13 +207,13 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fe-4` — Source-link list rendering duplicated between OracleRiskPanel and BridgeRouteRiskPanel** `[duplication | low | trivial | none]`
 - Problem: both panels end with an identical `sourceLinks.map()` rendering an anchor with the same className, `rel='noreferrer'`, `target='_blank'`, `key=source.url`. Byte-identical; both locals are even named `sourceLinks`.
-- Recommendation: extract module-private `RiskSourceLinks({ links })` and replace both blocks. Pure render extraction; classes stay static.
+- Done 2026-06-13: extracted module-private `RiskSourceLinks({ links })` and replaced both byte-identical source-link blocks without changing the static class string.
 - Files: `src/components/report-card.tsx:128-142,181-195`.
 - Verifier: byte-identical confirmed. Checks: `npm run typecheck`, `npm run lint`.
 
 **`fe-5` — Dead props yieldRankings and mintBurnFlows on StablecoinVirtualRowProps** `[dead-code | low | trivial | none]`
 - Problem: `StablecoinVirtualRowProps` declares `yieldRankings?` and `mintBurnFlows?`; the body destructures both into `_yieldRankings`/`_mintBurnFlows` (underscore = lint-tolerated). The sole call site never passes either. The `YieldRanking`/`MintBurnCoinFlow` type imports are used ONLY by these props.
-- Recommendation: remove the two prop declarations (51-52), the two destructured params (104-105), and the orphaned type imports (20-21).
+- Done 2026-06-13: removed the two unused prop declarations, their destructured placeholders, and the orphaned type imports.
 - Files: `src/components/stablecoin-table-row.tsx:20-21,51-52,104-105`.
 - Verifier: confirmed via Read of the call site (576-597) and grep. Checks: `npm run typecheck`, `npm run lint`.
 
@@ -225,7 +225,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fe-7` — isNestedInteractiveTarget recreated on every render of the virtualized row** `[performance | low | trivial | none]`
 - Problem: `isNestedInteractiveTarget` is declared inside `StablecoinVirtualRowBase`, closes over nothing, called once (155), reallocated every render of a frequently-rendered virtual row.
-- Recommendation: hoist to module scope. Pure move, no behavior change.
+- Done 2026-06-13: hoisted `isNestedInteractiveTarget` to module scope with the same logic and call site.
 - Files: `src/components/stablecoin-table-row.tsx:136-143`.
 - Verifier: confirmed no props/state refs, invoked once. Checks: `npm run typecheck`, `npm run lint`.
 

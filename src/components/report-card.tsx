@@ -49,6 +49,9 @@ type OracleRiskDisplay = NonNullable<ReportCardType["oracleRisk"]>;
 type OracleRiskConfidence = NonNullable<OracleRiskDisplay["confidence"]>;
 type BridgeRouteRiskDisplay = NonNullable<ReportCardType["bridgeRouteRisk"]>;
 type BridgeRouteRiskConfidence = NonNullable<BridgeRouteRiskDisplay["confidence"]>;
+type RiskSourceLink =
+  | NonNullable<OracleRiskDisplay["sources"]>[number]
+  | NonNullable<BridgeRouteRiskDisplay["sources"]>[number];
 
 const ORACLE_RISK_CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
   verified: "Verified",
@@ -63,6 +66,26 @@ const BRIDGE_ROUTE_RISK_CONFIDENCE_LABELS: Record<BridgeRouteRiskConfidence, str
   "manual-review": "Manual review",
   unknown: "Unknown",
 };
+
+function RiskSourceLinks({ links }: { links: readonly RiskSourceLink[] }) {
+  if (links.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
+      {links.map((source) => (
+        <a
+          key={source.url}
+          href={source.url}
+          target="_blank"
+          rel="noreferrer"
+          className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+        >
+          {source.label}
+        </a>
+      ))}
+    </div>
+  );
+}
 
 function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
   const sourceLinks = risk.sources ?? [];
@@ -125,21 +148,7 @@ function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
           ))}
         </div>
       ) : null}
-      {sourceLinks.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
-          {sourceLinks.map((source) => (
-            <a
-              key={source.url}
-              href={source.url}
-              target="_blank"
-              rel="noreferrer"
-              className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              {source.label}
-            </a>
-          ))}
-        </div>
-      ) : null}
+      <RiskSourceLinks links={sourceLinks} />
     </div>
   );
 }
@@ -178,21 +187,7 @@ function BridgeRouteRiskPanel({ risk }: { risk: BridgeRouteRiskDisplay }) {
           ))}
         </div>
       ) : null}
-      {sourceLinks.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
-          {sourceLinks.map((source) => (
-            <a
-              key={source.url}
-              href={source.url}
-              target="_blank"
-              rel="noreferrer"
-              className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              {source.label}
-            </a>
-          ))}
-        </div>
-      ) : null}
+      <RiskSourceLinks links={sourceLinks} />
     </div>
   );
 }

@@ -22,7 +22,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
-import { CHART_RED, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
@@ -38,8 +38,6 @@ function ChartTooltip({ active, children }: { active?: boolean; children: ReactN
   );
 }
 
-const CEMETERY_CHART_HEIGHT = "h-[250px] sm:h-[350px]";
-
 function CemeteryChartCard({ title, ariaLabel, children }: { title: string; ariaLabel?: string; children: ReactNode }) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -49,7 +47,7 @@ function CemeteryChartCard({ title, ariaLabel, children }: { title: string; aria
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={CEMETERY_CHART_HEIGHT} role={ariaLabel ? "figure" : undefined} aria-label={ariaLabel}>
+        <div className={CHART_HEIGHT} role={ariaLabel ? "figure" : undefined} aria-label={ariaLabel}>
           {children}
         </div>
       </CardContent>
@@ -458,7 +456,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
       </CardHeader>
       <CardContent>
         <div
-          className={CEMETERY_CHART_HEIGHT}
+          className={CHART_HEIGHT}
           role="figure"
           aria-label="Cumulative peak value destroyed over time"
         >

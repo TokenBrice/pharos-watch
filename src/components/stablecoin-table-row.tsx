@@ -17,8 +17,6 @@ import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
-import type { YieldRanking } from "@shared/types/yield";
-import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { confidenceClass } from "@/lib/confidence";
@@ -48,8 +46,6 @@ interface StablecoinVirtualRowProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
-  yieldRankings?: Map<string, YieldRanking>;
-  mintBurnFlows?: Map<string, MintBurnCoinFlow>;
   showPinnedControl?: boolean;
   isPinned?: boolean;
   onTogglePinned?: (coinId: string) => void;
@@ -88,6 +84,15 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
+function isNestedInteractiveTarget(
+  target: EventTarget | null,
+  currentTarget: EventTarget | null,
+): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const interactiveAncestor = target.closest("a,button,input,select,textarea,[role=\"button\"],[role=\"link\"]");
+  return interactiveAncestor != null && interactiveAncestor !== currentTarget;
+}
+
 function StablecoinVirtualRowBase({
   coin,
   rank,
@@ -101,8 +106,6 @@ function StablecoinVirtualRowBase({
   pegScores,
   dexLiquidity,
   reportCards,
-  yieldRankings: _yieldRankings,
-  mintBurnFlows: _mintBurnFlows,
   showPinnedControl = false,
   isPinned = false,
   onTogglePinned,
@@ -132,15 +135,6 @@ function StablecoinVirtualRowBase({
     riskLevel === "poor" ? "pharos-row-risk-poor" :
     riskLevel === "warning" ? "pharos-row-risk-warning" : "";
   const isCompactDensity = density === "list" || density === "compact";
-
-  function isNestedInteractiveTarget(
-    target: EventTarget | null,
-    currentTarget: EventTarget | null,
-  ): boolean {
-    if (!(target instanceof HTMLElement)) return false;
-    const interactiveAncestor = target.closest("a,button,input,select,textarea,[role=\"button\"],[role=\"link\"]");
-    return interactiveAncestor != null && interactiveAncestor !== currentTarget;
-  }
 
   return (
     <TableRow

@@ -8,7 +8,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
 import { formatCurrency } from "@shared/lib/format";
-import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
@@ -183,7 +183,7 @@ export function McapChart({
 
   const chartBody =
     visibleData.length > 0 ? (
-      <div className="relative h-[250px] sm:h-[350px]">
+      <div className={`relative ${CHART_HEIGHT}`}>
         <div
           ref={chartContainerRef}
           className="h-full"
@@ -264,7 +264,7 @@ export function McapChart({
         ) : null}
       </div>
     ) : (
-      <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
+      <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
         No market cap data available
       </div>
     );
