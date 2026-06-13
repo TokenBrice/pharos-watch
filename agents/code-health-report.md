@@ -534,7 +534,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`api-5` — statusImpact computed via hardcoded job-name comparison in CRON_JOB_DEFINITIONS map()** `[maintainability | low | small | low]`
 - Problem: `statusImpact` is resolved by comparing `definition.job` against 4 literals inside the `.map()`. Adding a critical job means editing the map, not the definition.
-- Recommendation: add optional `statusImpact?: CronStatusImpact` to `CronJobDefinitionInput`, set `statusImpact: "critical"` inline on the 4 critical job objects, and change the map to `definition.statusImpact ?? "watch"`. Declaration-site, byte-identical. Not a frozen-invariant surface.
+- Done 2026-06-13: added optional `statusImpact` to `CronJobDefinitionInput`, declared the four critical jobs inline, and changed the map default to `definition.statusImpact ?? "watch"`.
 - Files: `shared/lib/cron-jobs.ts:549-563`.
 - Verifier: 4-literal comparison + type confirmed; not in check-frozen-invariants; demoted medium->low. Checks: `npm run typecheck`, `npm test -- cron`, `npm run check:cron-connections`, `npm run check:cron-sync`.
 

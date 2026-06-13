@@ -117,6 +117,7 @@ export interface CronConnectionBudgetMeta extends CronConnectionBudgetDefinition
 
 type CronJobDefinitionInput = Omit<CronJobDefinition, "intervalSec"> & {
   intervalSec?: number;
+  statusImpact?: CronStatusImpact;
 };
 
 export const CRON_GROUPS: readonly CronGroupDefinition[] = [
@@ -174,6 +175,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    statusImpact: "critical",
     maxConnections: 4, // Intake overlaps one DL fetch with serialized supplemental families; primary price providers are capped at 4.
     connectionGroup: "quarter-hourly-chain",
   },
@@ -193,6 +195,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 1800, // Trigger fires every 15 min alongside sync-stablecoins, but internal cooldown gates actual writes to every 30 min.
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    statusImpact: "critical",
     maxConnections: 3, // Secondary FX races three mirrors; metals run at <=2 and overlays are sequential.
     connectionGroup: "quarter-hourly-chain",
   },
@@ -283,6 +286,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "sixHourlyBlacklist",
     triggerMode: "isolated",
+    statusImpact: "critical",
     maxConnections: 1, // Rate-limited sequential Etherscan/TronGrid/RPC calls
   },
   {
@@ -291,6 +295,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyMintBurnCritical",
     triggerMode: "isolated",
+    statusImpact: "critical",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
   },
   {
@@ -552,13 +557,7 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
     ...definition,
     intervalSec,
     schedule: CRON_SCHEDULES[definition.scheduleKey],
-    statusImpact:
-      definition.job === "sync-stablecoins" ||
-      definition.job === "sync-fx-rates" ||
-      definition.job === "sync-blacklist" ||
-      definition.job === "sync-mint-burn"
-        ? "critical"
-        : "watch",
+    statusImpact: definition.statusImpact ?? "watch",
   };
 });
 
