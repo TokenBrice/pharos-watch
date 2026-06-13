@@ -375,7 +375,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`frontend-11` — changelogs index.ts manually lists entries; no completeness validation** `[maintainability | low | small | low]`
 - Problem: every new changelog file must be hand-imported and pushed into the array. `index.test.ts` checks only ordering/fields, not that all date files are registered — a forgotten registration silently omits an entry.
-- Recommendation: add a completeness test reading the directory's `YYYY-MM-DD.ts` files and asserting `changelogs.length` equals the count. Keep the static barrel for the static-export build.
+- Done 2026-06-13: added a completeness test that reads the changelog directory's `YYYY-MM-DD.ts` files and asserts `changelogs.length` equals the count. The static barrel remains unchanged for the static-export build.
 - Files: `src/data/changelogs/index.ts:1-35`.
 - Verifier: 13 files -> 13 entries today; drift risk real; a test is the build-safe mitigation. Checks: `npm run test:merge-gate`.
 
