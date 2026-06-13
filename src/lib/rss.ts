@@ -31,6 +31,10 @@ export interface RssFeed {
   items: RssItem[];
 }
 
+type RssResponseFeed = Omit<RssFeed, "lastBuildDate"> & {
+  lastBuildDate?: string;
+};
+
 /** Escape characters that have special meaning in XML element text/attributes. */
 export function escapeXml(value: string): string {
   return value
@@ -83,4 +87,17 @@ export function renderRss20(feed: RssFeed): string {
   const footer = ["  </channel>", "</rss>", ""];
   const items = feed.items.map(renderItem);
   return [...header, ...items, ...footer].join("\n");
+}
+
+export function rssResponse(feed: RssResponseFeed): Response {
+  const xml = renderRss20({
+    ...feed,
+    lastBuildDate: feed.lastBuildDate ?? feed.items[0]?.pubDate ?? toRfc822(new Date()),
+  });
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/rss+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
 }

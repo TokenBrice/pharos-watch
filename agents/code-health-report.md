@@ -250,7 +250,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-feed-1` — RSS response boilerplate duplicated verbatim in all 4 feed routes** `[duplication | low | small | low]`
 - Problem: each of the 4 GET handlers repeats the identical tail — `lastBuildDate = items[0]?.pubDate ?? toRfc822(new Date())`, `renderRss20`, and a Response with the exact same `Content-Type: application/rss+xml; charset=utf-8` and `Cache-Control: public, max-age=3600`. The real shared block is the whole GET tail, not just the Response literal.
-- Recommendation: add `rssResponse(feed)` (or `makeRssFeedResponse(feed)`) to `src/lib/rss.ts` owning the lastBuildDate fallback + the two fixed headers. Each route builds its feed object and returns `rssResponse(...)`.
+- Done 2026-06-13: added `rssResponse(feed)` to `src/lib/rss.ts`; it owns the lastBuildDate fallback and fixed RSS headers. The four feed routes now build the feed object and return `rssResponse(...)`.
 - Files: `src/app/feed/cemetery/route.ts:42-61`, `src/app/feed/depeg/route.ts:66-85`, `src/app/feed/digest/route.ts:34-53`, `src/app/feed/methodology/route.ts:141-160`, `src/lib/rss.ts`.
 - Verifier: boilerplate confirmed identical; corrected the cited line ranges. Checks: `npm run lint`, `npm run typecheck`, `npm test -- feed`.
 

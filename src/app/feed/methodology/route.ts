@@ -1,4 +1,4 @@
-import { escapeXml, renderRss20, toRfc822, type RssItem } from "@/lib/rss";
+import { escapeXml, rssResponse, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
@@ -140,21 +140,13 @@ function methodologyItems(): RssItem[] {
 
 export async function GET(): Promise<Response> {
   const items = methodologyItems();
-  const lastBuildDate = items[0]?.pubDate ?? toRfc822(new Date());
-  const xml = renderRss20({
+  return rssResponse({
     title: "Pharos Methodology Changelog",
     link: `${SITE_URL}/methodology/`,
     feedUrl: `${SITE_URL}${FEED_PATH}`,
     description:
       "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
     language: "en-US",
-    lastBuildDate,
     items,
-  });
-  return new Response(xml, {
-    headers: {
-      "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
-    },
   });
 }

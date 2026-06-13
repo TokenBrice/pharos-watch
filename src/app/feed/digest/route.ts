@@ -1,5 +1,5 @@
 import digests from "../../../../data/digests.json";
-import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
+import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const dynamic = "force-static";
@@ -33,21 +33,13 @@ function digestItems(entries: readonly DigestEntry[]): RssItem[] {
 
 export async function GET(): Promise<Response> {
   const items = digestItems(digests as DigestEntry[]);
-  const lastBuildDate = items[0]?.pubDate ?? toRfc822(new Date());
-  const xml = renderRss20({
+  return rssResponse({
     title: "Pharos Digest",
     link: `${SITE_URL}/digest/`,
     feedUrl: `${SITE_URL}${FEED_PATH}`,
     description:
       "Daily and weekly digests from pharos.watch — stablecoin market signals, PSI moves, depeg flags, and yield anomalies.",
     language: "en-US",
-    lastBuildDate,
     items,
-  });
-  return new Response(xml, {
-    headers: {
-      "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
-    },
   });
 }
