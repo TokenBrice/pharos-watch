@@ -172,6 +172,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: verified both sites; sharpened the reportCard intersection requirement. Checks: `npm run check:types`.
 
 **`sd-5` — Duplicate scoring-breakdown details/summary markup across MintAuthoritySection and RedemptionBackstopCard** `[duplication | low | small | none]`
+- Status: Closed 2026-06-13. Added `ScoringBreakdownDisclosure` for the shared details/summary shell and left each card's unique breakdown body inline as children.
 - Problem: character-for-character identical `<details className="group">` + `<summary class="...">` with the same dashed-underline "Scoring breakdown" label and `<ChevronDown ... group-open:rotate-180>`. Only the inner `<div>` body diverges.
 - Recommendation: extract `ScoringBreakdownDisclosure({ children })` rendering the `<details>`/`<summary>` shell with the static class string and ChevronDown, taking the breakdown grid as `children`.
 - Files: `src/components/stablecoin-detail/mint-authority-section.tsx:96-100`, `src/components/stablecoin-detail/redemption-backstop-card.tsx:162-166`.
