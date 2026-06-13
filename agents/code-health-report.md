@@ -872,6 +872,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`pc-2` — BENCHMARK_PROVIDER_ORDER and BENCHMARK_DEGRADATION_ORDER diverge in AUD position without a comment** `[maintainability | low | trivial | none]`
 - Problem: `BENCHMARK_PROVIDER_ORDER` lists AUD at index 5; `BENCHMARK_DEGRADATION_ORDER` lists AUD at index 7. Both contain the same 11 keys; only AUD's position differs. No comment explains the deliberate difference.
+- Done 2026-06-13: documented that degradation reporting intentionally keeps AUD below MXN/BRL while fetch order queries AUD earlier.
 - Recommendation: add a one-line comment above `BENCHMARK_DEGRADATION_ORDER` noting it intentionally differs only in AUD's rank (the two serve fetch-order vs reporting/degradation priority). Do NOT derive one from the other. Confirm the AUD rationale before asserting it.
 - Files: `worker/src/cron/fetch-tbill-rate.ts:1021-1047`.
 - Verifier: both arrays + AUD divergence verified (index 5 vs 7, not 5 vs 8); comment-only fix safe; rationale should be confirmed.

@@ -1035,6 +1035,7 @@ const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
   "TRY",
 ] as const;
 
+// Degradation reporting keeps AUD below MXN/BRL even though fetch order queries AUD earlier.
 const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
   "USD_EFFR",
   "EUR",
