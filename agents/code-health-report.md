@@ -975,6 +975,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: reproduced TS7053; found the pre-existing exported const; the candidate's rec would break the build. Checks: `typecheck:worker`.
 
 **`w-recap-2` — buildWeeklyRiskLeaderboard sort priority lacks a direct unit test** `[test-gap | low | small | low]`
+- Done 2026-06-13: added an integration-style weekly recap fixture that inspects the generated prompt and locks the leaderboard order: unsuppressed signals before suppressed ones, critical depegs before higher-severity non-critical depegs, and suppressed rows retaining their suppression reason.
 - Problem: the leaderboard sort (suppression last > critical first > severityScore desc > impactScore desc) decides the P1 lead. `buildWeeklyRiskLeaderboard` is not exported and is exercised only through integration tests. One test covers the critical-lead branch indirectly; the suppression-last tiebreak and severity-vs-impact ordering are not directly asserted.
 - Recommendation: optional. Assert ordering via the prompt body in a new `generateWeeklyRecap` fixture (suppressed yield anomaly + non-critical depeg + critical depeg), matching the existing integration-test style (the function is file-private).
 - Files: `worker/src/cron/weekly-recap.ts:446-452`, `worker/src/cron/__tests__/weekly-recap.test.ts`.

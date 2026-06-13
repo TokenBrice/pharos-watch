@@ -466,6 +466,68 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toContain("Worst depeg by bps");
   });
 
+  it("orders the weekly risk leaderboard by suppression, criticality, severity, then impact", async () => {
+    const rows = buildDailyRows();
+    const baseInput = JSON.parse(rows[2]!.input_data) as Record<string, unknown>;
+    rows[2] = {
+      ...rows[2]!,
+      input_data: JSON.stringify({
+        ...baseInput,
+        activeDepegCount: 3,
+        topDepegs: [
+          {
+            stablecoinId: "critical-small",
+            symbol: "CRIT",
+            bps: -2_500,
+            direction: "below",
+            mcapUsd: 75_000_000,
+            startedAt: rows[2]!.generated_at - 3_600,
+            impactScore: 120,
+          },
+          {
+            stablecoinId: "noncritical-large",
+            symbol: "BIG",
+            bps: -900,
+            direction: "below",
+            mcapUsd: 5_000_000_000,
+            startedAt: rows[2]!.generated_at - 1_800,
+            impactScore: 4_500,
+          },
+          {
+            stablecoinId: "suppressed-critical",
+            symbol: "SUP",
+            bps: -2_500,
+            direction: "below",
+            mcapUsd: 3_000_000_000,
+            startedAt: rows[2]!.generated_at - 900,
+            impactScore: 7_500,
+            suppressReason: "known bad upstream quote",
+          },
+        ],
+      }),
+    };
+    const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    await generateWeeklyRecap(db, "anthropic-key", null);
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    const prompt = body.messages[0].content;
+    const criticalIndex = prompt.indexOf("weekly:depeg:critical-small");
+    const noncriticalIndex = prompt.indexOf("weekly:depeg:noncritical-large");
+    const suppressedIndex = prompt.indexOf("weekly:depeg:suppressed-critical");
+
+    expect(criticalIndex).toBeGreaterThan(-1);
+    expect(noncriticalIndex).toBeGreaterThan(-1);
+    expect(suppressedIndex).toBeGreaterThan(-1);
+    expect(criticalIndex).toBeLessThan(noncriticalIndex);
+    expect(noncriticalIndex).toBeLessThan(suppressedIndex);
+    expect(prompt).toContain("weekly:depeg:suppressed-critical");
+    expect(prompt).toContain("suppress: known bad upstream quote");
+  });
+
   it("normalizes weekly meta lead and tone through the allowlist", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
