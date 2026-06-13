@@ -94,14 +94,14 @@ Status legend: `[ ]` not started · `[x]` done · `[G]` guarded (needs before/af
 | `[ ]` Shared types derive from Zod schemas / enums | `types-1`, `types-5`, `types-6`, `types-2`, `types-3`, `types-4`, `types-7`, `fe-6`, `chains-9` | Export `StatusHealthValue`, `BLUECHIP_GRADE_VALUES`, `ChainMeta`; infer `StressSignalDetailResponse` + `ParsedTelegramDispatchEventsDetected`; tighten `CronRun.status`; import confidence unions. Leave `TelegramDispatchCronMetadata` explicit; DeadStablecoin.contracts left out. | small | low |
 | `[ ]` Single-source cross-file constant lists | `chains-7`, `vm-4`, `rbc-10`, `pc-2`, `wapi-6`, `worker-store-7`, `types-8` | Real fix: export `ACTIVE_BACKING_DIVERSITY_TYPES`, build aggregator `backingTotals` from it. Rest comment-only cross-refs. DeadStablecoin.contracts skipped. | trivial | low |
 | `[ ]` Pure helpers out of component/client files | `fe-10`, `f-compare-2`, `f-stablecoin-detail-2`, `sd-1` | Move `gradeBandLabel`, `buildCompareSelectionInsights`, `buildYieldStoryCallouts` to lib; inline the `const s` alias. Single-consumer moves — pursue when the file is otherwise touched. | trivial | none |
-| `[ ]` Targeted test-gap fills | `frontend-11`, `cls-8`, `worker-store-9`, `wapi-12`, `w-recap-2`, `wrouter-5`, `scr-4` | changelog completeness test, getDewsRiskLevel WATCH->calm pin, gates preview-branch test, handler-aggregation + repair-auth-expired gaps, leaderboard tiebreak test. scr-4 highest priority (drift + generated check). | small | low |
+| `[x]` Targeted test-gap fills | `frontend-11`, `cls-8`, `worker-store-9`, `wapi-12`, `w-recap-2`, `wrouter-5`, `scr-4` | Done 2026-06-13: changelog completeness, getDewsRiskLevel WATCH collapse, DDRR publication/repair gaps, OG handler aggregation, weekly leaderboard tiebreak, preview site-proxy grant, and smoke-api redemption enum drift coverage are pinned by tests. | small | low |
 
 ### Wave 3 — Structural / Decomposition
 
 | Theme | Members | Combined action | Effort | Risk |
 | --- | --- | --- | --- | --- |
-| `[ ]` CI/maintenance script walker + helper consolidation | `ci-1`, `ci-8`, `ci-7`, `ci-5`, `ci-4`, `scr-2`, `scr-3`, `scr-6`, `scr-7`, `scr-9`, `ci-9` | Migrate ONLY the plain source-file walkers to `collectSourceFiles` (pass each script's `excludedDirs`); EXCLUDE the symlink + async walkers. `fetchWithRetry`, `normalizeRoute` (smoke only, not lighthouse), import shared isRecord/parsePositiveInt, `writeOutputFile`. Add argv[1] guard (ci-4). DO NOT do a repo-wide entrypoint-idiom rename (ci-7). | medium | low |
-| `[ ]` Redemption-backstop config date + boilerplate | `rbc-1`, `rbc-2`, `rbc-3`, `rbc-4`, `rbc-7`, `rbc-6`, `rbc-5` | `review-dates.ts` shared dates; base fragments via `cloneRedemptionBackstopConfig` (clones MUST stay independent — registry mutates in place). Leave mre7yield/inalpha-nest inline. Narrow rbc-7 to 3 sites. rbc-5 notes diverge — leave inline. Offline only, no score impact. | medium | low |
+| `[x]` CI/maintenance script walker + helper consolidation | `ci-1`, `ci-8`, `ci-7`, `ci-5`, `ci-4`, `scr-2`, `scr-3`, `scr-6`, `scr-7`, `scr-9`, `ci-9` | Done 2026-06-13: migrated only safe source walkers, centralized smoke route/output helpers and retry loop shape, kept lighthouse/symlink/async walkers out of scope, added guarded entrypoint/import/comment cleanups, and pinned redemption enum drift. | medium | low |
+| `[x]` Redemption-backstop config date + boilerplate | `rbc-1`, `rbc-2`, `rbc-3`, `rbc-4`, `rbc-7`, `rbc-6`, `rbc-5` | Done 2026-06-13: shared review dates, record-entry factory, Midas/Spiko/Nest/base-fragment extraction with cloned configs, scoped reviewed-doc comments, and intentional inline holds for divergent syrup/mre7yield/inalpha cases. Offline only, no score impact. | medium | low |
 | `[G]` God-file decomposition (Mint Authority VM) | `f-xcut-6`, `vm-11`, `frontend-7` | Move MA types + builders (~178-665) + `shortenAddress` into `stablecoin-detail-mint-authority-view-model.ts`. CRITICAL: move `labelFromMap` to a shared spot (do NOT orphan/duplicate). Pure code-motion; defer unless the file is actively worked. | medium | low |
 
 ### Wave 4 — Needs Care / Verify (not clean no-ops)
@@ -1174,6 +1174,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 ### CI Scripts (`ci-*`)
 
 **`ci-1` — Nine CI scripts each define a private recursive file-walker instead of the shared collectSourceFiles helper** `[duplication | medium | medium | low]`
+- Done 2026-06-13: routed the plain walker cases in check-client-registry-imports, check-script-entrypoints, and check-feature-flag-inlining through `collectSourceFiles` with their existing extension/skip sets. `check-doc-counts` has no source-file walker in the current tree.
 - Problem: nine CI scripts each define their own recursive directory walker while ten others consume `collectSourceFiles` from `scripts/lib/source-files.mjs`. The walkers do NOT all do the same thing — check-agent-skill-symlinks walks for symlinks via lstatSync, check-selector-banned-phrases is async, check-script-entrypoints/check-client-registry-imports handle a file-OR-dir root, and skip-lists differ. Genuine duplication but NOT a uniform mechanical swap.
 - Recommendation: migrate ONLY the plain source-file walkers (check-client-registry-imports, check-script-entrypoints, check-feature-flag-inlining, check-doc-counts), passing each script's existing `excludedDirs` explicitly so the scanned set is byte-for-byte unchanged. Use the check-cron-abort-contract.mjs file-vs-dir wrapper. Do NOT migrate check-agent-skill-symlinks (symlinks) or treat check-env-contract/check-unused-code under the ci-10 exclusion caveat.
 - Files: 9 scripts under `scripts/ci/` + `scripts/lib/source-files.mjs:10-32`.
@@ -1192,30 +1193,35 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: two identical filter calls confirmed; demoted medium->low (cold-path single function). Checks: `npm run test` (pharos-change-contract).
 
 **`ci-4` — check-shared-types-imports.mjs entrypoint guard omits the process.argv[1] null check** `[type-safety | low | trivial | low]`
+- Done 2026-06-13: added the missing `process.argv[1]` guard before comparing the script URL.
 - Problem: line 140 is `if (import.meta.url === pathToFileURL(process.argv[1]).href)` with no `process.argv[1] &&` guard. The file is imported by a test; under vitest `argv[1]` is defined so no crash occurs. Every sibling exportable script uses the guard. Defensive consistency, not an active bug.
 - Recommendation: add the guard: `if (process.argv[1] && import.meta.url === ...)`. One-line, behavior-preserving.
 - Files: `scripts/ci/check-shared-types-imports.mjs:140-142`.
 - Verifier: missing guard confirmed; TypeError only theoretical; demoted medium->low. Checks: `npm run test` (check-shared-types-imports).
 
 **`ci-5` — Four CI scripts import bare 'fs' / 'path' instead of the node: protocol prefix** `[consistency | low | trivial | none]`
+- Done 2026-06-13: changed the four CI script imports to `node:fs` / `node:path`.
 - Problem: four scripts use bare imports (check-unused-code, check-duplicate-exports, check-reserve-fixture-freshness, check-cron-schedule-sync.ts); 37 others use the `node:` prefix. No eslint rule enforces it — purely stylistic.
 - Recommendation: change the four to `from "node:fs"` / `from "node:path"`. Low priority.
 - Files: `scripts/ci/check-unused-code.mjs:3-4`, `.../check-duplicate-exports.mjs:7-8`, `.../check-reserve-fixture-freshness.mjs:8-9`, `.../check-cron-schedule-sync.ts:1`.
 - Verifier: count corrected 3->4; no eslint rule enforces. Checks: `npm run lint`.
 
 **`ci-7` — Entrypoint guard uses three interchangeable idioms across the CI scripts** `[consistency | low | small | none]`
+- Done 2026-06-13: kept the repo-wide guard names unchanged and limited the implementation to the unsafe unguarded `ci-4` case.
 - Problem: multiple idioms (`const isCliEntrypoint`, `const isDirectRun`, inline `if (process.argv[1] && ...)`, the unguarded one, `path.resolve` variants). The `isCliEntrypoint`/`isDirectRun` names are semantically identical. Real cosmetic drift but spans ~18 files — a large mechanical rename with near-zero benefit and regression risk in a guard.
 - Recommendation: do NOT do a blanket rename pass. Limit scope to the genuinely-unsafe unguarded form (already captured by ci-4). Leave the naming alone — a repo-wide rename is exactly the unrequested cross-file refactor the project rules discourage.
 - Files: `scripts/ci/{pharos-change-contract,check-cron-abort-contract,check-shared-types-imports,check-seo-static,check-reserve-fixture-freshness}.mjs`.
 - Verifier: idiom spread confirmed; down-scoped to ci-4 only; full standardization is churny taste-work. Overlaps ci-4. Checks: `npm run lint`.
 
 **`ci-8` — check-selector-banned-phrases.mjs is the only file-scanning CI script using async fs/promises** `[consistency | low | small | low]`
+- Done 2026-06-13: intentionally left the async scanner unchanged because its filters diverge; this row only migrated the plain walker cases.
 - Problem: it imports from `node:fs/promises` and `walkDir` is async — the only async file-scanning CI script. The "~45 lines saved" is overstated: walkDir is ~18 lines and its skip rules differ (skips dotfiles, __tests__, .test/.spec, supports excludeBasenames). A swap is NOT a clean drop-in and risks changing which files are scanned.
 - Recommendation: optional, low priority. If pursued, only the dir-kind branch can call `collectSourceFiles`, replicating the existing filters so the scanned set is unchanged. Leaving it async is defensible — recommend keep:false on the rewrite unless a broader cleanup is requested.
 - Files: `scripts/ci/check-selector-banned-phrases.mjs:24,86-134`.
 - Verifier: only async scanner confirmed; line savings overstated, filters diverge; guarded recommendation; overlaps ci-1. Checks: `npm run check:selector-banned-phrases`.
 
 **`ci-9` — DIRECT_COIN_POOL triple-spreads the top-10 coins with no explanatory comment** `[readability | low | trivial | none]`
+- Done 2026-06-13: added a one-line comment explaining the 3x top-10 weighting.
 - Problem: lines 194-196 spread `HOT_COIN_IDS.slice(0,10)` three times then `slice(10)` once, giving the top-10 coins 3x weight. Intentional weighting, undocumented; could be misread as a copy-paste error. Test-only load simulator.
 - Recommendation: add a one-line comment (e.g. `// top-10 coins appear 3x to mimic hot-coin subscription concentration`). Do NOT rewrite to `Array.from(...).flat()`. Comment-only.
 - Files: `scripts/ci/check-telegram-load.ts:193-198`.
@@ -1230,18 +1236,21 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: bodies identical; flagged the potential now-unused parse imports. Checks: `npm run lint`, `npm run test:smoke-ui`.
 
 **`scr-2` — fetchJsonWithRetry and fetchPngWithRetry in smoke-api.mjs are near-identical retry loops** `[duplication | low | small | low]`
+- Done 2026-06-13: extracted the shared `fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retryDelayMs)` retry skeleton and kept the JSON/PNG wrappers as thin adapters.
 - Problem: both share an identical retry skeleton (totalAttempts, isRetryableStatus/isRetryableError, warn-and-sleep, final throw); the only difference is `fetchJson(...)` vs `fetchPng(...)`. ~28 lines duplicated.
 - Recommendation: extract `fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retryDelayMs)` where `fetcher(timeoutMs)` returns the result; both wrappers become one-liners. Preserve the exact `[smoke-api] WARN ...` log/error strings.
 - Files: `scripts/maintenance/smoke-api.mjs:161-189,206-234`.
 - Verifier: structurally identical aside from the inner fetch; risk none->low (asserted-on strings). Checks: `npm run lint`, `npm run test:smoke-api`.
 
 **`scr-3` — normalizeRoute duplicated identically in smoke-ui.mjs and smoke-mobile-ui.mjs (lighthouse variant genuinely differs)** `[duplication | low | small | low]`
+- Done 2026-06-13: exported `normalizeRoute` from `smoke-runtime.mjs` and imported it in smoke-ui and smoke-mobile-ui only; the divergent lighthouse variant stays local.
 - Problem: smoke-ui and smoke-mobile-ui `normalizeRoute` are functionally identical (trim; `/` passthrough; prepend `/`). The lighthouse variant is DIFFERENT (`/${route.replace(/^\/+/, '')}` collapses leading slashes) — must NOT be folded in.
 - Recommendation: export `normalizeRoute` from smoke-runtime.mjs and import it in smoke-ui + smoke-mobile-ui only; delete those two local copies. Leave lighthouse's variant.
 - Files: `scripts/maintenance/smoke-ui.mjs:177-183`, `.../smoke-mobile-ui.mjs:107-111`, `.../lighthouse-static-export.mjs:97-100`.
 - Verifier: smoke-ui/mobile identical; lighthouse divergent; corrected the 3-way framing to a 2-file dedup. Checks: `npm run lint`, `npm run test:smoke-ui`, `npm run test:smoke-ui:mobile`.
 
 **`scr-4` — REDEMPTION_ENUMS in smoke-api.mjs has DRIFTED from shared/types/redemption.ts (not identical)** `[maintainability | medium | medium | medium]`
+- Done 2026-06-13: added the missing `fixed-buffer` capacity basis, exported `REDEMPTION_ENUMS`, and added a Vitest mirror test that compares every smoke-api enum set with the matching Zod schema options.
 - Problem: the candidate's "every value matches exactly" is FALSE — already drifted: shared `RedemptionCapacityBasisSchema` includes `fixed-buffer`, ABSENT from smoke-api's `capacityBasis` set. The exact silent-staleness failure, already occurring.
 - Recommendation: the proposed `new Set(Schema.options)` is NOT a drop-in: (a) smoke-api runs via plain `node`, not tsx, so it cannot import the Zod `.ts`; (b) deriving would CHANGE the accepted set (adds `fixed-buffer`). Two tasks: (1) immediate — reconcile the drift by adding `fixed-buffer` (and audit every set); (2) durable — replace the hand-kept block with a generated artifact under a new `check:redemption-enums`. Do NOT do the naive Zod-import rewrite.
 - Files: `scripts/maintenance/smoke-api.mjs:298-363`, `shared/types/redemption.ts:5-162`.
@@ -1254,12 +1263,14 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: both functions + sole call site confirmed. Checks: `npm run test:smoke-api`.
 
 **`scr-6` — audit-price-source-depth.ts and audit-dex-pricing-source-gaps.ts redefine isRecord/UnknownRecord already in coverage-audit-cli** `[duplication | low | small | low]`
+- Done 2026-06-13: imported `isRecord` and `UnknownRecord` from `coverage-audit-cli` in the two audit scripts and left the divergent fetch/format helpers local.
 - Problem: the "5 maintenance scripts define their own isRecord" claim is FALSE — only 2 do. The `interface UnknownRecord` + `isRecord` in both ARE byte-identical to coverage-audit-cli and importable (both run under tsx). But the other proposed consolidations are unsafe: `fetchJson` differs (hardcoded Referer, no apiKey), and audit-dex's `formatUsd` produces DIFFERENT output.
 - Recommendation: scope to the safe subset — import `isRecord` and `UnknownRecord` from `../lib/coverage-audit-cli` in both audit scripts and delete the two local copies. Do NOT consolidate `fetchJson` or audit-dex's `formatUsd`.
 - Files: `scripts/maintenance/audit-price-source-depth.ts:58-60,207-209`, `.../audit-dex-pricing-source-gaps.ts:15-17,154-156`, `scripts/lib/coverage-audit-cli.ts:8-14`.
 - Verifier: only 2 (not 5) define UnknownRecord; fetchJson/formatUsd diverge; narrowed to isRecord/UnknownRecord. Checks: `npm run audit:price-source-depth`, `npm run lint`.
 
 **`scr-7` — writeOutput helper duplicated across reserve/dependency/l2beat coverage-audit generators** `[duplication | low | small | low]`
+- Done 2026-06-13: added `writeOutputFile()` to `coverage-audit-cli` and routed the reserve/dependency generators through it while keeping their distinct stdout messages.
 - Problem: reserve (728-733) and dependency (752-757) share `writeOutput(path, output, cwd)` (mkdirSync+writeFileSync) differing ONLY in the stdout message. l2beat (380-384) has a DIFFERENT signature (no `cwd`, uses `resolve(process.cwd(), path)`, no message); redemption (548-549) inlines just the two write lines.
 - Recommendation: add `writeOutputFile(path, contents, cwd = process.cwd())` to coverage-audit-cli.ts. reserve/dependency call it and keep their distinct stdout message at the call site. l2beat + redemption can also call it. Low value.
 - Files: `scripts/maintenance/generate-reserve-coverage-audit.ts:728-733`, `.../generate-dependency-coverage-audit.ts:752-757`, `.../generate-l2beat-snapshot-coverage-audit.ts:380-384`, `.../generate-redemption-coverage-audit.ts:548-549`.
@@ -1272,6 +1283,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: three identical bodies; none import smoke-runtime; removed smoke-ui from scope. Checks: `npm run validate:pages-smoke`.
 
 **`scr-9` — wait-pages-release-marker.mjs redefines readPositiveInt identical to smoke-runtime parsePositiveInt** `[duplication | low | trivial | none]`
+- Done 2026-06-13: imported `parsePositiveInt` from `smoke-runtime.mjs` and removed the local `readPositiveInt` helper.
 - Problem: local `readPositiveInt` (10-13) is byte-identical to smoke-runtime's exported `parsePositiveInt`, called 5 times in parseArgs. The file imports nothing from smoke-runtime today.
 - Recommendation: import `parsePositiveInt` (and per scr-8, `sleep`) from smoke-runtime; remove the local and rename its 5 call sites. Pair with scr-8 in one edit.
 - Files: `scripts/maintenance/wait-pages-release-marker.mjs:10-13`, `scripts/lib/smoke-runtime.mjs:7-10`.
