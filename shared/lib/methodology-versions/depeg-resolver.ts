@@ -50,8 +50,12 @@ export const DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC = 72 * 3600;
 /** Active public-lock backstop delay for pending canonical incidents under DDRv3. */
 export const DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
 
-/** May 27, 2026 00:00:00 UTC. */
-export const DDR_V2_EFFECTIVE_AT = ddrV2ChangelogEntry?.effectiveAt ?? 1779897600;
+const ddrV2EffectiveAt = ddrV2ChangelogEntry?.effectiveAt;
+if (ddrV2EffectiveAt == null) {
+  throw new Error("DDR v2 changelog entry is missing its effectiveAt timestamp");
+}
+/** Effective timestamp of the DDR v2 methodology landmark (sourced from the v2 changelog entry). */
+export const DDR_V2_EFFECTIVE_AT = ddrV2EffectiveAt;
 
 /** DDRv2 freezes public predictions after the 24h landmark. */
 export const DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;

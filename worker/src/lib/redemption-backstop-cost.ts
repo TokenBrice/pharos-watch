@@ -169,12 +169,13 @@ function resolveRedemptionCost(
   }
 
   const feeBps = Math.max(0, costModel.feeBps);
+  const costScenarioScores = resolveCostScenarioScores(costModel, feeBps);
   return {
-    score: resolveCostScenarioScores(costModel, feeBps)?.activeUser ?? resolveBoundedFeeScore(feeBps),
+    score: costScenarioScores?.activeUser ?? resolveBoundedFeeScore(feeBps),
     feeBps,
     feeConfidence,
     feeModelKind,
-    costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
+    costScenarioScores,
     ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
     notes: [],
   };

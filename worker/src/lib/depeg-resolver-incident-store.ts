@@ -1,3 +1,4 @@
+import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
@@ -41,7 +42,7 @@ export type DdrLockAuditAction =
   | "publication_failed"
   | "published";
 
-const DEFAULT_DDR_V2_EFFECTIVE_AT = 1_779_897_600;
+const DEFAULT_DDR_V2_EFFECTIVE_AT = DDR_V2_EFFECTIVE_AT;
 const DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
