@@ -674,7 +674,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`types-2` — TelegramDispatchCronMetadata partially mirrors TelegramDispatchCronResult; ParsedTelegramDispatchEventsDetected is a clean derivation candidate** `[duplication | low | small | low]`
 - Problem: the "uniform 1:1 number->number|null clone" claim is INACCURATE: booleans stay non-null, `skipped` stays string|null, `safetyAlertSourceState` becomes enum|null, and `eventsDetected`/`perAlertType` become whole-object|null. A generic `NullableNumbers<T>` would mis-handle those.
-- Recommendation: apply only the clean half — `type ParsedTelegramDispatchEventsDetected = { [K in keyof TelegramDispatchEventsDetected]: number | null }` (that interface is pure all-number). Leave `TelegramDispatchCronMetadata` explicit (mixed nullability).
+- Done 2026-06-13: replaced only the clean all-number mirror with `type ParsedTelegramDispatchEventsDetected = { [K in keyof TelegramDispatchEventsDetected]: number | null }`. `TelegramDispatchCronMetadata` remains explicit because its nullability is mixed.
 - Files: `shared/types/status.ts:405-414,480-489,491-527`.
 - Verifier: read both + the parser; the 38-field 1:1 claim is wrong; only the ParsedTelegramDispatchEventsDetected derivation is clean. Checks: `npm run typecheck`, `npm run typecheck:worker`.
 

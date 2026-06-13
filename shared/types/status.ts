@@ -481,16 +481,9 @@ export interface TelegramDispatchCronResult {
   perAlertType: PerAlertTypeDelivery;
 }
 
-export interface ParsedTelegramDispatchEventsDetected {
-  dews: number | null;
-  depeg: number | null;
-  depegTriggered: number | null;
-  depegResolved: number | null;
-  depegWorsening: number | null;
-  safety: number | null;
-  launch: number | null;
-  suppressedMethodologyChanges: number | null;
-}
+export type ParsedTelegramDispatchEventsDetected = {
+  [K in keyof TelegramDispatchEventsDetected]: number | null;
+};
 
 export interface TelegramDispatchCronMetadata {
   subscribersNotified: number | null;
