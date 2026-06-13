@@ -106,4 +106,49 @@ describe("runDexScreenerPass", () => {
       entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
     )).toBe(false);
   });
+
+  it("keeps exact fallback prices on the upper-middle median for even pool counts", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        {
+          chainId: "base",
+          dexId: "uniswap",
+          pairAddress: "0xpair1",
+          baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
+          quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+          priceUsd: "0.99",
+          priceNative: null,
+          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+          pairCreatedAt: null,
+        },
+        {
+          chainId: "base",
+          dexId: "uniswap",
+          pairAddress: "0xpair2",
+          baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
+          quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+          priceUsd: "1.01",
+          priceNative: null,
+          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+          pairCreatedAt: null,
+        },
+      ],
+    });
+
+    const asset = makeMissingAsset({
+      id: "exact-usd",
+      symbol: "EXACT",
+      address: "0xabc",
+      chains: ["Base"],
+    });
+    const result = await runDexScreenerPass([asset], undefined, undefined);
+
+    expect(result).toMatchObject({ resolved: 1, failures: [] });
+    expect(asset.price).toBe(1.01);
+    expect(asset.priceSource).toBe("dexscreener-exact");
+    expect(asset.priceConfidence).toBe("fallback");
+  });
 });

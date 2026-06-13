@@ -13,6 +13,7 @@ import {
   filterDependencyGraphEdgesToLive,
   type DependencyGraphEdge,
 } from "@shared/lib/dependency-graph";
+import { percentileLinear } from "@shared/lib/stats";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { DependencyType, ReportCard } from "@shared/types";
 
@@ -111,13 +112,16 @@ export const SUPERNODE_CONFIG = {
 
 export function percentile(values: number[], q: number): number {
   if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const idx = (sorted.length - 1) * q;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
-  const t = idx - lo;
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * t;
+  if (!Number.isFinite(q) || q < 0 || q > 1) {
+    const sorted = [...values].sort((a, b) => a - b);
+    const idx = (sorted.length - 1) * q;
+    const lo = Math.floor(idx);
+    const hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    const t = idx - lo;
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * t;
+  }
+  return percentileLinear(values, q * 100) ?? 0;
 }
 
 export function minMaxNormalize(ids: string[], valueById: Map<string, number>): Map<string, number> {

@@ -53,6 +53,22 @@ describe("fetchRedstonePrices", () => {
     expect(r.venueAgreementPct).toBeCloseTo(60, 0);
   });
 
+  it("uses the conventional midpoint median for even venue counts", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDT: {
+          value: 1.0,
+          source: { a: 0.98, b: 1.0, c: 1.02, d: 1.04 },
+          timestamp: Date.now(),
+        },
+      }), { status: 200 }),
+    ));
+
+    const outcome = await fetchRedstonePrices(["USDT"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("usdt-tether")?.price).toBe(1.01);
+  });
+
   it("preserves exact-case symbols for mixed-case assets", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response(JSON.stringify({

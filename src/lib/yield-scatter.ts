@@ -1,4 +1,5 @@
 import { clamp } from "@shared/lib/math";
+import { percentileLinear } from "@shared/lib/stats";
 
 export const SAFETY_SCORE_THRESHOLD = 60;
 
@@ -26,14 +27,16 @@ function roundUp(value: number, step: number) {
 
 function percentile(sortedValues: number[], p: number) {
   if (sortedValues.length === 0) return 0;
+  if (!Number.isFinite(p) || p < 0 || p > 1) {
+    const index = (sortedValues.length - 1) * p;
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    if (lower === upper) return sortedValues[lower];
 
-  const index = (sortedValues.length - 1) * p;
-  const lower = Math.floor(index);
-  const upper = Math.ceil(index);
-  if (lower === upper) return sortedValues[lower];
-
-  const weight = index - lower;
-  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight;
+    const weight = index - lower;
+    return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight;
+  }
+  return percentileLinear(sortedValues, p * 100) ?? 0;
 }
 
 export function computeSafetyDomain(scores: number[], isMobile: boolean): [number, number] {

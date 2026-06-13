@@ -183,6 +183,41 @@ describe("address price providers", () => {
     expect(result.successfulRequests).toBe(1);
   });
 
+  it("keeps DexScreener address prices on the upper-middle median for even pool counts", async () => {
+    const target = makeDexScreenerTarget(0, {
+      stablecoinId: "upper-middle",
+      symbol: "USDV",
+      address: "0x0000000000000000000000000000000000000001",
+    });
+    const pair = (priceUsd: string, pairAddress: string) => ({
+      chainId: "base",
+      dexId: "uniswap",
+      pairAddress,
+      baseToken: { address: target.address, name: "Verified USD", symbol: "USDV" },
+      quoteToken: { address: "0x0000000000000000000000000000000000000002", name: "USD Coin", symbol: "USDC" },
+      priceUsd,
+      priceNative: null,
+      volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+      liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+      pairCreatedAt: null,
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify([
+      pair("0.99", "0xpair1"),
+      pair("1.01", "0xpair2"),
+    ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDexScreenerAddressProvider(
+      [target],
+      undefined,
+      1_700_000_000,
+      Date.now() + 60_000,
+    );
+
+    expect(result.quotes).toHaveLength(1);
+    expect(result.quotes[0]?.priceUsd).toBe(1.01);
+  });
+
   it("does not continue DexScreener address batches after an upstream refusal", async () => {
     const fetchMock = vi.fn(async () => new Response("forbidden", { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);

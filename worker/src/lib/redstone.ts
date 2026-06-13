@@ -2,6 +2,7 @@ import {
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
+import { median } from "@shared/lib/stats";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { fetchWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
@@ -75,14 +76,6 @@ function normalizeEntry(entry: RedstoneEntry | RedstoneEntry[] | undefined): Red
   return entry;
 }
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  if (sorted.length === 0) return Number.NaN;
-  if (sorted.length % 2 === 1) return sorted[middle]!;
-  return (sorted[middle - 1]! + sorted[middle]!) / 2;
-}
-
 async function fetchRedstoneBatch(
   symbols: string[],
   signal?: AbortSignal,
@@ -147,7 +140,7 @@ async function fetchRedstoneBatch(
 
     const venuePrices = [...venues.values()];
     const derivedPrice = median(venuePrices);
-    if (!Number.isFinite(derivedPrice) || derivedPrice <= 0) {
+    if (derivedPrice == null || !Number.isFinite(derivedPrice) || derivedPrice <= 0) {
       console.warn(`[redstone] Skipping ${apiSym}: unusable venue median`);
       continue;
     }
