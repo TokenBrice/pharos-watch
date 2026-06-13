@@ -9,21 +9,28 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
 import { normalizeProtocol } from "./pool-helpers";
 
+type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
+type PoolExtraKey = keyof PoolExtra;
+
 function getPoolExtraNumber(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
-  key: string,
+  key: PoolExtraKey,
 ): number | null {
-  const value = extra?.[key as keyof NonNullable<typeof extra>];
+  const value = extra?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function getPoolExtraBoolean(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
-  key: string,
+  key: PoolExtraKey,
 ): boolean | null {
-  const value = extra?.[key as keyof NonNullable<typeof extra>];
+  const value = extra?.[key];
   return typeof value === "boolean" ? value : null;
 }
+
+const POOL_VOL_TO_TVL_RATIO_MAX = 50;
+const LARGE_POOL_TVL_MIN_USD = 100_000_000;
+const LARGE_POOL_MIN_VOLUME_USD = 50_000;
 
 export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   const protocolTvl: Record<string, number> = {};
@@ -90,7 +97,7 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     }
 
     const lockedLiquidityPct = getPoolExtraNumber(pool.extra, "lockedLiquidityPct");
-    if (lockedLiquidityPct != null && lockedLiquidityPct >= 0) {
+    if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
       lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
       totalTvlForLocked += pool.tvlUsd;
     }
@@ -147,8 +154,8 @@ export function filterRetainedPools(pools: LiquidityMetrics["topPools"]): Liquid
   return pools.filter((pool) => {
     if (isBlockedDexId(pool.project)) return false;
     const vol = pool.volumeUsd1d || 0;
-    if (pool.tvlUsd > 0 && vol / pool.tvlUsd > 50) return false;
-    if (pool.tvlUsd > 100_000_000 && vol < 50_000) return false;
+    if (pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) return false;
+    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) return false;
     return true;
   });
 }
@@ -406,6 +413,22 @@ function median(values: number[]): number {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 }
 
+function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number {
+  const sorted = [...observations].sort((left, right) => left.price - right.price);
+  const totalTvl = sorted.reduce((sum, observation) => sum + observation.tvl, 0);
+  const halfTvl = totalTvl / 2;
+  let cumulativeTvl = 0;
+  let medianPrice = sorted[0]?.price ?? 0;
+  for (const observation of sorted) {
+    cumulativeTvl += observation.tvl;
+    if (cumulativeTvl >= halfTvl) {
+      medianPrice = observation.price;
+      break;
+    }
+  }
+  return medianPrice;
+}
+
 export function collapseDuplicateObservations(
   observations: DexPriceObs[],
 ): { collapsed: DexPriceObs[]; duplicateGroups: number; duplicateObservations: number } {
@@ -455,24 +478,13 @@ export function aggregateProtocolSources(
   }
 
   const aggregated = Array.from(byProtocol.entries(), ([protocol, protocolObs]) => {
-    const sorted = [...protocolObs].sort((left, right) => left.price - right.price);
-    const totalTvl = sorted.reduce((sum, observation) => sum + observation.tvl, 0);
-    const halfTvl = totalTvl / 2;
-    let cumulativeTvl = 0;
-    let medianPrice = sorted[0]?.price ?? 0;
-    for (const observation of sorted) {
-      cumulativeTvl += observation.tvl;
-      if (cumulativeTvl >= halfTvl) {
-        medianPrice = observation.price;
-        break;
-      }
-    }
+    const totalTvl = protocolObs.reduce((sum, observation) => sum + observation.tvl, 0);
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
     return {
       protocol,
       chain: chains.length === 1 ? chains[0] : "multi",
-      price: medianPrice,
+      price: tvlWeightedMedian(protocolObs),
       tvl: Math.round(totalTvl),
     };
   });

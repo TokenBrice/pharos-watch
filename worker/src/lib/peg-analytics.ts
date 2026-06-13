@@ -1,6 +1,10 @@
 import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
+import {
+  computePegScore,
+  coinTrackingStart,
+  NULL_PEG_SCORE_RESULT,
+  PEG_SCORE_LOOKBACK_SEC,
+} from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
 import { sumPegBuckets } from "@shared/lib/supply";
@@ -35,24 +39,6 @@ function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData &
   return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
 }
 
-function buildNavPegScoreResult(): ReturnType<typeof computePegScore> {
-  return {
-    pegScore: null,
-    pegPct: 100,
-    severityScore: 100,
-    spreadPenalty: 0,
-    eventCount: 0,
-    scoredEventCount: 0,
-    excludedEventCount: 0,
-    lowConfidenceEventCount: 0,
-    qualityAdjusted: false,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 0,
-  };
-}
-
 function buildPriceFirstSeenObservations(
   assets: readonly StablecoinData[],
   fallbackObservedAtSec: number,
@@ -78,7 +64,7 @@ export async function derivePegAnalyticsSnapshot(
 ): Promise<PegAnalyticsSnapshot> {
   const includeNavTokens = options.includeNavTokens ?? false;
   const nowSec = Math.floor(Date.now() / 1000);
-  const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * DAY_SECONDS);
+  const fourYearsAgoSec = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const [eventsResult, firstSeenMap] = await Promise.all([
     db.prepare(
@@ -108,7 +94,7 @@ export async function derivePegAnalyticsSnapshot(
     counts: pegRateCounts = {},
   } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
-  const trackingFallbackStart = nowSec - 4 * 365.25 * DAY_SECONDS;
+  const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
   for (const meta of ACTIVE_STABLECOINS) {
@@ -152,7 +138,7 @@ export async function derivePegAnalyticsSnapshot(
     const trackingAnchorSec = parseLaunchDateSec(meta.launchDate) ?? firstSeenMap.get(meta.id) ?? null;
     const trackingStart = coinTrackingStart(events, trackingFallbackStart, trackingAnchorSec);
     const scoreResult = meta.flags.navToken
-      ? buildNavPegScoreResult()
+      ? { ...NULL_PEG_SCORE_RESULT }
       : computePegScore(events, trackingStart, nowSec);
 
     pegDataById.set(meta.id, {

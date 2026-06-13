@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { classifyPoolType, normalizeProtocol, initMetrics, computeLiquidityScore, computeDurabilityScore } from "../pool-helpers";
+import {
+  classifyPoolType,
+  computeDurabilityScore,
+  computeLiquidityScore,
+  computePoolStress,
+  initMetrics,
+  normalizeProtocol,
+} from "../pool-helpers";
 
 describe("normalizeProtocol", () => {
   it("collapses hyphenated PancakeSwap variants", () => {
@@ -132,6 +139,21 @@ describe("computeLiquidityScore", () => {
     const m = initMetrics("test", "TEST");
     const { score } = computeLiquidityScore(m, 0);
     expect(score).toBe(0);
+  });
+});
+
+describe("computePoolStress", () => {
+  it("returns 0 for an ideal pool", () => {
+    expect(computePoolStress(1, 1, 365, 1)).toBe(0);
+  });
+
+  it("returns 100 for the worst measured pool", () => {
+    expect(computePoolStress(0, 0, 0, 0)).toBe(100);
+  });
+
+  it("scores a mid-range pool from the documented component weights", () => {
+    // 35*(1-0.8) + 25*(1-0.5) + 20*(1-182.5/365) + 20*(1-0.75) = 34.5 -> 35
+    expect(computePoolStress(0.8, 0.5, 182.5, 0.75)).toBe(35);
   });
 });
 

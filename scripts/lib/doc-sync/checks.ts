@@ -23,6 +23,7 @@ import { HEALTH_METHODOLOGY_VERSION } from "../../../shared/lib/chain-health";
 import {
   DURABILITY_COMPONENT_WEIGHTS,
   LIQUIDITY_SCORE_WEIGHTS,
+  type LiquidityScoreComponentKey,
 } from "../../../shared/lib/liquidity-score-weights";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
@@ -259,13 +260,16 @@ function checkDewsDoc(failures: Failure[]): void {
 function checkLiquidityDoc(failures: Failure[]): void {
   const file = "docs/dex-liquidity.md";
   const doc = read(file);
+  const liquidityComponentWeightByKey = Object.fromEntries(
+    LIQUIDITY_SCORE_WEIGHTS.map(({ key, weight }) => [key, weight]),
+  ) as Record<LiquidityScoreComponentKey, number>;
 
   const componentRows = [
-    { row: "**TVL Depth**", label: "liquidity component TVL Depth", expected: LIQUIDITY_SCORE_WEIGHTS[0].weight * 100 },
-    { row: "**Volume Activity**", label: "liquidity component Volume Activity", expected: LIQUIDITY_SCORE_WEIGHTS[1].weight * 100 },
-    { row: "**Pool Quality**", label: "liquidity component Pool Quality", expected: LIQUIDITY_SCORE_WEIGHTS[2].weight * 100 },
-    { row: "**Durability**", label: "liquidity component Durability", expected: LIQUIDITY_SCORE_WEIGHTS[3].weight * 100 },
-    { row: "**Diversity**", label: "liquidity component Diversity", expected: LIQUIDITY_SCORE_WEIGHTS[4].weight * 100 },
+    { row: "**TVL Depth**", label: "liquidity component TVL Depth", expected: liquidityComponentWeightByKey.tvlDepth * 100 },
+    { row: "**Volume Activity**", label: "liquidity component Volume Activity", expected: liquidityComponentWeightByKey.volumeActivity * 100 },
+    { row: "**Pool Quality**", label: "liquidity component Pool Quality", expected: liquidityComponentWeightByKey.poolQuality * 100 },
+    { row: "**Durability**", label: "liquidity component Durability", expected: liquidityComponentWeightByKey.durability * 100 },
+    { row: "**Diversity**", label: "liquidity component Diversity", expected: liquidityComponentWeightByKey.pairDiversity * 100 },
   ];
 
   for (const component of componentRows) {

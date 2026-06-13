@@ -33,7 +33,11 @@ describe("isPlausibleDexObservationPrice guards peg", () => {
 });
 
 // Minimal input builder for classifyCoverage – only sourceMix and totalTvlUsd vary per case.
-function makeCoverageInput(sourceMix: LiquiditySourceMixByFamily, totalTvlUsd: number) {
+function makeCoverageInput(
+  sourceMix: LiquiditySourceMixByFamily,
+  totalTvlUsd: number,
+  overrides: Partial<Parameters<typeof classifyCoverage>[0]> = {},
+) {
   return {
     sourceMix,
     totalTvlUsd,
@@ -44,6 +48,7 @@ function makeCoverageInput(sourceMix: LiquiditySourceMixByFamily, totalTvlUsd: n
     syntheticTvlUsd: 0,
     decayedTvlUsd: 0,
     measuredPriceTvlUsd: 0,
+    ...overrides,
   };
 }
 
@@ -115,6 +120,65 @@ describe("classifyCoverage", () => {
   it("returns unobserved when sourceMix is empty even with positive TVL", () => {
     const { coverageClass } = classifyCoverage(makeCoverageInput({}, 5_000_000));
     expect(coverageClass).toBe("unobserved");
+  });
+
+  it("caps coverageConfidence at 1 for fully measured broad primary coverage", () => {
+    const { coverageClass, coverageConfidence } = classifyCoverage(
+      makeCoverageInput(
+        { dl: { poolCount: 10, tvlUsd: 100 } },
+        100,
+        {
+          protocolCount: 10,
+          sourceFamilyCount: 10,
+          balanceMeasuredTvlUsd: 100,
+          organicMeasuredTvlUsd: 100,
+          measuredPriceTvlUsd: 100,
+        },
+      ),
+    );
+
+    expect(coverageClass).toBe("primary");
+    expect(coverageConfidence).toBe(1);
+  });
+
+  it("floors coverageConfidence at 0 when fallback coverage is fully synthetic and decayed", () => {
+    const { coverageClass, coverageConfidence } = classifyCoverage(
+      makeCoverageInput(
+        { cg_onchain: { poolCount: 1, tvlUsd: 100 } },
+        100,
+        {
+          syntheticTvlUsd: 100,
+          decayedTvlUsd: 100,
+        },
+      ),
+    );
+
+    expect(coverageClass).toBe("fallback");
+    expect(coverageConfidence).toBe(0);
+  });
+
+  it("blends coverageConfidence for mixed measured and fallback evidence", () => {
+    const { coverageClass, coverageConfidence } = classifyCoverage(
+      makeCoverageInput(
+        {
+          dl: { poolCount: 2, tvlUsd: 60 },
+          cg_onchain: { poolCount: 1, tvlUsd: 40 },
+        },
+        100,
+        {
+          protocolCount: 2,
+          sourceFamilyCount: 2,
+          balanceMeasuredTvlUsd: 50,
+          organicMeasuredTvlUsd: 25,
+          measuredPriceTvlUsd: 20,
+          syntheticTvlUsd: 10,
+          decayedTvlUsd: 20,
+        },
+      ),
+    );
+
+    expect(coverageClass).toBe("mixed");
+    expect(coverageConfidence).toBeCloseTo(0.61, 6);
   });
 });
 

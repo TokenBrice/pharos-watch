@@ -41,3 +41,17 @@ export function worstDeviation(events: DepegEvent[]): number | null {
   }
   return worst;
 }
+
+export function medianOf(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+    : sorted[mid] ?? null;
+}
+
+export function medianOfRounded(values: readonly number[]): number {
+  const median = medianOf(values);
+  return median == null ? 0 : Math.round(median);
+}

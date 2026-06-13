@@ -1,9 +1,11 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { clampScore } from "@shared/lib/math";
+import { DURABILITY_COMPONENT_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
-import { DURABILITY_COMPONENT_WEIGHTS, LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
+import { LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
 
 /**
@@ -13,6 +15,13 @@ import { buildChainAddressKey } from "./token-resolution";
  */
 const POOL_QUALITY_FLOOR_RATIO = 0.15;
 const POOL_QUALITY_WINDOW = 0.65; // 0.80 - 0.15
+const TVL_DEPTH_SLOPE = 35;
+const TVL_DEPTH_ANCHOR_RATIO = 0.0007;
+const TVL_DEPTH_FALLBACK_MCAP_USD = 1_000_000_000;
+
+function computeTvlDepthScore(depthRatio: number): number {
+  return clampScore(TVL_DEPTH_SLOPE * Math.log10(depthRatio / TVL_DEPTH_ANCHOR_RATIO));
+}
 
 /** Parse pool symbol string into constituent token symbols */
 export function parsePoolSymbols(symbol: string): string[] {
@@ -85,16 +94,12 @@ export function computeDurabilityScore(
   // Maturity sub-score
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
-  return Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(
-        organicScore * DURABILITY_COMPONENT_WEIGHTS.organicFraction +
-          tvlStabilityScore * DURABILITY_COMPONENT_WEIGHTS.tvlStability +
-          volumeConsistencyScore * DURABILITY_COMPONENT_WEIGHTS.volumeConsistency +
-          maturityScore * DURABILITY_COMPONENT_WEIGHTS.maturity,
-      ),
+  return clampScore(
+    Math.round(
+      organicScore * DURABILITY_COMPONENT_WEIGHTS.organicFraction +
+        tvlStabilityScore * DURABILITY_COMPONENT_WEIGHTS.tvlStability +
+        volumeConsistencyScore * DURABILITY_COMPONENT_WEIGHTS.volumeConsistency +
+        maturityScore * DURABILITY_COMPONENT_WEIGHTS.maturity,
     ),
   );
 }
@@ -110,25 +115,22 @@ export function computeLiquidityScore(
   if (circulatingUsd != null && circulatingUsd > 0) {
     // Size-aware relative formula: depth ratio vs circulating supply
     const depthRatio = tvlInput / circulatingUsd;
-    tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(depthRatio / 0.0007)));
+    tvlDepth = computeTvlDepthScore(depthRatio);
   } else {
     // v5.5 absolute fallback: uses a $1B implied reference mcap to reuse the
     // ratio formula's anchor (0.07% depth = score 0). Equivalent to running
     // the ratio branch with depthRatio = tvl / 1_000_000_000.
     // Yields: $700K → 0, $5M → 30, $140M → 80, ~$500M → clamps at 100.
-    tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(Math.max(tvlInput, 1) / 700_000)));
+    tvlDepth = computeTvlDepthScore(Math.max(tvlInput, 1) / TVL_DEPTH_FALLBACK_MCAP_USD);
   }
 
   // Component 2: Volume activity (20%) — log-scale
   const vtRatio = m.totalTvlUsd > 0 ? m.totalVolume24hUsd / m.totalTvlUsd : 0;
-  const volumeActivity = vtRatio <= 0 ? 0 : Math.min(100, Math.max(0, 38 * (Math.log10(vtRatio) + 3)));
+  const volumeActivity = vtRatio <= 0 ? 0 : clampScore(38 * (Math.log10(vtRatio) + 3));
 
   // Component 3: Pool quality (20%) — quality retention ratio
   const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;
-  const poolQuality = Math.min(
-    100,
-    Math.max(0, ((qualityRetention - POOL_QUALITY_FLOOR_RATIO) / POOL_QUALITY_WINDOW) * 100),
-  );
+  const poolQuality = clampScore(((qualityRetention - POOL_QUALITY_FLOOR_RATIO) / POOL_QUALITY_WINDOW) * 100);
 
   // Component 4: Durability (20%) — passed in from durability computation
   const durability = durabilityScore;
@@ -152,7 +154,7 @@ export function computeLiquidityScore(
   };
 
   return {
-    score: Math.max(0, Math.min(100, Math.round(raw))),
+    score: clampScore(Math.round(raw)),
     components,
   };
 }
@@ -271,7 +273,7 @@ export function computePoolStress(
 ): number {
   const immaturityPenalty = Math.max(0, 1 - maturityDays / 365);
   const raw = 35 * (1 - balanceRatio) + 25 * (1 - organicFraction) + 20 * immaturityPenalty + 20 * (1 - pairQuality);
-  return Math.max(0, Math.min(100, Math.round(raw)));
+  return clampScore(Math.round(raw));
 }
 
 /** Check if a Curve registryId indicates a CryptoSwap pool */

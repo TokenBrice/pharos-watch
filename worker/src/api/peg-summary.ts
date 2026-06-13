@@ -1,4 +1,5 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -31,7 +32,7 @@ const PEG_TYPE_BY_CURRENCY: Record<string, string> = {
   EUR: "peggedEUR",
   GBP: "peggedGBP",
   CHF: "peggedCHF",
-  BRL: "peggedBRL",
+  BRL: "peggedREAL",
   RUB: "peggedRUB",
   JPY: "peggedJPY",
   IDR: "peggedIDR",
@@ -162,43 +163,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   const methodologyVersion = getDepegDewsMethodologyVersionAt(stablecoinsCache.updatedAt);
 
   // 4. Compute per-coin data
-  const coins: {
-    id: string;
-    symbol: string;
-    name: string;
-    pegType: string;
-    pegCurrency: string;
-      governance: string;
-      currentDeviationBps: number | null;
-      pegReferenceUnavailable?: boolean;
-      depegEventCoverageLimited?: boolean;
-      pegScore: number | null;
-      priceSource?: string;
-      priceConfidence?: StablecoinData["priceConfidence"];
-      priceObservedAt?: number | null;
-      priceObservedAtMode?: StablecoinData["priceObservedAtMode"];
-      priceSyncedAt?: number | null;
-      priceUpdatedAt?: number | null;
-      consensusSources?: string[];
-      agreeSources?: string[];
-      primaryTrust?: "authoritative" | "confirm_required" | "unusable";
-      pegPct: number;
-    severityScore: number;
-    spreadPenalty: number;
-    eventCount: number;
-    worstDeviationBps: number | null;
-    activeDepeg: boolean;
-    lastEventAt: number | null;
-    trackingSpanDays: number;
-    methodologyVersion: string;
-    dexPriceCheck?: {
-      dexPrice: number;
-      dexDeviationBps: number;
-      agrees: boolean;
-      sourcePools: number;
-      sourceTvl: number;
-    } | null;
-  }[] = [];
+  const coins: PegSummaryCoin[] = [];
 
   let activeDepegCount = 0;
   const allAbsBps: number[] = [];
@@ -301,12 +266,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   }
 
   // Median deviation
-  allAbsBps.sort((a, b) => a - b);
-  const medianBps = allAbsBps.length > 0
-    ? allAbsBps.length % 2 === 0
-      ? Math.round((allAbsBps[allAbsBps.length / 2 - 1] + allAbsBps[allAbsBps.length / 2]) / 2)
-      : allAbsBps[Math.floor(allAbsBps.length / 2)]
-    : 0;
+  const medianBps = medianOfRounded(allAbsBps);
 
   // Flag peg types using fallback rates so frontend can signal stale data
   const fallbackPegTypes = Object.entries(pegRateSources)

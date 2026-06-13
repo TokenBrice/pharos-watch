@@ -56,6 +56,25 @@ describe("computePegScore", () => {
     expect(result.activeDepeg).toBe(true);
   });
 
+  it("uses the magnitude floor for brief high-deviation events", () => {
+    const start = NOW - 30 * DAY;
+    const eventStart = NOW - DAY;
+    const events = [{
+      startedAt: eventStart,
+      endedAt: eventStart + 2 * 60 * 60,
+      peakDeviationBps: 400,
+      direction: "below" as const,
+    }];
+
+    const recencyWeight = 1 / (1 + ((NOW - eventStart) / (365.25 * DAY)));
+    const durationPenalty = (400 / 100) * ((2 / 24) / 30) * recencyWeight;
+    const magnitudeFloor = (400 / 2000) * recencyWeight;
+
+    expect(magnitudeFloor).toBeGreaterThan(durationPenalty);
+    const result = computePegScore(events as never, start, NOW);
+    expect(100 - result.severityScore).toBeCloseTo(magnitudeFloor, 6);
+  });
+
   it("weights recent events more heavily than old ones", () => {
     const start = NOW - 365 * DAY;
     const recentEvent = [{

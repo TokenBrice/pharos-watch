@@ -96,6 +96,20 @@ describe("derivePegRates", () => {
     expect(result.rates.peggedGOLD).toBeCloseTo(1600 / gramOz, 6);
   });
 
+  it("excludes DGLD from the gold peer median", () => {
+    const result = derivePegRates(
+      [
+        asset("xaut-tether-gold", "peggedGOLD", 2000, 2_000_000),
+        asset("paxg-pax-gold", "peggedGOLD", 2200, 2_000_000),
+        asset("dgld-gold-token-sa", "peggedGOLD", 10_000, 2_000_000),
+      ],
+      new Map(),
+    );
+
+    expect(result.rates.peggedGOLD).toBe(2100);
+    expect(result.counts.peggedGOLD).toBe(2);
+  });
+
   it("uses fallback rates for groups with fewer than 3 eligible coins", () => {
     const result = derivePegRates(
       [
@@ -108,6 +122,13 @@ describe("derivePegRates", () => {
 
     expect(result.rates.peggedEUR).toBe(1.2);
     expect(result.sources.peggedEUR).toBe("fallback");
+  });
+
+  it("normalizes BRL peg types to the DefiLlama peggedREAL key", () => {
+    const result = derivePegRates([asset("brl-token", "peggedBRL", 0.18, 2_000_000)]);
+
+    expect(result.rates.peggedBRL).toBeUndefined();
+    expect(result.rates.peggedREAL).toBe(0.18);
   });
 });
 

@@ -1,4 +1,5 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
+import { medianOf } from "./peg-utils";
 import { sumPegBuckets } from "./supply";
 
 /**
@@ -14,6 +15,10 @@ export interface PegRatesResult {
   rates: Record<string, number>;
   sources: Record<string, PegRateSource>;
   counts: Record<string, number>;
+}
+
+function normalizePegType(pegType: string | undefined): string | undefined {
+  return pegType === "peggedBRL" ? "peggedREAL" : pegType;
 }
 
 /**
@@ -39,7 +44,7 @@ export function derivePegRates(
   const groups: Record<string, number[]> = {};
 
   for (const a of assets) {
-    const peg = a.pegType;
+    const peg = normalizePegType(a.pegType);
     let price = a.price;
     if (!peg || price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
 
@@ -73,12 +78,9 @@ export function derivePegRates(
     // Guard: skip empty groups (shouldn't happen since we only push non-empty,
     // but defends the median indexing below against an empty array).
     if (prices.length === 0) continue;
-    prices.sort((a, b) => a - b);
-    const mid = Math.floor(prices.length / 2);
-    const median =
-      prices.length % 2 === 0
-        ? (prices[mid - 1] + prices[mid]) / 2
-        : prices[mid];
+    // Keep the scoring reference unrounded; display medians round at the API edge.
+    const median = medianOf(prices);
+    if (median == null) continue;
 
     // For thin fiat peg groups (<3 coins), use ECB FX rate instead of
     // unreliable median (1 coin = own price, 2 coins = mirror deviations).

@@ -3,6 +3,14 @@ import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
+const LOW_CONFIDENCE_WEIGHT = 0.5;
+const MAGNITUDE_FLOOR_DIVISOR = 2000;
+const ACTIVE_DEPEG_FLOOR = 5;
+const ACTIVE_DEPEG_CAP = 50;
+const ACTIVE_DEPEG_BPS_PER_POINT = 50;
+const SPREAD_PENALTY_MAX = 15;
+const SPREAD_STDDEV_SCALE = 1000;
+const PEG_COMPOSITE_WEIGHT = 0.5;
 
 /**
  * Compute the tracking window start for a coin, respecting both the 4-year
@@ -78,6 +86,22 @@ export interface PegScoreResult {
   trackingSpanDays: number;
 }
 
+export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
+  pegScore: null,
+  pegPct: 100,
+  severityScore: 100,
+  spreadPenalty: 0,
+  eventCount: 0,
+  scoredEventCount: 0,
+  excludedEventCount: 0,
+  lowConfidenceEventCount: 0,
+  qualityAdjusted: false,
+  worstDeviationBps: null,
+  activeDepeg: false,
+  lastEventAt: null,
+  trackingSpanDays: 0,
+};
+
 function isExcludedByAudit(event: DepegEvent): boolean {
   const verdict = event.provenance?.auditVerdict;
   return verdict === "false_positive" || verdict === "disputed";
@@ -85,7 +109,7 @@ function isExcludedByAudit(event: DepegEvent): boolean {
 
 function eventSeverityWeight(event: DepegEvent): number {
   const confidenceTier = event.provenance?.confidenceTier;
-  if (confidenceTier === "low") return 0.5;
+  if (confidenceTier === "low") return LOW_CONFIDENCE_WEIGHT;
   return 1;
 }
 
@@ -112,21 +136,7 @@ export function computePegScore(
 
   // No events and no known tracking start -> assume stable, default score
   if (startSec === null) {
-    return {
-      pegScore: null,
-      pegPct: 100,
-      severityScore: 100,
-      spreadPenalty: 0,
-      eventCount: 0,
-      scoredEventCount: 0,
-      excludedEventCount: 0,
-      lowConfidenceEventCount: 0,
-      qualityAdjusted: false,
-      worstDeviationBps: null,
-      activeDepeg: false,
-      lastEventAt: null,
-      trackingSpanDays: 0,
-    };
+    return { ...NULL_PEG_SCORE_RESULT };
   }
 
   const spanSec = Math.max(now - startSec, 1);
@@ -157,7 +167,7 @@ export function computePegScore(
     const recencyWeight = 1 / (1 + yearsAgo);
 
     const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;
-    const magnitudeFloor = (peakBps / 2000) * recencyWeight;
+    const magnitudeFloor = (peakBps / MAGNITUDE_FLOOR_DIVISOR) * recencyWeight;
     totalPenalty += Math.max(durationPenalty, magnitudeFloor) * eventSeverityWeight(e);
   }
   const severityScore = Math.max(0, 100 - totalPenalty);
@@ -174,7 +184,9 @@ export function computePegScore(
     const mean = absBpsList.reduce((s, v) => s + v, 0) / absBpsList.length;
     const variance = absBpsList.reduce((s, v) => s + (v - mean) ** 2, 0) / absBpsList.length;
     const stdDev = Math.sqrt(variance);
-    spreadPenalty = Number.isFinite(stdDev) ? Math.min(15, (stdDev / 1000) * 15) : 0;
+    spreadPenalty = Number.isFinite(stdDev)
+      ? Math.min(SPREAD_PENALTY_MAX, (stdDev / SPREAD_STDDEV_SCALE) * SPREAD_PENALTY_MAX)
+      : 0;
   }
 
   // --- Active depeg penalty ---
@@ -183,16 +195,23 @@ export function computePegScore(
   let activeDepegPenalty = 0;
   for (const e of scoringEvents) {
     if (e.endedAt === null) {
-      // Scale: 100 bps (threshold) = 5 penalty (floor), 2500+ bps = 50 penalty (hard cap)
+      // Scale: floor 5 below 250 bps, 2500+ bps = 50 penalty (hard cap).
       // Use worst active event when multiple concurrent depegs exist.
       const rawAbsBps = Math.abs(e.peakDeviationBps);
       const absBps = Number.isFinite(rawAbsBps) ? rawAbsBps : 0;
-      activeDepegPenalty = Math.max(activeDepegPenalty, Math.min(50, Math.max(5, absBps / 50)));
+      activeDepegPenalty = Math.max(
+        activeDepegPenalty,
+        Math.min(ACTIVE_DEPEG_CAP, Math.max(ACTIVE_DEPEG_FLOOR, absBps / ACTIVE_DEPEG_BPS_PER_POINT)),
+      );
     }
   }
 
   // --- Composite ---
-  const raw = 0.5 * pegPct + 0.5 * severityScore - activeDepegPenalty - spreadPenalty;
+  const raw =
+    PEG_COMPOSITE_WEIGHT * pegPct +
+    PEG_COMPOSITE_WEIGHT * severityScore -
+    activeDepegPenalty -
+    spreadPenalty;
   const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---

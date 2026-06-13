@@ -23,14 +23,12 @@ export interface NativePegImpliedUsdQuote {
 }
 
 function getReferenceTypeForPegType(
-  pegType: string | null | undefined,
-  validationReferences?: {
+  pegType: string,
+  validationReferences: {
     type: PriceReferenceType;
     typeByPeg?: Record<string, PriceReferenceType | undefined>;
   },
 ): PriceReferenceType {
-  if (!validationReferences) return "none";
-  if (!pegType) return validationReferences.type;
   return validationReferences.typeByPeg?.[pegType] ?? validationReferences.type;
 }
 

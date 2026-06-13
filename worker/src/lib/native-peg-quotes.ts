@@ -72,10 +72,6 @@ export function getPreferredNativePegQueryCurrency(pegCurrency: string | null | 
   return getNativePegQueryCurrencies(pegCurrency)[0] ?? null;
 }
 
-function getQueryCurrenciesForPeg(pegCurrency: string): string[] {
-  return SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES.get(pegCurrency) ?? [];
-}
-
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -123,7 +119,7 @@ export async function fetchCurrentNativePegQuotes(
   }
 
   for (const [pegCurrency, group] of groupedRequests) {
-    const queryCurrencies = getQueryCurrenciesForPeg(pegCurrency);
+    const queryCurrencies = getNativePegQueryCurrencies(pegCurrency);
     if (queryCurrencies.length === 0) continue;
     for (let index = 0; index < group.length; index += COINGECKO_NATIVE_PEG_BATCH_SIZE) {
       const batch = group.slice(index, index + COINGECKO_NATIVE_PEG_BATCH_SIZE);

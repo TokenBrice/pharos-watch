@@ -28,6 +28,22 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 }));
 
 vi.mock("@shared/lib/peg-score", () => ({
+  PEG_SCORE_LOOKBACK_SEC: 126_230_400,
+  NULL_PEG_SCORE_RESULT: {
+    pegScore: null,
+    pegPct: 100,
+    severityScore: 100,
+    spreadPenalty: 0,
+    eventCount: 0,
+    scoredEventCount: 0,
+    excludedEventCount: 0,
+    lowConfidenceEventCount: 0,
+    qualityAdjusted: false,
+    worstDeviationBps: null,
+    activeDepeg: false,
+    lastEventAt: null,
+    trackingSpanDays: 0,
+  },
   computePegScore: vi.fn(() => ({
     pegScore: 91,
     pegPct: 0.91,

@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { roundTo } from "@shared/lib/math";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -25,6 +26,8 @@ import {
 } from "./scoring-helpers";
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
+const MIN_STABILITY_SAMPLES = 7, PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
+const DISPLAY_PRICE_RATIO_MIN = 0.5, DISPLAY_PRICE_RATIO_MAX = 2.0;
 
 interface ProtocolCapDiagnostics {
   cappedPoolCount: number;
@@ -39,12 +42,16 @@ interface ScoreDiagnostics {
 /** @internal Exported for testing only. */
 export function computeSeriesStability(values: number[]): number | null {
   const finite = values.filter((v) => Number.isFinite(v));
-  if (finite.length < 7) return null;
+  if (finite.length < MIN_STABILITY_SAMPLES) return null;
   const mean = finite.reduce((sum, value) => sum + value, 0) / finite.length;
   if (mean <= 0) return null;
   const variance = finite.reduce((sum, value) => sum + (value - mean) ** 2, 0) / finite.length;
   const cv = Math.sqrt(Math.max(0, variance)) / mean;
   return Math.round((1 - Math.min(1, cv)) * 10000) / 10000;
+}
+
+function weightedRatio(sum: number, total: number, places = 4): number | null {
+  return total > 0 ? roundTo(sum / total, places) : null;
 }
 
 async function loadConfidentHistoryStability(db: D1Database): Promise<{
@@ -173,18 +180,11 @@ export async function computeStablecoinScores(
     const { score, components } = computeLiquidityScore(m, durability, circulatingUsd);
 
     // v2: Compute aggregate metrics
-    const weightedBalanceRatio = m.totalTvlForBalance > 0
-      ? Math.round((m.balanceRatioWeightedSum / m.totalTvlForBalance) * 10000) / 10000
-      : null;
-    const organicFrac = m.totalTvlForOrganic > 0
-      ? Math.round((m.organicTvlWeightedSum / m.totalTvlForOrganic) * 10000) / 10000
-      : null;
-    const avgStress = m.totalTvlUsd > 0
-      ? Math.round((m.stressWeightedSum / m.totalTvlUsd) * 100) / 100
-      : null;
-    const lockedLiqPct = m.totalTvlForLocked > 0
-      ? Math.round((m.lockedLiqWeightedSum / m.totalTvlForLocked) * 10000) / 10000
-      : null;
+    const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
+    const organicFrac = weightedRatio(m.organicTvlWeightedSum, m.totalTvlForOrganic);
+    // Stored diagnostic only: stress-unmeasured TVL contributes zero stress under the current methodology.
+    const avgStress = weightedRatio(m.stressWeightedSum, m.totalTvlUsd, 2);
+    const lockedLiqPct = weightedRatio(m.lockedLiqWeightedSum, m.totalTvlForLocked);
     const { coverageClass, coverageConfidence } = classifyCoverage({
       sourceMix: rebuilt.sourceMix,
       totalTvlUsd: m.totalTvlUsd,
@@ -365,10 +365,10 @@ export async function computeDexPrices(
     // Only apply when 3+ observations exist and majority by count agrees with primary.
     let medianInputObs = collapsedObservations;
     if (primaryPrice != null && primaryPrice > 0 && collapsedObservations.length >= 3) {
-      const MAX_DEVIATION_RATIO = 2.5;
       const nearPrimary = collapsedObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
-        return ratio >= (1 / MAX_DEVIATION_RATIO) && ratio <= MAX_DEVIATION_RATIO;
+        return ratio >= (1 / PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO) &&
+          ratio <= PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO;
       });
       if (nearPrimary.length >= 2 && nearPrimary.length > collapsedObservations.length / 2) {
         medianInputObs = nearPrimary;
@@ -412,7 +412,7 @@ export async function computeDexPrices(
       if (!isPlausibleDexObservationPrice(id, obs.price, references)) return false;
       if (primaryPrice != null && primaryPrice > 0) {
         const ratio = obs.price / primaryPrice;
-        if (ratio < 0.5 || ratio > 2.0) return false;
+        if (ratio < DISPLAY_PRICE_RATIO_MIN || ratio > DISPLAY_PRICE_RATIO_MAX) return false;
       }
       return true;
     });
