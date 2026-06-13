@@ -331,7 +331,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`vm-5` — `const sections = baseSections` is a dead no-op alias** `[dead-code | low | trivial | none]`
 - Problem: line 508 `const sections = baseSections;` creates a no-op alias immediately before the return object spreads `sections,`. `baseSections` is not referenced after 508 except through the alias.
-- Recommendation: remove line 508 and write `sections: baseSections,` in the return object.
+- Done 2026-06-13: source already returns `sections: baseSections` directly; the no-op `sections` alias is gone.
 - Files: `src/lib/status-dashboard-model.ts:508`.
 - Verifier: confirmed alias is pure noise; `check:unused-code` does NOT flag it (only finds dead modules/exports), so genuinely uncaught. Checks: `npm run lint:typed`.
 
