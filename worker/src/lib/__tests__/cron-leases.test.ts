@@ -51,11 +51,18 @@ type CronRunRow = {
   slot_started_at: number | null;
 };
 
+type CacheRow = {
+  key: string;
+  value: string;
+  updated_at: number;
+};
+
 interface TestLeaseDb extends D1Database {
   getSlot: (slotKey: string, slotStartedAt: number) => SlotExecutionRow | undefined;
   getLease: (job: string) => LeaseRow | undefined;
   getProgress: (job: string) => ProgressRow | undefined;
   getRuns: () => CronRunRow[];
+  getCache: (key: string) => CacheRow | undefined;
 }
 
 function makeSlotMapKey(slotKey: string, slotStartedAt: number): string {
@@ -67,11 +74,13 @@ function makeLeaseDb(seed?: {
   slots?: SlotExecutionRow[];
   progress?: ProgressRow[];
   runs?: CronRunRow[];
+  cache?: CacheRow[];
 }): TestLeaseDb {
   const leases = new Map<string, LeaseRow>();
   const slots = new Map<string, SlotExecutionRow>();
   const progressRows = new Map<string, ProgressRow>();
   const cronRuns: CronRunRow[] = [...(seed?.runs ?? [])];
+  const cacheRows = new Map<string, CacheRow>();
 
   for (const lease of seed?.leases ?? []) {
     leases.set(lease.job, lease);
@@ -81,6 +90,9 @@ function makeLeaseDb(seed?: {
   }
   for (const progress of seed?.progress ?? []) {
     progressRows.set(progress.job, progress);
+  }
+  for (const row of seed?.cache ?? []) {
+    cacheRows.set(row.key, row);
   }
 
   function stmt(sql: string) {
@@ -186,6 +198,16 @@ function makeLeaseDb(seed?: {
               return { success: true, meta: { changes: 0 } };
             }
             progressRows.delete(job);
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("INSERT OR REPLACE INTO cache")) {
+            const [key, value, updatedAt] = args as [string, string, number];
+            cacheRows.set(key, {
+              key,
+              value,
+              updated_at: updatedAt,
+            });
             return { success: true, meta: { changes: 1 } };
           }
 
@@ -380,6 +402,7 @@ function makeLeaseDb(seed?: {
     getLease: (job: string) => leases.get(job),
     getProgress: (job: string) => progressRows.get(job),
     getRuns: () => [...cronRuns],
+    getCache: (key: string) => cacheRows.get(key),
   } as unknown as TestLeaseDb;
 }
 
@@ -852,10 +875,40 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlot = db.getSlot("hourlyYield", staleSlotStartedAt);
     expect(staleSlot?.result_status).toBe("error");
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
+      error: "scheduled slot heartbeat stale; marked expired by later invocation",
       staleSlotReconciliation: {
         syntheticCronRuns: 1,
         progressRowsCleared: 1,
         leasesCleared: 1,
+        abandonedJobs: [
+          {
+            job: "sync-yield-data",
+            progressStage: "evaluation",
+            leaseOwner: "yield-owner-a",
+            leaseUntil: now - 60,
+          },
+        ],
+      },
+    });
+    const eventMarker = db.getCache("cron:event:hourlyyield:scheduled-slot-abandoned");
+    expect(eventMarker).toBeDefined();
+    expect(eventMarker?.value ? JSON.parse(eventMarker.value) : null).toMatchObject({
+      event: "cron_event",
+      job: "hourlyYield",
+      eventType: "scheduled-slot-abandoned",
+      severity: "error",
+      metadata: {
+        slotKey: "hourlyYield",
+        slotOwner: "slot-owner-a",
+        staleSlotReconciliation: {
+          abandonedJobs: [
+            {
+              job: "sync-yield-data",
+              progressStage: "evaluation",
+              leaseOwner: "yield-owner-a",
+            },
+          ],
+        },
       },
     });
   });

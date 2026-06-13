@@ -8,13 +8,58 @@ const NOW = new Date("2026-06-10T03:00:00Z");
 const NOW_SEC = Math.floor(NOW.getTime() / 1000);
 const SINCE_SEC = NOW_SEC - 7 * 86400;
 const SYNC_TIMEOUT_MS = CRON_TIMEOUT_MS["sync-stablecoins"];
+const LIVE_RESERVES_TIMEOUT_MS = CRON_TIMEOUT_MS["sync-live-reserves"];
+const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
+const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
+const STALE_SLOT_METADATA_REASON_PATTERN = "%\"reason\":\"stale-slot-reconciled\"%";
 
-function statsMatcher(stats: { n: number; avg_ms: number; max_ms: number; cap_hits: number }): MockTableConfig {
+function statsMatcher(stats: {
+  n: number;
+  avg_ms: number;
+  max_ms: number;
+  cap_hits: number;
+  budget_truncations?: number;
+}): MockTableConfig {
   return {
     match: "FROM cron_runs",
-    matchBinds: [SYNC_TIMEOUT_MS, "sync-stablecoins", SINCE_SEC],
-    rows: [stats],
-    first: stats,
+    matchBinds: [
+      SYNC_TIMEOUT_MS,
+      "sync-stablecoins",
+      SINCE_SEC,
+      STALE_SLOT_CHILD_ERROR,
+      STALE_SLOT_METADATA_REASON_PATTERN,
+    ],
+    rows: [{ budget_truncations: 0, ...stats }],
+    first: { budget_truncations: 0, ...stats },
+  };
+}
+
+function liveReservesStatsMatcher(stats: {
+  n: number;
+  avg_ms: number;
+  max_ms: number;
+  cap_hits: number;
+  budget_truncations?: number;
+}): MockTableConfig {
+  return {
+    match: "FROM cron_runs",
+    matchBinds: [
+      LIVE_RESERVES_TIMEOUT_MS,
+      "sync-live-reserves",
+      SINCE_SEC,
+      STALE_SLOT_CHILD_ERROR,
+      STALE_SLOT_METADATA_REASON_PATTERN,
+    ],
+    rows: [{ budget_truncations: 0, ...stats }],
+    first: { budget_truncations: 0, ...stats },
+  };
+}
+
+function slotStatsMatcher(rows: Record<string, unknown>[]): MockTableConfig {
+  return {
+    match: "FROM cron_slot_executions",
+    rows,
+    first: rows[0] ?? null,
   };
 }
 
@@ -98,5 +143,63 @@ describe("runCronDurationWatchdog", () => {
     expect(result.status).toBe("degraded");
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: true });
+  });
+
+  it("excludes stale-slot reconciled child rows from runtime averages", async () => {
+    const db = mockD1([
+      statsMatcher({ n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const runtimeQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM cron_runs"));
+
+    expect(result.status).toBeUndefined();
+    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_CHILD_ERROR))).toBe(true);
+    expect(runtimeQueries.some((entry) => entry.binds.includes(STALE_SLOT_METADATA_REASON_PATTERN))).toBe(true);
+  });
+
+  it("keeps live reserve run-budget truncations as runtime pressure", async () => {
+    const db = mockD1([
+      liveReservesStatsMatcher({
+        n: 42,
+        avg_ms: Math.round(LIVE_RESERVES_TIMEOUT_MS * 0.5),
+        max_ms: LIVE_RESERVES_TIMEOUT_MS - 1,
+        cap_hits: 0,
+        budget_truncations: 3,
+      }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      runtimeBreaching: ["sync-live-reserves"],
+      slotAbandonmentBreaching: [],
+      breaching: ["sync-live-reserves"],
+      alerted: true,
+    });
+  });
+
+  it("alerts on scheduled slot abandonment separately from runtime pressure", async () => {
+    const db = mockD1([
+      slotStatsMatcher([{
+        slot_key: "hourlyYieldSync",
+        slots: 168,
+        error_slots: 56,
+        abandoned_slots: 56,
+        latest_abandoned_at: NOW_SEC - 60,
+      }]),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      runtimeBreaching: [],
+      slotAbandonmentBreaching: ["hourlyYieldSync"],
+      breaching: ["hourlyYieldSync"],
+      alerted: true,
+    });
+    expect(db.getHistory().some((entry) => entry.binds.includes(`%${STALE_SLOT_ERROR}%`))).toBe(true);
   });
 });

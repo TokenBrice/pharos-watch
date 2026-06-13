@@ -66,6 +66,16 @@ export interface CronStaleArtifact {
   slotStartedAt?: number | null;
 }
 
+export interface CronEvent {
+  event: "cron_event";
+  job: string;
+  eventType: string;
+  severity: "info" | "warning" | "error";
+  message: string;
+  metadata?: Record<string, unknown>;
+  recordedAt: number;
+}
+
 export interface CronStatus {
   lastRun: CronRun | null;
   recentRuns: CronRun[];
@@ -74,6 +84,7 @@ export interface CronStatus {
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
   staleArtifacts?: CronStaleArtifact[];
+  latestEvent?: CronEvent;
   /**
    * Set to `true` only for watch-tier crons that have zero historical runs
    * (bootstrap state). The cron is considered healthy in this state because

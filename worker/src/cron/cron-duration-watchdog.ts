@@ -3,6 +3,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS } from "../lib/cron-lease";
 import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 /**
  * Duration-trend watchdog for status-tracked cron jobs with explicit app-level
@@ -17,12 +18,19 @@ import { throwIfAborted } from "../lib/abort";
  */
 const DURATION_ALERT_AVG_RATIO = 0.8;
 const DURATION_ALERT_CAP_HITS = 3;
+const DURATION_ALERT_BUDGET_TRUNCATIONS = 3;
+const SLOT_ABANDONMENT_ALERT_COUNT = 3;
+const SLOT_ABANDONMENT_ALERT_RATIO = 0.1;
 const LOOKBACK_SEC = 7 * 86400;
 // Skip jobs with too few recent runs (fresh deploys, paused lanes) — a 7d
 // average over a handful of runs is noise, not a trend.
 const MIN_RUNS_FOR_TREND = 20;
+const MIN_SLOTS_FOR_ABANDONMENT_TREND = 20;
 const ALERT_COOLDOWN_SEC = 7 * 86400;
 const ALERT_MARKER_KEY = "cron-duration-watchdog:alert";
+const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
+const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
+const STALE_SLOT_METADATA_REASON_PATTERN = "%\"reason\":\"stale-slot-reconciled\"%";
 
 interface JobDurationStats {
   job: string;
@@ -30,8 +38,18 @@ interface JobDurationStats {
   avgMs: number;
   maxMs: number;
   capHits: number;
+  budgetTruncations: number;
   timeoutMs: number;
   avgRatio: number;
+}
+
+interface SlotAbandonmentStats {
+  scheduleKey: string;
+  slots: number;
+  errorSlots: number;
+  abandonedSlots: number;
+  latestAbandonedAt: number | null;
+  abandonmentRatio: number;
 }
 
 interface StatsRow {
@@ -39,11 +57,32 @@ interface StatsRow {
   avg_ms: number | null;
   max_ms: number | null;
   cap_hits: number | null;
+  budget_truncations: number | null;
 }
 
-function isBreaching(stats: JobDurationStats): boolean {
+interface SlotStatsRow {
+  slot_key: string;
+  slots: number;
+  error_slots: number | null;
+  abandoned_slots: number | null;
+  latest_abandoned_at: number | null;
+}
+
+function isRuntimeBreaching(stats: JobDurationStats): boolean {
   if (stats.runs < MIN_RUNS_FOR_TREND) return false;
-  return stats.avgRatio >= DURATION_ALERT_AVG_RATIO || stats.capHits >= DURATION_ALERT_CAP_HITS;
+  return (
+    stats.avgRatio >= DURATION_ALERT_AVG_RATIO ||
+    stats.capHits >= DURATION_ALERT_CAP_HITS ||
+    stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
+  );
+}
+
+function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats): boolean {
+  if (stats.slots < MIN_SLOTS_FOR_ABANDONMENT_TREND) return false;
+  return (
+    stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT ||
+    stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO
+  );
 }
 
 function readLastAlertedAt(value: string | null | undefined): number {
@@ -70,10 +109,13 @@ export async function runCronDurationWatchdog(
     db
       .prepare(
         "SELECT COUNT(*) AS n, CAST(AVG(duration_ms) AS INT) AS avg_ms, MAX(duration_ms) AS max_ms, " +
-        "SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits " +
-        "FROM cron_runs WHERE job = ? AND started_at > ?",
+        "SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits, " +
+        "SUM(CASE WHEN metadata LIKE '%\"runBudgetTruncated\":true%' THEN 1 ELSE 0 END) AS budget_truncations " +
+        "FROM cron_runs WHERE job = ? AND started_at > ? " +
+        "AND (error IS NULL OR error <> ?) " +
+        "AND (metadata IS NULL OR metadata NOT LIKE ?)",
       )
-      .bind(timeoutMs, job, sinceSec),
+      .bind(timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON_PATTERN),
   );
   const results = await db.batch<StatsRow>(statements);
   throwIfAborted(signal);
@@ -87,14 +129,44 @@ export async function runCronDurationWatchdog(
       avgMs,
       maxMs: row?.max_ms ?? 0,
       capHits: row?.cap_hits ?? 0,
+      budgetTruncations: row?.budget_truncations ?? 0,
       timeoutMs,
       avgRatio: timeoutMs > 0 ? avgMs / timeoutMs : 0,
     };
   });
-  const breaching = stats.filter(isBreaching);
 
-  if (breaching.length === 0) {
-    return { itemCount: stats.length, metadata: JSON.stringify({ stats }) };
+  const slotRows = await db
+    .prepare(
+      "SELECT slot_key, COUNT(*) AS slots, " +
+      "SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots, " +
+      "SUM(CASE WHEN result_status = 'error' AND metadata LIKE ? THEN 1 ELSE 0 END) AS abandoned_slots, " +
+      "MAX(CASE WHEN result_status = 'error' AND metadata LIKE ? THEN slot_started_at ELSE NULL END) AS latest_abandoned_at " +
+      "FROM cron_slot_executions WHERE slot_started_at > ? GROUP BY slot_key",
+    )
+    .bind(`%${STALE_SLOT_ERROR}%`, `%${STALE_SLOT_ERROR}%`, sinceSec)
+    .all<SlotStatsRow>();
+  throwIfAborted(signal);
+
+  const slotStatsByKey = new Map((slotRows.results ?? []).map((row) => [row.slot_key, row]));
+  const slotStats: SlotAbandonmentStats[] = Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => {
+    const row = slotStatsByKey.get(scheduleKey);
+    const slots = row?.slots ?? 0;
+    const abandonedSlots = row?.abandoned_slots ?? 0;
+    return {
+      scheduleKey,
+      slots,
+      errorSlots: row?.error_slots ?? 0,
+      abandonedSlots,
+      latestAbandonedAt: row?.latest_abandoned_at ?? null,
+      abandonmentRatio: slots > 0 ? abandonedSlots / slots : 0,
+    };
+  });
+
+  const runtimeBreaching = stats.filter(isRuntimeBreaching);
+  const slotAbandonmentBreaching = slotStats.filter(isSlotAbandonmentBreaching);
+
+  if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
+    return { itemCount: stats.length + slotStats.length, metadata: JSON.stringify({ stats, slotStats }) };
   }
 
   const marker = await getCache(db, ALERT_MARKER_KEY);
@@ -102,17 +174,27 @@ export async function runCronDurationWatchdog(
   const dueForAlert = nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
   let alerted = false;
   if (dueForAlert) {
-    const lines = breaching.map((entry) =>
+    const runtimeLines = runtimeBreaching.map((entry) =>
       `- ${entry.job}: 7d avg ${Math.round(entry.avgMs / 1000)}s of ${Math.round(entry.timeoutMs / 1000)}s ceiling ` +
-      `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ${entry.runs} runs`,
+      `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ` +
+      `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs`,
+    );
+    const slotLines = slotAbandonmentBreaching.map((entry) =>
+      `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
+      `(${Math.round(entry.abandonmentRatio * 100)}%), ${entry.errorSlots} total error slot(s)`,
     );
     alerted = await sendAlert(
       alertWebhookUrl,
-      "Cron duration budget breach",
+      "Cron runtime budget or slot abandonment breach",
       [
-        "Fetch-heavy cron jobs are trending into their app-level timeout ceilings.",
-        ...lines,
-        "Budget the next provider/feature addition into a different trigger slot before the timeout truncates runs.",
+        "Cron runtime pressure and scheduled-slot abandonment are reported separately.",
+        ...(runtimeLines.length > 0
+          ? ["Runtime budget pressure:", ...runtimeLines]
+          : []),
+        ...(slotLines.length > 0
+          ? ["Scheduled slot abandonment:", ...slotLines]
+          : []),
+        "Treat runtime budget pressure as capacity work; treat slot abandonment as worker infrastructure/platform interruption.",
       ].join("\n"),
     );
     if (alerted) {
@@ -122,10 +204,16 @@ export async function runCronDurationWatchdog(
 
   return {
     status: "degraded",
-    itemCount: stats.length,
+    itemCount: stats.length + slotStats.length,
     metadata: JSON.stringify({
       stats,
-      breaching: breaching.map((entry) => entry.job),
+      slotStats,
+      runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
+      slotAbandonmentBreaching: slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
+      breaching: [
+        ...runtimeBreaching.map((entry) => entry.job),
+        ...slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
+      ],
       alerted,
       suppressedByCooldown: !dueForAlert,
     }),

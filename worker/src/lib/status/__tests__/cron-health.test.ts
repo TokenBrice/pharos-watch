@@ -238,3 +238,56 @@ describe("loadCronHealth — stale cron artifact readout", () => {
     ]);
   });
 });
+
+describe("loadCronHealth — cron event markers", () => {
+  const NOW = 1_775_890_000;
+
+  it("surfaces the latest scheduled-slot abandonment marker on child crons", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const event = {
+      event: "cron_event",
+      job: "hourlyYieldSync",
+      eventType: "scheduled-slot-abandoned",
+      severity: "error",
+      message: "Scheduled slot hourlyYieldSync stopped heartbeating and was reconciled as abandoned.",
+      metadata: {
+        slotKey: "hourlyYieldSync",
+        slotStartedAt: NOW - 3600,
+        slotOwner: "slot-owner-a",
+        staleSlotReconciliation: {
+          abandonedJobs: [{
+            job: "sync-yield-data",
+            progressStage: "evaluation",
+            leaseOwner: "yield-owner-a",
+          }],
+        },
+      },
+      recordedAt: NOW - 60,
+    };
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "FROM cache",
+        rows: [{
+          key: "cron:event:hourlyyieldsync:scheduled-slot-abandoned",
+          value: JSON.stringify(event),
+          updated_at: NOW - 60,
+        }],
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.crons["sync-yield-data"]?.latestEvent).toMatchObject({
+      eventType: "scheduled-slot-abandoned",
+      severity: "error",
+      metadata: {
+        slotKey: "hourlyYieldSync",
+        slotOwner: "slot-owner-a",
+      },
+    });
+    expect(snapshot.crons["sync-stablecoins"]?.latestEvent).toBeUndefined();
+  });
+});

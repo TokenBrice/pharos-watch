@@ -198,6 +198,8 @@ Related extracted loaders:
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
+Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, but the duration watchdog excludes them from runtime averages and reports slot abandonment as an infrastructure/runtime-instability signal instead.
+
 Mint/burn public freshness now uses the same grace window before warning: `/api/mint-burn-flows` and `/flows` stay `fresh` through `2 * expectedIntervalSec` for the critical lane (`60m` at the current cadence), then degrade/stale afterward. `/api/status` now reuses that same public-health floor for availability once the critical lane has emitted real sync telemetry, so admin and public surfaces no longer drift on fresh-but-degraded mint/burn runs.
 
 For the split DEX pipeline:

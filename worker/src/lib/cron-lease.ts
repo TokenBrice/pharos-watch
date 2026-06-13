@@ -236,6 +236,21 @@ interface StaleSlotReconciliationSummary {
   syntheticCronRuns: number;
   progressRowsCleared: number;
   leasesCleared: number;
+  abandonedJobs: Array<{
+    job: string;
+    progressStage: string | null;
+    progressUpdatedAt: number;
+    leaseOwner: string;
+    leaseUntil: number;
+  }>;
+}
+
+const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
+const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
+
+function cacheKeySegment(value: string): string {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
+  return (normalized || "unknown").slice(0, 96);
 }
 
 function normalizeAbortError(reason: unknown, fallback: Error): Error {
@@ -382,6 +397,7 @@ async function reconcileStaleSlotArtifacts(
     syntheticCronRuns: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
+    abandonedJobs: [],
   };
   const progressRows = await listProgressRowsForStaleSlot(db, slot.slot_started_at);
 
@@ -398,6 +414,13 @@ async function reconcileStaleSlotArtifacts(
       await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec);
       summary.syntheticCronRuns++;
     }
+    summary.abandonedJobs.push({
+      job: progress.job,
+      progressStage: progress.stage,
+      progressUpdatedAt: progress.updated_at,
+      leaseOwner: progress.lease_owner,
+      leaseUntil: lease.lease_until,
+    });
 
     const progressDelete = await runWithOverloadRetry(() =>
       db
@@ -417,6 +440,46 @@ async function reconcileStaleSlotArtifacts(
   }
 
   return summary;
+}
+
+async function writeStaleSlotEventMarker(
+  db: D1Database,
+  slot: StaleSlotExecutionRow,
+  nowSec: number,
+  reconciliation: StaleSlotReconciliationSummary,
+): Promise<void> {
+  const record = {
+    event: "cron_event",
+    job: slot.slot_key,
+    eventType: STALE_SLOT_ABANDONED_EVENT_TYPE,
+    severity: "error",
+    message: `Scheduled slot ${slot.slot_key}@${slot.slot_started_at} stopped heartbeating and was reconciled as abandoned.`,
+    metadata: {
+      slotKey: slot.slot_key,
+      slotStartedAt: slot.slot_started_at,
+      slotOwner: slot.execution_owner,
+      slotStartedAtActual: slot.started_at,
+      slotUpdatedAt: slot.updated_at,
+      reconciledAt: nowSec,
+      staleSlotReconciliation: reconciliation,
+    },
+    recordedAt: nowSec,
+  };
+  const cacheKey = `cron:event:${cacheKeySegment(slot.slot_key)}:${cacheKeySegment(STALE_SLOT_ABANDONED_EVENT_TYPE)}`;
+  try {
+    await runWithOverloadRetry(() =>
+      db
+        .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .bind(cacheKey, JSON.stringify(record), nowSec)
+        .run(),
+    );
+    console.error(`[cron-event:${slot.slot_key}] ${STALE_SLOT_ABANDONED_EVENT_TYPE}: ${record.message}`);
+  } catch (err) {
+    console.warn(
+      `[cron-slot] Failed to persist stale slot marker for ${slot.slot_key}@${slot.slot_started_at}:`,
+      err,
+    );
+  }
 }
 
 async function finishStaleScheduledSlotExecution(
@@ -444,7 +507,7 @@ async function finishStaleScheduledSlotExecution(
         nowSec,
         nowSec,
         JSON.stringify({
-          error: "scheduled slot heartbeat stale; marked expired by later invocation",
+          error: STALE_SLOT_ERROR,
           staleSlotReconciliation: reconciliation,
         }),
         slot.slot_key,
@@ -467,6 +530,7 @@ async function claimScheduledSlotExecution(
   const staleSlots = await listStaleScheduledSlotExecutions(db, slotKey, staleBefore);
   for (const staleSlot of staleSlots) {
     const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
+    await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
     await finishStaleScheduledSlotExecution(db, staleSlot, nowSec, staleBefore, reconciliation);
   }
   const inserted = await runWithOverloadRetry(() =>

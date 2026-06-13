@@ -1,5 +1,6 @@
 import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
-import type { CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
+import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 
@@ -27,6 +28,16 @@ const CRON_HISTORY_ROWS_PER_JOB = 10;
 const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
 const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
+const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
+
+function cacheKeySegment(value: string): string {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
+  return (normalized || "unknown").slice(0, 96);
+}
+
+function staleSlotEventCacheKey(scheduleKey: string): string {
+  return `cron:event:${cacheKeySegment(scheduleKey)}:${cacheKeySegment(STALE_SLOT_ABANDONED_EVENT_TYPE)}`;
+}
 
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
@@ -37,6 +48,40 @@ function parseMetadataObject(value: string | null | undefined): Record<string, u
       : undefined;
   } catch {
     return undefined;
+  }
+}
+
+function parseCronEvent(value: string | null | undefined): CronEvent | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (
+      record.event !== "cron_event" ||
+      typeof record.job !== "string" ||
+      typeof record.eventType !== "string" ||
+      (record.severity !== "info" && record.severity !== "warning" && record.severity !== "error") ||
+      typeof record.message !== "string" ||
+      typeof record.recordedAt !== "number" ||
+      !Number.isFinite(record.recordedAt)
+    ) {
+      return null;
+    }
+    const metadata = record.metadata;
+    return {
+      event: "cron_event",
+      job: record.job,
+      eventType: record.eventType,
+      severity: record.severity,
+      message: record.message,
+      ...(metadata && typeof metadata === "object" && !Array.isArray(metadata)
+        ? { metadata: metadata as Record<string, unknown> }
+        : {}),
+      recordedAt: record.recordedAt,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -146,6 +191,7 @@ export async function loadCronHealth(
   let cronLeaseRows: Array<{ job: string; lease_owner: string; lease_until: number }> = [];
   let cronLeaseQueryFailed = false;
   const staleArtifactsByJob = new Map<string, CronStaleArtifact[]>();
+  const latestEventByJob = new Map<string, CronEvent>();
 
   try {
     const leaseRows = await db
@@ -276,6 +322,48 @@ export async function loadCronHealth(
     }
   }
 
+  try {
+    const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
+    const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
+    const eventKeyInClause = buildInClause(eventKeys);
+    const scheduleKeyByEventKey = new Map(eventKeys.map((key, index) => [key, scheduleKeys[index]]));
+    const eventRows = await db
+      .prepare(
+        `SELECT key, value, updated_at
+           FROM cache
+           WHERE key IN (${eventKeyInClause.sql})`,
+      )
+      .bind(...eventKeyInClause.binds)
+      .all<{
+        key: string;
+        value: string | null;
+        updated_at: number;
+      }>();
+
+    for (const row of eventRows.results ?? []) {
+      const scheduleKey = scheduleKeyByEventKey.get(row.key);
+      if (!scheduleKey) continue;
+      const event = parseCronEvent(row.value);
+      if (!event) continue;
+      for (const job of flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])) {
+        const previous = latestEventByJob.get(job);
+        if (!previous || previous.recordedAt < event.recordedAt) {
+          latestEventByJob.set(job, event);
+        }
+      }
+    }
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "cron_slot_events_unavailable",
+      route: "status",
+      source: "cache",
+      message: "Cron slot event markers unavailable",
+      error: err,
+    });
+  }
+
   const cronByJob = new Map<string, CronRun[]>();
   for (const row of cronRows.results ?? []) {
     const runs = cronByJob.get(row.job) ?? [];
@@ -381,6 +469,7 @@ export async function loadCronHealth(
         };
       })(),
       ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),
+      ...(latestEventByJob.has(job) ? { latestEvent: latestEventByJob.get(job) } : {}),
       ...(watchBootstrap ? { bootstrap: true } : {}),
     };
 
