@@ -34,6 +34,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { cn } from "@/lib/utils";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   TELEGRAM_ACTIONS,
@@ -121,6 +122,8 @@ const ACTION_ANCHORS = {
   digest: "channel",
   community: "community",
 } as const satisfies Record<TelegramActionKey, string>;
+
+const PROSE_LINK_CLASS = "rounded-sm underline underline-offset-4 transition-colors hover:text-foreground";
 
 const RECOMMENDED_SETUPS = [
   {
@@ -276,7 +279,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
   return (
     <section
       id={anchorId}
-      className={`pharos-card-shell pharos-interactive-card flex h-full scroll-mt-24 flex-col p-5 ${cardClassName}`}
+      className={cn("pharos-card-shell pharos-interactive-card flex h-full scroll-mt-24 flex-col p-5", cardClassName)}
       style={{ "--stagger-index": index } as CSSProperties}
     >
       <div className="flex items-start gap-3">
@@ -304,10 +307,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
         {action.showArchiveLink ? (
           <>
             {" "}
-            <Link
-              href="/digest/"
-              className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-            >
+            <Link href="/digest/" className={PROSE_LINK_CLASS}>
               Browse archive
             </Link>
             .
@@ -505,7 +505,7 @@ export default function PharosWatchBotPage() {
                   href={MINI_APP_WATCHLIST_DEEP_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+                  className={PROSE_LINK_CLASS}
                 >
                   open the Mini App
                 </a>{" "}
@@ -797,7 +797,7 @@ export default function PharosWatchBotPage() {
                   to raise the floor. See{" "}
                   <Link
                     href="/methodology/#pegscore-dews-methodology"
-                    className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+                    className={PROSE_LINK_CLASS}
                   >
                     the DEWS methodology
                   </Link>{" "}
@@ -960,7 +960,7 @@ export default function PharosWatchBotPage() {
 
         <p className="text-xs text-muted-foreground">
           Methodology for DEWS, safety-grade, and depeg scoring lives on the{" "}
-          <Link href="/methodology/" className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground">
+          <Link href="/methodology/" className={PROSE_LINK_CLASS}>
             methodology page
           </Link>
           .

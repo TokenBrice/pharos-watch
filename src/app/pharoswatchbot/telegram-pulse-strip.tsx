@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Area, AreaChart } from "recharts";
 import { ChevronDown } from "lucide-react";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
@@ -84,6 +85,8 @@ function lifecycleRangeDays(data: TelegramWatcherHistoryPoint[]): number {
 
 function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
+  const rawGradientId = useId();
+  const gradientId = `telegram-watcher-growth-${rawGradientId.replace(/:/g, "")}`;
   const rangeDays = lifecycleRangeDays(data);
   const tickFormatter = rangeDays > 120 ? formatMonthTick : formatDayTick;
   const singlePointTimestamp = data.length === 1 ? data[0]?.timestamp : undefined;
@@ -101,7 +104,7 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
       {ready ? (
         <AreaChart width={width} height={height} data={data} margin={{ top: 10, right: 10, bottom: 22, left: 0 }}>
           <defs>
-            <linearGradient id="telegramWatcherGrowthGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--brand-accent)" stopOpacity={0.34} />
               <stop offset="95%" stopColor="var(--brand-accent)" stopOpacity={0.03} />
             </linearGradient>
@@ -115,7 +118,7 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
             dataKey="activeWatchers"
             name="Active Telegram chats"
             stroke="var(--brand-accent)"
-            fill="url(#telegramWatcherGrowthGrad)"
+            fill={`url(#${gradientId})`}
             strokeWidth={2}
             dot={data.length === 1 ? { r: 3, strokeWidth: 2 } : false}
             activeDot={{ r: 4 }}

@@ -113,7 +113,7 @@ Status legend: `[ ]` not started · `[x]` done · `[G]` guarded (needs before/af
 | `[x]` GRADE_RANK / BLUECHIP_GRADE_VALUES tables | `sel-2`, `sel-7`, `types-5` | Selector ranking now delegates to shared report-card rank; selector snapshot derives bluechip grades from `BluechipGradeSchema.options` and pins the `NR` safety-grade exception in tests. | small | low |
 | `[x]` Local stableJsonStringify (hash-input boundary) | `worker-store-2` | Store path verified on `stableJsonStringifyV1`; ddrv2-store tests snapshot the persisted source fingerprint and incident key for the current payload. | small | medium |
 | `[x]` Inline ternary/value duplication (worker + components) | `wapi-1`, `tw-7`, `wapi-10`, `f-stablecoin-detail-1`, `w-recap-1`, `w-cron-6`, `w-cron-8`, `worker-store-6`, `worker-infra-2`, `worker-infra-3`, `worker-infra-7`, `worker-infra-9`, `fe-5`, `fe-7` | Hoisted the safe confidence-tier/variant/count/config-key/API-key/filter helpers; imported existing `DEWS_BAND_RANK`; preserved the blacklist `toLowerCase` behavior. Verified existing frontend row cleanup before leaving it unchanged. | medium | medium |
-| `[x]` Chart-component consistency | `fviz-4`, `fviz-3`, `fviz-5`, `fviz-6`, `fviz-1`, `f-pharoswatchbot-2`, `f-pharoswatchbot-4`, `sd-7` | Chart gradient IDs now use sanitized `useId`; comparison chart uses `externalRange`; shared reduced-motion hook keeps live `change` subscription and both component copies are removed. Optional ResponsiveContainer migration remains out of scope. | medium | medium |
+| `[x]` Chart-component consistency | `fviz-4`, `fviz-3`, `fviz-5`, `fviz-6`, `fviz-1`, `f-pharoswatchbot-2`, `f-pharoswatchbot-4`, `sd-7` | Chart gradient IDs now use sanitized `useId`; comparison chart uses `externalRange`; shared reduced-motion hook keeps live `change` subscription and both component copies are removed. PharosWatchBot SurfaceCard/prose-link class cleanup is done. Optional ResponsiveContainer migration remains out of scope. | medium | medium |
 | `[x]` Divergent-hue design flags (owner sign-off) | `cls-9`, `cls-10` | Accepted in Wave 4: VAR chart hue aligned to sky and centralized governance table color aligned to the badge yellow. | trivial | medium |
 | `[x]` Sentinel/SQL-param readability (scoped) | `tw-10`, `worker-store-6`, `f-pharoswatchbot-3`, `rbc-12`, `f-pharoswatchbot-1` | Scoped safe item done: `loadFirstPublicationMembership` now uses `filterSql`. GATED_SENTINEL and optional CSS/comment cleanups remain intentionally deferred outside Wave 4's verified code paths. | small | low |
 | `[x]` Design-consistency flags (left-stripe) | `sd-7` | MobileRiskSnapshot retired left-stripe removed after design-language cross-check; card keeps the existing responsive visibility and content structure. | trivial | low |
@@ -141,7 +141,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fviz-3` — Static SVG linearGradient IDs risk ID collisions** `[maintainability | low | trivial | low]`
 - Problem: four chart components use hard-coded SVG gradient IDs (`mcapGradient`, `destroyedGradient`, `dewsGrad`, `psiScoreGradient`). Collision risk is largely theoretical — each renders as a single instance per page. Candidate overstated the SSR-flush/hydration corruption scenario.
-- Recommendation: low-priority hardening. If done, follow ACTUAL prior art: peg-gauge.tsx and row-sparkline.tsx use `useId()` and SANITIZE it (`gauge-${rawId.replace(/:/g,'')}`) because React's `useId` returns colon-containing strings invalid in SVG `url(#…)`. The candidate's bare-`useId()` prescription is WRONG. Skip dews-detail/cemetery unless touched anyway.
+- Done 2026-06-13: mcap, cemetery, DEWS detail, PSI history, and Telegram watcher growth gradients now use sanitized `useId()`-derived IDs. The bare-`useId()` prescription was avoided because React IDs can contain colons that break SVG `url(#...)` references.
 - Files: `src/components/mcap-chart.tsx:217`, `src/components/cemetery-charts.tsx:468`, `src/components/dews-detail.tsx:324`, `src/components/psi-history-chart.tsx:144`.
 - Verifier: all 4 static IDs confirmed; corrected the recommendation to sanitized useId. Checks: `npm run typecheck`.
 
@@ -276,7 +276,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-pharoswatchbot-2` — SurfaceCard builds className via template literal** `[consistency | low | trivial | none]`
 - Problem: the central claim that this "violates the static Tailwind class rule" is FALSE. 277-279 select between two fully-static string literals via a ternary, then 284 interpolates. No `bg-${x}` patterns — purging unaffected. The only real point is consistency: `cn()` (used in 42 files) is the preferred helper and is not imported here.
-- Recommendation: optional consistency tidy — import `cn` and replace the manual ternary+interpolation. Do NOT justify as a hard-rule fix. Low priority.
+- Done 2026-06-13: imported `cn` and replaced the manual SurfaceCard interpolation while preserving static Tailwind strings.
 - Files: `src/app/pharoswatchbot/page.tsx:277-285`.
 - Verifier: refuted the hard-rule framing (21 app files use the same pattern); demoted medium->low. Checks: `npm run lint`, `npm run typecheck`.
 
@@ -288,7 +288,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`f-pharoswatchbot-4` — Prose inline-link class string repeated 4 times with no named constant** `[consistency | low | trivial | none]`
 - Problem: `rounded-sm underline underline-offset-4 transition-colors hover:text-foreground` appears at 314, 513, 805, 968 on plain prose anchors/Links. `TelegramLink` (207-219) handles EXTERNAL links with a deliberately divergent class string, correctly not reused.
-- Recommendation: optional micro-DRY — `const PROSE_LINK_CLASS = '...'` referenced at all 4 sites (must be a plain literal). Marginal value; do only if already editing the file.
+- Done 2026-06-13: added plain-literal `PROSE_LINK_CLASS` and reused it at the four prose-link sites; external `TelegramLink` remains intentionally separate.
 - Files: `src/app/pharoswatchbot/page.tsx:314,513,805,968`.
 - Verifier: 4 exact occurrences verified; TelegramLink legitimately different. Checks: `npm run lint`, `npm run typecheck`.
 
