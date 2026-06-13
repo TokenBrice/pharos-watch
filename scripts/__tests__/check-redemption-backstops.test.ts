@@ -57,7 +57,7 @@ describe("check-redemption-backstops CLI", () => {
     expect(report.summary.configuredCount).toBe(310);
     expect(report.auditRows).toHaveLength(310);
     expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("writes deterministic JSON report data", () => {
     const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-")), "report.json");

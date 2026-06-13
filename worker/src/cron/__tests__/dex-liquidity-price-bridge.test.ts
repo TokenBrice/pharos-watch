@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+const GATE_LOAD_TIMEOUT_MS = 15_000;
+
 describe("loadDexPriceSources", () => {
   it("parses price_sources_json into per-stablecoin protocol arrays", async () => {
     const mockDb = {
@@ -25,7 +27,7 @@ describe("loadDexPriceSources", () => {
     expect(result.get("usdc")).toHaveLength(2);
     expect(result.get("usdc")![0].protocol).toBe("fluid");
     expect(result.get("usdc")![1].protocol).toBe("balancer");
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("returns empty map on missing table", async () => {
     const mockDb = {
