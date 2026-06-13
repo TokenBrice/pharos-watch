@@ -1,5 +1,5 @@
 import {
-  SAFETY_SCORE_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/safety-score-version";
 import { scoringAnchorId } from "./content-shared";
 import { ScoringChangelogV8Entries } from "./content-v8";
@@ -24,4 +24,4 @@ export function ScoringChangelogContent() {
   );
 }
 
-export { SAFETY_SCORE_VERSION_LABEL };
+export { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL };

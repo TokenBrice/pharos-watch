@@ -2,9 +2,9 @@ import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/blackli
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
 import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
-import { REDEMPTION_BACKSTOP_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
 
@@ -58,9 +58,9 @@ export function formatPreambleMarkdown(p: ExportPreamble): string {
  * explicitly to `<TableExportMenu>`.
  */
 const METHODOLOGY_LABEL_BY_ENDPOINT: Record<string, string> = {
-  stablecoins: `safety-score ${SAFETY_SCORE_VERSION_LABEL}`,
-  "report-cards": `safety-score ${SAFETY_SCORE_VERSION_LABEL}`,
-  "bluechip-ratings": `safety-score ${SAFETY_SCORE_VERSION_LABEL}`,
+  stablecoins: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
+  "report-cards": `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
+  "bluechip-ratings": `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
   "peg-summary": `depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
   "depeg-events": `depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
   "dews-snapshot": `depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
@@ -72,8 +72,8 @@ const METHODOLOGY_LABEL_BY_ENDPOINT: Record<string, string> = {
   blacklist: `blacklist-tracker ${BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}`,
   yield: `yield ${YIELD_METHODOLOGY_VERSION_LABEL}`,
   "yield-rankings": `yield ${YIELD_METHODOLOGY_VERSION_LABEL}`,
-  pricing: `pricing-pipeline ${PRICING_PIPELINE_VERSION_LABEL}`,
-  "redemption-backstop": `redemption-backstop ${REDEMPTION_BACKSTOP_VERSION_LABEL}`,
+  pricing: `pricing-pipeline ${PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL}`,
+  "redemption-backstop": `redemption-backstop ${REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL}`,
 };
 
 /**

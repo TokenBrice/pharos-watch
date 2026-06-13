@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
@@ -85,7 +85,7 @@ function mockSnapshot(
   vi.mocked(buildReportCardsSnapshot).mockResolvedValue({
     cards,
     methodology: {
-      version: SAFETY_SCORE_VERSION,
+      version: SAFETY_SCORE_METHODOLOGY_VERSION,
       weights: {
         pegStability: 0,
         liquidity: 0,
@@ -144,7 +144,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.snapshotDay).toBe(Math.floor(Date.now() / 1000 / 86_400) * 86_400);
-    expect(metadata.methodologyVersion).toBe(SAFETY_SCORE_VERSION);
+    expect(metadata.methodologyVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     expect(metadata.seeded).toBe(2);
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(0);

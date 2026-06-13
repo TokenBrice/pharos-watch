@@ -40,7 +40,7 @@ import {
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-authority-version";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
@@ -384,7 +384,7 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
-            methodologyLabel={`safety-score ${SAFETY_SCORE_VERSION_LABEL}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
+            methodologyLabel={`safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
             triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
             disabled={scoreFilterDataLoading}
           />

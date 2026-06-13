@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
@@ -9,7 +9,7 @@ import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 
-const SCORING_CHANGELOG_BY_VERSION = new Map(SAFETY_SCORE_CHANGELOG.map((entry) => [entry.version, entry]));
+const SCORING_CHANGELOG_BY_VERSION = new Map(SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => [entry.version, entry]));
 
 export function scoringAnchorId(version: string) {
   return `scoring-${slugifyId(version)}`;

@@ -1,7 +1,7 @@
 import { getCache, setCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
 import { isRecord } from "@shared/lib/type-guards";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
@@ -179,12 +179,12 @@ export async function loadReportCardCache(
     return { kind: "error", reason: decoded.reason, updatedAt: decoded.updatedAt };
   }
 
-  if (decoded.payload.methodologyVersion !== SAFETY_SCORE_VERSION) {
+  if (decoded.payload.methodologyVersion !== SAFETY_SCORE_METHODOLOGY_VERSION) {
     return { kind: "error", reason: "methodology-mismatch", updatedAt: decoded.payload.updatedAt };
   }
   const payload: ReportCardCachePayload = {
     ...decoded.payload,
-    methodologyVersion: SAFETY_SCORE_VERSION,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   };
 
   if (options.maxAgeMs != null) {
@@ -218,7 +218,7 @@ export async function writeReportCardCache(
     JSON.stringify({
       scores,
       updatedAt,
-      methodologyVersion: SAFETY_SCORE_VERSION,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       degradedInputs: buildReportCardCacheInputStatus(options),
     } satisfies ReportCardCachePayload),
   );

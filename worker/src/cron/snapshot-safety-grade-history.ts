@@ -1,4 +1,4 @@
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
@@ -63,7 +63,7 @@ export async function snapshotSafetyGradeHistory(
 
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
-  const methodologyVersion = SAFETY_SCORE_VERSION;
+  const methodologyVersion = SAFETY_SCORE_METHODOLOGY_VERSION;
 
   let snapshot;
   try {

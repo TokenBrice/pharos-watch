@@ -23,7 +23,7 @@ import type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
 } from "@shared/lib/redemption-backstop-configs/shared";
-import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   type RedemptionBackstopConfigManifestEntry,
@@ -831,14 +831,14 @@ function validateApiReferenceExample(
   }
 
   if (
-    parsed.data.methodology.version !== REDEMPTION_BACKSTOP_VERSION ||
-    parsed.data.methodology.currentVersion !== REDEMPTION_BACKSTOP_VERSION
+    parsed.data.methodology.version !== REDEMPTION_BACKSTOP_METHODOLOGY_VERSION ||
+    parsed.data.methodology.currentVersion !== REDEMPTION_BACKSTOP_METHODOLOGY_VERSION
   ) {
     addFinding(
       findings,
       "error",
       "api-docs-redemption-backstops-version-stale",
-      `docs/api-reference.md redemption-backstops example must use methodology version ${REDEMPTION_BACKSTOP_VERSION}`,
+      `docs/api-reference.md redemption-backstops example must use methodology version ${REDEMPTION_BACKSTOP_METHODOLOGY_VERSION}`,
     );
   }
 }

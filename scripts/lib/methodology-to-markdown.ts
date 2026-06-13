@@ -27,11 +27,11 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
 } from "../../shared/lib/mint-burn-flow-version";
 import {
-  PRICING_PIPELINE_CHANGELOG,
-  PRICING_PIPELINE_CHANGELOG_PATH,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
 } from "../../shared/lib/pricing-pipeline-version";
 import {
-  SAFETY_SCORE_CHANGELOG,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
 } from "../../shared/lib/safety-score-version";
 import {
@@ -49,7 +49,7 @@ const CHANGELOG_REGISTRY = {
   scoring: {
     title: "Safety Scores Changelog",
     path: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-    entries: SAFETY_SCORE_CHANGELOG,
+    entries: SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   },
   depeg: {
     title: "Depeg Tracker and DEWS Changelog",
@@ -88,8 +88,8 @@ const CHANGELOG_REGISTRY = {
   },
   "pricing-pipeline": {
     title: "Pricing Pipeline Changelog",
-    path: PRICING_PIPELINE_CHANGELOG_PATH,
-    entries: PRICING_PIPELINE_CHANGELOG,
+    path: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+    entries: PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
   },
   "chain-health": {
     title: "Chain Health Changelog",

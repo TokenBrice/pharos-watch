@@ -6,7 +6,7 @@ import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
 import { EditorialMasthead } from "@/components/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
@@ -213,7 +213,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             ? "Weekly recap composed from the week's tracked events and DEWS history; scores reflect data available at publication."
             : "Daily digest composed from the day's tracked events and DEWS history; scores reflect data available at publication."
         }
-        methodologyVersion={SAFETY_SCORE_VERSION_LABEL}
+        methodologyVersion={SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}
         citation={{
           title: `${digest.title} (${formatted})`,
           canonicalUrl: `${SITE_URL}/digest/${digest.date}/`,

@@ -14,11 +14,11 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { PSI_METHODOLOGY_CHANGELOG_PATH, PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
-  REDEMPTION_BACKSTOP_VERSION_LABEL,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/redemption-backstop-version";
 import {
   MINT_AUTHORITY_METHODOLOGY_PATH,
@@ -136,7 +136,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     detail:
       "Missing exit data applies a 10% penalty instead of redistributing weight. Overall grade is NR when too few base dimensions are rated.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   resilience: {
@@ -144,7 +144,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary: "Three-factor score for collateral quality, custody model, and blacklist capability.",
     detail: "Chain infrastructure is not scored here. It now lives in Decentralization to avoid double-counting.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   freezable: {
@@ -152,7 +152,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "The issuer or protocol admin can freeze, block, seize, or destroy user balances through resolved on-chain controls. This is a trust/centralization risk, not an instant harm.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   freezableUpstream: {
@@ -160,7 +160,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "No direct holder freeze is resolved for this stablecoin, but an upstream collateral or parent asset can be frozen. Protocol-held balances may be exposed even when individual holders are not directly blocked.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   freezableNo: {
@@ -168,7 +168,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "No direct, upstream, or possible freeze exposure is resolved in the current model. This does not prove the asset is risk-free.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   freezablePossible: {
@@ -176,7 +176,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Mutable, pause-capable, or similar admin surfaces could enable freezing, seizure, or destruction, but active address-level freezing is not confirmed.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   dependencyRisk: {
@@ -186,7 +186,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     detail:
       "Wrapper and mechanism-critical dependencies can ceiling the final score to the upstream asset when that dependency is fundamental.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   redemptionBackstop: {
@@ -196,7 +196,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     detail:
       "This is currently documented under the Safety Scores methodology because it feeds the Liquidity / Exit dimension rather than having a standalone public section.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
-    versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+    versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   },
   effectiveExit: {
     title: "Effective Exit",
@@ -205,7 +205,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     detail:
       "The route score is first capped by route family and current capacity, then the effective-exit model applies freshness gates, the model-confidence discount, and the independent-route diversification bonus before comparing against DEX liquidity.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
-    versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+    versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   },
   mintAuthorityScore: {
     title: "Mint Authority Score",

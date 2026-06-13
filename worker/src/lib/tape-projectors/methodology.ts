@@ -18,10 +18,10 @@ import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "@shared/lib/chain-health-ver
 import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "@shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "@shared/lib/liquidity-score-version";
 import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_CHANGELOG } from "@shared/lib/pricing-pipeline-version";
+import { PRICING_PIPELINE_METHODOLOGY_CHANGELOG } from "@shared/lib/pricing-pipeline-version";
 import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/stability-index-version";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
 import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/yield-methodology-version";
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
 
@@ -79,7 +79,7 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
     domain: "pricing-pipeline",
     label: "Pricing Pipeline",
     href: "/methodology/pricing-pipeline-changelog/",
-    changelog: PRICING_PIPELINE_CHANGELOG,
+    changelog: PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "redemption-backstop",
@@ -91,7 +91,7 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
     domain: "safety-score",
     label: "Safety Score",
     href: "/methodology/scoring-changelog/",
-    changelog: SAFETY_SCORE_CHANGELOG,
+    changelog: SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "stability-index",

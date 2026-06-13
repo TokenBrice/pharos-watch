@@ -20,7 +20,7 @@ import {
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
-import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata, type ReserveSnapshotMetadataRecord } from "./live-reserves-store";
@@ -286,7 +286,7 @@ export async function buildRedemptionBackstopEntry(
     ...(staticFields.costScenarioScores ? { costScenarioScores: staticFields.costScenarioScores } : {}),
     routeExitCorrelation,
     queueEnabled: staticFields.queueEnabled,
-    methodologyVersion: REDEMPTION_BACKSTOP_VERSION,
+    methodologyVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
     updatedAt: now,
     ...(staticFields.docs ? { docs: staticFields.docs } : {}),
     notes,
@@ -371,7 +371,7 @@ export function buildFailedRedemptionBackstopEntry(
     feeBps: staticFields.feeBps,
     feeDescription: staticFields.feeDescription,
     queueEnabled: staticFields.queueEnabled,
-    methodologyVersion: REDEMPTION_BACKSTOP_VERSION,
+    methodologyVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
     updatedAt: now,
     ...(staticFields.docs ? { docs: staticFields.docs } : {}),
     notes: [

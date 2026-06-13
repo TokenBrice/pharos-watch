@@ -1,6 +1,6 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   DIMENSION_WEIGHTS,
   PEG_MULTIPLIER_EXPONENT,
@@ -71,7 +71,7 @@ export function buildReportCardsSnapshotEnvelope(input: {
   return {
     cards: input.cards,
     methodology: {
-      version: SAFETY_SCORE_VERSION,
+      version: SAFETY_SCORE_METHODOLOGY_VERSION,
       weights: DIMENSION_WEIGHTS,
       pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
       activeDepegSeveritySource: ACTIVE_DEPEG_SEVERITY_SOURCE,

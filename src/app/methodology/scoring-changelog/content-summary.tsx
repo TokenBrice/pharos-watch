@@ -1,4 +1,4 @@
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangelogTable, changelogTableClassNames } from "./content-shared";
@@ -54,7 +54,7 @@ export function ScoringChangelogSummaryTables() {
                   ["v4.0", "multiplier", "25%", "\u2014", "25%", "10%", "30%"],
                   ["v4.1", "multiplier", "30%", "\u2014", "20%", "15%", "25%"],
                   [
-                    `v5.0\u2013${SAFETY_SCORE_VERSION_LABEL.replace(/^v/, "")}`,
+                    `v5.0\u2013${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.replace(/^v/, "")}`,
                     "multiplier",
                     "30%",
                     "\u2014",

@@ -1,6 +1,6 @@
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-  SAFETY_SCORE_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/safety-score-version";
 import { MethodologySectionShell } from "../../methodology-shared";
 import { SAFETY_SCORES_SECTION_CONTENT } from "../methodology-content";
@@ -12,7 +12,7 @@ export function SafetyScoresMethodologySection() {
     <MethodologySectionShell
       id={SAFETY_SCORES_SECTION_CONTENT.id}
       title={SAFETY_SCORES_SECTION_CONTENT.title}
-      versionLabel={SAFETY_SCORE_VERSION_LABEL}
+      versionLabel={SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when weights, thresholds, or dimension definitions change."
       badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"

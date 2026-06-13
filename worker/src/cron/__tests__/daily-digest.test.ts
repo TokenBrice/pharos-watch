@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
@@ -330,7 +330,7 @@ function makeBaseTables(): MockTableConfig[] {
       rows: [],
       first: {
         value: JSON.stringify({
-          methodologyVersion: SAFETY_SCORE_VERSION,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
           scores: {
             "usdt-tether": { score: 80, grade: "A" },
             "usdc-circle": { score: 78, grade: "A" },

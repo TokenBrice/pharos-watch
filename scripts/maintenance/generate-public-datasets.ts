@@ -37,7 +37,7 @@ import { getMechanismArchetypeLabel } from "../../shared/lib/classification/mech
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/liquidity-score-version";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
-import { SAFETY_SCORE_VERSION_LABEL } from "../../shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-score-version";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 import { parseCheckMode } from "../lib/cli.mjs";
@@ -733,7 +733,7 @@ function buildTopicSpecs(
       topic: "top-stablecoins",
       rows: projectTopStablecoins(envelope),
       columns: TOP_STABLECOINS_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_VERSION_LABEL}`,
+      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
       sheetColumns: TOP_STABLECOINS_COLUMNS,
     } as TopicSpec<TopStablecoinRow> as TopicSpec<unknown>,
     {
@@ -747,14 +747,14 @@ function buildTopicSpecs(
       topic: "scores-latest",
       rows: projectScoresLatest(envelope),
       columns: SCORES_LATEST_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_VERSION_LABEL} | dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL} | liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`,
+      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} | dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL} | liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`,
       sheetColumns: SCORES_LATEST_COLUMNS,
     } as TopicSpec<ScoreLatestRow> as TopicSpec<unknown>,
     {
       topic: "peg-mechanism-distribution",
       rows: projectPegMechanismDistribution(),
       columns: PEG_MECHANISM_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_VERSION_LABEL}`,
+      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
       sheetColumns: PEG_MECHANISM_COLUMNS,
     } as TopicSpec<PegMechanismDistributionRow> as TopicSpec<unknown>,
   ];

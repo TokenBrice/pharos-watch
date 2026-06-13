@@ -4,7 +4,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { BluechipActiveList } from "./active-list";
 import {
   BLUECHIP_GATES,
@@ -42,7 +42,7 @@ export default function AboutBluechipPage() {
       leadParagraphs={[BLUECHIP_LEDE]}
       headerSupplement={
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          Methodology {SAFETY_SCORE_VERSION_LABEL} ·{" "}
+          Methodology {SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} ·{" "}
           <Link
             href="/methodology/#safety-scores-methodology"
             className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
@@ -126,7 +126,7 @@ export default function AboutBluechipPage() {
                 Current version
               </dt>
               <dd className="font-mono text-sm tracking-tight text-foreground/85">
-                Methodology {SAFETY_SCORE_VERSION_LABEL}
+                Methodology {SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}
               </dd>
             </div>
             <div className="grid gap-1 py-4 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-6">

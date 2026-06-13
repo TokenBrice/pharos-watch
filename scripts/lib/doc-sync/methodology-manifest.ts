@@ -3,9 +3,9 @@ import { CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL } from "@shared/lib/chain-health
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
 import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
-import { REDEMPTION_BACKSTOP_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
 
@@ -24,7 +24,7 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     doc: "docs/pricing-pipeline.md",
     timelineDoc: "docs/pricing-pipeline-timeline.md",
     versionFile: "shared/lib/methodology-versions/pricing-pipeline.ts",
-    expectedLabel: PRICING_PIPELINE_VERSION_LABEL,
+    expectedLabel: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
   },
   {
     key: "stability-index",
@@ -42,7 +42,7 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     key: "redemption-backstop",
     doc: "docs/redemption-backstops.md",
     versionFile: "shared/lib/methodology-versions/redemption-backstop.ts",
-    expectedLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+    expectedLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   },
   {
     key: "mint-burn-flow",
@@ -71,7 +71,7 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     timelineDoc: "docs/report-cards-timeline.md",
     versionFile: "shared/lib/methodology-versions/safety-score.ts",
     extraProvenanceFiles: ["shared/lib/methodology-versions/safety-score-data.ts"],
-    expectedLabel: SAFETY_SCORE_VERSION_LABEL,
+    expectedLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
   },
   {
     key: "blacklist-tracker",
@@ -115,4 +115,4 @@ export const METHODOLOGY_PROVENANCE_FILES: readonly string[] = [
   ...METHODOLOGY_INFRA_PROVENANCE_FILES,
 ];
 
-export { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, SAFETY_SCORE_VERSION_LABEL };
+export { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, SAFETY_SCORE_METHODOLOGY_VERSION_LABEL };

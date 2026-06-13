@@ -13,5 +13,8 @@ export const MINT_AUTHORITY_METHODOLOGY_VERSION = mintAuthority.currentVersion;
 /** Display-ready Mint Authority Score methodology version (with "v" prefix). */
 export const MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL = mintAuthority.versionLabel;
 
-/** Public methodology route for Mint Authority Score methodology. */
+/**
+ * Public methodology anchor for Mint Authority Score — an in-page #anchor on /methodology, not a
+ * dedicated changelog route, so it is intentionally named _METHODOLOGY_PATH (not _METHODOLOGY_CHANGELOG_PATH).
+ */
 export const MINT_AUTHORITY_METHODOLOGY_PATH = mintAuthority.changelogPath;

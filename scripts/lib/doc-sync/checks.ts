@@ -62,7 +62,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
   METHODOLOGY_PROVENANCE_FILES,
-  SAFETY_SCORE_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "./methodology-manifest";
 
 function checkMethodologyVersions(failures: Failure[]): void {
@@ -91,7 +91,7 @@ function checkMethodologyCommitProvenance(failures: Failure[]): void {
 function checkReportCardsDoc(failures: Failure[]): void {
   const file = "docs/report-cards.md";
   const doc = read(file);
-  const expectedVersion = SAFETY_SCORE_VERSION_LABEL;
+  const expectedVersion = SAFETY_SCORE_METHODOLOGY_VERSION_LABEL;
 
   expectEqual(
     failures,

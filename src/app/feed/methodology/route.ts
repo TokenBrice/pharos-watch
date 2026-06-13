@@ -25,11 +25,11 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/mint-burn-flow";
 import {
-  PRICING_PIPELINE_CHANGELOG,
-  PRICING_PIPELINE_CHANGELOG_PATH,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/pricing-pipeline";
 import {
-  SAFETY_SCORE_CHANGELOG,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/safety-score";
 import {
@@ -60,7 +60,7 @@ const SOURCES: readonly Source[] = [
     key: "safety-score",
     label: "Safety Score",
     path: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-    entries: SAFETY_SCORE_CHANGELOG,
+    entries: SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   },
   {
     key: "depeg-dews",
@@ -107,8 +107,8 @@ const SOURCES: readonly Source[] = [
   {
     key: "pricing-pipeline",
     label: "Pricing Pipeline",
-    path: PRICING_PIPELINE_CHANGELOG_PATH,
-    entries: PRICING_PIPELINE_CHANGELOG,
+    path: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+    entries: PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
   },
   {
     key: "yield",

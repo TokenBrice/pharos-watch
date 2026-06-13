@@ -29,10 +29,10 @@ import { sha256Hex } from "../lib/hash";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health-version";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
-import { PRICING_PIPELINE_VERSION } from "@shared/lib/pricing-pipeline-version";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION } from "@shared/lib/pricing-pipeline-version";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
-import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
@@ -113,14 +113,14 @@ async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
 
 function buildMethodologyVersions(): StableMethodologyVersions {
   return {
-    pegScore: SAFETY_SCORE_VERSION,
+    pegScore: SAFETY_SCORE_METHODOLOGY_VERSION,
     dews: DEPEG_DEWS_METHODOLOGY_VERSION,
     liquidityScore: LIQUIDITY_METHODOLOGY_VERSION,
     psi: PSI_METHODOLOGY_VERSION,
-    reportCard: SAFETY_SCORE_VERSION,
+    reportCard: SAFETY_SCORE_METHODOLOGY_VERSION,
     chainHealth: CHAIN_HEALTH_METHODOLOGY_VERSION,
-    redemptionBackstop: REDEMPTION_BACKSTOP_VERSION,
-    pricingPipeline: PRICING_PIPELINE_VERSION,
+    redemptionBackstop: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+    pricingPipeline: PRICING_PIPELINE_METHODOLOGY_VERSION,
     yieldMethodology: YIELD_METHODOLOGY_VERSION,
   };
 }

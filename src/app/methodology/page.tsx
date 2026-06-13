@@ -12,7 +12,7 @@ import { buildFaqJsonLd } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { EDITORIAL_BODY_STYLE } from "@/lib/digest";
 
@@ -40,7 +40,7 @@ export default function MethodologyPage() {
             buildFaqJsonLd([
               {
                 question: "How does Pharos grade stablecoins?",
-                answer: `Pharos computes a weighted average of four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies (pegScore / 100)^0.40 as a peg stability power-curve multiplier. Decentralization starts from governance quality, then can apply chain-infrastructure, reviewed CDP oracle setup, reviewed bridge-route, and Mint Authority penalties; branch-aware oracle profiles use the weakest verified branch when present. Redemption backstops can improve Liquidity only when the route is currently usable, the redemption snapshot is fresh, and v4 current executable capacity supports the modeled exit size; eventual-only issuer exits remain visible but do not replace missing DEX liquidity. Severe active depegs use the open event peak for final caps and disable static or non-live-direct redemption uplift unless live-open redemption evidence exists. When liquidity data is absent, a 10% penalty is applied to the final score after the peg multiplier (weights are redistributed across available dimensions). Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_VERSION_LABEL}.`,
+                answer: `Pharos computes a weighted average of four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies (pegScore / 100)^0.40 as a peg stability power-curve multiplier. Decentralization starts from governance quality, then can apply chain-infrastructure, reviewed CDP oracle setup, reviewed bridge-route, and Mint Authority penalties; branch-aware oracle profiles use the weakest verified branch when present. Redemption backstops can improve Liquidity only when the route is currently usable, the redemption snapshot is fresh, and v4 current executable capacity supports the modeled exit size; eventual-only issuer exits remain visible but do not replace missing DEX liquidity. Severe active depegs use the open event peak for final caps and disable static or non-live-direct redemption uplift unless live-open redemption evidence exists. When liquidity data is absent, a 10% penalty is applied to the final score after the peg multiplier (weights are redistributed across available dimensions). Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}.`,
               },
               {
                 question: "How is the Pharos peg score calculated?",

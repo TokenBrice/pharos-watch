@@ -22,7 +22,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
@@ -76,7 +76,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     label: "Grade",
     sortKey: "safetyScore",
     className: "text-center",
-    title: `Pharos Safety Grade (${SAFETY_SCORE_VERSION_LABEL})`,
+    title: `Pharos Safety Grade (${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL})`,
   },
   {
     id: "mintAuthority",

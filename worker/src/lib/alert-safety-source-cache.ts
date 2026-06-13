@@ -1,4 +1,4 @@
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   DIMENSION_WEIGHTS,
   NO_LIQUIDITY_PENALTY,
@@ -412,7 +412,7 @@ function buildRawInputSnapshotFromCard(card: ReportCard): AlertSafetyRawInputSna
   };
 }
 
-export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE_VERSION): string {
+export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE_METHODOLOGY_VERSION): string {
   return `safety-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
 }
 

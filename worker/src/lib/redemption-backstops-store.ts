@@ -34,8 +34,8 @@ import {
 } from "@shared/types/redemption";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
-  REDEMPTION_BACKSTOP_VERSION,
-  REDEMPTION_BACKSTOP_VERSION_LABEL,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   getRedemptionBackstopVersionAt,
   toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
@@ -630,8 +630,8 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
       ...buildMethodologyEnvelope({
         version: snapshotMethodology.version,
         versionLabel: snapshotMethodology.versionLabel,
-        currentVersion: REDEMPTION_BACKSTOP_VERSION,
-        currentVersionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+        currentVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+        currentVersionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
         changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
         asOf: updatedAt,
       }),

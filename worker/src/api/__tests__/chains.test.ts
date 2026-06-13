@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Mock stablecoins to avoid importing full metadata tree
@@ -64,7 +64,7 @@ function reportCardCache(
     first: {
       key: "report_card_cache",
       value: JSON.stringify({
-        methodologyVersion: SAFETY_SCORE_VERSION,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
         scores,
         updatedAt: nowSec - payloadAgeSeconds,
         ...(degradedInputs ? { degradedInputs } : {}),
