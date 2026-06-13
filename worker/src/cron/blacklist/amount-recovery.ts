@@ -398,7 +398,7 @@ async function recoverEvmAmountFromEventOrHistory(opts: {
   let amount: number | null = null;
   let amountSource = unresolvedAmountSource;
   let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
-  let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
+  let lastProvider: BlacklistRecoveryProvider;
 
   if (row.event_type === "destroy") {
     lastProvider = "event_receipt";

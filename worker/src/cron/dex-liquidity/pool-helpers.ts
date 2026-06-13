@@ -389,13 +389,8 @@ export function buildSymbolLookups(): SymbolLookups {
     }
   }
 
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const contract of getTrackedContracts(meta)) {
-      const owners = globalAddressOwners.get(contract.address.toLowerCase());
-      if (owners && owners.size === 1) {
-        addressToId.set(contract.address.toLowerCase(), meta.id);
-      }
-    }
+  for (const [address, owners] of globalAddressOwners) {
+    if (owners.size === 1) addressToId.set(address, [...owners][0]);
   }
 
   return {

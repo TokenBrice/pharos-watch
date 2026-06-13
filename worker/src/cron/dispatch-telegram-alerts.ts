@@ -68,7 +68,6 @@ import {
   mergeSubscriberMaps,
 } from "./dispatch-telegram-subscribers";
 
-const MAX_MESSAGES_PER_RUN = TELEGRAM_MAX_MESSAGES_PER_RUN;
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
 type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
@@ -174,24 +173,6 @@ function assignSharedDispatchState(
 ): void {
   if (!sharedState) return;
   Object.assign(sharedState, updates);
-}
-
-function hasDetectedTelegramEvents(events: {
-  dewsChanges: unknown[];
-  depegTriggered: unknown[];
-  depegResolved: unknown[];
-  depegWorsening: unknown[];
-  safetyChanges: unknown[];
-  launchPromoted: unknown[];
-}): boolean {
-  return (
-    events.dewsChanges.length > 0 ||
-    events.depegTriggered.length > 0 ||
-    events.depegResolved.length > 0 ||
-    events.depegWorsening.length > 0 ||
-    events.safetyChanges.length > 0 ||
-    events.launchPromoted.length > 0
-  );
 }
 
 export async function dispatchTelegramAlerts(
@@ -365,14 +346,7 @@ export async function dispatchTelegramAlerts(
       },
     });
 
-    const hasEvents = hasDetectedTelegramEvents({
-      dewsChanges,
-      depegTriggered,
-      depegResolved,
-      depegWorsening,
-      safetyChanges,
-      launchPromoted,
-    });
+    const hasEvents = eventCount > 0;
     const canUseEventlessFastPath =
       !hasEvents &&
       safetySourceAssessment.state === "ok" &&
@@ -681,7 +655,7 @@ export async function dispatchTelegramAlerts(
       botToken,
       subscriberQueue,
       drainResult,
-      maxMessagesPerRun: MAX_MESSAGES_PER_RUN,
+      maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
       nowSec,
       chatsInBackoff,
       globalBackoffUntil,

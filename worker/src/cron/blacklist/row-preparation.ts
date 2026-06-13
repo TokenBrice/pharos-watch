@@ -21,18 +21,6 @@ function buildCurrentBalanceKey(row: BlacklistRow): string {
   );
 }
 
-export function buildLatestBlacklistRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
-  // Legacy latest-row projection retained for narrow historical tests; live balance snapshots use buildCurrentBalanceSnapshotRows().
-  const latestByAddress = new Map<string, BlacklistRow>();
-  const orderedRows = [...rows].sort(compareBlacklistRows);
-
-  for (const row of orderedRows) {
-    latestByAddress.set(buildCurrentBalanceKey(row), row);
-  }
-
-  return Array.from(latestByAddress.values());
-}
-
 export function buildCurrentBalanceSnapshotRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
   const latestByAddress = new Map<
     string,

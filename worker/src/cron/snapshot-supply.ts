@@ -7,6 +7,9 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { setCache } from "../lib/db-cache";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
+const CACHE_MAX_AGE_SEC = 1200;
+const CACHE_DEGRADED_AGE_SEC = 600;
+
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
   freshnessGateLabel?: string;
@@ -59,16 +62,16 @@ export async function snapshotSupply(
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
   const cacheAge = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
-  if (cacheAge > 1200) {
-    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>1200s), skipping snapshot`);
+  if (cacheAge > CACHE_MAX_AGE_SEC) {
+    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
     return {
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }),
     };
   }
-  if (cacheAge > 600) {
-    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
+  if (cacheAge > CACHE_DEGRADED_AGE_SEC) {
+    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
   // One snapshot per UTC day, keyed on the marker's stored snapshotDate. The

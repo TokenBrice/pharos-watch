@@ -149,15 +149,22 @@ function getDeviationSignal(price: number | null | undefined, pegReference: numb
   return price == null ? null : deriveDepegSignal(price, pegReference);
 }
 
+function confidenceTierForVerdict(verdict: Verdict): "high" | "medium" | "low" {
+  if (verdict === "confirmed" || verdict === "repaired") return "high";
+  if (verdict === "no_data") return "low";
+  return "medium";
+}
+
 function buildAuditVerdictProvenanceStmt(
   db: D1Database,
   event: DepegRow,
   verdict: Verdict,
   nowSec: number,
 ): D1PreparedStatement {
+  const confidenceTier = confidenceTierForVerdict(verdict);
   const publicJson = JSON.stringify({
     auditVerdict: verdict,
-    confidenceTier: verdict === "confirmed" || verdict === "repaired" ? "high" : verdict === "no_data" ? "low" : "medium",
+    confidenceTier,
     pegScoreEligible: verdict !== "false_positive" && verdict !== "disputed",
     updatedAt: nowSec,
   });
@@ -177,7 +184,7 @@ function buildAuditVerdictProvenanceStmt(
       event.id,
       event.source,
       verdict,
-      verdict === "confirmed" || verdict === "repaired" ? "high" : verdict === "no_data" ? "low" : "medium",
+      confidenceTier,
       publicJson,
       nowSec,
       nowSec,
@@ -998,6 +1005,7 @@ export async function auditEvents(
   const affectedDays = new Set<number>();
   const provenanceStatements: D1PreparedStatement[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
+  const nowSec = Math.floor(Date.now() / 1000);
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -1058,7 +1066,7 @@ export async function auditEvents(
 
       if (validatedPrices.length === 0) {
         if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", Math.floor(Date.now() / 1000)));
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push(toAuditedEvent(event, "no_data", { cgMaxBps: null }));
@@ -1083,7 +1091,7 @@ export async function auditEvents(
 
       if (maxSameDirectionBps >= falsePositiveBar) {
         if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "confirmed", Math.floor(Date.now() / 1000)));
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "confirmed", nowSec));
         }
         result.auditedEvents.push(toAuditedEvent(event, "confirmed", {
           cgMaxBps: maxCgBps,
@@ -1092,7 +1100,7 @@ export async function auditEvents(
         }));
       } else if (maxOppositeDirectionBps >= falsePositiveBar) {
         if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", Math.floor(Date.now() / 1000)));
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push(toAuditedEvent(event, "disputed", {
@@ -1104,7 +1112,7 @@ export async function auditEvents(
         // CoinGecko data was available but did not confirm this direction.
         result.falsePositivesFound++;
         if (!dryRun) {
-          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", Math.floor(Date.now() / 1000)));
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", nowSec));
           invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push(toAuditedEvent(event, "false_positive", {

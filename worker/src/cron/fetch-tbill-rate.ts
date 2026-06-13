@@ -39,6 +39,7 @@ import {
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
+import { DAY_MS } from "@shared/lib/time-constants";
 import {
   ETHERFUSE_CETES_BENCHMARK_SOURCE,
   fetchEtherfuseCetesIssuance,
@@ -145,6 +146,8 @@ function parseEnglishDate(dateRaw: string): string | null {
   return `${year}-${month}-${match[1].padStart(2, "0")}`;
 }
 
+// Spot-SONIA fallback parser, currently not wired into production: GBP resolves
+// via parseBoeSoniaCompoundedIndexCsv. Retained (covered only by its own test).
 export function parseBoeSoniaCsv(csv: string): { recordDate: string; rate: number } | null {
   const lines = csv.split(/\r?\n/);
   for (let i = lines.length - 1; i >= 1; i--) {
@@ -183,11 +186,11 @@ export function parseBoeSoniaCompoundedIndexCsv(csv: string): { recordDate: stri
   const latest = observations[observations.length - 1];
   if (!latest) return null;
 
-  const targetStartMs = latest.timestampMs - BOE_COMPOUNDED_SONIA_WINDOW_DAYS * 86_400_000;
+  const targetStartMs = latest.timestampMs - BOE_COMPOUNDED_SONIA_WINDOW_DAYS * DAY_MS;
   const start = [...observations].reverse().find((entry) => entry.timestampMs <= targetStartMs);
   if (!start || start.indexValue <= 0) return null;
 
-  const dayCount = (latest.timestampMs - start.timestampMs) / 86_400_000;
+  const dayCount = (latest.timestampMs - start.timestampMs) / DAY_MS;
   if (!Number.isFinite(dayCount) || dayCount < 80) return null;
 
   const rate = ((latest.indexValue / start.indexValue - 1) * 365 / dayCount) * 100;

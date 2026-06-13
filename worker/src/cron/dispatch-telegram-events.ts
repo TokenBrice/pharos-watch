@@ -36,7 +36,6 @@ export interface TelegramDispatchEvents {
   safetyChanges: SafetyChangeWithExplain[];
   launchPromoted: ReturnType<typeof buildLaunchPromotions>;
   suppressedMethodologyChanges: number;
-  suppressedSafetyChangesAtSeed: number;
   dewsIds: string[];
   depegIds: string[];
   safetyIds: string[];
@@ -75,12 +74,6 @@ export async function buildTelegramDispatchEvents(
     safeSafetySnapshot,
     safetySnapshotNeedsSeed,
   } = snapshotState;
-
-  // When the Telegram lane has to reseed its safety snapshot (e.g. methodology
-  // version flip changed the source generation), real downgrades against the
-  // last seen snapshot would silently disappear. Count them against the prior
-  // snapshot purely for operator visibility; they are not fanned out.
-  const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
 
   const dewsChanges = buildDewsChanges(
     dewsRows.filter((row) => isDewsAlertable(row.band)),
@@ -267,7 +260,6 @@ export async function buildTelegramDispatchEvents(
     safetyChanges,
     launchPromoted,
     suppressedMethodologyChanges,
-    suppressedSafetyChangesAtSeed,
     dewsIds,
     depegIds,
     safetyIds,

@@ -6,6 +6,8 @@ import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
+const CACHE_MAX_AGE_SEC = 1200;
+
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (signal?.aborted) {
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "aborted" }) };
@@ -18,8 +20,8 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   }
 
   const cacheAge = Math.floor(Date.now() / 1000) - cache.updatedAt;
-  if (cacheAge > 1200) {
-    console.warn(`[snapshot-chain-supply] Cache is ${cacheAge}s old (>1200s), skipping`);
+  if (cacheAge > CACHE_MAX_AGE_SEC) {
+    console.warn(`[snapshot-chain-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }) };
   }
 
@@ -80,14 +82,12 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     };
   }
 
-  if (stmts.length > 0) {
-    try {
-      await batchExecute(db, stmts, { signal });
-      await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
-    } catch (err) {
-      recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });
-      return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
-    }
+  try {
+    await batchExecute(db, stmts, { signal });
+    await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
+  } catch (err) {
+    recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
   }
 
   console.log(`[snapshot-chain-supply] Inserted ${stmts.length} rows for ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);

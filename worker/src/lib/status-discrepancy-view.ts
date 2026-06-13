@@ -9,6 +9,20 @@ import {
   type StatusLevel,
 } from "./status-reliability-shared";
 
+export function hasDivergence(
+  overallStatus: StatusLevel,
+  probe: StatusProbeSummary,
+  now: number,
+): boolean {
+  if (probe.status === "unknown" || probe.timestamp == null) {
+    return false;
+  }
+  const probeAgeSeconds = Math.max(0, now - probe.timestamp);
+  const severityDelta = SEVERITY[overallStatus] - SEVERITY[probe.status];
+  const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
+  return freshProbe && Math.abs(severityDelta) >= 1;
+}
+
 export function buildDiscrepancy(
   overallStatus: StatusLevel,
   probe: StatusProbeSummary,

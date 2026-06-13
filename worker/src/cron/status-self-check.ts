@@ -26,6 +26,7 @@ import {
   writeStatusProbeRun,
   type StatusLevel,
 } from "../lib/status-reliability";
+import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 
 interface ProbeResult {
@@ -109,13 +110,6 @@ export async function isBootstrapCacheMiss(
   }
 }
 
-function percentile95(latencies: number[]): number {
-  if (latencies.length === 0) return 0;
-  const sorted = [...latencies].sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
-  return sorted[idx];
-}
-
 function percentile(latencies: number[], quantile: number): number {
   if (latencies.length === 0) return 0;
   const sorted = [...latencies].sort((a, b) => a - b);
@@ -129,7 +123,7 @@ function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
   return {
     minMs: probes.length > 0 ? Math.min(...latencies) : 0,
     medianMs: percentile(latencies, 0.5),
-    p95Ms: percentile95(latencies),
+    p95Ms: percentile(latencies, 0.95),
     maxMs: probes.length > 0 ? Math.max(...latencies) : 0,
   };
 }
@@ -429,9 +423,10 @@ async function probePathInternally(
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
   try {
-    const url = new URL(path, ADMIN_PROBE_PATHS.includes(path) ? DEFAULT_SELF_URL : probeBaseUrl);
+    const isAdminPath = ADMIN_PROBE_PATHS.includes(path);
+    const url = new URL(path, isAdminPath ? DEFAULT_SELF_URL : probeBaseUrl);
     const headers = new Headers();
-    if (ADMIN_PROBE_PATHS.includes(path)) {
+    if (isAdminPath) {
       headers.set("Cf-Access-Authenticated-User-Email", "internal-status-self-check@pharos.watch");
     }
 
@@ -444,7 +439,7 @@ async function probePathInternally(
       db,
       execCtx: ctx,
       request,
-      trustedAdmin: ADMIN_PROBE_PATHS.includes(path),
+      trustedAdmin: isAdminPath,
       mintBurnFreshnessConfig,
     });
     if (!response) {
@@ -676,7 +671,7 @@ export async function runStatusSelfCheck(
     persistenceSucceeded: statusPersistenceSucceeded,
   } = await evaluateStatusAndPersist(db, now);
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
-  const discrepancyObservation = buildDiscrepancy(
+  const discrepancyObserved = hasDivergence(
     effectiveStatus,
     {
       timestamp: now,
@@ -687,13 +682,12 @@ export async function runStatusSelfCheck(
       p95LatencyMs,
     },
     now,
-    0,
   );
 
   const discrepancyState = await updateDiscrepancyObservation(
     db,
     now,
-    discrepancyObservation.hasDivergence,
+    discrepancyObserved,
     hasProbeFailure,
   );
   const discrepancy = buildDiscrepancy(
