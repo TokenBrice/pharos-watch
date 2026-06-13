@@ -5,6 +5,7 @@ import {
   isTelegramMiniAppPath,
 } from "@shared/lib/site-csp";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { isHtmlResponse } from "./lib/proxy-utils";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
@@ -132,10 +133,6 @@ function addCspHeaders(headers: Headers, nonce: string, options: { telegramMiniA
     headers.delete("X-Frame-Options");
     headers.set("X-Robots-Tag", "noindex, nofollow");
   }
-}
-
-function isHtmlResponse(response: Response): boolean {
-  return response.headers.get("Content-Type")?.toLowerCase().includes("text/html") ?? false;
 }
 
 function cloneForMethod(response: Response, method: string, headers: Headers): Response {

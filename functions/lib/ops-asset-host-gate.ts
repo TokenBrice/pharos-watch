@@ -5,16 +5,13 @@ import {
 } from "@shared/lib/site-csp";
 import { noindexTextNotFoundResponse, withNoindex } from "./noindex";
 import { rejectIfNotOpsUiOrigin } from "./ops-origin";
+import { isHtmlResponse } from "./proxy-utils";
 
 export interface OpsAssetHostGateEnv {
   ASSETS: {
     fetch: typeof fetch;
   };
   OPS_UI_ORIGIN?: string;
-}
-
-function isHtmlResponse(response: Response): boolean {
-  return response.headers.get("Content-Type")?.toLowerCase().includes("text/html") ?? false;
 }
 
 async function withOpsHtmlCsp(response: Response, method: string): Promise<Response> {

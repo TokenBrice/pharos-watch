@@ -26,6 +26,10 @@ export function summarizeFetchError(error: unknown): { kind: string; message: st
   return { kind: typeof error, message: String(error) };
 }
 
+export function isHtmlResponse(response: Response): boolean {
+  return response.headers.get("Content-Type")?.toLowerCase().includes("text/html") ?? false;
+}
+
 /**
  * Build upstream request headers by forwarding a set of client headers
  * and appending auth/service headers.
