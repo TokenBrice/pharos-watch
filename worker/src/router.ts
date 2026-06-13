@@ -61,7 +61,7 @@ export function resolveRoute(url: URL, method: string): ResolvedRoute | null {
 }
 
 function getRouteErrorLabel(routeMatch: RouteMatch, path: string): string {
-  return routeMatch.endpoint?.key ?? routeMatch.endpoint?.path ?? path;
+  return routeMatch.endpoint?.key ?? path;
 }
 
 async function handleRouteWithErrorBoundary(

@@ -1,3 +1,4 @@
+import { sleep } from "./abort";
 import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
 
 // --- Per-job cron timeout configuration ---
@@ -266,10 +267,6 @@ function createAbortPromise(signal: AbortSignal, fallback: Error): Promise<never
     }
     signal.addEventListener("abort", rejectReason, { once: true });
   });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function getStopReason(error: unknown): CronJobAbandonedMetadata["stopReason"] {
@@ -769,7 +766,7 @@ export async function runCronWithLease<T>(
   opts?: CronLeaseOptions,
 ): Promise<CronLeaseRunResult<T>> {
   const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
-  const timeoutSec = Math.ceil((CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS) / 1000);
+  const timeoutSec = Math.ceil(timeoutMs / 1000);
   const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
   const maxRenewFailures = opts?.maxRenewFailures ?? 2;

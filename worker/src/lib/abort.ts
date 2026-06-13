@@ -30,6 +30,10 @@ export function rethrowIfAborted(error: unknown, signal?: AbortSignal): void {
   }
 }
 
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function sleepWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) return;
   throwIfAborted(signal);

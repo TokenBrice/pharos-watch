@@ -1,4 +1,5 @@
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
+import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
@@ -249,28 +250,6 @@ function optionPolicyDelaySec(options?: { policyDelaySec?: number }): number {
   return options?.policyDelaySec ?? DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC;
 }
 
-function stableJsonStringify(value: unknown): string {
-  if (value === null) return "null";
-  if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") {
-    if (!Number.isFinite(value) || !Number.isSafeInteger(value)) {
-      throw new Error("DDR incident hash payload contains an unsupported number");
-    }
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stableJsonStringify(entry)).join(",")}]`;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, entryValue]) => entryValue !== undefined)
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
-    return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableJsonStringify(entryValue)}`).join(",")}}`;
-  }
-  throw new Error("DDR incident hash payload contains an unsupported value");
-}
-
 async function sourceFingerprintForEvent(event: DdrCanonicalIncidentEventInput): Promise<string> {
   if (event.sourceFingerprint != null) {
     const fingerprint = event.sourceFingerprint.trim().toLowerCase();
@@ -279,7 +258,7 @@ async function sourceFingerprintForEvent(event: DdrCanonicalIncidentEventInput):
   }
 
   return sha256Hex(
-    stableJsonStringify({
+    stableJsonStringifyV1({
       direction: event.direction,
       firstObservedPeakBucketBps: peakBucketBps(event.peakDeviationBps),
       firstStartedAt: event.startedAt,
@@ -296,7 +275,7 @@ function peakBucketBps(peakDeviationBps: number): number {
 }
 
 async function incidentKeyForEvent(event: DdrCanonicalIncidentEventInput, sourceFingerprint: string): Promise<string> {
-  const canonicalIdentityJson = stableJsonStringify({
+  const canonicalIdentityJson = stableJsonStringifyV1({
     direction: event.direction,
     firstObservedPeakBucketBps: peakBucketBps(event.peakDeviationBps),
     firstStartedAt: event.startedAt,
@@ -511,46 +490,6 @@ async function insertNewIncident(
         policyMembership.createdAt,
       ),
   ]);
-}
-
-async function assertNoAmbiguousNearbyIncident(
-  db: D1Database,
-  event: DdrCanonicalIncidentEventInput,
-  policyDelaySec: number,
-): Promise<void> {
-  const row = await db
-    .prepare(
-      `SELECT incident_key
-       FROM depeg_resolver_incidents i
-       WHERE i.stablecoin_id = ?
-         AND i.peg_currency = ?
-         AND i.direction = ?
-         AND ABS(i.current_started_at - ?) <= ?
-         AND NOT EXISTS (
-           SELECT 1
-           FROM depeg_resolver_incident_event_links l
-           WHERE l.incident_key = i.incident_key
-             AND l.event_id = ?
-         )
-       ORDER BY ABS(i.current_started_at - ?) ASC, i.created_at ASC
-       LIMIT 1`,
-    )
-    .bind(
-      event.stablecoinId,
-      event.pegCurrency,
-      event.direction,
-      event.startedAt,
-      policyDelaySec,
-      event.eventId,
-      event.startedAt,
-    )
-    .first<{ incident_key: string }>();
-  if (row) {
-    throw new DdrIncidentRepairRequiredError(
-      event.eventId,
-      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
-    );
-  }
 }
 
 async function linkUnsealedNearbyIncident(
@@ -812,7 +751,6 @@ export async function ensureCanonicalIncidents(
         ensured.set(event.eventId, nearby);
         continue;
       }
-      await assertNoAmbiguousNearbyIncident(db, event, policyDelaySec);
     } catch (error) {
       if (error instanceof DdrIncidentRepairRequiredError && options.onRepairRequired) {
         options.onRepairRequired(event.eventId, error.message);

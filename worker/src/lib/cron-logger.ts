@@ -1,3 +1,4 @@
+import { sleep } from "./abort";
 import {
   CRON_ABANDONED_JOB_GRACE_MS,
   CRON_TIMEOUT_MS,
@@ -52,10 +53,6 @@ function serializeTerminalCronMetadata(error: unknown): string | null {
 type CronJobOutcome =
   | { status: "fulfilled"; value: CronResult | void }
   | { status: "rejected"; error: unknown };
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Records a swallowed cron failure with a structured log line and in-memory

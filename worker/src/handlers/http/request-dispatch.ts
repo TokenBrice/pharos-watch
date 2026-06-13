@@ -45,7 +45,7 @@ export async function handleHttpRequestImpl(
   if (maintenanceResponse) return addCorsHeaders(maintenanceResponse, origin);
 
   const url = new URL(request.url);
-  let edgeCache = createEdgeCacheContext(request, url);
+  const edgeCache = createEdgeCacheContext(request, url);
   let cached: Response | null = null;
   const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
   if (fastGate) {
@@ -98,7 +98,6 @@ export async function handleHttpRequestImpl(
   }
 
   if (!cached) {
-    edgeCache = createEdgeCacheContext(request, url);
     cached = await readEdgeCache(edgeCache);
   }
   if (cached) {

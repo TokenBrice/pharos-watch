@@ -22,6 +22,7 @@ import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-cards";
 
 // ---------------------------------------------------------------------------
@@ -224,7 +225,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
          FROM mint_burn_hourly
          WHERE stablecoin_id = ? AND hour_ts >= ?`,
       )
-      .bind(id, Math.floor(Date.now() / 1000) - 7 * 86400)
+      .bind(id, Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS)
       .first<{ net_flow: number | null }>(),
     db
       .prepare(
@@ -392,7 +393,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
 async function handleDepegOg(db: D1Database): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
-  const oneDayAgo = now - 86400;
+  const oneDayAgo = now - DAY_SECONDS;
 
   const [activeDepegsResult, psiRow, stressRows, activeDepegsDetails, recoveredTodayResult, newTodayResult] = await Promise.all([
     db
@@ -492,7 +493,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
 
 async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
-  const sevenDaysAgo = now - 7 * 86400;
+  const sevenDaysAgo = now - 7 * DAY_SECONDS;
 
   const [
     latestSample, 
@@ -507,7 +508,7 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
       .first<{ score: number; band: string; stored_at: number }>(),
     db
       .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-      .bind(now - 86400)
+      .bind(now - DAY_SECONDS)
       .first<{ avg: number | null }>(),
     // New: 7-day average
     db
