@@ -7,6 +7,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { sleep } from "../lib/smoke-runtime.mjs";
+
 const OUT_DIR = new URL("../../out", import.meta.url).pathname;
 const SERVER_LOG = join(tmpdir(), `pages-smoke-server-${process.pid}.log`);
 const ENV_FILE = resolve(".env.local");
@@ -40,10 +42,6 @@ function firstNonEmpty(...values) {
 
 function shouldRunMobileSmoke() {
   return process.env.PAGES_SMOKE_INCLUDE_MOBILE !== "0";
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildBaseUrl(host, port) {

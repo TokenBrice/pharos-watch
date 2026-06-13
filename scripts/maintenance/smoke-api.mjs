@@ -278,14 +278,6 @@ function stripMeta(body) {
   return rest;
 }
 
-function loadStrictContractPaths() {
-  const parsed = [...STRICT_CONTRACT_SMOKE_PATHS];
-  for (const p of parsed) {
-    assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
-  }
-  return parsed;
-}
-
 export function resolveContractSmokePaths(scope = "full") {
   const selected = scope === "canary" ? CANARY_CONTRACT_SMOKE_PATHS : STRICT_CONTRACT_SMOKE_PATHS;
   const parsed = [...selected];
@@ -820,7 +812,7 @@ async function run() {
   const scope = ensureScope(rawScope);
   const strictPaths = resolveContractSmokePaths(scope);
   if (scope === "full") {
-    assertPathCoverage(loadStrictContractPaths(), ENDPOINT_ASSERTIONS);
+    assertPathCoverage(resolveContractSmokePaths("full"), ENDPOINT_ASSERTIONS);
   } else {
     assertPathCoverage(strictPaths, ENDPOINT_ASSERTIONS, { allowExtraAssertions: true });
   }

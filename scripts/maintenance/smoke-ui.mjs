@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "url";
-import { assert, parseNonNegativeInt, parsePositiveInt } from "../lib/smoke-runtime.mjs";
+import { assert, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -136,18 +136,6 @@ function getUiRetryDelayMs() {
 function getExpectedGaId() {
   const configured = (process.env.SMOKE_UI_EXPECT_GA_ID ?? "").trim();
   return configured || null;
-}
-
-function readPositiveIntEnv(key, fallback) {
-  return parsePositiveInt(process.env[key], fallback);
-}
-
-function readNonNegativeIntEnv(key, fallback) {
-  return parseNonNegativeInt(process.env[key], fallback);
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
@@ -1001,7 +989,7 @@ export async function run() {
       );
 
       const failedWorker = overflowResults.find((result) => result.status === "rejected");
-      if (failedWorker?.status === "rejected") {
+      if (failedWorker) {
         throw failedWorker.reason;
       }
 

@@ -3,6 +3,8 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
+import { sleep } from "../lib/smoke-runtime.mjs";
+
 const DEFAULT_ATTEMPTS = 60;
 const DEFAULT_DELAY_MS = 5_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -42,10 +44,6 @@ function parseArgs(argv) {
   }
 
   return args;
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildAccessHeaders() {

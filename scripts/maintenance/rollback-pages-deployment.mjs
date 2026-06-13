@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 
+import { sleep } from "../lib/smoke-runtime.mjs";
+
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 2_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function singleAttempt({ url, apiToken, fetchImpl, timeoutMs }) {
   const response = await fetchImpl(url, {

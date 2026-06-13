@@ -1,14 +1,7 @@
 import {
-  OPS_UI_ORIGIN,
-  SITE_ORIGIN,
-} from "@shared/lib/runtime-origins";
-import {
   hostnameOfSiteDataCallerHeader,
   isSiteDataAllowedUiHostname,
 } from "@shared/lib/site-data-lane";
-
-export const DEFAULT_SITE_UI_ORIGIN = SITE_ORIGIN;
-export const DEFAULT_OPS_UI_ORIGIN = OPS_UI_ORIGIN;
 
 export function rejectIfNotSiteDataUiOrigin(
   request: Request,

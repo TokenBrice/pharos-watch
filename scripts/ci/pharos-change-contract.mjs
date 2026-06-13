@@ -287,14 +287,11 @@ export function classifyChangedFiles(files) {
 
 export function classifyUserPrompt(prompt) {
   const promptText = String(prompt ?? "");
-  const matchedRoutes = PROMPT_ROUTES
-    .filter((route) => route.patterns.some((pattern) => pattern.test(promptText)))
-    .map((route) => route.label);
-  const matchedFamilies = getFamiliesByIds(
-    PROMPT_ROUTES
-      .filter((route) => route.patterns.some((pattern) => pattern.test(promptText)))
-      .flatMap((route) => route.familyIds),
+  const matched = PROMPT_ROUTES.filter((route) =>
+    route.patterns.some((pattern) => pattern.test(promptText)),
   );
+  const matchedRoutes = matched.map((route) => route.label);
+  const matchedFamilies = getFamiliesByIds(matched.flatMap((route) => route.familyIds));
 
   return {
     checks: unique(matchedFamilies.flatMap((family) => family.checks)),
@@ -1290,7 +1287,7 @@ function parseArgs(argv) {
 function normalizeHookMode(hook) {
   if (!hook) return null;
   const normalized = String(hook).replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-  return HOOK_EVENT_NAMES.has(normalized) ? normalized : normalized;
+  return normalized;
 }
 
 function printHelp() {

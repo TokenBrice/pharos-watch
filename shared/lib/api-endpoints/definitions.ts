@@ -816,4 +816,4 @@ export function getStrictContractPaths(): readonly string[] {
 }
 
 /** Pre-computed strict contract paths (module-load-time). */
-export const STRICT_CONTRACT_PATHS_LIST = getStrictContractPaths();
+export const STRICT_CONTRACT_PATHS_LIST = STRICT_CONTRACT_PATHS;
