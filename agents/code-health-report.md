@@ -540,7 +540,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`api-8` — Private getSiteDataAccess/getPublicApiAccess in definitions.ts shadow public exports in validation.ts** `[naming | low | trivial | none]`
 - Problem: definitions.ts defines private `getSiteDataAccess(endpoint)` (763) and `getPublicApiAccess(endpoint)` (768); validation.ts EXPORTS public `getSiteDataAccess(path)` (44) and `getPublicApiAccess(path)` (28). Same names, different signatures, sibling modules.
-- Recommendation: rename the PRIVATE helpers to `resolveEndpointSiteDataAccess` / `resolveEndpointPublicApiAccess`; update their two call sites in the ENDPOINT_DEFINITIONS map. Module-private, fully local. Leave the public names.
+- Done 2026-06-13: renamed the module-private helpers to `resolveEndpointSiteDataAccess` / `resolveEndpointPublicApiAccess` and updated the two `ENDPOINT_DEFINITIONS` map call sites. Public validation exports are unchanged.
 - Files: `shared/lib/api-endpoints/definitions.ts:763-770`, `shared/lib/api-endpoints/validation.ts:28-54`.
 - Verifier: both private (absent from index.ts exports); 2 call sites; demoted medium->low. Checks: `npm run typecheck`, `npm test -- api-endpoints`.
 

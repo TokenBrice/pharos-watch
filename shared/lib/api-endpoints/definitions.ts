@@ -760,19 +760,19 @@ export type EndpointDependenciesForKey<K extends EndpointKey> =
     ? Deps
     : readonly [];
 
-function getSiteDataAccess(endpoint: BaseEndpointDefinition): EndpointSiteDataAccess {
+function resolveEndpointSiteDataAccess(endpoint: BaseEndpointDefinition): EndpointSiteDataAccess {
   if (endpoint.siteDataAccess) return endpoint.siteDataAccess;
   return !endpoint.adminRequired && endpoint.methods.includes("GET") ? "allowed" : "denied";
 }
 
-function getPublicApiAccess(endpoint: BaseEndpointDefinition): EndpointPublicApiAccess {
+function resolveEndpointPublicApiAccess(endpoint: BaseEndpointDefinition): EndpointPublicApiAccess {
   return endpoint.publicApiAccess ?? (endpoint.adminRequired ? "exempt" : "protected");
 }
 
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = BASE_ENDPOINT_DEFINITIONS.map((endpoint) => ({
   ...endpoint,
-  publicApiAccess: getPublicApiAccess(endpoint),
-  siteDataAccess: getSiteDataAccess(endpoint),
+  publicApiAccess: resolveEndpointPublicApiAccess(endpoint),
+  siteDataAccess: resolveEndpointSiteDataAccess(endpoint),
 }));
 
 const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
