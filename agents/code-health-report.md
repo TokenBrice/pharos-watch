@@ -90,7 +90,7 @@ Status legend: `[ ]` not started · `[x]` done · `[G]` guarded (needs before/af
 | `[x]` Cross-component JSX/markup extraction | `sd-5`, `fe-4`, `fe-11`, `sd-2`, `sd-11`, `sd-1`, `sd-6` | `ScoringBreakdownDisclosure`, `RiskSourceLinks`, `AmountBadges`, `deriveContractInfo` (plain fn, not a hook), `AttestorTierBadge`, `shouldShowVerdict`. SCOPE DOWN sd-11 to ~4-5 cls-driven Link badges only (static-color spans must NOT be unified). | small | low |
 | `[x]` RSS/route/event-handler boilerplate | `f-feed-1`, `fe-1`, `frontend-2`, `frontend-3`, `frontend-1` | `rssResponse(feed)`, `useSortColumnEvent(resolvedColumns, toggleSort)`, `formatEpochSecondsLocale`, hoist page-metadata derivations, export `normalizeWhitespace` ONLY (summarizeText diverges via stripTermMarkup). | small | low |
 | `[x]` Telegram command/callback boilerplate | `tw-1`, `tw-2`, `tw-3`, `tw-5`, `w-dispatch-4`, `w-cron-5` | Delete passthrough wrappers (replyToChat, isGroupChat), `replyWithOptionalMiniApp(ctx, msg, markup)` (accept markup), route quicksub console.error to logTelegramEvent, `runTelegramReconciliation` extractor. LEAVE the 3 cron progress wrappers (w-dispatch-4). | small | low |
-| `[ ]` Scheduled-handler dispatch consolidation | `w-cron-4`, `w-cron-1`, `w-cron-7`, `w-cron-9`, `w-cron-10`, `wrouter-1` | Migrate 4 single-task handlers to `runSingleScheduledJob`; export `cacheKeySegment` from cron-lease; drop mint-burn wrapper; CronResult casts; migrate 2 admin routes (accept route-* label change). DO NOT auto-migrate pattern-(c) error-propagating handlers. | small | low |
+| `[x]` Scheduled-handler dispatch consolidation | `w-cron-4`, `w-cron-1`, `w-cron-7`, `w-cron-9`, `w-cron-10`, `wrouter-1` | Migrate 4 single-task handlers to `runSingleScheduledJob`; export `cacheKeySegment` from cron-lease; drop mint-burn wrapper; CronResult casts; migrate 2 admin routes (accept route-* label change). DO NOT auto-migrate pattern-(c) error-propagating handlers. | small | low |
 | `[ ]` Shared types derive from Zod schemas / enums | `types-1`, `types-5`, `types-6`, `types-2`, `types-3`, `types-4`, `types-7`, `fe-6`, `chains-9` | Export `StatusHealthValue`, `BLUECHIP_GRADE_VALUES`, `ChainMeta`; infer `StressSignalDetailResponse` + `ParsedTelegramDispatchEventsDetected`; tighten `CronRun.status`; import confidence unions. Leave `TelegramDispatchCronMetadata` explicit; DeadStablecoin.contracts left out. | small | low |
 | `[ ]` Single-source cross-file constant lists | `chains-7`, `vm-4`, `rbc-10`, `pc-2`, `wapi-6`, `worker-store-7`, `types-8` | Real fix: export `ACTIVE_BACKING_DIVERSITY_TYPES`, build aggregator `backingTotals` from it. Rest comment-only cross-refs. DeadStablecoin.contracts skipped. | trivial | low |
 | `[ ]` Pure helpers out of component/client files | `fe-10`, `f-compare-2`, `f-stablecoin-detail-2`, `sd-1` | Move `gradeBandLabel`, `buildCompareSelectionInsights`, `buildYieldStoryCallouts` to lib; inline the `const s` alias. Single-consumer moves — pursue when the file is otherwise touched. | trivial | none |
@@ -989,6 +989,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 ### Worker Cron infrastructure — lease/logger/handlers (`w-cron-*`)
 
 **`w-cron-1` — Identical cacheKeySegment() duplicated in cron-lease.ts and cron-logger.ts** `[duplication | low | trivial | none]`
+- Done 2026-06-13: exported `cacheKeySegment` from `cron-lease.ts` and imported it in `cron-logger.ts`, preserving the existing dependency direction.
 - Problem: both files define a private `cacheKeySegment(value: string): string` with byte-for-byte identical bodies.
 - Recommendation: export `cacheKeySegment` from cron-lease.ts (the dependency root) and import in cron-logger.ts. IMPORTANT: this direction, NOT the reverse — cron-logger already imports from cron-lease, so exporting from the logger would create a circular import.
 - Files: `worker/src/lib/cron-lease.ts:251-254`, `worker/src/lib/cron-logger.ts:124-127`.
@@ -1007,6 +1008,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: verbatim duplication confirmed. Checks: `npm run typecheck:worker`.
 
 **`w-cron-4` — Four single-task slot-group handlers should use runSingleScheduledJob** `[duplication | low | small | low]`
+- Done 2026-06-13: migrated daily-0810, monthly-yield-audit, half-hourly, and yield-supplemental from one-task slot groups to direct `runSingleScheduledJob` calls.
 - Problem: daily-0810, monthly-yield-audit, half-hourly, yield-supplemental each define a private `build*SlotGroups` returning exactly one serial group with one task, then call `runScheduledSlotGroups`. `runSingleScheduledJob(runtime, slotLabel, task)` already encapsulates that.
 - Recommendation: replace the `build*SlotGroups` + `runScheduledSlotGroups` pair with a direct `runSingleScheduledJob(...)`, preserving `job`/`run`/`errorMessage` (monthly-yield-audit + yield-supplemental carry an errorMessage). Do NOT touch the multi-job callers. Both paths funnel through `runBestEffortScheduledJobWithOutcome` so output is preserved.
 - Files: `worker/src/handlers/scheduled/{daily-0810,monthly-yield-audit,half-hourly,yield-supplemental}.ts`.
@@ -1026,18 +1028,21 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: the const breaks import grouping; no TDZ issue; an implementer may reasonably skip it. Checks: `npm run lint`.
 
 **`w-cron-7` — Redundant onSettledSuccess async wrapper in mint-burn-slot.ts** `[simplification | low | trivial | none]`
+- Done 2026-06-13: passed `options.onSettledSuccess` directly through to the leased cron options.
 - Problem: `onSettledSuccess: options.onSettledSuccess ? async (...) => options.onSettledSuccess?.(...) : undefined` wraps the callback in a new async arrow. The ternary already proves it is defined, and both option types have the identical signature.
 - Recommendation: replace with `onSettledSuccess: options.onSettledSuccess`. Direct pass-through is type-correct and behavior-identical.
 - Files: `worker/src/handlers/scheduled/mint-burn-slot.ts:37-39`.
 - Verifier: both interfaces declare the identical signature; pure redundancy. Checks: `npm run typecheck:worker`.
 
 **`w-cron-9` — digest-trigger-poll.ts uses anonymous structural casts where CronResult suffices** `[type-safety | low | trivial | none]`
+- Done 2026-06-13: replaced the anonymous `status`/`metadata` structural casts with `CronResult | null | undefined` casts.
 - Problem: `result` is `CronResult | void`; the file casts it as `{ status?: string } | null | undefined` (85, 105) and `{ metadata?: unknown }` / `{ metadata: string }` (110-111) instead of the imported `CronResult`, which already declares both fields.
 - Recommendation: replace the anonymous casts with `(result as CronResult | null | undefined)?.status` / `.metadata`. Keep the `null|undefined` union so the `void` case stays expressible; the `.startsWith` guard remains needed.
 - Files: `worker/src/handlers/scheduled/digest-trigger-poll.ts:85,105,110-111`.
 - Verifier: CronResult declares both fields; behavior-preserving (compile-time only); medium confidence (cosmetic, low payoff). Checks: `npm run typecheck:worker`.
 
 **`w-cron-10` — Inconsistent single-job dispatch patterns across scheduled handlers** `[consistency | low | small | low]`
+- Done 2026-06-13: left the error-propagating raw `runLeasedCron` handlers unmigrated and added comments documenting the intentional fail-event semantics.
 - Problem: three patterns coexist for single-job slots: (a) `runSingleScheduledJob`, (b) `build*SlotGroups` + `runScheduledSlotGroups` (the w-cron-4 files), (c) raw `runtime.runLeasedCron` + manual `buildScheduledSlotSummary` (hourly-blacklist, thirty-minute-dex-discovery). Pattern (c) has NO try/catch, so a thrown error propagates out — marking the scheduled event as failed; patterns (a)/(b) swallow it into a 'thrown' summary and the event succeeds.
 - Recommendation: the (a)/(b) consolidation is covered by w-cron-4. For (c): the error-propagation difference is real but whether it is deliberate is unverified. Do NOT migrate (c) blindly (would silently change fail-the-event to swallow-and-degrade). Confirm intent; if intentional, add a one-line comment.
 - Files: `worker/src/handlers/scheduled/{hourly-blacklist,thirty-minute-dex-discovery}.ts`.
@@ -1129,6 +1134,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 ### Worker Router (`wrouter-*`)
 
 **`wrouter-1` — Three admin/ops routes bypass the file-local define*AdminRoute helpers and carry a divergent "route-" log label** `[consistency | low | small | low]`
+- Done 2026-06-13: migrated the two admin idempotent routes to `defineIdempotentAdminRoute`, accepting the route-label normalization; the weaker ops-routes case stayed out of scope.
 - Problem: the two admin routes `remediate-blacklist-amount-gaps` and `backfill-blacklist-current-balances` call `makeIdempotentAdminRoute` directly instead of the `defineIdempotentAdminRoute` helper, passing a `"route-<key>"` LABEL (consumed as the `route:` field of the `api_handler_error` log). Migrating WOULD change logged labels. The ops-routes case is weaker (no `defineAdminRoute` helper exists; adding one for a single call site is speculative).
 - Recommendation: migrate ONLY the two admin routes to `defineIdempotentAdminRoute("<key>", handler)`, accepting the `route-` label change. Do NOT introduce a new `defineAdminRoute` helper for the single ops-routes call site.
 - Files: `worker/src/routes/admin-routes.ts:73-89`, `worker/src/routes/ops-routes.ts:29-32`.

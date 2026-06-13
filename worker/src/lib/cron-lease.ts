@@ -249,7 +249,7 @@ interface StaleSlotReconciliationSummary {
 const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
-function cacheKeySegment(value: string): string {
+export function cacheKeySegment(value: string): string {
   const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
   return (normalized || "unknown").slice(0, 96);
 }

@@ -82,7 +82,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   }
 
   const leaseLocked =
-    (result as { status?: string } | null | undefined)?.status === "skipped_locked";
+    (result as CronResult | null | undefined)?.status === "skipped_locked";
 
   // Preserve the flag when the 08:05 scheduled run holds the lease so the next
   // poll can retry. Clear it on every other outcome (ok, degraded, error,
@@ -102,13 +102,13 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   } else if (leaseLocked) {
     outcome = "skipped_locked";
   } else {
-    const status = (result as { status?: string } | null | undefined)?.status;
+    const status = (result as CronResult | null | undefined)?.status;
     if (status === "degraded" || status === "error") {
       outcome = status;
     } else if (status === "skipped_locked") {
       outcome = "skipped_locked";
-    } else if (typeof (result as { metadata?: unknown } | null | undefined)?.metadata === "string"
-      && ((result as { metadata: string }).metadata.startsWith("skipped:"))) {
+    } else if (typeof (result as CronResult | null | undefined)?.metadata === "string"
+      && ((result as CronResult).metadata!.startsWith("skipped:"))) {
       outcome = "skipped";
     }
   }

@@ -7,23 +7,11 @@
  */
 import { runDiscoveryScan } from "../../cron/discovery-scan";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
-
-function buildDaily0810SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "discovery-scan",
-      tasks: [
-        {
-          job: "discovery-scan",
-          run: (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey),
-        },
-      ],
-    },
-  ];
-}
+import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(runtime, "daily 08:10 slot", buildDaily0810SlotGroups(runtime));
+  return runSingleScheduledJob(runtime, "daily 08:10 slot", {
+    job: "discovery-scan",
+    run: (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey),
+  });
 }

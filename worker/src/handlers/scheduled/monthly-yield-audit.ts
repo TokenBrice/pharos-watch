@@ -1,27 +1,11 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
-
-function buildMonthlyYieldAuditSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "yield-coverage-audit",
-      tasks: [
-        {
-          job: "yield-coverage-audit",
-          errorMessage: "[cron] yield-coverage-audit failed in monthly slot:",
-          run: (signal) => runYieldCoverageAudit(runtime.db, signal, runtime.chainRpcs),
-        },
-      ],
-    },
-  ];
-}
+import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(
-    runtime,
-    "monthly yield audit slot",
-    buildMonthlyYieldAuditSlotGroups(runtime),
-  );
+  return runSingleScheduledJob(runtime, "monthly yield audit slot", {
+    job: "yield-coverage-audit",
+    errorMessage: "[cron] yield-coverage-audit failed in monthly slot:",
+    run: (signal) => runYieldCoverageAudit(runtime.db, signal, runtime.chainRpcs),
+  });
 }

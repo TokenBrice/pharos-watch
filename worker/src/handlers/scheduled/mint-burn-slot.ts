@@ -34,9 +34,7 @@ export async function runMintBurnSlot(
         jobName: options.jobName,
         onProgress: reportProgress,
     }),
-    onSettledSuccess: options.onSettledSuccess
-      ? async (settledRuntime, result) => options.onSettledSuccess?.(settledRuntime, result)
-      : undefined,
+    onSettledSuccess: options.onSettledSuccess,
   });
   return buildScheduledSlotSummary([
     result === null

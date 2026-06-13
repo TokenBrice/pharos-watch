@@ -70,22 +70,11 @@ export const ADMIN_STATIC_ROUTES = [
     ({ request }) => request.method === "POST",
     ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
   ),
-  defineStaticRoute(
-    "remediate-blacklist-amount-gaps",
-    makeIdempotentAdminRoute(
-      "route-remediate-blacklist-amount-gaps",
-      "remediate-blacklist-amount-gaps",
-      ({ db, url, request, chainRpcs }) => handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
-    ),
+  defineIdempotentAdminRoute("remediate-blacklist-amount-gaps", ({ db, url, request, chainRpcs }) =>
+    handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
   ),
-  defineStaticRoute(
-    "backfill-blacklist-current-balances",
-    makeIdempotentAdminRoute(
-      "route-backfill-blacklist-current-balances",
-      "backfill-blacklist-current-balances",
-      ({ db, url, trustedAdmin, request, chainRpcs }) =>
-        handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
-    ),
+  defineIdempotentAdminRoute("backfill-blacklist-current-balances", ({ db, url, trustedAdmin, request, chainRpcs }) =>
+    handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
   ),
   defineStaticRoute("reset-cron-lease", handleResetCronLease),
   defineStaticRoute("reset-circuit-breaker", handleResetCircuitBreaker),

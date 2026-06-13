@@ -5,6 +5,7 @@ import { buildScheduledSlotSummary, summarizeCronResult } from "./slot-summary";
 
 export async function runSixHourlyBlacklistSlot(runtime: ScheduledRuntimeContext) {
   const etherscanKey = runtime.env.ETHERSCAN_API_KEY ?? null;
+  // NOTE: errors propagate here (event marked failed), unlike runSingleScheduledJob handlers which swallow into a 'thrown' summary.
   const result = await runtime.runLeasedCron(
     "sync-blacklist",
     (signal, reportProgress) => {

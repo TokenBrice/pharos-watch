@@ -5,6 +5,7 @@ import {
   CronJobAbandonedError,
   CronTimeoutError,
   DEFAULT_CRON_TIMEOUT_MS,
+  cacheKeySegment,
   runWithOverloadRetry,
 } from "./cron-lease";
 import { setCache } from "./db-cache";
@@ -117,11 +118,6 @@ const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_KEYS = 30;
 const MAX_CRON_EVENT_METADATA_ARRAY_ITEMS = 20;
 const MAX_CRON_EVENT_METADATA_DEPTH = 3;
-
-function cacheKeySegment(value: string): string {
-  const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
-  return (normalized || "unknown").slice(0, 96);
-}
 
 function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
   if (value == null || typeof value === "number" || typeof value === "boolean") {

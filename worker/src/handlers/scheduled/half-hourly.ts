@@ -10,31 +10,19 @@
  */
 import { syncDexLiquidity } from "../../cron/dex-liquidity/orchestrator";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
-
-function buildHalfHourlySlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "dex-liquidity",
-      tasks: [
-        {
-          job: "sync-dex-liquidity",
-          run: (signal, reportProgress) =>
-            syncDexLiquidity(
-              runtime.db,
-              runtime.env.GRAPH_API_KEY ?? null,
-              signal,
-              runtime.coingeckoApiKey,
-              runtime.chainRpcs,
-              reportProgress,
-            ),
-        },
-      ],
-    },
-  ];
-}
+import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(runtime, "half-hour dex slot", buildHalfHourlySlotGroups(runtime));
+  return runSingleScheduledJob(runtime, "half-hour dex slot", {
+    job: "sync-dex-liquidity",
+    run: (signal, reportProgress) =>
+      syncDexLiquidity(
+        runtime.db,
+        runtime.env.GRAPH_API_KEY ?? null,
+        signal,
+        runtime.coingeckoApiKey,
+        runtime.chainRpcs,
+        reportProgress,
+      ),
+  });
 }
