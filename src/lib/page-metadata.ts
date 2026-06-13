@@ -51,7 +51,7 @@ const BACKING_METADATA_PHRASES: Record<BackingType, string> = {
   algorithmic: "algorithmic stablecoin",
 };
 
-function normalizeWhitespace(text: string): string {
+export function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 

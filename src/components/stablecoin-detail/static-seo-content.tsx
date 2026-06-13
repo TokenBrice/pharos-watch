@@ -9,6 +9,7 @@ import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disc
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import type { FaqItem } from "@/lib/faq";
+import { normalizeWhitespace } from "@/lib/page-metadata";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -33,10 +34,6 @@ const FACT_LABEL_CLASS = "text-[11px] font-semibold uppercase tracking-[0.12em] 
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
 
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));

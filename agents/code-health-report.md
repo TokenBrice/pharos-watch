@@ -345,7 +345,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`frontend-1` — Duplicated normalizeWhitespace in static-seo-content.tsx; divergent summarizeText is intentional** `[duplication | low | trivial | low]`
 - Problem: `normalizeWhitespace` is byte-for-byte identical in both files. `summarizeText` has a real, intentional divergence: the static-seo copy calls `stripTermMarkup(text)` (mandatory — renders `{{term:...}}` markup), has no first-sentence shortcut, uses `'...'` not `'…'`, a 0.7 threshold, a different trailing-punctuation set, and `maxLength 280`.
-- Recommendation: only `normalizeWhitespace` is safely dedupable — export from page-metadata.ts and import. Do NOT replace the local `summarizeText` (would drop `stripTermMarkup` and change SEO copy).
+- Done 2026-06-13: exported `normalizeWhitespace` from `page-metadata.ts` and imported it in static SEO content. Left the divergent `summarizeText` implementation intact.
 - Files: `src/lib/page-metadata.ts:54-56,110-120`, `src/components/stablecoin-detail/static-seo-content.tsx:37-50`.
 - Verifier: normalizeWhitespace identical; summarizeText divergence confirmed; scoped to normalizeWhitespace only. Checks: `npm run test:merge-gate`.
 
