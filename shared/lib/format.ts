@@ -1,10 +1,7 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 import { BPS_PER_UNIT } from "./math";
+import { isFiniteNumber } from "./type-guards";
 export { formatCompactUsdShort } from "./format-compact-usd-short";
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
 
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
 function abbreviateNumber(value: number, decimals: number, prefix = ""): string {

@@ -84,7 +84,7 @@ Status legend: `[ ]` not started · `[x]` done · `[G]` guarded (needs before/af
 | Theme | Members | Combined action | Effort | Risk |
 | --- | --- | --- | --- | --- |
 | `[ ]` `isRecord` guard consolidation | `f-xcut-1`, `slu-4`, `worker-store-5`, `worker-infra-4` | Delete local copies; import canonical `isRecord` from `@shared/lib/type-guards`. Swap selector `isPlainObject` (20 sites), publication-store `recordValue`. Keep address-price-providers barrel. EXCLUDE `scripts/*` and divergent `UnknownRecord` aliases. | small | low |
-| `[ ]` Finite-number guard consolidation (shared) | `cls-4`, `cls-5`, `slu-7` | Add + export `isFiniteNumber` predicate to `type-guards.ts` (does not exist there today). Swap byte-identical copies in format.ts + selector/snapshot.ts; route royco `finiteNumber` / yield-scoring `finiteOrNull` to existing `numberValue`. Shared-only scope. | small | low |
+| `[x]` Finite-number guard consolidation (shared) | `cls-4`, `cls-5`, `slu-7` | Done 2026-06-13: exported `isFiniteNumber` from `type-guards.ts`, routed `numberValue` through it, imported the predicate in format + selector snapshot, and replaced royco/yield-scoring value helpers with `numberValue`. Shared-only scope. | small | low |
 | `[ ]` Worker error-message coercion helper | `f-xcut-2` | Add `toErrorMessage(error)` to a worker lib util; fold redstone `errorMessage` + pricing-provider-diagnostics `errorMessageFor`; migrate the ~206 inline ternaries in batches. NOT in shared/lib. | medium | low |
 | `[x]` Inline clamp -> shared clampScore (non-score UI) | `f-xcut-5` | Done 2026-06-13: replaced the non-score UI/view-model clamp sites with `clampScore` from `@shared/lib/math`, including the extra `telegram-pulse-strip.tsx` site found during implementation. Score-compute and worker runtime clamps stayed out of scope. | small | none |
 | `[x]` Cross-component JSX/markup extraction | `sd-5`, `fe-4`, `fe-11`, `sd-2`, `sd-11`, `sd-1`, `sd-6` | `ScoringBreakdownDisclosure`, `RiskSourceLinks`, `AmountBadges`, `deriveContractInfo` (plain fn, not a hook), `AttestorTierBadge`, `shouldShowVerdict`. SCOPE DOWN sd-11 to ~4-5 cls-driven Link badges only (static-color spans must NOT be unified). | small | low |
@@ -439,12 +439,14 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: zero consumers; NOT flagged by `check:unused-code` because `export *` from index.ts credits barrel star-exports as consumption. Deletion safe. Checks: `npm run check:unused-code`, `npm run lint:typed`.
 
 **`cls-4` — finiteOrNull / finiteNumber duplicate type-guards.numberValue (shared scope)** `[duplication | low | small | low]`
+- Done 2026-06-13: deleted the royco/yield-scoring local helpers and replaced call sites with `numberValue`.
 - Problem: `royco-tranche-safety.finiteNumber(value: unknown)` is byte-identical to `numberValue`. `yield-scoring.finiteOrNull(value: number|null|undefined)` has the same body with a narrower param. Both private.
 - Recommendation: replace royco's with `numberValue` (drop-in). For yield-scoring, alias `const finiteOrNull = numberValue` or replace call sites (numberValue accepts unknown). Scope to these two shared files only — identical copies in src/lib and worker/src are OUTSIDE this slice (worker excluded from root TS graph).
 - Files: `shared/lib/yield-scoring.ts:73-75`, `shared/lib/royco-tranche-safety.ts:9-11`, `shared/lib/type-guards.ts:15-17`.
 - Verifier: bodies identical; scope note added (don't pull in src/worker copies). Checks: `npm run lint:typed`, `npx vitest run shared/lib/__tests__`.
 
 **`cls-5` — isFiniteNumber boolean guard defined twice in shared/lib** `[duplication | low | small | low]`
+- Done 2026-06-13: added the shared `isFiniteNumber` predicate and imported it in both duplicated sites.
 - Problem: format.ts and selector/snapshot.ts each define a private `isFiniteNumber(value): value is number` with identical body — the boolean sibling of `numberValue`.
 - Recommendation: add `export function isFiniteNumber(value: unknown): value is number` to type-guards.ts and import in both, deleting the copies. Worker has its own copies — leave those (separate runtime boundary).
 - Files: `shared/lib/format.ts:5-7`, `shared/lib/selector/snapshot.ts:137-139`.
@@ -753,6 +755,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 - Verifier: corrected caller count (5, not 2); exact-string test suite exists; risk raised to medium. Checks: `npm run test:unit -- format`, `npm run test:unit -- relative-time`.
 
 **`slu-7` — isFiniteNumber duplicated between format.ts and selector/snapshot.ts** `[duplication | low | trivial | low]`
+- Done 2026-06-13: `format.ts` and `selector/snapshot.ts` now use the exported `type-guards.ts` predicate.
 - Problem: both define identical private `isFiniteNumber(value): value is number`. snapshot.ts uses it 6 times. type-guards.ts does NOT export `isFiniteNumber` (only `numberValue`, which returns number|null — a different shape, not a type predicate), so the "type-guards already encodes it" framing is partly misleading.
 - Recommendation: add and export `isFiniteNumber` from type-guards.ts (new type predicate), import in both, delete the copies. Keep `numberValue` as-is. (Same shared addition as `cls-5`.)
 - Files: `shared/lib/format.ts:5-7`, `shared/lib/selector/snapshot.ts:137-139`, `shared/lib/type-guards.ts:15-17`.

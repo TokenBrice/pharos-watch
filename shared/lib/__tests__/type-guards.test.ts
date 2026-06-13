@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isRecord, numberValue, stringValue } from "../type-guards";
+import { isFiniteNumber, isRecord, numberValue, stringValue } from "../type-guards";
 
 describe("isRecord", () => {
   it("accepts plain objects and rejects null, arrays, and primitives", () => {
@@ -33,5 +33,14 @@ describe("numberValue", () => {
     expect(numberValue(NaN)).toBeNull();
     expect(numberValue(Infinity)).toBeNull();
     expect(numberValue("42")).toBeNull();
+  });
+});
+
+describe("isFiniteNumber", () => {
+  it("narrows finite numbers only", () => {
+    expect(isFiniteNumber(42)).toBe(true);
+    expect(isFiniteNumber(NaN)).toBe(false);
+    expect(isFiniteNumber(Infinity)).toBe(false);
+    expect(isFiniteNumber("42")).toBe(false);
   });
 });

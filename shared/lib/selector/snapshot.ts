@@ -1,4 +1,5 @@
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
+import { isFiniteNumber } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
 import { sha256Hex } from "../sha256";
 import {
@@ -132,10 +133,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isNumberInRange(value: unknown, min: number, max: number): value is number {

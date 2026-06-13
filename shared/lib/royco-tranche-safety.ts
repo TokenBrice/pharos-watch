@@ -1,13 +1,10 @@
 import { clampScore } from "./math";
+import { numberValue } from "./type-guards";
 import type { YieldSourceRisk, YieldTrancheSide, YieldVenueRiskTier } from "../types/yield";
 
 export interface RoycoDawnTrancheSafetyResult {
   score: number;
   penalty: number;
-}
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function isRoycoDawnTrancheSourceRisk(
@@ -101,7 +98,7 @@ function accessPenalty(sourceRisk: YieldSourceRisk, side: YieldTrancheSide): num
 }
 
 function withdrawalPenalty(sourceRisk: YieldSourceRisk, side: YieldTrancheSide): number {
-  const delaySeconds = finiteNumber(sourceRisk.withdrawalDelaySeconds);
+  const delaySeconds = numberValue(sourceRisk.withdrawalDelaySeconds);
   const hasUnderlyingConstraint = sourceRisk.investabilityFlags?.includes("withdrawals-underlying-dependent") === true;
   let penalty = hasUnderlyingConstraint ? (side === "senior" ? 1 : 2) : 0;
   if (delaySeconds != null && delaySeconds > 0) {
@@ -118,12 +115,12 @@ export function computeRoycoDawnTrancheSafetyScore(params: {
 
   const side = params.sourceRisk.trancheSide;
   const underlyingSafetyScore = clampScore(params.underlyingSafetyScore);
-  const coverage = finiteNumber(params.sourceRisk.marketCoverageRatio);
-  const minCoverage = finiteNumber(params.sourceRisk.marketMinCoverageRatio);
-  const utilization = finiteNumber(params.sourceRisk.marketUtilizationRatio);
-  const utilizationLimit = finiteNumber(params.sourceRisk.marketUtilizationLimitRatio);
-  const drawdownRatio = finiteNumber(params.sourceRisk.marketDrawdownRatio);
-  const trancheTvlUsd = finiteNumber(params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd);
+  const coverage = numberValue(params.sourceRisk.marketCoverageRatio);
+  const minCoverage = numberValue(params.sourceRisk.marketMinCoverageRatio);
+  const utilization = numberValue(params.sourceRisk.marketUtilizationRatio);
+  const utilizationLimit = numberValue(params.sourceRisk.marketUtilizationLimitRatio);
+  const drawdownRatio = numberValue(params.sourceRisk.marketDrawdownRatio);
+  const trancheTvlUsd = numberValue(params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd);
 
   const firstLossPenalty = side === "junior" ? 18 : 0;
   const drawdownPenalty = drawdownRatio == null ? 0 : Math.min(side === "senior" ? 20 : 30, drawdownRatio * 100 * (side === "senior" ? 0.6 : 1.2));
