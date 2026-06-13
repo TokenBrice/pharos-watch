@@ -75,6 +75,31 @@ export function defineOverride(
   };
 }
 
+/**
+ * Build registry entries from a `Record<id, config>`, attaching a `sourceFilePath`
+ * and an override reason. Supply `overrideReason` to apply one reason to every
+ * entry (uniform override of a shared default), or `overrideReasonForIds` to attach
+ * a reason only to the ids it returns a string for (the rest stay un-flagged).
+ */
+export function defineRecordEntries(
+  configs: Record<string, RedemptionBackstopConfig>,
+  options: {
+    overrideReason?: string;
+    overrideReasonForIds?: (id: string) => string | undefined;
+    sourceFilePath: string;
+  },
+): RedemptionBackstopRegistryEntry[] {
+  return Object.entries(configs).map(([id, config]) => {
+    const overrideReason = options.overrideReason ?? options.overrideReasonForIds?.(id);
+    return {
+      id,
+      config,
+      sourceFilePath: options.sourceFilePath,
+      ...(overrideReason ? { overrideReason } : {}),
+    };
+  });
+}
+
 export function getBackstopRegistryOverrideReasons(
   configs: Record<string, RedemptionBackstopConfig>,
 ): ReadonlyMap<string, string> {

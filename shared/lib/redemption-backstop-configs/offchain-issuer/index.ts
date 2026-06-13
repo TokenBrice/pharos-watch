@@ -1,4 +1,4 @@
-import { defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "../factory";
+import { defineBackstopRegistry, defineRecordEntries } from "../factory";
 import { applyTrackedReviewedDocs } from "../shared";
 import { BASE_OFFCHAIN_ISSUER_ENTRIES } from "./base-batches";
 import { COMMODITY_OFFCHAIN_CONFIGS } from "./commodity";
@@ -9,41 +9,28 @@ import { REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS } from "./remediation-and-l
 import { REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 import type { RedemptionBackstopConfig } from "../shared";
 
-function defineRecordEntries(
-  configs: Record<string, RedemptionBackstopConfig>,
-  overrideReason: string,
-  sourceFilePath: string,
-): RedemptionBackstopRegistryEntry[] {
-  return Object.entries(configs).map(([id, config]) => ({ id, config, overrideReason, sourceFilePath }));
-}
-
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
   ...BASE_OFFCHAIN_ISSUER_ENTRIES,
-  ...defineRecordEntries(
-    COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS,
-    "Reviewed issuer-specific config replaces the shared offchain issuer default.",
-    "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
-  ),
-  ...defineRecordEntries(
-    MAJOR_ISSUER_OFFCHAIN_CONFIGS,
-    "Reviewed major-issuer config replaces the shared offchain issuer default.",
-    "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-  ),
-  ...defineRecordEntries(
-    NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS,
-    "Reviewed non-USD or tokenized-asset config replaces the shared offchain issuer default.",
-    "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-  ),
-  ...defineRecordEntries(
-    COMMODITY_OFFCHAIN_CONFIGS,
-    "Reviewed commodity issuer config replaces the shared offchain issuer default.",
-    "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
-  ),
-  ...defineRecordEntries(
-    REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS,
-    "Reviewed remediation or late-audit config replaces the shared offchain issuer default.",
-    "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
-  ),
+  ...defineRecordEntries(COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS, {
+    overrideReason: "Reviewed issuer-specific config replaces the shared offchain issuer default.",
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
+  }),
+  ...defineRecordEntries(MAJOR_ISSUER_OFFCHAIN_CONFIGS, {
+    overrideReason: "Reviewed major-issuer config replaces the shared offchain issuer default.",
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+  }),
+  ...defineRecordEntries(NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS, {
+    overrideReason: "Reviewed non-USD or tokenized-asset config replaces the shared offchain issuer default.",
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+  }),
+  ...defineRecordEntries(COMMODITY_OFFCHAIN_CONFIGS, {
+    overrideReason: "Reviewed commodity issuer config replaces the shared offchain issuer default.",
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+  }),
+  ...defineRecordEntries(REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS, {
+    overrideReason: "Reviewed remediation or late-audit config replaces the shared offchain issuer default.",
+    sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
+  }),
 ]);
 
 applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [

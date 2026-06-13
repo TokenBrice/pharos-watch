@@ -1,5 +1,5 @@
 import { undisclosedReviewedFee, sourceRef } from "../shared";
-import { defineStablecoinRedeemConfig } from "./shared";
+import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
 export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
@@ -12,7 +12,7 @@ export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemCon
   costModel: undisclosedReviewedFee(
     "JupUSD's primary mint and redeem rail is benefactor-gated and settles against USDC; public materials do not publish one universal fixed redemption fee",
   ),
-  reviewedAt: "2026-03-23",
+  reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
     sourceRef("JupUSD homepage", "https://jupusd.money/", ["route", "capacity"]),
     sourceRef("Offside Labs JupUSD audit", "https://jupusd.money/homepage/audits/offsidelabs.pdf", [

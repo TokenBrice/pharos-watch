@@ -1,6 +1,7 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   applyTrackedReviewedDocs,
+  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   documentedVariableFee,
   undisclosedReviewedFee,
@@ -8,15 +9,55 @@ import {
   queueRedeemBase,
   sourceRef,
 } from "./shared";
+import { REVIEWED_FIRST_WAVE_AT, REVIEWED_REMEDIATION_AT, REVIEWED_STABLECOIN_AUDIT_AT } from "./review-dates";
 
-const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
-const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
-const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
+
+/** Nest NAV-vault redemptions (nTBILL/nBASIS/nOPAL/nWISDOM) share an identical
+ *  issuer-API queued-NAV shape and docs[]; they differ only in the fee-description
+ *  token name and the expected redemption-window note. The inalpha-nest vault has
+ *  a different docs[]/notes[] shape and stays inline below. */
+const nestNavVaultBase: RedemptionBackstopConfig = {
+  ...queueRedeemBase,
+  ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+  accessModel: "issuer-api",
+  settlementModel: "days",
+  executionModel: "rules-based-nav",
+  outputAssetType: "nav",
+  costModel: undisclosedReviewedFee(),
+  docs: [
+    sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+      "settlement",
+    ]),
+  ],
+};
+
+const NEST_NAV_VAULTS: readonly [id: string, ticker: string, windowNote: string][] = [
+  ["ntbill-nest", "nTBILL", "Nest docs list an expected nTBILL redemption window of 1-3 business days."],
+  ["nbasis-nest", "nBASIS", "Nest docs list an expected nBASIS redemption window of 3-5 business days."],
+  ["nopal-nest", "nOPAL", "Nest docs list an expected nOPAL redemption window from minutes to 7 business days."],
+  ["nwisdom-nest", "nWISDOM", "Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
+];
+
+const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
+  NEST_NAV_VAULTS.map(([id, ticker, windowNote]) => {
+    const config = cloneRedemptionBackstopConfig(nestNavVaultBase);
+    config.costModel = undisclosedReviewedFee(
+      `Nest docs describe ${ticker} redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee`,
+    );
+    config.notes = [windowNote];
+    return [id, config];
+  }),
+);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
@@ -78,7 +119,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       0,
       "Falcon docs state users bear gas and execution costs while Falcon does not charge a separate protocol-specific redemption fee",
     ),
-    reviewedAt: "2026-03-23",
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef(
         "Falcon redeem guide",
@@ -699,27 +740,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
   },
-  "ntbill-nest": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
-    notes: ["Nest docs list an expected nTBILL redemption window of 1-3 business days."],
-  },
+  ...NEST_NAV_VAULT_CONFIGS,
   "inalpha-nest": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -753,69 +774,6 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Nest's nALPHA guide documents redemption requests from Plume or Ethereum into pUSD or USDC through the atomic queue; Pharos tracks inALPHA as the same Alpha vault LP exposure.",
       "Nest docs list a 3-5 business day nALPHA redemption window and broader queue mechanics, so the route is modeled as delayed NAV redemption rather than instant stablecoin liquidity.",
     ],
-  },
-  "nbasis-nest": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
-    notes: ["Nest docs list an expected nBASIS redemption window of 3-5 business days."],
-  },
-  "nopal-nest": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
-    notes: ["Nest docs list an expected nOPAL redemption window from minutes to 7 business days."],
-  },
-  "nwisdom-nest": {
-    ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
-    notes: ["Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
   },
   "busd0-usual": {
     ...queueRedeemBase,

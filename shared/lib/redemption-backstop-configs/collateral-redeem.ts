@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBackstopRegistry, defineBatch, type RedemptionBackstopRegistryEntry } from "./factory";
+import { defineBackstopRegistry, defineBatch, defineRecordEntries } from "./factory";
 import {
   applyTrackedReviewedDocs,
   collateralRedeemBase,
@@ -10,13 +10,16 @@ import {
   LIQUITY_STYLE_REDEMPTION_FEE,
   sourceRef,
 } from "./shared";
+import {
+  REVIEWED_FIRST_WAVE_AT,
+  REVIEWED_FOLLOWUP_REMEDIATION_AT,
+  REVIEWED_REMEDIATION_AT,
+  REVIEWED_STABLECOIN_AUDIT_AT,
+} from "./review-dates";
 
-const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
-const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_DIRECT_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_HIVE_HBD_AT = "2026-05-05";
 const REVIEWED_MENTO_CDP_AT = "2026-05-11";
-const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
-const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
@@ -31,17 +34,13 @@ const BASE_COLLATERAL_REDEEM_IDS = [
 ] as const;
 const BASE_COLLATERAL_OVERRIDE_REASON =
   "Reviewed collateral-specific route replaces the shared collateral redemption default.";
+const BASE_COLLATERAL_REDEEM_ID_SET = new Set<string>(BASE_COLLATERAL_REDEEM_IDS);
 
-function defineCollateralRecordEntries(
-  configs: Record<string, RedemptionBackstopConfig>,
-): RedemptionBackstopRegistryEntry[] {
-  const baseIds = new Set<string>(BASE_COLLATERAL_REDEEM_IDS);
-  return Object.entries(configs).map(([id, config]) => ({
-    id,
-    config,
+function defineCollateralRecordEntries(configs: Record<string, RedemptionBackstopConfig>) {
+  return defineRecordEntries(configs, {
+    overrideReasonForIds: (id) => (BASE_COLLATERAL_REDEEM_ID_SET.has(id) ? BASE_COLLATERAL_OVERRIDE_REASON : undefined),
     sourceFilePath: SOURCE_FILE_PATH,
-    ...(baseIds.has(id) ? { overrideReason: BASE_COLLATERAL_OVERRIDE_REASON } : {}),
-  }));
+  });
 }
 
 const mentoCdpRedeemConfig: RedemptionBackstopConfig = {

@@ -153,7 +153,7 @@ All 187 kept findings, grouped by domain prefix. Each block lists `[category | s
 
 **`fviz-5` — comparison-chart manually re-implements range sync that useTimeRangeFilter's externalRange provides** `[simplification | low | small | low]`
 - Problem: ComparisonChart keeps `localRange` + a useEffect that writes the external `range` prop into local state, plus `activeRange = range ?? localRange`. `useTimeRangeFilter` supports `config.externalRange` (29, 42-43). ComparisonChart IS used in controlled mode at compare/client.tsx:506-507 — live dual-write path.
-- Recommendation: pass `{ externalRange: range }` (4th arg), remove the useEffect sync (61-65), drop `activeRange`, keep `handleRangeChange` calling `onRangeChange`. When `range` is undefined, externalRange is undefined and the hook falls back to internal state — semantics preserved.
+- Done 2026-06-13: source already passes `{ externalRange: range }` to `useTimeRangeFilter` and no longer carries the prop-to-local sync `useEffect`; the hook-owned range is used for controls and date formatting.
 - Files: `src/components/comparison-chart.tsx:48-65`, `src/hooks/use-time-range-filter.ts:29-43`.
 - Verifier: externalRange + live controlled caller confirmed; demoted medium->low (taste, no observed bug). Checks: `npm run typecheck`, `npm run test`, `npm run lint`.
 

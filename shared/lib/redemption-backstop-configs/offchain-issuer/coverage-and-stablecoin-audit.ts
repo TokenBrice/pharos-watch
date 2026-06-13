@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "../shared";
 import {
+  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   documentedVariableFee,
   undisclosedReviewedFee,
@@ -12,6 +13,81 @@ import {
   REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
+
+/** Midas liquid-yield-token (LYT) vaults share an identical issuer-API NAV-redemption
+ *  shape, settlement, and the standard `liquid-yield-token` doc; they differ only in the
+ *  fee/note token name and the per-product page URL. mre7yield-midas diverges (different
+ *  reviewed date, `smart-contracts` doc, and note) and stays inline below. */
+const midasLytBase: RedemptionBackstopConfig = {
+  ...issuerBase,
+  ...documentedBoundSupplyFull("2026-05-14"),
+  settlementModel: "days",
+  outputAssetType: "nav",
+  costModel: undisclosedReviewedFee(),
+  docs: [
+    sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
+  ],
+};
+
+const MIDAS_LYT_VAULTS: readonly [id: string, ticker: string, productUrl: string][] = [
+  ["mf-one-midas", "mF-ONE", "https://midas.app/mfone"],
+  ["mglobal-midas-fasanara", "mGLOBAL", "https://midas.app/mglobal"],
+  ["mhyper-midas", "mHYPER", "https://midas.app/mhyper"],
+  ["mmev-midas", "mMEV", "https://docs.midas.app/tokens/mmev"],
+  ["mapollo-midas", "mAPOLLO", "https://midas.app/mapollo"],
+];
+
+const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
+  MIDAS_LYT_VAULTS.map(([id, ticker, productUrl]) => {
+    const config = cloneRedemptionBackstopConfig(midasLytBase);
+    config.costModel = undisclosedReviewedFee(
+      `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
+    );
+    config.docs = [
+      sourceRef(`Midas ${ticker}`, productUrl, ["route", "capacity", "fees", "access", "settlement"]),
+      ...config.docs!,
+    ];
+    config.notes = [
+      `${ticker} is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.`,
+    ];
+    return [id, config];
+  }),
+);
+
+/** Spiko fund redemptions share the same "deposits and withdrawals" doc plus the
+ *  SICAV prospectus; USD/GBP funds reference the standard redemption-order API while
+ *  the EUR funds reference the instant-redemption-order API. Each entry appends its
+ *  own product-page ref (some funds lack one) before the prospectus. Returned as fresh
+ *  arrays/objects so no doc reference is shared across entries. */
+const spikoDepositsRef = () =>
+  sourceRef(
+    "Spiko deposits and withdrawals",
+    "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+    ["route", "fees", "access", "settlement"],
+  );
+const spikoBaseDocs = () => [
+  spikoDepositsRef(),
+  sourceRef(
+    "Spiko investor redemption API",
+    "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+    ["route", "access", "settlement"],
+  ),
+];
+const spikoEurBaseDocs = () => [
+  spikoDepositsRef(),
+  sourceRef(
+    "Spiko instant redemption API",
+    "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
+    ["route", "access", "settlement"],
+  ),
+];
+const spikoProspectus = () =>
+  sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+    "capacity",
+    "fees",
+    "access",
+    "settlement",
+  ]);
 
 export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "usdt-tether": {
@@ -188,92 +264,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
     ],
   },
-  "mf-one-midas": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-14"),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mF-ONE redemption fee",
-    ),
-    docs: [
-      sourceRef("Midas mF-ONE", "https://midas.app/mfone", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
-    ],
-    notes: [
-      "mF-ONE is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
-    ],
-  },
-  "mglobal-midas-fasanara": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-14"),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mGLOBAL redemption fee",
-    ),
-    docs: [
-      sourceRef("Midas mGLOBAL", "https://midas.app/mglobal", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
-    ],
-    notes: [
-      "mGLOBAL is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
-    ],
-  },
-  "mhyper-midas": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-14"),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mHYPER redemption fee",
-    ),
-    docs: [
-      sourceRef("Midas mHYPER", "https://midas.app/mhyper", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
-    ],
-    notes: [
-      "mHYPER is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
-    ],
-  },
-  "mmev-midas": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-14"),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mMEV redemption fee",
-    ),
-    docs: [
-      sourceRef("Midas mMEV", "https://docs.midas.app/tokens/mmev", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
-    ],
-    notes: [
-      "mMEV is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
-    ],
-  },
-  "mapollo-midas": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-05-14"),
-    settlementModel: "days",
-    outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mAPOLLO redemption fee",
-    ),
-    docs: [
-      sourceRef("Midas mAPOLLO", "https://midas.app/mapollo", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
-    ],
-    notes: [
-      "mAPOLLO is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
-    ],
-  },
+  ...MIDAS_LYT_CONFIGS,
   "benji-franklin-templeton": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -437,24 +428,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed USTBL redemption fee",
     ),
-    docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko investor redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
-        ["route", "access", "settlement"],
-      ),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
+    docs: [...spikoBaseDocs(), spikoProspectus()],
     notes: [
       "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
     ],
@@ -468,23 +442,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SAFO redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko investor redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoBaseDocs(),
       sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -499,27 +459,13 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SPKCC redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko investor redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoBaseDocs(),
       sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
         "capacity",
         "fees",
         "access",
       ]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -534,27 +480,13 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed UKTBL redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko investor redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoBaseDocs(),
       sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
         "capacity",
         "fees",
         "access",
       ]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -569,23 +501,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed GBPSAFO redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko investor redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoBaseDocs(),
       sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -599,24 +517,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EUTBL redemption fee",
     ),
-    docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko instant redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
-        ["route", "access", "settlement"],
-      ),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-    ],
+    docs: [...spikoEurBaseDocs(), spikoProspectus()],
     notes: [
       "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
     ],
@@ -630,23 +531,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSAFO redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko instant redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoEurBaseDocs(),
       sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
@@ -661,27 +548,13 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSPKCC redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Spiko deposits and withdrawals",
-        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
-        ["route", "fees", "access", "settlement"],
-      ),
-      sourceRef(
-        "Spiko instant redemption API",
-        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
-        ["route", "access", "settlement"],
-      ),
+      ...spikoEurBaseDocs(),
       sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
         "capacity",
         "fees",
         "access",
       ]),
-      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      spikoProspectus(),
     ],
     notes: [
       "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",

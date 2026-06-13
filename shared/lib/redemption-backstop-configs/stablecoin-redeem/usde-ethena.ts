@@ -1,5 +1,5 @@
 import { documentedVariableFee, sourceRef } from "../shared";
-import { defineStablecoinRedeemConfig } from "./shared";
+import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
 export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
@@ -12,7 +12,7 @@ export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig
   costModel: documentedVariableFee(
     "Ethena docs describe direct USDe redemption for whitelisted mint users at $1 into supported stable assets, with users reimbursing transaction gas and execution costs rather than paying a separate fixed protocol fee",
   ),
-  reviewedAt: "2026-03-23",
+  reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
     sourceRef(
       "Ethena peg arbitrage mechanism",
