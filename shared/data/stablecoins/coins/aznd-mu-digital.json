@@ -156,6 +156,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Mu Digital lists AZND on Ethereum and Monad, but the reviewed issuer pages and reserve dashboard do not describe a source-of-truth chain, bridge contracts, or burn/mint controls. The multichain route is unresolved and scored as opaque until issuer route controls are documented.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Mu Digital docs",
+        "url": "https://docs.mudigital.net"
+      },
+      {
+        "label": "Mu Digital proof of reserve",
+        "url": "https://mu.accountable.capital/"
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

@@ -240,5 +240,31 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2022-11-18"
+  "launchDate": "2022-11-18",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "VEUR is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "VEUR issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "VNX",
+        "url": "https://vnx.li/"
+      },
+      {
+        "label": "VNX Euro on RWA.xyz",
+        "url": "https://app.rwa.xyz/assets/VEUR"
+      }
+    ]
+  }
 }

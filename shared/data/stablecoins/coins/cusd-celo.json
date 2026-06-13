@@ -144,6 +144,34 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "USDm is tracked on Celo plus additional chains; candidate evidence points to Celo/canonical bridge infrastructure rather than a separate issuer bridge. The route is scored as canonical bridge exposure with probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Celo",
+        "slug": "celo",
+        "url": "https://l2beat.com/interop/protocols/celo",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mento reserve docs",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
+      {
+        "label": "L2BEAT Celo",
+        "url": "https://l2beat.com/interop/protocols/celo"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {

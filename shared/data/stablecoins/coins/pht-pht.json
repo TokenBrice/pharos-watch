@@ -202,5 +202,39 @@
       "depType": "collateral"
     }
   },
-  "launchDate": "2025-02-13"
+  "launchDate": "2025-02-13",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "PHT uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "APACX PHT",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ]
+  }
 }

@@ -143,6 +143,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "srUSD is a Reservoir wrapper with Ethereum and Berachain deployments. Reviewed Reservoir materials show protocol-owned contract deployments but do not point to a third-party bridge, so Pharos classifies the route as issuer/protocol-native at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Reservoir contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Reservoir docs",
+        "url": "https://docs.reservoir.xyz"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",

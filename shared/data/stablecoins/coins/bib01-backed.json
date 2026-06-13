@@ -24,6 +24,40 @@
     "cadence": "daily",
     "attestorJurisdiction": "Switzerland"
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Backed announced Chainlink CCIP as its interoperability infrastructure for moving Backed tokens across blockchains. bIB01 is therefore reviewed as a CCIP-backed external validated-network route rather than pure issuer-only settlement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Backed Chainlink CCIP announcement",
+        "url": "https://backed.fi/news-updates/backed-is-now-all-in-on-chainlink-tokenized-asset-infrastructure"
+      },
+      {
+        "label": "Backed docs",
+        "url": "https://docs.backed.fi/"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

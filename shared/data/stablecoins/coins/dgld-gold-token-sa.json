@@ -24,6 +24,33 @@
     "cadence": "real-time",
     "attestorJurisdiction": "Switzerland"
   },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "Gold Token SA states that DGLD was deployed on Base through Base native Ethereum bridge infrastructure. The reviewed route is therefore a canonical L2 bridge path, not an independent liquidity or validator bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Base native bridge",
+        "url": "https://docs.base.org/base-chain/network-information/bridges",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "DGLD Base launch",
+        "url": "https://dgld.ch/news/major-milestone-for-dgld-now-live-on-base"
+      },
+      {
+        "label": "Base bridge docs",
+        "url": "https://docs.base.org/base-chain/network-information/bridges"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

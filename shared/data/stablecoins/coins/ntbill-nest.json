@@ -210,5 +210,27 @@
       ]
     }
   },
-  "launchDate": "2024-12-18"
+  "launchDate": "2024-12-18",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "nTBILL is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "nTBILL issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ]
+  }
 }

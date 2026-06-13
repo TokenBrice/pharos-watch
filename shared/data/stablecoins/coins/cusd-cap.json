@@ -256,6 +256,35 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "Cap cUSD is deployed on multiple chains and the candidate route evidence points to Across. Across is an intent/liquidity framework, so route execution and solver/liquidity availability are material to cross-chain movement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Cap docs",
+        "url": "https://docs.cap.app/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "launchDate": "2025-07-08",
   "mechanismArchetype": "rwa-credit-fund"
 }

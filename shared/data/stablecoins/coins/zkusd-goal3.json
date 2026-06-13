@@ -51,6 +51,23 @@
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "zkUSD has one tracked ZKsync contract and no source-verified cross-chain route. The ZKsync signal is canonical chain infrastructure context, so this is reviewed as native to the current deployment.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Goal3 X",
+        "url": "https://x.com/Goal3_xyz"
+      },
+      {
+        "label": "L2BEAT ZKsync Era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

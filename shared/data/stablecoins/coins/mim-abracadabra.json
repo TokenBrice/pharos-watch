@@ -241,6 +241,32 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Abracadabra documents MIM Beaming as LayerZero OFT-powered omnichain transfers. Because the route uses a third-party OFT/messaging stack for cross-chain accounting, Pharos scores MIM as external-lock-mint rather than issuer-native settlement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": ["lockAndMint", "burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Abracadabra Omnichain MIM docs",
+        "url": "https://docs.abracadabra.money/learn/tokens/omnichain-mim"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "reserves": [
     {

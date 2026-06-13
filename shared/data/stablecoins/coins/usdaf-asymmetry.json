@@ -56,6 +56,23 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDaf has one tracked Ethereum contract and no source-verified cross-chain route in reviewed Asymmetry docs. The Across candidate did not resolve to a material durable supply route for this asset.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Asymmetry docs",
+        "url": "https://docs.asymmetry.finance/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -65,7 +82,9 @@
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "reserves": [
     {
       "name": "ysyBOLD (Yearn savings BOLD)",

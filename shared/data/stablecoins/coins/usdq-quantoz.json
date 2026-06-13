@@ -26,6 +26,27 @@
     "attestorLicense": "DNB EMI (MiCAR)",
     "provider": "Quantoz transparency dashboard"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Quantoz publishes USDQ as a regulated issuer token across Ethereum, Polygon, XRPL, and Algorand with issuer transparency and resource pages, and no separate bridge protocol was resolved. The reviewed route is issuer-managed native issuance/redemption across supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Quantoz USDQ product page",
+        "url": "https://www.quantoz.com/products/eurq-usdq"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency"
+      },
+      {
+        "label": "Quantoz resources",
+        "url": "https://www.quantoz.com/resources"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

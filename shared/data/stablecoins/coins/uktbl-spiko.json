@@ -172,6 +172,31 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Spiko documents internal infrastructure for issuing, operating, and monitoring its regulated fund tokens across EVM networks, Starknet, and Stellar. For UKTBL, no independent bridge route was verified, so the route is reviewed as issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "note": "Issuer technical write-up describes Spiko-controlled multichain token operations."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+      },
+      {
+        "label": "Spiko UK T-Bills fund",
+        "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

@@ -61,6 +61,34 @@
       "decimals": 8
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "FEUSD has HyperEVM/Hyperliquid deployments and candidate evidence points to Hyperliquid canonical routing. With no separate issuer bridge protocol resolved, the route is reviewed as canonical ecosystem bridge exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Hyperliquid",
+        "slug": "hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Felix docs",
+        "url": "https://usefelix.gitbook.io/docs"
+      },
+      {
+        "label": "L2BEAT Hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+      }
+    ]
+  },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

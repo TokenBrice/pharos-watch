@@ -204,6 +204,36 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDO's documented cross-chain route is Chainlink CCIP. CCIP provides token transfers through Chainlink oracle-network validation and rate-limited token pools, so Pharos scores the route as an external validated network rather than an issuer-only or canonical rollup bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": ["burnAndMint"],
+        "note": "USDO is listed in the Chainlink CCIP token directory."
+      }
+    ],
+    "sources": [
+      {
+        "label": "OpenEden USDO docs",
+        "url": "https://docs.openeden.com/usdo/introduction"
+      },
+      {
+        "label": "OpenEden Chainlink CCIP announcement",
+        "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
+      },
+      {
+        "label": "Chainlink USDO CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

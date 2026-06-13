@@ -69,6 +69,23 @@
   ],
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "syzUSD is listed on Plasma and Monad as a staked yzuUSD variant, but reviewed Yuzu materials and reserve pages do not identify a bridge route, source chain, or cross-chain validation controls. The route is unresolved and scored as opaque.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Yuzu docs",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
+        "label": "Yuzu proof of reserve",
+        "url": "https://yuzu.accountable.capital/"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",

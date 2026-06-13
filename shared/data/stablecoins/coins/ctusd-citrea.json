@@ -27,6 +27,23 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ctUSD is documented as Citrea USD, the native stablecoin for Bitcoin on Citrea, and the registry has only a Citrea deployment. No material bridge route was resolved for this asset.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Citrea ctUSD docs",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "Citrea ctUSD launch blog",
+        "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

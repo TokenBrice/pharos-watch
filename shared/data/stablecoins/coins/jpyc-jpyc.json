@@ -53,6 +53,27 @@
       "decimals": 18
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "JPYC has official deployments across Ethereum, Polygon, and Avalanche. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "JPYC website",
+        "url": "https://jpyc.co.jp/"
+      },
+      {
+        "label": "JPYC GitHub",
+        "url": "https://github.com/jpycoin"
+      },
+      {
+        "label": "L2BEAT Avalanche Bridge",
+        "url": "https://l2beat.com/interop/protocols/avalanche"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

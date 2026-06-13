@@ -268,6 +268,37 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "WUSD is a WSPN stablecoin with multichain deployments and LayerZero is available on Viction, one of the checked WUSD chains. Because public materials do not resolve a stronger issuer-native route and the candidate route is LayerZero-style, Pharos classifies the bridge exposure as external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "WSPN whitepaper",
+        "url": "https://www.wspn.io/Documents/Whitepaper%20for%20WSPN.pdf"
+      },
+      {
+        "label": "WSPN Viction deployment release",
+        "url": "https://www.prnewswire.com/in/news-releases/wspn-partners-with-viction-and-ninety-eight-ecosystem-to-boost-wusd-adoption-and-expand-market-reach-302296318.html"
+      },
+      {
+        "label": "LayerZero Viction deployment docs",
+        "url": "https://docs.layerzero.network/v2/deployments/chains/tomo"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "reserves": [

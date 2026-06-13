@@ -64,6 +64,31 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "bUSD0 inherits USD0's multichain route surface. Usual documents USD0 and USUAL deployments across Ethereum, Arbitrum, Base, and BNB Chain with Chainlink CCIP and LayerZero supporting unified liquidity, so the bridge route is scored as an external validated-network dependency.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP / LayerZero for Usual",
+        "url": "https://docs.usual.money/",
+        "note": "Usual's documentation names CCIP and LayerZero as cross-chain infrastructure for USD0 and USUAL."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Usual docs",
+        "url": "https://docs.usual.money/"
+      },
+      {
+        "label": "bUSD0 docs",
+        "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "dao-governance",
   "reserves": [

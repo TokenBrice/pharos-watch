@@ -160,6 +160,31 @@
       "reviewedAt": "2026-06-11"
     }
   },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "MSUSD is deployed on Ethereum and Sonic. Sonic documentation describes Sonic Gateway as the native Ethereum/Sonic bridge, so Pharos treats this as canonical/native gateway route exposure rather than a third-party liquidity bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Sonic Gateway",
+        "url": "https://docs.soniclabs.com/sonic/sonic-gateway",
+        "bridgeTypes": ["canonical"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Main Street Finance",
+        "url": "https://mainstreet.finance/"
+      },
+      {
+        "label": "Sonic Gateway docs",
+        "url": "https://docs.soniclabs.com/sonic/sonic-gateway"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "reserves": [

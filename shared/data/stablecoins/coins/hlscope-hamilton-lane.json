@@ -16,6 +16,38 @@
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "HLSCOPE was first tokenized through Securitize on Polygon and is now tracked on Ethereum and Optimism as well. Public multichain evidence points to Wormhole-enabled interoperability, so the route is reviewed conservatively as an external lock/mint route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers",
+        "bridgeTypes": [
+          "nativeTokenTransfer",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Hamilton Lane SCOPE via Securitize",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      },
+      {
+        "label": "Securitize SCOPE Polygon launch",
+        "url": "https://securitize.io/learn/press/securitize-expands-access-to-hamilton-lanes-senior-credit-opportunities-fund-via-polygon"
+      },
+      {
+        "label": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Securitize",

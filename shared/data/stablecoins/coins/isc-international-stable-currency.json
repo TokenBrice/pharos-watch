@@ -39,6 +39,19 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "ISC docs",
+        "url": "https://wp.isc.money/"
+      }
+    ]
+  },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

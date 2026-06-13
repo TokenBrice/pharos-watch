@@ -286,6 +286,35 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USD1 cross-chain transfers are documented by World Liberty Financial as using a Chainlink CCIP bridge across integrated networks. That puts durable cross-chain movement on an external validated messaging network rather than a canonical rollup bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": ["burnAndMint", "messagePassing"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "World Liberty Financial bridge docs",
+        "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+      },
+      {
+        "label": "World Liberty Financial USD1 page",
+        "url": "https://worldlibertyfinancial.com/usd1"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

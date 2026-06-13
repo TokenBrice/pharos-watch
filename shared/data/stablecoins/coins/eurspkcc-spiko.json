@@ -167,6 +167,35 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Spiko's tokenized fund shares are deployed across multiple chains, and Spiko announced Chainlink CCIP as the interoperability standard for compliance-aware cross-chain transfers. Pharos treats the route as external validated-network exposure rather than a canonical bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": ["messagePassing", "burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko Chainlink CCIP announcement",
+        "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
+      },
+      {
+        "label": "Spiko contracts repository",
+        "url": "https://github.com/spiko-tech/contracts"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

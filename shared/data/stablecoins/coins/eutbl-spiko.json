@@ -25,6 +25,36 @@
     "attestorJurisdiction": "France",
     "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko CCIP announcement",
+        "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

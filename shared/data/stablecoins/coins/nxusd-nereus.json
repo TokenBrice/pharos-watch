@@ -74,6 +74,19 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "NXUSD has a single Avalanche deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nereus Finance",
+        "url": "https://nereus.finance/"
+      }
+    ]
+  },
   "reserves": [
     {
       "name": "Nereus overcollateralized crypto positions including DAI collateral",

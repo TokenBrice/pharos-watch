@@ -136,5 +136,19 @@
       }
     }
   },
-  "launchDate": "2024-03-12"
+  "launchDate": "2024-03-12",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "yvUSDC-1 is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked yvUSDC-1 vault is a single Ethereum Yearn vault; bridge-route risk is inherited from underlying USDC routes, not this vault contract.",
+    "sources": [
+      {
+        "label": "Yearn v3 vault",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      }
+    ]
+  }
 }

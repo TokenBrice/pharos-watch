@@ -155,5 +155,19 @@
         }
       ]
     }
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "UUSD is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked UUSD contract is on Tezos and reviewed Youves docs describe local synthetic-asset contracts rather than a cross-chain route.",
+    "sources": [
+      {
+        "label": "Youves smart contracts",
+        "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      }
+    ]
   }
 }

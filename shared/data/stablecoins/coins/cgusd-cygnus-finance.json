@@ -188,6 +188,23 @@
     }
   },
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "cgUSD currently has one tracked Base deployment in Pharos metadata, and no reviewed Cygnus source shows durable supply depending on a cross-chain bridge route. The row is triaged as single-chain/native for bridge-route scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cygnus docs",
+        "url": "https://wiki.cygnus.finance/whitepaper/"
+      },
+      {
+        "label": "Cygnus website",
+        "url": "https://www.cygnus.finance/"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

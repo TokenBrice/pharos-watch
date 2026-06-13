@@ -200,5 +200,42 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2021-10-31"
+  "launchDate": "2021-10-31",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "XAUT is issuer-native on Ethereum, but the reviewed route set includes XAUt0, which locks XAUt in an Ethereum OFT adapter and mints equivalent XAUt0 on destination chains. Pharos scores the weakest durable route as external lock/mint because it depends on LayerZero/OFT lockbox infrastructure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Tether Gold FAQ",
+        "url": "https://gold.tether.to/faq"
+      },
+      {
+        "label": "USDT0 / XAUt0 docs",
+        "url": "https://docs.usdt0.to/"
+      },
+      {
+        "label": "USDT0 site",
+        "url": "https://usdt0.to/"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  }
 }

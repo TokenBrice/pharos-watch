@@ -250,6 +250,35 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Ethena lists sUSDe deployments across many chains and LayerZero OFT is the reviewed cross-chain token pattern for unified multichain supply. The route is treated as external lock/burn-and-mint infrastructure with Ethena multisig controls on destination deployments.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockOrBurnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ethena key addresses",
+        "url": "https://docs.ethena.fi/solution-design/key-addresses"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "wrapper",

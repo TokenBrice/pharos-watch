@@ -93,6 +93,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "JAAA represents fund shares issued by the Janus Henderson/Anemoy/Centrifuge tokenization stack. The reviewed sources support tokenized fund issuance rather than a user-facing external bridge route, so the multichain posture is treated as issuer-native at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Janus Henderson Anemoy partnership",
+        "url": "https://www.janushenderson.com/corporate/press-releases/janus-henderson-to-partner-with-anemoy-and-centrifuge-on-its-first-tokenized-fund/"
+      },
+      {
+        "label": "Centrifuge JAAA onboarding",
+        "url": "https://gov.centrifuge.io/t/cp158-pool-onboarding-janus-henderson-anemoy-aaa-clo-fund/6845"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

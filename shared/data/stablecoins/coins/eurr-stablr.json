@@ -223,5 +223,27 @@
       "title": "Minting and redemption suspended",
       "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting EURR and USDR. Minting and redemption were suspended, 4.5M unbacked EURR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
     }
-  ]
+  ],
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EURR is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "EURR issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "StablR stablecoins",
+        "url": "https://www.stablr.com/"
+      }
+    ]
+  }
 }

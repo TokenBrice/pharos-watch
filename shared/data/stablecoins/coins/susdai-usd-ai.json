@@ -67,6 +67,32 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USD.AI lists sUSDai OAdapter contracts on Arbitrum and states USDai and sUSDai are available as LayerZero OFTs on other EVM chains. The staked wrapper therefore inherits a third-party OFT route and is scored as external-lock-mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": ["lockAndMint", "burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USD.AI contract addresses",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "reserves": [

@@ -40,6 +40,31 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "XOFm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Celo",
+        "slug": "celo",
+        "url": "https://l2beat.com/scaling/projects/celo"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mento stablecoin docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento addresses",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

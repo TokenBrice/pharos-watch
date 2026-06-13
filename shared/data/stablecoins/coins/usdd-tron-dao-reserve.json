@@ -41,6 +41,39 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "USDD is tracked on Tron, Ethereum, and BSC, while the workflow evidence resolves Across-style cross-chain route signals rather than issuer-native bridge controls. The reviewed profile treats cross-chain movement as a liquidity/intent route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDD docs",
+        "url": "https://docs.usdd.io"
+      },
+      {
+        "label": "USDD website",
+        "url": "https://usdd.io/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

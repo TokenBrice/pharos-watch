@@ -75,6 +75,35 @@
       "decimals": 6
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "ZARP has multiple tracked deployments and candidate evidence points to Across. Without stronger issuer-native bridge controls resolved, external liquidity/intent routing is the material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "ZARP docs",
+        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

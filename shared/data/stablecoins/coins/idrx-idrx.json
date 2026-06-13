@@ -97,6 +97,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "IDRX is issuer-backed rupiah stablecoin infrastructure available on multiple supported networks. Reviewed issuer materials did not identify a distinct bridge, lockbox, or liquidity route controlling durable supply, so Pharos treats the route as native issuance on listed chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "IDRX",
+        "url": "https://home.idrx.co/"
+      },
+      {
+        "label": "IDRX docs",
+        "url": "https://docs.idrx.co/"
+      }
+    ]
+  },
   "custodyModel": "institutional-unregulated",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",

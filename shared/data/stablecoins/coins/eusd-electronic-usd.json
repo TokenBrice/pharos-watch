@@ -189,6 +189,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "eUSD is described as launched across Ethereum and MobileCoin, with later support on Base and Arbitrum. Public evidence supports native multichain issuance rather than a documented external bridge route, so the review uses issuer-native burn/mint at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Reserve eUSD launch article",
+        "url": "https://blog.reserve.org/introducing-the-electronic-dollar-eusd-cb9d8f50aae"
+      },
+      {
+        "label": "Sentz eUSD article",
+        "url": "https://www.sentz.com/blog/electronic-dollars-eusd-a-data-protecting-stablecoin"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "reserves": [
     {

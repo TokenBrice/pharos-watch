@@ -261,6 +261,19 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "XUSD is issued by StraitsX across Ethereum, BNB Chain, and Solana. No public third-party bridge route was resolved from issuer evidence, so reviewed risk is issuer-native multichain mint/redeem exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StraitsX XUSD",
+        "url": "https://www.straitsx.com/xusd"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "reserves": [

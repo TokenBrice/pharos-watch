@@ -18,6 +18,33 @@
   "detailProvider": "defillama",
   "geckoId": "hashnote-usyc",
   "pythFeedId": "0x01cb900802d74a2e3d36bd9bf100523532b650c47dcac2e8202ba1e972eab305",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USYC docs list Ethereum and BSC deployments and a Cross Chain Teller that lets users subscribe and redeem native USYC from Ethereum. The route is reviewed as issuer-native burn/mint style fund administration rather than a permissionless bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "USYC Cross Chain Teller",
+        "url": "https://usyc.docs.hashnote.com/overview/smart-contracts",
+        "bridgeTypes": [
+          "subscribeRedeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USYC smart contracts",
+        "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+      },
+      {
+        "label": "USYC introduction",
+        "url": "https://usyc.docs.hashnote.com/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

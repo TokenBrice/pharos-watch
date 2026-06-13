@@ -234,6 +234,45 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "FRAX has legacy FraxFerry routes and newer LayerZero/OFT cross-chain paths. Because durable multichain supply can depend on OFT or ferry-style bridge infrastructure, the route is reviewed as external lock/mint rather than canonical rollup-only exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "FraxFerry",
+        "url": "https://docs.frax.finance/cross-chain/bridge",
+        "bridgeTypes": [
+          "lockMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Frax cross-chain overview",
+        "url": "https://docs.frax.com/protocol/crosschain/overview"
+      },
+      {
+        "label": "FraxFerry docs",
+        "url": "https://docs.frax.finance/cross-chain/bridge"
+      },
+      {
+        "label": "Frax LayerZero x Stargate docs",
+        "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate"
+      }
+    ]
+  },
   "governanceQuality": "dao-governance",
   "custodyModel": "institutional-regulated",
   "reserves": [

@@ -154,6 +154,31 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "ACRED is distributed across Aptos, Avalanche, Ethereum, Ink, Polygon, and Solana through Securitize, with Wormhole identified by Securitize/Wormhole as the interoperability provider for tokenized fund transfers. The route is therefore treated as an external validated-network dependency rather than an issuer-native burn/mint rail.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole / Securitize interoperability",
+        "url": "https://wormhole.com/case-studies/securitize",
+        "note": "Wormhole describes facilitating multichain access to tokenized funds including Apollo Global's ACRED."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Securitize ACRED launch",
+        "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+      },
+      {
+        "label": "Wormhole Securitize case study",
+        "url": "https://wormhole.com/case-studies/securitize"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

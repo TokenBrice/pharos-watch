@@ -171,6 +171,36 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": ["Non-minting"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "wFIAT whitepaper",
+        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

@@ -186,6 +186,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "VNXAU is an issuer-managed multichain gold token. Reviewed issuer/product sources show multichain issuance and transferability but no independent bridge protocol, so route risk is issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNX Gold",
+        "url": "https://vnx.li/gold/"
+      },
+      {
+        "label": "VNX Gold docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "reserves": [

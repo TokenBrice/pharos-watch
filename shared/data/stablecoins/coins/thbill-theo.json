@@ -74,6 +74,32 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "thBILL is marketed as multi-chain native across Ethereum, Base, Arbitrum, and HyperEVM, with route evidence pointing to LayerZero-powered cross-chain operation. Pharos scores the route as external lock/mint/OFT-style exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": ["Lock & Mint", "Burn & Mint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Theo thBILL",
+        "url": "https://theo.xyz/thbill"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

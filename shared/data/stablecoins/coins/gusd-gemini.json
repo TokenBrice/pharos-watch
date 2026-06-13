@@ -231,5 +231,32 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2018-09-09"
+  "launchDate": "2018-09-09",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "GUSD is issuer-native on Ethereum, but the tracked NEAR deployment resolves to a factory.bridge.near account, indicating a bridged representation rather than Gemini-native issuance on NEAR. The weakest reviewed route is therefore external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "NEAR bridge factory",
+        "url": "https://nearblocks.io/address/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
+        "bridgeTypes": [
+          "external-lock-mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Gemini Dollar",
+        "url": "https://www.gemini.com/dollar"
+      },
+      {
+        "label": "GUSD NEAR bridge-factory account",
+        "url": "https://nearblocks.io/address/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near"
+      }
+    ]
+  }
 }

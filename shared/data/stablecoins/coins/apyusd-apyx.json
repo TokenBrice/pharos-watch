@@ -142,6 +142,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "apyUSD has tracked Ethereum and Base contracts but no source-verified user bridge route or third-party bridge controls were resolved. The row is reviewed as native/direct deployments rather than a material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "APYX docs",
+        "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "APYX dashboard",
+        "url": "https://accountable.apyx.fi/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",

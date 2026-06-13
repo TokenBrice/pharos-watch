@@ -84,6 +84,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USBD is deployed across several chains with the same token address pattern, but reviewed Bima docs and existing contract review do not identify the bridge/messaging layer or source-of-truth chain. Until Bima documents the cross-chain route, the profile is kept in the opaque tier.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Bima docs",
+        "url": "https://docs.bima.money/"
+      },
+      {
+        "label": "Bima website",
+        "url": "https://bima.money/"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

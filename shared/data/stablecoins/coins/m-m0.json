@@ -293,6 +293,45 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "M Portal",
+        "url": "https://docs.m0.org/home/technical-documentations/m-portal/overview/",
+        "bridgeTypes": [
+          "lockMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/",
+        "bridgeTypes": [
+          "nativeTokenTransfer"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "M Portal overview",
+        "url": "https://docs.m0.org/home/technical-documentations/m-portal/overview/"
+      },
+      {
+        "label": "M Portal underlying technology",
+        "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
+      },
+      {
+        "label": "Wormhole NTT overview",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
+      }
+    ]
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

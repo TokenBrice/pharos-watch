@@ -95,6 +95,32 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "JTRSY is deployed across multiple chains and the workflow's L2BEAT route signal points to Across. Across is an intent/liquidity route with non-minting transfer execution, so Pharos scores this as liquidity-or-intent route exposure with probable confidence pending deeper issuer-specific bridge docs.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": ["Non-minting"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Anemoy JTRSY",
+        "url": "https://www.anemoy.io/funds/jtrsy"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

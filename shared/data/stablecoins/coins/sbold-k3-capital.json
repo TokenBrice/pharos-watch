@@ -36,6 +36,23 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "sBOLD is a K3 Capital wrapper deployed only on Ethereum in the registry. No material bridge route was resolved for the wrapper, so it is reviewed as single-chain/native for bridge-route scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "K3 sBOLD docs",
+        "url": "https://k3-capital.gitbook.io/sbold"
+      },
+      {
+        "label": "K3 Capital website",
+        "url": "https://www.k3.capital/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -237,6 +237,27 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "MetaMask describes mUSD as issued by Bridge and powered by M0, initially available on Ethereum and Linea. I did not resolve a separate user bridge or lockbox route for durable supply, so Pharos treats current route risk as native issuance on its supported deployments.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MetaMask mUSD announcement",
+        "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet"
+      },
+      {
+        "label": "M0 and Bridge mUSD partnership",
+        "url": "https://www.m0.org/press-releases/bridge-and-m0-are-partnering-to-help-businesses-issue-custom-stablecoins-starting-with-metamask-usd"
+      },
+      {
+        "label": "M0 mUSD repository",
+        "url": "https://github.com/m0-foundation/mUSD"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

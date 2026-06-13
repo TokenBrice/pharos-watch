@@ -72,6 +72,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Maple confirms syrupUSDC expanded from Ethereum to Solana, Arbitrum, and Base, but the reviewed public sources do not specify a bridge, burn/mint, or lockbox topology for the receipt token. The route is left conservative pending clearer Maple route documentation.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Maple syrupUSDC multichain article",
+        "url": "https://maple.finance/insights/syrupusdc-and-syrupusdt-built-for-scale"
+      },
+      {
+        "label": "Maple syrupUSDC lender docs",
+        "url": "https://maplefinance.gitbook.io/maple/syrupusdc-for-lenders/introduction"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

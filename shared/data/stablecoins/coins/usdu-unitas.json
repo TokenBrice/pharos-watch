@@ -136,6 +136,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDU is tracked on BNB Chain and Solana, but reviewed Unitas docs do not identify a cross-chain bridge, canonical route, or issuer burn/mint control surface for moving supply between chains. The route is unresolved and scored as opaque.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Unitas docs",
+        "url": "https://docs.unitas.so/"
+      },
+      {
+        "label": "Unitas website",
+        "url": "https://unitas.so/"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

@@ -36,6 +36,40 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Inverse documents sDOLA bridging through Chainlink CCIP, with sDOLA locked on the source chain and minted on the destination after CCIP relay. The route is reviewed as an external validated-network bridge with Chainlink validation assumptions.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse sDOLA docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Inverse DOLA cross-chain guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -150,6 +150,24 @@
       "reviewedAt": "2026-06-11"
     }
   },
+  "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "YLDS is issued through Figure/Provenance rails with tracked Solana and Provenance representations. Reviewed Provenance/YLDS materials support issuer-native tokenization and redemption rather than a third-party holder bridge, so the route is scored as issuer-native-burn-mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YLDS website",
+        "url": "https://www.ylds.com/"
+      },
+      {
+        "label": "Provenance YLDS docs",
+        "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "reserves": [

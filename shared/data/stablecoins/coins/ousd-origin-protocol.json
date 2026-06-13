@@ -226,5 +226,22 @@
       ]
     }
   },
-  "launchDate": "2020-09-18"
+  "launchDate": "2020-09-18",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Origin docs describe mainnet OUSD holders receiving yield without bridging or cross-chain action, and Pharos has no source-verified active bridge route for the secondary checked deployment. The row is reviewed as no material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Origin Dollar docs",
+        "url": "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"
+      },
+      {
+        "label": "Origin Dollar repository",
+        "url": "https://github.com/OriginProtocol/origin-dollar"
+      }
+    ]
+  }
 }

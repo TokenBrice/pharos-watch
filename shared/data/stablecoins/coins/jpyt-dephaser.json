@@ -172,6 +172,34 @@
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "JPYT is tracked on OP Stack chains and the candidate evidence points to OP Mainnet canonical routing. No separate issuer bridge route was resolved, so the route is reviewed as canonical rollup bridge exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet Canonical",
+        "slug": "op-mainnet",
+        "url": "https://l2beat.com/interop/protocols/op-mainnet",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "DePhaser docs",
+        "url": "https://docs.dephaser.com/"
+      },
+      {
+        "label": "L2BEAT OP Mainnet",
+        "url": "https://l2beat.com/interop/protocols/op-mainnet"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

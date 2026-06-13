@@ -180,6 +180,49 @@
     "reviewedAt": "2026-05-14"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "Ripio describes wMXN as a wrapped local stablecoin for on-chain usage, and candidate route evidence includes Across and World Chain. Because external liquidity/intent routing is material, the route is scored as liquidity/intent.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "World Chain",
+        "slug": "world",
+        "url": "https://l2beat.com/interop/protocols/world",
+        "bridgeTypes": [
+          "canonical",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "L2BEAT World Chain",
+        "url": "https://l2beat.com/interop/protocols/world"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

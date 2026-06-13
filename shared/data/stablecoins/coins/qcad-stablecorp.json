@@ -24,6 +24,27 @@
     "cadence": "real-time",
     "attestorJurisdiction": "Canada"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Stablecorp describes QCAD as a compliant CAD token and has issuer/public-regulatory evidence for multichain availability. No separate bridge protocol was resolved, so the reviewed route is issuer-native issuance on supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD",
+        "url": "https://stablecorp.ca/"
+      },
+      {
+        "label": "QCAD Digital Trust order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      },
+      {
+        "label": "Stablecorp Base announcement",
+        "url": "https://stablecorp.medium.com/stablecorp-base-bringing-canada-onchain-1eb6a763470a"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

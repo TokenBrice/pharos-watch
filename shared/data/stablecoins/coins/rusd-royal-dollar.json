@@ -31,6 +31,23 @@
       "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "RUSD is issued on Ethereum, BNB Chain, and Tron, and Royal Coins materials mention an R-Bridge settlement ecosystem, but the reviewed public source set does not resolve whether durable supply moves through issuer burn/mint, lock/mint, validator messaging, or liquidity routing. The route remains opaque pending route-control evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Royal RUSD page",
+        "url": "https://www.rcoins.digital/RUSD.html"
+      },
+      {
+        "label": "RUSD whitepaper",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      }
+    ]
+  },
   "jurisdiction": {
     "country": "Hong Kong"
   },

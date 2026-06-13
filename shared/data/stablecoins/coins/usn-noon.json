@@ -231,6 +231,24 @@
       ]
     }
   },
+  "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Noon USN is tracked on Ethereum, Sophon, zkSync, and Starknet, but reviewed Noon docs do not document the cross-chain route, source chain, or validation controls. The deployment model is corrected to native-multichain and the route remains opaque pending issuer evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Noon docs",
+        "url": "https://docs.noon.capital"
+      },
+      {
+        "label": "Noon website",
+        "url": "https://noon.capital"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

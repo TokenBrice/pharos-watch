@@ -177,6 +177,19 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "AEUR is issuer-documented as available on Ethereum and BNB Chain, with no public bridge route required for holder-facing supply. The multichain posture is reviewed as issuer-native issuance/redemption exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anchored Coins AEUR",
+        "url": "https://www.anchoredcoins.com/en/landing/aeur"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

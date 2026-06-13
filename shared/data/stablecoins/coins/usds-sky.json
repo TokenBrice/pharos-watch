@@ -219,6 +219,37 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Sky documents a USDS Ethereum-Solana LayerZero bridge replacing the deprecated Wormhole bridge. Because the active cross-chain transfer path is a LayerZero/OFT-style route, Pharos reviews USDS as external lock/mint bridge exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sky USDS Ethereum-Solana bridge guide",
+        "url": "https://developers.sky.money/guides/skylink/usds-ethereum-solana-bridge/"
+      },
+      {
+        "label": "Sky OApp/OFT repository",
+        "url": "https://github.com/sky-ecosystem/sky-oapp-oft"
+      },
+      {
+        "label": "LayerZero on L2BEAT",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",

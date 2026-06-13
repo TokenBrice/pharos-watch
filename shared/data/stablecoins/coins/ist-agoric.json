@@ -35,6 +35,23 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "IST is native to the Agoric/Inter Protocol stack and appears on Osmosis through Cosmos ecosystem routing rather than a reviewed EVM bridge. No material third-party bridge route was resolved, so the profile is native/single-chain for scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Inter Protocol docs",
+        "url": "https://docs.inter.trade/"
+      },
+      {
+        "label": "Inter Protocol analytics",
+        "url": "https://analytics.inter.trade/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

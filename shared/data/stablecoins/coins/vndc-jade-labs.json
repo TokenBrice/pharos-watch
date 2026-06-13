@@ -73,6 +73,23 @@
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "VNDC is tracked across Ethereum, Polygon, and BNB Chain, but the reviewed issuer/platform pages do not document a bridge route, source chain, or cross-chain validation model. The multichain route is unresolved and scored as opaque.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "VNDC website",
+        "url": "https://vndc.io/"
+      },
+      {
+        "label": "ONUS issuer platform",
+        "url": "https://goonus.io/en/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

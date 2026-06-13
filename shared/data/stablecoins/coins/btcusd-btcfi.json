@@ -106,6 +106,31 @@
       ]
     }
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "BtcUSD/BTCFi relies on Bifrost cross-chain technology for collateral movement across networks. Bifrost bridge documentation describes a cross-chain bridge service rather than a native issuer-only route, so Pharos scores this as external validated-network exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Bifrost Bridge",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide",
+        "bridgeTypes": ["messagePassing", "lockAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "BTCFi",
+        "url": "https://www.btcfi.one/"
+      },
+      {
+        "label": "Bifrost bridge guide",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
+      }
+    ]
+  },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": ["liquity-v1"],

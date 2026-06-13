@@ -133,6 +133,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDCV is issued by Societe Generale-FORGE on Ethereum and Solana through issuer smart contracts listed in the white paper. No bridge, lockbox, or external cross-chain transfer route was resolved, so Pharos treats this as native issuance on each supported chain.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SG-FORGE CoinVertible",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      },
+      {
+        "label": "USDCV white paper",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

@@ -133,6 +133,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Etherfuse documents per-chain asset setup and mint/burn style issuance through its platform for supported assets including CETES. No independent bridge route is required in the reviewed public docs, so Pharos treats it as issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Etherfuse docs overview",
+        "url": "https://docs.etherfuse.com/overview"
+      },
+      {
+        "label": "Etherfuse developer docs",
+        "url": "https://app.etherfuse.com/legal/dev-docs"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

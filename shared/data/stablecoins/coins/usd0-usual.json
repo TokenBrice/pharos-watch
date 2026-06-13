@@ -71,7 +71,23 @@
         "signerCount": 15,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "owners": ["0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C", "0xDF758F044e3761aD52E1B96E1A468f03f565334b", "0x8d08338c592cF18C586C43d6b567cb938614F6b8", "0x6BC737aD5213ea26a3A1Bb73431598AF2167cDBd", "0xD09C7955C38b9ACDC293e006bD5d0C059a57699a", "0xFe45baf0F18c207152A807c1b05926583CFE2e4b", "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8", "0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7", "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3", "0x3b9eAF01facee23846cea722a92e853bee064d69", "0xDA1a7e2D400f09292F22d02343E9BF8445EAA71C", "0x91c5Da0CEFc781545B6B9Ad0438D1a944B6DdC52", "0x1F7F8786D8699CC4d722AEaEd5797a6d8a6815d5", "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7", "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"],
+          "owners": [
+            "0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C",
+            "0xDF758F044e3761aD52E1B96E1A468f03f565334b",
+            "0x8d08338c592cF18C586C43d6b567cb938614F6b8",
+            "0x6BC737aD5213ea26a3A1Bb73431598AF2167cDBd",
+            "0xD09C7955C38b9ACDC293e006bD5d0C059a57699a",
+            "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+            "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8",
+            "0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7",
+            "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3",
+            "0x3b9eAF01facee23846cea722a92e853bee064d69",
+            "0xDA1a7e2D400f09292F22d02343E9BF8445EAA71C",
+            "0x91c5Da0CEFc781545B6B9Ad0438D1a944B6DdC52",
+            "0x1F7F8786D8699CC4d722AEaEd5797a6d8a6815d5",
+            "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7",
+            "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"
+          ],
           "threshold": 8,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
@@ -275,6 +291,45 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Usual documents USD0 cross-chain transfers across Ethereum, Arbitrum, Base, and BNB Chain using Chainlink CCIP for messaging and LayerZero for omnichain token transfers.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockOrBurnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Usual USD0 architecture",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+      },
+      {
+        "label": "Usual FAQ",
+        "url": "https://docs.usual.money/start-here/faq"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

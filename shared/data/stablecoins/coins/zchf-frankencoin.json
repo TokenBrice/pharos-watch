@@ -30,6 +30,23 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Frankencoin reports ZCHF deployments across eight blockchains, but the reviewed Frankencoin source set does not resolve bridge mechanics or control assumptions for non-Ethereum deployments. Pharos marks the cross-chain route opaque until specific bridge or contract-route evidence is sourced.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Frankencoin website",
+        "url": "https://frankencoin.com/"
+      },
+      {
+        "label": "Frankencoin docs",
+        "url": "https://docs.frankencoin.com/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

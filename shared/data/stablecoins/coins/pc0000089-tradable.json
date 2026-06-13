@@ -59,6 +59,23 @@
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000089 has one tracked zkSync deployment in the local catalog, and reviewed Tradable materials do not show holder-facing supply moving through a separate bridge route. The row is triaged as single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tradable docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable website",
+        "url": "https://www.tradable.xyz/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

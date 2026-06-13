@@ -248,5 +248,22 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "RLUSD is issued by Ripple on Ethereum and XRPL as issuer-native stablecoin deployments, not as a holder-facing third-party bridge wrapper. Cross-chain route risk is therefore reviewed as issuer-native mint/redeem exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripple stablecoin page",
+        "url": "https://ripple.com/solutions/stablecoin/"
+      },
+      {
+        "label": "XRPL issued currencies docs",
+        "url": "https://xrpl.org/docs/concepts/tokens/fungible-tokens/"
+      }
+    ]
+  },
   "launchDate": "2024-08-09"
 }

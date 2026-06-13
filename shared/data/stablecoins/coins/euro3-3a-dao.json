@@ -127,6 +127,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "EURO3 is deployed on Polygon and Linea and uses issuer-controlled mintable token contracts, but the reviewed 3A documentation does not identify a bridge route, source chain, or cross-chain validation controls. The route is conservatively scored as opaque pending bridge-specific evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "EURO3 docs",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      },
+      {
+        "label": "3A smart contract docs",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

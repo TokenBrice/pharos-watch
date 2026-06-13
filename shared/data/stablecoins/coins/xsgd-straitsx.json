@@ -277,6 +277,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "XSGD is a StraitsX-issued fiat stablecoin deployed across multiple networks, including account-based issuer rails such as XRPL and Stellar-style assets rather than a single third-party wrapped bridge route. The reviewed topology is issuer-native mint/redeem exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StraitsX XSGD",
+        "url": "https://www.straitsx.com/xsgd"
+      },
+      {
+        "label": "StraitsX website",
+        "url": "https://www.straitsx.com/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "reserves": [

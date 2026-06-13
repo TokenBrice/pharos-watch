@@ -85,6 +85,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-lock-mint",
+    "summary": "mMEV is a Midas tokenized strategy token deployed on Ethereum, Plume, and Etherlink. Issuer docs show controlled product deployments but do not document a public third-party bridge, so the reviewed route is issuer-operated multichain issuance with probable lock/mint controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mMEV page",
+        "url": "https://midas.app/mmev"
+      },
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

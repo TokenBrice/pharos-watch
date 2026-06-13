@@ -33,6 +33,47 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "dEURO documents immutable Ethereum mainnet protocol contracts, while the tracked deployments extend to Polygon, Arbitrum, Optimism, and Base. No external bridge protocol was resolved, so the reviewed route is treated as canonical rollup/base-layer bridging rather than a separate third-party lockbox.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum canonical bridge",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet standard bridge",
+        "slug": "op-mainnet",
+        "url": "https://l2beat.com/scaling/projects/op-mainnet",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "dEURO smart contracts",
+        "url": "https://docs.deuro.com/smart-contracts"
+      },
+      {
+        "label": "Arbitrum token bridging docs",
+        "url": "https://docs.arbitrum.io/how-arbitrum-works/deep-dives/token-bridging"
+      },
+      {
+        "label": "Optimism standard bridge docs",
+        "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

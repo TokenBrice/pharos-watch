@@ -273,5 +273,27 @@
       }
     }
   },
-  "launchDate": "2023-04-28"
+  "launchDate": "2023-04-28",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "FDUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "FDUSD issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "First Digital FDUSD",
+        "url": "https://www.firstdigitallabs.com/fdusd"
+      }
+    ]
+  }
 }

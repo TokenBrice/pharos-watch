@@ -59,6 +59,35 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "IDRT has multichain deployments and the candidate bridge evidence points to Across. With no stronger issuer-native burn/mint controls resolved, the external liquidity/intent route determines the tier.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Rupiah Token website",
+        "url": "https://rupiahtoken.com/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

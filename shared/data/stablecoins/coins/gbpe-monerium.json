@@ -180,6 +180,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Monerium documents GBPe as a supported e-money token on multiple chains and describes in-app cross-chain moves through linked Monerium accounts. The reviewed route is issuer-native movement rather than a public third-party bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Monerium token docs",
+        "url": "https://docs.monerium.com/tokens/"
+      },
+      {
+        "label": "Monerium cross-chain guide",
+        "url": "https://monerium.com/guide/metamask-top-up/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",

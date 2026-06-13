@@ -25,6 +25,23 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Malta"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "STASIS EURS is an issuer-backed euro token with Ethereum, Polygon, and Stellar deployments and no resolved external bridge protocol in source materials. The reviewed route is issuer-managed native issuance/redemption across supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "STASIS website",
+        "url": "https://stasis.net/"
+      },
+      {
+        "label": "STASIS EURS token repository",
+        "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

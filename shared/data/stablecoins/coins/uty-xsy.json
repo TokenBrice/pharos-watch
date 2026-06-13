@@ -51,6 +51,23 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "UTY is listed on Avalanche and Base, but reviewed YieldPoint/XSY public material does not clearly document whether the cross-chain supply path is canonical, issuer mint/burn, or external bridge infrastructure. The route remains conservative pending source documentation.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "YieldPoint website",
+        "url": "https://yieldpoint.io/"
+      },
+      {
+        "label": "YieldPoint docs",
+        "url": "https://docs.yieldpoint.io/"
+      }
+    ]
+  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

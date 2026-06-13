@@ -211,5 +211,22 @@
       ]
     }
   },
-  "launchDate": "2024-02-23"
+  "launchDate": "2024-02-23",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "fxUSD is tracked on Ethereum and Base, but reviewed f(x) Protocol documentation explains the stablecoin mechanics without documenting a Base bridge or cross-chain mint route. Pharos keeps the bridge-route tier unresolved and conservative.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "f(x) Protocol docs",
+        "url": "https://fxprotocol.gitbook.io/"
+      },
+      {
+        "label": "f(x) Protocol website",
+        "url": "https://fx.aladdin.club/"
+      }
+    ]
+  }
 }

@@ -26,6 +26,27 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Macropod describes AUDM as an issuer-backed Australian dollar token and announced direct deployment on Base after earlier Ethereum, Solana, and Redbelly support. No third-party bridge dependency was resolved, so the route is reviewed as issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Macropod AUDM Base announcement",
+        "url": "https://www.macropod.com/resources/audm-hops-onto-base"
+      },
+      {
+        "label": "Macropod docs",
+        "url": "https://docs.macropod.com/"
+      },
+      {
+        "label": "Macropod transparency",
+        "url": "https://www.macropod.com/transparency"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -131,6 +131,30 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "FinChain's existing on-chain review identifies CCIP bridge pools among the FUSD minter set, and the issuer documents multichain FUSD deployments. Because cross-chain supply movement depends on Chainlink CCIP messaging/pools, FUSD is scored as external-validated-network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://chain.link/cross-chain"
+      }
+    ],
+    "sources": [
+      {
+        "label": "FinChain FUSD token docs",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+      },
+      {
+        "label": "Chainlink CCIP",
+        "url": "https://chain.link/cross-chain"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

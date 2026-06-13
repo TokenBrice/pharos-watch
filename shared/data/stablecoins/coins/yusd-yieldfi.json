@@ -156,6 +156,32 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "YUSD is deployed on many chains and L2BEAT points its route signal at Across. Across is an intent/liquidity framework with non-minting route execution, so Pharos scores this as a liquidity-or-intent route rather than a canonical bridge or issuer-native path.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": ["Non-minting"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "YieldFi YUSD terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

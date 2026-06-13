@@ -200,5 +200,33 @@
       }
     }
   },
-  "launchDate": "2021-02-23"
+  "launchDate": "2021-02-23",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "DOLA cross-chain deployments are reviewed through Inverse Finance documentation that identifies Chainlink CCIP bridges and chain-specific Fed contracts. CCIP is an external validation and messaging route, so the bridge-route tier is external validated network rather than issuer-native settlement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/resources/bridge-risks",
+        "bridgeTypes": [
+          "external-messaging",
+          "validated-network"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse Finance smart contracts",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
+      },
+      {
+        "label": "Chainlink bridge-risk docs",
+        "url": "https://docs.chain.link/resources/bridge-risks"
+      }
+    ]
+  }
 }

@@ -27,6 +27,19 @@
     "attestorLicense": "EMI (MiCA)",
     "attestorTier": "self"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Societe Generale-FORGE publishes EURCV as an issuer-managed EMT across Ethereum, XRPL, Stellar, and Solana. No external bridge route is documented, so the reviewed route is regulated issuer-native issuance on supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SG-FORGE CoinVertible",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

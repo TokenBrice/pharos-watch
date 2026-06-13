@@ -211,6 +211,30 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Falcon Finance states USDf uses Chainlink CCIP and the Cross-Chain Token standard for native cross-chain transfers. Because supported-chain supply movement depends on CCIP validation, the route is scored as external-validated-network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Falcon Finance CCIP announcement",
+        "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+      },
+      {
+        "label": "Falcon Finance smart contracts",
+        "url": "https://docs.falcon.finance/resources/smart-contracts"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "reserves": [
     {

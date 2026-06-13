@@ -198,5 +198,31 @@
       }
     }
   },
-  "launchDate": "2025-12-17"
+  "launchDate": "2025-12-17",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "U is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "U issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "United Stables",
+        "url": "https://u.tech/"
+      },
+      {
+        "label": "United Stables BNB launch",
+        "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain"
+      }
+    ]
+  }
 }

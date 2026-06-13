@@ -125,6 +125,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "XAI has one tracked Ethereum contract and no token-specific bridge route in reviewed Silo docs. The Across candidate did not resolve to durable XAI supply movement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Silo docs",
+        "url": "https://docs.silo.finance/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

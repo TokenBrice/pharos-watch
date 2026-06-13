@@ -156,6 +156,23 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "GBPm is part of Mento's local stablecoin system and is documented as available directly on supported chains. No holder-facing bridge or lockbox route was resolved for GBPm, so Pharos treats route risk as native issuance on the relevant chain deployments.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento stablecoins on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento",
+        "url": "https://www.mento.org/"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

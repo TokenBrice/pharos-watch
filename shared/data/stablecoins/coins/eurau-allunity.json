@@ -186,6 +186,31 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "AllUnity says EURAU integrates Chainlink CCIP for native zero-slippage burn/mint transfers across supported chains. Because durable cross-chain supply movement depends on CCIP's external interoperability network and issuer controls, the route is scored as external-validated-network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe",
+        "bridgeTypes": ["burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "AllUnity Chainlink partnership",
+        "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe"
+      },
+      {
+        "label": "AllUnity EURAU",
+        "url": "https://allunity.com/eurau"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

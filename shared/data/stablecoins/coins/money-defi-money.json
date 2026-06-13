@@ -34,6 +34,47 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "MONEY is deployed on Arbitrum, Optimism, and Base, all Ethereum rollup ecosystems with canonical bridge infrastructure. No external bridge protocol evidence was resolved, so the route is reviewed as canonical rollup bridging/native rollup deployment.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum canonical bridge",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet standard bridge",
+        "slug": "op-mainnet",
+        "url": "https://l2beat.com/scaling/projects/op-mainnet",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "defi.money docs",
+        "url": "https://docs.defi.money/"
+      },
+      {
+        "label": "Arbitrum token bridging docs",
+        "url": "https://docs.arbitrum.io/how-arbitrum-works/deep-dives/token-bridging"
+      },
+      {
+        "label": "Optimism standard bridge docs",
+        "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

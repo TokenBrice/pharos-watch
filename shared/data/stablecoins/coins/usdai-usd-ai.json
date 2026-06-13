@@ -120,6 +120,37 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDai documentation shows an Arbitrum hub and public ecosystem references to LayerZero. The reviewed route is therefore an external interoperability-network path rather than purely issuer-native or canonical rollup bridging.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USD.AI contract addresses",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "USD.AI ecosystem",
+        "url": "https://usd.ai/ecosystem"
+      },
+      {
+        "label": "LayerZero on L2BEAT",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

@@ -35,6 +35,23 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "dForce documents USX as its protocol stablecoin across supported chains. No independent bridge protocol was resolved in the review, so the route is treated as dForce-managed native multichain issuance rather than third-party bridge supply.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dForce USX docs",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      },
+      {
+        "label": "dForce website",
+        "url": "https://dforce.network/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -131,6 +131,27 @@
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "DOC is source-verified as a Rootstock Money on Chain stable asset, but the checked Arbitrum deployment does not have issuer documentation that resolves the bridge, lockbox, or mint-control route. Pharos keeps the route conservative until the Arbitrum path is documented.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Money on Chain DOC",
+        "url": "https://moneyonchain.com/doc-stablecoin/"
+      },
+      {
+        "label": "Money on Chain docs",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Money on Chain main RBTC contract repository",
+        "url": "https://github.com/money-on-chain/main-RBTC-contract"
+      }
+    ]
+  },
   "reserves": [
     {
       "name": "Rootstock BTC (rBTC) collateral",

@@ -71,6 +71,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "AUDX public issuer material describes direct availability on supported blockchains rather than a third-party bridge route. Pharos reviews the route as issuer-native multichain issuance, with broader listed deployments kept at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AUDX website",
+        "url": "https://www.audxtoken.com/"
+      },
+      {
+        "label": "AUDX transparency",
+        "url": "https://www.audxtoken.com/transparency"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

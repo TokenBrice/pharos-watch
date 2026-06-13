@@ -24,6 +24,44 @@
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Turkey"
   },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "GRAMG is tracked on Avalanche and Polygon, and the L2BEAT queue resolved Across/Avalanche route signals rather than issuer bridge docs. The reviewed route is therefore conservatively treated as liquidity or intent routing for cross-chain movement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Avalanche Bridge",
+        "slug": "avalanche",
+        "url": "https://l2beat.com/bridges/projects/avalanche",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

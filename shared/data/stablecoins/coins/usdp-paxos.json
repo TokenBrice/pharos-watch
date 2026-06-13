@@ -229,6 +229,27 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDP is Paxos-issued and Paxos documentation describes the asset as available on multiple blockchains, with Paxos expansion to Solana separately announced. The multichain route is reviewed as issuer-native issuance/redemption.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paxos USDP overview",
+        "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+      },
+      {
+        "label": "Paxos assets and blockchains",
+        "url": "https://docs.paxos.com/guides/developer/blockchains"
+      },
+      {
+        "label": "Paxos Solana expansion",
+        "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

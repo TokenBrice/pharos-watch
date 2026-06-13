@@ -41,6 +41,27 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Parallel USDp is deployed on many chains through Parallel Money contracts and app transparency materials. No single external bridge protocol was resolved for durable supply, so the reviewed route is issuer/protocol-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Parallel docs",
+        "url": "https://docs.parallel.best/"
+      },
+      {
+        "label": "Parallel transparency",
+        "url": "https://app.parallel.best/transparency"
+      },
+      {
+        "label": "Parallel app",
+        "url": "https://app.parallel.best/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

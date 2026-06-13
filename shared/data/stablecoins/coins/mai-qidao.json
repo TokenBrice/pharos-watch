@@ -144,6 +144,35 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "MAI historically expanded across many chains through third-party bridge allocations, with public governance and post-incident reporting tying MAI's cross-chain supply to Multichain-era bridge exposure. Because supply integrity depended on external lock/mint infrastructure rather than issuer-native settlement, MAI is scored as external-lock-mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "manual",
+        "name": "Multichain-era MAI bridge route",
+        "url": "https://governance.aave.com/t/add-mai-on-aave-v3/7630",
+        "note": "Aave onboarding discussion describes MAI as cross-chain through Multichain; incident reporting later tied bridge failure to MAI bad debt."
+      }
+    ],
+    "sources": [
+      {
+        "label": "QiDao / Mai docs",
+        "url": "https://docs.mai.finance/"
+      },
+      {
+        "label": "Aave MAI onboarding discussion",
+        "url": "https://governance.aave.com/t/add-mai-on-aave-v3/7630"
+      },
+      {
+        "label": "DL News MAI / Multichain incident coverage",
+        "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
+      }
+    ]
+  },
   "governanceQuality": "multisig",
   "reserves": [
     {

@@ -152,5 +152,22 @@
       ]
     }
   },
-  "launchDate": "2023-09-28"
+  "launchDate": "2023-09-28",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDRIF is source-verified as a Rootstock RIF-backed stablecoin, but the checked Arbitrum deployment has no reviewed issuer documentation resolving bridge or mint-route controls. Pharos keeps the bridge route conservative pending route evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "RIF on Chain docs",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+      },
+      {
+        "label": "Rootstock USDRIF launch",
+        "url": "https://rootstock.io/blog/new-stablecoin-protocol-launched-on-rootstock-introducing-usdrif/"
+      }
+    ]
+  }
 }

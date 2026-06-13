@@ -207,5 +207,31 @@
       }
     }
   },
-  "launchDate": "2024-07-02"
+  "launchDate": "2024-07-02",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EURI is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "EURI issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Banking Circle EURI whitepaper",
+        "url": "https://www.bankingcircle.com/insights/euro-stablecoin-whitepaper/"
+      },
+      {
+        "label": "Banking Circle EURI launch",
+        "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      }
+    ]
+  }
 }

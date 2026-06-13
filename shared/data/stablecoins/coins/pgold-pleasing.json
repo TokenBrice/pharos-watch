@@ -66,6 +66,44 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "PGOLD is listed in Chainlink CCIP directory data across Arbitrum, Ethereum, and Pharos with lock/release and burn/mint pools. The route depends on CCIP validation and token-pool controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Arbitrum Canonical",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/interop/protocols/arbitrum",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Chainlink PGOLD CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/PGOLD"
+      },
+      {
+        "label": "Pleasing PGOLD docs",
+        "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+      }
+    ]
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

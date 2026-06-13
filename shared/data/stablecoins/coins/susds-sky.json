@@ -157,6 +157,41 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "sUSDS is the ERC-4626 savings wrapper for USDS and its multichain route is tied to Sky/Spark cross-chain liquidity plus Sky's Wormhole NTT expansion. Because NTT/OFT-style routes introduce an external messaging and token framework, Pharos scores the wrapper as external lock/mint exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/blog/sky-formerly-maker-is-expanding-sky-usds-and-susds-multichain-to-solana-with",
+        "bridgeTypes": ["burnAndMint", "lockAndMint"]
+      },
+      {
+        "source": "docs",
+        "name": "Spark cross-chain PSM",
+        "url": "https://docs.spark.fi/dev/savings/spark-psm",
+        "bridgeTypes": ["liquidity"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sky sUSDS token docs",
+        "url": "https://developers.sky.money/protocol/tokens/susds/"
+      },
+      {
+        "label": "Wormhole Sky multichain announcement",
+        "url": "https://wormhole.com/blog/sky-formerly-maker-is-expanding-sky-usds-and-susds-multichain-to-solana-with"
+      },
+      {
+        "label": "Spark PSM docs",
+        "url": "https://docs.spark.fi/dev/savings/spark-psm"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "wrapper",

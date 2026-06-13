@@ -70,6 +70,33 @@
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDXL spans HyperEVM and Hyperliquid, and L2BEAT describes the Hyperliquid bridge as a canonical USDC bridge validated by a permissioned validator set. Pharos reviews the route as external validated-network exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Hyperliquid bridge",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid",
+        "bridgeTypes": [
+          "validatedBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Last website",
+        "url": "https://www.last.net/"
+      },
+      {
+        "label": "L2BEAT Hyperliquid bridge",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

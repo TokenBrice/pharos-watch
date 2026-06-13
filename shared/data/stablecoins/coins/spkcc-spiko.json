@@ -159,6 +159,33 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "SPKCC has source-visible deployments across several chains, including Arbitrum, but public issuer pages do not document the bridge or cross-chain mint controls for the fund shares. The route remains unresolved and is reviewed conservatively.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum One",
+        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "L2BEAT Arbitrum One",
+        "url": "https://l2beat.com/scaling/projects/arbitrum"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

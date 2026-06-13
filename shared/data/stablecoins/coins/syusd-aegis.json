@@ -197,5 +197,31 @@
       }
     }
   },
-  "launchDate": "2025-06-03"
+  "launchDate": "2025-06-03",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "sYUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "sYUSD issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Aegis sYUSD docs",
+        "url": "https://docs.aegis.im/tokens/syusd"
+      },
+      {
+        "label": "Aegis smart contracts",
+        "url": "https://docs.aegis.im/smart-contracts"
+      }
+    ]
+  }
 }

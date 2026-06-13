@@ -17,6 +17,50 @@
   "llamaId": "271",
   "detailProvider": "defillama",
   "geckoId": "avant-usd",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Avant identifies Avalanche as the native avUSD minting chain and says in-app bridging across supported networks uses Chainlink CCIP and LayerZero. Because the route depends on external messaging/validation networks rather than only issuer-native settlement, it is reviewed as an external validated-network route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Avant core tokens",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      },
+      {
+        "label": "Avant contract addresses",
+        "url": "https://docs.avantprotocol.com/security/contract-addresses"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

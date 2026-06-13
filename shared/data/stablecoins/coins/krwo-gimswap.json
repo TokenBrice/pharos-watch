@@ -120,6 +120,19 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "GimSwap docs describe KRWO as issued on Kaia and BNB networks to enable Korean-won transactions. The source evidence supports issuer-native multichain issuance rather than an external bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "GimSwap docs",
+        "url": "https://docs.gimswap.com/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

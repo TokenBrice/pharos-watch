@@ -62,6 +62,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "StandX documents DUSD as chain-native on Solana and BNB Chain with StandX Gateway components handling minting and redemption. No third-party bridge route was verified, so the reviewed topology is issuer-native mint/redeem on each supported chain.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StandX DUSD solutions",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX key addresses",
+        "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "reserves": [

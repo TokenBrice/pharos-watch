@@ -24,6 +24,23 @@
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Switzerland"
   },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "GLDT is advertised across ICP, Ethereum, Base, and Arbitrum, but reviewed Gold DAO sources do not resolve the bridge protocol, validator/messaging assumptions, or route controls for the EVM deployments. Pharos marks the route opaque until route-level controls are sourced.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "GLDT website",
+        "url": "https://gldt.org/"
+      },
+      {
+        "label": "Gold DAO key canisters",
+        "url": "https://docs.gold-dao.org/other/key-canisters"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

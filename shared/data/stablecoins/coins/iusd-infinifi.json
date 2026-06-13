@@ -49,6 +49,23 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "IUSD is tracked only on Ethereum in Pharos and reviewed infiniFi docs do not identify a material cross-chain route for the token. The metadata row is treated as single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "infiniFi docs",
+        "url": "https://docs.infinifi.xyz/"
+      },
+      {
+        "label": "infiniFi stats",
+        "url": "https://stats.infinifi.xyz/"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

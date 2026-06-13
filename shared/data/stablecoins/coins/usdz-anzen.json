@@ -133,6 +133,35 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Anzen documents the USDz/sUSDz bridge as powered by LayerZero for Ethereum, Base, and Blast, so cross-chain supply movement uses an external omnichain lock/burn-and-mint route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockOrBurnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Anzen USDz bridge docs",
+        "url": "https://docs.anzen.finance/user-guide/how-to-bridge-usdz-and-susdz"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

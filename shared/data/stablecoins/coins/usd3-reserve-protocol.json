@@ -55,6 +55,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-lock-mint",
+    "summary": "USD3 is deployed on Ethereum and Base with no source-verified third-party bridge path resolved. The reviewed profile treats it as protocol/issuer-controlled multichain issuance and not a liquidity bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Reserve docs",
+        "url": "https://docs.reserve.org/"
+      },
+      {
+        "label": "USD3 transparency",
+        "url": "https://api.reserve.org/discover/dtfs"
+      }
+    ]
+  },
   "governanceQuality": "dao-governance",
   "proofOfReserves": {
     "type": "real-time",

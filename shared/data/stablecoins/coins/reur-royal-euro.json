@@ -67,6 +67,19 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Royal Euro is presented as an issuer-backed euro stable-value token, and the reviewed public material does not document a separate third-party bridge route. Pharos treats the multichain supply as issuer-native issuance/redemption at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RCOINS Royal Euro",
+        "url": "https://www.rcoins.digital/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

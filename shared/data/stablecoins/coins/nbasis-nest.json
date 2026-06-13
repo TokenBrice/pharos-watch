@@ -17,6 +17,23 @@
   "detailProvider": "coingecko",
   "geckoId": "nest-basis-vault",
   "protocolSlug": "nest-credit",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Nest publishes nBASIS through Nest product documentation with Ethereum, Plume, and Plasma deployments. No external bridge protocol evidence was resolved, so the reviewed route is issuer/protocol-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest website",
+        "url": "https://www.nest.credit/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

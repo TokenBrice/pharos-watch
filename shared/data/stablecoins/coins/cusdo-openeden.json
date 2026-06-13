@@ -72,6 +72,36 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "cUSDO is a wrapped form of USDO and inherits USDO's Chainlink CCIP cross-chain route. The route uses CCIP token-transfer infrastructure and external oracle-network validation rather than a canonical rollup bridge or issuer-only burn/mint rail.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": ["burnAndMint"],
+        "note": "OpenEden announced USDO interoperability through Chainlink CCIP; cUSDO is the wrapper of USDO."
+      }
+    ],
+    "sources": [
+      {
+        "label": "OpenEden cUSDO docs",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "OpenEden Chainlink CCIP announcement",
+        "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
+      },
+      {
+        "label": "Chainlink USDO CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",

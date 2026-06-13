@@ -31,6 +31,38 @@
       }
     ]
   },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Mezo documents the MUSD bridge between Mezo, Ethereum, and Base using Wormhole NTT. Because cross-chain supply relies on Wormhole NTT bridge contracts, the reviewed route is external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers",
+        "bridgeTypes": [
+          "nativeTokenTransfer",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mezo MUSD bridge docs",
+        "url": "https://mezo.org/docs/users/musd/musd-bridge/"
+      },
+      {
+        "label": "Mezo Wormhole announcement",
+        "url": "https://mezo.org/blog/mezo-and-musd-go-multichain-with-wormhole/"
+      },
+      {
+        "label": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

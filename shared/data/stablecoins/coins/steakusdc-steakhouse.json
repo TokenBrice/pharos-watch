@@ -99,6 +99,23 @@
   ],
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "steakUSDC is tracked only as an Ethereum Morpho vault token in Pharos. The reviewed Steakhouse and Morpho sources do not show a durable bridge route for the vault share.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Steakhouse docs",
+        "url": "https://www.steakhouse.financial/docs"
+      },
+      {
+        "label": "Morpho steakUSDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

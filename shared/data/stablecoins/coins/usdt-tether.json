@@ -414,5 +414,42 @@
       }
     }
   },
-  "launchDate": "2017-11-28"
+  "launchDate": "2017-11-28",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USDT has many issuer-native deployments, but the reviewed A5 route set also includes USDT0, which locks canonical USDT in an Ethereum OFT adapter and mints equivalent USDT0 on destination chains. Pharos scores the reviewed cross-chain route conservatively as external lock/mint because the weakest durable route depends on OFT lock/mint infrastructure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Tether transparency",
+        "url": "https://tether.to/en/transparency/"
+      },
+      {
+        "label": "USDT0 docs",
+        "url": "https://docs.usdt0.to/"
+      },
+      {
+        "label": "USDT0 site",
+        "url": "https://usdt0.to/"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  }
 }

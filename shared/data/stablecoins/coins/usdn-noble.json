@@ -118,6 +118,48 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Noble documents USDN issuance through M0 Portal infrastructure backed by Wormhole NTT. The route locks M on Ethereum and transmits value to Noble, so it is reviewed as an external lock/mint route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "M0 M Portal",
+        "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/",
+        "bridgeTypes": [
+          "wormholeNtt",
+          "lockRelease",
+          "mintBurn"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers",
+        "bridgeTypes": [
+          "nativeTokenTransfer",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Noble USDN architecture",
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/"
+      },
+      {
+        "label": "M0 M Portal underlying technology",
+        "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
+      },
+      {
+        "label": "Wormhole NTT",
+        "url": "https://wormhole.com/products/native-token-transfers"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

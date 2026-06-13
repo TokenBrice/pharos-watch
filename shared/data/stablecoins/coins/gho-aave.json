@@ -260,6 +260,39 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "GHO cross-chain expansion uses Chainlink CCIP pools, with Ethereum lock/release and destination burn/mint pools listed in Chainlink directory data. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Chainlink GHO CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
+      },
+      {
+        "label": "Aave GHO docs",
+        "url": "https://aave.com/docs/ecosystem/gho"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",
   "reserves": [

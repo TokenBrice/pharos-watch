@@ -133,6 +133,19 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. No material bridge route is present for the reviewed metadata row.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento on Celo docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

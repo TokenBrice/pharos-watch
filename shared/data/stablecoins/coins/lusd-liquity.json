@@ -148,6 +148,37 @@
     }
   },
   "deploymentModel": "canonical-bridge",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "LUSD can only be minted on Ethereum mainnet and L2 deployments rely on official rollup bridges for routes such as Arbitrum and Optimism, so the reviewed cross-chain exposure is canonical bridge risk rather than an external token bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum One",
+        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Liquity LUSD x-chain strategy",
+        "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
+      },
+      {
+        "label": "Liquity LUSD on Arbitrum",
+        "url": "https://www.liquity.org/blog/liquitys-lusd-emerges-as-a-growing-force-on-arbitrum"
+      },
+      {
+        "label": "L2BEAT Arbitrum One",
+        "url": "https://l2beat.com/scaling/projects/arbitrum"
+      }
+    ]
+  },
   "governanceQuality": "immutable-code",
   "infrastructures": ["liquity-v1"],
   "reserves": [

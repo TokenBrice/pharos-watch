@@ -61,6 +61,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "nWISDOM is listed on Ethereum and Plume, and Nest documents the relevant Teller/Manager contract addresses, but reviewed materials do not identify whether supply moves through issuer mint/redeem, a canonical bridge, or a third-party route. The bridge route is therefore unresolved.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest smart contracts",
+        "url": "https://docs.nest.credit/developers/smart-contracts"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

@@ -113,6 +113,23 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Apyx lists apxUSD deployments on Ethereum, Base, and BNB Chain, but the reviewed issuer materials did not identify a burn/mint, lock/mint, canonical bridge, or external messaging route for supply movement. The route is therefore left in the opaque tier pending protocol-specific bridge-control documentation.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Apyx docs",
+        "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "Apyx EVM contracts",
+        "url": "https://apyx-labs.github.io/evm-contracts/"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

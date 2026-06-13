@@ -130,6 +130,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "GRAMS is listed as multichain in Pharos, but reviewed public issuer-facing material does not clearly document whether transfers use issuer mint/burn, canonical bridges, or a third-party bridge. The route is conservative until Token Teknoloji publishes route controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Token Teknoloji website",
+        "url": "https://tokenteknoloji.com/"
+      },
+      {
+        "label": "GRAMS market reference",
+        "url": "https://www.coingecko.com/en/coins/gram-silver"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "reserves": [

@@ -151,6 +151,23 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "CHFm currently has one tracked Celo contract and no separate cross-chain route in local metadata. The L2BEAT Celo signal is chain infrastructure context, not evidence of a token bridge route for CHFm.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento CHFm docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "L2BEAT Celo",
+        "url": "https://l2beat.com/interop/protocols/celo"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
@@ -191,6 +208,8 @@
       "weight": 1
     }
   ],
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "launchDate": "2025-03-22"
 }

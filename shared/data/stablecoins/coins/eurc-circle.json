@@ -237,6 +237,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "EURC is issued by Circle as a native euro stablecoin on supported chains; Circle's EURC material lists chain availability but does not identify a separate EURC bridge route comparable to USDC CCTP. Pharos treats EURC route risk as native issuance on each chain.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle EURC",
+        "url": "https://www.circle.com/eurc"
+      },
+      {
+        "label": "Circle EURC supported blockchains",
+        "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

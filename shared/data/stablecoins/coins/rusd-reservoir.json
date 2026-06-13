@@ -270,6 +270,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Reservoir rUSD is deployed across many chains and issuer docs list official contract addresses. No external bridge protocol was resolved, so reviewed evidence supports issuer/protocol-native multichain minting rather than a liquidity bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Reservoir contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Reservoir docs",
+        "url": "https://docs.reservoir.xyz"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",

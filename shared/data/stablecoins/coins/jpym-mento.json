@@ -198,6 +198,23 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "JPYm is tracked on Celo and Monad, but Mento's reviewed docs describe Celo minting/usage and do not document a bridge route or cross-chain controls for the Monad deployment. The route is scored as opaque until Mento publishes bridge-specific evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Mento docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento smart contracts docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

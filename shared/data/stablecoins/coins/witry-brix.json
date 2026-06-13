@@ -185,5 +185,37 @@
       ]
     }
   },
-  "launchDate": "2026-03-12"
+  "launchDate": "2026-03-12",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "wiTRY is reviewed as a two-chain wrapped iTRY deployment with MegaETH route evidence in the workflow and issuer documentation for the Brix product. The route is scored as canonical rollup bridge because the reviewed external signal is the MegaETH rollup route rather than a separate token bridge lockbox.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "MegaETH",
+        "slug": "megaeth",
+        "url": "https://l2beat.com/scaling/projects/megaeth",
+        "bridgeTypes": [
+          "canonical-rollup-bridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Brix docs",
+        "url": "https://docs.brix.money/"
+      },
+      {
+        "label": "Brix proof of reserves",
+        "url": "https://accountable.brix.money/"
+      },
+      {
+        "label": "L2BEAT MegaETH",
+        "url": "https://l2beat.com/scaling/projects/megaeth"
+      }
+    ]
+  }
 }

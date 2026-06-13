@@ -63,6 +63,23 @@
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000031 is tracked only on ZKsync in Pharos. The reviewed Tradable product docs and deal page do not document a separate cross-chain route for this tokenized asset row.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tradable product docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable deal page",
+        "url": "https://app.tradable.xyz/investor/deals/861cce9e-08ae-45a0-aca8-9fa229a0189d"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

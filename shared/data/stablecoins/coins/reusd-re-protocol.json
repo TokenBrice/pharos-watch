@@ -251,5 +251,31 @@
     "yieldSource": "Re Protocol vault",
     "yieldType": "governance-set"
   },
-  "launchDate": "2025-01-21"
+  "launchDate": "2025-01-21",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "reUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "reUSD issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Re Protocol docs",
+        "url": "https://docs.re.xyz"
+      },
+      {
+        "label": "Re Protocol introduction",
+        "url": "https://docs.re.xyz/getting-started-with-re/introduction-to-the-re-protocol"
+      }
+    ]
+  }
 }

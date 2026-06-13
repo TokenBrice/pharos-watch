@@ -116,6 +116,23 @@
       "decimals": 7
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "VCHF is a VNX-issued multichain fiat token. Reviewed issuer docs show VNX multichain token issuance, with no independent bridge protocol resolved, so route risk is issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNX docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/"
+      },
+      {
+        "label": "VNX website",
+        "url": "https://vnx.li/"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

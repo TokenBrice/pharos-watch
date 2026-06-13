@@ -211,5 +211,22 @@
       ]
     }
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "VGBP has issuer-controlled deployments across its listed chains, and the reviewed mint-authority data resolves direct VNX issuer minting on Base. No separate bridge, lockbox, or liquidity route was resolved, so Pharos treats current route risk as native issuance on supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNX platform docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/"
+      },
+      {
+        "label": "VNX",
+        "url": "https://vnx.li/"
+      }
+    ]
+  },
   "launchDate": "2025-06-02"
 }

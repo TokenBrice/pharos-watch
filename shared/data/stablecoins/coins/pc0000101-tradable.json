@@ -59,6 +59,23 @@
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000101 has one tracked ZKsync contract and no resolved token bridge route. The ZKsync candidate signal is canonical chain context, so the asset is reviewed as native to its current deployment.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tradable docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "L2BEAT ZKsync Era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

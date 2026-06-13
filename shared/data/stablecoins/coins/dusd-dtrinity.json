@@ -16,6 +16,23 @@
   "detailProvider": "coingecko",
   "geckoId": "dtrinity-usd",
   "cmcSlug": "dtrinity-dusd",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "dTRINITY documents dUSD as chain-isolated, with separate native deployments and reserves by network; it explicitly says same-name dUSD tokens are not fungible across chains. The route is therefore reviewed as native per-chain issuance rather than a bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
+      },
+      {
+        "label": "dTRINITY network support",
+        "url": "https://docs.dtrinity.org/key-concepts/network-support"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

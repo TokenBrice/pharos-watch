@@ -257,6 +257,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "TrueUSD documents support on multiple chains through its issuer ecosystem. The reviewed evidence supports native issuer mint/redeem availability rather than a single external bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "TrueUSD website",
+        "url": "https://tusd.io/"
+      },
+      {
+        "label": "TrueUSD supported-chain release",
+        "url": "https://www.prnewswire.com/news-releases/trueusd-becomes-first-usd-backed-stablecoin-to-secure-minting-with-proof-of-reserves-301752857.html"
+      }
+    ]
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

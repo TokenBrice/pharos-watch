@@ -128,6 +128,23 @@
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "MXNe is issued by Brale, whose issuance docs describe native stablecoins on each chain and 1:1 cross-chain swaps that burn on the source chain and mint on the destination chain.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Brale stablecoin swap docs",
+        "url": "https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap"
+      },
+      {
+        "label": "Introducing MXNe",
+        "url": "https://brale.xyz/blog/introducing-mxne"
+      }
+    ]
+  },
   "reserves": [
     {
       "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",

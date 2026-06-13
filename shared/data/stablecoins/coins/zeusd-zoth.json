@@ -17,6 +17,23 @@
   "llamaId": "225",
   "detailProvider": "defillama",
   "geckoId": "zeusd",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Zoth describes ZeUSD as an omni-chain composable stable token and the registry tracks several chains, but the reviewed source set did not resolve the bridge protocol, validation model, or issuer controls. The route is intentionally marked opaque until Zoth publishes route-level controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD docs",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+      },
+      {
+        "label": "Zoth website",
+        "url": "https://zoth.io/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

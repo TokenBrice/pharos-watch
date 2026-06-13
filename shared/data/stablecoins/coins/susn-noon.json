@@ -34,6 +34,34 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Noon documents Hyperlane interoperability for USN and sUSN. USN uses burn/mint, while sUSN uses lock-mint and mint-unlock with an Ethereum lock address, so the staked token route is reviewed as external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Hyperlane",
+        "url": "https://docs.hyperlane.xyz/",
+        "bridgeTypes": [
+          "messaging",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Noon interoperability docs",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+      },
+      {
+        "label": "Hyperlane docs",
+        "url": "https://docs.hyperlane.xyz/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

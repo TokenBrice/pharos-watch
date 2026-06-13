@@ -215,6 +215,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDG is Paxos-issued and its official Global Dollar page lists deployments on Ethereum, Solana, Ink, and X Layer. The route is reviewed as issuer-native multichain issuance/redemption.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Global Dollar build page",
+        "url": "https://globaldollar.com/build-with-usdg"
+      },
+      {
+        "label": "Paxos USDG contract repository",
+        "url": "https://github.com/paxosglobal/usdg-contract"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

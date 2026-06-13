@@ -136,6 +136,23 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDKG is tracked on Tron and Ethereum, but reviewed issuer pages do not document whether supply is issuer-native on both chains or bridged through a lock/mint route. The bridge-route profile remains opaque pending issuer route-control evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USDKG website",
+        "url": "https://www.usdkg.com/"
+      },
+      {
+        "label": "USDKG transparency",
+        "url": "https://www.usdkg.com/transparency"
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

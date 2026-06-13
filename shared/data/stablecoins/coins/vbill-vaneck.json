@@ -146,6 +146,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "VBILL fund shares are issued through Securitize across Avalanche, BNB Chain, Ethereum, and Solana investment rails. The reviewed evidence supports issuer/platform-native multichain issuance rather than a public external bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize VBILL page",
+        "url": "https://securitize.io/primary-market/vaneck-vbill"
+      },
+      {
+        "label": "VanEck VBILL launch release",
+        "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

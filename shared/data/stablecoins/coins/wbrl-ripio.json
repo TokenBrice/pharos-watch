@@ -26,6 +26,45 @@
   },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "brazilian-real",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "Ripio wBRL is tracked across Ethereum, Base, World Chain, BSC, Polygon, and Gnosis, and the L2BEAT queue resolved Across/World route signals. The route is reviewed as liquidity/intent routing rather than an issuer-only burn/mint bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "World Chain",
+        "slug": "world",
+        "url": "https://l2beat.com/scaling/projects/worldchain"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "L2BEAT World Chain",
+        "url": "https://l2beat.com/scaling/projects/worldchain"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

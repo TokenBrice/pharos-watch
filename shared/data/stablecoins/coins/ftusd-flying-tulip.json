@@ -23,6 +23,23 @@
     "cadence": "real-time",
     "provider": "Flying Tulip dashboard"
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Flying Tulip contract docs list separate ftUSD core and mint/redeem contracts on Ethereum and Sonic, and sale docs note bridging is not necessary when assets are held on the right network. The row is reviewed as native per-chain issuance with no material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip contract addresses",
+        "url": "https://docs.flyingtulip.com/contract-addresses/"
+      },
+      {
+        "label": "Flying Tulip sale process",
+        "url": "https://docs.flyingtulip.com/guides/sale-process/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -280,6 +280,36 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "AUSD is natively issued by Agora across supported chains, with public interoperability material pointing to Wormhole NTT/AUSD0 burn-mint routing and existing on-chain review identifying an Agora-controlled bridge-minter path. Pharos treats this as issuer-native burn/mint rather than a third-party liquidity route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole NTT",
+        "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin",
+        "bridgeTypes": ["burnAndMint"],
+        "note": "Agora selected Wormhole NTT to unify AUSD liquidity across chains."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Agora AUSD",
+        "url": "https://www.agora.finance/"
+      },
+      {
+        "label": "Agora and Wormhole AUSD interoperability",
+        "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin"
+      },
+      {
+        "label": "AUSD Etherscan token",
+        "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

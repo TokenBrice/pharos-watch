@@ -137,6 +137,33 @@
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "Balanced markets bnUSD as usable across many chains and describes cross-chain connectivity through xCall/IBC-style messaging. Because holder movement is part of a cross-chain DeFi liquidity system rather than issuer redemption-only rails, the route is reviewed as liquidity-route risk.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Balanced xCall",
+        "url": "https://blog.balanced.network/archway-connection/",
+        "bridgeTypes": [
+          "crossChainMessaging"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Balanced website",
+        "url": "https://balanced.network/"
+      },
+      {
+        "label": "Balanced xCall connection article",
+        "url": "https://blog.balanced.network/archway-connection/"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

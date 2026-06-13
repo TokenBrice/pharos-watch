@@ -25,6 +25,66 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "SEC-registered 1940 Act money market fund"
   },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "WisdomTree WTGXX is deployed across multiple EVM networks and Stellar, while the route candidate set includes Across plus rollup/canonical paths. Because cross-chain movement appears to depend materially on routing/liquidity surfaces, the reviewed tier is liquidity-or-intent.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Arbitrum canonical bridge",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Avalanche Bridge",
+        "slug": "avalanche",
+        "url": "https://l2beat.com/bridges/projects/avalanche",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet standard bridge",
+        "slug": "op-mainnet",
+        "url": "https://l2beat.com/scaling/projects/op-mainnet",
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "WisdomTree WTGXX",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "WisdomTree Connect",
+        "url": "https://www.wisdomtree.com/connect"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

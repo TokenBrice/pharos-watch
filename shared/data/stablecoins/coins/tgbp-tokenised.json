@@ -80,6 +80,23 @@
       "decimals": 9
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "tGBP has issuer-managed deployments across several chains and no source-verified third-party bridge route in reviewed materials. The route is reviewed as issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "tGBP website",
+        "url": "https://www.tokenisedgbp.com/"
+      },
+      {
+        "label": "tGBP transparency",
+        "url": "https://www.tokenisedgbp.com/transparency"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

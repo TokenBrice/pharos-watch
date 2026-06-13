@@ -207,6 +207,32 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Ondo documents USDY bridging through LayerZero's OFT standard, using burn/mint native USDY on supported chains. Because bridge accounting depends on a third-party OFT route, USDY is scored as external-lock-mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": ["burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ondo Token Bridge docs",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

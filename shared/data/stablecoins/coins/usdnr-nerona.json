@@ -168,6 +168,34 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-lock-mint",
+    "summary": "USDnr is an M0-based token deployed on Ethereum and Fluent. M0 bridge docs describe hub-and-spoke portal contracts for moving M0 tokens between connected networks, so the route is issuer/protocol-operated lock/mint infrastructure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "M0 bridge portals",
+        "url": "https://docs.m0.org/build/bridging-user",
+        "bridgeTypes": [
+          "hubAndSpoke",
+          "lockMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Nerona docs",
+        "url": "https://docs.nerona.xyz/"
+      },
+      {
+        "label": "M0 bridging docs",
+        "url": "https://docs.m0.org/build/bridging-user"
+      }
+    ]
+  },
   "chainTier": "ethereum",
   "reserves": [
     {

@@ -71,6 +71,23 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "MMXN is issuer-backed fiat stablecoin infrastructure on its listed chains, and the reviewed materials did not resolve a separate bridge, lockbox, or liquidity-routing dependency. Pharos treats the route as native issuance for the current deployments.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Moneta Digital",
+        "url": "https://monetadigital.com/"
+      },
+      {
+        "label": "MMXN whitepaper",
+        "url": "https://github.com/moneta-digital/mmxn-specs/blob/main/MMXN%20Whitepaper%20-%20English.pdf"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

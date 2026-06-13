@@ -22,6 +22,39 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "Wrapped Savings rUSD is deployed across many chains and the L2BEAT candidate route resolves Across liquidity/intent routing. The reviewed profile treats cross-chain movement as liquidity/intent route exposure rather than issuer-native finality.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Reservoir docs",
+        "url": "https://docs.reservoir.xyz"
+      },
+      {
+        "label": "Reservoir reserves",
+        "url": "https://app.reservoir.xyz/reserves"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

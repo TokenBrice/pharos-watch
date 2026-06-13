@@ -182,5 +182,31 @@
     }
   },
   "launchDate": "2026-02-26",
-  "mechanismArchetype": "rwa-credit-fund"
+  "mechanismArchetype": "rwa-credit-fund",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "SAFO is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "SAFO issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko and Amundi introduce SAFO",
+        "url": "https://int.media.amundi.com/article/spiko-and-amundi-introduce-safo"
+      },
+      {
+        "label": "Spiko Web3 treasury products",
+        "url": "https://www.spiko.io/use-cases/web3"
+      }
+    ]
+  }
 }

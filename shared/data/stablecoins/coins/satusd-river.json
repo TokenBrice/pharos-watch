@@ -105,6 +105,32 @@
   },
   "chainTier": "unproven",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "River documents satUSD as an omnichain asset and bridge built on LayerZero's OFT standard, including cross-chain collateral and minting flows. Because route finality depends on the LayerZero/OFT stack, satUSD is scored as external-lock-mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": ["lockAndMint", "burnAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "River bridge docs",
+        "url": "https://docs.river.inc/products/editor/bridge"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": ["liquity-v1"],
   "reserves": [

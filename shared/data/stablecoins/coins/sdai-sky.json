@@ -117,6 +117,35 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "sDAI is a savings wrapper over DAI and its non-Ethereum deployments inherit DAI/Sky bridge-route exposure. Spark/Sky documentation shows cross-chain liquidity and savings-token deployments outside Ethereum, so Pharos applies a conservative external lock/mint route review for the wrapper.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Spark cross-chain PSM",
+        "url": "https://docs.spark.fi/dev/savings/spark-psm",
+        "bridgeTypes": ["lockAndMint", "liquidity"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spark docs",
+        "url": "https://docs.spark.fi/"
+      },
+      {
+        "label": "Spark PSM docs",
+        "url": "https://docs.spark.fi/dev/savings/spark-psm"
+      },
+      {
+        "label": "Sky Dai token docs",
+        "url": "https://developers.sky.money/protocol/tokens/dai/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "wrapper",

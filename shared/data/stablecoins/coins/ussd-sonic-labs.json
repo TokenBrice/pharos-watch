@@ -146,6 +146,34 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Sonic USSD docs describe 1:1 redemption into supported USD assets on the chain of choice and CCTP-supported redemption paths. Candidate CCTP evidence supports an issuer-native burn/mint route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "CCTP v2",
+        "slug": "cctpv2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sonic USSD docs",
+        "url": "https://docs.soniclabs.com/sonic/ussd"
+      },
+      {
+        "label": "L2BEAT CCTP v2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

@@ -160,6 +160,31 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Spiko describes its own infrastructure for issuing, operating, and monitoring regulated fund tokens across EVM networks, Starknet, and Stellar with minimal external dependencies. For GBPSAFO, no separate bridge protocol was verified, so the reviewed route is issuer-operated multichain issuance rather than a third-party bridge rail.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "note": "Issuer technical write-up describes Spiko-controlled multichain token operations."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+      },
+      {
+        "label": "Spiko GBP fund",
+        "url": "https://www.spiko.io/spiko-pound"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

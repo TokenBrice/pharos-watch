@@ -177,6 +177,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Frax documents cross-chain frxUSD mint/redeem flows and supported routes; sfrxUSD is a frxUSD variant, so its bridge-route exposure is inherited from Frax-operated cross-chain mint/redeem infrastructure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax frxUSD cross-chain mint and redeem",
+        "url": "https://docs.frax.com/frxusd/cross-chain-mint-and-redeem-quickstart"
+      },
+      {
+        "label": "Frax sfrxUSD docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "wrapper",

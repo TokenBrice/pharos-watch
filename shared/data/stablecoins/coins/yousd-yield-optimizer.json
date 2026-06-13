@@ -48,6 +48,36 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "yoUSD is a multi-chain yield-optimizer stable asset whose strategy allocates across protocols and chains. The workflow's L2BEAT route signal points to Across, so Pharos scores bridge-route exposure as a liquidity-or-intent route rather than native-only issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": ["Non-minting"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "YO Protocol",
+        "url": "https://www.yo.xyz/"
+      },
+      {
+        "label": "YO Protocol docs",
+        "url": "https://docs.yo.xyz/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

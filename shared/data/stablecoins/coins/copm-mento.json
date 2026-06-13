@@ -133,6 +133,23 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "COPm has a single Celo deployment in the reviewed metadata and Celo's local-stablecoin docs list COPm as a Mento stablecoin on Celo. No material bridge route is resolved for this row.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Celo local stablecoins",
+        "url": "https://docs.celo.org/build-on-celo/build-with-local-stablecoin"
+      },
+      {
+        "label": "Mento stables on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

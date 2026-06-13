@@ -16,6 +16,23 @@
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "340",
   "detailProvider": "defillama",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Multipli documents rwaUSDi and its unwind/peg module across multiple EVM deployments, with no external bridge protocol resolved. The reviewed route is issuer/protocol-native issuance and redemption mechanics across supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Multipli docs",
+        "url": "https://docs.multipli.fi/"
+      },
+      {
+        "label": "Multipli unwind and peg module",
+        "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

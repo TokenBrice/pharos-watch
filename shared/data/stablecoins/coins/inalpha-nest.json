@@ -17,6 +17,23 @@
   "detailProvider": "coingecko",
   "geckoId": "nest-alpha-vault-lp",
   "protocolSlug": "nest-credit",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Nest publishes inALPHA through its own product and documentation on Ethereum and Plume, with no external bridge protocol evidence resolved. The reviewed route is issuer/protocol-native issuance rather than a third-party bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest website",
+        "url": "https://www.nest.credit/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

@@ -113,8 +113,14 @@
           "source": "onchain"
         },
         "sources": [
-          { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" },
-          { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
+          {
+            "label": "LlamaRisk Rings review",
+            "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z"
+          },
+          {
+            "label": "scUSD Ethereum BoringVault",
+            "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          }
         ],
         "evidence": "At Ethereum block 25295183: getOwners() returned 6 signers, getThreshold() returned 4, getModulesPaginated() returned empty. This Safe is a PROPOSER on the TimelockController (0xFb6ec7CCBd77a42922a35D22A94fdF7fd54EE4BC, 86400s min delay) which owns the RolesAuthority (0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348) that gates all BoringVault role grants."
       },
@@ -134,12 +140,56 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Rings on Veda", "url": "https://docs.veda.tech/vault-deployments/rings" },
-        { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" },
-        { "label": "scUSD Ethereum BoringVault", "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" },
-        { "label": "scUSD Sonic BoringVault", "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae" }
+        {
+          "label": "Rings on Veda",
+          "url": "https://docs.veda.tech/vault-deployments/rings"
+        },
+        {
+          "label": "LlamaRisk Rings review",
+          "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z"
+        },
+        {
+          "label": "scUSD Ethereum BoringVault",
+          "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        },
+        {
+          "label": "scUSD Sonic BoringVault",
+          "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        }
       ]
     }
   },
-  "launchDate": "2024-12-09"
+  "launchDate": "2024-12-09",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "scUSD is reviewed as a Sonic/Ethereum Rings asset whose architecture includes cross-chain components: underlying capital is bridged through the Sonic bridge and vault shares can be bridged through LayerZero. Because holder-facing supply can depend on bridge/vault-share routing, Pharos scores the route as external lock/mint.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "bridgeTypes": [
+          "oft",
+          "external-messaging"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sonic Rings explainer",
+        "url": "https://blog.soniclabs.com/rings-protocol-explained-scusd-and-sceth/"
+      },
+      {
+        "label": "LlamaRisk Rings review",
+        "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ]
+  }
 }

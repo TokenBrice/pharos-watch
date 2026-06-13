@@ -251,6 +251,41 @@
     }
   },
   "deploymentModel": "canonical-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "DAI is Ethereum-native, but its non-Ethereum supply includes bridge-minted representations. Maker/Sky bridge repositories document escrow/bridge contracts that lock L1 DAI and mint destination DAI, so Pharos conservatively scores the current multichain route as external lock/mint rather than pure native issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "MakerDAO Optimism DAI Bridge",
+        "url": "https://github.com/makerdao/optimism-dai-bridge",
+        "bridgeTypes": ["lockAndMint"]
+      },
+      {
+        "source": "docs",
+        "name": "MakerDAO Starknet DAI Bridge",
+        "url": "https://github.com/makerdao/starknet-dai-bridge",
+        "bridgeTypes": ["lockAndMint"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sky Dai token docs",
+        "url": "https://developers.sky.money/protocol/tokens/dai/"
+      },
+      {
+        "label": "MakerDAO Optimism DAI bridge",
+        "url": "https://github.com/makerdao/optimism-dai-bridge"
+      },
+      {
+        "label": "MakerDAO Starknet DAI bridge",
+        "url": "https://github.com/makerdao/starknet-dai-bridge"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",

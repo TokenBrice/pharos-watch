@@ -177,6 +177,30 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Alchemix documents alAsset L2 bridging through Everclear xERC20 plus lockbox contracts; mainnet alUSD can be locked and L2 xalUSD minted, with Everclear as the whitelisted bridge path.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Everclear xERC20 lockbox",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2",
+        "bridgeTypes": [
+          "lockbox",
+          "externalMessaging"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Alchemix on L2 docs",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "reserves": [
     {

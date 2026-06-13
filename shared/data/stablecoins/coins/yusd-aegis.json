@@ -152,6 +152,35 @@
     }
   },
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Aegis has YUSD deployments on Ethereum, BNB Chain, and Avalanche, and issuer route evidence identifies LayerZero-powered bridging to Avalanche. The bridge route is therefore treated as external lock/burn-and-mint infrastructure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockOrBurnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Aegis docs",
+        "url": "https://docs.aegis.im/"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "reserves": [

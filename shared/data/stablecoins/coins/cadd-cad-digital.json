@@ -122,6 +122,27 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Canada"
   },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "CAD Digital/Tetra announced CADD as a regulated CAD stablecoin live on Base, Ethereum, and Tempo with Solana planned. No separate bridge protocol is documented in issuer materials, so the reviewed route is issuer-native multichain issuance.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tetra CADD launch",
+        "url": "https://tetradg.com/cadd-stablecoin/"
+      },
+      {
+        "label": "CADD supported blockchains",
+        "url": "https://tetradg.com/supported-blockchains/"
+      },
+      {
+        "label": "BusinessWire CADD launch",
+        "url": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

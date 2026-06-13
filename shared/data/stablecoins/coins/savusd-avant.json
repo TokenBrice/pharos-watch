@@ -93,6 +93,34 @@
     }
   ],
   "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "savUSD is an avUSD variant with deployments spanning Avalanche and EVM chains; the available candidate evidence points to Avalanche/canonical bridge routing rather than issuer burn/mint controls.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Avalanche Bridge",
+        "slug": "avalanche",
+        "url": "https://l2beat.com/interop/protocols/avalanche",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Avant docs",
+        "url": "https://docs.avantprotocol.com/"
+      },
+      {
+        "label": "L2BEAT Avalanche Bridge",
+        "url": "https://l2beat.com/interop/protocols/avalanche"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",

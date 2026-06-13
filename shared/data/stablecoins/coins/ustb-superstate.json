@@ -182,6 +182,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USTB shares are issued as tokens on Ethereum, Solana, and Plume or held in book-entry form. Superstate documentation does not identify a bridge route controlling durable supply, so Pharos treats route risk as native issuance on the supported ledgers.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Superstate USTB",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "Superstate USTB docs",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",

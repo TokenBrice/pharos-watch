@@ -229,6 +229,23 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDK has a single Solana deployment in the reviewed metadata. No material bridge route was resolved; the token is treated as native to its current deployment for bridge-route scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "KAST",
+        "url": "https://kast.xyz/"
+      },
+      {
+        "label": "M0 dashboard",
+        "url": "https://dashboard.m0.org/"
+      }
+    ]
+  },
   "reserves": [
     {
       "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",

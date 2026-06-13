@@ -188,6 +188,47 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "canonical-bridge",
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "crvUSD has durable deployments on Ethereum and multiple L2s; reviewed route evidence points to canonical rollup bridges for the L2 representations rather than a separate issuer bridge or liquidity network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum Canonical",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/interop/protocols/arbitrum",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "ZKsync Era",
+        "slug": "zksync-era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Curve crvUSD docs",
+        "url": "https://resources.curve.finance/"
+      },
+      {
+        "label": "L2BEAT Arbitrum Canonical",
+        "url": "https://l2beat.com/interop/protocols/arbitrum"
+      },
+      {
+        "label": "L2BEAT ZKsync Era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

@@ -15,6 +15,23 @@
   "pegMechanism": "ONYC is a yield-bearing stable-value token rather than a fixed $1 wrapper; the token value accrues yield from OnRe's structured insurance collateral strategies, with primary-market access governed by OnRe's platform terms",
   "detailProvider": "coingecko",
   "geckoId": "onyc",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ONYC source materials describe a Solana tokenized reinsurance product, and the registry has only a Solana deployment. The row was reviewed as single-chain/native with no material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ONYC docs",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+      },
+      {
+        "label": "ONYC transparency",
+        "url": "https://app.onre.finance/earn/transparency"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

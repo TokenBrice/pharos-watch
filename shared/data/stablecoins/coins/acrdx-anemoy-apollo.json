@@ -226,5 +226,38 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "launchDate": "2025-12-15"
+  "launchDate": "2025-12-15",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "ACRDX has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Anemoy ACRDX launch",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "Across developer docs",
+        "url": "https://docs.across.to/"
+      }
+    ]
+  }
 }

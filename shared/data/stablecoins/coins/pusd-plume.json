@@ -108,6 +108,23 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Plume pUSD",
+        "url": "https://plume.org/pusd"
+      },
+      {
+        "label": "Plume USD docs",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ]
+  },
   "custodyModel": "onchain",
   "reserves": [
     {

@@ -66,6 +66,24 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "syrupUSDT is a Maple wrapper variant of USDT with tracked deployments on Ethereum, Plasma, and BNB Chain. Reviewed Maple materials did not identify the cross-chain route or whether supply is synchronized by issuer minting, wrapper vaults, or a bridge, so the route remains opaque.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Maple website",
+        "url": "https://maple.finance/"
+      },
+      {
+        "label": "Maple proof of reserves",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

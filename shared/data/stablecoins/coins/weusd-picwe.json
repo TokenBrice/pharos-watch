@@ -66,6 +66,23 @@
   },
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "WEUSD is deployed across multiple EVM chains and Movement, but reviewed PicWe docs describe mint/redeem behavior without enough bridge-control detail to verify whether routes are canonical, issuer-native, or external. The route is kept opaque pending protocol-specific evidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "PicWe WEUSD docs",
+        "url": "https://docs.picwe.org/what-is-weusd"
+      },
+      {
+        "label": "PicWe website",
+        "url": "https://picwe.org/"
+      }
+    ]
+  },
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

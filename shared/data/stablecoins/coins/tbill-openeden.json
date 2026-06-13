@@ -199,6 +199,23 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "OpenEden TBILL is issued on multiple chains for eligible investors; reviewed sources show issuer-controlled tokenization and mint/redeem access rather than a public third-party bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OpenEden TBILL page",
+        "url": "https://openeden.com/tbill"
+      },
+      {
+        "label": "OpenEden app TBILL vault",
+        "url": "https://app.openeden.com/tbill?chain=xrpl"
+      }
+    ]
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

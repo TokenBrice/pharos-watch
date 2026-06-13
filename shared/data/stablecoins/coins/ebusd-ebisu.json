@@ -141,6 +141,35 @@
     }
   },
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "ebUSD is deployed on Ethereum and Plasma, and candidate evidence points to Chainlink CCIP. Because route finality depends on CCIP messaging and token-pool validation, it is scored as an external validated network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ebisu docs",
+        "url": "https://ebisu.gitbook.io/ebisu-money"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [
     "liquity-v2"

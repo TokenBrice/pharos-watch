@@ -57,6 +57,32 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "sdUSD is a staked wrapper around dTRINITY dUSD with deployments on Ethereum and Fraxtal. L2BEAT candidate data points to Across-style route liquidity for this family, and no issuer-native bridge-control document was verified, so the wrapper is conservatively scored as a liquidity/intent route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": ["nonMinting"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "dTRINITY sdUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

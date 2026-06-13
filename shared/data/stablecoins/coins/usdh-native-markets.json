@@ -191,6 +191,36 @@
       ]
     }
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDH has HyperEVM and Hyperliquid deployments. Hyperliquid bridge documentation and L2BEAT describe the bridge as validator-signed, with more than two-thirds staking power required for deposits or withdrawals, so Pharos scores this as external validated-network exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Hyperliquid",
+        "slug": "hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid",
+        "bridgeTypes": ["validatorBridge"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDH docs",
+        "url": "https://docs.usdh.com"
+      },
+      {
+        "label": "Hyperliquid bridge docs",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge"
+      },
+      {
+        "label": "L2BEAT Hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+      }
+    ]
+  },
   "reserves": [
     {
       "name": "Tokenized treasuries (Superstate USTB)",

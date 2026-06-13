@@ -199,5 +199,19 @@
       }
     }
   },
-  "launchDate": "2024-10-14"
+  "launchDate": "2024-10-14",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "cdxUSD is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked cdxUSD contract set has one Base deployment, and reviewed Cod3x material describes mint/burn facilitators rather than a cross-chain token route.",
+    "sources": [
+      {
+        "label": "Cod3x cdxUSD tech stack",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ]
+  }
 }

@@ -133,6 +133,23 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PHPm has a single Celo deployment in the reviewed metadata and Celo's local-stablecoin docs list PHPm as a Mento stablecoin on Celo. No material bridge route is resolved for this row.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Celo local stablecoins",
+        "url": "https://docs.celo.org/build-on-celo/build-with-local-stablecoin"
+      },
+      {
+        "label": "Mento PUSO launch note",
+        "url": "https://www.mento.org/blog/introducing-puso-the-first-decentralized-philippine-peso-stablecoin"
+      }
+    ]
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

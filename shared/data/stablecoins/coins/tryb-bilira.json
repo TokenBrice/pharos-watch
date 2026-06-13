@@ -25,6 +25,35 @@
   "llamaId": "300",
   "detailProvider": "defillama",
   "geckoId": "bilira",
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "TRYB is deployed across many chains and the L2BEAT queue resolved Across route evidence rather than issuer-native bridge controls. The reviewed route is liquidity/intent routing because cross-chain movement materially depends on solver/liquidity execution.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "BiLira TRYB product page",
+        "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

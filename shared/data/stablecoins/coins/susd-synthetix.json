@@ -225,5 +225,37 @@
       ]
     }
   },
-  "launchDate": "2019-09-26"
+  "launchDate": "2019-09-26",
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "sUSD has reviewed Synthetix bridge evidence through the Synthetix Teleporter and Chainlink CCIP, plus the legacy native Optimism bridge path. Because the durable cross-chain route depends on external CCIP messaging for Teleporter transfers, Pharos scores it as external validated network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/resources/bridge-risks",
+        "bridgeTypes": [
+          "external-messaging",
+          "validated-network"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Synthetix Teleporter CCIP launch",
+        "url": "https://blog.synthetix.io/synthetix-launches-teleporters-with-chainlinks-ccip/"
+      },
+      {
+        "label": "Synthetix sUSD bridge enabled",
+        "url": "https://blog.synthetix.io/susd-bridge-enabled/"
+      },
+      {
+        "label": "Chainlink bridge-risk docs",
+        "url": "https://docs.chain.link/resources/bridge-risks"
+      }
+    ]
+  }
 }
