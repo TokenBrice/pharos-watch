@@ -3,7 +3,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parsePositiveInt } from "../lib/smoke-runtime.mjs";
+import { normalizeRoute, parsePositiveInt } from "../lib/smoke-runtime.mjs";
 import { getBrowserLaunchOptions } from "./smoke-ui.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_MOBILE_UI_URL ?? process.env.SMOKE_UI_URL ?? "http://localhost:3000";
@@ -102,12 +102,6 @@ function ensureUrl(input) {
     throw new Error("Missing URL. Pass --url http://localhost:3000 or set SMOKE_MOBILE_UI_URL.");
   }
   return new URL(trimmed).toString();
-}
-
-function normalizeRoute(input) {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed || trimmed === "/") return "/";
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
 export function parseRouteList(input, fallback = DEFAULT_MOBILE_UI_ROUTES) {

@@ -191,6 +191,7 @@ const HOT_COIN_IDS = [
 ] as const;
 
 const DIRECT_COIN_POOL = [
+  // top-10 coins appear 3x to mimic hot-coin subscription concentration
   ...HOT_COIN_IDS.slice(0, 10),
   ...HOT_COIN_IDS.slice(0, 10),
   ...HOT_COIN_IDS.slice(0, 10),

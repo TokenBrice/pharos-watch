@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = "src";
@@ -14,24 +15,6 @@ const FAT_REGISTRY_IMPORTS = new Set([
   "@shared/lib/stablecoins/index",
   "@shared/lib/stablecoins/registry",
 ]);
-
-function extension(path) {
-  const index = path.lastIndexOf(".");
-  return index >= 0 ? path.slice(index) : "";
-}
-
-function collectFiles(dir, acc) {
-  if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      collectFiles(full, acc);
-    } else if (entry.isFile() && SOURCE_EXTENSIONS.has(extension(entry.name))) {
-      acc.push(full);
-    }
-  }
-}
 
 function hasUseClientDirective(source) {
   const withoutBom = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
@@ -104,11 +87,11 @@ function collectImports(file, source) {
   return { imports, fatRegistryLines };
 }
 
-const files = [];
 const sourceRoot = resolve(ROOT, SOURCE_ROOT);
-if (existsSync(sourceRoot) && statSync(sourceRoot).isDirectory()) {
-  collectFiles(sourceRoot, files);
-}
+const files =
+  existsSync(sourceRoot) && statSync(sourceRoot).isDirectory()
+    ? collectSourceFiles(sourceRoot, { extensions: SOURCE_EXTENSIONS, excludedDirs: SKIP_DIRS })
+    : [];
 
 const moduleInfoByFile = new Map();
 for (const file of files) {

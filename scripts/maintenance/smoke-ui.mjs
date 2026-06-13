@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "url";
-import { assert, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
+import { assert, normalizeRoute, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -160,14 +160,6 @@ export function chunkOverflowRoutes(routes, workerCount) {
     chunks.push(routes.slice(i, i + chunkSize));
   }
   return chunks;
-}
-
-function normalizeRoute(input) {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed || trimmed === "/") {
-    return "/";
-  }
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
 export function getOverflowRoutes(mode) {

@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_JOB_DEFINITIONS,

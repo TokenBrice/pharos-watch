@@ -26,8 +26,8 @@
  * Wired into PAGES_VALIDATE_COMMANDS so it runs after `npm run build`.
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, statSync } from "node:fs";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const FLAGS_SOURCE = "src/lib/feature-flags.ts";
 const CHUNKS_DIR = ".next/static/chunks";
@@ -96,17 +96,7 @@ function listChunkFiles(dir) {
   } catch {
     return null;
   }
-  const files = [];
-  const walk = (current) => {
-    for (const name of readdirSync(current)) {
-      const path = join(current, name);
-      const s = statSync(path);
-      if (s.isDirectory()) walk(path);
-      else if (s.isFile() && name.endsWith(".js")) files.push(path);
-    }
-  };
-  walk(dir);
-  return files;
+  return collectSourceFiles(dir, { extensions: new Set([".js"]), excludedDirs: new Set() });
 }
 
 const setFlags = Object.keys(process.env).filter(

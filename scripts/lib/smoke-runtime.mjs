@@ -74,6 +74,14 @@ export function parseCliOptions(argv, handlers, { allowUnknown = true } = {}) {
   }
 }
 
+export function normalizeRoute(input) {
+  const trimmed = (input ?? "").trim();
+  if (!trimmed || trimmed === "/") {
+    return "/";
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

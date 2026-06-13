@@ -158,12 +158,12 @@ function isRetryableError(error) {
   );
 }
 
-async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+async function fetchWithRetry(fetcher, endpointPath, timeoutMs, retryCount, retryDelayMs) {
   const totalAttempts = retryCount + 1;
   let lastError = null;
   for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
     try {
-      const result = await fetchJson(baseUrl, endpointPath, timeoutMs);
+      const result = await fetcher(timeoutMs);
       if (attempt < totalAttempts && isRetryableStatus(result.status)) {
         console.log(
           `[smoke-api] WARN ${endpointPath} returned ${result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
@@ -186,6 +186,16 @@ async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, 
   }
 
   throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
+}
+
+function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+  return fetchWithRetry(
+    (timeout) => fetchJson(baseUrl, endpointPath, timeout),
+    endpointPath,
+    timeoutMs,
+    retryCount,
+    retryDelayMs,
+  );
 }
 
 async function fetchPng(baseUrl, endpointPath, timeoutMs) {
@@ -203,34 +213,14 @@ async function fetchPng(baseUrl, endpointPath, timeoutMs) {
   };
 }
 
-async function fetchPngWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
-  const totalAttempts = retryCount + 1;
-  let lastError = null;
-  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
-    try {
-      const result = await fetchPng(baseUrl, endpointPath, timeoutMs);
-      if (attempt < totalAttempts && isRetryableStatus(result.status)) {
-        console.log(
-          `[smoke-api] WARN ${endpointPath} returned ${result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
-        );
-        await sleep(retryDelayMs);
-        continue;
-      }
-      return result;
-    } catch (error) {
-      lastError = error;
-      if (attempt < totalAttempts && isRetryableError(error)) {
-        console.log(
-          `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(error)}); retrying in ${retryDelayMs}ms`,
-        );
-        await sleep(retryDelayMs);
-        continue;
-      }
-      throw new Error(`${endpointPath} request failed: ${formatError(error)}`);
-    }
-  }
-
-  throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
+function fetchPngWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+  return fetchWithRetry(
+    (timeout) => fetchPng(baseUrl, endpointPath, timeout),
+    endpointPath,
+    timeoutMs,
+    retryCount,
+    retryDelayMs,
+  );
 }
 
 export function assertOgImageResult(endpointPath, result) {
@@ -287,7 +277,7 @@ export function resolveContractSmokePaths(scope = "full") {
   return parsed;
 }
 
-const REDEMPTION_ENUMS = {
+export const REDEMPTION_ENUMS = {
   routeFamily: new Set([
     "stablecoin-redeem",
     "basket-redeem",
@@ -333,6 +323,7 @@ const REDEMPTION_ENUMS = {
     "issuer-term-redemption",
     "full-system-eventual",
     "daily-limit",
+    "fixed-buffer",
     "hot-buffer",
     "psm-balance-share",
     "strategy-buffer",

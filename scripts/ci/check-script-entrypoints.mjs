@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { extname, relative, resolve } from "node:path";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const ROOT = process.cwd();
 const SCAN_ROOTS = ["scripts", "docs", "package.json"];
@@ -22,30 +23,17 @@ const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
 const REVERSE_REFERENCE_ROOTS = ["scripts", "docs", "package.json", ".github"];
 const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
 
-function extension(path) {
-  const index = path.lastIndexOf(".");
-  return index >= 0 ? path.slice(index) : "";
-}
-
 function collectFiles(path, acc, extensions = SOURCE_EXTENSIONS) {
   const abs = resolve(ROOT, path);
   if (!existsSync(abs)) return;
   const stats = statSync(abs);
   if (stats.isFile()) {
-    if (extensions.has(extension(abs))) acc.push(abs);
+    if (extensions.has(extname(abs))) acc.push(abs);
     return;
   }
   if (!stats.isDirectory()) return;
 
-  for (const entry of readdirSync(abs, { withFileTypes: true })) {
-    if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
-    const full = join(abs, entry.name);
-    if (entry.isDirectory()) {
-      collectFiles(full, acc, extensions);
-    } else if (entry.isFile() && extensions.has(extension(entry.name))) {
-      acc.push(full);
-    }
-  }
+  acc.push(...collectSourceFiles(abs, { extensions, excludedDirs: SKIP_DIRS }));
 }
 
 function isTestPath(path) {

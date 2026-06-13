@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 
 export const PROD_ORIGIN = "https://pharos.watch";
@@ -96,4 +97,11 @@ export function readRequiredJsonFile(path: string, label: string): unknown {
 export function resolveGeneratedAt(options: { generatedAt: string | null }): string {
   if (options.generatedAt === "now") return new Date().toISOString();
   return options.generatedAt ?? new Date().toISOString();
+}
+
+export function writeOutputFile(path: string, contents: string, cwd: string = process.cwd()): string {
+  const target = resolve(cwd, path);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, contents, "utf8");
+  return target;
 }

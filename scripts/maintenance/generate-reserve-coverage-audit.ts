@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../../shared/lib/live-reserve-adapters-definitions";
 import {
   ACTIVE_STABLECOINS,
@@ -25,6 +24,7 @@ import {
   readRequiredJsonFile,
   resolveGeneratedAt,
   sortByMarketCapOrRank,
+  writeOutputFile,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
 
@@ -726,9 +726,7 @@ async function loadReportCardInput(
 }
 
 function writeOutput(path: string, output: string, cwd: string): void {
-  const target = resolve(cwd, path);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, output, "utf8");
+  const target = writeOutputFile(path, output, cwd);
   process.stdout.write(`Wrote reserve coverage audit to ${target}\n`);
 }
 

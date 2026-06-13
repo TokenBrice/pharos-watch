@@ -3,23 +3,18 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
-import { sleep } from "../lib/smoke-runtime.mjs";
+import { parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_ATTEMPTS = 60;
 const DEFAULT_DELAY_MS = 5_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
 
-function readPositiveInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
 function parseArgs(argv) {
   const args = {
-    attempts: readPositiveInt(process.env.PHAROS_RELEASE_MARKER_ATTEMPTS, DEFAULT_ATTEMPTS),
-    delayMs: readPositiveInt(process.env.PHAROS_RELEASE_MARKER_DELAY_MS, DEFAULT_DELAY_MS),
+    attempts: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_ATTEMPTS, DEFAULT_ATTEMPTS),
+    delayMs: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_DELAY_MS, DEFAULT_DELAY_MS),
     markerPath: process.env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json",
-    timeoutMs: readPositiveInt(process.env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
+    timeoutMs: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     urls: [],
   };
 
@@ -32,13 +27,13 @@ function parseArgs(argv) {
       args.urls.push(argv[index + 1] ?? "");
       index += 1;
     } else if (arg === "--attempts") {
-      args.attempts = readPositiveInt(argv[index + 1], args.attempts);
+      args.attempts = parsePositiveInt(argv[index + 1], args.attempts);
       index += 1;
     } else if (arg === "--delay-ms") {
-      args.delayMs = readPositiveInt(argv[index + 1], args.delayMs);
+      args.delayMs = parsePositiveInt(argv[index + 1], args.delayMs);
       index += 1;
     } else if (arg === "--timeout-ms") {
-      args.timeoutMs = readPositiveInt(argv[index + 1], args.timeoutMs);
+      args.timeoutMs = parsePositiveInt(argv[index + 1], args.timeoutMs);
       index += 1;
     }
   }

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   buildDependencyGraphEdges,
   filterDependencyGraphEdgesToLive,
@@ -26,6 +26,7 @@ import {
   readRequiredJsonFile,
   resolveGeneratedAt,
   sortByMarketCapOrRank,
+  writeOutputFile,
 } from "../lib/coverage-audit-cli";
 
 const DEFAULT_BASELINE_PATH = "scripts/lib/dependency-coverage-baseline.json";
@@ -750,9 +751,7 @@ async function loadOptionalInputs(
 }
 
 function writeOutput(path: string, output: string, cwd: string): void {
-  const target = resolve(cwd, path);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, output, "utf8");
+  const target = writeOutputFile(path, output, cwd);
   process.stdout.write(`Wrote dependency coverage audit to ${target}\n`);
 }
 

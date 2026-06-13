@@ -7,6 +7,7 @@ import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-r
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
+import { isRecord, type UnknownRecord } from "../lib/coverage-audit-cli";
 
 const PROD_ORIGIN = "https://pharos.watch";
 const PROD_PEG_SUMMARY_URL = `${PROD_ORIGIN}/_site-data/peg-summary`;
@@ -54,10 +55,6 @@ export type AuditStablecoinMeta = Pick<
   | "tradedContracts"
   | "links"
 >;
-
-interface UnknownRecord {
-  [key: string]: unknown;
-}
 
 export interface PriceSourceMetadataSnapshot {
   geckoId: boolean;
@@ -202,10 +199,6 @@ export function bucketSourceDepth(count: number): DepthBucket {
   if (count >= 5) return "5+";
   if (count <= 0) return "0";
   return String(count) as DepthBucket;
-}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function stringValue(value: unknown): string | null {

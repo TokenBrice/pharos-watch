@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
+import { isRecord, type UnknownRecord } from "../lib/coverage-audit-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
@@ -11,10 +12,6 @@ const HIGH_PRIORITY_MCAP_USD = 50_000_000;
 const LOW_SOURCE_DEPTH = 2;
 const PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
 const DEFAULT_CURVE_CONFIG_PATH = "worker/src/lib/curve-pool-configs.ts";
-
-interface UnknownRecord {
-  [key: string]: unknown;
-}
 
 export interface DexGapStablecoinRow {
   id: string;
@@ -149,10 +146,6 @@ interface CliOptions {
   reportPath: string | null;
   format: "markdown" | "json";
   generatedAt: string | null;
-}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function stringValue(value: unknown): string | null {

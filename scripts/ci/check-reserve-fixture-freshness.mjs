@@ -5,8 +5,8 @@
  * MAX_AGE_DAYS days from today.
  */
 
-import { readFileSync, readdirSync } from "fs";
-import path from "path";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "url";
 
 export const MAX_AGE_DAYS = 90;

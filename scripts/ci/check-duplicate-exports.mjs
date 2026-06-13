@@ -4,8 +4,8 @@
  * in shared/lib and src/lib. Catches post-merge conflicts from
  * parallel worktree development.
  */
-import { readFileSync, readdirSync, statSync } from "fs";
-import { join, relative } from "path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 
 const DIRS = ["shared/lib", "src/lib", "worker/src/lib"];
 const EXT_RE = /\.(ts|tsx)$/;

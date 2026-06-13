@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, statSync } from "fs";
-import { extname, dirname, join, relative, resolve } from "path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { extname, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 
 const ROOT = process.cwd();
