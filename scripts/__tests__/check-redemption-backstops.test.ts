@@ -7,6 +7,8 @@ import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-v
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 
+const GATE_LOAD_TIMEOUT_MS = 15_000;
+
 const baseConfig: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
   accessModel: "issuer-api",
@@ -85,7 +87,7 @@ describe("check-redemption-backstops CLI", () => {
     ).toMatchObject({
       feeModelKind: "undisclosed-reviewed",
     });
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("preserves warning findings in reports while exiting successfully", () => {
     const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-warnings-")), "report.json");

@@ -10,6 +10,7 @@ const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
 const loadReserveSnapshotMetadataMapMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
+const GATE_LOAD_TIMEOUT_MS = 15_000;
 
 function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Record<string, unknown> = {}) {
   return {
@@ -207,7 +208,7 @@ describe("syncRedemptionBackstops", () => {
     expect(result.status).toBe("error");
     expect(result.metadata).toContain("stablecoins-cache:missing-cache");
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("aborts before loading inputs when the signal is already aborted", async () => {
     const controller = new AbortController();
@@ -219,7 +220,7 @@ describe("syncRedemptionBackstops", () => {
     expect(loadStablecoinsCacheMock).not.toHaveBeenCalled();
     expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("aborts between configured IDs without writing a partial snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);

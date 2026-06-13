@@ -21,7 +21,7 @@ import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { FaqSection } from "@/components/faq-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-view-model";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-mint-authority-view-model";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 

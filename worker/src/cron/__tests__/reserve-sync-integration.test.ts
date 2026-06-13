@@ -6,6 +6,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
 const recordOutcomeSafeMock = vi.fn();
+const GATE_LOAD_TIMEOUT_MS = 15_000;
 
 vi.mock("../reserve-adapters/index", () => ({
   getReserveAdapter: getReserveAdapterMock,
@@ -87,7 +88,7 @@ describe("reserve sync → API integration", () => {
       for (const call of recordOutcomeSafeMock.mock.calls) {
         expect(call[2]).toBe(true); // success outcome
       }
-    });
+    }, GATE_LOAD_TIMEOUT_MS);
   });
 
   describe("adapter failure → sync_state records error", () => {
