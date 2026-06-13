@@ -151,7 +151,10 @@ From the repo root:
 cd worker
 npx --no-install wrangler versions upload --tag operator-origin-update
 # Smoke the uploaded version's preview URL before promotion.
-npx --no-install wrangler versions deploy "$VERSION_ID@100"
+cd ..
+WORKER_NAME=stablecoin-api WORKER_VERSION_ID="$VERSION_ID" \
+  node .github/scripts/deploy-worker-version.mjs --message "Operator origin route update"
+cd worker
 npx --no-install wrangler triggers deploy
 ```
 

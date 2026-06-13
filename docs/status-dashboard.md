@@ -213,7 +213,7 @@ For the split DEX pipeline:
 
 ### Availability status
 
-Computed from the shared public-health floor plus availability-impacting cron availability:
+Computed from public cache impact, public mint/burn impact, circuit health, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
 
 - `stale` if any of:
   - any shared cache impact is `stale`
@@ -638,6 +638,8 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/components/status/price-source-health.tsx`      | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
 | `src/components/status/yield-health.tsx`             | Yield health card — rankings count/freshness/delta, safety hydration coverage, supplemental cache age, benchmark fallback/age, coverage-audit age/queue, and runbook link                                                                                                               |
 | `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h canonical-chain flow vs chain-supply delta diagnostics                                                                                                                                                                                             |
+| `src/lib/status/public-status.ts`                    | Public impacted-surface derivation that maps `/api/health` status causes to affected public pages and APIs                                                                                                                                                                             |
+| `worker/src/api/status-supplements.ts`               | Admin `/api/status` supplement loader for liquidity health, yield health, price-source diagnostics, GT probe state, D1 usage, and CoinGecko drift data                                                                                                                                  |
 | `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) through the ops-host same-origin proxy                                                                                                                                                               |
 | `src/hooks/api-hooks.ts`                             | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                              |
 | `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                     |

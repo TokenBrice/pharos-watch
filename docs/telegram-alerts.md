@@ -48,6 +48,7 @@ BotFather-owned release checklist:
 - `worker/src/api/telegram-webhook-store.ts`
 - `worker/src/cron/dispatch-telegram-alerts.ts`
 - `worker/src/cron/daily-digest.ts`
+- `worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts`
 - `worker/src/lib/telegram-webhook-registration.ts`
 - `shared/lib/telegram-bot-registration.ts`
 - `worker/src/lib/telegram.ts`
@@ -540,7 +541,7 @@ expiry from real failures:
 - `pendingDroppedMaxAttemptsFallback` — defensive `PENDING_MAX_ATTEMPTS` ceiling was hit
   while the row was still retryable; expected to be 0 in normal operation.
 
-Terminal pending drops are dead-lettered before deletion with `reason` values `ttl_expired`, `permanent_failure`, `max_attempts`, or `blocked_disabled`. If dead-letter insertion fails, cleanup fails closed and leaves the row claimed/deferred for later operator-safe retry instead of deleting unaudited failure context.
+Terminal pending drops are dead-lettered before deletion with `reason` values `ttl_expired`, `permanent_failure`, `max_attempts`, or `blocked_disabled`. Expired-row cleanup logs an error-level bypass event and still removes expired live rows when dead-letter insertion fails, so an audit-table outage cannot let the live delivery queue grow without bound.
 
 Retry and deferral metadata lives on the pending rows:
 

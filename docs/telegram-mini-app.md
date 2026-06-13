@@ -81,7 +81,7 @@ The Mini App seam does not receive Telegram webhook updates and does not call th
 HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
 
 - Parse `URLSearchParams` from raw `initData`.
-- Require `hash`, `auth_date`, and `user` for mutations.
+- Require `hash`, `auth_date`, and `user` for both Mini App endpoints.
 - Build the bot-token HMAC data-check string from all fields except `hash`, sorted alphabetically, joined by `\n`.
 - Derive the secret key with `HMAC-SHA-256(key="WebAppData", message=TELEGRAM_BOT_TOKEN)`.
 - Compare the computed hex HMAC with `hash` using timing-safe comparison.
