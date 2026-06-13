@@ -1,11 +1,12 @@
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG,
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/liquidity-score-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/liquidity-score-changelog/",
+  path: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Liquidity Score Changelog - Version History",
   metadataDescription:
     `Full version history of the Pharos Liquidity Score methodology, from v1.0 through ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}. Every scoring and normalization revision documented.`,

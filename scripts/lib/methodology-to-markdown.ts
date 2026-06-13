@@ -1,66 +1,99 @@
-import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "../../shared/lib/blacklist-tracker-version";
-import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "../../shared/lib/chain-health-version";
-import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "../../shared/lib/depeg-dews-version";
-import { DDR_METHODOLOGY_CHANGELOG } from "../../shared/lib/depeg-resolver-version";
-import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "../../shared/lib/liquidity-score-version";
-import type { MethodologyChangelogEntry } from "../../shared/lib/methodology-version";
-import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "../../shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_CHANGELOG } from "../../shared/lib/pricing-pipeline-version";
-import { SAFETY_SCORE_CHANGELOG } from "../../shared/lib/safety-score-version";
-import { PSI_METHODOLOGY_CHANGELOG } from "../../shared/lib/stability-index-version";
-import { YIELD_METHODOLOGY_CHANGELOG } from "../../shared/lib/yield-methodology-version";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/blacklist-tracker-version";
+import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/chain-health-version";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/depeg-dews-version";
+import {
+  DDR_METHODOLOGY_CHANGELOG,
+  DDR_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/depeg-resolver-version";
+import {
+  LIQUIDITY_METHODOLOGY_CHANGELOG,
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/liquidity-score-version";
+import {
+  toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
+} from "../../shared/lib/methodology-version";
+import {
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/mint-burn-flow-version";
+import {
+  PRICING_PIPELINE_CHANGELOG,
+  PRICING_PIPELINE_CHANGELOG_PATH,
+} from "../../shared/lib/pricing-pipeline-version";
+import {
+  SAFETY_SCORE_CHANGELOG,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/safety-score-version";
+import {
+  PSI_METHODOLOGY_CHANGELOG,
+  PSI_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/stability-index-version";
+import {
+  YIELD_METHODOLOGY_CHANGELOG,
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+} from "../../shared/lib/yield-methodology-version";
 import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/app/methodology/sections/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
 
 const CHANGELOG_REGISTRY = {
   scoring: {
     title: "Safety Scores Changelog",
-    path: "/methodology/scoring-changelog/",
+    path: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     entries: SAFETY_SCORE_CHANGELOG,
   },
   depeg: {
     title: "Depeg Tracker and DEWS Changelog",
-    path: "/methodology/depeg-changelog/",
+    path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
   },
   "depeg-resolver": {
     title: "Depeg Duration Resolver Changelog",
-    path: "/methodology/depeg-resolver-changelog/",
+    path: DDR_METHODOLOGY_CHANGELOG_PATH,
     entries: DDR_METHODOLOGY_CHANGELOG,
   },
   "blacklist-tracker": {
     title: "Blacklist Tracker Changelog",
-    path: "/methodology/blacklist-tracker-changelog/",
+    path: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
     entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   },
   "liquidity-score": {
     title: "Liquidity Score Changelog",
-    path: "/methodology/liquidity-score-changelog/",
+    path: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
   },
   "stability-index": {
     title: "Stability Index Changelog",
-    path: "/methodology/stability-index-changelog/",
+    path: PSI_METHODOLOGY_CHANGELOG_PATH,
     entries: PSI_METHODOLOGY_CHANGELOG,
   },
   "mint-burn-flow": {
     title: "Mint/Burn Flow Changelog",
-    path: "/methodology/mint-burn-flow-changelog/",
+    path: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
     entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
   },
   yield: {
     title: "Yield Intelligence Changelog",
-    path: "/methodology/yield-changelog/",
+    path: YIELD_METHODOLOGY_CHANGELOG_PATH,
     entries: YIELD_METHODOLOGY_CHANGELOG,
   },
   "pricing-pipeline": {
     title: "Pricing Pipeline Changelog",
-    path: "/methodology/pricing-pipeline-changelog/",
+    path: PRICING_PIPELINE_CHANGELOG_PATH,
     entries: PRICING_PIPELINE_CHANGELOG,
   },
   "chain-health": {
     title: "Chain Health Changelog",
-    path: "/methodology/chain-health-changelog/",
+    path: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
     entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
   },
 } as const satisfies Record<string, {
@@ -100,7 +133,7 @@ export function buildMethodologyChangelogMarkdown(key: MethodologyChangelogKey):
       const commitLine = entry.commits.length > 0
         ? `\n\nCommits: ${entry.commits.map((sha) => `\`${sha}\``).join(", ")}`
         : "";
-      return `## v${entry.version} - ${entry.title}\n\n**Effective:** ${entry.date}\n\n${entry.summary}\n\n${impact}${commitLine}`;
+      return `## ${toMethodologyVersionLabel(entry.version)} - ${entry.title}\n\n**Effective:** ${entry.date}\n\n${entry.summary}\n\n${impact}${commitLine}`;
     })
     .join("\n\n");
 

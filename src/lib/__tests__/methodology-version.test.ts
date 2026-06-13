@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   compareMethodologyVersions,
   createMethodologyVersion,
+  formatMethodologyDisplayDate,
+  methodologyChangelogEntryId,
   toMethodologyVersionLabel,
   type MethodologyChangelogEntry,
 } from "@shared/lib/methodology-version";
@@ -122,5 +124,21 @@ describe("compareMethodologyVersions", () => {
 describe("toMethodologyVersionLabel", () => {
   it("prefixes version with v", () => {
     expect(toMethodologyVersionLabel("3.1")).toBe("v3.1");
+  });
+});
+
+describe("formatMethodologyDisplayDate", () => {
+  it("formats changelog dates in UTC", () => {
+    expect(formatMethodologyDisplayDate("2026-06-06")).toBe("Jun 6, 2026");
+  });
+
+  it("returns the source value for invalid dates", () => {
+    expect(formatMethodologyDisplayDate("not-a-date")).toBe("not-a-date");
+  });
+});
+
+describe("methodologyChangelogEntryId", () => {
+  it("preserves historical changelog anchor ids", () => {
+    expect(methodologyChangelogEntryId("3.01")).toBe("changelog-v-3-01");
   });
 });

@@ -3,7 +3,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
-} from "@shared/lib/chains/health-version";
+} from "@shared/lib/methodology-versions/chain-health";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,

@@ -13,7 +13,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 - **Current methodology version:** `v3.01`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
-- **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`)
+- **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
@@ -222,5 +222,6 @@ The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with 
 | `worker/src/lib/depeg-resolver-assessment-store.ts` | DDR assessment checkpoint persistence for later review |
 | `worker/src/cron/compute-depeg-resolver-review.ts` | DDRR snapshot builder from stored assessments and actual event outcomes |
 | `worker/src/api/depeg-resolver-review.ts` | Cache-backed public DDRR endpoint |
-| `shared/lib/methodology-versions/depeg-resolver.ts` | Methodology version constants + changelog |
+| `shared/lib/methodology-versions/depeg-resolver.ts` | Methodology version constants + changelog composition |
+| `shared/data/methodology-changelogs/depeg-resolver/*.ts` | Machine-readable changelog entries |
 | `shared/lib/depeg-resolver-version.ts` | Re-export of the version constants |

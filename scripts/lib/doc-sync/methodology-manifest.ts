@@ -31,6 +31,11 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     doc: "docs/stability-index.md",
     timelineDoc: "docs/stability-index-timeline.md",
     versionFile: "shared/lib/methodology-versions/stability-index.ts",
+    extraProvenanceFiles: [
+      "shared/data/methodology-changelogs/stability-index/v1.ts",
+      "shared/data/methodology-changelogs/stability-index/v2.ts",
+      "shared/data/methodology-changelogs/stability-index/v3.ts",
+    ],
     expectedLabel: PSI_METHODOLOGY_VERSION_LABEL,
   },
   {
@@ -79,7 +84,8 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     key: "chain-health",
     doc: "docs/chain-health.md",
     timelineDoc: "docs/chain-health-timeline.md",
-    versionFile: "shared/lib/chains/health-version.ts",
+    versionFile: "shared/lib/methodology-versions/chain-health.ts",
+    extraProvenanceFiles: ["shared/data/methodology-changelogs/chain-health/v1.ts"],
     expectedLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
   },
   {

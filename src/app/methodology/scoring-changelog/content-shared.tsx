@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
-import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+import {
+  formatMethodologyDisplayDate,
+  toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
+} from "@shared/lib/methodology-version";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
@@ -9,15 +13,6 @@ const SCORING_CHANGELOG_BY_VERSION = new Map(SAFETY_SCORE_CHANGELOG.map((entry) 
 
 export function scoringAnchorId(version: string) {
   return `scoring-${slugifyId(version)}`;
-}
-
-function formatScoringDate(date: string) {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 export function getScoringEntry(version: string): MethodologyChangelogEntry {
@@ -68,16 +63,19 @@ export function ChangelogTable({
 }
 
 export function VersionCard({ entry, children }: { entry: MethodologyChangelogEntry; children: ReactNode }) {
-  const anchorId = scoringAnchorId(`v${entry.version}`);
+  const versionLabel = toMethodologyVersionLabel(entry.version);
+  const anchorId = scoringAnchorId(versionLabel);
 
   return (
     <Card id={anchorId} className="scroll-mt-28 rounded-xl">
       <CardHeader>
         <CardTitle as="h2">
           <span className="flex flex-wrap items-center gap-2">
-            <Pill>{`v${entry.version}`}</Pill>
+            <Pill>{versionLabel}</Pill>
             {entry.title}
-            <span className="text-sm font-normal text-muted-foreground">{formatScoringDate(entry.date)}</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              {formatMethodologyDisplayDate(entry.date)}
+            </span>
           </span>
         </CardTitle>
       </CardHeader>

@@ -1,11 +1,12 @@
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/chain-health-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/chain-health-changelog/",
+  path: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Chain Health Score Changelog — Version History",
   metadataDescription:
     `Full version history of the Pharos Chain Health Score methodology, from v1.0 through ${CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}. Every weight, factor, and tier revision documented.`,

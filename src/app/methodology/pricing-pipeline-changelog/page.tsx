@@ -1,11 +1,12 @@
 import {
   PRICING_PIPELINE_CHANGELOG,
+  PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/pricing-pipeline-changelog/",
+  path: PRICING_PIPELINE_CHANGELOG_PATH,
   metadataTitle: "Pricing Pipeline Changelog - Version History",
   metadataDescription:
     `Full version history of the Pharos Pricing Pipeline methodology, from v1.0 through ${PRICING_PIPELINE_VERSION_LABEL}. Every source addition and consensus algorithm revision documented.`,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createMethodologyVersion } from "../methodology-version";
+import {
+  createMethodologyVersion,
+  formatMethodologyDisplayDate,
+  methodologyChangelogEntryId,
+  toMethodologyVersionLabel,
+} from "../methodology-version";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
 
 describe("createMethodologyVersion", () => {
@@ -54,5 +59,16 @@ describe("DDR methodology version constants", () => {
 
     expect(DDR_V2_EFFECTIVE_AT).toBe(1_779_897_600);
     expect(DDR_V2_EFFECTIVE_AT).toBe(v2?.effectiveAt);
+  });
+});
+
+describe("methodology display helpers", () => {
+  it("formats version labels and display dates consistently", () => {
+    expect(toMethodologyVersionLabel("3.4")).toBe("v3.4");
+    expect(formatMethodologyDisplayDate("2026-06-06")).toBe("Jun 6, 2026");
+  });
+
+  it("derives changelog entry ids from version labels", () => {
+    expect(methodologyChangelogEntryId("3.01")).toBe("changelog-v-3-01");
   });
 });

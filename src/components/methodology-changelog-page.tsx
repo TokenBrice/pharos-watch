@@ -4,6 +4,11 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { PharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
+import {
+  formatMethodologyDisplayDate,
+  methodologyChangelogEntryId,
+  toMethodologyVersionLabel,
+} from "@shared/lib/methodology-version";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 interface MethodologyChangelogPageProps {
@@ -18,10 +23,6 @@ interface MethodologyChangelogPageProps {
   children?: React.ReactNode;
   footerContent?: React.ReactNode;
   jsonLdIdentifier?: PharosUrnJsonLdIdentifier;
-}
-
-function changelogEntryId(version: string) {
-  return `changelog-v-${version.replaceAll(".", "-")}`;
 }
 
 export function MethodologyChangelogPage({
@@ -40,8 +41,8 @@ export function MethodologyChangelogPage({
   const derivedSections = [
     { id: "latest-updates", label: "Latest" },
     ...entries.map((entry) => ({
-      id: changelogEntryId(entry.version),
-      label: `v${entry.version}`,
+      id: methodologyChangelogEntryId(entry.version),
+      label: toMethodologyVersionLabel(entry.version),
     })),
   ];
 
@@ -116,15 +117,10 @@ export function MethodologyChangelogPage({
                   <p className="pharos-kicker">Latest Version</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {`v${latestEntry.version}`}
+                      {toMethodologyVersionLabel(latestEntry.version)}
                     </span>
                     <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {new Date(`${latestEntry.date}T00:00:00Z`).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        timeZone: "UTC",
-                      })}
+                      {formatMethodologyDisplayDate(latestEntry.date)}
                     </span>
                     {latestEntry.reconstructed && (
                       <span className="inline-block rounded-full border border-border/60 bg-background/55 px-2.5 py-0.5 text-xs text-muted-foreground">
@@ -159,7 +155,7 @@ export function MethodologyChangelogPage({
               <MethodologyVersionCard
                 key={entry.version}
                 entry={entry}
-                entryId={changelogEntryId(entry.version)}
+                entryId={methodologyChangelogEntryId(entry.version)}
                 defaultOpen={index === 0}
               />
             ))}

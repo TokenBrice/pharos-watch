@@ -4,8 +4,10 @@
  * Each methodology defines its changelog data and passes it to
  * createMethodologyVersion() to get version resolution, labels,
  * and sorted windows — eliminating boilerplate duplication across
- * the 6 methodology version files.
+ * methodology version files.
  */
+
+import { slugifyId } from "../format";
 
 export interface MethodologyChangelogEntry {
   version: string;
@@ -60,7 +62,7 @@ export function compareMethodologyVersions(a: string, b: string): number {
 
 export function createMethodologyVersion(config: MethodologyVersionConfig): MethodologyVersion {
   const { currentVersion, changelogPath, changelog } = config;
-  const versionLabel = `v${currentVersion}`;
+  const versionLabel = toMethodologyVersionLabel(currentVersion);
   const sortedChangelog = [...changelog].sort((a, b) => {
     const versionDiff = compareMethodologyVersions(b.version, a.version);
     return versionDiff !== 0 ? versionDiff : b.effectiveAt - a.effectiveAt;
@@ -93,4 +95,22 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
 
 export function toMethodologyVersionLabel(version: string): string {
   return `v${version}`;
+}
+
+const METHODOLOGY_DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+export function formatMethodologyDisplayDate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime())
+    ? METHODOLOGY_DISPLAY_DATE_FORMATTER.format(parsed)
+    : date;
+}
+
+export function methodologyChangelogEntryId(version: string): string {
+  return `changelog-v-${slugifyId(version)}`;
 }

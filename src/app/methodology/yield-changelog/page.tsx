@@ -1,11 +1,12 @@
 import {
   YIELD_METHODOLOGY_CHANGELOG,
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/yield-changelog/",
+  path: YIELD_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Yield Intelligence Changelog - Version History",
   metadataDescription:
     `Full version history of the Pharos Yield Intelligence methodology, from v1.0 through ${YIELD_METHODOLOGY_VERSION_LABEL}. Every source-resolution and scoring revision documented.`,

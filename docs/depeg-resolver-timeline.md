@@ -2,7 +2,7 @@
 
 Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.01`.
 
-Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
+Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
 
 ---
 
@@ -63,5 +63,5 @@ Launched the two-stage Depeg Duration Resolver: a mechanistic Resolution Outlook
 ## Notes
 
 - The full methodology, limitations, and backtest/acceptance plan live in [depeg-resolver.md](./depeg-resolver.md).
-- Effective boundaries and the machine-readable changelog are encoded in `shared/lib/methodology-versions/depeg-resolver.ts`.
+- Effective boundaries are composed in `shared/lib/methodology-versions/depeg-resolver.ts`; the machine-readable changelog entries live in `shared/data/methodology-changelogs/depeg-resolver/`.
 - DDR consumes confirmed `depeg_events` from the [depeg detection pipeline](./depeg-detection.md); it does not run its own detection.

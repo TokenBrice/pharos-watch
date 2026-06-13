@@ -1,11 +1,12 @@
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/depeg-dews-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/depeg-changelog/",
+  path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Depeg Tracker + DEWS Changelog - Version History",
   metadataDescription:
     `Full version history of the Pharos Depeg Tracker + DEWS methodology, from v1.0 through ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}. Every threshold, formula, and confirmation-policy revision documented.`,

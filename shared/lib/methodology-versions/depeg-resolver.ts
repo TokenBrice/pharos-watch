@@ -1,88 +1,15 @@
+import { DEPEG_RESOLVER_V1 } from "../../data/methodology-changelogs/depeg-resolver/v1";
+import { DEPEG_RESOLVER_V2 } from "../../data/methodology-changelogs/depeg-resolver/v2";
+import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resolver/v3";
 import { createMethodologyVersion } from "./base";
 
 const ddr = createMethodologyVersion({
   currentVersion: "3.01",
   changelogPath: "/methodology/depeg-resolver-changelog/",
   changelog: [
-    {
-      version: "3.01",
-      title: "Live Context Input Wiring",
-      date: "2026-06-06",
-      effectiveAt: 1780704000,
-      summary:
-        "Wired Stage 1's documented live-context inputs into the Worker DDR precompute path.",
-      impact: [
-        "Uses fresh DEWS sub-signals to derive bank-run and blacklist-surge inputs for K5 and K3",
-        "Uses the same 7-day DEX TVL baseline selection as the liquidity API for K5 exit-collapse checks",
-        "Hydrates the latest Safety Score history row so R5 mean-reversion anchors and related context use live report-card data",
-        "Marks DDR runs degraded when these required context-source queries fail instead of scoring with silently absent inputs",
-      ],
-      commits: [],
-      reconstructed: false,
-    },
-    {
-      version: "3.0",
-      title: "Forecast Readiness Contract",
-      date: "2026-06-04",
-      effectiveAt: 1780531200,
-      summary:
-        "Added the shared DDR forecast-readiness contract for readiness-gated locks with immutable public metadata.",
-      impact: [
-        "Introduces the readiness-72h-v1 forecast-readiness version and a strict early-lock threshold",
-        "Publishes row-level readiness components and reasons as forecast readiness, not a probability or confidence label",
-        "Adds optional/defaulted lock trigger, readiness, and 72h backstop metadata to the public contract while preserving legacy rows",
-        "Includes new immutable readiness metadata in public row hash payloads when present",
-      ],
-      commits: [],
-      reconstructed: false,
-    },
-    {
-      version: "2.0",
-      title: "Sticky Public Prediction Contract",
-      date: "2026-05-27",
-      effectiveAt: 1779897600,
-      summary:
-        "Replaced live DDR drift with DDRv2: one immutable public prediction or no-call at the 24h lock landmark, backed by manifest publication and append-only errata.",
-      impact: [
-        "Freezes one official public_prediction outcome per canonical incident key instead of recomputing public forecasts every run",
-        "Adds pending, lock-deferred, publication-retry, no-call, frozen, and invalidated public states with live facts separated from frozen prediction payloads",
-        "Anchors duration estimates to the lock timestamp and preserves frozen fields on stale responses while marking live overlays stale",
-        "Moves DDRR accountability to first-published sealed outcomes and explicit coverage states rather than mutable latest snapshots",
-      ],
-      commits: [],
-      reconstructed: false,
-    },
-    {
-      version: "1.1",
-      title: "Depeg Duration Resolver Reviewer",
-      date: "2026-05-25",
-      effectiveAt: 1779733800,
-      summary:
-        "Added the Depeg Duration Resolver Reviewer (DDRR), the audit layer that scores stored DDR assessments against later canonical depeg-event outcomes.",
-      impact: [
-        "Stores quarter-hourly DDR assessment checkpoints and reviews the first checkpoint for each event under the current methodology",
-        "Publishes recovery-likelihood accuracy and average observed-minus-DDR recovery-duration error on /depeg/ and GET /api/depeg-resolver-review",
-        "Keeps pending, insufficient-signal, and data-issue rows visible while excluding them from scored headline accuracy",
-        "Removes terminal-lifecycle assets from live DDR readouts while DDRR scores their stored predictions as terminal outcomes",
-      ],
-      commits: [],
-      reconstructed: false,
-    },
-    {
-      version: "1.0",
-      title: "Initial Depeg Duration Resolver",
-      date: "2026-05-25",
-      effectiveAt: 1779667200,
-      summary:
-        "Launched the two-stage Depeg Duration Resolver: a mechanistic Resolution Outlook (terminal vs recoverable) and a stratified empirical duration estimate over recovered historical incidents.",
-      impact: [
-        "Stage 1 emits an ordinal verdict (recovery_likely / at_risk / recovery_unlikely / insufficient_signal) from kill signals and recovery anchors over structural metadata and the live depeg fingerprint",
-        "Stage 2 emits a depth/direction/structural-class stratified landmark estimate with per-horizon (6h/24h/7d/30d) resolution likelihood, support-gated and Wilson-bounded",
-        "Verdicts are calibrated domain reads, not fitted probabilities; audit-verdict gating is not used because event provenance is unpopulated",
-      ],
-      commits: [],
-      reconstructed: false,
-    },
+    ...DEPEG_RESOLVER_V3,
+    ...DEPEG_RESOLVER_V2,
+    ...DEPEG_RESOLVER_V1,
   ],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");

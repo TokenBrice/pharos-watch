@@ -1,11 +1,12 @@
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/blacklist-tracker-changelog/",
+  path: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Blacklist Tracker Changelog — Version History",
   metadataDescription:
     `Full version history of the Pharos Blacklist Tracker methodology, from v1.0 through ${BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}. Every event-coverage, cursor, and enrichment revision documented.`,

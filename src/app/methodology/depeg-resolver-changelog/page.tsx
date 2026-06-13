@@ -1,11 +1,12 @@
 import {
   DDR_METHODOLOGY_CHANGELOG,
+  DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/depeg-resolver-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/depeg-resolver-changelog/",
+  path: DDR_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Depeg Duration Resolver Changelog — Version History",
   metadataDescription:
     `Full version history of the Pharos Depeg Duration Resolver methodology, from v1.0 through ${DDR_METHODOLOGY_VERSION_LABEL}. Every resolution-rubric, stratification, and support-gate revision documented.`,

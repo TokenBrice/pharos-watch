@@ -53,5 +53,5 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ## Notes
 
-- Canonical machine-readable source: `shared/lib/chains/health-version.ts` (re-exported by `shared/lib/chain-health-version.ts`)
+- Canonical machine-readable source: `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/chain-health-version.ts` and `shared/lib/chains/health-version.ts`)
 - Current runtime weights and factor helpers live in `shared/lib/chains/health.ts` and are re-exported by `shared/lib/chain-health.ts`

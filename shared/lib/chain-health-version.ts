@@ -1,1 +1,1 @@
-export * from "./chains/health-version";
+export * from "./methodology-versions/chain-health";

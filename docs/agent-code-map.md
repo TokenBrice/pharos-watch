@@ -342,7 +342,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chain-health.ts`
 - `shared/lib/chains/aggregator.ts` - ChainAggregatorAsset, ChainAggregatorInput, aggregateChains
 - `shared/lib/chains/circulating.ts` - ChainCirculatingPoint, RawChainCirculating, canonicalizeChainCirculating, findCanonicalChainData
-- `shared/lib/chains/health-version.ts` - CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, getChainHealthMethodologyVersionAt
+- `shared/lib/chains/health-version.ts`
 - `shared/lib/chains/health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT
 - `shared/lib/chains/index.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_META, CHAIN_RESILIENCE_TIER
 - `shared/lib/chains/l2beat-audit.ts` - L2BeatAliasIntegrityIssue, L2BeatAliasIntegrityIssueKind, L2BeatBridgeRouteReviewAudit, L2BeatBridgeRouteReviewReason, L2BeatBridgeRouteReviewRow, L2BeatChainCoverageAudit
@@ -375,7 +375,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
 - `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
-- ... 247 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 248 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 

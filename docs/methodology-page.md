@@ -41,7 +41,7 @@
 | Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/depeg-resolver-version.ts`                                                                                                                                          |
 | Contagion Test        | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/chain-health-version.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and L2BEAT-first chain environment (stage/risk snapshot for matched scaling projects, Pharos resilience-tier fallback when unmatched). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
+| Chain Health Score    | `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/chain-health-version.ts`) — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and L2BEAT-first chain environment (stage/risk snapshot for matched scaling projects, Pharos resilience-tier fallback when unmatched). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
 
 ---
 
@@ -153,6 +153,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 
 ## Changelog
 
+- **v3.14** (2026-06-13): Updated Chain Health source mapping to the canonical `shared/lib/methodology-versions/chain-health.ts` module while documenting the preserved compatibility re-exports.
 - **v3.13** (2026-06-11): Added the Mint Authority Score section, source mapping, update contract, and methodology-context references for the standalone v1.0 score.
 - **v3.12** (2026-05-15): Documented the new `#blacklist-tracker`, `#bluechip`, and `#proof-of-reserves` methodology-context sub-anchors used by the May 2026 detail-page work, plus the surfacing fields (`oneLiner`, `mechanismArchetype`, `attestorTier`, `cadence`) now carried on `StablecoinMeta`.
 - **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.

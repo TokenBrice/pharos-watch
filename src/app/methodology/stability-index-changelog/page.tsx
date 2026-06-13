@@ -1,11 +1,12 @@
 import {
   PSI_METHODOLOGY_CHANGELOG,
+  PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
 import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
 const route = createStandardMethodologyChangelogRoute({
-  path: "/methodology/stability-index-changelog/",
+  path: PSI_METHODOLOGY_CHANGELOG_PATH,
   metadataTitle: "Stability Index Changelog — Version History",
   metadataDescription:
     `Full version history of the Pharos Stability Index methodology, from v1.0 through ${PSI_METHODOLOGY_VERSION_LABEL}. Every formula, cap, and component revision documented.`,

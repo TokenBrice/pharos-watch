@@ -1,4 +1,8 @@
-import { type MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+import {
+  formatMethodologyDisplayDate,
+  toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
+} from "@shared/lib/methodology-version";
 
 export type { MethodologyChangelogEntry };
 
@@ -19,12 +23,7 @@ export function MethodologyVersionCard({
   entryId?: string;
   defaultOpen?: boolean;
 }) {
-  const dateLabel = new Date(`${entry.date}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const dateLabel = formatMethodologyDisplayDate(entry.date);
 
   return (
     <details
@@ -36,7 +35,7 @@ export function MethodologyVersionCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Pill>{`v${entry.version}`}</Pill>
+              <Pill>{toMethodologyVersionLabel(entry.version)}</Pill>
               <Pill>{dateLabel}</Pill>
               {entry.reconstructed && <Pill>Reconstructed</Pill>}
             </div>
