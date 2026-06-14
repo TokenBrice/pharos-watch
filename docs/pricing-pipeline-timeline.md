@@ -1,10 +1,19 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.15` (2026-02-01 -> 2026-06-07).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.16` (2026-02-01 -> 2026-06-14).
 
 ---
 
 > Older entries are archived in [pricing-pipeline-timeline-archive.md](./pricing-pipeline-timeline-archive.md); this file keeps the 10 most recent.
+
+## v6.16 - DEX pool replacement price validation (June 14, 2026)
+
+- Pool-challenge protocol medians must now pass the same peg-aware DEX observation validation used by DEX liquidity before they can downgrade or replace a primary price
+- Inverse or otherwise implausible commodity pool marks are ignored before pool-challenge divergence and replacement checks
+- `pool-tvl-weighted` can still publish corroborated DEX replacements when the protocol medians are plausible for the asset's peg and denomination
+- Commodity tokens such as one-ounce gold assets can no longer be published at near-zero inverse prices from malformed challenger rows
+
+---
 
 ## v6.15 - DexScreener liquidity breaker isolation (June 7, 2026)
 
@@ -84,9 +93,3 @@ Internal changelog reconstructed from the machine-readable methodology version s
 - CADD and the Mento JPY/ZAR/XOF stables can repair DefiLlama zero-supply rows from verified deployments and current FX references when DL chart history is absent or below the tracked repair floor
 
 ---
-
-## v6.06 - DexScreener symbol-search retirement (May 22, 2026)
-
-- The last-resort DexScreener symbol-search fallback no longer calls `/latest/dex/search`
-- Production probes showed Worker-side upstream refusals while the lane resolved zero prices in recent stablecoin sync runs
-- DexScreener exact-address fallback remains available through `dexscreener-prices`; addressless assets without another usable fallback remain explicitly missing

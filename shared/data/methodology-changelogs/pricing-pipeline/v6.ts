@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.16",
+      title: "DEX pool replacement price validation",
+      date: "2026-06-14",
+      effectiveAt: 1781465182,
+      summary:
+        "Pool-challenge protocol medians must now pass the same peg-aware DEX observation validation used by DEX liquidity before they can downgrade or replace a primary price.",
+      impact: [
+        "Inverse or otherwise implausible commodity pool marks are ignored before pool-challenge divergence and replacement checks",
+        "`pool-tvl-weighted` can still publish corroborated DEX replacements when the protocol medians are plausible for the asset's peg and denomination",
+        "Commodity tokens such as one-ounce gold assets can no longer be published at near-zero inverse prices from malformed challenger rows",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.15",
       title: "DexScreener liquidity breaker isolation",
       date: "2026-06-07",

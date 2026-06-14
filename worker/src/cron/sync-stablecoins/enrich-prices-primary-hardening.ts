@@ -5,6 +5,7 @@ import type { PriceValidationContext, PriceValidationReferences } from "../../li
 import {
   buildPriceValidationContext,
   isSevereFixedPegDownside,
+  validatePriceCandidate,
 } from "../../lib/price-validation";
 import {
   DEX_FRESHNESS_SEC,
@@ -116,33 +117,43 @@ export function applyPoolChallenge(
     );
     if (protocolGroups.length === 0) continue;
 
+    const validationContext = validationContexts?.get(assetId);
     const pegType = assetPegTypes.get(assetId);
+    const challengeContext =
+      validationContext ??
+      buildPriceValidationContext({ stablecoinId: assetId, pegType });
+    const challengeableProtocolGroups = filterChallengeableProtocolGroups(
+      protocolGroups,
+      challengeContext,
+      references,
+    );
+    if (challengeableProtocolGroups.length === 0) continue;
+
     const poolChallengeBps = pegType === "peggedUSD"
       ? 500
       : Math.min(getDepegThresholdBps(pegType) * 2, 500);
-    const validationContext = validationContexts?.get(assetId);
     const preserveCorroboratedSevereDownside = hasCorroboratedSevereDownsideCandidate(
       assetId,
       result,
       pegType,
       references,
-      validationContext,
+      challengeContext,
     );
 
     // Evaluate divergence from one protocol-level price, not from any single pool.
     // A rogue pool inside an otherwise agreeing protocol should not count as
     // independent corroboration for replacing the published price.
-    const divergingProtocolGroups = protocolGroups.filter((group) => {
+    const divergingProtocolGroups = challengeableProtocolGroups.filter((group) => {
       return pricePairDivergenceBps(result.price, group.price) >= poolChallengeBps;
     });
     const replacementProtocolGroups = selectReplacementProtocolGroups({
       result,
-      protocolGroups,
+      protocolGroups: challengeableProtocolGroups,
       divergingProtocolGroups,
       pegType,
       poolChallengeBps,
       references,
-      validationContext,
+      validationContext: challengeContext,
     });
 
     if (divergingProtocolGroups.length > 0 || replacementProtocolGroups.length > 0) {
@@ -191,6 +202,16 @@ export function applyPoolChallenge(
   return downgrades;
 }
 
+function filterChallengeableProtocolGroups(
+  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>,
+  validationContext: PriceValidationContext,
+  references?: PriceValidationReferences,
+): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+  return protocolGroups.filter((group) => (
+    validatePriceCandidate(group.price, validationContext, "dex_observation", references).accepted
+  ));
+}
+
 function selectReplacementProtocolGroups(params: {
   result: PrimaryPriceResult;
   protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
@@ -198,16 +219,13 @@ function selectReplacementProtocolGroups(params: {
   pegType: string | undefined;
   poolChallengeBps: number;
   references?: PriceValidationReferences;
-  validationContext?: PriceValidationContext;
+  validationContext: PriceValidationContext;
 }): Array<{ price: number; tvl: number; observedAt?: number | null }> {
   if (params.divergingProtocolGroups.length >= 2) {
     return params.divergingProtocolGroups;
   }
 
-  const context =
-    params.validationContext ??
-    buildPriceValidationContext({ pegType: params.pegType });
-  const pegRef = getCurrentPegReference(context, params.references);
+  const pegRef = getCurrentPegReference(params.validationContext, params.references);
   if (pegRef == null) return [];
 
   const depegThresholdBps = getDepegThresholdBps(params.pegType);

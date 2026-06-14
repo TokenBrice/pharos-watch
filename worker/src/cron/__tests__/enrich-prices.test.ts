@@ -17,6 +17,7 @@ import { runCmcPass, runDexScreenerPass, runDlContractPasses, runJupiterPass } f
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 const staleObservedAtSec = () => Math.floor(Date.now() / 1000) - (2 * 3600);
@@ -3340,8 +3341,8 @@ describe("applyPoolChallenge", () => {
     ]);
     const pools = new Map([
       ["xusd-test", [
-        { price: 0.006, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
-        { price: 0.005, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
+        { price: 0.80, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
       ]],
     ]);
     const pegTypes = new Map<string, string | undefined>([["xusd-test", "peggedUSD"]]);
@@ -3567,6 +3568,61 @@ describe("applyPoolChallenge", () => {
 
     expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
     expect(results.get("dusd-test")!.price).toBeCloseTo(0.81, 6);
+  });
+
+  it("ignores inverse commodity protocol medians before pool challenge replacement", () => {
+    const assetId = "xaum-matrixdock";
+    const results = new Map<string, PrimaryPriceResult>([
+      [assetId, {
+        price: 4_170,
+        source: "coingecko",
+        confidence: "single-source",
+        dlPrice: null,
+        cgPrice: 4_170,
+        candidateSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+      }],
+    ]);
+    const pools = new Map([
+      [assetId, [
+        { price: 1 / 4_229, tvlUsd: 800_000, protocol: "curve", chain: "ethereum" },
+        { price: 1 / 4_180, tvlUsd: 600_000, protocol: "balancer", chain: "ethereum" },
+        { price: 4_229, tvlUsd: 399_000, protocol: "uniswap-v3", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([[assetId, "peggedGOLD"]]);
+    const references: PriceValidationReferences = {
+      rates: { peggedGOLD: 4_220 },
+      type: "fresh",
+      updatedAt: Math.floor(Date.now() / 1000),
+    };
+    const validationContext: PriceValidationContext = {
+      stablecoinId: assetId,
+      pegCurrency: "GOLD",
+      pegType: "peggedGOLD",
+      pegClass: "commodity",
+      navToken: false,
+      commodityOunces: 1,
+      tracked: true,
+    };
+    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 };
+
+    const downgrades = applyPoolChallenge(
+      results,
+      pools,
+      pegTypes,
+      stats,
+      references,
+      undefined,
+      new Map([[assetId, validationContext]]),
+    );
+
+    expect(downgrades).toBe(0);
+    expect(results.get(assetId)!.price).toBe(4_170);
+    expect(results.get(assetId)!.source).toBe("coingecko");
+    expect(results.get(assetId)!.confidence).toBe("single-source");
+    expect(stats.singleSource).toBe(1);
+    expect(stats.low).toBe(0);
   });
 
   it("preserves corroborated severe downside even when multiple DEX protocols diverge upward", () => {

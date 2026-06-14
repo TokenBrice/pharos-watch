@@ -4,6 +4,14 @@ Older entries moved from [pricing-pipeline-timeline.md](./pricing-pipeline-timel
 
 ---
 
+## v6.06 - DexScreener symbol-search retirement (May 22, 2026)
+
+- The last-resort DexScreener symbol-search fallback no longer calls `/latest/dex/search`
+- Production probes showed Worker-side upstream refusals while the lane resolved zero prices in recent stablecoin sync runs
+- DexScreener exact-address fallback remains available through `dexscreener-prices`; addressless assets without another usable fallback remain explicitly missing
+
+---
+
 ## v6.05 - DexScreener address breaker hardening (May 20, 2026)
 
 - DexScreener exact-address primary augmentation is now explicit opt-in through `ADDRESS_PRICE_PROVIDERS_ENABLED`
