@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { decodeUint256AtSlot } from "../evm-logs";
 import {
   buildMintBurnScope,
   collectMintBurnBridgeValidationErrors,
@@ -11,53 +10,45 @@ import {
   validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
 
-const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const MINT_BURN_ADDRESS_OVERRIDES = new Set([
-  "0x4691c475be804fa85f91c2d6d0adf03114de3093",
-  "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e",
-]);
 const REMOVED_STABLECOIN_IDS = [
   "253",
   "uscc-legacy",
 ] as const;
 
 describe("mint-burn-contracts reUSD config", () => {
-  it("uses 18 decimals for reUSD Deposited mint events", () => {
-    const reusdDepositConfigs = MINT_BURN_CONFIGS.filter(
-      (c) =>
-        c.symbol === "reUSD" &&
-        c.events.some((e) => e.topicHash === REUSD_DEPOSITED_TOPIC && e.direction === "mint"),
-    );
+  it("tracks canonical reUSD token zero-address Transfers instead of vault collateral events", () => {
+    const configs = getMintBurnConfigsForStablecoin("reusd-re-protocol");
+    expect(configs).toHaveLength(1);
 
-    expect(reusdDepositConfigs.length).toBeGreaterThan(0);
-    for (const cfg of reusdDepositConfigs) {
-      expect(cfg.decimals).toBe(18);
-
-      const depositEvent = cfg.events.find((e) => e.topicHash === REUSD_DEPOSITED_TOPIC);
-      expect(depositEvent?.amountEncoding).toBe("nth-data-uint256");
-      expect(depositEvent?.dataSlot).toBe(2);
-    }
-  });
-
-  it("decodes known reUSD Deposited payload to 10 tokens (not 10T)", () => {
-    const cfg = MINT_BURN_CONFIGS.find(
-      (c) =>
-        c.symbol === "reUSD" &&
-        c.chain.chainId === "ethereum" &&
-        c.events.some((e) => e.topicHash === REUSD_DEPOSITED_TOPIC && e.direction === "mint"),
-    );
-    expect(cfg).toBeDefined();
-
-    // ETH tx 0xca639a80db00f29bedb9c36fd40f913cae7bbd1f66c1731848610c365e1040cc
-    // Deposited(user, token, amount) with amount slot = 10e18.
-    const data =
-      "0x000000000000000000000000b6dcd6e755cc55b8d230be8290742b78fadc4a17" +
-      "00000000000000000000000057f5e098cad7a3d1eed53991d4d66c45c9af7812" +
-      "0000000000000000000000000000000000000000000000008ac7230489e80000";
-
-    expect(decodeUint256AtSlot(data, 2, cfg!.decimals)).toBe(10);
+    const cfg = configs[0]!;
+    expect(cfg).toMatchObject({
+      chain: { chainId: "ethereum" },
+      symbol: "reUSD",
+      contractAddress: "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      decimals: 18,
+      dustThreshold: 10_000,
+      startBlock: 21_675_000,
+      tier: "extended",
+      adapterKind: "transfer-zero-address",
+    });
+    expect(cfg.events).toEqual([
+      {
+        signature: "Transfer(address,address,uint256)",
+        topicHash: TRANSFER_TOPIC,
+        direction: "mint",
+        amountEncoding: "transfer-value",
+        filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED },
+      },
+      {
+        signature: "Transfer(address,address,uint256)",
+        topicHash: TRANSFER_TOPIC,
+        direction: "burn",
+        amountEncoding: "transfer-value",
+        filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED },
+      },
+    ]);
   });
 });
 
@@ -132,10 +123,9 @@ describe("mint-burn-contracts shared metadata alignment", () => {
       );
       if (matchingDeployment) continue;
 
-      expect(
-        MINT_BURN_ADDRESS_OVERRIDES.has(config.contractAddress.toLowerCase()),
-        `expected ${config.stablecoinId} ${config.contractAddress} to be declared in shared metadata or allowlisted override`,
-      ).toBe(true);
+      throw new Error(
+        `expected ${config.stablecoinId} ${config.contractAddress} to be declared in shared metadata`,
+      );
     }
   });
 });

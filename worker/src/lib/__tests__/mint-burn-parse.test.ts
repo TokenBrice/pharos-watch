@@ -60,7 +60,11 @@ describe("parseMintBurnLogs — custom event encodings", () => {
   });
 
   // 0x14e0001 = 21,889,025
-  const blockTimestamps = new Map([[21_889_025, 1700000000]]);
+  const blockTimestamps = new Map([
+    [21_889_025, 1700000000],
+    [24_540_392, 1740578939],
+    [25_193_105, 1748509227],
+  ]);
   const prices = new Map([["usdt-tether", 1.0]]);
   const priceHistory = new Map<string, []>();
   const runTimestamp = 1700000100;
@@ -144,58 +148,60 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(rows[0].counterparty).toBeNull();
   });
 
-  // --- reUSD custom event parsing ---
+  // --- reUSD token Transfer parsing ---
 
-  const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
-  const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc0af66837a83c3560ec6220";
+  const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const REUSD_TOKEN_ADDRESS = "0x5086bf358635b81d8c47c66d1c8b9e567db70c72";
+  const REUSD_USER = "0x0000000000000000000000003f0bf2350a9d2c0e976ca0749d13b732202468a6";
 
-  const reusdDepositEventDef: MintBurnEventDef = {
-    signature: "Deposited(address,address,uint256)",
-    topicHash: REUSD_DEPOSITED_TOPIC,
+  const reusdTransferMintEventDef: MintBurnEventDef = {
+    signature: "Transfer(address,address,uint256)",
+    topicHash: TRANSFER_TOPIC,
     direction: "mint" as const,
-    amountEncoding: "nth-data-uint256" as const,
-    dataSlot: 2,
+    amountEncoding: "transfer-value" as const,
+    filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED },
   };
 
-  const reusdRedeemEventDef: MintBurnEventDef = {
-    signature: "InstantRedemptionProcessed(address,uint256,uint256)",
-    topicHash: REUSD_INSTANT_REDEEM_TOPIC,
+  const reusdTransferBurnEventDef: MintBurnEventDef = {
+    signature: "Transfer(address,address,uint256)",
+    topicHash: TRANSFER_TOPIC,
     direction: "burn" as const,
-    amountEncoding: "first-data-uint256" as const,
+    amountEncoding: "transfer-value" as const,
+    filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED },
   };
 
-  // 50,000 reUSD (18 decimals) = 50_000 * 10^18
-  const DEPOSITOR_SLOT = "0000000000000000000000001111111111111111111111111111111111111111";
-  const RECEIVER_SLOT  = "0000000000000000000000002222222222222222222222222222222222222222";
-  const AMOUNT_50K_18DEC = BigInt("50000000000000000000000").toString(16).padStart(64, "0");
-  const REUSD_DEPOSIT_DATA = "0x" + DEPOSITOR_SLOT + RECEIVER_SLOT + AMOUNT_50K_18DEC;
-
-  const REUSD_VAULT_ADDRESS = "0x4691c475be804fa85f91c2d6d0adf03114de3093";
-
-  const makeReusdConfig = (eventDef: MintBurnEventDef, address: string): MintBurnContractConfig => ({
+  const makeReusdConfig = (
+    eventDef: MintBurnEventDef,
+    overrides: Partial<Pick<MintBurnContractConfig, "dustThreshold">> = {},
+  ): MintBurnContractConfig => ({
     stablecoinId: "reusd-re-protocol",
     symbol: "reUSD",
     chain: ETHEREUM_CHAIN,
-    contractAddress: address,
+    contractAddress: REUSD_TOKEN_ADDRESS,
     decimals: 18,
-    dustThreshold: 10_000,
+    dustThreshold: overrides.dustThreshold ?? 10_000,
     startBlock: 21_675_000,
-    adapterKind: "custom-events",
+    adapterKind: "transfer-zero-address",
     startBlockSource: "reviewed-contract-specific",
     startBlockConfidence: "high",
     tier: "extended",
     events: [eventDef],
   });
 
-  it("parses reUSD Deposited event with dataSlot=2 as mint", () => {
-    const config = makeReusdConfig(reusdDepositEventDef, REUSD_VAULT_ADDRESS);
+  it("parses issue #143 reUSD USDC deposit from the token Transfer mint amount", () => {
+    const config = makeReusdConfig(reusdTransferMintEventDef);
     const log: AlchemyLogEntry = {
-      address: REUSD_VAULT_ADDRESS,
-      topics: [REUSD_DEPOSITED_TOPIC],
-      data: REUSD_DEPOSIT_DATA,
-      blockNumber: "0x14e0001",
-      logIndex: "0x3",
-      transactionHash: "0xreusd10000000000000000000000000000000000000000000000000000000001",
+      address: REUSD_TOKEN_ADDRESS,
+      topics: [
+        TRANSFER_TOPIC,
+        ZERO_ADDRESS_PADDED,
+        REUSD_USER,
+      ],
+      data: "0x0000000000000000000000000000000000000000000005a4174ed7b223a2d5b9",
+      blockNumber: "0x1806a91",
+      logIndex: "0x17e",
+      transactionHash: "0xef6c0033ae6d3af5acd3f7a84b9903d087e317ff8d2b528a196fbe068644bf63",
       blockHash: "0x0",
       transactionIndex: "0x0",
       removed: false,
@@ -203,7 +209,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
 
     const { rows, dropped } = parseMintBurnLogs(
       config,
-      reusdDepositEventDef,
+      reusdTransferMintEventDef,
       [log],
       blockTimestamps,
       new Map([["reusd-re-protocol", 1.0]]),
@@ -213,27 +219,26 @@ describe("parseMintBurnLogs — custom event encodings", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].direction).toBe("mint");
-    expect(rows[0].amount).toBe(50_000);
-    expect(rows[0].amount_usd).toBe(50_000);
+    expect(rows[0].amount).toBeCloseTo(26_638.777959, 6);
+    expect(rows[0].amount_usd).toBeCloseTo(26_638.777959, 6);
     expect(rows[0].stablecoin_id).toBe("reusd-re-protocol");
+    expect(rows[0].counterparty).toBe("0x3f0bf2350a9d2c0e976ca0749d13b732202468a6");
     expect(dropped).toBe(0);
   });
 
-  it("parses reUSD InstantRedemptionProcessed as burn from slot 0", () => {
-    const REDEEM_VAULT = "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e";
-    const config = makeReusdConfig(reusdRedeemEventDef, REDEEM_VAULT);
-
-    const SHARES_25K = BigInt("25000000000000000000000").toString(16).padStart(64, "0");
-    const PAYOUT_SLOT = "0".repeat(64);
-    const redeemData = "0x" + SHARES_25K + PAYOUT_SLOT;
-
+  it("parses reUSD redemption burns from the token Transfer burn amount", () => {
+    const config = makeReusdConfig(reusdTransferBurnEventDef, { dustThreshold: 1 });
     const log: AlchemyLogEntry = {
-      address: REDEEM_VAULT,
-      topics: [REUSD_INSTANT_REDEEM_TOPIC],
-      data: redeemData,
-      blockNumber: "0x14e0001",
-      logIndex: "0x7",
-      transactionHash: "0xreusd20000000000000000000000000000000000000000000000000000000002",
+      address: REUSD_TOKEN_ADDRESS,
+      topics: [
+        TRANSFER_TOPIC,
+        "0x000000000000000000000000a31deebb3680a3007120e74bcbdf4df36f042a40",
+        ZERO_ADDRESS_PADDED,
+      ],
+      data: "0x0000000000000000000000000000000000000000000001fe0d9b83ef66d20000",
+      blockNumber: "0x17674e8",
+      logIndex: "0x1",
+      transactionHash: "0x831367d37ebb2bd3bf41a1152124a493c309b1f092ce161da578d635b49d23e8",
       blockHash: "0x0",
       transactionIndex: "0x0",
       removed: false,
@@ -241,7 +246,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
 
     const { rows, dropped } = parseMintBurnLogs(
       config,
-      reusdRedeemEventDef,
+      reusdTransferBurnEventDef,
       [log],
       blockTimestamps,
       new Map([["reusd-re-protocol", 1.0]]),
@@ -251,39 +256,10 @@ describe("parseMintBurnLogs — custom event encodings", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].direction).toBe("burn");
-    expect(rows[0].amount).toBe(25_000);
+    expect(rows[0].amount).toBeCloseTo(9_408.82, 6);
     expect(rows[0].burn_type).toBe("effective_burn");
+    expect(rows[0].counterparty).toBe("0xa31deebb3680a3007120e74bcbdf4df36f042a40");
     expect(dropped).toBe(0);
-  });
-
-  it("drops event when dataSlot points beyond available data", () => {
-    const config = makeReusdConfig(reusdDepositEventDef, REUSD_VAULT_ADDRESS);
-    // Only 2 slots of data (128 hex chars) — slot 2 is missing
-    const shortData = "0x" + DEPOSITOR_SLOT + RECEIVER_SLOT;
-    const log: AlchemyLogEntry = {
-      address: REUSD_VAULT_ADDRESS,
-      topics: [REUSD_DEPOSITED_TOPIC],
-      data: shortData,
-      blockNumber: "0x14e0001",
-      logIndex: "0x4",
-      transactionHash: "0xreusd30000000000000000000000000000000000000000000000000000000003",
-      blockHash: "0x0",
-      transactionIndex: "0x0",
-      removed: false,
-    };
-
-    const { rows, dropped } = parseMintBurnLogs(
-      config,
-      reusdDepositEventDef,
-      [log],
-      blockTimestamps,
-      new Map([["reusd-re-protocol", 1.0]]),
-      priceHistory,
-      runTimestamp,
-    );
-
-    expect(rows).toHaveLength(0);
-    expect(dropped).toBe(1);
   });
 });
 

@@ -197,7 +197,7 @@ Events are also classified by `flow_type` (`standard`, `bridge_transfer`, or `at
 | `Issue(uint256)` | `0xcb8241ad...` | `first-data-uint256` |
 | `Redeem(uint256)` | `0x702d5967...` | `first-data-uint256` |
 
-**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 18-decimal amount), and burns from `InstantRedemptionRouted(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
+**reUSD special handling:** Re Protocol reUSD is tracked from the reUSD token's canonical zero-address `Transfer` events. Earlier vault-event parsing used `Deposited(address,address,uint256)`, but that event reports deposited collateral units; USDC/USDT deposits therefore decode as 6-decimal collateral amounts instead of 18-decimal reUSD shares and can fall below the dust threshold. The token `Transfer(from=0x0)` / `Transfer(to=0x0)` logs are the canonical mint/burn amount source, and they also avoid double-counting instant redemptions that emit both a token burn and a route-level redemption event.
 
 **Custom counterparty encoding.** For events whose relevant address is not in a standard topic slot, `MintBurnEventDef` now exposes an optional `counterpartyEncoding` override:
 
