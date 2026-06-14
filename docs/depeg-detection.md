@@ -361,6 +361,21 @@ interface DepegEvent {
   source: "live" | "backfill"
   confirmationSources: string | null
   pendingReason: string | null
+  provenance?: {
+    sourceKind?: string | null
+    replayRunId?: string | null
+    replayVersion?: string | null
+    sourcePriceProviders?: string[] | null
+    quoteMode?: string | null
+    pegReferenceSource?: string | null
+    supplySource?: string | null
+    confirmationPolicy?: string | null
+    confirmationPointCount?: number | null
+    confidenceTier?: string | null
+    auditVerdict?: string | null
+    pegScoreEligible?: boolean | null
+    updatedAt?: number | null
+  } | null
 }
 ```
 

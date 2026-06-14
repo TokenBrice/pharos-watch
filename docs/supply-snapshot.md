@@ -26,15 +26,15 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 373 entries: 371 active tracked + 2 shadow)
-5. Check the once-per-UTC-date guard before building write statements:
-   - read cache key `snapshot-supply:last-write`
-   - if the marker's stored `snapshotDate` equals today's UTC date, skip with `reason: "already_written_today"` (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
-6. Floor current date/time to UTC midnight:
+5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
    );
    ```
+6. Check the once-per-UTC-date guard before building write statements:
+   - read cache key `snapshot-supply:last-write`
+   - if the marker's stored `snapshotDate` equals today's `snapshotDate`, skip with `reason: "already_written_today"` (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
 7. For each PSI-eligible cached asset:
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
@@ -139,7 +139,7 @@ Configured protocol-inventory exclusions also participate in admin historical re
 **File:** `shared/lib/supply.ts`
 
 ```typescript
-export function sumPegBuckets(obj: Record<string, number> | undefined): number {
+export function sumPegBuckets(obj: Record<string, number> | null | undefined): number {
   if (!obj) return 0;
   return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
 }
@@ -214,9 +214,9 @@ The handler explicitly supports `detailProvider === "coingecko"` and `detailProv
 **File:** `src/hooks/use-stablecoins.ts`
 
 - Fetches `/api/supply-history?stablecoin=<id>&days=<days>`
-- Validates the response with `SupplyHistoryResponseSchema` from `@shared/types`
+- Returns the response typed as `SupplyHistoryPoint[]`; the runtime query registry used by this hook attaches no Zod schema, so the payload is not runtime-validated in this path
 - Returns normalized `{ date, circulatingUsd, price }` points directly; there is no detail-endpoint transform in the hook anymore
-- TanStack Query: `staleTime = 1 hour`, `refetchInterval = 2 hours`
+- TanStack Query: `staleTime = 24 hours`, `refetchInterval = 48 hours` (derived from the daily `CRON_24H` producer interval)
 
 ### McapChart
 
@@ -262,7 +262,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data
 5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
 6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
-7. The write path is intentionally throttled by a 20-hour cooldown cache key (one snapshot per UTC day) even though the cron is chained to the 15-minute lane
+7. The write path is intentionally guarded by a once-per-UTC-date equality check on the `snapshot-supply:last-write` marker (the first healthy run after UTC midnight writes the single daily snapshot) even though the cron is chained to the 15-minute lane
 8. `supply_history` is kept as an archive for downstream historical replays such as PSI backfills; recover older gaps with the admin backfill when needed
 
 ---

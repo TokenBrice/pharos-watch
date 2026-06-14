@@ -80,7 +80,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 ### TronGrid API
 
 - **Base URL:** `https://api.trongrid.io/v1/`
-- **Events:** `/contracts/{address}/events?event_name={name}&limit=200&order_by=block_timestamp,desc`
+- **Events:** `/contracts/{address}/events?event_name={name}&limit=200&order_by=block_timestamp,asc`
 - **Current balances:** `/accounts/{address}` (Pharos converts stored Tron hex addresses to base58 for this path)
 - **Optional auth:** `TRON-PRO-API-KEY` header
 
@@ -219,7 +219,7 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 | AUSD | Arbitrum, Base | `AccountFrozen(address)`, `AccountUnfrozen(address)` | Indexed address |
 | MNEE | Ethereum | `AccountFrozen(address)`, `AccountUnfrozen(address)`, `FundsConfiscated(address,uint256,address)`, `HoldingsBurnt(address,uint256)` | Confiscation/burn amounts are indexed in `topics[2]`; AccountBlacklisted/AccountDelisted intentionally deferred |
 | EURI | Ethereum, BSC | `Freeze(address,address)`, `Unfreeze(address,address)` | Dual-index account address; EUR-denominated USD conversion |
-| USDQ | Ethereum | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)` | USDT0/Hadron pattern |
+| USDQ | Ethereum, Polygon | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)` | USDT0/Hadron pattern |
 | USDO | Ethereum, Base | `AccountBanned(address)`, `AccountUnbanned(address)` | Indexed address |
 | USDX | Ethereum | `AddedBlacklist(address)`, `RemovedBlacklist(address)` | Non-indexed address in data |
 | AID | Ethereum, Arbitrum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address; Base remains deferred |
@@ -456,7 +456,7 @@ Seize(address indexed,address indexed,uint256,string)
   Amount: first 32 bytes of data
   hasAmount: true
 
-OmnibusSeize(address indexed,address,uint256,string,uint8)
+OmnibusSeize(address,address,uint256,string,uint8)
   Topic: 0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9
   Address: first 32-byte data slot
   Amount: second 32-byte data slot

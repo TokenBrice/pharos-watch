@@ -20,7 +20,7 @@
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`. Mint Authority Score currently uses a machine-readable changelog and the `/methodology/#mint-authority-score` anchor rather than a separate changelog route.
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
-- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` further splitting into `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
+- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v8.tsx`, `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` further splitting into `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
@@ -91,7 +91,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 For the safety-score changelog specifically, update both:
 
 1. `shared/lib/methodology-versions/safety-score-data.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
-2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables (with `content-v6.tsx` composing from `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
+2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v8.tsx`, `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables (with `content-v6.tsx` composing from `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
 
 ---
 

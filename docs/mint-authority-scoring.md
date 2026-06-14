@@ -13,7 +13,7 @@
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied as the final Decentralization stage after wrapper inheritance, chain infrastructure, and any reviewed CDP oracle setup; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
+Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied as the final Decentralization stage after wrapper inheritance, chain infrastructure, any reviewed CDP oracle setup, and reviewed bridge-route risk; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
 
 ## Inputs
 

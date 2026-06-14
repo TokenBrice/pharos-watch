@@ -654,6 +654,9 @@ CREATE TABLE yield_history (
   yield_type      TEXT,
   publication_generation_id TEXT,
   publication_state TEXT,
+  pys_at_publish    REAL,             -- PYS at publish time (v8.14, migration 0132)
+  safety_at_publish REAL,             -- safety score at publish time (v8.14, migration 0132)
+  variance_at_publish REAL,           -- APY30d variance at publish time (v8.14, migration 0132)
   PRIMARY KEY (stablecoin_id, source_key, recorded_at)
 );
 ```

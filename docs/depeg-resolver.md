@@ -107,8 +107,8 @@ Each anchor is rated `weak` or `strong`.
 The ordinal tiers are `recovery_likely` › `at_risk` › `recovery_unlikely`, plus the `insufficient_signal` escape hatch.
 
 ```
-if key inputs missing (no MA review, no usable supply history, or no live price)  → insufficient_signal
-else if any K severe, OR (>= 2 K elevated AND no strong R among R1, R2)           → recovery_unlikely
+if key inputs missing (no MA review, no usable supply history, or no live price), AND coin not frozen  → insufficient_signal
+else if coin is frozen (below-peg), OR any K severe, OR (>= 2 K elevated AND no strong R among R1, R2)  → recovery_unlikely
 else if no K elevated AND >= 2 strong R, including >= 1 of {R1, R2}                → recovery_likely
 else                                                                              → at_risk
 ```

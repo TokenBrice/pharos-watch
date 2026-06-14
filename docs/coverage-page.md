@@ -52,7 +52,7 @@ Status semantics are intentionally user-facing:
 - query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
 - `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Resolved`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
 - `Yield`: `Ranked`, `Gap`, or `Data n/a`
-- `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
+- `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Unknown`, `Disabled`, `Not Covered`, or `Data n/a`
 - `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
 - `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
 - `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`, with optional score-band breakdowns
@@ -120,7 +120,7 @@ Breakdowns are intentionally dense and should stay short:
 - DEX: `primary / mixed / fallback`
 - Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
 - Redemption: `heuristic / resolved / configured / impaired / issuer / psm / queue / collateral / stable / basket / data n/a`
-- Flows: `full / partial / lagging / bootstrapping / data n/a`
+- Flows: `full / partial / lagging / bootstrapping / unknown / data n/a`
 - Price: `tracked / price-only`
 - Freezable status: `live / yes / upstream / possible / no`
 - Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown / score-hardened / score-governed / score-managed / score-concentrated / score-exposed / score-nr`

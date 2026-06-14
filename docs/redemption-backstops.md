@@ -49,7 +49,7 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 
 Status semantics:
 
-- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`ceil(configured * 1%)`), or when current market evidence intentionally marks a route `impaired`
+- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`max(1, ceil(configured * 1%))`), or when current market evidence intentionally marks a route `impaired`
 - `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale or missing
 - `error` when zero routes resolve to a usable scored row because of route failures, cache misses, blocking unresolved states, or all configured routes missing capacity
 
@@ -347,7 +347,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 ## Frontend Consumers
 
-- `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_REGISTRY.redemptionBackstops` in `src/lib/api-query-registry.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
+- `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_RUNTIME_REGISTRY.redemptionBackstops` in `src/lib/api-query-runtime-registry.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
 - `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail

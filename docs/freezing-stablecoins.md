@@ -34,7 +34,7 @@ The script prints two artifacts:
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, then run `npm run prebuild` or `npm run check:generated-artifacts` to refresh/check the prevalidated registry, legacy redirect map, and client registry projections. Do not edit generated aggregates, prevalidated registry output, client registry output, redirect maps, or legacy category shells by hand.
 
-The schema enforces the invariant: `frozenAt` is required when `status === "frozen"`, and `obituary` is only allowed when `status === "frozen"`.
+The schema enforces the invariant: both `frozenAt` and `obituary` are required when `status === "frozen"`, and both fields are disallowed when `status` is anything else.
 
 ### 3. Remove from independent registries
 

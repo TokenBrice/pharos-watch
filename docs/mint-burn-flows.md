@@ -51,7 +51,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `dustThreshold` | 10,000 default (token-native); 10 for gold tokens | Events below this amount are discarded |
+| `dustThreshold` | 10,000 default (token-native); 10 for precious-metal tokens | Events below this amount are discarded |
 | `EVM_SAFETY_MARGIN_BLOCKS` | 75 | Safety margin when advancing sync state to chain head, derived as `ceil(900s indexing safety / 12s block time)` |
 | `DENOM_SCALE` | 0.3 | Pressure-shift denominator = 30% of baseline daily absolute flow |
 | `DENOM_FLOOR` | $1,000,000 | Minimum pressure-shift denominator |
@@ -168,7 +168,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | syrupUSDT | syrupusdt-maple | 6 | Extended | Transfer |
 | AID | aid-gaib | 18 | Extended | Transfer |
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
-| reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionRouted (2 configs, Ethereum) |
+| reUSD | reusd-re-protocol | 18 | Extended | Transfer (zero-address) |
 
 Public `/api/mint-burn-flows` and the daily digest collector now use the same **report-card-cache driven** FTQ classification. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is treated as unavailable instead of silently falling back to a hardcoded safe-haven list.
 
@@ -555,7 +555,7 @@ Each event row includes valuation provenance fields (`priceUsed`, `priceTimestam
 
 Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
-**Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
+**Cache:** `CACHE_PROFILES.producerBacked` (~5-min CDN edge freshness with a 5-min stale-while-revalidate window)
 
 ### POST /api/backfill-mint-burn-prices (admin)
 
