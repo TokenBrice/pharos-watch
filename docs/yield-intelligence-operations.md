@@ -34,6 +34,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Pendle`
   - `Yearn/Kong`
   - `Beefy`
+  - `Royco Dawn`
 - Optional RPC families use a 30 second family budget on the supplemental lane, a 10 second per-call timeout, two retries per URL, and alternating fallback/primary endpoint order across targets so one hot endpoint does not absorb the whole family burst:
   - `Compound V3`
   - `Aave V3`

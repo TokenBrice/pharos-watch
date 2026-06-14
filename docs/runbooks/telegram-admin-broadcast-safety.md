@@ -8,7 +8,7 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
 
 ## Preflight Checklist
 
-1. **Check backlog health.** `/api/status` -> `telegramBot.pendingDeliveries` should be low and decreasing. Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec > 1800`, `pendingNearTtlCount > 0`, `pendingDeliveryBacklog.expired > 0`, or `retryErrorClassCounts.rate_limit` dominates.
+1. **Check backlog health.** `/api/status` -> `telegramBot.pendingDeliveries` should be low and decreasing. Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec > 1800`, `crons["dispatch-telegram-alerts"].lastRun.metadata.pendingNearTtlCount > 0`, `pendingDeliveryBacklog.expired > 0`, or `retryErrorClassCounts.rate_limit` dominates.
 2. **Run a dry run.**
 
    ```bash
@@ -45,7 +45,7 @@ If the live request returns `409`, rerun the dry run, wait for backlog to drain,
 
 ## Post-Send Monitoring
 
-1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec`, `pendingNearTtlCount`, and `retryErrorClassCounts` for at least two five-minute runs.
+1. Watch `telegramBot.pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.estimatedDrainTimeSec`, `crons["dispatch-telegram-alerts"].lastRun.metadata.pendingNearTtlCount`, and `retryErrorClassCounts` for at least two five-minute runs.
 2. If rate limits appear, stop additional broadcasts and follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
 3. If pending age approaches 45 minutes, follow [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
 

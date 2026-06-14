@@ -2,14 +2,14 @@
 
 ## Symptom
 
-The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, or `/unsnooze`, or mutating `/settings` callbacks are being refused after a fresh `getChatMember` admin lookup fails closed across many groups.
+The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, or `/unsnooze` after a fresh `getChatMember` admin lookup fails closed across many groups. (Note: the soft toggle below only relaxes these gated commands. Mutating `/settings` inline callbacks are always hard-gated for non-admins regardless of the toggle, and require a separate code change to relax.)
 
 The gate's enforcement mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
 
 - **Hard (current code default):** non-admin invocations are refused; the dispatch does not run.
 - **Soft (emergency rollback):** non-admin invocations get the same warning copy but the command still runs.
 
-Both modes emit a `group_admin_denial` usage event in `telegram_usage_daily` with `outcome = "denied"` (hard) or `outcome = "warned"` (soft) so the rollback toggle is observable from the audit log.
+For gated commands, hard mode emits a `group_admin_denial` usage event in `telegram_usage_daily` with `outcome = "denied"`, and soft mode emits the same event with `outcome = "warned"`, so the rollback toggle is observable from the audit log. (Settings-callback denials always emit `outcome = "denied"` regardless of the toggle.)
 
 ## When to Flip to Soft
 

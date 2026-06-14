@@ -28,9 +28,9 @@ Detection signals:
    ```
 
    Check the returned payload for:
-   - `alert_snooze_until_ts > now` (user snoozed)
-   - `quiet_hours_enabled = 1` AND current UTC hour inside the window
-   - `consecutive_block_count >= 2` (subscriber auto-disabled after two 403s within 24h)
+   - `subscriber.snooze.active === true` (user snoozed; `subscriber.snooze.untilTs` is the expiry)
+   - `subscriber.quietHours.enabled === true` AND current UTC hour inside `subscriber.quietHours.startHourUtc`..`subscriber.quietHours.endHourUtc`
+   - subscriber auto-disabled after two 403s within 24h (the `consecutive_block_count >= 2` strike counter is internal to dispatch and not returned by this endpoint; check the D1 table directly with `SELECT consecutive_block_count FROM telegram_subscribers WHERE chat_id = ?`)
    - empty subscriptions / global flags all 0
 6. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`, especially if the secret was recently rotated.
 

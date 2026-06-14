@@ -11,7 +11,7 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## First checks
 
 1. **`sync-stablecoins` cron:** Admin page → Crons section. Is the cron healthy? Last successful run recent (< 2× expected interval)?
-2. **Data-quality signal:** `/admin` → Overview → Blockers. `missing_prices_degraded` or `missing_prices_stale` usually accompanies a degraded cache.
+2. **Data-quality signal:** `/admin` → Triage → Blockers. `missing_prices_degraded` or `missing_prices_stale` usually accompanies a degraded cache.
 3. **Pricing provider diagnostics:** `/api/status` response → `priceProviderDiagnostics`. Any upstream (Binance, CoinGecko, DefiLlama) reporting sustained failures?
 
 ## Remediation

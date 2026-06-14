@@ -2,7 +2,7 @@
 
 ## Symptom
 
-Users report that the `/start` setup wizard does not progress: tapping a branch button (Recommended / Custom / Skip) either re-renders the intro keyboard or returns "still working on the previous step, try again in a moment".
+Users report that the `/start` setup wizard does not progress: tapping a branch button (Recommended / Custom / Skip) either re-renders the intro keyboard or returns "Setup expired. Send /start to begin again."
 
 Detection signals:
 

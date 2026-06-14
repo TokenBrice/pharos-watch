@@ -239,7 +239,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `governanceQuality`            | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper`                            |
 | `dependencies[].type`          | `wrapper` \| `mechanism` \| `collateral`                                                                                            |
 | `variantKind`                  | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity`                                                   |
-| `yieldConfig.yieldType`        | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` \| `structured-tranche` |
+| `yieldConfig.yieldType`        | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` \| `fixed-yield` \| `structured-tranche` |
 | `infrastructures[]`            | `liquity-v1` \| `liquity-v2` \| `m0`                                                                                                |
 | `mechanismArchetype`           | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund`                                  |
 | `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none`                                                                                 |

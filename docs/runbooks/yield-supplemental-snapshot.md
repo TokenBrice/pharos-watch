@@ -3,7 +3,7 @@
 Triggered by:
 - `sync-yield-supplemental` returning `degraded` with `fallbackMode: "empty-snapshot"`
 - `sync-yield-data` metadata showing `supplementalSourceMode` as `unavailable` or `stale-cache`
-- Optional Aave, Compound, Morpho, Pendle, Yearn/Kong, or Beefy rows disappearing from rankings/source boards
+- Optional Aave, Compound, Morpho, Pendle, Yearn/Kong, Beefy, or Royco Dawn rows disappearing from rankings/source boards
 
 ## Symptom
 
