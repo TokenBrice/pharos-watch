@@ -14,7 +14,10 @@ import { runBoundedQueue } from "../../shared/bounded-queue";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
-export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }> = {
+export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<
+  string,
+  { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }
+> = {
   // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
@@ -24,11 +27,17 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // tracks the Ethereum eEARN vault token used by Royco Dawn.
   "eearn-ember",
 ]);
-const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<string, readonly { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }[]> = {
+const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
+  string,
+  readonly { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }[]
+> = {
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
   "cadd-cad-digital": [{ chain: "ethereum" }, { chain: "base" }],
+  // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
+  // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
+  "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
   "xofm-mento": [{ chain: "celo" }],
@@ -45,7 +54,9 @@ function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["
   return contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron");
 }
 
-export function selectSingleOnChainSupplyContract(meta: StablecoinMeta): NonNullable<StablecoinMeta["contracts"]>[number] | null {
+export function selectSingleOnChainSupplyContract(
+  meta: StablecoinMeta,
+): NonNullable<StablecoinMeta["contracts"]>[number] | null {
   const contracts = meta.contracts ?? [];
   if (contracts.length !== 1) return null;
   const [contract] = contracts;
@@ -69,9 +80,7 @@ export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
 }
 
 function buildProbeInput(chain: string): LiveReserveInput {
-  return chain === "solana"
-    ? { kind: "onchain-solana" }
-    : { kind: "onchain-evm", chain, rpcMode: "public-rpc" };
+  return chain === "solana" ? { kind: "onchain-solana" } : { kind: "onchain-evm", chain, rpcMode: "public-rpc" };
 }
 
 function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[number]): number {
@@ -144,9 +153,8 @@ async function fetchOnChainSupplyForContract(input: {
 } | null> {
   const probeInput = buildProbeInput(input.supplyContract.chain);
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
-  const chainRpc = input.supplyContract.chain === "solana"
-    ? undefined
-    : input.chainRpcs?.get(input.supplyContract.chain);
+  const chainRpc =
+    input.supplyContract.chain === "solana" ? undefined : input.chainRpcs?.get(input.supplyContract.chain);
 
   try {
     const raw = await probeTrackedTokenSupply(
@@ -174,7 +182,9 @@ async function fetchOnChainSupplyForContract(input: {
     const mcap = supply * input.priceUsd;
     if (Number.isFinite(mcap) && mcap > 0) {
       const chainLabel = contractChainLabel(input.supplyContract);
-      console.log(`[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`);
+      console.log(
+        `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
+      );
       return { mcap, supplySource, chainLabel };
     }
   } catch (err) {
@@ -196,7 +206,9 @@ export async function fetchOnChainMcap(
   const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
     if (!curated && (meta.contracts?.length ?? 0) > 1) {
-      console.warn(`[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`);
+      console.warn(
+        `[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`,
+      );
     }
     return null;
   }
@@ -227,7 +239,9 @@ export async function fetchCuratedAggregateOnChainMcap(
     throwIfAborted(signal);
     const supplyContract = meta.contracts?.find((entry) => entry.chain === curated.chain);
     if (!supplyContract || !isSupportedOnChainSupplyContract(supplyContract)) {
-      console.warn(`[fiat-cg] ${meta.symbol}: configured aggregate supply chain ${curated.chain} is missing or unsupported`);
+      console.warn(
+        `[fiat-cg] ${meta.symbol}: configured aggregate supply chain ${curated.chain} is missing or unsupported`,
+      );
       return null;
     }
 

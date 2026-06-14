@@ -3,12 +3,8 @@ import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { runBoundedQueue } from "../../shared/bounded-queue";
 import type { PeggedAsset } from "../enrich-prices";
-import {
-  buildZephyrProtocolPeggedAsset,
-  fetchZephyrProtocolStats,
-  isZephyrScannerAssetId,
-} from "../zephyr-zsd";
-import { fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
+import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   getSupplementalChainLabels,
@@ -87,9 +83,29 @@ export async function fetchFiatCoinGeckoTokens(
         const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
         let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
+        let chainCirculating: PeggedAsset["chainCirculating"] = {};
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only fiat assets in supply coverage without inventing a live market quote.
+        if (priceForSupply != null) {
+          const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal);
+          if (aggregateOnChainMcap) {
+            mcap = aggregateOnChainMcap.mcap;
+            supplySource = aggregateOnChainMcap.supplySource;
+            chainCirculating = Object.fromEntries(
+              Object.entries(aggregateOnChainMcap.chainCirculating ?? {}).map(([chainLabel, current]) => [
+                chainLabel,
+                {
+                  current,
+                  circulatingPrevDay: 0,
+                  circulatingPrevWeek: 0,
+                  circulatingPrevMonth: 0,
+                },
+              ]),
+            );
+          }
+        }
+
         if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (onChainMcap) {
@@ -118,16 +134,16 @@ export async function fetchFiatCoinGeckoTokens(
           price: priceResolution?.price ?? null,
           priceSource: priceResolution?.source,
           priceConfidence,
-          priceUpdatedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
-          priceObservedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
-          priceObservedAtMode: priceResolution ? priceResolution.observedAtMode ?? "local_fetch" : null,
+          priceUpdatedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
+          priceObservedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
+          priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : null,
           priceSyncedAt: priceResolution ? nowSec : null,
           supplySource,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,
-          chainCirculating: {},
+          chainCirculating,
           chains: getSupplementalChainLabels(meta),
         } as PeggedAsset;
       },
