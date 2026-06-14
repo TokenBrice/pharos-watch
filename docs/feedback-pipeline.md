@@ -207,8 +207,9 @@ For non-USD pegs, the worker now derives `pegReference` from the tracked peg typ
 - Stablecoin (name + ID, if provided)
 - Page URL
 - Current value (`pegValue`, if provided)
-- Expected value / source (`expectedValue`, if provided)
+- Submitter contact (`contactHandle`, if provided)
 - Description
+- Expected value / source (`expectedValue`, if provided)
 - Auto-verification snapshot (data corrections only)
 - Footer: `*Submitted via Pharos feedback widget*`
 

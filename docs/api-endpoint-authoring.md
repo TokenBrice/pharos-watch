@@ -15,7 +15,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Messaging and ops route bindings | `worker/src/routes/messaging-routes.ts`, `worker/src/routes/ops-routes.ts` |
 | Dynamic route bindings | `worker/src/routes/dynamic-routes.ts` |
 | Frontend API helpers | `src/hooks/api-hooks.ts`, `src/hooks/use-api-query.ts`, `src/lib/api.ts` |
-| Frontend API query registry | `src/lib/api-query-registry.ts` — Canonical descriptor table consumed by `src/hooks/api-hooks.ts` |
+| Frontend API query registry | `src/lib/api-query-runtime-registry.ts` — runtime descriptor table consumed by `src/hooks/api-hooks.ts`; the schema-bearing `src/lib/api-query-registry.ts` is consumed by `src/lib/homepage-bootstrap.ts` |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 

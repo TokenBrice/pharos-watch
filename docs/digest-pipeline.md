@@ -170,7 +170,7 @@ After the digest is stored in D1, it is posted to the configured Telegram channe
 **File:** `worker/src/lib/twitter.ts`
 
 - Auth: **OAuth 1.0a** signed with `crypto.subtle.HMAC-SHA1` (no third-party library)
-- Format: `{title}\n\n{text}` — cashtag `$` prefixes auto-injected on first mention of each tracked ticker; truncated to 280 chars if needed
+- Format: `{title}\n\n{text}` — a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed
 - Endpoint: `POST https://api.twitter.com/2/tweets`
 
 **Required secrets:**

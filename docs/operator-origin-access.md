@@ -104,7 +104,7 @@ The current proxy now fails closed on its own trust boundary:
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
-- The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.
+- The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`, plus `Retry-After` when present so upstream backoff semantics survive the proxy layer.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT

@@ -25,7 +25,7 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`f
   - `getMechanismArchetypeLabel(archetype)`
   - `getMechanismExplainerPath(archetype)` returns `/learn/mechanisms/<slug>/`
 - **Slug source:** `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`
-- **Diagram reuse:** `mechanismDiagramFor(archetype, "USDX")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`
+- **Diagram reuse:** `mechanismDiagramFor(archetype, "STBL")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`
 
 The hub is a static route with no client-only state. The archetype route is static-exported via `generateStaticParams()` driven by `MECHANISM_ARCHETYPE_VALUES`.
 
@@ -61,14 +61,16 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 
 1. **`ExplainerPageShell` header** — 3-level breadcrumb (`Dashboard / Learn / <Archetype>`), `BreadcrumbJsonLd`, editorial display `<h1>` (`content.headline`), subtitle (larger muted lead), and optional lead paragraphs. Wrapped in `mx-auto w-full max-w-[68rem] space-y-12`.
 2. **Diagram hero** — bare diagram, centered, no card wrapper, no kicker label.
-3. **"How it works"** — kicker + `<h2>` + `<ol>` of 3 steps with a left rail and small numbered chips (`-left-[1.875rem] sm:-left-[2.375rem]`). Step body capped at `max-w-[65ch]`.
-4. **"Where the design fails"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`, stacked on mobile). Hairline dividers between items. Body capped at `max-w-[65ch]`.
-5. **"What to watch on Pharos"** — kicker + `<h2>` + `<ol>` with a 2-digit mono prefix (`01`, `02`, …) and hairline dividers. No card chrome.
-6. **"Tracked examples"** — kicker + `<h2>` + `<ul>` with hairline dividers. Each row: mono ticker + name + 1-sentence note + right arrow. Hover bumps the arrow + colors the ticker `frost-blue`.
+3. **"How it works"** — kicker + `<h2>` + `<ol>` of 3 steps with a left rail and small numbered chips (`-left-[1.875rem] sm:-left-[2.375rem]`).
+4. **"Tracked examples"** (`RepresentativeCoins`) — kicker + `<h2>` + `<ul>` with hairline dividers. Each row: logo + mono ticker + name + 1-sentence note + right arrow. Hover bumps the arrow + colors the ticker `frost-blue`.
+5. **"Decommissioned"** (optional, only when `content.decommissioned` is non-empty) — kicker + `<h2>` + `<ul>` of dead designs (name + date + obituary), with a link to `/cemetery/`.
+6. **"Where the design fails"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`, stacked on mobile). Hairline dividers between items.
 7. **"Variations"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`).
-8. **"Continue reading"** — section above a top border. 2-column grid of underline-on-hover row links, with `ArrowUpRight` glyph.
+8. **"What to watch on Pharos"** — kicker + `<h2>` + `<ol>` with a 2-digit mono prefix (`01`, `02`, …) and hairline dividers. No card chrome.
+9. **"Tracked universe"** (`TrackedCoinList`) — kicker + `<h2>` + `<ul>` of all active coins via `getActiveByArchetype` (variants nested). Each row: mono ticker + name + right arrow (no note). Footer links to the screener plus `+N upcoming` / `+N frozen` deep-links.
+10. **"Continue reading"** — section above a top border. 2-column grid of color-on-hover row links (text + bottom border turn `frost-blue` on hover), with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`06`) + active/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
+The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`06`) + tracked/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
 ---
 

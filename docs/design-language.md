@@ -205,7 +205,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Shared page title utility | `pharos-page-title`                                                                                                                  |
 | Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]`                              |
-| Home logotype label       | `text-sm font-mono font-semibold uppercase tracking-[0.14em] md:text-[1.02rem] md:tracking-[0.16em]`                                 |
+| Home logotype label       | `sr-only md:not-sr-only md:font-mono md:text-[1.02rem] md:font-semibold md:uppercase md:tracking-[0.16em] md:text-foreground` (hidden below md)                |
 | Primary section heading   | `leading-none font-semibold`                                                                                                         |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                                                                    |
 | Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`                                         |
@@ -551,9 +551,7 @@ Two dominant focus patterns:
 ### Loading States
 
 - Skeletons are the default loading surface (`data-slot="skeleton"` + `animate-pulse`)
-- Page-level loader currently appears as:
-  - `flex min-h-[40vh] items-center justify-center`
-  - `h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse`
+- Page-level loading uses skeleton shells (`PageLoadingShell` / `PageLoadingChartBlock` in `src/components/page-loading-skeleton.tsx`), built from `Skeleton` (`data-slot="skeleton"`); there is no frost-blue spinner.
 
 ### Live/Event Indicator
 

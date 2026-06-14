@@ -145,8 +145,9 @@ Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached
 | `/api/og/safety-scores` | safety scores summary card |
 | `/api/og/depeg` | depeg summary card |
 | `/api/og/stability-index` | stability index summary card |
+| `/api/og/chain/:id` | per-chain card (referenced from `src/app/chains/[chain]/page.tsx` via `API_PATHS.ogChain`) |
 
-These are the only OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
+These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
 
 ## CI guardrails
 

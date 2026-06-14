@@ -52,7 +52,7 @@ A file (or small set of files) that takes the API response and emits a presentat
 
 Examples:
 - `src/app/stability-index/view-model.ts` — `buildPsiComponentData`, `buildPsiBeamDimmers`, `buildPsiHistoryStats`, `buildPsiContributorRows`
-- `src/app/chains/harbor-map.ts` — `buildChainHarborEntries` with sort, cap-at-8, cargo manifest extraction
+- `src/app/chains/harbor-map.ts` — `buildChainHarborEntries` (sort, cargo manifest extraction), `buildChainHarborModelFromEntries` (cap-at-8, aggregation)
 - `src/app/chains/nautical-scene-math.ts` — `hullWidth`, `cargoCapacityForHull`, `depthLayers`, `wakeLength`, `aggregateSkyBand`, `nextHarborSweepId`
 - `src/components/dews-summary-model.ts` — `computeBandCounts`, `resolveRadarClick`, `getAggregateFreshnessTimestamp`, plus internal `computePositions`
 - `src/lib/alt-peg-hero.ts` — `buildPegDiversityHero`; sizing floors/ceilings in `src/lib/alt-peg-sizing.ts` (`SIZE_FLOOR`, `FIAT_MAP_SIZE_CEIL`, `SKY_COHORT_SIZE_CEIL`); overlap resolution in `src/lib/alt-peg-packing.ts` (`resolvePackedCoinOverlaps`)
@@ -291,7 +291,7 @@ Glows, halos, gradients, and ambient washes use OKLCH with alpha, which stays pe
 
 ## 9. Accessibility
 
-- **SVG root:** `role="img"` + `aria-label` that summarizes state in one sentence ("Pharos lighthouse — STEADY 72", "DEWS radar — 4 elevated, highest: DANGER", "Nautical chart of 8 largest stablecoin chains"). Screen readers treat the scene as one atomic image.
+- **SVG root:** non-interactive scenes use `role="img"` + an `aria-label` that summarizes state in one sentence (PSI lighthouse — "Pharos lighthouse — STEADY 72"; harbor chart SVG — "Nautical chart of 8 largest stablecoin chains", inside a `role="group"` scroll wrapper). Scenes with focusable marks use `role="group"` instead, because interactive descendants inside `role="img"` are invalid (axe nested-interactive) — e.g. the DEWS radar ("DEWS radar — 4 elevated, highest: DANGER") carries `role="group"`. `role="img"` lets screen readers treat the scene as one atomic image.
 - **Interactive marks:** `role="button"`, `tabIndex={0}`, `aria-label` with the entity name and metric, `aria-pressed` when selected.
 - **Decorative layers:** `aria-hidden="true"` on stars, grid, ripples, reflections, atmospheric text.
 - **Reduced motion:** animations behind a no-preference media query; reduced-motion branch sets static fallback opacities (don’t leave elements invisible).

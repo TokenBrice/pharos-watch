@@ -81,7 +81,7 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 - **Pagination:** opaque cursor (base64url-encoded `{v:1, ts, id}`); page size is 500 (also the API max).
 - **Severity floor expansion:** server expands `severityFloor=<level>` into the inclusive set at or above that rank using `SEVERITY_RANK` from `@shared/types/tape-event`.
 - **Type filters:** `type=foo` matches exactly; `type=foo.*` matches all subtypes; `class=foo` is a shortcut for `type=foo.*`. Both can be passed multiple times.
-- **Freshness:** `_meta.maxAge = 600` (10 minutes). The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.
+- **Freshness:** `Cache-Control: max-age=600` (10 minutes); `_meta` carries `{updatedAt, ageSeconds, status}`. The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.
 - **Hook:** `useEvents()` in `src/hooks/use-events.ts` wraps the infinite-query path; `useLatestEvents()` wraps the single-page latest-N path used by the homepage tape marquee and the permalink buffer.
 
 `/api/events` is allowlisted on the same-origin site-data lane, so the page reads it through `/_site-data/events` from the browser.
@@ -101,7 +101,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 | `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
 | `psi.band_changed`                              | `stability_index_samples`               | PSI regime-band transitions                                          |
 | `dews.escalated` / `.deescalated`               | `stress_signals`                        | DEWS stress-level changes                                            |
-| `mint_burn.large_flow`                          | `mint_burn_events`                      | Large net mint/burn flow observations                                |
+| `mint_burn.large_mint` / `.large_burn`          | `mint_burn_events`                      | Large single-transaction mint or burn flows (one event per direction) |
 | `yield.warning_emitted` / `.pys_dropped`        | `yield_history` (warning_emitted) / `yield_source_decisions` (pys_dropped) | Yield-risk warnings and PYS drops                                    |
 | `methodology.bumped:<domain>`                   | `shared/lib/*-version` modules          | Methodology version bumps (first-observation pattern)                |
 | `cemetery.entry.added`                          | `shared/lib/cemetery-merged.ts`         | Newly added cemetery entries                                         |

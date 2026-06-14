@@ -31,7 +31,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 - **Theme**: Light theme by default, with the same dense financial-dashboard hierarchy preserved in dark mode
 - **References**: DeFi-native research products with strong data density and practical crypto analytics, but Pharos should not collapse into looking like another interchangeable dashboard
 - **Brand accent**: Frost-blue `oklch(0.72 0.14 248)` — used sparingly for navigation active states and brand touches
-- **Fonts**: Geist-named CSS tokens backed by system sans/mono stacks for the core UI; all numbers use the mono token so precision remains visible without adding first-paint webfont requests. Three intentional non-core carve-outs: Newsreader serif (Daily Digest editorial), Georgia serif (`AiSummary` paragraph on stablecoin detail), Courier New + the mono token (Tape / `/timeline/` wire-service stream)
+- **Fonts**: Geist-named CSS tokens backed by system sans/mono stacks for the core UI; all numbers use the mono token so precision remains visible without adding first-paint webfont requests. Three intentional non-core carve-outs: Newsreader serif (Daily Digest editorial), Georgia serif (`AiSummary` paragraph on stablecoin detail), Courier New (Daily Digest + depeg editorial body — paired with Newsreader headlines). The Tape / `/timeline/` wire-service stream uses only the mono token.
 - **Color use**: Semantic first — color communicates state (health, risk, trend direction), not empty decoration
 - **Design bar**: Avoid generic SaaS sameness; every major surface should feel authored and recognizably Pharos
 

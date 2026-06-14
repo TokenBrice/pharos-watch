@@ -49,7 +49,7 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 | `shared/data/stablecoins/coins.generated.json`                                                                                        | generated/runtime aggregate regenerated with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `data/logos.json`                                                                                                                     | per-coin logo display                                                                                        |
 | `data/ai-summaries.json`                                                                                                              | teaser copy shown on cards when available                                                                    |
-| `src/lib/pre-launch.ts`                                                                                                               | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring            |
+| `src/lib/pre-launch.ts`                                                                                                               | launch-phase labels, drift heuristics, fuzzy-date formatting, and sort scoring                               |
 
 The route does not call the Worker API directly. It is a metadata-driven surface over pre-launch stablecoin entries already checked into the repo.
 

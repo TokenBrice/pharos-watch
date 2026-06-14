@@ -18,8 +18,8 @@ The route is static and frontend-only. It does not call worker APIs.
 
 `src/app/privacy/page.tsx` defines:
 
-- title: `Privacy Policy`
-- description: `Pharos privacy policy: what data we collect, how we use it, and your choices.`
+- title: `Pharos Privacy Policy: Analytics, API & Telegram Data`
+- description: `Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.`
 - canonical: `/privacy/`
 - Open Graph image: `/og-card.png`
 
@@ -78,7 +78,7 @@ The visible policy must enumerate every Telegram-owned D1 table, its purpose, an
 
 | Table | Purpose | Retention |
 |-------|---------|-----------|
-| `telegram_subscribers` | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune via daily `telegram-inactive-cleanup` |
+| `telegram_subscribers` | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune via weekly `telegram-inactive-cleanup` (runs from the daily-0300 slot, gated to once per 7 days) |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry |

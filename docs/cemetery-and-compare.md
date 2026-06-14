@@ -82,11 +82,11 @@ Each appendix includes the epitaph for every newly added coin plus a rotating da
 
 ### UI behavior
 
-- `CemeteryClient` maintains an `expanded` symbol set for obituary panels plus a local sort toggle (`newest` default, `oldest` fallback).
+- `CemeteryClient` maintains an `expanded` coin-id set for obituary panels plus a local sort toggle (`newest` default, `oldest` fallback).
 - Tombstones render newest death-year first by default even though `DEAD_STABLECOINS` remains curated in oldest-first order in-repo.
 - `CemeteryTombstones` renders all year sections inside one continuous atmospheric cemetery scene with shared ground, horizon, fog, and a central path; size still reflects peak market cap.
 - Tombstone logos come from each row's `logo` field under `public/logos/cemetery/` and render both on the grave marker and in the hover/focus memorial plaque.
-- Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead.
+- Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead (or the full obituary for the top-20 entries by peak market cap).
 - Tombstone selection auto-expands the matching obituary and scrolls into view.
 - `StablecoinCemetery` renders collapsible rows with source links and cause badges, using the same order as the tombstone field above.
 - `CemeteryCharts` receives server-projected cemetery entries and computes all chart series from that payload (no API fetch).

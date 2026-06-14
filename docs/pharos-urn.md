@@ -17,9 +17,9 @@ urn:pharos:<entity-class>:<id>[@<qualifier>]
 - **`urn:pharos:`** — fixed prefix. No other repo features may invent their own `pharos:foo:bar` strings.
 - **`<entity-class>`** — one of the closed enum below.
 - **`<id>`** — lowercase, hyphens not underscores, no leading or trailing hyphen.
-- **`@<qualifier>`** — optional version or ISO date, used only when the citation pins a mutable surface to a point in time. Lowercase, hyphens or dots allowed.
+- **`@<qualifier>`** — optional version or ISO date, used only when the citation pins a mutable surface to a point in time. Lowercase letters, digits, hyphens, or dots allowed.
 
-The colon `:` is the only structural separator. Reader tooling can split `urn.split(":")` deterministically.
+The colon `:` separates the prefix and entity-class fields; `@` separates the id from the optional qualifier. Reader tooling splits on `:` first, then on `@`, to extract all components.
 
 ---
 
@@ -59,7 +59,7 @@ Pages with permanently immutable URLs (digests, depeg events, cemetery entries) 
 
 ## JSON-LD integration
 
-Add the URN to each surface's existing JSON-LD as an `identifier` `PropertyValue`:
+The URN is added to each coin surface's JSON-LD as an `identifier` `PropertyValue` via `src/lib/pharos-urn-json-ld.ts` (`buildPharosUrnJsonLdIdentifier`), already wired into the `Thing` and `Dataset` nodes in `src/lib/stablecoin-detail-json-ld.ts`. The canonical URL stays in `@id`; the URN is **only** an `identifier` property — never bake the URN scheme into the JSON-LD `@id` field.
 
 ```jsonc
 {
@@ -74,8 +74,6 @@ Add the URN to each surface's existing JSON-LD as an `identifier` `PropertyValue
   ]
 }
 ```
-
-The pattern already exists for contract addresses in `src/lib/stablecoin-detail-json-ld.ts`. Mirror it for the URN. The canonical URL stays in `@id`; the URN is **only** an `identifier` property — never bake the URN scheme into the JSON-LD `@id` field.
 
 ---
 

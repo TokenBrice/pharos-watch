@@ -1230,8 +1230,8 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `sync-dex-liquidity`            | 1,800s (30min)   | `10,40 * * * *`                                   |
 | `sync-yield-data`               | 3,600s (1h)      | `20 * * * *`                                      |
 | `sync-yield-supplemental`       | 14,400s (4h)     | `25 */4 * * *`                                    |
-| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (20h cooldown) / `0 8 * * *` (fallback) |
-| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *` (20h cooldown)                     |
+| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (once per UTC date) / `0 8 * * *` (fallback) |
+| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *` (once per UTC date)                |
 | `publish-report-card-cache`     | 900s (15min)     | `*/15 * * * *`                                    |
 | `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |

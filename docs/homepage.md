@@ -83,13 +83,12 @@ Homepage page discovery rotation is also browser-local:
 
 ### `SiteHeader`
 
-Additional masthead-only reads:
+`SiteHeader` is a pure presentational server component. It takes four static build-time props from `src/app/page.tsx` and reads no hooks or live data:
 
-- `useHealth()` for blacklist and mint/burn totals
-- `useDexLiquidity()` for total processed pools
-- `useStablecoins()` for live tracked-coin availability
-
-Repeated hook usage is expected. These surfaces share TanStack Query cache state rather than passing one large route payload through props.
+- `tracked` from `TRACKED_STABLECOIN_COUNT`
+- `total` from `ACTIVE_STABLECOIN_COUNT`
+- `pegCount` from `ACTIVE_PEG_CURRENCY_COUNT`
+- `chainCount` from `Object.keys(CHAIN_META).length`
 
 ### `HomepageTape`
 
@@ -132,7 +131,8 @@ Under the fold (`HomeAltClient`):
 2. `StablecoinTable`
 3. `DailyDigest` in `preview` mode
 4. `HomepageDiscoveryModule`
-5. `HomeAltUpcomingHorizonConstellation`
+
+After `HomeAltClient`: `HomeAltUpcomingHorizonConstellation`, rendered as a page-level sibling in `src/app/page.tsx`.
 
 The directory table is the product's workbench, so it sits directly under the KPI band (June 2026 mythos pass); the editorial band (digest + discovery) follows it.
 

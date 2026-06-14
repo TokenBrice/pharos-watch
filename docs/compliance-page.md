@@ -36,7 +36,7 @@ URL filters:
 
 Default view is `regime=all`. For legacy MiCA links, the client infers `regime=mica` when `status` is a MiCA status or `type`/`tokenType` is present.
 
-The main authorization table excludes frozen and pre-launch assets. MiCA rows can enter the main table when the coin is active and has `mica` metadata. GENIUS rows remain in the separate "Implementation Watch" section while `GENIUS_REGIME_STATE.rulemakingPhase !== "effective"`.
+The main authorization table excludes frozen and pre-launch assets. MiCA rows can enter the main table when the coin is active and has `mica` metadata. GENIUS rows enter the main table only when the regime is effective (`GENIUS_REGIME_STATE.rulemakingPhase === "effective"`) and the coin is not pre-launch; pre-launch coins and all coins while the regime is not yet effective remain in the separate "Implementation Watch" section.
 
 ## GENIUS Modeling
 
