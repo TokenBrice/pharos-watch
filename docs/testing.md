@@ -187,7 +187,7 @@ const db = mockD1([
 - `match` — substring to look for in the SQL query
 - `rows` — array of row objects for `.all()` results
 - `first` — optional single object for `.first()` results
-- `batch()` — executes each statement's `.all()` and returns array of results
+- `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
 - `mockD1(tables, { requireMatch: true })` — throws if executed SQL does not match a configured entry
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
 - `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
@@ -476,14 +476,14 @@ describe("syncFxRates", () => {
 
 **Extends:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`
 
-**Custom rules** — React Compiler rules are downgraded to warnings since they flag valid patterns that work correctly at runtime:
+**Custom rules** — React Compiler rules are set to `error`. They flag patterns that are merely suboptimal for the compiler, but `lint` runs with `--max-warnings=0`, so `error` and `warn` fail the gate identically; configuring them as `error` keeps the declared severity aligned with enforcement. Use a scoped `eslint-disable` with justification for the rare legitimate exception:
 
 | Rule                                      | Level | Reason                                                                                       |
 | ----------------------------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `react-hooks/preserve-manual-memoization` | warn  | Compiler can't optimize `useMemo([data])` when body accesses `data.current.*` sub-properties |
-| `react-hooks/set-state-in-effect`         | warn  | Standard pattern for reading localStorage/sessionStorage on mount                            |
-| `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
-| `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
+| `react-hooks/preserve-manual-memoization` | error | Compiler can't optimize `useMemo([data])` when body accesses `data.current.*` sub-properties |
+| `react-hooks/set-state-in-effect`         | error | Standard pattern for reading localStorage/sessionStorage on mount                            |
+| `react-hooks/purity`                      | error | `Date.now()` in render is intentional for timestamp-based UIs                                |
+| `react-hooks/incompatible-library`        | error | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
 **Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.claude/`, `.codex-autorunner/`, `agents/**`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
 
