@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.81",
+    title: "Unsupported-chain Curve fallback coverage",
+    date: "2026-06-14",
+    effectiveAt: 1781395200,
+    summary:
+      "Fallback pool discovery can now retain Curve pools on chains not covered by the native Curve API, while still skipping fallback Curve rows where native Curve enrichment already owns the chain.",
+    impact: [
+      "GeckoTerminal and CoinGecko Onchain Curve pools remain skipped on Ethereum, Base, Arbitrum, and Polygon to avoid duplicate Curve API coverage",
+      "Curve pools on unsupported native-API chains such as Plasma can now contribute retained liquidity, challenger-pool evidence, and DEX price observations after the normal TVL, price sanity, protocol-cap, and dedupe gates",
+      "This lets single-chain assets such as Yuzu USD surface Plasma Curve liquidity evidence instead of depending only on aggregator prices when the native Curve API has no chain coverage",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.8",
     title: "Retained-pool DEX price ownership hardening",
     date: "2026-06-06",

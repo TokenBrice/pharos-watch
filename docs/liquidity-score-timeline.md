@@ -1,6 +1,14 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.8` (2026-02-19 -> 2026-06-06).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.81` (2026-02-19 -> 2026-06-14).
+
+---
+
+## v5.81 - Unsupported-chain Curve fallback coverage (June 14, 2026)
+
+- GeckoTerminal and CoinGecko Onchain Curve pools remain skipped on Ethereum, Base, Arbitrum, and Polygon, where the native Curve API already owns Curve pool enrichment and price observations
+- Curve pools on chains not covered by the native Curve API, such as Plasma, can now pass through secondary discovery after the normal TVL, price-sanity, protocol-cap, and dedupe gates
+- Unsupported-chain Curve rows can contribute retained liquidity, challenger-pool evidence, and DEX price observations instead of being dropped solely because their DEX id starts with `curve`
 
 ---
 

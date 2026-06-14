@@ -250,7 +250,7 @@ export interface AerodromeLookups {
 export interface GtCrawlResult {
   /** New pools not found in existing sources, keyed by stablecoinId */
   newPools: Map<string, GtNewPool[]>;
-  /** Price observations from all non-Curve GT pools */
+  /** Price observations from fallback pools after native-source overlap guards. */
   priceObs: Map<string, DexPriceObs[]>;
   /** Stats for logging */
   stats: { requests: number; poolsSeen: number; poolsNew: number; poolsSkippedCurve: number; poolsSkippedKnown: number };

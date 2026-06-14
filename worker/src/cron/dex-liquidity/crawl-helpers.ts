@@ -7,6 +7,7 @@ import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { makeChainAddressKey } from "./token-resolution";
+import { CURVE_CHAINS } from "./constants";
 
 export type CrawlStats = {
   requests: number;
@@ -73,6 +74,12 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
 
 export type CrawlTokenPoolsResult = { stoppedEarly: boolean };
 
+const NATIVE_CURVE_API_CHAINS = new Set<string>(CURVE_CHAINS);
+
+export function shouldSkipFallbackCurvePool(chain: string, dexId: string): boolean {
+  return dexId.startsWith("curve") && NATIVE_CURVE_API_CHAINS.has(chain);
+}
+
 function resolveStablecoinSide(
   chain: string,
   stablecoinAddress: string,
@@ -136,7 +143,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         if (!parsed.tvlUsd || parsed.tvlUsd < minTvlUsd || parsed.tvlUsd > 1e12) continue;
         if (isBlockedDexId(parsed.dexId)) continue;
 
-        if (parsed.dexId.startsWith("curve")) {
+        if (shouldSkipFallbackCurvePool(token.ourChain, parsed.dexId)) {
           config.stats.poolsSkippedCurve++;
           continue;
         }
