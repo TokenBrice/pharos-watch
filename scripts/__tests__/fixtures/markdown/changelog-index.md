@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-06-07 to 2026-06-14
+
+Safety Score v8.0 folds in mint authority, report cards score chain and oracle risk, and a depeg control board ships.
+
+- **Safety Score v8.0**: Mint authority joins the Decentralization factor as a penalty-only blend, backed by on-chain verification of the issuer registry. Caps now decay, multiple incidents are supported, and the score shows on coin pages.
+- **Chain & oracle risk**: Report cards now fold in L2BEAT chain risk and CDP oracle risk, with new bridge-route and enriched oracle risk profiles. The Decentralization compute is deduped and now enforces oracle coverage.
+- **Reserves & redemption**: Reserve views ship for 11 active coins, eight more become evidence-bearing attestation feeds, and 30 redemption routes gain live reserve-sync capacity. Redemption reaches v4.11 with documented same-day buffers.
+- **Yield & compliance**: Yield coverage expands via the Wave 1 source-roster (v8.23), and GBP, JPY, and AUD benchmarks move to direct central-bank sources. A broad MiCA and GENIUS data pass refreshes compliance metadata across the registry.
+- **Depeg control board**: The depeg table becomes an interactive control board with filtering, sorting, and severity signals. Displayed deviation is now gated on peg-reference authority (DEWS v6.08), and repair-required events are quarantined.
+- **Verification passport**: The coin detail hero becomes a verification passport — visas for Issued, MiCA, GENIUS, and track record — and the contract wall becomes labeled rows with inline verify actions. An MRZ experiment was reverted.
+- **Search, a11y & performance**: Per-chain OG cards ship for 107 chain pages, detail pages gain FAQ and Article JSON-LD, and a hydrated-state axe lane plus screen-reader tables raise accessibility. Critical CSS inlines and the CSP drops unsafe-eval.
+- **Platform consolidation**: A shared table system replaces bespoke tables with common shells, controls, and skeletons. Code-health Waves 1–4 dedupe helpers, prune dead exports, name magic numbers, and tidy worker and scoring internals.
+
 ## 2026-06-01 to 2026-06-06
 
 Navigation redesign reshapes the sidebar and homepage, a compare hub launches, and the depeg resolver locks forecasts.
