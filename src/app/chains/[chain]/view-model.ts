@@ -17,15 +17,15 @@ export function buildCompositionLayout(coins: ChainStablecoin[]) {
   } else if (totalCoins <= 6) {
     cols = 3;
     rows = 2;
-    maxDisplay = totalCoins > 6 ? 5 : totalCoins;
+    maxDisplay = totalCoins;
   } else if (totalCoins <= 8) {
     cols = 4;
     rows = 2;
-    maxDisplay = totalCoins > 8 ? 7 : totalCoins;
+    maxDisplay = totalCoins;
   } else if (totalCoins <= 11) {
     cols = 4;
     rows = 3;
-    maxDisplay = totalCoins > 11 ? 10 : totalCoins;
+    maxDisplay = totalCoins;
   } else {
     cols = 4;
     rows = 3;
