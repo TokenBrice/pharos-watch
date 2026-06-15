@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**75/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
+**78/733 done (11%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 636 | 3 | 0 | 75 | 19 |
+| Count | 633 | 3 | 0 | 78 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 35 | 1 | 0 | 220 |
-| quality | 315 | 31 | 2 | 0 | 275 |
+| redundancy | 266 | 36 | 2 | 0 | 218 |
+| quality | 315 | 33 | 1 | 0 | 274 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -35,7 +35,7 @@
 | ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
-| ⬜ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types |  | `src/components/stablecoin-detail/hero-card-secti` |
+| 🔄 | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
 | ⬜ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call |  | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
 | ✅ | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body | codex | `scripts/maintenance/audit-dex-pricing-source-gap` |
@@ -177,7 +177,7 @@
 | ⬜ | [R-143](redundancy/R-143.md) | S | clone | stablecoinRouteSearchText called twice per coin in buildL2BeatBridgeRouteReviewAudit |  | `shared/lib/chains/l2beat-audit.ts:L551, L589` |
 | ✅ | [R-144](redundancy/R-144.md) | S | clone | escapeSqlString defined independently in two maintenance scripts instead of using the shar | codex | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [R-145](redundancy/R-145.md) | S | clone | InlineKeyboardButton interface duplicated in setup and messages modules |  | `worker/src/api/telegram-webhook-setup.ts:L77-L82` |
-| 🔄 | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used | codex | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
+| ✅ | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used | codex | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
 | ⬜ | [R-147](redundancy/R-147.md) | S | clone | DRPC_NETWORK map duplicated in balance-providers.ts and chainlink-feeds.ts |  | `worker/src/cron/blacklist/balance-providers.ts:L` |
 | ⬜ | [R-148](redundancy/R-148.md) | S | wrapper | loadLastRunSec / recordLastRunSec re-implement the shared cache abstraction |  | `worker/src/cron/telegram-inactive-cleanup.ts:L51` |
 | ⬜ | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts |  | `worker/src/lib/cex-tickers.ts:L65-L68` |
@@ -212,7 +212,7 @@
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
 | ⬜ | [R-180](redundancy/R-180.md) | S | clone | normalizeStringArray duplicated between response.ts and digest-intelligence.ts |  | `worker/src/cron/daily-digest/response.ts:L128-L1` |
-| ⬜ | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value |  | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
+| 🔄 | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
 | ⬜ | [R-182](redundancy/R-182.md) | S | clone | Generic object/number/string/boolean accessor helpers cloned across three locations |  | `worker/src/lib/status/yield-health.ts:L99-L121, ` |
 | ⬜ | [R-183](redundancy/R-183.md) | S | wrapper | getTelegramBotStats re-exported through derived-data.ts adding an unnecessary barrel hop |  | `worker/src/lib/status/derived-data.ts:L14, worke` |
 | ⬜ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s |  | `src/generated/depeg-event-related-data.json.d.ts` |
@@ -318,7 +318,7 @@
 |---|---|---|---|---|---|---|
 | ✅ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
 | ✅ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
-| 🔄 | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
+| ✅ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ⬜ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts |  | `src/app/screener/picker/use-selector.ts:L163-L16` |
@@ -435,7 +435,7 @@
 | ✅ | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb | codex | `shared/lib/selector/yield-source.ts:L70-L71` |
 | ✅ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
-| ⬜ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be |  | `src/components/exploit-notice-banner.tsx:L11-L35` |
+| 🔄 | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be | codex | `src/components/exploit-notice-banner.tsx:L11-L35` |
 | ✅ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
 | ⬜ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block |  | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ⬜ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function |  | `worker/src/cron/sync-live-reserves-run-state.ts:` |
@@ -514,7 +514,7 @@
 | ⬜ | [Q-197](quality/Q-197.md) | S | naming | `takeaways[4]` in `usr-resolv-2026.ts` is a multi-sentence prose paragraph, violating the  |  | `src/app/learn/case-studies/content/usr-resolv-20` |
 | ✅ | [Q-198](quality/Q-198.md) | S | complexity | check-cron-connection-budget.ts: printReport couples to global CRON_CONNECTION_BUDGET, byp | codex | `scripts/ci/check-cron-connection-budget.ts:L183-` |
 | ⬜ | [Q-199](quality/Q-199.md) | S | error-handling | SectionBanner swallows clipboard write rejection silently |  | `src/components/stablecoin-detail/section-banner.` |
-| 🔄 | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link | codex | `src/components/home-alt-mini-cards/supply-moves-` |
+| ✅ | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link | codex | `src/components/home-alt-mini-cards/supply-moves-` |
 | ⬜ | [Q-201](quality/Q-201.md) | S | complexity | HomeAltHeroChart calls makeScales redundantly — once per area path and once per top-line p |  | `src/components/home-alt-hero-chart.tsx:L119-L173` |
 | ⬜ | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices |  | `src/components/exploit-notice-banner.tsx:L49` |
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
