@@ -228,19 +228,16 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function AboutPage() {
-  const activeStablecoinCount = ACTIVE_STABLECOIN_COUNT;
-  const preLaunchStablecoinCount = PRE_LAUNCH_STABLECOIN_COUNT;
-  const deadStablecoinCount = DEAD_STABLECOIN_COUNT;
   const trackedFeatures = getTrackedFeatures({
-    activeStablecoins: activeStablecoinCount,
-    deadStablecoins: deadStablecoinCount,
-    preLaunchStablecoins: preLaunchStablecoinCount,
+    activeStablecoins: ACTIVE_STABLECOIN_COUNT,
+    deadStablecoins: DEAD_STABLECOIN_COUNT,
+    preLaunchStablecoins: PRE_LAUNCH_STABLECOIN_COUNT,
   });
   const faqItems = getAboutFaqItems({
-    activeStablecoins: activeStablecoinCount,
-    deadStablecoins: deadStablecoinCount,
+    activeStablecoins: ACTIVE_STABLECOIN_COUNT,
+    deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
-  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: activeStablecoinCount });
+  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: ACTIVE_STABLECOIN_COUNT });
   const operatingPrinciples = [
     PRINCIPLES_AXIOMS[0],
     PRINCIPLES_AXIOMS[1],
