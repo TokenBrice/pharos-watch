@@ -123,7 +123,7 @@ export const CASE_STUDY_CLIENT_BY_CEMETERY_ID: Record<string, CaseStudyClientSum
   },
   "xusd-stream-finance-xusd-2025-11": {
     slug: "stream-elixir-contagion-2025",
-    title: "Stream Finance: when one fund manager's loss broke three stablecoins",
+    title: "Stream Finance: loss broke three stablecoins",
     outcome: "died",
   },
   "usr-resolv": {
@@ -133,7 +133,7 @@ export const CASE_STUDY_CLIENT_BY_CEMETERY_ID: Record<string, CaseStudyClientSum
   },
   "usdn-neutrino-usd-2022-04": {
     slug: "usdn-neutrino-2022",
-    title: "Neutrino USD: the billion-dollar algo death five weeks before Terra",
+    title: "Neutrino USD: the stablecoin collapse before Terra",
     outcome: "died",
   },
   "husd-husd-2022-10": {
