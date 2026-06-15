@@ -292,6 +292,16 @@ export async function evaluateCachedPublicApiReadFastGate(
   };
 }
 
+// Intentional divergence from the slow path (evaluateAccessGate above): the
+// cache-hit fast path enforces only the isolate-local rate limiter and skips
+// both the D1 rate-limit write and recordApiKeyUsage. This is deliberate — the
+// fast path exists to serve a cached body with in-memory key auth and zero D1
+// I/O, so per-key limits are counted per isolate rather than globally across the
+// fleet. A heavy cache-hit consumer can therefore receive up to ~N × its quota
+// where N is the number of active isolates; this is an accepted trade-off for
+// cache-hit latency, not an oversight. If global accounting on cache hits is
+// ever required, queue a recordApiKeyUsage-equivalent D1 write via waitUntil
+// here (matching the slow path), which would require threading env/ctx in.
 export function checkCachedPublicApiReadFastRateLimit(apiKey: AuthenticatedApiKey): Response | null {
   const limit = isApiKeyRateLimitDependencyCircuitOpen()
     ? resolveIsolateFallbackApiKeyRateLimit(apiKey.rateLimitPerMinute)

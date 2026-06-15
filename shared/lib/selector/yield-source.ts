@@ -64,7 +64,11 @@ function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
   return clamp(100 - (age / 172_800) * 100, 0, 100);
 }
 
-function yieldSourceScore(candidate: YieldSourceCandidate, input: SelectorInput): number {
+function yieldSourceScore(
+  candidate: YieldSourceCandidate,
+  input: SelectorInput,
+  benchmarkRate: number | null,
+): number {
   const venue = venueMatchesPreference(candidate, input) ? 100 : 35;
   const risk =
     candidate.sourceRiskScore != null
@@ -72,7 +76,11 @@ function yieldSourceScore(candidate: YieldSourceCandidate, input: SelectorInput)
       : riskTierScore(candidate.venueRiskTier);
   const depth = sourceDepthScore(candidate);
   const freshness = sourceFreshnessScore(candidate);
-  const apy = excessApyConcave(candidate.apy30d - 4) ?? 0;
+  // Match the main scorer's excess-APY definition (scoring.ts excessApy):
+  // measure against the per-coin benchmarkRate so non-USD pegs use the
+  // peg-appropriate benchmark instead of a flat 4% floor. Fall back to 4
+  // only when the row has no benchmark.
+  const apy = excessApyConcave(candidate.apy30d - (benchmarkRate ?? 4)) ?? 0;
   return venue * 0.35 + risk * 0.25 + depth * 0.2 + freshness * 0.15 + apy * 0.05;
 }
 
@@ -113,7 +121,7 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     return null;
   }
   candidates.sort((a, b) => {
-    const scoreDiff = yieldSourceScore(b, input) - yieldSourceScore(a, input);
+    const scoreDiff = yieldSourceScore(b, input, row.benchmarkRate) - yieldSourceScore(a, input, row.benchmarkRate);
     if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
     const riskDiff = riskTierScore(b.venueRiskTier) - riskTierScore(a.venueRiskTier);
     if (riskDiff !== 0) return riskDiff;
