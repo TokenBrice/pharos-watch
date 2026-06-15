@@ -4,8 +4,7 @@
  * credential-harvesting phishing kits. Prevents shipping a sanitizer-style
  * inline script that gets pharos.watch flagged by Safe Browsing again.
  *
- * Triggered patterns (any combination of two within the same inline <script>
- * is a deploy-blocking red card; documented signatures alone are yellow):
+ * Any unallowlisted red-pattern match in an inline <script> is deploy-blocking:
  *
  *   - history.replaceState near credential-shaped identifiers
  *   - URLSearchParams over window.location.hash
@@ -28,7 +27,7 @@ const ALLOWLIST = new Map([
   // ["api/index.html", new Set(["url-hash-token-extraction"])],
 ]);
 
-/** @typedef {{ id: string; severity: "yellow" | "red"; test: (script: string) => boolean }} Signature */
+/** @typedef {{ id: string; severity: "red"; test: (script: string) => boolean }} Signature */
 
 /** @type {Signature[]} */
 const SIGNATURES = [
