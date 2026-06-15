@@ -70,7 +70,7 @@ export function ReliabilitySection({
       >
         <summary className="cursor-pointer text-sm font-medium text-foreground">
           Endpoint probes, circuit breakers, and cache freshness
-          {(browserProbeSummary?.failCount ?? 0) > 0 || (data.summary.worstCacheRatio ?? 0) > 1 ? (
+          {(browserProbeSummary?.failCount ?? 0) > 0 || data.summary.worstCacheRatio > 1 ? (
             <span className="ml-2 text-xs font-normal text-muted-foreground">
               {[
                 browserProbeSummary && browserProbeSummary.failCount > 0 ? `${browserProbeSummary.failCount} probe fail` : null,

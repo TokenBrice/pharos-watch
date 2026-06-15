@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**87/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
+**88/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 624 | 3 | 0 | 87 | 19 |
+| Count | 624 | 2 | 0 | 88 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 40 | 1 | 0 | 215 |
-| quality | 315 | 38 | 2 | 0 | 268 |
+| quality | 315 | 39 | 1 | 0 | 268 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -596,7 +596,7 @@
 | ⬜ | [Q-279](quality/Q-279.md) | S | error-handling | sealPublicOutcome has a TOCTOU window: load-then-insert is not atomic, causing a misleadin |  | `worker/src/lib/depeg-resolver-publication-store.` |
 | ⬜ | [Q-280](quality/Q-280.md) | S | complexity | topologicalOrder has no cycle detection; a dependency cycle silently produces a wrong orde |  | `worker/src/lib/report-cards-snapshot-card.ts:L47` |
 | ⬜ | [Q-281](quality/Q-281.md) | S | error-handling | methodology-change kind applied to non-methodology product pivots, diluting the Pharos met |  | `shared/data/annotations/curated-annotations.ts:L` |
-| 🔄 | [Q-282](quality/Q-282.md) | S | dead-code | Dead null-coalescing guards on a non-optional number field (worstCacheRatio) | codex | `src/app/admin/sections/reliability-section.tsx:7` |
+| ✅ | [Q-282](quality/Q-282.md) | S | dead-code | Dead null-coalescing guards on a non-optional number field (worstCacheRatio) | codex | `src/app/admin/sections/reliability-section.tsx:7` |
 | ⬜ | [Q-283](quality/Q-283.md) | S | complexity | YieldIntelligenceMethodologySection is a 302-line single-component file with a long prose  |  | `src/app/methodology/sections/monitoring/yield-in` |
 | ⬜ | [Q-284](quality/Q-284.md) | M | type-safety | stripCommentsAndStrings in check-feature-flag-inlining.mjs does not handle template-litera |  | `scripts/ci/check-feature-flag-inlining.mjs:L52-L` |
 | ⬜ | [Q-285](quality/Q-285.md) | S | error-handling | coin-notice.tsx uses array index as React list key for potentially stable, ordered notices |  | `src/components/coin-notice.tsx:L59` |

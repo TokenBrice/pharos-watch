@@ -44,7 +44,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const reliabilitySignal =
     (healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy" ||
     (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
-    (data?.summary.worstCacheRatio ?? 0) > 1;
+    (data != null && data.summary.worstCacheRatio > 1);
 
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
   const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
