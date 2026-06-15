@@ -293,20 +293,32 @@ async function recordDirectApiOutcome(
   circuitKey: string,
   success: boolean,
 ): Promise<DirectApiCircuitEvent | null> {
+  // Record the outcome exactly once. recordOutcomeSafe never throws, so the
+  // write is unconditional and cannot be duplicated by the read path below.
+  // Re-recording in a catch (the previous behavior) inflated the consecutive
+  // failure count and could trip the breaker a run early.
+  const before = await readCircuitRecordSafe(db, circuitKey);
+  await recordOutcomeSafe(db, circuitKey, success);
+  const after = await readCircuitRecordSafe(db, circuitKey);
+
+  // best-effort state-change detection; a failed read returns null (no event)
+  if (!before || !after || before.state === after.state) return null;
+  return {
+    circuitKey,
+    from: before.state,
+    to: after.state,
+    at: after.state === "closed" ? after.lastSuccessAt : after.openedAt ?? after.lastFailureAt,
+  };
+}
+
+async function readCircuitRecordSafe(
+  db: D1Database,
+  circuitKey: string,
+): Promise<Awaited<ReturnType<typeof getCircuitRecord>> | null> {
   try {
-    const before = await getCircuitRecord(db, circuitKey);
-    await recordOutcomeSafe(db, circuitKey, success);
-    const after = await getCircuitRecord(db, circuitKey);
-    if (before.state === after.state) return null;
-    return {
-      circuitKey,
-      from: before.state,
-      to: after.state,
-      at: after.state === "closed" ? after.lastSuccessAt : after.openedAt ?? after.lastFailureAt,
-    };
+    return await getCircuitRecord(db, circuitKey);
   } catch (err) {
-    console.warn(`[dex-liquidity] Failed to record ${circuitKey} circuit telemetry:`, err);
-    await recordOutcomeSafe(db, circuitKey, success);
+    console.warn(`[dex-liquidity] Failed to read ${circuitKey} circuit telemetry:`, err);
     return null;
   }
 }
