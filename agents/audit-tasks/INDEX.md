@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**23/733 done (3%)**  `█░░░░░░░░░░░░░░░░░░░`
+**27/733 done (4%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 708 | 2 | 0 | 23 | 0 |
+| Count | 702 | 4 | 0 | 27 | 0 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 13 | 2 | 0 | 251 |
+| redundancy | 266 | 16 | 4 | 0 | 246 |
 | quality | 315 | 5 | 0 | 0 | 310 |
-| sustainability | 152 | 5 | 0 | 0 | 147 |
+| sustainability | 152 | 6 | 0 | 0 | 146 |
 
 ## redundancy (266)
 
@@ -22,7 +22,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| 🔄 | [R-001](redundancy/R-001.md) | M | naming | Two divergent functions named classifyLiquidityEvidence classify the same public field dif | codex | `worker/src/api/dex-liquidity-history.ts:15-51 + ` |
+| ✅ | [R-001](redundancy/R-001.md) | M | naming | Two divergent functions named classifyLiquidityEvidence classify the same public field dif | codex | `worker/src/api/dex-liquidity-history.ts:15-51 + ` |
 
 ### Medium (88)
 
@@ -38,7 +38,7 @@
 | ⬜ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types |  | `src/components/stablecoin-detail/hero-card-secti` |
 | ⬜ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call |  | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
-| ⬜ | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body |  | `scripts/maintenance/audit-dex-pricing-source-gap` |
+| 🔄 | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body | codex | `scripts/maintenance/audit-dex-pricing-source-gap` |
 | ⬜ | [R-013](redundancy/R-013.md) | S | clone | Three independent formatAge implementations across the telegram layer |  | `worker/src/api/telegram-webhook-insights.ts:L21-` |
 | ⬜ | [R-014](redundancy/R-014.md) | S | dead-code | DEX_LIQUIDITY_TABLES Set is a dead allowlist — iteration array is always a strict subset |  | `worker/src/cron/dex-liquidity/persistence.ts:L54` |
 | ⬜ | [R-015](redundancy/R-015.md) | S | clone | Two functionally identical price-observation merge functions coexist |  | `worker/src/cron/dex-liquidity/subgraph-helpers.t` |
@@ -54,7 +54,7 @@
 | ⬜ | [R-025](redundancy/R-025.md) | S | dead-code | PharosLogoWithText exported but never imported |  | `src/components/pharos-logo.tsx:L41-L59` |
 | ⬜ | [R-026](redundancy/R-026.md) | S | clone | Data-source label map duplicated across two modules |  | `src/components/yield-detail-section-model.ts:L17` |
 | ✅ | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
-| ⬜ | [R-028](redundancy/R-028.md) | S | clone | stringValue / numberValue re-defined locally in 6+ maintenance scripts despite shared expo |  | `scripts/maintenance/audit-dia-provider-poc.ts:L1` |
+| 🔄 | [R-028](redundancy/R-028.md) | S | clone | stringValue / numberValue re-defined locally in 6+ maintenance scripts despite shared expo | codex | `scripts/maintenance/audit-dia-provider-poc.ts:L1` |
 | ⬜ | [R-029](redundancy/R-029.md) | M | clone | Structural clone: api-query-registry.ts and api-query-runtime-registry.ts |  | `src/lib/api-query-registry.ts:L1-L361, src/lib/a` |
 | ⬜ | [R-030](redundancy/R-030.md) | S | clone | Double console.log for directApiSkippedUntracked behind identical guard |  | `worker/src/cron/dex-liquidity/orchestrator-phase` |
 | ⬜ | [R-031](redundancy/R-031.md) | S | dead-code | _symbolToIds parameter is dead in both subgraph source-family fetchers |  | `worker/src/cron/dex-liquidity/subgraph-source-fa` |
@@ -123,11 +123,11 @@
 |---|---|---|---|---|---|---|
 | ✅ | [R-090](redundancy/R-090.md) | S | clone | Split import of `@shared/lib/format` in chains/client.tsx | codex | `src/app/chains/client.tsx:L19, L23` |
 | ✅ | [R-091](redundancy/R-091.md) | S | dead-code | Redundant `shouldShowTickerLabel` alias in coin-emblem.tsx | codex | `src/app/alt-pegs/fiat-world-atlas/coin-emblem.ts` |
-| ⬜ | [R-092](redundancy/R-092.md) | S | clone | Split import statements from `@/hooks/api-hooks` in depeg/client.tsx |  | `src/app/depeg/client.tsx:L8-L9` |
+| ✅ | [R-092](redundancy/R-092.md) | S | clone | Split import statements from `@/hooks/api-hooks` in depeg/client.tsx | codex | `src/app/depeg/client.tsx:L8-L9` |
 | ⬜ | [R-093](redundancy/R-093.md) | S | dead-code | getErrorMessage in raw-snapshot.ts is a one-line pass-through wrapper with no value |  | `worker/src/lib/status/raw-snapshot.ts:L48-L50` |
 | ⬜ | [R-094](redundancy/R-094.md) | S | dead-code | buildComplianceViewModel calls isGeniusRegimeEffective twice per invocation |  | `src/app/compliance/model.ts:L268-L278` |
 | ✅ | [R-095](redundancy/R-095.md) | S | dead-code | collectCronConsoleUsage is an exported alias with zero importers | codex | `scripts/ci/check-cron-console-usage.mjs:L153` |
-| ⬜ | [R-096](redundancy/R-096.md) | S | wrapper | One-line ChartTooltip wrapper adds no value inside cemetery-charts.tsx |  | `src/components/cemetery-charts.tsx:L33-L39` |
+| 🔄 | [R-096](redundancy/R-096.md) | S | wrapper | One-line ChartTooltip wrapper adds no value inside cemetery-charts.tsx | codex | `src/components/cemetery-charts.tsx:L33-L39` |
 | ⬜ | [R-097](redundancy/R-097.md) | S | dead-code | documentedBoundSupplyFull called only to discard its capacityModel in 10 stablecoin-redeem |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ⬜ | [R-098](redundancy/R-098.md) | S | dead-code | Hardcoded ownership-conflict string at telegram-webhook.ts:557 bypasses the shared PENDING |  | `worker/src/api/telegram-webhook.ts:L557` |
 | ⬜ | [R-099](redundancy/R-099.md) | S | clone | countWords and countTitleWords are identical functions |  | `worker/src/cron/daily-digest/response.ts:L248-L2` |
@@ -189,7 +189,7 @@
 | ⬜ | [R-155](redundancy/R-155.md) | S | dead-code | scopeNodeIds Set in computeVisibleGraph is redundant with the nodeIds loop |  | `src/components/contagion-graph-graph.ts:58-95` |
 | ⬜ | [R-156](redundancy/R-156.md) | S | clone | Three private formatDeviation functions with near-identical logic |  | `src/app/depeg/[event]/page.tsx:78-85 + src/app/d` |
 | ⬜ | [R-157](redundancy/R-157.md) | S | dead-code | capitalize() in selector-mobile-form duplicates selectorProfileLabel from shared |  | `src/components/selector/selector-mobile-form.tsx` |
-| 🔄 | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log | codex | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
+| ✅ | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log | codex | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
 | ⬜ | [R-159](redundancy/R-159.md) | S | dead-code | getCoinsByLifecycleStatus accepts a 'dead' status that is unreachable and always returns [ |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [R-160](redundancy/R-160.md) | S | clone | rowsById map constructed independently in lower-ranked and output-helpers for the same uni |  | `shared/lib/selector/lower-ranked.ts:L109-L110; s` |
 | ⬜ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null |  | `src/lib/sidebar-signals.ts:L55-L57` |
@@ -203,7 +203,7 @@
 | ⬜ | [R-169](redundancy/R-169.md) | S | dead-code | Local formatPercent duplicates shared/lib/format.formatPercentFromRatio |  | `src/components/depeg-resolver-reviewer-module.ts` |
 | ⬜ | [R-170](redundancy/R-170.md) | S | wrapper | flow-machine-scene-shredder.tsx performs a one-shot matchMedia read inside useState initia |  | `src/components/flow-machine-scene-shredder.tsx:L` |
 | ⬜ | [R-171](redundancy/R-171.md) | S | clone | FeedbackModal dynamic import duplicated across FeedbackButton and MobileUtilityDock |  | `src/components/feedback-button.tsx:L7-L10, src/c` |
-| ⬜ | [R-172](redundancy/R-172.md) | S | wrapper | `PAGES_UI_PREFIXES` in deploy-impact.mjs is a hard-coded clone of `DEPLOY_IMPACT_REGISTRY. |  | `scripts/lib/deploy-impact.mjs:L22-L28` |
+| 🔄 | [R-172](redundancy/R-172.md) | S | wrapper | `PAGES_UI_PREFIXES` in deploy-impact.mjs is a hard-coded clone of `DEPLOY_IMPACT_REGISTRY. | codex | `scripts/lib/deploy-impact.mjs:L22-L28` |
 | ⬜ | [R-173](redundancy/R-173.md) | S | wrapper | getResolvedDynamicEndpointDescriptor performs a redundant third descriptor lookup for admi |  | `shared/lib/api-endpoints/validation.ts:L181-193` |
 | ⬜ | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
@@ -774,7 +774,7 @@
 | ⬜ | [S-130](sustainability/S-130.md) | S | docs | Glossary methodology version pins are manually maintained and can drift from the versioned |  | `src/app/learn/glossary/content.ts:L65-L229` |
 | ⬜ | [S-131](sustainability/S-131.md) | S | dead-code | blacklist/page.tsx is a legacy redirect wrapper that renders FreezeWatchClient under a noi |  | `src/app/blacklist/page.tsx:L1-L30` |
 | ⬜ | [S-132](sustainability/S-132.md) | S | modularity | BACKING_SENTENCE_LABELS is a local Record covering the entire BackingType union without ex |  | `src/components/stablecoin-detail/hero-card-ident` |
-| ⬜ | [S-133](sustainability/S-133.md) | S | config | backfill-ai-summary-provenance.mjs hard-codes model name 'claude-opus-4-7' that will becom |  | `scripts/maintenance/backfill-ai-summary-provenan` |
+| ✅ | [S-133](sustainability/S-133.md) | S | config | backfill-ai-summary-provenance.mjs hard-codes model name 'claude-opus-4-7' that will becom | codex | `scripts/maintenance/backfill-ai-summary-provenan` |
 | ⬜ | [S-134](sustainability/S-134.md) | S | config | Magic 400ms and 500ms Playwright settle delays are undocumented and fragile on slow CI run |  | `scripts/maintenance/build-og-editorial.mjs:L194,` |
 | ⬜ | [S-135](sustainability/S-135.md) | S | config | getStatusPageActions falls back to probePath for status page action path, which is semanti |  | `shared/lib/api-endpoints/status.ts:L9-10` |
 | ⬜ | [S-136](sustainability/S-136.md) | S | coupling | Duplicated isBlacklistStablecoin guard across blacklist endpoints |  | `worker/src/api/blacklist-summary.ts:65-67 (dupli` |
