@@ -123,7 +123,8 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     }
   }
 
-  // Require at least 2 available signals (weight >= 0.30) for a score
+  // Require at least 2 available signals (weight >= 0.30) for a score;
+  // returns null when weight is too low (no score produced).
   if (totalWeight < MIN_AVAILABLE_WEIGHT) {
     return null;
   }

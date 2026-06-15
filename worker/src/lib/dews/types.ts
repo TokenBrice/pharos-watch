@@ -105,7 +105,6 @@ export interface DEWSInput {
 }
 
 export type DewsInsufficientEvidenceReason =
-  | "total_weight_below_minimum"
   | "data_quality_only"
   | "missing_market_or_liquidity_evidence";
 
