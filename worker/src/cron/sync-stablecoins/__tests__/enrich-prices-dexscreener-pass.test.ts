@@ -107,6 +107,49 @@ describe("runDexScreenerPass", () => {
     )).toBe(false);
   });
 
+  it("includes DexScreener response status details in exact lookup diagnostics", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/html",
+      error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const result = await runDexScreenerPass([
+      makeMissingAsset({
+        id: "exact-usd",
+        symbol: "EXACT",
+        address: "0xabc",
+        chains: ["Base"],
+      }),
+    ], undefined, db);
+
+    expect(result).toMatchObject({
+      resolved: 0,
+      failures: [],
+      diagnostics: [
+        expect.objectContaining({
+          source: "dexscreener-exact",
+          endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
+          status: 429,
+          ok: false,
+          success: false,
+          errorClass: "upstream-error",
+          errorMessage: expect.stringContaining("HTTP 429"),
+        }),
+      ],
+    });
+  });
+
   it("keeps exact fallback prices on the upper-middle median for even pool counts", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,

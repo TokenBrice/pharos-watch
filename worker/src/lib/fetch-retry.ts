@@ -3,6 +3,7 @@ import { cancelResponseBodyQuietly } from "./response-body";
 interface FetchWithRetryOptions {
   passthrough404?: boolean;
   passthroughStatuses?: number[];
+  returnFinalResponse?: boolean;
   timeoutMs?: number;
 }
 function getRetryDelayMs(response: Response, attempt: number): number | null {
@@ -70,6 +71,9 @@ export async function fetchWithRetry(
         continue;
       }
       console.warn(`[fetch-retry] ${url} returned ${res.status} (attempt ${i + 1}/${maxRetries + 1})`);
+      if (options?.returnFinalResponse && i >= maxRetries) {
+        return res;
+      }
       await cancelResponseBodyQuietly(res);
     } catch (err) {
       if (signal?.aborted) {

@@ -61,7 +61,7 @@ The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines
 `single-asset` now supports optional `reserveProbe`, `supplyProbe`, and `timestampProbe` paths so weak single-bucket feeds can persist honest reserve/supply ratio telemetry when the upstream exposes it. The family remains `weak-live-probe` unless the source is strong enough to justify promotion into a more independent adapter class.
 
 `attestation-pdf-index` is a validated-static adapter for issuer pages that expose dated PDF attestations. It selects the newest dated PDF link, including Webflow-style gated PDF attributes, validates source freshness from the report date, and emits configured static reserve slices until full PDF text extraction is implemented.
-The adapter fetches issuer index pages with browser-style `Origin`, `Referer`, and `Accept-Language` headers because some WordPress/hosting stacks rate-limit generic Worker HTML requests while still serving normal browser navigations.
+The adapter normally fetches issuer index pages with browser-style `Origin`, `Referer`, and `Accept-Language` headers because some WordPress/hosting stacks rate-limit generic Worker HTML requests while still serving normal browser navigations. Hostinger/WordPress pages that reject browser-origin hints, currently Schuman's reserve-audit page, use the neutral Pharos fetch identity instead.
 
 ### Fallback Inputs
 
@@ -91,7 +91,7 @@ The shared live-reserve config schema enforces adapter-specific primary and fall
 
 Branch-balance adapters (`evm-branch-balances`, `liquity-v2-branches`, and `lista`) can set a per-branch `priceToken` when the measured collateral balance is a protocol receipt token whose live price should be sourced from a separate underlying token address. The balance still comes from the configured branch token; only the DefiLlama price lookup address changes.
 
-Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena and Reservoir now do this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients.
+Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena, OpenEden, and Reservoir use this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients. OpenEden and Reservoir additionally retry with the neutral Pharos fetch identity when the browser-style request fails.
 
 USDe's Ethena reserve config also keeps Ethena's main-domain collateral API as a same-provider JSON fallback for cases where the `app.ethena.fi` API route returns the dashboard HTML shell to Worker-origin requests.
 

@@ -1,5 +1,6 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { USER_AGENT } from "../../lib/constants";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput } from "./input-guards";
 import type { AdapterContext } from "./types";
@@ -7,6 +8,11 @@ import { runAdapterIo } from "./concurrency";
 import { toErrorMessage } from "../../lib/error-utils";
 
 export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+export const HTML_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+export const NEUTRAL_ADAPTER_HEADERS = {
+  "User-Agent": USER_AGENT,
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 /**
  * Some issuer dashboards gate their JSON/HTML endpoints with CORS-style

@@ -213,7 +213,23 @@ export async function fetchDsFallbackPools(
       if (result.ok) {
         successfulRequests++;
       }
-      if (!result.ok) continue;
+      if (!result.ok) {
+        await logCronEvent(db, {
+          job: "sync-dex-liquidity",
+          eventType: "dexscreener-fallback-unusable-response",
+          severity: "warning",
+          message: "DexScreener fallback returned an unusable response for a tracked contract.",
+          metadata: {
+            stablecoinId: meta.id,
+            symbol: meta.symbol,
+            chain: contract.chain,
+            status: result.status ?? null,
+            contentType: result.contentType ?? null,
+            error: result.error ?? null,
+          },
+        });
+        continue;
+      }
       const pairs = result.pairs;
       if (pairs.length === 0) continue;
 

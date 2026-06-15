@@ -25,6 +25,40 @@ describe("dexscreener", () => {
     await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
       ok: false,
       pairs: [],
+      status: 200,
+      contentType: "text/plain;charset=UTF-8",
+      error: "DexScreener payload contained no valid pair rows",
+    });
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://api.dexscreener.com/tokens/v1/base/0xabc",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Origin: "https://dexscreener.com",
+          Referer: "https://dexscreener.com/",
+          "User-Agent": expect.stringContaining("Mozilla/5.0"),
+        }),
+      }),
+      2,
+      { timeoutMs: 10_000, returnFinalResponse: true },
+    );
+  });
+
+  it("returns final non-OK status details for diagnostics", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response("rate limited", {
+        status: 429,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+
+    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/html",
+      error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
     });
   });
 

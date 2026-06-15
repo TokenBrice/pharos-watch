@@ -6,6 +6,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeHtmlEntities,
   fetchPrimaryHtmlInput,
+  fetchTextWithRetry,
   htmlLayoutChangedError,
   readHtmlAttribute,
   requireHtmlInput,
@@ -14,13 +15,61 @@ import {
   verifiedFreshnessMetadata,
   isReserveRisk,
 } from "./helpers";
-import { buildBrowserHeaders } from "./request";
+import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const ADAPTER_NAME = "attestation-pdf-index";
 const COMPOSITION_MODE = "configured-static-slices";
 const COMPOSITION_NOTE =
   "Reserve composition is emitted from adapter params; the selected PDF is used for report and freshness metadata only until full PDF parsing is implemented.";
+const NEUTRAL_FIRST_HTML_HOSTS = new Set(["schuman.io", "www.schuman.io"]);
+
+function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
+  try {
+    return NEUTRAL_FIRST_HTML_HOSTS.has(new URL(url).hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+function buildBrowserHtmlHeaders(url: string): HeadersInit {
+  return {
+    Accept: HTML_ACCEPT_HEADER,
+    ...buildBrowserHeaders(new URL(url).origin, url),
+  };
+}
+
+function buildNeutralHtmlHeaders(): HeadersInit {
+  return {
+    Accept: HTML_ACCEPT_HEADER,
+    ...NEUTRAL_ADAPTER_HEADERS,
+  };
+}
+
+async function fetchAttestationIndexHtml(
+  config: LiveReservesConfig,
+  inputUrl: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<string> {
+  if (shouldUseNeutralHtmlHeadersFirst(inputUrl)) {
+    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, { headers: buildNeutralHtmlHeaders() });
+  }
+
+  try {
+    return await fetchPrimaryHtmlInput(
+      config,
+      ADAPTER_NAME,
+      signal,
+      ctx,
+      15_000,
+      { headers: buildBrowserHtmlHeaders(inputUrl) },
+    );
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, { headers: buildNeutralHtmlHeaders() });
+  }
+}
 
 const MONTH_INDEX_BY_PREFIX: Record<string, number> = {
   jan: 0,
@@ -434,13 +483,6 @@ export async function fetchAttestationPdfIndexReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
-  const html = await fetchPrimaryHtmlInput(
-    config,
-    ADAPTER_NAME,
-    signal,
-    ctx,
-    15_000,
-    { headers: buildBrowserHeaders(new URL(input.url).origin, input.url) },
-  );
+  const html = await fetchAttestationIndexHtml(config, input.url, signal, ctx);
   return adaptAttestationPdfIndex(html, readParams(config), { indexUrl: input.url });
 }

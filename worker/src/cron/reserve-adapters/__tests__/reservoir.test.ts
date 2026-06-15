@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
+import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   assets: [
@@ -17,6 +18,11 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   totalLiabilities: "95",
   equity: "5",
 };
+const RESERVOIR_TEST_URL = "https://example.com/reservoir";
+const RESERVOIR_BROWSER_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(
+  buildBrowserHeaders("https://app.reservoir.xyz", "https://app.reservoir.xyz/reserves"),
+)}`;
+const RESERVOIR_NEUTRAL_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
 
 describe("adaptReservoirReserves", () => {
   it("declares the reviewed latest-state balance-sheet API as not-applicable-only freshness", () => {
@@ -201,6 +207,31 @@ describe("adaptReservoirReserves", () => {
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.redemption).toMatchObject({
       freshnessKind: "same-run-api",
+    });
+  });
+
+  it("falls back to neutral API headers when browser-style headers fail", async () => {
+    const result = await fetchReservoirReserves(
+      { id: "r" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          [RESERVOIR_BROWSER_CACHE_KEY, Promise.reject(new Error("browser headers rejected"))],
+          [RESERVOIR_NEUTRAL_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalAssetsUsd: 100,
+      totalLiabilitiesUsd: 95,
+      collateralizationRatio: 100 / 95,
     });
   });
 

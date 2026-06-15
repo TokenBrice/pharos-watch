@@ -14,12 +14,17 @@ vi.mock("../../lib/dexscreener", async () => {
   };
 });
 
+vi.mock("../../lib/cron-logger", () => ({
+  logCronEvent: vi.fn(async () => {}),
+}));
+
 import { fetchDsFallbackPools, getFallbackTargets } from "../dex-liquidity/fetch-fallbacks";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { fetchDsTokenPoolsWithStatus } from "../../lib/dexscreener";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { logCronEvent } from "../../lib/cron-logger";
 
 function createMockDb(): D1Database {
   return {
@@ -91,6 +96,7 @@ describe("fetchDsFallbackPools circuit breaker", () => {
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
+    vi.mocked(logCronEvent).mockReset();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(recordOutcome).mockResolvedValue(undefined);
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
@@ -173,5 +179,44 @@ describe("fetchDsFallbackPools circuit breaker", () => {
       false,
     );
     expect(recordOutcome).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs DexScreener unusable response details for operations triage", async () => {
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/html",
+      error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/ethereum/0xabc; body starts with: rate limited",
+    });
+
+    const metrics = new Map<string, ReturnType<typeof initMetrics>>();
+    const zeroPools = initMetrics("usdt-tether", "USDT");
+    zeroPools.poolCount = 0;
+    metrics.set("usdt-tether", zeroPools);
+
+    const db = createMockDb();
+    await fetchDsFallbackPools(
+      db,
+      metrics,
+      new Map(),
+      createKnownPoolIdentityIndex(),
+    );
+
+    expect(logCronEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        job: "sync-dex-liquidity",
+        eventType: "dexscreener-fallback-unusable-response",
+        metadata: expect.objectContaining({
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          status: 429,
+          contentType: "text/html",
+          error: expect.stringContaining("HTTP 429"),
+        }),
+      }),
+    );
   });
 });

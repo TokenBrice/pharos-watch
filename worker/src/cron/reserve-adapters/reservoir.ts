@@ -10,7 +10,8 @@ import {
 } from "./helpers";
 import type { ValueBucketRule } from "./classification";
 import { wrapperAssetMeta } from "./wrapper-assets";
-import { buildBrowserHeaders } from "./request";
+import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { toErrorMessage } from "../../lib/error-utils";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -209,6 +210,38 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
   };
 }
 
+async function fetchReservoirPayload(
+  url: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<ReservoirReservesResponse> {
+  try {
+    return await fetchJsonWithRetry<ReservoirReservesResponse>(
+      url,
+      signal,
+      20_000,
+      ctx,
+      { headers: RESERVOIR_BROWSER_HEADERS },
+    );
+  } catch (primaryError) {
+    if (signal.aborted) throw primaryError;
+    try {
+      return await fetchJsonWithRetry<ReservoirReservesResponse>(
+        url,
+        signal,
+        20_000,
+        ctx,
+        { headers: NEUTRAL_ADAPTER_HEADERS },
+      );
+    } catch (fallbackError) {
+      if (signal.aborted) throw fallbackError;
+      throw new Error(
+        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
+      );
+    }
+  }
+}
+
 export async function fetchReservoirReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -217,13 +250,7 @@ export async function fetchReservoirReserves(
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "reservoir");
 
-  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(
-    primaryInput.url,
-    signal,
-    20_000,
-    ctx,
-    { headers: RESERVOIR_BROWSER_HEADERS },
-  );
+  const payload = await fetchReservoirPayload(primaryInput.url, signal, ctx);
   const adapted = adaptReservoirReserves(payload);
   const totalAssetsUsd = Number(payload.totalAssets);
   const totalLiabilitiesUsd = Number(payload.totalLiabilities);

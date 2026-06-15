@@ -6,6 +6,7 @@ import {
   fetchAttestationPdfIndexReserves,
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
+import { HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -225,7 +226,7 @@ describe("fetchAttestationPdfIndexReserves", () => {
   it("fetches the primary HTML input and resolves relative report URLs against that page", async () => {
     const html = '<a href="reports/2026-04-30-attestation.pdf">April 2026 report</a>';
     const fetchMock = vi.fn(
-      async () =>
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(html, {
           headers: { "content-type": "text/html" },
           status: 200,
@@ -256,6 +257,40 @@ describe("fetchAttestationPdfIndexReserves", () => {
       reportPdfPath: "/transparency/reports/2026-04-30-attestation.pdf",
       reportPdfUrl: "https://issuer.example/transparency/reports/2026-04-30-attestation.pdf",
       compositionMode: "configured-static-slices",
+    });
+  });
+
+  it("uses neutral HTML headers first for Schuman reserve-audit pages", async () => {
+    const html = '<a href="/reports/EUROP_Reserve_Report_31_05_2026.pdf">May 2026 report</a>';
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(html, {
+          headers: { "content-type": "text/html" },
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAttestationPdfIndexReserves(
+      {} as StablecoinMeta,
+      buildConfig("https://schuman.io/reserve-audits/"),
+      new AbortController().signal,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://schuman.io/reserve-audits/",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: HTML_ACCEPT_HEADER,
+          ...NEUTRAL_ADAPTER_HEADERS,
+        }),
+      }),
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty("Origin");
+    expect(result.metadata).toMatchObject({
+      reportDate: "2026-05-31",
+      reportPdfPath: "/reports/EUROP_Reserve_Report_31_05_2026.pdf",
     });
   });
 });

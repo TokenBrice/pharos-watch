@@ -4,7 +4,6 @@
  * by the main CG/GT/Curve/UniV3 pipeline.
  */
 import { fetchWithRetry } from "./fetch-retry";
-import { USER_AGENT } from "./constants";
 import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
@@ -12,6 +11,15 @@ import { sleepWithSignal } from "./abort";
 export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
+const DEXSCREENER_BROWSER_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const DEXSCREENER_API_HEADERS = {
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "en-US,en;q=0.9",
+  Origin: "https://dexscreener.com",
+  Referer: "https://dexscreener.com/",
+  "User-Agent": DEXSCREENER_BROWSER_USER_AGENT,
+};
 
 /** Response shape from GET /tokens/v1/{chainId}/{address} */
 export interface DsPair {
@@ -36,6 +44,9 @@ export interface DsTrackedTokenPrice {
 export interface DsFetchPoolsResult {
   ok: boolean;
   pairs: DsPair[];
+  status?: number;
+  contentType?: string;
+  error?: string;
 }
 
 function isDsPair(value: unknown): value is DsPair {
@@ -64,6 +75,27 @@ function parseDexScreenerTokenPoolsResponse(data: unknown): DsPair[] | null {
     return (data as { pairs: unknown[] }).pairs.filter(isDsPair);
   }
   return null;
+}
+
+function summarizeBody(raw: string, limit = 160): string {
+  return raw.replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+async function describeNonOkResponse(url: string, res: Response): Promise<DsFetchPoolsResult> {
+  const contentType = res.headers.get("content-type") ?? "unknown";
+  let snippet = "";
+  try {
+    snippet = summarizeBody(await res.text());
+  } catch {
+    snippet = "";
+  }
+  return {
+    ok: false,
+    pairs: [],
+    status: res.status,
+    contentType,
+    error: `HTTP ${res.status} for ${url}${snippet ? `; body starts with: ${snippet}` : ""}`,
+  };
 }
 
 /**
@@ -125,27 +157,52 @@ export async function fetchDsTokenPoolsWithStatus(
   // timeout here caused retries to be silently killed (the outer fired during
   // retry waits, producing an AbortError that callers swallowed as a failure).
   const res = await fetchWithRetry(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-    },
+    headers: DEXSCREENER_API_HEADERS,
     signal,
-  }, maxRetries, { timeoutMs });
-  if (!res?.ok) return { ok: false, pairs: [] };
+  }, maxRetries, { timeoutMs, returnFinalResponse: true });
+  if (!res) return { ok: false, pairs: [], error: `Fetch failed for ${url}` };
+  if (!res.ok) return describeNonOkResponse(url, res);
+
+  const contentType = res.headers.get("content-type") ?? "unknown";
+  const status = res.status;
 
   try {
-    const data = (await res.json()) as unknown;
+    const raw = await res.text();
+    const data = JSON.parse(raw) as unknown;
     const parsedPairs = parseDexScreenerTokenPoolsResponse(data);
-    if (parsedPairs == null) return { ok: false, pairs: [] };
+    if (parsedPairs == null) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: "DexScreener payload schema changed: expected array or object.pairs[]",
+      };
+    }
 
     const rawCount = Array.isArray(data)
       ? data.length
       : Array.isArray((data as { pairs?: unknown }).pairs)
         ? (data as { pairs: unknown[] }).pairs.length
         : 0;
-    return { ok: rawCount === 0 || parsedPairs.length > 0, pairs: parsedPairs };
-  } catch {
-    return { ok: false, pairs: [] };
+    if (rawCount > 0 && parsedPairs.length === 0) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: "DexScreener payload contained no valid pair rows",
+      };
+    }
+    return { ok: true, pairs: parsedPairs };
+  } catch (error) {
+    return {
+      ok: false,
+      pairs: [],
+      status,
+      contentType,
+      error: `DexScreener JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 }
 

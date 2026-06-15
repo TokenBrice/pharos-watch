@@ -10,7 +10,7 @@ import {
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
-import { buildBrowserHeaders } from "./request";
+import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
 
 interface OpenEdenReserveCompositionResponse {
   date?: string;
@@ -169,6 +169,40 @@ export function adaptOpenEdenUsdo(
 const OPENEDEN_PER_ATTEMPT_TIMEOUT_MS = 8_000;
 const OPENEDEN_TOTAL_TIMEOUT_MS = 16_000;
 
+async function fetchOpenEdenReserveComposition(
+  url: string,
+  signal: AbortSignal,
+  deadline: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<OpenEdenReserveCompositionResponse> {
+  const attemptSignal = AbortSignal.any([signal, deadline]);
+  try {
+    return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+      url,
+      attemptSignal,
+      OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
+      ctx,
+      { headers: OPENEDEN_BROWSER_HEADERS },
+    );
+  } catch (primaryError) {
+    if (signal.aborted || deadline.aborted) throw primaryError;
+    try {
+      return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+        url,
+        attemptSignal,
+        OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
+        ctx,
+        { headers: NEUTRAL_ADAPTER_HEADERS },
+      );
+    } catch (fallbackError) {
+      if (signal.aborted || deadline.aborted) throw fallbackError;
+      throw new Error(
+        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
+      );
+    }
+  }
+}
+
 export async function fetchOpenEdenUsdoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -179,13 +213,7 @@ export async function fetchOpenEdenUsdoReserves(
   const deadline = AbortSignal.timeout(OPENEDEN_TOTAL_TIMEOUT_MS);
   let payload: OpenEdenReserveCompositionResponse;
   try {
-    payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
-      primaryInput.url,
-      AbortSignal.any([signal, deadline]),
-      OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
-      ctx,
-      { headers: OPENEDEN_BROWSER_HEADERS },
-    );
+    payload = await fetchOpenEdenReserveComposition(primaryInput.url, signal, deadline, ctx);
   } catch (error) {
     if (signal.aborted) throw error;
     if (deadline.aborted) {
