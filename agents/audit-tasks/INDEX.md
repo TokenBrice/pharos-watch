@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**40/733 done (5%)**  `█░░░░░░░░░░░░░░░░░░░`
+**42/733 done (6%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 673 | 1 | 0 | 40 | 19 |
+| Count | 671 | 1 | 0 | 42 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 24 | 0 | 0 | 232 |
-| quality | 315 | 8 | 1 | 0 | 299 |
+| redundancy | 266 | 25 | 0 | 0 | 231 |
+| quality | 315 | 9 | 1 | 0 | 298 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -146,7 +146,7 @@
 | ⬜ | [R-112](redundancy/R-112.md) | S | clone | telegram-digest-appendices.ts rebuilds TRACKED_META_BY_ID instead of importing it |  | `worker/src/lib/telegram-digest-appendices.ts:L36` |
 | ⬜ | [R-113](redundancy/R-113.md) | S | dead-code | symbolToIds parameter accepted but immediately voided in convertToGtNewPools |  | `worker/src/lib/dex-api-pool-shaping.ts:L282, L28` |
 | ⬜ | [R-114](redundancy/R-114.md) | S | clone | parseCsvSymbols in mint-burn-health-config duplicates parseCsvEnv in env.ts |  | `worker/src/lib/mint-burn-health-config.ts:L40-L4` |
-| ⬜ | [R-115](redundancy/R-115.md) | S | dead-code | inferTag and TAG_RULES are permanently dead code |  | `src/components/changelog-entry-card.tsx:L7-17, L` |
+| ✅ | [R-115](redundancy/R-115.md) | S | dead-code | inferTag and TAG_RULES are permanently dead code | codex | `src/components/changelog-entry-card.tsx:L7-17, L` |
 | ⬜ | [R-116](redundancy/R-116.md) | S | dead-code | Dead `screenerFilterChips` key in buildResultSummaryCoordinationProps spread |  | `src/app/screener/picker/handoff.ts:L136` |
 | ⬜ | [R-117](redundancy/R-117.md) | S | clone | gradeRank() duplicated with divergent NR semantics across two files |  | `src/components/stablecoin-detail/safety-score-hi` |
 | ⬜ | [R-118](redundancy/R-118.md) | S | clone | scheduleIdle() is a near-clone in two component files |  | `src/components/home-alt-hero-chart-gate.tsx:29-4` |
@@ -455,7 +455,7 @@
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
 | ⬜ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps |  | `src/components/feedback-modal.tsx:L78-L120` |
-| 🔄 | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
+| ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
 | ⬜ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif |  | `scripts/maintenance/audit-redemption-v4-score-di` |
 | ⬜ | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
@@ -492,7 +492,7 @@
 | ⬜ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness |  | `src/components/selector/selector-shortlist-card.` |
 | ⬜ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent |  | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
-| ⬜ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces |  | `scripts/maintenance/yield-venue-risk-calibration` |
+| 🔄 | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
 | ⬜ | [Q-179](quality/Q-179.md) | S | complexity | `docs/api-reference.md` is read twice in the same `runDocSyncChecks` call |  | `scripts/lib/doc-sync/checks.ts:L329-L415` |
 | ⬜ | [Q-180](quality/Q-180.md) | S | security | Hardcoded personal email address in a user-visible error message |  | `src/lib/api-key-self-serve.ts:88` |
 | ⬜ | [Q-181](quality/Q-181.md) | S | dead-code | psiPresent metadata field is always true in snapshot-public-dataset.ts |  | `worker/src/cron/snapshot-public-dataset.ts:454` |

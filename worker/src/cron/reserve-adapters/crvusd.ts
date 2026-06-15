@@ -6,6 +6,7 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -107,6 +108,7 @@ const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallback
 );
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
+const CRVUSD_MARKET_READ_CONCURRENCY = 2;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
 const YIELD_BASIS_OPTIONAL_TIMEOUT_MS = 6_000;
@@ -311,8 +313,10 @@ async function fetchLlammaMarketDescriptors(
     throw new Error(`crvUSD ControllerFactory n_collaterals invalid: ${String(countRaw)}`);
   }
 
-  const descriptors = await Promise.all(
-    Array.from({ length: marketCount }, async (_, marketId): Promise<LlammaMarketDescriptor | null> => {
+  const descriptors = await mapWithConcurrency(
+    Array.from({ length: marketCount }, (_, marketId) => marketId),
+    CRVUSD_MARKET_READ_CONCURRENCY,
+    async (marketId): Promise<LlammaMarketDescriptor | null> => {
       throwIfAborted(signal);
       const [collateralAddress, controllerAddress, ammAddress] = await Promise.all([
         readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "collaterals", signal, ctx, [
@@ -345,7 +349,7 @@ async function fetchLlammaMarketDescriptors(
         minBand,
         maxBand,
       };
-    }),
+    },
   );
 
   return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
@@ -469,8 +473,10 @@ async function fetchYieldBasisMarketPositions(
     throw new Error(`crvUSD Yield Basis market_count invalid: ${String(marketCountRaw)}`);
   }
 
-  const positions = await Promise.all(
-    Array.from({ length: marketCount }, async (_, marketId): Promise<YieldBasisMarketPosition | null> => {
+  const positions = await mapWithConcurrency(
+    Array.from({ length: marketCount }, (_, marketId) => marketId),
+    CRVUSD_MARKET_READ_CONCURRENCY,
+    async (marketId): Promise<YieldBasisMarketPosition | null> => {
       throwIfAborted(signal);
       const market = (await readEthereumContract(YIELD_BASIS_FACTORY, YIELD_BASIS_FACTORY_ABI, "markets", signal, ctx, [
         BigInt(marketId),
@@ -513,7 +519,7 @@ async function fetchYieldBasisMarketPositions(
         assetDecimals,
         assetAmount,
       };
-    }),
+    },
   );
 
   return positions.filter((position): position is YieldBasisMarketPosition => position != null);
