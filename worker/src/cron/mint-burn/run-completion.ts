@@ -8,6 +8,13 @@ import { withBudgetMetadata } from "../../lib/cron-progress";
 import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
 
+// healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
+// than that are intentionally left unhealed (their cached prices are no longer
+// replay-safe). A non-zero historical backlog still permanently skews burn_volume_usd
+// and DEWS flow signals, so we surface it as a structured warning once it crosses this
+// threshold rather than letting it silently accumulate in run metadata.
+const NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD = 50;
+
 export async function completeMintBurnRun(input: {
   db: D1Database;
   budget: { limit: number; count: number };
@@ -100,6 +107,11 @@ export async function completeMintBurnRun(input: {
   const nowSec = Math.floor(Date.now() / 1000);
   let nullPricesHealed = 0;
   const nullPriceBacklog = await getNullPriceBacklog(input.db, nowSec);
+  if (nullPriceBacklog.historical > NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD) {
+    console.warn(
+      `[sync-mint-burn] Historical NULL amount_usd backlog ${nullPriceBacklog.historical} exceeds threshold ${NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD}; these events fall outside the 48h heal window and permanently skew burn_volume_usd / DEWS flow signals`,
+    );
+  }
   if (status !== "error") {
     try {
       const healResult = await healNullPrices(input.db, nowSec);
