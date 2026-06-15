@@ -744,4 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/smoke-runtime.test.ts`
 - `scripts/__tests__/smoke-ui.test.ts`
 - `scripts/__tests__/source-files.test.ts`
-- ... 182 more files omitted; use `rg --files scripts` for the full list.
+- ... 183 more files omitted; use `rg --files scripts` for the full list.
