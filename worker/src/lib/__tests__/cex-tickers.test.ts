@@ -341,6 +341,26 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.prices.has("DAI")).toBe(false);
   });
 
+  it("rejects ticker prices with trailing non-numeric text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/products/USDT-USD/ticker")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ bid: "0.9997 USD", ask: "0.9999 USD", price: "0.9998 USD" }),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      }),
+    );
+
+    const outcome = await fetchCoinbasePrices(["USDT"]);
+
+    expect(outcome.kind).toBe("no-data");
+    expect(outcome.value.prices.has("USDT")).toBe(false);
+  });
+
   it("keeps Coinbase product fetches serial inside the primary-provider budget", async () => {
     let inFlight = 0;
     let maxInFlight = 0;

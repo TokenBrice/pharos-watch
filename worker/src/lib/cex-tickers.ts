@@ -15,6 +15,7 @@ import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
+import { parsePositiveNumber } from "./number-utils";
 import {
   endpointLabel,
   errorClassFor,
@@ -60,11 +61,6 @@ function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDi
   return (
     diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451)
   );
-}
-
-function parsePositiveNumber(value: string | number | null | undefined): number | null {
-  const numeric = typeof value === "number" ? value : typeof value === "string" ? parseFloat(value) : Number.NaN;
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
 function midpointFromBidAsk(
