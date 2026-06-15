@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**16/733 done (2%)**  `░░░░░░░░░░░░░░░░░░░░`
+**21/733 done (3%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 716 | 1 | 0 | 16 | 0 |
+| Count | 711 | 1 | 0 | 21 | 0 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 10 | 0 | 0 | 256 |
-| quality | 315 | 3 | 0 | 0 | 312 |
-| sustainability | 152 | 3 | 1 | 0 | 148 |
+| redundancy | 266 | 11 | 1 | 0 | 254 |
+| quality | 315 | 5 | 0 | 0 | 310 |
+| sustainability | 152 | 5 | 0 | 0 | 147 |
 
 ## redundancy (266)
 
@@ -53,7 +53,7 @@
 | ⬜ | [R-024](redundancy/R-024.md) | S | clone | countConsecutiveStatus and getLastSuccessfulRun duplicated between cron-card and cron-lane |  | `src/components/status/cron-card.tsx:L39-L55, src` |
 | ⬜ | [R-025](redundancy/R-025.md) | S | dead-code | PharosLogoWithText exported but never imported |  | `src/components/pharos-logo.tsx:L41-L59` |
 | ⬜ | [R-026](redundancy/R-026.md) | S | clone | Data-source label map duplicated across two modules |  | `src/components/yield-detail-section-model.ts:L17` |
-| ⬜ | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts |  | `scripts/maintenance/lighthouse-static-export.mjs` |
+| 🔄 | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
 | ⬜ | [R-028](redundancy/R-028.md) | S | clone | stringValue / numberValue re-defined locally in 6+ maintenance scripts despite shared expo |  | `scripts/maintenance/audit-dia-provider-poc.ts:L1` |
 | ⬜ | [R-029](redundancy/R-029.md) | M | clone | Structural clone: api-query-registry.ts and api-query-runtime-registry.ts |  | `src/lib/api-query-registry.ts:L1-L361, src/lib/a` |
 | ⬜ | [R-030](redundancy/R-030.md) | S | clone | Double console.log for directApiSkippedUntracked behind identical guard |  | `worker/src/cron/dex-liquidity/orchestrator-phase` |
@@ -138,7 +138,7 @@
 | ✅ | [R-104](redundancy/R-104.md) | S | dead-code | check-cron-connection-budget.ts: missingBudgetJobs.length in the `failed` initializer is a | codex | `scripts/ci/check-cron-connection-budget.ts:L89-L` |
 | ✅ | [R-105](redundancy/R-105.md) | S | wrapper | clampPercent is a zero-value thin wrapper over shared clampScore | codex | `src/components/depeg-control-board.tsx:L57-L59` |
 | ⬜ | [R-106](redundancy/R-106.md) | S | clone | Identical resolveStaticCostScore duplicated across two audit scripts |  | `scripts/maintenance/audit-redemption-registry-pa` |
-| ⬜ | [R-107](redundancy/R-107.md) | S | dead-code | DAY_MS re-declared as a module-scoped constant in tape-digest.ts instead of importing from |  | `src/lib/tape-digest.ts:8` |
+| ✅ | [R-107](redundancy/R-107.md) | S | dead-code | DAY_MS re-declared as a module-scoped constant in tape-digest.ts instead of importing from | codex | `src/lib/tape-digest.ts:8` |
 | ⬜ | [R-108](redundancy/R-108.md) | S | dead-code | 'deleted' counter in SyncCurrentBalanceCacheResult is declared but never incremented |  | `worker/src/cron/blacklist/current-balance-cache.` |
 | ⬜ | [R-109](redundancy/R-109.md) | S | clone | AlertMarker type and readMarker() duplicated across two watchdog files |  | `worker/src/cron/cron-staleness-watchdog.ts:112-1` |
 | ⬜ | [R-110](redundancy/R-110.md) | S | clone | pegTypeKey and getChainLabels exactly duplicated in zephyr-zsd.ts |  | `worker/src/cron/sync-stablecoins/zephyr-zsd.ts:4` |
@@ -307,7 +307,7 @@
 |---|---|---|---|---|---|---|
 | ⬜ | [Q-001](quality/Q-001.md) | M | complexity | Sequential per-market RPC loops in crvusd make N round-trips per LLAMMA market with no par |  | `worker/src/cron/reserve-adapters/crvusd.ts:L314-` |
 | ✅ | [Q-002](quality/Q-002.md) | M | complexity | dispatchTelegramAlerts is a 590-line monolith with three distinct control paths | codex | `worker/src/cron/dispatch-telegram-alerts.ts:L167` |
-| ⬜ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion |  | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
+| ✅ | [Q-003](quality/Q-003.md) | S | dead-code | Slipstream pools hardcode volume24hUsd=0, triggering silent large-pool filter exclusion | codex | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ✅ | [Q-004](quality/Q-004.md) | S | type-safety | usdgo-osl rate-derived config uses benchmarkCurrency instead of benchmarkOverrideKey, spli | codex | `worker/src/cron/yield-config-rate-sources.ts:221` |
 
 ### Medium (170)
@@ -500,7 +500,7 @@
 | ⬜ | [Q-183](quality/Q-183.md) | S | complexity | injectCashtags rebuilds a large RegExp from all tracked stablecoin symbols on every call |  | `worker/src/lib/twitter.ts:L61-L66` |
 | ⬜ | [Q-184](quality/Q-184.md) | S | naming | pricing-pipeline/v1.ts uses 4-space indentation; all other changelog data files use 2-spac |  | `shared/data/methodology-changelogs/pricing-pipel` |
 | ⬜ | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component |  | `src/app/learn/case-studies/case-study-share.tsx:` |
-| ⬜ | [Q-186](quality/Q-186.md) | S | naming | check-node-modules-fresh.mjs uses console.warn for all output including success, making CI |  | `scripts/ci/check-node-modules-fresh.mjs:L25-L58` |
+| ✅ | [Q-186](quality/Q-186.md) | S | naming | check-node-modules-fresh.mjs uses console.warn for all output including success, making CI | codex | `scripts/ci/check-node-modules-fresh.mjs:L25-L58` |
 | ⬜ | [Q-187](quality/Q-187.md) | L | type-safety | StatusResponseSchema and StatusHistoryResponseSchema use passthrough().transform(v => v as |  | `shared/types/status.ts:L1046, L1056` |
 | ⬜ | [Q-188](quality/Q-188.md) | S | error-handling | snapshot-safety-grade-history uses manual signal?.aborted throws instead of throwIfAborted |  | `worker/src/cron/snapshot-safety-grade-history.ts` |
 | ⬜ | [Q-189](quality/Q-189.md) | S | naming | cronLeaseQueryFailed silently excluded from CronHealthSnapshot despite influencing orphan  |  | `worker/src/lib/status/cron-health.ts:L8-L23 (int` |
@@ -744,7 +744,7 @@
 | ⬜ | [S-100](sustainability/S-100.md) | S | scalability | LOGGED_STATUS_PERSISTENCE_FAILURES Set grows without bound within an isolate |  | `worker/src/lib/status-reliability-shared.ts:L37,` |
 | ⬜ | [S-101](sustainability/S-101.md) | S | clone | blacklist-gaps.ts hardcodes status string literals in SQL that duplicate the closed enum |  | `worker/src/lib/blacklist-gaps.ts:L168-L219` |
 | ⬜ | [S-102](sustainability/S-102.md) | S | scalability | STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS throws at module initialization time if an unsupport |  | `worker/src/lib/stablecoin-charts-reconciliation.` |
-| 🔄 | [S-103](sustainability/S-103.md) | S | config | SEARCH_EVENT_LIMIT=10 in generate-depeg-event-search-data.ts is an unexplained magic const | codex | `scripts/maintenance/generate-depeg-event-search-` |
+| ✅ | [S-103](sustainability/S-103.md) | S | config | SEARCH_EVENT_LIMIT=10 in generate-depeg-event-search-data.ts is an unexplained magic const | codex | `scripts/maintenance/generate-depeg-event-search-` |
 | ⬜ | [S-104](sustainability/S-104.md) | S | coupling | Priority case-study slugs in `page.tsx` are hardcoded strings with no validation at import |  | `src/app/learn/case-studies/page.tsx:L12-L31` |
 | ⬜ | [S-105](sustainability/S-105.md) | S | scalability | NOTABLE_QUAKES in intervention-seismograph is a hardcoded static list with no growth path |  | `src/components/freezewatch/intervention-seismogr` |
 | ⬜ | [S-106](sustainability/S-106.md) | S | complexity | report-card.tsx DimensionRow has an implicit coupling between dimKey string values and thr |  | `src/components/report-card.tsx:L191-L380` |
@@ -754,7 +754,7 @@
 | ⬜ | [S-110](sustainability/S-110.md) | M | scalability | Chainlink reference feed fetching is fully serialized with two sequential RPC calls per fe |  | `worker/src/lib/chainlink-feeds.ts:L236-L284` |
 | ⬜ | [S-111](sustainability/S-111.md) | S | coupling | GLOSSARY_JUMP_RAIL_LETTERS is a static hardcoded A-Z alphabet, independent of which letter |  | `src/app/learn/glossary/content.ts:L28-L55` |
 | ⬜ | [S-112](sustainability/S-112.md) | S | scalability | home-alt-hero-live-chart.tsx hard-codes four specific stablecoin IDs for cohort history |  | `src/components/home-alt-hero-live-chart.tsx:L35-` |
-| ⬜ | [S-113](sustainability/S-113.md) | S | documentation | lighthouse-static-export.mjs pins a specific Lighthouse version via npx string but has no  |  | `scripts/maintenance/lighthouse-static-export.mjs` |
+| ✅ | [S-113](sustainability/S-113.md) | S | documentation | lighthouse-static-export.mjs pins a specific Lighthouse version via npx string but has no  | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
 | ⬜ | [S-114](sustainability/S-114.md) | S | scalability | inline-homepage-critical-css.mjs processes ~800 HTML files sequentially at ~60ms each |  | `scripts/maintenance/inline-homepage-critical-css` |
 | ⬜ | [S-115](sustainability/S-115.md) | M | scalability | smoke-api.mjs REDEMPTION_ENUMS const is 60+ entries in a single 450-line file that accumul |  | `scripts/maintenance/smoke-api.mjs:L280-L346` |
 | ⬜ | [S-116](sustainability/S-116.md) | S | scalability | buildCemeteryYearSections assumes coins are pre-sorted by date; no guard on malformed deat |  | `src/lib/cemetery.ts:10-28` |
