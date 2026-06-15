@@ -1058,6 +1058,14 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(hero.passportItems.find((item) => item.key === "genius")?.href).toBe("/compliance/?regime=genius");
     // Coverage-limited peg summary -> no Record field (can't honestly claim one).
     expect(hero.passportItems.some((item) => item.key === "record")).toBe(false);
+
+    // USDC is the subject of the SVB case study -> dossier callout populated.
+    expect(hero.caseStudyCallout).toEqual({
+      href: "/learn/case-studies/usdc-svb-2023/",
+      title: "USDC and the Silicon Valley Bank weekend",
+      outcomeLabel: "Survived",
+      outcomeChipClass: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+    });
   });
 
   it("derives unavailable peg score and upstream freeze states", () => {
@@ -1365,6 +1373,10 @@ describe("stablecoin detail hero view-model builder", () => {
       redemptionBackstop,
     });
   }
+
+  it("omits the case-study callout for a coin that is no study's subject", () => {
+    expect(buildPassportHero().caseStudyCallout).toBeNull();
+  });
 
   it("adds the Issued field only for loose-valid launch dates", () => {
     expect(

@@ -90,6 +90,11 @@ import {
 export type { HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 export type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";
+import {
+  CASE_STUDY_OUTCOME_CHIPS,
+  CASE_STUDY_OUTCOME_LABELS,
+} from "@/app/learn/case-studies/case-study-outcomes";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -411,6 +416,18 @@ export interface HeroSignalRailItemViewModel {
   colorClass: string;
 }
 
+/**
+ * Inbound link to the long-form `/learn/case-studies/` retrospective whose
+ * subject (`primaryCoinId`) is this coin. Surfaced as a callout row at the foot
+ * of the hero dossier; `null` when no study takes this coin as its subject.
+ */
+export interface HeroCaseStudyCalloutViewModel {
+  href: string;
+  title: string;
+  outcomeLabel: string;
+  outcomeChipClass: string;
+}
+
 export interface HeroCardViewModel {
   coin: StablecoinMeta;
   coinData: StablecoinData;
@@ -455,6 +472,7 @@ export interface HeroCardViewModel {
   desktopTertiaryMetrics: HeroTertiaryMetricViewModel[];
   signalRailItems: HeroSignalRailItemViewModel[];
   passportItems: HeroPassportItemViewModel[];
+  caseStudyCallout: HeroCaseStudyCalloutViewModel | null;
 }
 
 export type StablecoinDetailViewModel =
@@ -626,6 +644,16 @@ export function buildStablecoinDetailHeroViewModel({
 
   const passportItems = buildHeroPassportItems(passport);
 
+  const subjectCaseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
+  const caseStudyCallout: HeroCaseStudyCalloutViewModel | null = subjectCaseStudy
+    ? {
+        href: `/learn/case-studies/${subjectCaseStudy.slug}/`,
+        title: subjectCaseStudy.title,
+        outcomeLabel: CASE_STUDY_OUTCOME_LABELS[subjectCaseStudy.outcome],
+        outcomeChipClass: CASE_STUDY_OUTCOME_CHIPS[subjectCaseStudy.outcome],
+      }
+    : null;
+
   const signalRailItems: HeroSignalRailItemViewModel[] = [
     {
       key: "safety",
@@ -710,6 +738,7 @@ export function buildStablecoinDetailHeroViewModel({
     ),
     signalRailItems,
     passportItems,
+    caseStudyCallout,
   };
 }
 

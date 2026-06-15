@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -132,6 +134,30 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         tertiaryMetrics={desktopTertiaryMetrics}
       />
       <HeroPassportStrip items={model.passportItems} />
+      {model.caseStudyCallout ? (
+        <Link
+          href={model.caseStudyCallout.href}
+          aria-label={`Read the case study: ${model.caseStudyCallout.title} (outcome: ${model.caseStudyCallout.outcomeLabel})`}
+          className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-frost-blue/20 bg-frost-blue/5 px-4 py-2.5 transition-colors hover:bg-frost-blue/10 sm:gap-3 sm:px-5"
+        >
+          <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-frost-blue" />
+          <span className="pharos-kicker shrink-0 text-frost-blue">Case study</span>
+          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-frost-blue/25" />
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+            {model.caseStudyCallout.title}
+          </span>
+          <Badge
+            variant="outline"
+            className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${model.caseStudyCallout.outcomeChipClass}`}
+          >
+            {model.caseStudyCallout.outcomeLabel}
+          </Badge>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-frost-blue/70 transition-all group-hover:translate-x-0.5 group-hover:text-frost-blue motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+          />
+        </Link>
+      ) : null}
     </Card>
   );
 }
