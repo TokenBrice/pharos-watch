@@ -27,6 +27,9 @@ export interface EtherfuseCetesIssuance {
   currentTokenAmount: number | null;
 }
 
+// Intentionally uses parseFloat (not the shared toFiniteNumber, which uses
+// Number()): the Etherfuse CETES API returns numeric fields with trailing units
+// or whitespace that Number() would reject as NaN but parseFloat tolerates.
 function parseFiniteNumber(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string") return null;

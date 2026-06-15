@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { parsePositiveNumber } from "../../lib/number-utils";
 import { rethrowIfAborted } from "../../lib/abort";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -75,8 +76,7 @@ const MODULE_MAP: Record<string, ModuleSpec> = {
 const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
 
 function parseNumericString(raw: string): number {
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : 0;
+  return parsePositiveNumber(raw) ?? 0;
 }
 
 // ---------------------------------------------------------------------------
