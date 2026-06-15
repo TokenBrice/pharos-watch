@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_JOB_DEFINITIONS,
@@ -11,8 +13,10 @@ import {
   SCHEDULED_SLOT_PLANS_BY_SCHEDULE,
 } from "../../shared/lib/scheduled-runner-registry";
 
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
 // Parse wrangler.toml cron triggers
-const wranglerToml = readFileSync("worker/wrangler.toml", "utf-8");
+const wranglerToml = readFileSync(join(ROOT, "worker/wrangler.toml"), "utf-8");
 const cronMatches = wranglerToml.match(/crons\s*=\s*\[([\s\S]*?)\]/);
 if (!cronMatches) {
   console.error("Could not find crons array in wrangler.toml");
