@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**155/733 done (21%)**  `████░░░░░░░░░░░░░░░░`
+**159/733 done (22%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 547 | 10 | 0 | 155 | 21 |
+| Count | 542 | 11 | 0 | 159 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 57 | 0 | 0 | 198 |
-| quality | 315 | 85 | 9 | 0 | 213 |
-| sustainability | 152 | 13 | 1 | 0 | 136 |
+| redundancy | 266 | 57 | 1 | 0 | 197 |
+| quality | 315 | 88 | 10 | 0 | 209 |
+| sustainability | 152 | 14 | 0 | 0 | 136 |
 
 ## redundancy (266)
 
@@ -215,7 +215,7 @@
 | ✅ | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
 | ⬜ | [R-182](redundancy/R-182.md) | S | clone | Generic object/number/string/boolean accessor helpers cloned across three locations |  | `worker/src/lib/status/yield-health.ts:L99-L121, ` |
 | ⬜ | [R-183](redundancy/R-183.md) | S | wrapper | getTelegramBotStats re-exported through derived-data.ts adding an unnecessary barrel hop |  | `worker/src/lib/status/derived-data.ts:L14, worke` |
-| ⬜ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s |  | `src/generated/depeg-event-related-data.json.d.ts` |
+| 🔄 | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s | codex | `src/generated/depeg-event-related-data.json.d.ts` |
 | ⬜ | [R-185](redundancy/R-185.md) | S | clone | Local CAUSE_OF_DEATH_LABELS in event-card.tsx duplicates shared CAUSE_META |  | `src/components/tape/event-card.tsx:L345-L354` |
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
 | 🚫 | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches | codex | `shared/lib/classification/domain.ts:L63-L71` |
@@ -348,10 +348,10 @@
 | ⬜ | [Q-062](quality/Q-062.md) | M | testing | api-pagination cursor-helper internals have no unit tests; multi-column disjunction untest |  | `worker/src/lib/api-pagination.ts:L1-L320 (49.6% ` |
 | ⬜ | [Q-063](quality/Q-063.md) | M | testing | reserve-presentation.ts (265 lines) has no tests; incorrect notice tone for stale/failed r |  | `src/components/stablecoin-detail/reserve-present` |
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
-| ⬜ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds |  | `src/components/table/content-table.tsx:L150-L153` |
+| 🔄 | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds | opus-02 | `src/components/table/content-table.tsx:L150-L153` |
 | ✅ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
 | ✅ | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
-| 🔄 | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
+| ✅ | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
 | 🔄 | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract | opus-06 | `src/lib/coverage-matrix-model.ts:185-202` |
@@ -359,7 +359,7 @@
 | 🔄 | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves | opus-07 | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
 | ⬜ | [Q-076](quality/Q-076.md) | M | complexity | supply7dOutcome evaluates wrong coin when symbol ranking changes day-over-day |  | `worker/src/cron/daily-digest/digest-next-trigger` |
 | ⬜ | [Q-079](quality/Q-079.md) | M | type-safety | isFallbackCronResult discriminates on 'metadata' in result — fragile structural guard |  | `worker/src/cron/sync-stablecoins/fallback.ts:22-` |
-| 🔄 | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast | opus-08 | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
+| ✅ | [Q-080](quality/Q-080.md) | S | type-safety | Eventless fast-path result built via Object.assign with an unsafe cast | opus-08 | `worker/src/cron/dispatch-telegram-alerts.ts:L374` |
 | 🔄 | [Q-081](quality/Q-081.md) | S | type-safety | Four independent nowSec timestamps computed within a single fan-out Promise.all | opus-09 | `worker/src/cron/dispatch-telegram-subscribers.ts` |
 | ⬜ | [Q-083](quality/Q-083.md) | M | testing | depeg-resolver resolution.ts — K2/R1/R2 kill and anchor factor codes never directly assert |  | `shared/lib/depeg-resolver/resolution.ts:L67-L130` |
 | ⬜ | [Q-086](quality/Q-086.md) | M | type-safety | Redemption backstop toEntry throws on schema parse failure, causing full snapshot load to  |  | `worker/src/lib/redemption-backstops-store.ts:L27` |
@@ -370,7 +370,7 @@
 | 🔄 | [Q-095](quality/Q-095.md) | S | error-handling | filterAgainstExisting in build-annotation-candidates uses fragile substring matching that  | opus-03 | `scripts/maintenance/build-annotation-candidates.` |
 | 🚫 | [Q-096](quality/Q-096.md) | S | type-safety | isActiveStablecoinMeta silently treats undefined status as active | codex | `shared/lib/stablecoins/status.ts:L3-L5` |
 | ⬜ | [Q-097](quality/Q-097.md) | M | complexity | runSimulation O(n²) post-simulation collision pass runs synchronously on the main thread w |  | `src/lib/contagion-layout.ts:493-543` |
-| ⬜ | [Q-098](quality/Q-098.md) | S | error-handling | backfill-cg-prices has no per-coin error isolation; one bad response aborts the whole batc |  | `worker/src/api/backfill-cg-prices.ts:53-176` |
+| 🔄 | [Q-098](quality/Q-098.md) | S | error-handling | backfill-cg-prices has no per-coin error isolation; one bad response aborts the whole batc | opus-04 | `worker/src/api/backfill-cg-prices.ts:53-176` |
 | ⬜ | [Q-100](quality/Q-100.md) | M | complexity | Mutable closure variable nextReplyMarkup in makeActionRunner creates ordering-sensitive im |  | `worker/src/api/webhook-commands/action-runner.ts` |
 | ⬜ | [Q-102](quality/Q-102.md) | M | error-handling | Telegram double-send risk when cache write fails after successful delivery |  | `worker/src/cron/daily-digest.ts:L284-L301` |
 | ⬜ | [Q-103](quality/Q-103.md) | M | error-handling | resolveRunStatus maps all-circuit-breaker-skipped runs to 'error', masking healthy circuit |  | `worker/src/cron/sync-live-reserves-finalize.ts:1` |
@@ -378,7 +378,7 @@
 | ⬜ | [Q-105](quality/Q-105.md) | S | type-safety | cap-vault silently prices all unknown assets at $1.00 regardless of underlying token |  | `worker/src/cron/reserve-adapters/cap-vault.ts:L8` |
 | ⬜ | [Q-108](quality/Q-108.md) | S | clone | 'legacy-best' source-key magic string duplicated ~10x while a named constant exists |  | `worker/src/cron/yield-sync/evaluation.ts:311,515` |
 | ⬜ | [Q-110](quality/Q-110.md) | S | type-safety | buildChainRpcs uses non-null assertion on Tron public RPC in the no-Alchemy branch |  | `worker/src/lib/chain-registry.ts:L114` |
-| ⬜ | [Q-111](quality/Q-111.md) | S | error-handling | getMintBurnReconciliation parallel DB queries are unguarded — any query failure bubbles as |  | `worker/src/lib/status/derived-data.ts:L208-L229` |
+| 🔄 | [Q-111](quality/Q-111.md) | S | error-handling | getMintBurnReconciliation parallel DB queries are unguarded — any query failure bubbles as | opus-08 | `worker/src/lib/status/derived-data.ts:L208-L229` |
 | ⬜ | [Q-112](quality/Q-112.md) | M | complexity | DEWS projector scans and classifies all band-change samples for both variants independentl |  | `worker/src/lib/tape-projectors/dews.ts:L198-L240` |
 | ⬜ | [Q-113](quality/Q-113.md) | M | complexity | FlowsClient unconditionally issues three concurrent API calls, one always redundant |  | `src/app/flows/client.tsx:L56-L78` |
 | ⬜ | [Q-119](quality/Q-119.md) | S | type-safety | Module-scoped mutable singleton searchTimer leaks across client navigations |  | `src/lib/analytics.ts:L58-L66` |
@@ -397,7 +397,7 @@
 | ⬜ | [Q-142](quality/Q-142.md) | M | type-safety | stablecoin-detail-mint-authority-client.ts: multiple unsafe casts of string values to narr |  | `src/lib/stablecoin-detail-mint-authority-client.` |
 | 🚫 | [Q-143](quality/Q-143.md) | S | naming | use-stress-test-model.ts lacks "use client" but exports React-hook-adjacent code with modu |  | `src/hooks/use-stress-test-model.ts:L1, L35-L39` |
 | ⬜ | [Q-144](quality/Q-144.md) | M | error-handling | Admin reject mutation is non-atomic: key can be deactivated while request stays pending/is |  | `worker/src/api/api-key-requests/admin-handlers.t` |
-| 🔄 | [Q-145](quality/Q-145.md) | S | error-handling | SSE data: line concatenation omits the newline separator required by the spec | codex | `worker/src/cron/digest/anthropic-stream.ts:L111-` |
+| ✅ | [Q-145](quality/Q-145.md) | S | error-handling | SSE data: line concatenation omits the newline separator required by the spec | codex | `worker/src/cron/digest/anthropic-stream.ts:L111-` |
 | ⬜ | [Q-146](quality/Q-146.md) | M | testing | Identity disambiguation resolver (a financial-signal correctness path) has no unit tests |  | `worker/src/cron/yield-sync/identity.ts:81-148` |
 | ⬜ | [Q-147](quality/Q-147.md) | S | complexity | derivePoolVolume24hUsd averages USD estimates instead of summing, producing incorrect mult |  | `worker/src/lib/dex-api-token-pricing.ts:L99-L144` |
 | ⬜ | [Q-148](quality/Q-148.md) | S | clone | Local median() diverges from canonical stats.median for even-length inputs, biasing aggreg |  | `worker/src/lib/address-price-providers/shared.ts` |
@@ -628,7 +628,7 @@
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
 | ✅ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio | codex | `functions/stablecoin/[[path]].ts:1-21` |
 | ✅ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
-| ⬜ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna |  | `functions/lib/site-data-origin.ts:6-22; shared/l` |
+| 🔄 | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna | codex | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
 
 ## sustainability (152)
@@ -637,7 +637,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| 🔄 | [S-008](sustainability/S-008.md) | M | coupling | useMotionPreference and usePrefersReducedMotion are parallel but unconnected motion-prefer | opus-01 | `src/hooks/use-motion-preference.ts:L1-L101 + src` |
+| ✅ | [S-008](sustainability/S-008.md) | M | coupling | useMotionPreference and usePrefersReducedMotion are parallel but unconnected motion-prefer | opus-01 | `src/hooks/use-motion-preference.ts:L1-L101 + src` |
 | ⬜ | [S-062](sustainability/S-062.md) | M | scalability | Selector-snapshot public write lane relies on a spoofable origin header plus a best-effort |  | `functions/selector-snapshot/[[path]].ts:34-72,13` |
 
 ### Medium (49)
