@@ -109,6 +109,31 @@ export function buildYieldDegradationReasons(params: {
   return degradationReasons;
 }
 
+/**
+ * On-chain rate health, coverage, and cooldown telemetry. These fields travel
+ * together as a cohesive unit through the yield-sync coordinator, so they are
+ * grouped into a sub-object rather than flattened onto the metadata signature.
+ */
+export interface YieldOnChainSyncMeta {
+  ratesResolved: number;
+  ratesConfigured: number;
+  envelopeRejections: readonly YieldEnvelopeRejection[];
+  attempted: number;
+  allDeterministicFailed: boolean;
+  explorerAttempted: number;
+  explorerResolved: number;
+  failureMaskedByAlternativeCoverage: boolean;
+  alternativeCoverageMissingIds: string[];
+  failures: Record<string, number> | null;
+  skippedDueToCooldown: boolean;
+  cooldownActive: boolean;
+  cooldownTriggered: boolean;
+  cooldownUntil: number | null;
+  cooldownRemainingSec: number;
+  consecutiveAllFailRuns: number;
+  consecutiveMaskedAllFailRuns: number;
+}
+
 export function buildYieldSyncMetadata(input: {
   rowsRead: number;
   rowsWritten: number;
@@ -127,30 +152,15 @@ export function buildYieldSyncMetadata(input: {
   previousPublishedRankingCount: number;
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
-  onChainRatesResolved: number;
-  onChainRatesConfigured: number;
-  onChainEnvelopeRejections: readonly YieldEnvelopeRejection[];
-  onChainAttempted: number;
-  onChainAllDeterministicFailed: boolean;
-  onChainExplorerAttempted: number;
-  onChainExplorerResolved: number;
-  onChainFailureMaskedByAlternativeCoverage: boolean;
-  onChainAlternativeCoverageMissingIds: string[];
-  onChainFailures: Record<string, number> | null;
-  onChainSkippedDueToCooldown: boolean;
-  onChainCooldownActive: boolean;
-  onChainCooldownTriggered: boolean;
-  onChainCooldownUntil: number | null;
-  onChainCooldownRemainingSec: number;
-  onChainConsecutiveAllFailRuns: number;
-  onChainConsecutiveMaskedAllFailRuns: number;
+  onChain: YieldOnChainSyncMeta;
   fallbackMode: string | null;
   validationFailures: number;
   riskFreeRate: number;
   cacheWriteSkipped: boolean;
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessMeta;
 }): string {
-  const onChainEnvelopeRejections = input.onChainEnvelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
+  const onChain = input.onChain;
+  const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
   return JSON.stringify({
     rowsRead: input.rowsRead,
     rowsWritten: input.rowsWritten,
@@ -178,25 +188,25 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
-      onChainRatesResolved: input.onChainRatesResolved,
-      onChainRatesConfigured: input.onChainRatesConfigured,
-      onChainEnvelopeRejectionCount: input.onChainEnvelopeRejections.length,
+      onChainRatesResolved: onChain.ratesResolved,
+      onChainRatesConfigured: onChain.ratesConfigured,
+      onChainEnvelopeRejectionCount: onChain.envelopeRejections.length,
       onChainEnvelopeRejections,
-      onChainEnvelopeRejectionsTruncated: input.onChainEnvelopeRejections.length > YIELD_METADATA_EXAMPLE_LIMIT,
-      onChainAttempted: input.onChainAttempted,
-      onChainAllDeterministicFailed: input.onChainAllDeterministicFailed,
-      onChainExplorerAttempted: input.onChainExplorerAttempted,
-      onChainExplorerResolved: input.onChainExplorerResolved,
-      onChainFailureMaskedByAlternativeCoverage: input.onChainFailureMaskedByAlternativeCoverage,
-      onChainAlternativeCoverageMissingIds: input.onChainAlternativeCoverageMissingIds,
-      onChainFailures: input.onChainFailures,
-      onChainSkippedDueToCooldown: input.onChainSkippedDueToCooldown,
-      onChainCooldownActive: input.onChainCooldownActive,
-      onChainCooldownTriggered: input.onChainCooldownTriggered,
-      onChainCooldownUntil: input.onChainCooldownUntil,
-      onChainCooldownRemainingSec: input.onChainCooldownRemainingSec,
-      onChainConsecutiveAllFailRuns: input.onChainConsecutiveAllFailRuns,
-      onChainConsecutiveMaskedAllFailRuns: input.onChainConsecutiveMaskedAllFailRuns,
+      onChainEnvelopeRejectionsTruncated: onChain.envelopeRejections.length > YIELD_METADATA_EXAMPLE_LIMIT,
+      onChainAttempted: onChain.attempted,
+      onChainAllDeterministicFailed: onChain.allDeterministicFailed,
+      onChainExplorerAttempted: onChain.explorerAttempted,
+      onChainExplorerResolved: onChain.explorerResolved,
+      onChainFailureMaskedByAlternativeCoverage: onChain.failureMaskedByAlternativeCoverage,
+      onChainAlternativeCoverageMissingIds: onChain.alternativeCoverageMissingIds,
+      onChainFailures: onChain.failures,
+      onChainSkippedDueToCooldown: onChain.skippedDueToCooldown,
+      onChainCooldownActive: onChain.cooldownActive,
+      onChainCooldownTriggered: onChain.cooldownTriggered,
+      onChainCooldownUntil: onChain.cooldownUntil,
+      onChainCooldownRemainingSec: onChain.cooldownRemainingSec,
+      onChainConsecutiveAllFailRuns: onChain.consecutiveAllFailRuns,
+      onChainConsecutiveMaskedAllFailRuns: onChain.consecutiveMaskedAllFailRuns,
       comparisonAnchorFreshness: input.comparisonAnchorFreshness,
     },
     fallbackMode: input.fallbackMode,
