@@ -297,6 +297,25 @@ describe("SelectorClient — state machine", () => {
     expect(screen.getByText("Open detail")).toBeTruthy();
   });
 
+  it("logs selector engine failures and shows the error state", async () => {
+    const mod = await import("@shared/lib/selector");
+    const engineError = new Error("engine exploded");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw engineError;
+    });
+
+    try {
+      setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+      render(<SelectorClient />);
+
+      expect(await screen.findByText(/Selector could not produce a result \(engine failed\)/i)).toBeTruthy();
+      expect(consoleError).toHaveBeenCalledWith("[selector] Selector engine failed", engineError);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("offers a Telegram subscribe command for the shortlisted stablecoins", async () => {
     const mod = await import("@shared/lib/selector");
     (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>

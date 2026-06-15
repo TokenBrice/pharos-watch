@@ -36,6 +36,10 @@ type SnapshotFetchResult =
   | { kind: "missing" }
   | { kind: "error"; reason: string };
 
+type SelectorEngineResult =
+  | { status: "ready"; output: SelectorOutput }
+  | { status: "error"; reason: "engine-failed" };
+
 async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
   if (!isValidSelectorSnapshotId(sid)) {
     return { kind: "error", reason: "invalid-snapshot-id" };
@@ -150,20 +154,24 @@ export function useSelector(
     redemptionBackstops.dataUpdatedAt,
   ]);
 
-  const engineOutput = useMemo<SelectorOutput | null>(() => {
+  const engineResult = useMemo<SelectorEngineResult | null>(() => {
     if (!liveInput || !rowsByKey) return null;
     try {
-      return runSelector(
-        liveInput,
-        { rows: rowsByKey.rows },
-        {
-          timestamp: rowsByKey.timestamp,
-          datasetHash: rowsByKey.datasetHash,
-          methodologyVersions: rowsByKey.methodologyVersions,
-        },
-      );
-    } catch {
-      return null;
+      return {
+        status: "ready",
+        output: runSelector(
+          liveInput,
+          { rows: rowsByKey.rows },
+          {
+            timestamp: rowsByKey.timestamp,
+            datasetHash: rowsByKey.datasetHash,
+            methodologyVersions: rowsByKey.methodologyVersions,
+          },
+        ),
+      };
+    } catch (error) {
+      console.error("[selector] Selector engine failed", error);
+      return { status: "error", reason: "engine-failed" };
     }
   }, [liveInput, rowsByKey]);
 
@@ -174,8 +182,8 @@ export function useSelector(
         status: "snapshot-found",
         output: snapshotState.output,
         isFrozen: true,
-        liveOutput: engineOutput,
-        liveStatus: !datasetReady ? "loading" : engineOutput ? "ready" : "error",
+        liveOutput: engineResult?.status === "ready" ? engineResult.output : null,
+        liveStatus: !datasetReady ? "loading" : engineResult?.status === "ready" ? "ready" : "error",
       };
     }
     if (snapshotState.kind === "error") {
@@ -183,16 +191,18 @@ export function useSelector(
     }
     if (snapshotState.kind === "miss") {
       if (!input) return { status: "error", reason: "snapshot-not-found" };
-      if (!engineOutput) return { status: "snapshot-loading" };
-      return { status: "snapshot-miss", output: engineOutput, bannerKey: "snapshot-miss" };
+      if (!engineResult) return { status: "snapshot-loading" };
+      if (engineResult.status === "error") return engineResult;
+      return { status: "snapshot-miss", output: engineResult.output, bannerKey: "snapshot-miss" };
     }
   }
 
   if (!input) return { status: "loading" };
   if (!datasetReady) return { status: "loading" };
-  if (!engineOutput) return { status: "error", reason: "engine-failed" };
+  if (!engineResult) return { status: "error", reason: "engine-failed" };
+  if (engineResult.status === "error") return engineResult;
 
-  return { status: "ready", output: engineOutput };
+  return { status: "ready", output: engineResult.output };
 }
 
 function queryDataOrErrorSettled(query: { data?: unknown; error?: unknown }): boolean {
