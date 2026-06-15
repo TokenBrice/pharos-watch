@@ -30,7 +30,7 @@ export function useStatusHistory(
 ): UseQueryResult<StatusHistoryResponse, Error> {
   return useAdminPollingQuery<StatusHistoryResponse>(
     ["status-history", window],
-    buildStatusHistoryPath(window),
+    () => buildStatusHistoryPath(window),
     CRON_1MIN,
     { schema: StatusHistoryResponseSchema },
   );

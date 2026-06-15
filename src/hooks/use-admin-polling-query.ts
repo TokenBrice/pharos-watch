@@ -11,13 +11,13 @@ const ADMIN_QUERY_SCOPE = "ops-proxy";
 
 export function useAdminPollingQuery<T>(
   key: readonly unknown[],
-  path: string,
+  path: string | (() => string),
   cronInterval: number,
   options?: AdminPollingOptions<T>,
 ): UseQueryResult<T, Error> {
   return usePollingQuery<T>(
     [...key, ADMIN_QUERY_SCOPE],
-    () => apiFetch<T>(buildAdminApiPath(path), options?.schema),
+    () => apiFetch<T>(buildAdminApiPath(typeof path === "function" ? path() : path), options?.schema),
     cronInterval,
     {
       enabled: options?.enabled ?? true,
