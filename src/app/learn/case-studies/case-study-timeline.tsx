@@ -52,8 +52,8 @@ export function CaseStudyTimeline({
     <div className="space-y-5">
       <TimelineSeverityLegend />
       <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
-      {entries.map((entry, i) => (
-        <li key={i} className="relative">
+      {entries.map((entry) => (
+        <li key={`${entry.dateISO}-${entry.headline}`} className="relative">
           <span
             aria-hidden="true"
             className={`absolute -left-[1.9375rem] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-background sm:-left-[2.4375rem] ${

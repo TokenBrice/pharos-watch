@@ -109,7 +109,7 @@ function HowItWorks({
       </div>
       <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
         {steps.map((step, i) => (
-          <li key={i} className="relative">
+          <li key={step.title} className="relative">
             <span
               aria-hidden="true"
               className="absolute -left-[1.875rem] top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background font-mono text-[11px] font-semibold tabular-nums text-muted-foreground sm:-left-[2.375rem] sm:h-7 sm:w-7 sm:text-xs"
@@ -147,9 +147,9 @@ function RiskProfile({
         <SectionHeading>Known failure modes</SectionHeading>
       </div>
       <dl className="divide-y divide-border/40">
-        {items.map((item, i) => (
+        {items.map((item) => (
           <div
-            key={i}
+            key={item.headline}
             className="grid gap-2 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,18ch)_minmax(0,1fr)] sm:gap-8"
           >
             <dt className="text-base font-semibold tracking-tight text-foreground">
@@ -213,9 +213,9 @@ function Variations({
         <SectionHeading>Sub-flavors within the archetype</SectionHeading>
       </div>
       <dl className="space-y-5">
-        {items.map((item, i) => (
+        {items.map((item) => (
           <div
-            key={i}
+            key={item.title}
             className="grid gap-2 sm:grid-cols-[minmax(0,22ch)_minmax(0,1fr)] sm:gap-8"
           >
             <dt className="text-base font-semibold tracking-tight text-foreground">
@@ -350,28 +350,32 @@ function TrackedCoinList({
     return null;
   }
 
-  const lifecycleFooterParts: React.ReactNode[] = [];
+  const lifecycleFooterParts: Array<{ key: string; node: React.ReactNode }> = [];
   if (preLaunchCount > 0) {
-    lifecycleFooterParts.push(
-      <Link
-        key="pre-launch"
-        href={`/screener/?mechanisms=${archetype}&lifecycle=pre-launch`}
-        className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
-      >
-        +{preLaunchCount} upcoming
-      </Link>,
-    );
+    lifecycleFooterParts.push({
+      key: "pre-launch",
+      node: (
+        <Link
+          href={`/screener/?mechanisms=${archetype}&lifecycle=pre-launch`}
+          className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+        >
+          +{preLaunchCount} upcoming
+        </Link>
+      ),
+    });
   }
   if (frozenCount > 0) {
-    lifecycleFooterParts.push(
-      <Link
-        key="frozen"
-        href={`/screener/?mechanisms=${archetype}&lifecycle=frozen`}
-        className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
-      >
-        +{frozenCount} frozen
-      </Link>,
-    );
+    lifecycleFooterParts.push({
+      key: "frozen",
+      node: (
+        <Link
+          href={`/screener/?mechanisms=${archetype}&lifecycle=frozen`}
+          className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+        >
+          +{frozenCount} frozen
+        </Link>
+      ),
+    });
   }
 
   return (
@@ -414,9 +418,9 @@ function TrackedCoinList({
         {lifecycleFooterParts.length > 0 ? (
           <p className="text-sm text-muted-foreground">
             {lifecycleFooterParts.map((part, i) => (
-              <span key={i}>
+              <span key={part.key}>
                 {i > 0 ? <span aria-hidden="true"> · </span> : null}
-                {part}
+                {part.node}
               </span>
             ))}
           </p>

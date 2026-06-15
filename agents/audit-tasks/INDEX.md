@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**63/733 done (9%)**  `██░░░░░░░░░░░░░░░░░░`
+**65/733 done (9%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 646 | 5 | 0 | 63 | 19 |
+| Count | 644 | 5 | 0 | 65 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 32 | 0 | 0 | 224 |
-| quality | 315 | 23 | 4 | 0 | 281 |
+| redundancy | 266 | 32 | 2 | 0 | 222 |
+| quality | 315 | 25 | 2 | 0 | 281 |
 | sustainability | 152 | 8 | 1 | 0 | 141 |
 
 ## redundancy (266)
@@ -173,7 +173,7 @@
 | ⬜ | [R-139](redundancy/R-139.md) | S | clone | intensity is clamped twice in the FlowMachine pipeline |  | `src/components/flow-machine-scene.tsx:49-53, src` |
 | ✅ | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette | codex | `src/components/providers.tsx:L66, L129, L140` |
 | ⬜ | [R-141](redundancy/R-141.md) | S | clone | `sleep` defined independently in sync-from-api.ts and smoke-runtime.mjs |  | `scripts/lib/sync-from-api.ts:L64, scripts/lib/sm` |
-| ⬜ | [R-142](redundancy/R-142.md) | S | wrapper | deriveVariantAwareDependencies is a zero-logic pass-through wrapper |  | `shared/lib/stablecoins/variants.ts:L13-L17` |
+| 🔄 | [R-142](redundancy/R-142.md) | S | wrapper | deriveVariantAwareDependencies is a zero-logic pass-through wrapper | codex | `shared/lib/stablecoins/variants.ts:L13-L17` |
 | ⬜ | [R-143](redundancy/R-143.md) | S | clone | stablecoinRouteSearchText called twice per coin in buildL2BeatBridgeRouteReviewAudit |  | `shared/lib/chains/l2beat-audit.ts:L551, L589` |
 | ✅ | [R-144](redundancy/R-144.md) | S | clone | escapeSqlString defined independently in two maintenance scripts instead of using the shar | codex | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [R-145](redundancy/R-145.md) | S | clone | InlineKeyboardButton interface duplicated in setup and messages modules |  | `worker/src/api/telegram-webhook-setup.ts:L77-L82` |
@@ -235,7 +235,7 @@
 | ⬜ | [R-201](redundancy/R-201.md) | S | clone | FlowChart computes the data range twice — once from raw hourly buckets, once from shaped c |  | `src/components/flow-chart.tsx:L133-L140, L175-L1` |
 | ⬜ | [R-202](redundancy/R-202.md) | S | clone | String-join dependency trick duplicated across two scroll-spy components |  | `src/components/api-reference-layout.tsx:L20-L36 ` |
 | ⬜ | [R-203](redundancy/R-203.md) | S | clone | IterationOne is a private named sub-component of FlowBrrrOverview that adds an indirection |  | `src/components/flow-brrr-overview.tsx:L112-L298` |
-| ⬜ | [R-204](redundancy/R-204.md) | S | dead-code | Thin free-function wrappers `d1Query`, `d1QueryParsed`, `d1ExecFile` are unused outside te |  | `scripts/lib/remote-d1.ts:L91-L101` |
+| 🔄 | [R-204](redundancy/R-204.md) | S | dead-code | Thin free-function wrappers `d1Query`, `d1QueryParsed`, `d1ExecFile` are unused outside te | codex | `scripts/lib/remote-d1.ts:L91-L101` |
 | ⬜ | [R-205](redundancy/R-205.md) | S | dead-code | refresh-reserve-html-fixtures.ts fetches the same URL four times for four Circle fixture f |  | `scripts/maintenance/refresh-reserve-html-fixture` |
 | ✅ | [R-206](redundancy/R-206.md) | S | dead-code | generate-cemetery-dataset.ts and generate-postman-collection.ts run side effects at module | codex | `scripts/maintenance/generate-cemetery-dataset.ts` |
 | ⬜ | [R-207](redundancy/R-207.md) | S | dead-code | incident-groups computes reopenWithin24h (and REOPEN_FLAG_GAP_SEC) but nothing ever reads  |  | `shared/lib/depeg-resolver/incident-groups.ts:22,` |
@@ -436,7 +436,7 @@
 | ✅ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
 | ⬜ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be |  | `src/components/exploit-notice-banner.tsx:L11-L35` |
-| 🔄 | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
+| ✅ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
 | ⬜ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block |  | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ⬜ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function |  | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ⬜ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key |  | `src/components/status/admin-action-button.tsx:L3` |
@@ -569,7 +569,7 @@
 | ⬜ | [Q-252](quality/Q-252.md) | S | type-safety | fetchHistoricalSecondaryFxDay casts API response without validation, silently accepts malf |  | `worker/src/lib/backfill-fx.ts:L159` |
 | ⬜ | [Q-253](quality/Q-253.md) | S | type-safety | DdrDiagnosticAssessmentSnapshot uses unknown[] for rows, silently dropping non-conforming  |  | `worker/src/lib/depeg-resolver-assessment-store.t` |
 | ⬜ | [Q-254](quality/Q-254.md) | S | testing | yield-source-risk-registry.ts has no shared/lib test; computed derived fields tested only  |  | `shared/lib/yield-source-risk-registry.ts:L1-L108` |
-| 🔄 | [Q-255](quality/Q-255.md) | S | complexity | Array index used as React `key` in `CaseStudyTimeline` and `explainer-shell.tsx` | codex | `src/app/learn/case-studies/case-study-timeline.t` |
+| ✅ | [Q-255](quality/Q-255.md) | S | complexity | Array index used as React `key` in `CaseStudyTimeline` and `explainer-shell.tsx` | codex | `src/app/learn/case-studies/case-study-timeline.t` |
 | ⬜ | [Q-256](quality/Q-256.md) | S | complexity | Inline `table` key uses `row.join('\|')` which is O(n×m) string allocation per render |  | `src/app/about/api/page.tsx:L193` |
 | ⬜ | [Q-257](quality/Q-257.md) | S | complexity | `pct` recomputed in `CompositionSection` when `chainShare` already holds it |  | `src/app/chains/[chain]/composition-section.tsx:L` |
 | 🚫 | [Q-258](quality/Q-258.md) | S | error-handling | handleRefresh in status/client.tsx is not memoized and its async refetches are not void-ca |  | `src/app/status/client.tsx:L48-L51` |
