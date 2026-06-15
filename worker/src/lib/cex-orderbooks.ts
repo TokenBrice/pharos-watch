@@ -217,13 +217,18 @@ export async function fetchMajorStablecoinOrderbookDepthSummary(
   signal?: AbortSignal,
 ): Promise<DirectCexOrderbookDepthSummary> {
   const rows: CexOrderbookDepth[] = [];
-  try {
-    rows.push(...await fetchBinanceOrderbookDepths(signal));
-    rows.push(...await fetchCoinbaseOrderbookDepths(signal));
-    rows.push(...await fetchKrakenOrderbookDepths(signal));
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[cex-orderbooks] direct depth fetch failed:", err);
+  const venues: Array<[string, (signal?: AbortSignal) => Promise<CexOrderbookDepth[]>]> = [
+    ["binance", fetchBinanceOrderbookDepths],
+    ["coinbase", fetchCoinbaseOrderbookDepths],
+    ["kraken", fetchKrakenOrderbookDepths],
+  ];
+  for (const [venue, fetchDepths] of venues) {
+    try {
+      rows.push(...await fetchDepths(signal));
+    } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      console.warn(`[cex-orderbooks] direct depth fetch failed for ${venue}:`, err);
+    }
   }
   return summarizeCexOrderbookDepths(rows);
 }
