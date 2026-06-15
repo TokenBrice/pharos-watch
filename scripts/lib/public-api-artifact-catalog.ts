@@ -158,21 +158,6 @@ export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
   description: "Historical lookback window in days. Defaults to 365.",
 } as const satisfies PublicApiArtifactParameter;
 
-export const YIELD_HISTORY_STABLECOIN_QUERY_PARAM = {
-  name: "stablecoin",
-  in: "query",
-  required: true,
-  schema: { type: "string" },
-  description: "Required canonical Pharos stablecoin ID.",
-} as const satisfies PublicApiArtifactParameter;
-
-export const YIELD_HISTORY_DAYS_PARAM = {
-  name: "days",
-  in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 365 },
-  description: "Historical lookback window in days. Defaults to 90.",
-} as const satisfies PublicApiArtifactParameter;
-
 export const YIELD_HISTORY_MODE_PARAM = {
   name: "mode",
   in: "query",
@@ -746,8 +731,8 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     tags: ["Yield", "History"],
     responseSchema: "YieldHistoryResponse",
     parameters: [
-      YIELD_HISTORY_STABLECOIN_QUERY_PARAM,
-      YIELD_HISTORY_DAYS_PARAM,
+      REQUIRED_STABLECOIN_QUERY_PARAM,
+      DEX_LIQUIDITY_HISTORY_DAYS_PARAM,
       YIELD_HISTORY_MODE_PARAM,
       {
         name: "sourceKey",

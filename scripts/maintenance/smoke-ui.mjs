@@ -72,7 +72,7 @@ function ensureMode(input) {
   throw new Error(`Invalid mode "${input}". Expected "local" or "live".`);
 }
 
-async function loadChromium() {
+export async function loadChromium() {
   try {
     const { chromium } = await import("playwright");
     return chromium;
@@ -106,7 +106,7 @@ function isMissingPlaywrightBrowserError(error) {
   return message.includes("Executable doesn't exist") || message.includes("Please run the following command");
 }
 
-async function launchChromiumBrowser(chromium) {
+export async function launchChromiumBrowser(chromium) {
   const launchOptions = getBrowserLaunchOptions();
   try {
     return await chromium.launch(launchOptions);
@@ -256,6 +256,22 @@ function buildSmokeRunCode(config) {
         window.scrollTo(0, document.body.scrollHeight);
       };
 
+      const buildSummary = async (text, rows, timedOut) => ({
+        hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
+        hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
+        hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
+        hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
+        hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
+        hasNoStablecoinData: text.includes("No stablecoin data available"),
+        hasStablecoins404: text.includes("stablecoins:404"),
+        recentEvents: await captureRecentEventsContract(),
+        rows,
+        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
+        timedOut,
+        title: document.title,
+        waitTimeoutMs,
+      });
+
       while (Date.now() < timeoutAt) {
         const text = document.body?.innerText ?? "";
         const rows = document.querySelectorAll("table tbody tr").length;
@@ -263,7 +279,6 @@ function buildSmokeRunCode(config) {
         const hasStablecoins404 = text.includes("stablecoins:404");
         const hasDataNotYetAvailable = matchesAny(text, ["Data not yet available", "Waiting for first sync"]);
         const hasConnectionIssue = matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]);
-        const hasLiveRefreshDelayed = matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]);
         const hasNoStablecoinData = text.includes("No stablecoin data available");
         const hasTerminalError =
           hasFailedToLoad
@@ -273,21 +288,7 @@ function buildSmokeRunCode(config) {
           || hasNoStablecoinData;
 
         if (rows > 0 || hasTerminalError) {
-          return {
-            hasConnectionIssue,
-            hasDataNotYetAvailable,
-            hasFailedToLoad,
-            hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
-            hasLiveRefreshDelayed,
-            hasNoStablecoinData,
-            hasStablecoins404,
-            recentEvents: await captureRecentEventsContract(),
-            rows,
-            textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
-            timedOut: false,
-            title: document.title,
-            waitTimeoutMs,
-          };
+          return buildSummary(text, rows, false);
         }
 
         maybeRevealHomepageTable();
@@ -295,21 +296,7 @@ function buildSmokeRunCode(config) {
       }
 
       const text = document.body?.innerText ?? "";
-      return {
-        hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
-        hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
-        hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
-        hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
-        hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
-        hasNoStablecoinData: text.includes("No stablecoin data available"),
-        hasStablecoins404: text.includes("stablecoins:404"),
-        recentEvents: await captureRecentEventsContract(),
-        rows: document.querySelectorAll("table tbody tr").length,
-        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
-        timedOut: true,
-        title: document.title,
-        waitTimeoutMs,
-      };
+      return buildSummary(text, document.querySelectorAll("table tbody tr").length, true);
     }, { waitTimeoutMs: config.waitTimeoutMs });
   }
 

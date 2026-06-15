@@ -7,7 +7,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
 
 export const MAX_AGE_DAYS = 90;
 export const FIXTURES_DIR = new URL(

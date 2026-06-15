@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PEG_LABELS_SHORT } from "../../shared/lib/classification";
+import {
+  BACKING_PROSE_LABELS,
+  GOVERNANCE_PROSE_LABELS,
+  PEG_LABELS_SHORT,
+} from "../../shared/lib/classification";
 import { CEMETERY_ENTRIES } from "../../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
@@ -10,7 +14,7 @@ import { MECHANISM_ARCHETYPE_VALUES } from "../../shared/types/core";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 import { GLOSSARY_ENTRIES } from "../../src/app/learn/glossary/content";
 import { ARCHETYPE_CONTENT } from "../../src/app/learn/mechanisms/content";
-import type { BackingType, GovernanceType, StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "../../shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,18 +22,6 @@ const DIGESTS_PATH = join(__dirname, "../../data/digests.json");
 const OUTPUT_PATH = join(__dirname, "../../public/llms.txt");
 const DIGEST_LIMIT = 20;
 const CHECK_MODE = process.argv.includes("--check");
-
-const GOVERNANCE_METADATA_PHRASES: Record<GovernanceType, string> = {
-  centralized: "centralized",
-  "centralized-dependent": "CeFi-dependent",
-  decentralized: "decentralized",
-};
-
-const BACKING_METADATA_PHRASES: Record<BackingType, string> = {
-  "rwa-backed": "backed by real-world assets",
-  "crypto-backed": "collateralized by crypto assets",
-  algorithmic: "algorithmic stablecoin",
-};
 
 interface DigestEntry {
   date: string;
@@ -51,8 +43,8 @@ function escapeMarkdown(text: string): string {
 }
 
 function stablecoinDescription(coin: StablecoinMeta): string {
-  const governance = GOVERNANCE_METADATA_PHRASES[coin.flags.governance] ?? coin.flags.governance;
-  const backing = BACKING_METADATA_PHRASES[coin.flags.backing] ?? coin.flags.backing;
+  const governance = GOVERNANCE_PROSE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backing = BACKING_PROSE_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const peg = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
 
   return `${governance} stablecoin ${backing} pegged to ${peg}.`;

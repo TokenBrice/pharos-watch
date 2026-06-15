@@ -1,17 +1,25 @@
 #!/usr/bin/env tsx
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { StablecoinMeta } from "../../shared/types";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
-import { isRecord, type UnknownRecord } from "../lib/coverage-audit-cli";
+import {
+  fetchJson,
+  formatNumber,
+  formatUsd,
+  isRecord,
+  markdownValue,
+  PROD_ORIGIN,
+  PROD_STABLECOINS_URL,
+  readJsonFile,
+  type UnknownRecord,
+} from "../lib/coverage-audit-cli";
 
-const PROD_ORIGIN = "https://pharos.watch";
 const PROD_PEG_SUMMARY_URL = `${PROD_ORIGIN}/_site-data/peg-summary`;
-const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 const PROD_REFERER = `${PROD_ORIGIN}/coverage/`;
 
 export const DEPTH_BUCKETS = ["0", "1", "2", "3", "4", "5+"] as const;
@@ -680,28 +688,12 @@ export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthA
   };
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatUsd(value: number): string {
-  if (value >= 1_000_000_000) return `$${formatNumber(value / 1_000_000_000)}B`;
-  if (value >= 1_000_000) return `$${formatNumber(value / 1_000_000)}M`;
-  if (value >= 1_000) return `$${formatNumber(value / 1_000)}K`;
-  return `$${formatNumber(value)}`;
-}
-
 function formatPercent(value: number): string {
   return `${formatNumber(value)}%`;
 }
 
 function renderDistribution(distribution: DepthDistribution): string {
   return DEPTH_BUCKETS.map((bucket) => `${bucket}: ${distribution[bucket]}`).join(", ");
-}
-
-function markdownValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 function renderRows(rows: PriceSourceDepthRow[], limit: number): string[] {
@@ -876,24 +868,6 @@ export function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
-
-async function fetchJson(url: string, fetchImpl: typeof fetch): Promise<unknown> {
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "application/json",
-      Referer: PROD_REFERER,
-    },
-  });
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${body.slice(0, 160)}`);
-  }
-  return JSON.parse(body) as unknown;
-}
-
 function generatedAtFromPayload(payload: unknown): string | null {
   if (!isRecord(payload)) return null;
   const direct = stringValue(payload.generatedAt ?? payload.fetchedAt ?? payload.updatedAt);
@@ -915,8 +889,8 @@ function resolveGeneratedAt(options: CliOptions, loaded: LoadedInputs): string {
 async function loadInputs(options: CliOptions, cwd: string, fetchImpl: typeof fetch): Promise<LoadedInputs> {
   if (options.source === "prod") {
     const [pegSummary, stablecoins] = await Promise.all([
-      fetchJson(PROD_PEG_SUMMARY_URL, fetchImpl),
-      fetchJson(PROD_STABLECOINS_URL, fetchImpl),
+      fetchJson(PROD_PEG_SUMMARY_URL, fetchImpl, undefined, { Referer: PROD_REFERER }),
+      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, { Referer: PROD_REFERER }),
     ]);
     return { mode: "prod", pegSummary, stablecoins };
   }

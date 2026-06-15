@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync } from "node:fs";
-import { extname, join, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { extname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 const {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -82,18 +83,12 @@ function splitLines(text) {
 }
 
 function collectFiles(rootDir) {
-  const files = [];
-  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
-    const entryPath = join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectFiles(entryPath));
-      continue;
-    }
-    if (entry.isFile() && SOURCE_SCAN_EXTENSIONS.has(extname(entry.name))) {
-      files.push(entryPath);
-    }
-  }
-  return files;
+  // Explicit empty excludedDirs: this scan intentionally recurses into __tests__
+  // (the shared default excludes it, which would change behavior here).
+  return collectSourceFiles(rootDir, {
+    extensions: SOURCE_SCAN_EXTENSIONS,
+    excludedDirs: new Set(),
+  });
 }
 
 function parseEnvExampleKeys(filePath) {

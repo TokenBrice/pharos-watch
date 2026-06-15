@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isRecord } from "@shared/lib/type-guards";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
@@ -83,10 +84,6 @@ interface CliOptions {
   reportPath: string | null;
   format: "markdown" | "json";
   generatedAt: string | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function stableStringify(value: unknown): string {

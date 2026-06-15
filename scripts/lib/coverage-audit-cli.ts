@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getCirculatingRaw } from "../../shared/lib/supply";
+import { isRecord } from "@shared/lib/type-guards";
+
+export { isRecord };
 
 export const PROD_ORIGIN = "https://pharos.watch";
 export const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards`;
@@ -8,10 +11,6 @@ export const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 
 export interface UnknownRecord {
   [key: string]: unknown;
-}
-
-export function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function numberValue(value: unknown): number | null {

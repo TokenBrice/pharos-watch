@@ -71,6 +71,17 @@ const DATASET_DATA_CATALOG_REFERENCE_PATHS = [
   "includedInDataCatalog.name",
   "includedInDataCatalog.url",
 ];
+const DATASET_BASE_REQUIRED_PATHS = [
+  "name",
+  "description",
+  "url",
+  "creator.@type",
+  "creator.name",
+  "publisher.@type",
+  "publisher.name",
+  "license",
+  "identifier.0.value",
+];
 
 // FAQ structured data is retained as semantic markup for visible Q&A content.
 // Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
@@ -93,19 +104,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     nodes: [
       {
         type: "Dataset",
-        requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
-          "sameAs.0",
-          "variableMeasured.0.name",
-        ],
+        requiredPaths: [...DATASET_BASE_REQUIRED_PATHS, "sameAs.0", "variableMeasured.0.name"],
       },
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
@@ -129,19 +128,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
       { type: "ItemList", requiredPaths: ["name", "numberOfItems", "itemListElement.0.item.name"] },
       {
         type: "Dataset",
-        requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
-          "sameAs",
-          "distribution.0.contentUrl",
-        ],
+        requiredPaths: [...DATASET_BASE_REQUIRED_PATHS, "sameAs", "distribution.0.contentUrl"],
       },
       { type: "DataDownload", requiredPaths: ["contentUrl", "encodingFormat"] },
     ],
@@ -174,15 +161,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
       {
         type: "Dataset",
         requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
+          ...DATASET_BASE_REQUIRED_PATHS,
           "sameAs",
           "distribution.0.contentUrl",
           ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
@@ -197,15 +176,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
       {
         type: "Dataset",
         requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
+          ...DATASET_BASE_REQUIRED_PATHS,
           "sameAs",
           "distribution.0.contentUrl",
           ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
@@ -229,15 +200,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
       {
         type: "Dataset",
         requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
+          ...DATASET_BASE_REQUIRED_PATHS,
           "sameAs",
           "distribution.0.contentUrl",
           ...DATASET_DATA_CATALOG_REFERENCE_PATHS,
@@ -254,15 +217,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
       {
         type: "Dataset",
         requiredPaths: [
-          "name",
-          "description",
-          "url",
-          "creator.@type",
-          "creator.name",
-          "publisher.@type",
-          "publisher.name",
-          "license",
-          "identifier.0.value",
+          ...DATASET_BASE_REQUIRED_PATHS,
           "sameAs",
           "variableMeasured.0.name",
           ...DATASET_DATA_CATALOG_REFERENCE_PATHS,

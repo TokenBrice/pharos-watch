@@ -3,8 +3,8 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { normalizeRoute, parsePositiveInt } from "../lib/smoke-runtime.mjs";
-import { getBrowserLaunchOptions } from "./smoke-ui.mjs";
+import { normalizeRoute, parseCliOptions, parsePositiveInt } from "../lib/smoke-runtime.mjs";
+import { launchChromiumBrowser, loadChromium } from "./smoke-ui.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_MOBILE_UI_URL ?? process.env.SMOKE_UI_URL ?? "http://localhost:3000";
 const DEFAULT_WAIT_MS = 1500;
@@ -56,42 +56,52 @@ export function parseArgs(argv) {
     workers: process.env.SMOKE_MOBILE_UI_WORKERS ?? "",
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--url") {
-      args.url = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--routes") {
-      args.routes = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--viewports") {
-      args.viewports = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--desktop-viewport") {
-      args.desktopViewport = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--timeout-ms") {
-      args.timeoutMs = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--wait-ms") {
-      args.waitMs = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--skip-desktop") {
+  parseCliOptions(argv, {
+    "--url": ({ readValue }) => {
+      args.url = readValue();
+      return "value";
+    },
+    "--routes": ({ readValue }) => {
+      args.routes = readValue();
+      return "value";
+    },
+    "--viewports": ({ readValue }) => {
+      args.viewports = readValue();
+      return "value";
+    },
+    "--desktop-viewport": ({ readValue }) => {
+      args.desktopViewport = readValue();
+      return "value";
+    },
+    "--timeout-ms": ({ readValue }) => {
+      args.timeoutMs = readValue();
+      return "value";
+    },
+    "--wait-ms": ({ readValue }) => {
+      args.waitMs = readValue();
+      return "value";
+    },
+    "--skip-desktop": () => {
       args.skipDesktop = true;
-    } else if (arg === "--include-desktop") {
+    },
+    "--include-desktop": () => {
       args.skipDesktop = false;
-    } else if (arg === "--skip-touch") {
+    },
+    "--skip-touch": () => {
       args.skipTouch = true;
-    } else if (arg === "--strict-touch-targets") {
+    },
+    "--strict-touch-targets": () => {
       args.strictTouchTargets = true;
-    } else if (arg === "--workers") {
-      args.workers = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--failure-screenshot-dir") {
-      args.failureScreenshotDir = argv[i + 1] ?? "";
-      i += 1;
-    }
-  }
+    },
+    "--workers": ({ readValue }) => {
+      args.workers = readValue();
+      return "value";
+    },
+    "--failure-screenshot-dir": ({ readValue }) => {
+      args.failureScreenshotDir = readValue();
+      return "value";
+    },
+  });
 
   return args;
 }
@@ -189,38 +199,6 @@ function joinUrl(baseUrl, route) {
 
 function sanitizeLabel(label) {
   return label.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "route";
-}
-
-async function loadChromium() {
-  try {
-    const { chromium } = await import("playwright");
-    return chromium;
-  } catch (error) {
-    throw new Error(
-      `[mobile-ui-smoke] Failed to load Playwright from workspace dependencies: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
-}
-
-function isMissingPlaywrightBrowserError(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("Executable doesn't exist") || message.includes("Please run the following command");
-}
-
-async function launchChromiumBrowser(chromium) {
-  const launchOptions = getBrowserLaunchOptions();
-  try {
-    return await chromium.launch(launchOptions);
-  } catch (error) {
-    const hasExplicitBrowser = Boolean(launchOptions.channel) || Boolean(launchOptions.executablePath);
-    if (hasExplicitBrowser || !isMissingPlaywrightBrowserError(error)) {
-      throw error;
-    }
-    console.log("[mobile-ui-smoke] WARN Playwright-managed Chromium missing; retrying with system Chrome");
-    return chromium.launch({ channel: "chrome", headless: true });
-  }
 }
 
 async function waitForSettledPage(page, waitMs) {
@@ -503,12 +481,13 @@ function buildRouteCaptureScript() {
   }`;
 }
 
+const ROUTE_CAPTURE_FN = Function(`return (${buildRouteCaptureScript()});`)();
+
 async function captureRoute(page, { route, scanTableGeometry, scanTouchTargets, timeoutMs, url, viewport, waitMs }) {
   const routeUrl = joinUrl(url, route);
   const response = await page.goto(routeUrl, { timeout: timeoutMs, waitUntil: "domcontentloaded" });
   await waitForSettledPage(page, waitMs);
-  const capture = Function(`return (${buildRouteCaptureScript()});`)();
-  const summary = await page.evaluate(capture, {
+  const summary = await page.evaluate(ROUTE_CAPTURE_FN, {
     scanTableGeometry,
     scanTouchTargets,
     touchHardFloorPx: DEFAULT_TOUCH_HARD_FLOOR_PX,

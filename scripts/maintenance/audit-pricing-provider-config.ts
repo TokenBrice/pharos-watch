@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import {
   BINANCE_MARKETS,
   BITSTAMP_MARKETS,
@@ -55,10 +56,6 @@ async function fetchJson<T>(url: string, fetchImpl: FetchLike = fetch): Promise<
     throw new HttpFetchError(url, response.status);
   }
   return response.json() as Promise<T>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 function assertArray(value: unknown, provider: string, path: string): asserts value is unknown[] {

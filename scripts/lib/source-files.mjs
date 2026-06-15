@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { extname, isAbsolute, join } from "node:path";
 
 export const DEFAULT_SOURCE_FILE_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "node_modules"]);
@@ -29,4 +29,11 @@ export function collectSourceFiles(rootDir, { extensions, excludedDirs = DEFAULT
 
   visit(rootDir);
   return files;
+}
+
+export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDirs } = {}) {
+  const absolute = resolveSourceRoot(root, cwd);
+  if (!existsSync(absolute)) return [];
+  if (statSync(absolute).isFile()) return [absolute];
+  return collectSourceFiles(absolute, { extensions, excludedDirs });
 }

@@ -666,7 +666,7 @@ function findProtectedWrite(paths) {
   return null;
 }
 
-function commandInvokesGitCleanForceDelete(command) {
+function* gitSubcommandTokens(command, subcommand) {
   for (const invocation of getShellCommandInvocations(command)) {
     if (invocation.name !== "git") continue;
     const { tokens } = invocation;
@@ -674,8 +674,14 @@ function commandInvokesGitCleanForceDelete(command) {
     if (tokens[cursor] === "-C") {
       cursor += 2;
     }
-    if (tokens[cursor] !== "clean") continue;
-    const optionText = tokens.slice(cursor + 1, cursor + 6)
+    if (tokens[cursor] !== subcommand) continue;
+    yield tokens.slice(cursor + 1);
+  }
+}
+
+function commandInvokesGitCleanForceDelete(command) {
+  for (const optionTokens of gitSubcommandTokens(command, "clean")) {
+    const optionText = optionTokens.slice(0, 5)
       .filter((token) => token.startsWith("-"))
       .join("");
     if (optionText.includes("f") && optionText.includes("d")) {
@@ -686,15 +692,8 @@ function commandInvokesGitCleanForceDelete(command) {
 }
 
 function commandInvokesGitResetHard(command) {
-  for (const invocation of getShellCommandInvocations(command)) {
-    if (invocation.name !== "git") continue;
-    const { tokens } = invocation;
-    let cursor = 1;
-    if (tokens[cursor] === "-C") {
-      cursor += 2;
-    }
-    if (tokens[cursor] !== "reset") continue;
-    if (tokens.slice(cursor + 1, cursor + 8).includes("--hard")) {
+  for (const optionTokens of gitSubcommandTokens(command, "reset")) {
+    if (optionTokens.slice(0, 7).includes("--hard")) {
       return true;
     }
   }
@@ -702,15 +701,8 @@ function commandInvokesGitResetHard(command) {
 }
 
 function commandInvokesGitPushNoVerify(command) {
-  for (const invocation of getShellCommandInvocations(command)) {
-    if (invocation.name !== "git") continue;
-    const { tokens } = invocation;
-    let cursor = 1;
-    if (tokens[cursor] === "-C") {
-      cursor += 2;
-    }
-    if (tokens[cursor] !== "push") continue;
-    if (tokens.slice(cursor + 1).some((token) => token === "--no-verify" || token.startsWith("--no-verify="))) {
+  for (const optionTokens of gitSubcommandTokens(command, "push")) {
+    if (optionTokens.some((token) => token === "--no-verify" || token.startsWith("--no-verify="))) {
       return true;
     }
   }

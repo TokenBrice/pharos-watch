@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-source-depth";
 import { ACTIVE_META_BY_ID } from "../../shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
+import { isRecord } from "@shared/lib/type-guards";
 
 const DIA_ASSET_QUOTATION_BASE_URL = "https://api.diadata.org/v1/assetQuotation";
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -98,10 +99,6 @@ interface CliOptions {
   maxContractsPerCoin: number;
   format: "json" | "markdown";
   reportPath: string | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function numberValue(value: unknown): number | null {

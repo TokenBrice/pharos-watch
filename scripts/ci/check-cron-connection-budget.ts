@@ -1,4 +1,4 @@
-import { pathToFileURL } from "url";
+import { pathToFileURL } from "node:url";
 import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
 

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { formatBytes } from "../lib/format-bytes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const BASELINE_PATH = path.join(root, "scripts/lib/build-attribution-baseline.json");
@@ -11,18 +12,6 @@ const EXPLAIN_SCRIPT = path.join(root, "scripts/maintenance/explain-build-chunks
 
 const KNOWN_CHUNK_GROWTH_LIMIT_BYTES = 50 * 1024;
 const UNCLASSIFIED_CHUNK_LIMIT_BYTES = 200 * 1024;
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KiB", "MiB", "GiB"];
-  let value = bytes / 1024;
-  let unit = units[0];
-  for (let i = 1; i < units.length && value >= 1024; i += 1) {
-    value /= 1024;
-    unit = units[i];
-  }
-  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
-}
 
 function runClassifier() {
   const result = spawnSync(process.execPath, [EXPLAIN_SCRIPT, "--json"], {

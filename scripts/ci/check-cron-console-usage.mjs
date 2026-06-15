@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
 
 export const DEFAULT_CRON_CONSOLE_ROOTS = ["worker/src/cron", "worker/src/handlers/scheduled.ts"];
 export const DEFAULT_STRUCTURED_LOG_ROOTS = [
@@ -27,14 +27,6 @@ const STRUCTURED_LOGGER_FILES = new Set([
   "worker/src/lib/structured-log.ts",
   "worker/src/lib/telegram-log.ts",
 ]);
-
-function collectFiles(root, cwd) {
-  const absolute = join(cwd, root);
-  if (!existsSync(absolute)) return [];
-  const stats = statSync(absolute);
-  if (stats.isFile()) return [absolute];
-  return collectSourceFiles(absolute, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS });
-}
 
 function lineNumberAt(source, offset) {
   return source.slice(0, offset).split(/\r?\n/g).length;
@@ -118,7 +110,10 @@ export function collectWorkerConsoleUsage(roots = DEFAULT_ROOTS, cwd = process.c
   const counts = {};
 
   for (const root of roots) {
-    for (const file of collectFiles(root, cwd)) {
+    for (const file of collectSourceFilesUnderRoot(root, cwd, {
+      extensions: SOURCE_EXTENSIONS,
+      excludedDirs: EXCLUDED_DIRS,
+    })) {
       const rel = relative(cwd, file).replaceAll("\\", "/");
       const source = readFileSync(file, "utf8");
       const count = collectConsoleCalls(source)
@@ -135,7 +130,10 @@ export function collectWorkerConsoleFindings(roots = DEFAULT_ROOTS, cwd = proces
   const findings = [];
 
   for (const root of roots) {
-    for (const file of collectFiles(root, cwd)) {
+    for (const file of collectSourceFilesUnderRoot(root, cwd, {
+      extensions: SOURCE_EXTENSIONS,
+      excludedDirs: EXCLUDED_DIRS,
+    })) {
       const rel = relative(cwd, file).replaceAll("\\", "/");
       const source = readFileSync(file, "utf8");
       for (const call of collectConsoleCalls(source)) {

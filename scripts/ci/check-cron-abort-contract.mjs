@@ -4,7 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
 
 const DEFAULT_ROOTS = ["worker/src/handlers/scheduled", "worker/src/cron"];
 const WAIVER_FILE = "scripts/lib/cron-abort-contract-waivers.json";
@@ -40,14 +40,6 @@ function isWaived(waivers, file, lineText) {
     typeof waiver.reason === "string" &&
     waiver.reason.length > 0
   );
-}
-
-function collectFiles(root, cwd) {
-  const absolute = resolve(cwd, root);
-  if (!existsSync(absolute)) return [];
-  const stats = statSync(absolute);
-  if (stats.isFile()) return [absolute];
-  return collectSourceFiles(absolute, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS });
 }
 
 function normalizeRel(cwd, file) {
@@ -104,7 +96,10 @@ function collectCronAbortContractFiles(roots, cwd) {
   const queue = [];
   const seen = new Set();
   for (const root of roots) {
-    for (const file of collectFiles(root, cwd)) {
+    for (const file of collectSourceFilesUnderRoot(root, cwd, {
+      extensions: SOURCE_EXTENSIONS,
+      excludedDirs: EXCLUDED_DIRS,
+    })) {
       queue.push(file);
     }
   }
