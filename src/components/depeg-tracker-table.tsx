@@ -69,10 +69,6 @@ const PEG_DEVIATION_PLACEHOLDER: ReadonlyArray<number | null> = Object.freeze(
   Array<null>(30).fill(null),
 );
 
-function getDepegRowPegSeries(_row: DepegTrackerRow): ReadonlyArray<number | null> {
-  return PEG_DEVIATION_PLACEHOLDER;
-}
-
 function StatusBadge({ row }: { row: DepegTrackerRow }) {
   if (row.coin.activeDepeg) {
     return (
@@ -294,7 +290,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   className="text-right w-[112px] hidden xl:table-cell"
                 >
                   <RowSparkline
-                    data={getDepegRowPegSeries(row)}
+                    data={PEG_DEVIATION_PLACEHOLDER}
                     signed
                     referenceValue={0}
                     ariaLabel={`30-day peg deviation for ${coin.symbol}`}
