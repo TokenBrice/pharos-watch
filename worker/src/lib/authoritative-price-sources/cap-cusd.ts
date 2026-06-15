@@ -11,7 +11,7 @@ import {
   encodeUint256,
   ETHEREUM_CHAIN,
   findNearestSupply,
-  getContractConfig,
+  getUsdcQuotedRedeemConfig,
   PROTOCOL_REDEEM_SOURCE,
   ratioToNumber,
   type CurrentPriceOverride,
@@ -41,7 +41,7 @@ async function fetchCapRedeemQuote(
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const config = getContractConfig(CAP_CUSD_ID);
+  const config = getUsdcQuotedRedeemConfig(CAP_CUSD_ID);
   if (!config) return null;
 
   const sampleInputAmount = BigInt(Math.round(sampleNotionalUsd)) * 10n ** BigInt(config.contractDecimals);

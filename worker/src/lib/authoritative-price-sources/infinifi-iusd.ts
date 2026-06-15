@@ -8,7 +8,7 @@ import {
   decodeUint256WordBigInt,
   encodeUint256,
   ETHEREUM_CHAIN,
-  getContractConfig,
+  getUsdcQuotedRedeemConfig,
   PROTOCOL_REDEEM_SOURCE,
   ratioToNumber,
   type CurrentPriceOverride,
@@ -26,7 +26,7 @@ async function fetchInfiniFiRedeemQuote(
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const config = getContractConfig(IUSD_INFINIFI_ID);
+  const config = getUsdcQuotedRedeemConfig(IUSD_INFINIFI_ID);
   if (!config) return null;
 
   const inputAmount = 10n ** BigInt(config.contractDecimals);

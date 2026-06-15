@@ -324,7 +324,18 @@ export function findNearestSupply(
   return nearest?.supply ?? null;
 }
 
-export function getContractConfig(stablecoinId: string): {
+/**
+ * Resolve the Ethereum contract/decimals for a stablecoin together with the
+ * quote-token contract/decimals used to interpret a protocol-redeem output.
+ *
+ * The redeem output is assumed to settle in USDC: the quote contract/decimals
+ * are always resolved from {@link USDC_CIRCLE_ID}. Callers feed `quoteDecimals`
+ * straight into `ratioToNumber`, so a non-USDC settlement asset would be
+ * silently mis-scaled. The `quoteDecimals === 6` guard makes a future
+ * USDC-metadata change fail loudly (returns null) instead of producing a wrong
+ * price.
+ */
+export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
   contract: string;
   contractDecimals: number;
   quoteContract: string;
@@ -337,6 +348,13 @@ export function getContractConfig(stablecoinId: string): {
   const contract = meta.contracts?.find((entry) => entry.chain === ETHEREUM_CHAIN);
   const quoteContract = quoteMeta.contracts?.find((entry) => entry.chain === ETHEREUM_CHAIN);
   if (!contract || !quoteContract) return null;
+
+  if (quoteContract.decimals !== 6) {
+    console.warn(
+      `[authoritative-price-sources] getUsdcQuotedRedeemConfig: expected 6-decimal USDC quote, got ${quoteContract.decimals}`,
+    );
+    return null;
+  }
 
   return {
     contract: contract.address,
