@@ -33,7 +33,7 @@ const PIPELINE_TABS: Array<{ id: PipelineTab; label: string }> = [
   { id: "discovery", label: "Discovery" },
 ];
 
-function deriveInitialPipelineTab(data: StatusResponse): PipelineTab {
+export function deriveInitialPipelineTab(data: StatusResponse): PipelineTab {
   if (
     data.dataQuality.missingPrices > 0 ||
     data.dataQuality.blacklistMissingAmounts > 0 ||

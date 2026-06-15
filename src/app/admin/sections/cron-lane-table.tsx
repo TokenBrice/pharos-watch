@@ -33,7 +33,7 @@ interface CronLaneRow {
   skippedStreak: number;
 }
 
-function countConsecutiveStatus(runs: RecentRun[], status: string): number {
+export function countConsecutiveStatus(runs: RecentRun[], status: string): number {
   let count = 0;
   for (const run of runs) {
     if (run.status !== status) break;
@@ -42,7 +42,7 @@ function countConsecutiveStatus(runs: RecentRun[], status: string): number {
   return count;
 }
 
-function getLastSuccessfulRun(runs: RecentRun[]): RecentRun | null {
+export function getLastSuccessfulRun(runs: RecentRun[]): RecentRun | null {
   return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
 }
 
