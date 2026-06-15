@@ -34,7 +34,7 @@ describe("PsiBeamDimmers", () => {
 
     render(createElement(PsiBeamDimmers, { lanes }));
 
-    expect(screen.getByText(/Beam Dimmers.*Current PSI component pressure/)).toBeTruthy();
+    expect(screen.getByText(/Beam Dimmers.*Component pressure/)).toBeTruthy();
     expect(screen.getByText("Severity")).toBeTruthy();
     expect(screen.getByText("Trend")).toBeTruthy();
     expect(screen.getByText(/not a causal timeline/i)).toBeTruthy();

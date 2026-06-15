@@ -35,6 +35,14 @@ export interface PsiContributorRow extends StabilityContributor {
   total: number;
 }
 
+export interface PsiComponentPoint {
+  ts: number;
+  severity: number;
+  breadth: number;
+  stressBreadth: number;
+  trend: number;
+}
+
 export type PsiBeamDimmerKey = "severity" | "breadth" | "stressBreadth" | "trend";
 
 export interface PsiBeamDimmerLane {
@@ -79,7 +87,7 @@ function clampPct(value: number, max: number): number {
 export function buildPsiComponentData(
   history: Array<{ date: number; components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null }> | undefined,
   current: { computedAt: number; components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number } } | null | undefined,
-): Array<{ ts: number; severity: number; breadth: number; stressBreadth: number; trend: number }> {
+): PsiComponentPoint[] {
   if (!current || !history) return [];
   const reversed = [...history].filter((point) => point.components).reverse();
   return [

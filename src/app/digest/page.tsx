@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { ChevronDown, Send } from "lucide-react";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -26,10 +26,27 @@ const digestEntries = digests as {
   digestType?: "daily" | "weekly";
 }[];
 
-const weeklyDigestEntries = digestEntries.filter((entry) => entry.digestType === "weekly").slice(0, 8);
+const weeklyDigestEntries = digestEntries.filter((entry) => entry.digestType === "weekly");
+const visibleWeeklyDigestEntries = weeklyDigestEntries.slice(0, 2);
+const olderWeeklyDigestEntries = weeklyDigestEntries.slice(2);
 
 function formatDigestDate(dateStr: string): string {
   return formatDigestDateLabel(dateStr, "short");
+}
+
+function WeeklyDigestCard({ entry }: { entry: (typeof digestEntries)[number] }) {
+  return (
+    <Link
+      href={`/digest/${entry.date}/`}
+      className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
+    >
+      <p className="font-mono text-xs uppercase text-muted-foreground">{formatDigestDate(entry.date)}</p>
+      <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+        {entry.title}
+      </h3>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{entry.text}</p>
+    </Link>
+  );
 }
 
 export default function DigestArchivePage() {
@@ -103,20 +120,25 @@ export default function DigestArchivePage() {
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            {weeklyDigestEntries.map((entry) => (
-              <Link
-                key={entry.date}
-                href={`/digest/${entry.date}/`}
-                className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
-              >
-                <p className="font-mono text-xs uppercase text-muted-foreground">{formatDigestDate(entry.date)}</p>
-                <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
-                  {entry.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{entry.text}</p>
-              </Link>
+            {visibleWeeklyDigestEntries.map((entry) => (
+              <WeeklyDigestCard key={entry.date} entry={entry} />
             ))}
           </div>
+          {olderWeeklyDigestEntries.length > 0 ? (
+            <details className="group rounded-lg border border-border/60 bg-muted/20">
+              <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-foreground marker:hidden">
+                <span>Show {olderWeeklyDigestEntries.length} older weekly recaps</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="max-h-[26rem] overflow-y-auto border-t border-border/60 p-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  {olderWeeklyDigestEntries.map((entry) => (
+                    <WeeklyDigestCard key={entry.date} entry={entry} />
+                  ))}
+                </div>
+              </div>
+            </details>
+          ) : null}
         </section>
       ) : null}
 

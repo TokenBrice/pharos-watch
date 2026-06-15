@@ -217,10 +217,17 @@ export function PsiLighthouseScene({
   band,
   score,
   className,
+  fill = false,
 }: {
   band: string;
   score: number;
   className?: string;
+  /**
+   * When true the scene covers its container (height-driven, edges clipped)
+   * instead of sizing to its own aspect ratio. The container then owns the
+   * height — used in the hero so the scene matches the data column.
+   */
+  fill?: boolean;
 }) {
   const uid = useId();
   const bandKey = band as ConditionBand;
@@ -250,8 +257,10 @@ export function PsiLighthouseScene({
     "--psi-pulse-dur": `${pulseDur}s`,
     "--psi-beam-origin-x": `${LH_X}px`,
     "--psi-beam-origin-y": `${BEAM_Y}px`,
-    aspectRatio: `${VIEWBOX_WIDTH} / ${VIEWBOX_HEIGHT}`,
     display: "block",
+    // In fill mode the container owns the height; imposing an aspect ratio here
+    // would fight it, so only self-size when not filling.
+    ...(fill ? null : { aspectRatio: `${VIEWBOX_WIDTH} / ${VIEWBOX_HEIGHT}` }),
   } as CSSProperties;
   const transitionStyle: CSSProperties = {
     transition: "fill 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 600ms cubic-bezier(0.22, 1, 0.36, 1)",
@@ -262,8 +271,8 @@ export function PsiLighthouseScene({
       viewBox={`${VIEWBOX_X} ${VIEWBOX_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
       role="img"
       aria-label={`Pharos lighthouse — ${band} ${Math.round(score)}`}
-      className={cn("psi-scene block h-auto w-full", className)}
-      preserveAspectRatio="xMidYMid meet"
+      className={cn("psi-scene block w-full", fill ? "h-full" : "h-auto", className)}
+      preserveAspectRatio={fill ? "xMidYMid slice" : "xMidYMid meet"}
       style={cssVars}
       data-testid="psi-lighthouse-scene"
       data-band={band}
