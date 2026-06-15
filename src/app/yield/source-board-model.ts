@@ -1,4 +1,5 @@
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { getYieldDataSourceLabel } from "@/lib/yield-data-source";
 import {
   YIELD_SOURCE_CONFIDENCE_ORDER,
   classifyYieldSourceDepth,
@@ -140,29 +141,6 @@ function emptyDepthCounts(): YieldSourceDepthCounts {
   };
 }
 
-function formatDataSourceLabel(dataSource: string): string {
-  switch (dataSource) {
-    case "defillama":
-      return "DeFiLlama";
-    case "defillama-auto":
-      return "DeFiLlama auto";
-    case "onchain":
-      return "On-chain";
-    case "price-derived":
-      return "Price-derived";
-    case "protocol-api":
-      return "Protocol API";
-    case "rate-derived":
-      return "Rate-derived";
-    default:
-      return dataSource
-        .split(/[-_\s]+/u)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ") || "Unknown";
-  }
-}
-
 function addCount(map: Map<string, number>, key: string) {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
@@ -268,7 +246,7 @@ export function buildYieldSourceBoardModel(
     })] += 1;
 
     const yieldTypeLabel = YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType;
-    const dataSourceLabel = formatDataSourceLabel(ranking.dataSource);
+    const dataSourceLabel = getYieldDataSourceLabel(ranking.dataSource);
 
     if (ranking.provenance?.sourceSwitch) {
       sourceSwitchCount += 1;
@@ -311,7 +289,7 @@ export function buildYieldSourceBoardModel(
           yieldType: sourceRow.yieldType,
           yieldTypeLabel: YIELD_TYPE_LABELS[sourceRow.yieldType] ?? sourceRow.yieldType,
           dataSource: sourceRow.dataSource,
-          dataSourceLabel: formatDataSourceLabel(sourceRow.dataSource),
+          dataSourceLabel: getYieldDataSourceLabel(sourceRow.dataSource),
           selectedCount: 0,
           alternateCount: 0,
           apyValues: [],

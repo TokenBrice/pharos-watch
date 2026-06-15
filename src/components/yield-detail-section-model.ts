@@ -4,6 +4,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
+import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
@@ -13,33 +14,6 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import type { YieldRanking } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
-
-const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
-  onchain: {
-    label: "On-chain",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  },
-  defillama: {
-    label: "DeFiLlama",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
-  },
-  "defillama-auto": {
-    label: "DeFiLlama",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
-  },
-  "protocol-api": {
-    label: "Protocol-native",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
-  },
-  "price-derived": {
-    label: "Price-derived",
-    badge: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20",
-  },
-  "rate-derived": {
-    label: "Rate-derived",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
-  },
-};
 
 export interface YieldDetailSectionReadyModel {
   status: "ready";
@@ -151,7 +125,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   );
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
-  const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
+  const dataSourceMeta = getYieldDataSourceMeta(ranking.dataSource);
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
   const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
   const selectedSourceKeys = new Set(
