@@ -1,8 +1,6 @@
-import type { ReactNode } from "react";
 import type { MechanismArchetype, VariantKind } from "@shared/types";
 
-import { SyntheticDeltaNeutralDiagram } from "./synthetic-delta-neutral-diagram";
-import { ThreeStepArchetypeDiagram } from "./three-step-archetype-diagram";
+import { renderArchetype } from "./render-archetype";
 
 interface WrapperDiagramProps {
   /** Child (wrapper) symbol, e.g. "sUSDe", "sDAI". */
@@ -35,30 +33,6 @@ const VARIANT_STRESS_FOOTNOTE: Record<VariantKind, string> = {
   "risk-absorption": "stress: parent stress + first-loss absorption",
   "bond-maturity": "stress: parent stress + maturity mismatch",
 };
-
-function renderParentDiagram(
-  archetype: MechanismArchetype,
-  parentSymbol: string,
-): ReactNode {
-  if (archetype === "synthetic-delta-neutral") {
-    return (
-      <SyntheticDeltaNeutralDiagram
-        symbol={parentSymbol}
-        stressFootnote=""
-      />
-    );
-  }
-  if (
-    archetype === "fiat-cash" ||
-    archetype === "tbill" ||
-    archetype === "cdp" ||
-    archetype === "algorithmic" ||
-    archetype === "rwa-credit-fund"
-  ) {
-    return <ThreeStepArchetypeDiagram archetype={archetype} symbol={parentSymbol} stressFootnote="" />;
-  }
-  return null;
-}
 
 export function WrapperDiagram({
   symbol,
@@ -95,7 +69,7 @@ export function WrapperDiagram({
           >
             {parentSymbol} mechanism
           </p>
-          {renderParentDiagram(parentArchetype, parentSymbol)}
+          {renderArchetype(parentArchetype, parentSymbol, { stressFootnote: "" })}
         </div>
 
         <svg
