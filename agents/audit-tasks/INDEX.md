@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**112/733 done (15%)**  `███░░░░░░░░░░░░░░░░░`
+**114/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 600 | 2 | 0 | 112 | 19 |
+| Count | 596 | 4 | 0 | 114 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 48 | 1 | 0 | 207 |
-| quality | 315 | 55 | 1 | 0 | 252 |
-| sustainability | 152 | 9 | 0 | 0 | 141 |
+| redundancy | 266 | 49 | 1 | 0 | 206 |
+| quality | 315 | 56 | 2 | 0 | 250 |
+| sustainability | 152 | 9 | 1 | 0 | 140 |
 
 ## redundancy (266)
 
@@ -28,7 +28,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| ⬜ | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value |  | `shared/lib/redemption-backstop-configs/queue-red` |
+| 🔄 | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value | codex | `shared/lib/redemption-backstop-configs/queue-red` |
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ⬜ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store |  | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
@@ -210,7 +210,7 @@
 | ✅ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
 | ✅ | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union | codex | `worker/src/api/api-key-requests/rate-limit.ts:14` |
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
-| 🔄 | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly | codex | `worker/src/cron/dex-liquidity/token-batch-runner` |
+| ✅ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly | codex | `worker/src/cron/dex-liquidity/token-batch-runner` |
 | ⬜ | [R-180](redundancy/R-180.md) | S | clone | normalizeStringArray duplicated between response.ts and digest-intelligence.ts |  | `worker/src/cron/daily-digest/response.ts:L128-L1` |
 | ✅ | [R-181](redundancy/R-181.md) | S | wrapper | pricing-source-policy.ts is a pure re-export shim with no added value | codex | `worker/src/lib/pricing-source-policy.ts:L1-L11` |
 | ⬜ | [R-182](redundancy/R-182.md) | S | clone | Generic object/number/string/boolean accessor helpers cloned across three locations |  | `worker/src/lib/status/yield-health.ts:L99-L121, ` |
@@ -450,7 +450,7 @@
 | ⬜ | [Q-037](quality/Q-037.md) | S | error-handling | Wrong bootstrap-source key passed to resolveBootstrapAllowed for yield-rankings loader |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ⬜ | [Q-038](quality/Q-038.md) | S | error-handling | loadDewsRows always issues two DB queries; legacy table queried even when latest is comple |  | `worker/src/cron/dispatch-telegram-state.ts:L70-L` |
 | ⬜ | [Q-042](quality/Q-042.md) | S | dead-code | DewsInsufficientEvidenceReason variant 'total_weight_below_minimum' is declared but never  |  | `worker/src/lib/dews/types.ts:L107-L111, worker/s` |
-| ⬜ | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" |  | `src/app/docs/[slug]/page.tsx:L82-L97` |
+| 🔄 | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" | codex | `src/app/docs/[slug]/page.tsx:L82-L97` |
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
@@ -460,7 +460,7 @@
 | ✅ | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo | codex | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
 | ⬜ | [Q-069](quality/Q-069.md) | M | complexity | `validateRedemptionBackstopRegistry` is a 1117-line god function with nested function decl |  | `scripts/lib/redemption-backstop-validation.ts:L1` |
-| 🔄 | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl | codex | `scripts/maintenance/audit-seo-render-budget.mjs:` |
+| ✅ | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl | codex | `scripts/maintenance/audit-seo-render-budget.mjs:` |
 | ✅ | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru | codex | `worker/src/cron/mint-burn/run-completion.ts:L154` |
 | ⬜ | [Q-084](quality/Q-084.md) | M | complexity | DailyDigest contains an IIFE returning JSX, splitting layout into two unrelated branches i |  | `src/components/daily-digest.tsx:L249-L333` |
 | ⬜ | [Q-085](quality/Q-085.md) | M | complexity | readRedemptionBackstopLiveMetadata is a 220-line monolithic function with 30+ intermediate |  | `worker/src/lib/redemption-backstop-live-metadata` |
@@ -617,7 +617,7 @@
 | ⬜ | [Q-300](quality/Q-300.md) | S | complexity | computeWeightedMedianPrice uses a lower-fence boundary (>= halfWeight) that selects the fi |  | `worker/src/lib/dex-price-estimators.ts:L38-L45` |
 | ⬜ | [Q-301](quality/Q-301.md) | S | security | Transitive advisories in build/dev chain (ws high, postcss moderate) tracked but the prod- |  | `package.json:scripts.audit:deps (`npm audit --au` |
 | ⬜ | [Q-302](quality/Q-302.md) | M | error-handling | Inline AbortSignal.any timeout composition in worker fetch-retry bypasses the shared creat |  | `worker/src/lib/fetch-retry.ts:42-49 vs shared/li` |
-| ⬜ | [Q-303](quality/Q-303.md) | S | type-safety | Unsafe key cast into CRON_STATUS_COLORS duplicated in two render paths |  | `src/app/admin/sections/cron-lane-table.tsx:106, ` |
+| 🔄 | [Q-303](quality/Q-303.md) | S | type-safety | Unsafe key cast into CRON_STATUS_COLORS duplicated in two render paths | codex | `src/app/admin/sections/cron-lane-table.tsx:106, ` |
 | ⬜ | [Q-304](quality/Q-304.md) | S | naming | OG card 24h change derived from adjacent daily supply_history snapshots, not a true 24h wi |  | `worker/src/api/og.tsx:236-243,288-291` |
 | ✅ | [Q-305](quality/Q-305.md) | S | type-safety | events.ts accepts negative since/until and unbounded epoch values without validating they  | codex | `worker/src/api/events.ts:44-49,111-114` |
 | ⬜ | [Q-306](quality/Q-306.md) | M | type-safety | digest-snapshot casts DB-stored JSON straight to DigestInputData without shape validation |  | `worker/src/api/digest-snapshot.ts:89-107` |
@@ -708,7 +708,7 @@
 | ⬜ | [S-017](sustainability/S-017.md) | M | coupling | repair-non-usd-fiat-depeg-history.ts uses module-scope mutable D1 and operation-mode const |  | `worker/scripts/repair-non-usd-fiat-depeg-history` |
 | ⬜ | [S-019](sustainability/S-019.md) | S | coupling | currentVersion string in lib files is manually synced with the top entry version in data f |  | `shared/lib/methodology-versions/yield-methodolog` |
 | ⬜ | [S-020](sustainability/S-020.md) | S | complexity | getChainTrackedDeploymentCount calls getTrackedDeploymentsForChain which re-scans all 406  |  | `src/app/chains/static-chain-content.ts:L75-L113` |
-| ⬜ | [S-021](sustainability/S-021.md) | S | config | check-cron-schedule-sync.ts reads wrangler.toml with a relative path and no explicit root  |  | `scripts/ci/check-cron-schedule-sync.ts:L15` |
+| 🔄 | [S-021](sustainability/S-021.md) | S | config | check-cron-schedule-sync.ts reads wrangler.toml with a relative path and no explicit root  | codex | `scripts/ci/check-cron-schedule-sync.ts:L15` |
 | ⬜ | [S-023](sustainability/S-023.md) | M | coupling | exit-route-map.tsx hard-codes SVG coordinate literals with no connection to EXIT_ROUTE_SCE |  | `src/components/exit-route-map.tsx:L203-L348` |
 | ⬜ | [S-045](sustainability/S-045.md) | S | config | NO_FREEZE_IMPL hardcoded implementation address bypasses probe for the known-safe impl |  | `worker/src/cron/sync-usds-status.ts:17-18,99` |
 | ⬜ | [S-046](sustainability/S-046.md) | S | scalability | Module-scope mutable Map in fx-rate-state.ts grows unboundedly across isolate lifetime |  | `worker/src/lib/fx-rate-state.ts:L183-L218` |
