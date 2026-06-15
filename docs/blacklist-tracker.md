@@ -44,7 +44,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 - **Function:** `syncBlacklist(opts: SyncBlacklistOptions)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
 - **Caller contract:** the 6-hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
-- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
+- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, providerCircuitSkips, etherscanCircuitSkips, tronGridCircuitSkips, apiErrorClasses, runtimeBudgetReached, subrequestBudgetReached, runtimeBudgetMs, enrichAttempted, enrichSucceeded, enrichFailed, currentBalanceCacheUpdated, currentBalanceCacheDeleted, currentBalanceCacheFailed, tronLedgerUpdated, producerGapMetricSnapshots, producerSummarySnapshot, producerSnapshotSkipped, producerSnapshotError, budgetUsed, budgetLimit } }`
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
 

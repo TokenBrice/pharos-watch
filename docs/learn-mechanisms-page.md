@@ -40,7 +40,7 @@ Current treatment:
 - **Display title:** editorial-scale `<h1>` set in Geist Sans extra-bold at `text-[clamp(2.25rem,4.5vw,4rem)]` with `tracking-[-0.035em]`. Custom to this route family; not `pharos-page-title`.
 - **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
-- **Per-archetype accent:** lives only in the **section kicker color** via `ARCHETYPE_VISUALS[archetype].kickerClass`. The visual differentiation between archetypes already lives in the diagram itself (loop arc for tbill, dashed flow + callout for algorithmic, return arc for cdp, split spot+perp legs for synthetic).
+- **Per-archetype accent:** lives only in the **section kicker color** via `ARCHETYPE_VISUALS[archetype].kickerClass`. The visual differentiation between archetypes already lives in the diagram itself (return arc for fiat-cash redeem and cdp, dashed reflexive arc for algorithmic, quarterly-redemption arc for rwa-credit-fund, split spot+perp legs for synthetic; tbill is the plain forward three-step flow).
 
 | Archetype               | Kicker pair                            |
 | ----------------------- | -------------------------------------- |
@@ -77,7 +77,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 ## Metadata + SEO
 
 - Title: hand-tuned per archetype, all ending in `, Explained` (see `TITLE_BY_ARCHETYPE` in the route module); template `%s | Pharos` adds the suffix.
-- Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
+- Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
 - JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
@@ -103,7 +103,7 @@ The guard runs in `validate:prebuild` and so blocks deploy even on non-Pages-imp
 - **Sidebar:** `src/lib/nav-config.ts` LEARN group → `Mechanisms`, `Case Studies`, and `Glossary`
 - **Coin detail (`src/components/key-info-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, gated on `meta.mechanismArchetype`.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`key-info-card` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
-- **Methodology index (`src/app/methodology/page.tsx`):** single "Learn the mechanisms" callout near the top.
+- **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
 - **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.
 
@@ -118,7 +118,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 3. Add visuals to `ARCHETYPE_VISUALS` in `src/app/learn/mechanisms/content/types.ts` (pick a non-semantic accent border).
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
-6. Generate a new diagram component under `src/components/stablecoin-detail/mechanism-diagrams/<slug>-diagram.tsx` and wire it in `mechanismDiagramFor`.
+6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).
 7. Run `node scripts/maintenance/build-og-learn-images.mjs` and the `svg-to-png` skill on the new staged SVG.
 8. Run `npm run check:archetype-explainer-coverage` until it passes; this is the gate.
 

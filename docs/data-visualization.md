@@ -118,7 +118,7 @@ Inputs are hostile. Feed the view-model `-50`, `250`, `NaN`, `null`, unknown ban
 Build the scene as an ordered layer stack from atmospheric background to interactive foreground. Canonical order:
 
 1. **Atmospheric background** — sky gradient, starfield, water gradient; `aria-hidden`.
-2. **Ambient state wash** — band-tinted overlay covering sky and water (PSI sky 0.12, water 0.08; Harbor "fog" sky when ≥30% fragile). This makes the *whole scene* reflect the headline state, not just one glyph.
+2. **Ambient state wash** — band-tinted overlay covering sky and water (PSI sky 0.12, water 0.08; Harbor "fog" sky when ≥30% of rated chains are fragile or concentrated). This makes the *whole scene* reflect the headline state, not just one glyph.
 3. **Structural grid** — rings, spokes, waterline, depth ticks, grid, region anchors. Low opacity, `aria-hidden`.
 4. **Secondary data marks** — wakes, cohort threads, depth draft, reflections.
 5. **Primary data marks** — coins, blips, ships, beacons. These are the focusable units.

@@ -78,7 +78,7 @@ Homepage page discovery rotation is also browser-local:
 - localStorage key: `pharos.homepageDiscovery.v1`
 - value: `{ cursor: number }`, normalized to a non-negative integer
 - `HomeAltClient` chooses and stores a randomized spotlight cursor on homepage-client mount, even though the visual module is lazy-mounted below the fold
-- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference/Guide pages, de-duplicates by `href`, interleaves groups, then renders one spotlight plus the next four compact modules
+- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference pages, de-duplicates by `href`, interleaves groups, then renders one spotlight plus the next four compact modules
 - compact Page Discovery modules use route-specific `shortDescription` copy sized for the tile width; the one-liners may wrap to a second line at `xl`, where the four minor tiles are narrowest
 
 ### `SiteHeader`
@@ -123,14 +123,14 @@ Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 1. `CoreTopRail` directly below the global PSI `RegimeBar`
 2. `SiteHeader`
 3. `HomeAltHero`
-4. `HomeAltMiniCardGrid`
 
 Under the fold (`HomeAltClient`):
 
-1. `PegBrowseStrip`
-2. `StablecoinTable`
-3. `DailyDigest` in `preview` mode
-4. `HomepageDiscoveryModule`
+1. `HomeAltMiniCardGrid`
+2. `PegBrowseStrip`
+3. `StablecoinTable`
+4. `DailyDigest` in `preview` mode
+5. `HomepageDiscoveryModule`
 
 After `HomeAltClient`: `HomeAltUpcomingHorizonConstellation`, rendered as a page-level sibling in `src/app/page.tsx`.
 

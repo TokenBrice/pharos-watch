@@ -72,7 +72,7 @@ Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-expo
 
 - Reads the `bluechip-ratings` cache key directly.
 - Uses the `slow` cache profile (`public, s-maxage=3600, max-age=300`).
-- Applies freshness headers with a 43,200-second stale threshold.
+- Applies freshness headers with a 43,200-second max-age budget (the `Warning: stale` header fires at 8x that, ~345,600s; `_meta.status` becomes `stale` at 12x, ~518,400s).
 - Returns a top-level object keyed by canonical Pharos stablecoin ID.
 - The handler is a custom cache reader that appends `_meta = { updatedAt, ageSeconds, status }` to the plain-object response after reading the cached Bluechip payload.
 

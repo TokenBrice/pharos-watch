@@ -568,7 +568,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 - Slice normalization / valuation / unknown-exposure math (`slice-math.ts`) with configurable precision (`normalizeSlices`, `slicesFromValues`, `valueUsdFromBigIntPrice`)
 - Risk validation (`isReserveRisk`)
 
-`worker/src/cron/reserve-adapters/evm.ts` provides hex-level EVM call helpers for ERC-4626 vault introspection.
+`worker/src/cron/reserve-adapters/evm.ts` provides EVM address-decoding/contract-resolution helpers (`parseEvmAddressResult`, `resolveCoinContractAddress`); ERC-4626 vault introspection helpers live in `erc4626.ts` and raw on-chain call helpers in `onchain.ts`.
 
 ### Adding a New Adapter
 

@@ -150,7 +150,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 - `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 - `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
 
-**Columns:** coin · MiCA status badge · token type (EMT/ART) · competent authority · authorized entity · `significant` marker · source links.
+**Columns:** coin · regime (MiCA / GENIUS) · status badge · pathway / type (EMT/ART, authorizationType, `significant` badge) · authority · issuer entity · [reserve disclosure — GENIUS rows only] · sources.
 
 **Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
 
@@ -158,7 +158,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in `NAV_GROUPS.monitor` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The sidebar and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance?regime=mica`. It reuses the established badge styling; no new component is required.
+**Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance/?regime=mica`. It reuses the established badge styling; no new component is required.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 

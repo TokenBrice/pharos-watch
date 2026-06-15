@@ -322,7 +322,7 @@ Additional response fields:
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
-- `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `diagnosticIssueCount`, `worstCacheRatio`)
+- `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 
 ### Cron error escalation
 
