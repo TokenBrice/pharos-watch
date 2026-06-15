@@ -85,8 +85,7 @@ export function SupplyMovesCard(): React.JSX.Element {
               prefetch={false}
               href={buildStablecoinUrl(peak.id)}
               className="pharos-focus-ring -mx-1 flex items-center gap-2.5 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
-              aria-label={`${formatPct(peak.pctChange)} ${peak.symbol} Peak 7d supply moved over 7 days`}
-              title={`${peak.symbol} supply moved ${formatPct(peak.pctChange)} over 7 days`}
+              aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
             >
               <span
                 className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
