@@ -1,0 +1,67 @@
+import { describe, expect, it, vi } from "vitest";
+import { completeMintBurnRun } from "../mint-burn/run-completion";
+import { setMintBurnRunState } from "../mint-burn/run-state";
+import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
+import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
+
+vi.mock("../mint-burn/run-state", () => ({
+  setMintBurnRunState: vi.fn(),
+}));
+
+vi.mock("../../lib/mint-burn-pipeline/price-heal", () => ({
+  getNullPriceBacklog: vi.fn(),
+  healNullPrices: vi.fn(),
+}));
+
+vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
+  sweepRecentRoundtrips: vi.fn(),
+}));
+
+describe("completeMintBurnRun", () => {
+  it("keeps apiErrors separate from validationFailures metadata", async () => {
+    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
+    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
+    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
+
+    const result = await completeMintBurnRun({
+      db: {} as D1Database,
+      budget: { limit: 200, count: 7 },
+      lane: "critical",
+      jobName: "sync-mint-burn",
+      chainHeads: new Map([["ethereum", 22_000_000]]),
+      startIndex: 0,
+      enabledConfigs: [],
+      configs: [],
+      configsDisabled: 0,
+      contractsTotal: 0,
+      lastBlocksAfterRun: new Map(),
+      runState: { nextConfigIndex: 0, degradedStreak: 0, lastConfigKey: null },
+      runStatePersistenceFailed: false,
+      degradeConsecutiveThreshold: 2,
+      errorConsecutiveThreshold: 3,
+      rowsRead: 0,
+      rowsParsed: 0,
+      rowsInserted: 0,
+      rowsIgnored: 0,
+      rowsDropped: 0,
+      contractsProcessed: 0,
+      contractsSkipped: 0,
+      contractsDeferredExtended: 0,
+      apiErrors: 4,
+      effectiveBurns: 0,
+      bridgeBurns: 0,
+      reviewBurns: 0,
+      atomicRoundtripsTotal: 0,
+      txContextShortfalls: 0,
+      bridgeClassificationDeferredRows: 0,
+      criticalContractsEnabled: 0,
+      criticalContractsSatisfied: 0,
+      criticalContractsUnsatisfied: 0,
+      configBreakdown: [],
+    });
+
+    expect(result.metadata.apiErrors).toBe(4);
+    expect(result.metadata.validationFailures).toBe(0);
+  });
+});
