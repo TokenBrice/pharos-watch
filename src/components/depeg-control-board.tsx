@@ -54,10 +54,6 @@ const METRIC_HELP = {
   dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
 };
 
-function clampPercent(value: number): number {
-  return clampScore(value);
-}
-
 function statusLabel(row: DepegTrackerRow): string {
   if (row.coin.activeDepeg) return "live";
   if (row.pendingIncident) return "pending";
@@ -157,7 +153,7 @@ function DeviationBar({ bps }: { bps: number | null }) {
     return <div className="h-1.5 rounded-full bg-muted" aria-label="Deviation unavailable" />;
   }
   const abs = Math.abs(bps);
-  const width = clampPercent(getDeviationBarWidthPercent(abs));
+  const width = clampScore(getDeviationBarWidthPercent(abs));
   const barClass =
     abs >= 500
       ? "bg-red-500"
@@ -184,7 +180,7 @@ function LinearGauge({
   tone?: string;
   ariaLabel: string;
 }) {
-  const pct = value == null ? 0 : clampPercent((Math.abs(value) / max) * 100);
+  const pct = value == null ? 0 : clampScore((Math.abs(value) / max) * 100);
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-label={ariaLabel}>
       <div className={cn("h-full rounded-full", tone)} style={{ width: value == null ? "0%" : `${Math.max(3, pct)}%` }} />
