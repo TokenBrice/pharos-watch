@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**61/733 done (8%)**  `██░░░░░░░░░░░░░░░░░░`
+**63/733 done (9%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 650 | 3 | 0 | 61 | 19 |
+| Count | 646 | 5 | 0 | 63 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 31 | 1 | 0 | 224 |
-| quality | 315 | 22 | 2 | 0 | 284 |
-| sustainability | 152 | 8 | 0 | 0 | 142 |
+| redundancy | 266 | 32 | 0 | 0 | 224 |
+| quality | 315 | 23 | 4 | 0 | 281 |
+| sustainability | 152 | 8 | 1 | 0 | 141 |
 
 ## redundancy (266)
 
@@ -171,7 +171,7 @@
 | ⬜ | [R-137](redundancy/R-137.md) | S | dead-code | feedPages and datasetPages are permanently empty arrays in sitemap.ts |  | `src/app/sitemap.ts:462-484` |
 | ✅ | [R-138](redundancy/R-138.md) | S | wrapper | fieldClassName() is a zero-argument function returning a constant string | codex | `src/components/status/api-keys-panel-parts.tsx:L` |
 | ⬜ | [R-139](redundancy/R-139.md) | S | clone | intensity is clamped twice in the FlowMachine pipeline |  | `src/components/flow-machine-scene.tsx:49-53, src` |
-| 🔄 | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette | codex | `src/components/providers.tsx:L66, L129, L140` |
+| ✅ | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette | codex | `src/components/providers.tsx:L66, L129, L140` |
 | ⬜ | [R-141](redundancy/R-141.md) | S | clone | `sleep` defined independently in sync-from-api.ts and smoke-runtime.mjs |  | `scripts/lib/sync-from-api.ts:L64, scripts/lib/sm` |
 | ⬜ | [R-142](redundancy/R-142.md) | S | wrapper | deriveVariantAwareDependencies is a zero-logic pass-through wrapper |  | `shared/lib/stablecoins/variants.ts:L13-L17` |
 | ⬜ | [R-143](redundancy/R-143.md) | S | clone | stablecoinRouteSearchText called twice per coin in buildL2BeatBridgeRouteReviewAudit |  | `shared/lib/chains/l2beat-audit.ts:L551, L589` |
@@ -317,9 +317,9 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ✅ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
-| ⬜ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry |  | `shared/lib/redemption-backstop-configs/factory.t` |
+| 🔄 | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
 | ⬜ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read |  | `worker/src/cron/reserve-adapters/sky-makercore.t` |
-| ⬜ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat |  | `worker/src/lib/price-validation.ts:L191-L197` |
+| 🔄 | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ⬜ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts |  | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
@@ -436,7 +436,7 @@
 | ✅ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
 | ⬜ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be |  | `src/components/exploit-notice-banner.tsx:L11-L35` |
-| ⬜ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function |  | `scripts/maintenance/fetch-logos.ts:90-96` |
+| 🔄 | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
 | ⬜ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block |  | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ⬜ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function |  | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ⬜ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key |  | `src/components/status/admin-action-button.tsx:L3` |
@@ -506,7 +506,7 @@
 | ⬜ | [Q-189](quality/Q-189.md) | S | naming | cronLeaseQueryFailed silently excluded from CronHealthSnapshot despite influencing orphan  |  | `worker/src/lib/status/cron-health.ts:L8-L23 (int` |
 | ⬜ | [Q-190](quality/Q-190.md) | S | dead-code | Unused parameter _visibleCount in getHomepageDiscoveryCycleLength |  | `src/lib/homepage-discovery.ts:L135-L141` |
 | ⬜ | [Q-191](quality/Q-191.md) | S | naming | stats.totalCommits name misrepresents its meaning |  | `src/data/changelogs/types.ts:L27, src/components` |
-| 🔄 | [Q-192](quality/Q-192.md) | S | error-handling | parse-version-upload.mjs: no error handling around per-line JSON.parse of wrangler JSONL o | codex | `.github/scripts/parse-version-upload.mjs:L11` |
+| ✅ | [Q-192](quality/Q-192.md) | S | error-handling | parse-version-upload.mjs: no error handling around per-line JSON.parse of wrangler JSONL o | codex | `.github/scripts/parse-version-upload.mjs:L11` |
 | ✅ | [Q-193](quality/Q-193.md) | S | type-safety | generate-reserve-coverage-audit.ts uses `file://${process.argv[1]}` template string for ma | codex | `scripts/maintenance/generate-reserve-coverage-au` |
 | ⬜ | [Q-194](quality/Q-194.md) | S | error-handling | removePresetSubscriptions calls statements[0].run() instead of db.batch(), silently droppi |  | `worker/src/api/telegram-store/presets.ts:L93-L10` |
 | ⬜ | [Q-195](quality/Q-195.md) | S | naming | Hardcoded 55-minute OXR rate-limit window lacks named constant |  | `worker/src/cron/sync-fx-rates-helpers.ts:738` |
@@ -768,7 +768,7 @@
 | ⬜ | [S-118](sustainability/S-118.md) | M | scalability | Fluid pool enrichment makes 3 concurrent RPC calls sequentially per pool, risks connection |  | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L87` |
 | ⬜ | [S-119](sustainability/S-119.md) | S | dead-code | telegram-pending-queue.ts is a trivial compatibility barrel with no added value |  | `worker/src/cron/telegram-pending-queue.ts:L1-L3` |
 | ⬜ | [S-120](sustainability/S-120.md) | S | config | TVL/seconds-per-year thresholds hardcoded inline instead of using the named constants besi |  | `worker/src/cron/yield-sync/sources-optional-prot` |
-| ⬜ | [S-121](sustainability/S-121.md) | S | config | SAFE_SCORE_THRESHOLD and RISKY_SCORE_THRESHOLD are undocumented magic numbers not linked t |  | `worker/src/lib/flight-to-quality-classification.` |
+| 🔄 | [S-121](sustainability/S-121.md) | S | config | SAFE_SCORE_THRESHOLD and RISKY_SCORE_THRESHOLD are undocumented magic numbers not linked t | codex | `worker/src/lib/flight-to-quality-classification.` |
 | ⬜ | [S-122](sustainability/S-122.md) | S | config | Hardcoded 30-second Etherscan timeout in evm-logs with no caller override path |  | `worker/src/lib/evm-logs.ts:L284` |
 | ⬜ | [S-123](sustainability/S-123.md) | S | complexity | yield-health.ts buildCoverageAuditQueue maintains two parallel legacy-item construction pa |  | `worker/src/lib/status/yield-health.ts:L464-L531` |
 | ⬜ | [S-124](sustainability/S-124.md) | S | scalability | Sub-decimal countdown versioning (3.997, 5.99…) creates a finite runway with no migration  |  | `shared/data/methodology-changelogs/blacklist-tra` |
