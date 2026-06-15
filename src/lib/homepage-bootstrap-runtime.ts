@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { isRecord } from "@shared/lib/type-guards";
+import type { ApiDependencyMeta } from "@shared/types/api-meta";
 import type { ApiMeta } from "@/lib/api";
 import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
@@ -48,14 +49,9 @@ function normalizeSource(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function normalizeDependencyMeta(value: unknown): ApiMeta["dependencies"] extends infer D ? D : never {
-  if (!isRecord(value)) return undefined as never;
-  const normalized: Record<string, {
-    updatedAt?: number | null;
-    ageSeconds?: number | null;
-    status: "fresh" | "degraded" | "stale" | "unavailable";
-    reason?: string | null;
-  }> = {};
+function normalizeDependencyMeta(value: unknown): Record<string, ApiDependencyMeta> | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: Record<string, ApiDependencyMeta> = {};
 
   for (const [key, raw] of Object.entries(value)) {
     if (!isRecord(raw)) continue;
@@ -71,7 +67,7 @@ function normalizeDependencyMeta(value: unknown): ApiMeta["dependencies"] extend
     };
   }
 
-  return normalized as never;
+  return normalized;
 }
 
 function normalizeApiMeta(value: unknown): ApiMeta | null {
