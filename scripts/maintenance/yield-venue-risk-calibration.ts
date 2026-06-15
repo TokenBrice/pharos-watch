@@ -8,7 +8,7 @@
  * Run: PHAROS_API_KEY=... tsx scripts/maintenance/yield-venue-risk-calibration.ts
  * (or with the key in .env.local). Read-only; prints a Markdown-ish report.
  */
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { computePYS, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
   resolveDependencyConcentration,
@@ -19,9 +19,11 @@ import {
 
 function loadKey(): string {
   if (process.env.PHAROS_API_KEY) return process.env.PHAROS_API_KEY;
-  const env = readFileSync(new URL("../../.env.local", import.meta.url), "utf8");
-  const line = env.split("\n").find((l) => l.trim().startsWith("PHAROS_API_KEY"));
-  const key = line?.split("=")[1]?.trim();
+  const envFile = new URL("../../.env.local", import.meta.url);
+  if (existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+  }
+  const key = process.env.PHAROS_API_KEY?.trim();
   if (!key) throw new Error("PHAROS_API_KEY not found in env or .env.local");
   return key;
 }
