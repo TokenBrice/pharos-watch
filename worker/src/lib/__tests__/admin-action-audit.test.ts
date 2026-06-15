@@ -63,7 +63,7 @@ describe("logAdminAction", () => {
     expect(insert.binds[1]).toBe("internal");
   });
 
-  it("caps details_json at DETAILS_MAX_LEN (4096) characters", async () => {
+  it("stores valid JSON with a truncation sentinel when details exceed DETAILS_MAX_LEN", async () => {
     const db = makeAuditMockDb();
     const huge = { blob: "x".repeat(10_000) };
 
@@ -73,6 +73,10 @@ describe("logAdminAction", () => {
     const detailsJson = insert.binds[6];
     expect(typeof detailsJson).toBe("string");
     expect((detailsJson as string).length).toBeLessThanOrEqual(DETAILS_MAX_LEN);
-    expect((detailsJson as string).length).toBe(DETAILS_MAX_LEN);
+    expect(JSON.parse(detailsJson as string)).toEqual({
+      _truncated: true,
+      maxSize: DETAILS_MAX_LEN,
+      originalSize: JSON.stringify(huge).length,
+    });
   });
 });

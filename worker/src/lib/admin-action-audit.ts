@@ -10,6 +10,17 @@ export interface AdminActionLogEntry {
 
 export const DETAILS_MAX_LEN = 4096;
 
+function serializeDetails(details: Record<string, unknown> | undefined): string | null {
+  if (!details) return null;
+  const detailsJson = JSON.stringify(details);
+  if (detailsJson.length <= DETAILS_MAX_LEN) return detailsJson;
+  return JSON.stringify({
+    _truncated: true,
+    maxSize: DETAILS_MAX_LEN,
+    originalSize: detailsJson.length,
+  });
+}
+
 export async function logAdminAction(
   db: D1Database,
   entry: AdminActionLogEntry,
@@ -19,9 +30,7 @@ export async function logAdminAction(
   const actor = entry.actor
     ?? request?.headers.get("Cf-Access-Authenticated-User-Email")
     ?? "internal";
-  const detailsJson = entry.details
-    ? JSON.stringify(entry.details).slice(0, DETAILS_MAX_LEN)
-    : null;
+  const detailsJson = serializeDetails(entry.details);
   try {
     await db
       .prepare(
