@@ -1,3 +1,4 @@
+import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinChartPoint, StablecoinData } from "@shared/types";
 
@@ -18,68 +19,13 @@ function normalizeChartPegType(pegType: string): string {
 }
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
-  switch (pegCurrency) {
-    case "USD":
-      return "peggedUSD";
-    case "EUR":
-      return "peggedEUR";
-    case "GBP":
-      return "peggedGBP";
-    case "CHF":
-      return "peggedCHF";
-    case "BRL":
-      return "peggedREAL";
-    case "RUB":
-      return "peggedRUB";
-    case "JPY":
-      return "peggedJPY";
-    case "IDR":
-      return "peggedIDR";
-    case "SGD":
-      return "peggedSGD";
-    case "TRY":
-      return "peggedTRY";
-    case "AUD":
-      return "peggedAUD";
-    case "ZAR":
-      return "peggedZAR";
-    case "CAD":
-      return "peggedCAD";
-    case "CNY":
-      return "peggedCNY";
-    case "CNH":
-      return "peggedCNH";
-    case "PHP":
-      return "peggedPHP";
-    case "MXN":
-      return "peggedMXN";
-    case "MYR":
-      return "peggedMYR";
-    case "KRW":
-      return "peggedKRW";
-    case "UAH":
-      return "peggedUAH";
-    case "ARS":
-      return "peggedARS";
-    case "KGS":
-      return "peggedKGS";
-    case "NGN":
-      return "peggedNGN";
-    case "XOF":
-      return "peggedXOF";
-    case "VND":
-      return "peggedVND";
-    case "GOLD":
-      return "peggedGOLD";
-    case "SILVER":
-      return "peggedSILVER";
-    case "VAR":
-      return "peggedVAR";
-    case "OTHER":
-      return "peggedOTHER";
-    default:
-      return null;
+  // VAR/OTHER have no canonical peg-type key; the shared helper returns
+  // undefined for them, so fall back to `pegged${currency}` to preserve the
+  // historical bucketing behavior here.
+  if (pegCurrency === "VAR" || pegCurrency === "OTHER") {
+    return `pegged${pegCurrency}`;
   }
+  return normalizePegTypeFromCurrency(pegCurrency) ?? null;
 }
 
 export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
