@@ -191,12 +191,12 @@
     "reviewAfter": "2026-09-11",
     "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
   },
-  "worker/src/lib/cron-lease.ts": {
+  "shared/lib/yield-source-risk-registry.ts": {
     "disposition": "queued-p4",
-    "notes": "Cron lease orchestration now combines worker-specific connection budgeting, timeout handling, and backoff metadata shaping for multiple cron lanes. Keep this explicitly waived for this release while lease policy work stabilizes.",
+    "notes": "Reviewed venue-risk registry was moved from the worker source-risk module into shared runtime-neutral metadata so maintenance scripts and worker code can use the same registry without a boundary waiver. The file is intentionally data-heavy; keep it waived until venue-risk entries are split into generated data or family-specific registry shards.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-06-13",
-    "reviewAfter": "2026-09-13",
-    "nextAction": "Split connection-budget accounting and lease backoff/state-machine transitions into focused helpers under a shared cron-lease contract."
+    "createdAt": "2026-06-15",
+    "reviewAfter": "2026-09-15",
+    "nextAction": "Split reviewed venue-risk entries from registry helpers, preferably into generated/static data plus a narrow shared resolver API."
   }
 }
