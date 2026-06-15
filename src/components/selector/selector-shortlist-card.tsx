@@ -47,7 +47,7 @@ function discreteStalenessLabel(seconds: number): string {
   return "Stale";
 }
 
-function precisStaleness(seconds: number): string {
+function preciseStaleness(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   const mins = Math.floor(seconds / 60);
   if (mins < 60) return `${mins}m`;
@@ -141,7 +141,7 @@ function buildEvidenceChips(
         const worst = Math.max(...ages);
         chips.push({
           label: "Freshness",
-          value: isMobile ? discreteStalenessLabel(worst) : `${precisStaleness(worst)} old`,
+          value: isMobile ? discreteStalenessLabel(worst) : `${preciseStaleness(worst)} old`,
           ariaLabel: `Data freshness watch: ${discreteStalenessLabel(worst).toLowerCase()}`,
           tone: "watch",
         });
@@ -288,7 +288,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             <ShieldAlert className="h-3 w-3" aria-hidden="true" />
             <span>
               Source risk: {rec.recommendedSource.sourceRiskTier}. Data freshness:{" "}
-              {precisStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
+              {preciseStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
             </span>
           </p>
           {yieldSourceUrl ? (
