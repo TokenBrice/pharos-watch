@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
+import { isReadableStablecoinMeta } from "./status";
 import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
@@ -122,10 +123,6 @@ const DeadStablecoinIdSchema = z.string().refine(isSlugLikeId, {
 const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
   message: "Invalid stablecoin id",
 });
-
-function isReadableStablecoinStatus(status: StablecoinMeta["status"]): boolean {
-  return status !== "pre-launch";
-}
 
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
@@ -313,7 +310,7 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
     const inheritedFrom = mintAuthority.inheritedFrom;
     if (inheritedFrom != null) {
       const parent = catalogById.get(inheritedFrom);
-      if (parent == null || !isReadableStablecoinStatus(parent.status)) {
+      if (parent == null || !isReadableStablecoinMeta(parent)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "mintAuthority.inheritedFrom must reference an active or frozen tracked stablecoin",
