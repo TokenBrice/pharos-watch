@@ -1,10 +1,13 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(),
+  costModel: fixedFee(
+    0,
+    "Frax docs describe sfrxUSD as redeemable for frxUSD at the current exchange rate with no price impact; no separate wrapper redemption fee is charged.",
+  ),
   reviewedAt: "2026-05-17",
   docs: [
     sourceRef("Frax sfrxUSD docs", "https://docs.frax.com/protocol/assets/frxusd/sfrxusd", ["route", "capacity"]),

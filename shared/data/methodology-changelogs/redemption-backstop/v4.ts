@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.12",
+    title: "Verified fee evidence and direct Sky LitePSM capacity",
+    date: "2026-06-15",
+    effectiveAt: 1781481600,
+    summary:
+      "A reviewed redemption-backstop upgrade tranche replaces undisclosed-fee placeholders with sourced fixed or formula fee models where public evidence supports them, and Sky DAI/USDS capacity now reads the LitePSM USDC pocket directly on-chain.",
+    impact: [
+      "Twenty-six live-direct wrapper, queue, and collateral routes now use fixed or formula fee evidence instead of `undisclosed-reviewed`, including Frax sfrxUSD, Spark sUSDC/sUSDT, Yearn yvUSDC/yBOLD, Aave sGHO/stkGHO, Jupiter JupUSD, Maple syrupUSDC, GAIB sAID, f(x) fxSAVE, and selected Gauntlet, Steakhouse, Curve, Noon, OpenEden, Ethena, dTRINITY, and Ebisu routes",
+      "Additional reviewed fee evidence was added for YieldFi yUSD, Hyperbeat hbUSDT, and Re Protocol reUSD, but those rows still depend on their existing capacity evidence and do not imply new live-direct buffer telemetry",
+      "Admin-configurable or still-undisclosed fee routes such as Ember eEarn, Maple syrupUSDT, Asymmetry asUSDF, Avant/Rings/Reservoir candidates, and several buffer-locator candidates remain unpromoted until public numeric fee or direct-capacity evidence exists",
+      "The `sky-makercore` adapter now validates Sky LitePSM `gem()` and `pocket()` on Ethereum and reads `USDC.balanceOf(pocket)` as same-run live-direct redemption capacity; if the on-chain probe is unavailable, DAI/USDS retain their existing reviewed fallback rather than failing open",
+      "The scoring formula and confidence gates are unchanged; the update only improves route evidence quality where the required fee and capacity proof was verified",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.11",
     title: "Documented immediate buffers for top fiat issuers",
     date: "2026-06-10",

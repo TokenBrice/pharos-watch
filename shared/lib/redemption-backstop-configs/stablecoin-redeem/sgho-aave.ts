@@ -1,12 +1,13 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const SGHO_AAVE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "Aave sGHO previewRedeem path exits to GHO at the contract exchange rate; public docs reviewed do not publish a separate fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "Aave sGHO previewRedeem returns the GHO amount received for redeeming sGHO shares; no separate sGHO redemption fee is documented.",
   ),
   docs: [
     sourceRef("Aave sGHO guide", "https://aave.com/docs/aave-v3/guides/sgho", [

@@ -1,11 +1,12 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const AUTOUSD_AUTO_FINANCE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "Auto Finance autopool withdrawals redeem autoUSD shares to USDC when autopool liquidity is available; public docs reviewed do not publish one fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "Auto Finance autopool redeem/withdraw burns autoUSD shares for USDC without a separate exit-fee deduction; streaming and periodic fees are NAV/accounting fees",
   ),
   reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
   docs: [

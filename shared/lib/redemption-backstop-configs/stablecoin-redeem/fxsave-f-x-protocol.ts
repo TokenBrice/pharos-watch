@@ -1,10 +1,13 @@
-import { documentedVariableFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_FXSAVE_LIVE_REDEMPTION_AT } from "./shared";
 
 export const FXSAVE_F_X_PROTOCOL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee("fxSAVE can exit through fxSP/router routes into fxUSD, USDC, or both depending on available liquidity"),
+  costModel: fixedFee(
+    100,
+    "f(x) atomic fxSAVE exits route through fxSP instantRedeem, where the current on-chain instantRedeemFeeRatio is 1%; the admin-governed parameter is capped at 5%",
+  ),
   reviewedAt: REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
   docs: [
     sourceRef("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool", ["route", "capacity", "fees", "access", "settlement"]),

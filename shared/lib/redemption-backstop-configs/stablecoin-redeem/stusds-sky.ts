@@ -1,11 +1,14 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const STUSDS_SKY_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(),
+  costModel: fixedFee(
+    0,
+    "Sky stUSDS implements ERC-4626 withdraw/redeem to USDS at the chi exchange rate; the published implementation does not apply a separate exit fee.",
+  ),
   docs: [
     sourceRef("Sky stUSDS docs", "https://developers.skyeco.com/protocol/tokens/stusds/", ["route", "capacity", "fees", "access", "settlement"]),
     sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", ["route", "capacity"]),

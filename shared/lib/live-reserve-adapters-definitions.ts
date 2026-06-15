@@ -571,7 +571,7 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,

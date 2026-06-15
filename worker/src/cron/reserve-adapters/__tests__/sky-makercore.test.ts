@@ -15,12 +15,22 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
+    fetchOnchainRawCall: vi.fn(),
+    fetchOnchainUint256: vi.fn(),
   };
 });
 
-import { fetchJsonWithRetry } from "../helpers";
+import { fetchJsonWithRetry, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
+const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574E4C5Ce33f8e8306Be057fD7341";
+const GEM_SELECTOR = "0x7bd2bea7";
+const POCKET_SELECTOR = "0xcccef9e2";
+
+function encodeAddressWord(address: string): string {
+  return `0x${address.replace(/^0x/, "").toLowerCase().padStart(64, "0")}`;
+}
 
 const SAMPLE_GROUPS: SkyGroupResult[] = [
   { group: "stablecoins", group_name: "Stablecoins", debt: "4848053264.74", collateral: "4848920495.92", datetime: "2026-04-05T17:33:24.053849" },
@@ -140,6 +150,12 @@ describe("resolveSkyTimestampSummary", () => {
 describe("fetchSkyMakercoreReserves PSM attribution", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
+      if (data === GEM_SELECTOR) return encodeAddressWord(SKY_LITE_PSM_USDC_ADDRESS);
+      if (data === POCKET_SELECTOR) return encodeAddressWord(SKY_LITE_PSM_USDC_POCKET);
+      return null;
+    });
+    vi.mocked(fetchOnchainUint256).mockResolvedValue(123_456_000000n);
   });
 
   const coin = { id: "usds-sky" } as unknown as StablecoinMeta;
@@ -171,5 +187,38 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
 
     const details = result.metadata?.details as { psmComposition?: string };
     expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
+    expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
+    expect(result.metadata?.immediateRedeemableUsd).toBe(123456);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 123456,
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      holderEligibility: "any-holder",
+      settlementDelaySec: 0,
+    });
+    expect(fetchOnchainUint256).toHaveBeenCalledWith(expect.objectContaining({
+      chain: "ethereum",
+      contract: SKY_LITE_PSM_USDC_ADDRESS,
+    }));
+  });
+
+  it("falls back without redemption metadata when LitePSM capacity is unavailable", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      count: 2,
+      results: [
+        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
+        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+      ],
+    });
+    vi.mocked(fetchOnchainRawCall).mockResolvedValue(null);
+
+    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
+    expect(result.metadata?.details).toMatchObject({ litePsmCapacity: "unavailable" });
   });
 });

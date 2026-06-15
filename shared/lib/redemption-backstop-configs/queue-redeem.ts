@@ -144,8 +144,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedQueueRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
-    costModel: undisclosedReviewedFee(
-      "Maple docs describe FIFO queued withdrawal requests for syrupUSDC and do not publish a separate protocol redemption fee",
+    costModel: fixedFee(
+      0,
+      "Maple WithdrawalManager docs process queued shares into assets at the current exchange rate, with no separate protocol redemption fee described",
     ),
     docs: [
       sourceRef(
@@ -204,10 +205,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "reusd-re-protocol": {
     ...queueRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
-    costModel: undisclosedReviewedFee(),
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    costModel: documentedVariableFee(
+      "Re Protocol docs state redemption and transaction fees currently start at 6 bps (0.06%).",
+      "formula",
+    ),
     docs: [
-      sourceRef("Re Protocol docs", "https://docs.re.xyz/", ["route", "settlement", "capacity"]),
+      sourceRef("Re Protocol reUSD docs", "https://docs.re.xyz/insurance-capital-layers/what-is-reusd", [
+        "route",
+        "settlement",
+        "capacity",
+        "fees",
+      ]),
       sourceRef("Re Protocol transparency", "https://app.re.xyz/transparency", ["capacity"]),
     ],
     notes: [
@@ -283,8 +292,9 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     capacityModel: { kind: "reserve-sync-metadata" },
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    costModel: documentedVariableFee(
-      "Ethena staking docs describe sUSDe unstaking as a 7-day cooldown into USDe, with users bearing transaction and execution costs rather than paying a separate fixed protocol redemption fee",
+    costModel: fixedFee(
+      0,
+      "Ethena staking docs and StakedUSDeV2 contract describe unstaking as burning sUSDe for proportionate USDe after cooldown, with no protocol redemption fee",
     ),
     docs: [
       sourceRef("Ethena staking docs", "https://docs.ethena.fi/solution-design/staking-usde", [
@@ -296,6 +306,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "Ethena staking key functions",
         "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions",
         ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Ethena StakedUSDeV2 contract",
+        "https://github.com/ethena-labs/code4arena-contest/blob/main/protocols/USDe/contracts/StakedUSDeV2.sol",
+        ["route", "fees"],
       ),
       sourceRef("Ethena key addresses", "https://docs.ethena.fi/solution-design/key-addresses", ["route"]),
     ],
@@ -359,7 +374,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee(),
+    costModel: fixedFee(
+      0,
+      "Aave Umbrella StakeToken docs describe ERC-4626 redeem/withdraw after cooldown with no exit fee",
+    ),
     docs: [
       sourceRef("Aave Umbrella unstake guide", "https://aave.com/help/umbrella/unstake", [
         "route",
@@ -375,6 +393,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "Aave stkGHO token contract",
         "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033",
         ["capacity"],
+      ),
+      sourceRef(
+        "Aave Umbrella StakeToken README",
+        "https://github.com/aave-dao/aave-umbrella/blob/main/src/contracts/stakeToken/README.md",
+        ["route", "fees"],
       ),
     ],
     notes: [
@@ -728,6 +751,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
       "Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within three working days with no fee",
+      "formula",
     ),
     docs: [
       sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", [

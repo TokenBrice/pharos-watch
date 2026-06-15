@@ -1,4 +1,4 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -7,8 +7,9 @@ export const SAID_GAIB_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   settlementModel: "queued",
   executionModel: "rules-based-nav",
   outputAssetType: "nav",
-  costModel: undisclosedReviewedFee(
-    "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; public docs reviewed do not publish one fixed unstaking fee",
+  costModel: fixedFee(
+    0,
+    "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; verified source exposes no separate unstaking-fee deduction",
   ),
   docs: [
     sourceRef("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said", [

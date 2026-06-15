@@ -1,12 +1,13 @@
-import { documentedVariableFee } from "../shared";
+import { fixedFee } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const YOUSD_YIELD_OPTIMIZER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   settlementModel: "immediate",
   executionModel: "rules-based-nav",
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, basis: "strategy-buffer" },
-  costModel: documentedVariableFee(
-    "ERC-4626 vault; instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
+  costModel: fixedFee(
+    0,
+    "YO docs state protocol deposit and withdrawal fees are currently set to 0; instant redemptions depend on the available liquidity buffer.",
   ),
   reviewedAt: "2026-04-16",
   notes: [

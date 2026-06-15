@@ -1,11 +1,12 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const GTUSDC_GAUNTLET_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; public docs reviewed do not publish one fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "MetaMorpho vault withdrawals redeem to USDC when vault liquidity is available; Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
   ),
   reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
   docs: [

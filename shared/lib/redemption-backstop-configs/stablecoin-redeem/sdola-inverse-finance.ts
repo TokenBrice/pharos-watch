@@ -1,12 +1,13 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull("2026-05-24"),
   capacityModel: { kind: "reserve-sync-metadata" },
   totalScoreCap: 70,
-  costModel: undisclosedReviewedFee(
-    "sDOLA docs describe deposits and redemptions through the ERC-4626 wrapper at the vault exchange rate; public materials reviewed do not publish a separate withdrawal fee",
+  costModel: fixedFee(
+    0,
+    "sDOLA docs describe permissionless instant unwrapping back to DOLA with no lock-up period or early-withdrawal penalty.",
   ),
   docs: [
     sourceRef("sDOLA docs", "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola", [

@@ -1,4 +1,4 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
 export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -9,8 +9,9 @@ export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemCon
     confidence: "documented-bound",
     basis: "hot-buffer",
   },
-  costModel: undisclosedReviewedFee(
-    "JupUSD's primary mint and redeem rail is benefactor-gated and settles against USDC; public materials do not publish one universal fixed redemption fee",
+  costModel: fixedFee(
+    4,
+    "Jupiter's JupUSD fee FAQ states the JupUSD program applies a 0.04% fee to mint and redeem transactions.",
   ),
   reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
@@ -19,6 +20,9 @@ export const JUPUSD_JUPITER_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemCon
       "route",
       "capacity",
       "access",
+      "fees",
+    ]),
+    sourceRef("JupUSD fees FAQ", "https://jupiverse.zendesk.com/hc/en-us/articles/24441752163740-What-fees-apply-to-JupUSD", [
       "fees",
     ]),
   ],

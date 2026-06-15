@@ -1,11 +1,12 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const SUSDC_SPARK_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "Spark savings vault withdrawals redeem spUSDC for USDC at the live vault exchange rate; no separate fixed protocol fee was identified in reviewed public docs",
+  costModel: fixedFee(
+    0,
+    "Spark docs describe Savings vault tokens as fee-free ERC-4626 products; spUSDC withdrawals redeem for USDC at the live vault exchange rate.",
   ),
   reviewedAt: "2026-05-17",
   docs: [

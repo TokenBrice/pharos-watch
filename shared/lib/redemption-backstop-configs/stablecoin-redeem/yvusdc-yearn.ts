@@ -1,12 +1,13 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const YVUSDC_YEARN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "Yearn v3 vault withdrawals redeem yvUSDC-1 to USDC at the live vault exchange rate; public docs reviewed do not publish one fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "Yearn v3 vault withdrawals redeem yvUSDC-1 to USDC at the live vault exchange rate; Yearn reports performance fees on yield, not a separate withdrawal fee.",
   ),
   docs: [
     sourceRef("Yearn v3 USDC vault", "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204", [

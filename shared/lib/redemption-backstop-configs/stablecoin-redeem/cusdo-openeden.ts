@@ -1,11 +1,14 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_WRAPPER_REDEMPTION_AT } from "./shared";
 
 export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(),
+  costModel: fixedFee(
+    0,
+    "OpenEden integration docs route cUSDO redeem through the wrapper into USDO at convertToAssets; the separate USDO primary redemption fee is downstream of this wrapper leg.",
+  ),
   docs: [
     sourceRef("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token", ["route", "capacity"]),
     sourceRef("OpenEden integration guide", "https://docs.openeden.com/usdo/developers/integration-guide", ["route"]),

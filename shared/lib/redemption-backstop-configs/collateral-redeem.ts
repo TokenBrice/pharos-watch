@@ -281,7 +281,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
-      costModel: undisclosedReviewedFee(),
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
         sourceRef("Ebisu overview", "https://ebisu.gitbook.io/ebisu-money", ["route", "capacity"]),
         sourceRef(
@@ -289,6 +289,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet",
           ["capacity"],
         ),
+        sourceRef("Liquity V2 redemption fee docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", [
+          "fees",
+        ]),
       ],
       notes: [
         "Fresh live reserve metadata reads Ebisu's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",

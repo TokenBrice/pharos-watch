@@ -1,9 +1,13 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
+  decimalNumberFromBigInt,
   fetchJsonWithRetry,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
@@ -46,6 +50,16 @@ interface ModuleSpec {
 // the PSM slice without a `coinId` attribution (rather than hardcoding one)
 // and surface the composition note in metadata.details.
 const SKY_PSM_COMPOSITION_NOTE = "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
+const SKY_LITE_PSM_ADDRESS = "0xf6e72db5454dd049d0788e411b06cfaf16853042";
+const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574e4c5ce33f8e8306be057fd7341";
+const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const SKY_LITE_PSM_RPC_URL = "https://ethereum-rpc.publicnode.com";
+const SKY_LITE_PSM_FALLBACK_RPC_URL = "https://eth.llamarpc.com";
+const SKY_LITE_PSM_USDC_DECIMALS = 6;
+const SKY_LITE_PSM_DOC_URL = "https://developers.sky.money/quick-start/guides/lite-psm/";
+const SKY_LITE_PSM_SOURCE_URL = "https://github.com/makerdao/dss-lite-psm";
+const GEM_SELECTOR = "0x7bd2bea7"; // gem()
+const POCKET_SELECTOR = "0xcccef9e2"; // pocket()
 
 const MODULE_MAP: Record<string, ModuleSpec> = {
   stablecoins: { name: "Stablecoins (PSM)", risk: "very-low", depType: "mechanism" },
@@ -116,6 +130,52 @@ export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
   );
 }
 
+function decodeAddressResult(raw: string | null): string | null {
+  if (typeof raw !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
+  const address = `0x${raw.slice(-40)}`.toLowerCase();
+  return /^0x0{40}$/.test(address) ? null : address;
+}
+
+async function fetchSkyLitePsmUsdcCapacity(signal: AbortSignal, ctx?: AdapterContext): Promise<{
+  capacityUsd: number;
+  capacityRaw: string;
+} | null> {
+  try {
+    const callBase = {
+      signal,
+      ctx,
+      chain: "ethereum",
+      rpcMode: "public-rpc" as const,
+      rpcUrl: SKY_LITE_PSM_RPC_URL,
+      fallbackRpcUrl: SKY_LITE_PSM_FALLBACK_RPC_URL,
+      timeoutMs: 12_000,
+    };
+
+    const [gemRaw, pocketRaw] = await Promise.all([
+      fetchOnchainRawCall({ ...callBase, contract: SKY_LITE_PSM_ADDRESS, data: GEM_SELECTOR }),
+      fetchOnchainRawCall({ ...callBase, contract: SKY_LITE_PSM_ADDRESS, data: POCKET_SELECTOR }),
+    ]);
+    const gem = decodeAddressResult(gemRaw);
+    const pocket = decodeAddressResult(pocketRaw);
+    if (gem !== SKY_LITE_PSM_USDC_ADDRESS || pocket !== SKY_LITE_PSM_USDC_POCKET) {
+      return null;
+    }
+
+    const balanceRaw = await fetchOnchainUint256({
+      ...callBase,
+      contract: SKY_LITE_PSM_USDC_ADDRESS,
+      data: encodeBalanceOfCallData(SKY_LITE_PSM_USDC_POCKET),
+    });
+    if (balanceRaw == null) return null;
+    return {
+      capacityUsd: decimalNumberFromBigInt(balanceRaw, SKY_LITE_PSM_USDC_DECIMALS),
+      capacityRaw: balanceRaw.toString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Adapter entry point
 // ---------------------------------------------------------------------------
@@ -165,13 +225,32 @@ export async function fetchSkyMakercoreReserves(
 
   const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
+  const redemptionMetadata = litePsmCapacity
+    ? buildRedemptionSnapshotMetadata({
+        capacityUsd: litePsmCapacity.capacityUsd,
+        capacityKind: "live-direct" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        routeStatusReason: "Sky LitePSM USDC pocket balance is readable on-chain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: [SKY_LITE_PSM_DOC_URL, SKY_LITE_PSM_SOURCE_URL],
+        litePsmAddress: SKY_LITE_PSM_ADDRESS,
+        litePsmPocket: SKY_LITE_PSM_USDC_POCKET,
+        litePsmGem: SKY_LITE_PSM_USDC_ADDRESS,
+        litePsmUsdcBalanceRaw: litePsmCapacity.capacityRaw,
+      })
+    : {};
 
   return {
     slices,
     metadata: {
       tokenCount: groups.length,
       totalCollateralUsd: Math.round(totalCollateralUsd),
-      immediateRedeemableUsd,
+      skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
+      ...(litePsmCapacity ? { immediateRedeemableUsd: litePsmCapacity.capacityUsd } : {}),
       ...(timestampSummary != null ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
       ...(timestampSummary
         ? {
@@ -185,17 +264,11 @@ export async function fetchSkyMakercoreReserves(
             "Sky groups payload did not expose a trustworthy snapshot timestamp",
           )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
-      details: { psmComposition: SKY_PSM_COMPOSITION_NOTE },
-      ...buildRedemptionSnapshotMetadata({
-        capacityUsd: immediateRedeemableUsd,
-        capacityKind: "live-proxy-validated",
-        freshnessKind: timestampSummary != null ? "verified-source-timestamp" : "unverified",
-        ...(timestampSummary != null ? { sourceTimestamp: timestampSummary.sourceTimestamp } : {}),
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        holderEligibility: "any-holder",
-        sourceUrls: [primaryInput.url],
-      }),
+      details: {
+        psmComposition: SKY_PSM_COMPOSITION_NOTE,
+        ...(litePsmCapacity ? {} : { litePsmCapacity: "unavailable" }),
+      },
+      ...redemptionMetadata,
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

@@ -1,10 +1,13 @@
-import { documentedVariableFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_YIELD_EXPANSION_AT } from "./shared";
 
 export const STEAKUSDT_STEAKHOUSE_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee("ERC-4626/Morpho vault withdrawals redeem to USDT when vault liquidity is available"),
+  costModel: fixedFee(
+    0,
+    "Steakhouse Prime Instant uses Morpho vaults; withdrawals redeem to USDT when liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
+  ),
   reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
   docs: [
     sourceRef("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant", ["route", "capacity", "fees", "access", "settlement"]),

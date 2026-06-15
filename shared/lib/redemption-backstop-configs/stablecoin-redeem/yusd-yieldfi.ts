@@ -1,4 +1,4 @@
-import { undisclosedReviewedFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -6,11 +6,16 @@ export const YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfi
   reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
   settlementModel: "queued",
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "YieldFi docs describe yToken redemption requests processed after a cooldown by keeper automation; public docs reviewed do not publish one fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
   ),
   docs: [
-    sourceRef("YieldFi yUSD", "https://docs.yield.fi/technical-docs/ytokens/yusd", ["route", "capacity"]),
+    sourceRef("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd", [
+      "route",
+      "capacity",
+      "fees",
+    ]),
     sourceRef("YieldFi smart contract interaction", "https://docs.yield.fi/technical-docs/smart-contract-interaction", [
       "route",
       "capacity",

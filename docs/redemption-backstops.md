@@ -6,11 +6,13 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.11`
+- **Current methodology version:** `v4.12`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.11` update: reviewed issuer rails with public at-par redemption terms AND attested ~100% highly-liquid reserves (PYUSD, USDP, USDG, GUSD) move from eventual-only `supply-full` to a `documented-bound` 25% same-day hot-buffer ratio (attested liquid share with a uniform 75% haircut, anchored above the worst observed primary-redemption wave). USDT, RLUSD, FDUSD, and USD1 deliberately stay eventual-only because their public terms do not commit to a settlement window. Issuer-specific stricter bounds (USDC's 7% cash floor) take precedence over the generic rule.
+Latest `v4.12` update: a verified medium-confidence upgrade tranche replaces eligible undisclosed-fee placeholders with fixed or formula fee evidence, while Sky `DAI`/`USDS` now read the LitePSM `USDC` pocket directly on-chain for same-run live-direct capacity. Routes with admin-configurable, silent, or missing fee/capacity evidence remain deliberately unpromoted.
+
+Previous `v4.11` update: reviewed issuer rails with public at-par redemption terms AND attested ~100% highly-liquid reserves (PYUSD, USDP, USDG, GUSD) move from eventual-only `supply-full` to a `documented-bound` 25% same-day hot-buffer ratio (attested liquid share with a uniform 75% haircut, anchored above the worst observed primary-redemption wave). USDT, RLUSD, FDUSD, and USD1 deliberately stay eventual-only because their public terms do not commit to a settlement window. Issuer-specific stricter bounds (USDC's 7% cash floor) take precedence over the generic rule.
 
 Previous `v4.07` update: conservative confidence defaults in the effective-exit blend (missing model confidence now applies the low 0.35 factor), live-proxy capacity with unknown route status always rolls up low confidence, the strong live-direct severe-depeg exemption is re-evaluated against the final resolved capacity state, and over-leveraged output-dependency compositions are flagged while the impaired share stays clamped at 100%.
 

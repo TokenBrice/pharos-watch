@@ -1,4 +1,4 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, documentedVariableFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig } from "./shared";
 
 export const SDUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -6,13 +6,15 @@ export const SDUSD_DTRINITY_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemCon
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
   totalScoreCap: 70,
-  costModel: undisclosedReviewedFee(
-    "dTRINITY docs describe sdUSD as an ERC-4626 vault redeemable into dUSD at the share exchange rate; public materials reviewed do not publish a separate withdrawal fee",
+  costModel: documentedVariableFee(
+    "dTRINITY docs state dSTAKE has no staking fee and unstaking incurs up to 10 bps retained by the vault for remaining sdUSD holders.",
+    "formula",
   ),
   docs: [
     sourceRef("dTRINITY sdUSD docs", "https://docs.dtrinity.org/protocol-components/sdusd", [
       "route",
       "capacity",
+      "fees",
       "access",
       "settlement",
     ]),

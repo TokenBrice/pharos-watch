@@ -243,7 +243,7 @@ describe("getRedemptionBackstopConfig", () => {
       executionModel: "rules-based-nav",
       outputAssetType: "stable-single",
       capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: { kind: "dynamic-or-unclear" },
+      costModel: { kind: "fee-bps", feeBps: 100 },
       reviewedAt: "2026-05-27",
     });
     expect(getRedemptionBackstopConfig("fxsave-f-x-protocol")?.notes?.[0]).toContain("idle fxSP balance");
@@ -661,7 +661,20 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("corrects Maple syrup routes onto reviewed queue redemption semantics", () => {
-    for (const id of ["syrupusdc-maple", "syrupusdt-maple"] as const) {
+    expect(getRedemptionBackstopConfig("syrupusdc-maple")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("syrupusdc-maple")?.docs?.length).toBeGreaterThan(0);
+
+    for (const id of ["syrupusdt-maple"] as const) {
       expect(getRedemptionBackstopConfig(id)).toMatchObject({
         routeFamily: "queue-redeem",
         accessModel: "whitelisted-onchain",
@@ -837,7 +850,7 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1, confidence: "documented-bound" },
-      costModel: { kind: "dynamic-or-unclear" },
+      costModel: { kind: "fee-bps", feeBps: 4 },
       reviewedAt: "2026-03-23",
     });
 
@@ -865,7 +878,7 @@ describe("getRedemptionBackstopConfig", () => {
       executionModel: "rules-based-nav",
       outputAssetType: "stable-single",
       capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: { kind: "dynamic-or-unclear" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-05-10",
     });
 

@@ -1,12 +1,13 @@
-import { documentedBoundSupplyFull, undisclosedReviewedFee, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const SBOLD_K3_CAPITAL_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: undisclosedReviewedFee(
-    "sBOLD ERC-4626 withdraw/redeem returns BOLD at the vault exchange rate; public docs reviewed do not publish one fixed redemption fee",
+  costModel: fixedFee(
+    0,
+    "K3 docs describe sBOLD entry fees only on deposit and mint; withdraw/redeem burns shares and returns BOLD at the vault exchange rate.",
   ),
   docs: [
     sourceRef("K3 sBOLD introduction", "https://k3-capital.gitbook.io/sbold/introducing-sbold", ["route", "capacity"]),
