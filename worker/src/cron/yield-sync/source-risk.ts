@@ -724,7 +724,7 @@ export function resolveReviewedYieldRiskConfig(
  * only set where the concentration is documented, so missing entries stay
  * neutral. See `agents/yearn-risk-pys-plan.md` §3.3.
  */
-export const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
+const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
   "yvusdc-yearn": {
     ecosystem: "Sky",
     severity: "medium",

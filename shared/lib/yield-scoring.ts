@@ -51,7 +51,7 @@ export function computeSourceRiskScoreFromPenalty(
  * derives the coarse {@link YieldVenueRiskTier} and a continuous PYS penalty.
  * See `worker/src/cron/yield-sync/source-risk.ts` for the scored venue registry.
  */
-export const VENUE_RISK_CATEGORY_WEIGHTS = {
+const VENUE_RISK_CATEGORY_WEIGHTS = {
   audits: 0.2,
   centralization: 0.3,
   fundsManagement: 0.3,
@@ -112,7 +112,7 @@ export function computeVenuePenaltyFromWeighted(weighted: number | null | undefi
 export type YieldDependencyConcentrationSeverity = "low" | "medium" | "high";
 
 /** Additive PYS source-risk penalty for reviewer-set cross-venue dependency concentration. */
-export const PYS_DEPENDENCY_CONCENTRATION_PENALTY: Record<
+const PYS_DEPENDENCY_CONCENTRATION_PENALTY: Record<
   YieldDependencyConcentrationSeverity,
   number
 > = {
