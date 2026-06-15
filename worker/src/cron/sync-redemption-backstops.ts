@@ -24,16 +24,11 @@ import {
 } from "../lib/redemption-backstop-availability";
 import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop-route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { throwIfAborted } from "../lib/abort";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
 const DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
-
-function throwIfAborted(signal: AbortSignal): void {
-  if (signal.aborted) {
-    throw signal.reason ?? new Error("sync-redemption-backstops aborted");
-  }
-}
 
 function getAllowedMissingCapacityCount(configuredCount: number): number {
   if (configuredCount <= 0) return 0;
