@@ -203,7 +203,7 @@ export function CoinSelector({
                   key={coin.id}
                   id={`coin-option-${coin.id}`}
                   role="option"
-                  aria-selected={focused}
+                  aria-selected={false}
                   aria-disabled={disabled}
                   className={
                     disabled
