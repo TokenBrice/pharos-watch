@@ -236,7 +236,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "fusd-finchain", spreadBps: 0, label: "Tokenized T-bill/MMF reserve-yield proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "safo-spiko-usd", spreadBps: 0, label: "Amundi Smart Cash overnight swap proxy (USD)" },
   { stablecoinId: "spkcc-spiko", spreadBps: 0, label: "Cash-and-carry strategy proxy (USD risk-free leg)" },
-  { stablecoinId: "usdgo-osl", spreadBps: 38, label: "EFFR-linked reserve-yield proxy (net of 0.38% fee)", benchmarkCurrency: "USD_EFFR" },
+  { stablecoinId: "usdgo-osl", spreadBps: 38, label: "EFFR-linked reserve-yield proxy (net of 0.38% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
   { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
 ];

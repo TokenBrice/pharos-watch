@@ -455,10 +455,23 @@ describe("yield config registry", () => {
     expect(config).toMatchObject({
       stablecoinId: "usdgo-osl",
       spreadBps: 38,
-      benchmarkCurrency: "USD_EFFR",
+      benchmarkOverrideKey: "USD_EFFR",
     });
+    expect(config?.benchmarkCurrency).toBeUndefined();
     expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
     expect(INTENTIONAL_GAP_REASONS["usdgo-osl"]).toBeUndefined();
+  });
+
+  it("keeps EFFR-linked rate-derived rows on benchmarkOverrideKey instead of benchmarkCurrency", () => {
+    const effrConfigs = RATE_DERIVED_CONFIGS.filter((entry) =>
+      entry.label.toUpperCase().includes("EFFR") || entry.benchmarkOverrideKey === "USD_EFFR",
+    );
+
+    expect(effrConfigs.length).toBeGreaterThan(0);
+    for (const config of effrConfigs) {
+      expect(config.benchmarkOverrideKey, config.stablecoinId).toBe("USD_EFFR");
+      expect(config.benchmarkCurrency, config.stablecoinId).toBeUndefined();
+    }
   });
 
   it("wires TRY and tokenized-treasury benchmark overrides for rate-derived rows", () => {
@@ -482,6 +495,7 @@ describe("yield config registry", () => {
       "wtgxx-wisdomtree",
       "ustbl-spiko",
       "fusd-finchain",
+      "usdgo-osl",
     ]) {
       expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
         benchmarkOverrideKey: "USD_EFFR",
