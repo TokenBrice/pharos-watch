@@ -126,7 +126,7 @@ function setupSqlite(): DatabaseSync {
     );
 
     CREATE TABLE api_key_request_rate_limit_v2 (
-      scope TEXT NOT NULL CHECK (scope IN ('ip', 'email', 'token', 'submission_ip', 'submission_email', 'verification_ip', 'verification_token')),
+      scope TEXT NOT NULL CHECK (scope IN ('submission_ip', 'submission_email', 'verification_ip', 'verification_token')),
       subject_hash TEXT NOT NULL,
       bucket_start INTEGER NOT NULL,
       count INTEGER NOT NULL DEFAULT 0,

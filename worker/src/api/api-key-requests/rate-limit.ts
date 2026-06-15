@@ -12,9 +12,6 @@ interface RateLimitDb {
 }
 
 export type ApiKeyRequestRateLimitScope =
-  | "ip"
-  | "email"
-  | "token"
   | "submission_ip"
   | "submission_email"
   | "verification_ip"
