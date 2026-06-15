@@ -8,7 +8,7 @@ import {
   stubCryptoForAuth,
 } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
-import { handleApiKeyRotate, handleApiKeyUpdate, handleApiKeys } from "../api-keys";
+import { handleApiKeyRotate, handleApiKeyUpdate, handleApiKeys } from "./api-keys.test-helpers";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRateLimitStateForTests } from "../../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";

@@ -1,4 +1,3 @@
-import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   createApiKey,
   deactivateApiKey,
@@ -18,10 +17,6 @@ interface ApiKeysRouteContext extends AdminRouteContext {
 
 interface ApiKeyByIdRouteContext extends ApiKeysRouteContext {
   apiKeyId: number;
-}
-
-function fallbackAdminRequest(path: string): Request {
-  return new Request(`https://ops-api.pharos.watch${path}`);
 }
 
 export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
@@ -44,15 +39,6 @@ export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
   },
 );
 
-export function handleApiKeys(
-  db: D1Database,
-  trustedAdmin = false,
-  request: Request = fallbackAdminRequest(API_PATHS.apiKeys()),
-  apiKeyHashPepper?: string,
-): Promise<Response> {
-  return handleApiKeysRoute({ db, trustedAdmin, request, apiKeyHashPepper });
-}
-
 export const handleApiKeyUpdateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-update",
   async ({ db, request, apiKeyId }) => {
@@ -67,15 +53,6 @@ export const handleApiKeyUpdateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
     return jsonResponse(updated, { noStore: true });
   },
 );
-
-export function handleApiKeyUpdate(
-  db: D1Database,
-  id: number,
-  trustedAdmin = false,
-  request: Request = fallbackAdminRequest(API_PATHS.apiKeyUpdate(id)),
-): Promise<Response> {
-  return handleApiKeyUpdateRoute({ db, apiKeyId: id, trustedAdmin, request });
-}
 
 export const handleApiKeyDeactivateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-deactivate",
@@ -98,13 +75,3 @@ export const handleApiKeyRotateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
     return jsonResponse(result, { noStore: true });
   },
 );
-
-export function handleApiKeyRotate(
-  db: D1Database,
-  id: number,
-  trustedAdmin = false,
-  request: Request = fallbackAdminRequest(API_PATHS.apiKeyRotate(id)),
-  apiKeyHashPepper?: string,
-): Promise<Response> {
-  return handleApiKeyRotateRoute({ db, apiKeyId: id, trustedAdmin, request, apiKeyHashPepper });
-}
