@@ -4,6 +4,7 @@
   { "name": "stablecoin-client-registry", "marker": "\"id\":\"a7a5-old-vector\",\"name\":\"A7A5\"" },
   { "name": "recharts", "marker": "\"recharts\"" },
   { "name": "recharts-component", "marker": "BarChart\"" },
+  { "name": "market-data-chart", "marker": "ChartAnnotationLegend" },
   { "name": "zod", "marker": "_zod.traits" },
   { "name": "next-framework", "marker": "getDeploymentId" },
   { "name": "react-tweet", "marker": "react-tweet" },
