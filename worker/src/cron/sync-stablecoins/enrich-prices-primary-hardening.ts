@@ -1,5 +1,6 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+import { isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -15,7 +16,6 @@ import {
 } from "../../lib/constants";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
-import { isPoolChallengeEligibleConsensus } from "../../lib/pricing-source-policy";
 import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";

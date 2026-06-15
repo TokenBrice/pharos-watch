@@ -2,9 +2,9 @@ import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
 } from "@shared/lib/pricing-source-registry";
+import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
-import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 const WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS = 2_000;

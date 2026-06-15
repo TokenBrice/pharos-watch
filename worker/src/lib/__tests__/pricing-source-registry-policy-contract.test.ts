@@ -6,7 +6,7 @@ import {
   hasDepegAuthoritativeSource,
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
-} from "../pricing-source-policy";
+} from "@shared/lib/pricing-source-policy";
 
 /**
  * Contract: the pricing-source registry is the single source of truth for

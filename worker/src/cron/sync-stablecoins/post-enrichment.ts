@@ -5,6 +5,12 @@
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
+import {
+  countDepegAuthoritativeSources,
+  getPriceCacheMaxAgeSec,
+  isReplaySafePriceSource,
+  isSingleSourceDepegAuthoritative,
+} from "@shared/lib/pricing-source-policy";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -42,12 +48,6 @@ import {
   stampPriceMetadata,
   type CronResult,
 } from "./shared";
-import {
-  countDepegAuthoritativeSources,
-  getPriceCacheMaxAgeSec,
-  isReplaySafePriceSource,
-  isSingleSourceDepegAuthoritative,
-} from "../../lib/pricing-source-policy";
 import {
   applyAcceptedPriceCandidate,
   applyProtocolPriceOverrides,

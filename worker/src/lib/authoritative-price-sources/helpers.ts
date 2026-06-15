@@ -1,4 +1,5 @@
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -13,7 +14,6 @@ export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
-import { isReplaySafePriceSource } from "../pricing-source-policy";
 import type { PriceValidationReferences } from "../price-validation";
 
 export const ETHEREUM_CHAIN = "ethereum";

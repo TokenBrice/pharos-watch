@@ -1,6 +1,11 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
+  countDepegAuthoritativeSources,
+  hasUpstreamCapableDepegAuthoritativeSource,
+  isSingleSourceDepegAuthoritative,
+} from "@shared/lib/pricing-source-policy";
+import {
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
@@ -8,11 +13,6 @@ import {
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import {
-  countDepegAuthoritativeSources,
-  hasUpstreamCapableDepegAuthoritativeSource,
-  isSingleSourceDepegAuthoritative,
-} from "./pricing-source-policy";
 
 export type DexPriceTrustTier = "ui" | "depeg";
 
