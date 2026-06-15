@@ -23,6 +23,8 @@ const CHAINLINK_METAL_PEG_KEYS = new Set<string>(["peggedGOLD", "peggedSILVER"])
 const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
 const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
 const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
+// Open Exchange Rates free-tier hourly quota: skip fetches within this window of the last attempt.
+const OXR_RATE_LIMIT_MINUTES = 55;
 
 function isChainlinkMetalPegKey(pegKey: string): pegKey is MetalPegKey {
   return CHAINLINK_METAL_PEG_KEYS.has(pegKey);
@@ -735,13 +737,13 @@ export async function runOpenExchangeRatesOverlay(
       : 0;
   const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
 
-  if (elapsedMinutes < 55) {
+  if (elapsedMinutes < OXR_RATE_LIMIT_MINUTES) {
     await logCronEvent(db, {
       job: "sync-fx-rates",
       eventType: "openexchange-rates-rate-limited",
       severity: "info",
-      message: "Skipping Open Exchange Rates fetch because the 55-minute rate limit window is still active.",
-      metadata: { elapsedMinutes: Math.round(elapsedMinutes), rateLimitMinutes: 55 },
+      message: `Skipping Open Exchange Rates fetch because the ${OXR_RATE_LIMIT_MINUTES}-minute rate limit window is still active.`,
+      metadata: { elapsedMinutes: Math.round(elapsedMinutes), rateLimitMinutes: OXR_RATE_LIMIT_MINUTES },
     });
     return "rate-limited";
   }
