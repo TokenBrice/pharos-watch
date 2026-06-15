@@ -499,19 +499,23 @@ export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
 export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
 export type BlacklistSortDirection = "asc" | "desc";
-export type BlacklistAmountSource =
-  | "event"
-  | "historical_balance"
-  | "derived"
-  | "unavailable"
-  | "current_balance_snapshot"
-  | "legacy_migration";
-export type BlacklistAmountStatus =
-  | "resolved"
-  | "recoverable_pending"
-  | "permanently_unavailable"
-  | "provider_failed"
-  | "ambiguous";
+export const BLACKLIST_AMOUNT_SOURCE_VALUES = [
+  "event",
+  "historical_balance",
+  "derived",
+  "unavailable",
+  "current_balance_snapshot",
+  "legacy_migration",
+] as const;
+export type BlacklistAmountSource = (typeof BLACKLIST_AMOUNT_SOURCE_VALUES)[number];
+export const BLACKLIST_AMOUNT_STATUS_VALUES = [
+  "resolved",
+  "recoverable_pending",
+  "permanently_unavailable",
+  "provider_failed",
+  "ambiguous",
+] as const;
+export type BlacklistAmountStatus = (typeof BLACKLIST_AMOUNT_STATUS_VALUES)[number];
 
 const BlacklistEventSchema = z.object({
   id: z.string(),
@@ -522,15 +526,8 @@ const BlacklistEventSchema = z.object({
   address: z.string(),
   amountNative: z.number().nullable(),
   amountUsdAtEvent: z.number().nullable(),
-  amountSource: z.enum([
-    "event",
-    "historical_balance",
-    "derived",
-    "unavailable",
-    "current_balance_snapshot",
-    "legacy_migration",
-  ]),
-  amountStatus: z.enum(["resolved", "recoverable_pending", "permanently_unavailable", "provider_failed", "ambiguous"]),
+  amountSource: z.enum(BLACKLIST_AMOUNT_SOURCE_VALUES),
+  amountStatus: z.enum(BLACKLIST_AMOUNT_STATUS_VALUES),
   txHash: z.string(),
   blockNumber: z.number(),
   timestamp: z.number(),

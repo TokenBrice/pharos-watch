@@ -37,6 +37,7 @@ export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 
 const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
+const StatusHealthOrUnknownSchema = z.enum(["healthy", "degraded", "stale", "unknown"]);
 export type StatusHealthOrUnknown = StatusHealthValue | "unknown";
 
 export const CRON_RUN_STATUS_VALUES = [
@@ -444,6 +445,25 @@ export type PerAlertTypeDelivery = Record<TelegramAlertType, PerAlertTypeDeliver
 export const SAFETY_ALERT_SOURCE_STATE_VALUES = ["ok", "missing", "corrupt", "stale", "wrong-generation"] as const;
 export type SafetyAlertSourceState = (typeof SAFETY_ALERT_SOURCE_STATE_VALUES)[number];
 
+/**
+ * The four nullable safety-alert source fields shared by the Telegram dispatch
+ * cron metadata and Telegram health summary surfaces. The cron *result* type
+ * has a non-null `safetyAlertSourceState`, so it cannot share this shape.
+ */
+export interface SafetyAlertFieldsNullable {
+  safetyAlertSourceState: SafetyAlertSourceState | null;
+  safetyAlertSourceAgeSeconds: number | null;
+  safetyAlertsSuppressed: boolean;
+  safetyAlertSourceGeneration: string | null;
+}
+
+const SafetyAlertFieldsNullableSchemaShape = {
+  safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
+  safetyAlertSourceAgeSeconds: z.number().nullable(),
+  safetyAlertsSuppressed: z.boolean(),
+  safetyAlertSourceGeneration: z.string().nullable(),
+} as const;
+
 export interface TelegramDispatchCronResult {
   subscribersNotified: number;
   messagesSent: number;
@@ -496,7 +516,7 @@ export type ParsedTelegramDispatchEventsDetected = {
   [K in keyof TelegramDispatchEventsDetected]: number | null;
 };
 
-export interface TelegramDispatchCronMetadata {
+export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable {
   subscribersNotified: number | null;
   messagesSent: number | null;
   blockedUsersCleanedUp: number | null;
@@ -522,10 +542,6 @@ export interface TelegramDispatchCronMetadata {
   pendingEnqueued: number | null;
   pendingExpired: number | null;
   chatsWithActiveSnooze: number | null;
-  safetyAlertSourceState: SafetyAlertSourceState | null;
-  safetyAlertSourceAgeSeconds: number | null;
-  safetyAlertsSuppressed: boolean;
-  safetyAlertSourceGeneration: string | null;
   presetQueryFailures: number | null;
   presetResolutionFailures: number | null;
   presetFailure: boolean;
@@ -927,42 +943,31 @@ const StatusStalenessSchema = z.object({
   isStale: z.boolean(),
 });
 
+const StatusProbePlaneSummarySchema = z.object({
+  status: StatusHealthOrUnknownSchema,
+  sampleCount: z.number(),
+  passCount: z.number(),
+  failCount: z.number(),
+  p95LatencyMs: z.number().nullable(),
+  origins: z.array(z.string()),
+});
+
 const StatusProbeSummarySchema = z.object({
   timestamp: z.number().nullable(),
-  status: z.enum(["healthy", "degraded", "stale", "unknown"]),
+  status: StatusHealthOrUnknownSchema,
   sampleCount: z.number(),
   passCount: z.number(),
   failCount: z.number(),
   bootstrapMissCount: z.number().optional(),
   p95LatencyMs: z.number().nullable(),
-  internal: z
-    .object({
-      status: z.enum(["healthy", "degraded", "stale", "unknown"]),
-      sampleCount: z.number(),
-      passCount: z.number(),
-      failCount: z.number(),
-      p95LatencyMs: z.number().nullable(),
-      origins: z.array(z.string()),
-    })
-    .nullable()
-    .optional(),
-  external: z
-    .object({
-      status: z.enum(["healthy", "degraded", "stale", "unknown"]),
-      sampleCount: z.number(),
-      passCount: z.number(),
-      failCount: z.number(),
-      p95LatencyMs: z.number().nullable(),
-      origins: z.array(z.string()),
-    })
-    .nullable()
-    .optional(),
+  internal: StatusProbePlaneSummarySchema.nullable().optional(),
+  external: StatusProbePlaneSummarySchema.nullable().optional(),
   internalExternalDiscrepancy: z
     .object({
       hasDivergence: z.boolean(),
       severityDelta: z.number(),
-      internalStatus: z.enum(["healthy", "degraded", "stale", "unknown"]),
-      externalStatus: z.enum(["healthy", "degraded", "stale", "unknown"]),
+      internalStatus: StatusHealthOrUnknownSchema,
+      externalStatus: StatusHealthOrUnknownSchema,
       reason: z.enum(["in-sync", "internal-missing", "external-missing", "external-worse", "internal-worse"]),
       details: z.string().nullable(),
     })
@@ -1079,15 +1084,11 @@ const CircuitRecordSchema = z.object({
 });
 export type CircuitRecord = z.infer<typeof CircuitRecordSchema>;
 
-export interface TelegramHealthSummary {
+export interface TelegramHealthSummary extends SafetyAlertFieldsNullable {
   totalChats: number;
   pendingDeliveries: number;
   lastDispatchAt: number | null;
   lastDispatchStatus: string | null;
-  safetyAlertSourceState: SafetyAlertSourceState | null;
-  safetyAlertSourceAgeSeconds: number | null;
-  safetyAlertsSuppressed: boolean;
-  safetyAlertSourceGeneration: string | null;
 }
 
 export interface HealthResponse {
@@ -1120,6 +1121,14 @@ export interface HealthResponse {
   telegramSummary?: TelegramHealthSummary | null;
 }
 
+const TelegramHealthSummarySchema = z.object({
+  totalChats: z.number(),
+  pendingDeliveries: z.number(),
+  lastDispatchAt: z.number().nullable(),
+  lastDispatchStatus: z.string().nullable(),
+  ...SafetyAlertFieldsNullableSchemaShape,
+});
+
 export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
   status: z.enum(["healthy", "degraded", "stale"]),
   timestamp: z.number(),
@@ -1147,16 +1156,7 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
-  telegramSummary: z.object({
-    totalChats: z.number(),
-    pendingDeliveries: z.number(),
-    lastDispatchAt: z.number().nullable(),
-    lastDispatchStatus: z.string().nullable(),
-    safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
-    safetyAlertSourceAgeSeconds: z.number().nullable(),
-    safetyAlertsSuppressed: z.boolean(),
-    safetyAlertSourceGeneration: z.string().nullable(),
-  }).nullable().optional(),
+  telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });
 
 export interface EndpointProbeResult {

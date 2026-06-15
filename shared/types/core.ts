@@ -743,13 +743,16 @@ export type FilterTag =
   | VariantFilterTag
   | GradeFilterTag;
 
-export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
-export type PriceObservedAtMode = "upstream" | "local_fetch" | "unknown";
-export type DepegPrimaryTrust = "authoritative" | "confirm_required" | "unusable";
+export const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
+export type PriceConfidence = (typeof PRICE_CONFIDENCE_VALUES)[number];
+export const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown"] as const;
+export type PriceObservedAtMode = (typeof PRICE_OBSERVED_AT_MODE_VALUES)[number];
+export const DEPEG_PRIMARY_TRUST_VALUES = ["authoritative", "confirm_required", "unusable"] as const;
+export type DepegPrimaryTrust = (typeof DEPEG_PRIMARY_TRUST_VALUES)[number];
 
-export const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
-export const PriceObservedAtModeSchema = z.enum(["upstream", "local_fetch", "unknown"]);
-export const DepegPrimaryTrustSchema = z.enum(["authoritative", "confirm_required", "unusable"]);
+export const PriceConfidenceSchema = z.enum(PRICE_CONFIDENCE_VALUES);
+export const PriceObservedAtModeSchema = z.enum(PRICE_OBSERVED_AT_MODE_VALUES);
+export const DepegPrimaryTrustSchema = z.enum(DEPEG_PRIMARY_TRUST_VALUES);
 
 export interface PriceSourceConfidenceProfile {
   activeDexLanes: number;

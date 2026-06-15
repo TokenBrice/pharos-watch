@@ -36,10 +36,7 @@ import {
   BRIDGE_ROUTE_RISK_SOURCE_VALUES,
   BRIDGE_ROUTE_RISK_TIER_VALUES,
   COIN_NOTICE_TYPE_VALUES,
-  COLLATERAL_QUALITY_VALUES,
-  CUSTODY_MODEL_VALUES,
   DEPENDENCY_TYPE_VALUES,
-  DEPLOYMENT_MODEL_VALUES,
   FEATURED_CONTENT_TYPE_VALUES,
   GENIUS_APPLICABILITY_VALUES,
   GENIUS_AUTHORIZATION_STATUS_VALUES,
@@ -49,7 +46,6 @@ import {
   GENIUS_ISSUER_PATHWAY_VALUES,
   GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES,
   GENIUS_SOURCE_KIND_VALUES,
-  GOVERNANCE_QUALITY_VALUES,
   GOVERNANCE_TYPE_VALUES,
   INFRASTRUCTURE_VALUES,
   LAUNCH_MILESTONE_TYPE_VALUES,
@@ -75,7 +71,15 @@ import {
   STABLECOIN_STATUS_VALUES,
   VARIANT_KIND_VALUES,
   YIELD_TYPE_VALUES,
-  CHAIN_TIER_VALUES,
+} from "./core";
+import {
+  BridgeRouteRiskTierSchema,
+  ChainTierSchema,
+  CollateralQualitySchema,
+  CustodyModelSchema,
+  DeploymentModelSchema,
+  GovernanceQualitySchema,
+  OracleRiskTierSchema,
 } from "./core";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
@@ -767,13 +771,13 @@ export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
   .strict();
 
 export const StablecoinMetaEnumSchemas = {
-  chainTier: z.enum(CHAIN_TIER_VALUES),
-  deploymentModel: z.enum(DEPLOYMENT_MODEL_VALUES),
-  collateralQuality: z.enum(COLLATERAL_QUALITY_VALUES),
-  custodyModel: z.enum(CUSTODY_MODEL_VALUES),
-  governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES),
-  oracleRiskTier: z.enum(ORACLE_RISK_TIER_VALUES),
-  bridgeRouteRiskTier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
+  chainTier: ChainTierSchema,
+  deploymentModel: DeploymentModelSchema,
+  collateralQuality: CollateralQualitySchema,
+  custodyModel: CustodyModelSchema,
+  governanceQuality: GovernanceQualitySchema,
+  oracleRiskTier: OracleRiskTierSchema,
+  bridgeRouteRiskTier: BridgeRouteRiskTierSchema,
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)),
   variantKind: z.enum(VARIANT_KIND_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
