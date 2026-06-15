@@ -119,17 +119,14 @@ function formatPoint(x: number, y: number): string {
 function buildAreaPath({
   rows,
   area,
-  bounds,
-  yDomain,
+  scales,
 }: {
   rows: TotalMcapChartRow[];
   area: CohortArea;
-  bounds: ChartBounds;
-  yDomain: [number, number];
+  scales: ReturnType<typeof makeScales>;
 }): string {
   if (rows.length === 0) return "";
 
-  const scales = makeScales({ rows, bounds, yDomain });
   const topPoints: string[] = [];
   const bottomPoints: string[] = [];
 
@@ -150,16 +147,13 @@ function buildAreaPath({
 function buildTopLinePath({
   rows,
   area,
-  bounds,
-  yDomain,
+  scales,
 }: {
   rows: TotalMcapChartRow[];
   area: CohortArea;
-  bounds: ChartBounds;
-  yDomain: [number, number];
+  scales: ReturnType<typeof makeScales>;
 }): string {
   if (rows.length === 0) return "";
-  const scales = makeScales({ rows, bounds, yDomain });
   return rows
     .map((row, index) => {
       let top = 0;
@@ -198,6 +192,7 @@ function HomeAltChartFrame({
     typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows,
   ];
   const visibleRows = sampleRows(rows);
+  const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
 
   return (
     <svg
@@ -271,8 +266,7 @@ function HomeAltChartFrame({
                 d={buildAreaPath({
                   rows: visibleRows,
                   area,
-                  bounds,
-                  yDomain: resolvedYDomain,
+                  scales,
                 })}
                 fill={`url(#${area.gradientId})`}
               />
@@ -283,8 +277,7 @@ function HomeAltChartFrame({
                 d={buildTopLinePath({
                   rows: visibleRows,
                   area,
-                  bounds,
-                  yDomain: resolvedYDomain,
+                  scales,
                 })}
                 fill="none"
                 stroke={area.color}
