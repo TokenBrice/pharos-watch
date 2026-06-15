@@ -648,4 +648,43 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance") && entry.binds.includes("no_data"))).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
   });
+
+  it("flags upstreamReachable=false and skips provenance when CG is down for the batch", async () => {
+    fetchWithRetryMock.mockReset();
+    fetchWithRetryMock.mockResolvedValue(
+      new Response("upstream unavailable", { status: 503 }),
+    );
+    const makeEvent = (id: number) => ({
+      id,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -150,
+      started_at: 1_800_000_000,
+      ended_at: 1_800_003_600,
+      start_price: 0.985,
+      peak_price: 0.985,
+      recovery_price: 0.999,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    });
+    const db = mockD1([]) as MockD1Database;
+
+    const result = await auditEvents(db, {
+      events: [makeEvent(50), makeEvent(51)],
+      minSupply: 0,
+      symbolFilter: null,
+      offset: 0,
+      limit: 10,
+      dryRun: false,
+    });
+
+    expect(result.upstreamErrorCount).toBe(2);
+    expect(result.upstreamReachable).toBe(false);
+    expect(result.auditedEvents.every((e) => e.verdict === "error")).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance"))).toBe(false);
+  });
 });

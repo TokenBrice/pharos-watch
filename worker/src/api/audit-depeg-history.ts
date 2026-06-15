@@ -32,6 +32,10 @@ const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
 const AUDIT_DEPEG_HISTORY_DEFAULT_LIMIT = 25;
 const AUDIT_DEPEG_HISTORY_MAX_LIMIT = 25;
 const DELETE_ID_PATTERN = /^\d+$/;
+// If at least this fraction of attempted CG fetches fail, treat it as an
+// upstream outage rather than genuine per-event errors: mark the result
+// upstreamReachable=false and refuse to persist provenance for the batch.
+const AUDIT_UPSTREAM_OUTAGE_ERROR_RATIO = 0.5;
 
 class AuditMutationCommitError extends Error {
   constructor(message: string) {
@@ -77,6 +81,14 @@ interface AuditResult {
   deletedEvents: { id: number; symbol: string; startedAt: number; peakBps: number }[];
   daysRecomputed: number;
   rejectedByValidationCount: number;
+  /** Number of attempted CG fetches that failed (non-ok response or fetch/parse error). */
+  upstreamErrorCount: number;
+  /**
+   * false when the upstream (CoinGecko) error rate crossed the outage threshold,
+   * signalling that the per-event 'error' verdicts reflect an outage rather than
+   * genuine data errors. Provenance is not persisted in that case.
+   */
+  upstreamReachable: boolean;
 }
 
 interface SyntheticSplitRepairSummary {
@@ -992,6 +1004,8 @@ export async function auditEvents(
     deletedEvents: [],
     daysRecomputed: 0,
     rejectedByValidationCount: 0,
+    upstreamErrorCount: 0,
+    upstreamReachable: true,
   };
 
   // Load FX references once so CG prices can be vetted with the same
@@ -1004,6 +1018,7 @@ export async function auditEvents(
   const provenanceStatements: D1PreparedStatement[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
+  let attemptedCgFetches = 0;
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -1026,6 +1041,7 @@ export async function auditEvents(
     const from = event.started_at - 3600;
     const to = (event.ended_at ?? event.started_at) + 3600;
 
+    attemptedCgFetches++;
     try {
       // Analyst plan: 500 req/min. 200ms delay ≈ 300 req/min with headroom.
       await new Promise((r) => setTimeout(r, 200));
@@ -1038,6 +1054,7 @@ export async function auditEvents(
 
       if (!cgRes?.ok) {
         console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
+        result.upstreamErrorCount++;
         result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
         continue;
       }
@@ -1121,11 +1138,20 @@ export async function auditEvents(
       }
     } catch (err) {
       console.warn(`[audit] Error auditing ${event.symbol}:`, err);
+      result.upstreamErrorCount++;
       result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
     }
   }
 
-  if (!dryRun && provenanceStatements.length > 0) {
+  // A high upstream error rate means CG was effectively down for the batch, so
+  // the per-event 'error' verdicts are outage noise, not genuine findings.
+  // Degrade cleanly: flag the result and skip provenance persistence.
+  result.upstreamReachable = !(
+    attemptedCgFetches > 0 &&
+    result.upstreamErrorCount / attemptedCgFetches >= AUDIT_UPSTREAM_OUTAGE_ERROR_RATIO
+  );
+
+  if (!dryRun && result.upstreamReachable && provenanceStatements.length > 0) {
     await assertNoSealedDdrEventMutation(
       db,
       invalidatingProvenanceEventIds,
