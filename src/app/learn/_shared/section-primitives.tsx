@@ -13,7 +13,7 @@ export function SectionKicker({
   className,
 }: {
   children: ReactNode;
-  className: string;
+  className?: string;
 }) {
   return <p className={cn("pharos-kicker", className)}>{children}</p>;
 }
