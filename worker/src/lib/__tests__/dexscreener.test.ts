@@ -32,13 +32,10 @@ describe("dexscreener", () => {
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.dexscreener.com/tokens/v1/base/0xabc",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Accept: "application/json, text/plain, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          Origin: "https://dexscreener.com",
-          Referer: "https://dexscreener.com/",
-          "User-Agent": expect.stringContaining("Mozilla/5.0"),
-        }),
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Pharos/1.0 (stablecoin analytics)",
+        },
       }),
       2,
       { timeoutMs: 10_000, returnFinalResponse: true },

@@ -7,18 +7,14 @@ import { fetchWithRetry } from "./fetch-retry";
 import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
+import { USER_AGENT } from "./constants";
 
 export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
-const DEXSCREENER_BROWSER_USER_AGENT =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const DEXSCREENER_API_HEADERS = {
-  Accept: "application/json, text/plain, */*",
-  "Accept-Language": "en-US,en;q=0.9",
-  Origin: "https://dexscreener.com",
-  Referer: "https://dexscreener.com/",
-  "User-Agent": DEXSCREENER_BROWSER_USER_AGENT,
+  Accept: "application/json",
+  "User-Agent": USER_AGENT,
 };
 
 /** Response shape from GET /tokens/v1/{chainId}/{address} */
