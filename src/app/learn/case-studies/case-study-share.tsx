@@ -17,7 +17,7 @@ export function CaseStudyShare() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard blocked (permissions / insecure context) — fail silently.
     }
