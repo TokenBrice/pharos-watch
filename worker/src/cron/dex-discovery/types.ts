@@ -70,7 +70,8 @@ export function stagedPoolMaturityDays(discoveredAt: number, now: number): numbe
 
 /** Tier thresholds for discovery priority. */
 export const DISCOVERY_TIERS = {
-  T1_MAX_POOLS: 0,
+  // Sentinel: coins with zero discovered pools get the highest crawl cadence (t1).
+  T1_ZERO_POOL_SENTINEL: 0,
   T2_MAX_POOLS: 4,
   T2_MODULO: 3,
   T3_MODULO: 10,

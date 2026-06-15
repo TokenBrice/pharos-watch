@@ -87,7 +87,8 @@ export function computeEffectiveTier(
 ): EffectiveTier {
   let tier: Exclude<EffectiveTier, "skip">;
 
-  if (poolCount === DISCOVERY_TIERS.T1_MAX_POOLS) {
+  // No pools discovered yet → highest crawl priority (priority inversion: zero means t1, not "empty").
+  if (poolCount === DISCOVERY_TIERS.T1_ZERO_POOL_SENTINEL) {
     tier = "t1";
   } else if (poolCount <= DISCOVERY_TIERS.T2_MAX_POOLS || chainCount <= 1) {
     tier = "t2";
