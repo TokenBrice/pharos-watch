@@ -9,12 +9,13 @@ import type {
 } from "./definitions";
 import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
+import { API_PATHS } from "./paths";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
-const AUDIT_DEPEG_HISTORY_PATH = "/api/audit-depeg-history";
-const BACKFILL_DEWS_PATH = "/api/backfill-dews";
+const AUDIT_DEPEG_HISTORY_PATH = API_PATHS.auditDepegHistoryBase();
+const BACKFILL_DEWS_PATH = API_PATHS.backfillDews();
 const ADMIN_DYNAMIC_PATH_ROOTS = [
   "/api/api-key-requests-admin",
   "/api/api-keys",
