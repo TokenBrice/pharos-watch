@@ -54,12 +54,12 @@ describe("logSkippedCronRun", () => {
     const metadata = JSON.parse(String(boundArgs[5])) as Record<string, unknown>;
     expect(metadata).toMatchObject({
       circuitSource: "dex-liquidity",
-      skipped: "circuit-open",
       skippedReason: "circuit-open",
       message: "DEX circuit open",
       slotStartedAt: 1_772_000_000,
       scheduleKey: "halfHourlyOffset",
     });
+    expect(metadata).not.toHaveProperty("skipped");
   });
 
   it("allows explicitly benign skip rows", async () => {
