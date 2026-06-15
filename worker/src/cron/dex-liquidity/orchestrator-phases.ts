@@ -19,8 +19,7 @@ export type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-ph
 export { buildAuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 
 export {
-  loadTrackedStablecoinPriceMap,
-  loadTrackedStablecoinMcapMap,
+  loadTrackedStablecoinMaps,
 } from "./orchestrator-phases/lookups";
 
 export { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";

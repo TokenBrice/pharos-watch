@@ -22,8 +22,7 @@ import {
   buildDexDirectApiFetchers,
   fetchSubgraphEnrichmentPhase,
   integrateDirectApiLiquidityPhase,
-  loadTrackedStablecoinMcapMap,
-  loadTrackedStablecoinPriceMap,
+  loadTrackedStablecoinMaps,
   mergeDexPriceObservationMap,
   runDirectApiFetchPhase,
   runFallbackCrawlerPhase,
@@ -170,8 +169,8 @@ type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writ
 
 interface DexLiquiditySourceState {
   validationReferences: Awaited<ReturnType<typeof loadPriceValidationReferences>>;
-  stablecoinPriceById: Awaited<ReturnType<typeof loadTrackedStablecoinPriceMap>>;
-  stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMcapMap>>;
+  stablecoinPriceById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinPriceById"];
+  stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinMcapById"];
   dataSources: DexLiquidityDataSources;
   lookups: DexLiquidityLookups;
   curvePoolMap: Awaited<ReturnType<typeof buildCurveLookups>>["curvePoolMap"];
@@ -288,8 +287,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   });
 
   const validationReferences = await loadPriceValidationReferences(ctx.db);
-  const stablecoinPriceById = await loadTrackedStablecoinPriceMap(ctx.db, ctx.syncStartSec);
-  const stablecoinMcapById = await loadTrackedStablecoinMcapMap(ctx.db);
+  const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec);
 
   const dataSources = await fetchDataSources(ctx.graphApiKey, ctx.db, ctx.signal);
   if (!dataSources) {

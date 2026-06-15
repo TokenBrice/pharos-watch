@@ -2,11 +2,20 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
 
-export async function loadTrackedStablecoinPriceMap(
+export interface TrackedStablecoinMaps {
+  stablecoinPriceById: Map<string, number>;
+  stablecoinMcapById: Map<string, number>;
+}
+
+/** Load the tracked price and market-cap maps from a single stablecoins-cache
+ *  read. The dex-liquidity cron needs both, so loading the (several-hundred-KB)
+ *  cache row once avoids a redundant D1 read and deserialisation. */
+export async function loadTrackedStablecoinMaps(
   db: D1Database,
   syncStartSec: number,
-): Promise<Map<string, number>> {
+): Promise<TrackedStablecoinMaps> {
   const stablecoinPriceById = new Map<string, number>();
+  const stablecoinMcapById = new Map<string, number>();
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
     let skippedWeakTrackedPrices = 0;
@@ -21,6 +30,10 @@ export async function loadTrackedStablecoinPriceMap(
       } else {
         skippedWeakTrackedPrices++;
       }
+      const mcap = getCirculatingRaw(asset);
+      if (mcap > 0) {
+        stablecoinMcapById.set(asset.id, mcap);
+      }
     }
     if (skippedWeakTrackedPrices > 0) {
       console.log(
@@ -29,27 +42,9 @@ export async function loadTrackedStablecoinPriceMap(
     }
   } else {
     console.warn(
-      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback",
+      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback",
     );
   }
 
-  return stablecoinPriceById;
-}
-
-export async function loadTrackedStablecoinMcapMap(
-  db: D1Database,
-): Promise<Map<string, number>> {
-  const mcapById = new Map<string, number>();
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-  if (hasUsableStablecoinsPayload(stablecoinsCache)) {
-    for (const asset of stablecoinsCache.payload.peggedAssets) {
-      const mcap = getCirculatingRaw(asset);
-      if (mcap > 0) {
-        mcapById.set(asset.id, mcap);
-      }
-    }
-  } else {
-    console.warn("[dex-liquidity] Stablecoins cache unavailable for market cap data; TVL depth will use absolute fallback");
-  }
-  return mcapById;
+  return { stablecoinPriceById, stablecoinMcapById };
 }

@@ -503,7 +503,7 @@ describe("syncDexLiquidity", () => {
     await syncDexLiquidity(db, "graph-key");
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback",
+      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback",
     );
   });
 
