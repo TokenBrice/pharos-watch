@@ -1,17 +1,42 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import {
+  getMechanismArchetypeLabel,
+  getMechanismExplainerPath,
+} from "@shared/lib/classification";
 import { PHAROS_ORG_NODE, safeJsonLd } from "@/lib/json-ld";
+import sitemapDates from "@/generated/sitemap-dates.json";
 import type { CaseStudy } from "./content/types";
 
 const HUB_PATH = "/learn/case-studies/";
-const BUILD_DATE_MODIFIED = new Date().toISOString();
+const SITEMAP_DATES = sitemapDates as Record<string, string>;
+const WORDS_PER_MINUTE = 200;
 
 function caseStudyUrl(slug: string): string {
   return `${SITE_ORIGIN}${HUB_PATH}${slug}/`;
 }
 
+/** Body word count, used for `wordCount` + `timeRequired` (reading time). */
+function caseStudyWordCount(study: CaseStudy): number {
+  const text = [
+    ...study.lead,
+    ...(study.takeaways ?? []),
+    ...study.sections.flatMap((section) => section.paragraphs),
+    ...study.timeline.map((entry) => `${entry.headline} ${entry.body}`),
+    ...study.watchpoints,
+  ].join(" ");
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
 /** `Article` document for a single case study detail page. */
 function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> {
   const url = caseStudyUrl(study.slug);
+  // Git-derived per-study modified date (falls back to publish date) so the
+  // markup never claims every study changed on every build — matches the
+  // mechanism-explainer and sitemap date handling.
+  const dateModified =
+    SITEMAP_DATES[`${HUB_PATH}${study.slug}/`] ?? study.datePublished;
+  const wordCount = caseStudyWordCount(study);
+  const timeRequired = `PT${Math.max(1, Math.round(wordCount / WORDS_PER_MINUTE))}M`;
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -25,8 +50,17 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
     publisher: { "@id": PHAROS_ORG_NODE["@id"] },
     inLanguage: "en",
     isPartOf: `${SITE_ORIGIN}${HUB_PATH}`,
+    articleSection: study.eyebrow,
+    about: {
+      "@type": "DefinedTerm",
+      name: getMechanismArchetypeLabel(study.archetype),
+      termCode: study.archetype,
+      url: `${SITE_ORIGIN}${getMechanismExplainerPath(study.archetype)}`,
+    },
+    wordCount,
+    timeRequired,
     datePublished: study.datePublished,
-    dateModified: BUILD_DATE_MODIFIED,
+    dateModified,
   };
 }
 
