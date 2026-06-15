@@ -150,8 +150,6 @@ export function collectWorkerConsoleFindings(roots = DEFAULT_ROOTS, cwd = proces
   return findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
 
-export const collectCronConsoleUsage = collectWorkerConsoleUsage;
-
 function readBaseline(path, cwd) {
   const absolute = join(cwd, path);
   if (!existsSync(absolute)) return null;
