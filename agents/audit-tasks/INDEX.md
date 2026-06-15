@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**121/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
+**125/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 587 | 6 | 0 | 121 | 19 |
+| Count | 586 | 3 | 0 | 125 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 51 | 2 | 0 | 203 |
-| quality | 315 | 59 | 4 | 0 | 245 |
-| sustainability | 152 | 11 | 0 | 0 | 139 |
+| redundancy | 266 | 52 | 1 | 0 | 203 |
+| quality | 315 | 62 | 1 | 0 | 245 |
+| sustainability | 152 | 11 | 1 | 0 | 138 |
 
 ## redundancy (266)
 
@@ -31,7 +31,7 @@
 | ✅ | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value | codex | `shared/lib/redemption-backstop-configs/queue-red` |
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
-| 🔄 | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
+| ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
@@ -337,7 +337,7 @@
 | ⬜ | [Q-041](quality/Q-041.md) | M | clone | Alert-safety explain snapshot re-derives stage scores from rounded baseScore, diverging fr |  | `worker/src/lib/alert-safety-source-cache.ts:L470` |
 | ✅ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh | codex | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
-| 🔄 | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
+| ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
 | ⬜ | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response |  | `src/app/screener/picker/use-selector.ts:L54` |
 | ⬜ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox |  | `src/components/coin-selector.tsx:L205-L207` |
 | ⬜ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard |  | `worker/src/handlers/scheduled/five-minute-telegr` |
@@ -520,7 +520,7 @@
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
 | ⬜ | [Q-204](quality/Q-204.md) | S | error-handling | sourceRiskInverted silent-null contract breaks the special-case detection in scoreRow |  | `shared/lib/selector/normalization.ts:L63, shared` |
 | ⬜ | [Q-205](quality/Q-205.md) | S | type-safety | ApiKeySelfServeCadence is a plain TypeScript union type with no Zod schema — unlike every  |  | `shared/types/api-key-requests.ts:L15-L20` |
-| 🔄 | [Q-206](quality/Q-206.md) | M | error-handling | use-status-history builds /api/status-history URL inline, bypassing the shared API_PATHS h | codex | `src/hooks/use-status-history.ts:L18-L25` |
+| ✅ | [Q-206](quality/Q-206.md) | M | error-handling | use-status-history builds /api/status-history URL inline, bypassing the shared API_PATHS h | codex | `src/hooks/use-status-history.ts:L18-L25` |
 | ⬜ | [Q-207](quality/Q-207.md) | S | clone | TOTAL_VALUE_SELECTOR (0xd4c3eea0) defined independently in two adapter files |  | `worker/src/cron/reserve-adapters/blast-usdb-yiel` |
 | ✅ | [Q-208](quality/Q-208.md) | S | naming | M0 adapter metadata comment `cashUnits: 'milli-usd-to-micro-usd'` is factually wrong | codex | `worker/src/cron/reserve-adapters/m0.ts:L63, L171` |
 | ⬜ | [Q-209](quality/Q-209.md) | S | error-handling | sync-bluechip setTimeout delay does not respect AbortSignal |  | `worker/src/cron/sync-bluechip.ts:L127` |
@@ -604,7 +604,7 @@
 | ⬜ | [Q-287](quality/Q-287.md) | S | complexity | DepegFeed seenIds Set grows without bound across the component lifetime |  | `src/components/depeg-feed.tsx:L44, L85-L94` |
 | ⬜ | [Q-288](quality/Q-288.md) | M | complexity | usePortfolio reads window.location.search directly in getInitialPortfolioState, bypassing  |  | `src/hooks/use-portfolio.ts:L78-L99` |
 | ⬜ | [Q-289](quality/Q-289.md) | S | error-handling | cancelResponseBodyQuietly called after res.json() already consumed body — misleading dead  |  | `worker/src/cron/sync-stablecoins/enrich-prices-d` |
-| 🔄 | [Q-290](quality/Q-290.md) | S | type-safety | rowToDepegEvent silently ignores unknown direction/source values after warning | codex | `worker/src/lib/depeg-helpers.ts:356-401` |
+| ✅ | [Q-290](quality/Q-290.md) | S | type-safety | rowToDepegEvent silently ignores unknown direction/source values after warning | codex | `worker/src/lib/depeg-helpers.ts:356-401` |
 | ⬜ | [Q-291](quality/Q-291.md) | S | naming | formatRouteAvailabilityReviewedAt is exported but semantically identical to inline formatU |  | `worker/src/lib/redemption-backstop-availability.` |
 | ⬜ | [Q-292](quality/Q-292.md) | S | naming | Two METHODOLOGY_SECTIONS nav IDs omit the '-methodology' suffix used by all other entries |  | `src/app/methodology/methodology-shared.tsx:17,21` |
 | ⬜ | [Q-293](quality/Q-293.md) | S | complexity | FundingKpiRow builds branching label objects inline, adding cognitive load |  | `src/components/funding/funding-page-sections.tsx` |
@@ -719,7 +719,7 @@
 | ✅ | [S-069](sustainability/S-069.md) | S | config | build-l2beat-bridge-route-candidates.ts uses fragile suffix-match to detect its own entry  | codex | `scripts/maintenance/build-l2beat-bridge-route-ca` |
 | ⬜ | [S-070](sustainability/S-070.md) | S | docs | fetch-slipstream.ts zero volume is undocumented as a known API limitation |  | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ⬜ | [S-071](sustainability/S-071.md) | S | config | Footer lighthouse beam animation is injected via dangerouslySetInnerHTML while all other p |  | `src/components/footer.tsx:31-43, 48` |
-| ⬜ | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const |  | `worker/src/cron/prune-cron-history.ts:10` |
+| 🔄 | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const | codex | `worker/src/cron/prune-cron-history.ts:10` |
 | ⬜ | [S-073](sustainability/S-073.md) | S | testing | Filename-to-dateRange.to convention is untested |  | `src/data/changelogs/__tests__/index.test.ts:L28-` |
 | ⬜ | [S-074](sustainability/S-074.md) | M | complexity | Projector boilerplate (watermark read, since/until, limit, dryRun) is copy-pasted across 6 |  | `worker/src/lib/tape-projectors/score.ts:L40-L46,` |
 | ⬜ | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal |  | `worker/src/cron/sync-live-reserves.ts:268, worke` |
