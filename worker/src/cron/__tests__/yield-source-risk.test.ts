@@ -42,6 +42,36 @@ const WAVE_2_REVIEWED_TIERS = {
   "morpho-blue": "medium",
   pendle: "low",
   beefy: "medium",
+  // Phase 2 (yield v8.3) scored long-tail venues — derived tiers.
+  clearpool: "high",
+  goldfinch: "high",
+  "3jane-lending": "high",
+  centrifuge: "medium",
+  "flux-finance": "medium",
+  cap: "medium",
+  avantis: "high",
+  "euler-v2": "low",
+  gearbox: "low",
+  "curve-llamalend": "low",
+  "fluid-lending": "medium",
+  dolomite: "medium",
+  exactly: "low",
+  "fraxlend-v2": "medium",
+  "aave-v4": "low",
+  "compound-v2": "low",
+  "felix-cdp": "medium",
+  frankencoin: "low",
+  "kamino-lend": "low",
+  justlend: "low",
+  "benqi-lending": "low",
+  "aries-markets": "high",
+  "scallop-lend": "medium",
+  "echelon-market": "medium",
+  "blend-pools-v2": "low",
+  "jupiter-lend": "medium",
+  "hyperlend-pooled": "medium",
+  curvance: "high",
+  "sovryn-dex": "medium",
 } as const;
 
 describe("yield source-risk registry", () => {
@@ -64,19 +94,33 @@ describe("yield source-risk registry", () => {
     }
   });
 
-  it("preserves calibration: low venues stay no-op, medium venues land in-band", () => {
+  // The original blue-chip venues (pre-Phase-2) were `low` = 0 penalty; that exact
+  // no-op must be preserved by the weighted curve.
+  const ORIGINAL_BLUE_CHIP_NO_OP = [
+    "aave-v3",
+    "compound-v3",
+    "sparklend",
+    "spark-savings",
+    "yearn",
+    "yearn-finance",
+    "pendle",
+  ] as const;
+
+  it("preserves the blue-chip no-op and keeps every venue penalty on the curve within bounds", () => {
+    for (const protocol of ORIGINAL_BLUE_CHIP_NO_OP) {
+      const config = YIELD_RISK_CONFIG[protocol];
+      expect(venueRiskTierOf(config), protocol).toBe("low");
+      expect(derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(config) }), protocol).toBe(1);
+    }
+
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       const config = YIELD_RISK_CONFIG[protocol];
-      const tier = venueRiskTierOf(config);
-      const penalty = derivePysSourceRiskPenalty({ venueRiskWeighted: venueRiskWeightedOf(config) });
-      if (tier === "low") {
-        // Legacy `low` was a 0 penalty; that no-op is preserved exactly.
-        expect(penalty, protocol).toBe(1);
-      } else {
-        // Legacy `medium` was a flat +0.15; scored mediums are now differentiated near it.
-        expect(penalty, protocol).toBeGreaterThan(1);
-        expect(penalty, protocol).toBeLessThanOrEqual(1.25);
-      }
+      const weighted = venueRiskWeightedOf(config);
+      const penalty = derivePysSourceRiskPenalty({ venueRiskWeighted: weighted });
+      // Penalty is exactly the continuous curve, and stays within sane bounds.
+      expect(penalty, protocol).toBeCloseTo(1 + Math.max(0, weighted - 2.0) * 0.15, 6);
+      expect(penalty, protocol).toBeGreaterThanOrEqual(1);
+      expect(penalty, protocol).toBeLessThanOrEqual(1.45);
     }
   });
 

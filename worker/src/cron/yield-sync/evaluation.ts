@@ -321,7 +321,13 @@ function evaluateYieldSourceGroup(
     const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
-    const reviewedRiskConfig = resolveReviewedYieldRiskConfig(inferVenueProtocol(y));
+    // Resolve the reviewed venue config from the same identifier stored as
+    // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
+    // auto-discovered lending rows — not just native/curated families — pick up
+    // their 5-category venue-risk score.
+    const reviewedRiskConfig = resolveReviewedYieldRiskConfig(
+      sourceRisk?.venueProtocol ?? y.project ?? inferVenueProtocol(y),
+    );
     const reviewedVenueRiskWeighted = reviewedRiskConfig
       ? computeVenueRiskWeighted(reviewedRiskConfig.scores)
       : null;

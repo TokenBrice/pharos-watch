@@ -85,8 +85,12 @@ export function computeVenueRiskWeighted(scores: YieldVenueRiskScores): number {
  */
 export function deriveVenueRiskTier(weighted: number | null | undefined): YieldVenueRiskTier {
   if (typeof weighted !== "number" || !Number.isFinite(weighted)) return "unknown";
-  if (weighted < 2.5) return "low";
-  if (weighted < 3.5) return "medium";
+  // Round to 3 decimals so boundary scores (e.g. 0.15*3 = 2.4999…) land on the
+  // intended tier rather than a floating-point hair under it. The continuous
+  // penalty curve still uses the exact weighted value.
+  const w = Math.round(weighted * 1000) / 1000;
+  if (w < 2.5) return "low";
+  if (w < 3.5) return "medium";
   return "high";
 }
 

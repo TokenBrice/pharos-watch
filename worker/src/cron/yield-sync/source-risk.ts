@@ -27,6 +27,38 @@ export const YIELD_RISK_CONFIG_PROTOCOLS = [
   "morpho-blue",
   "pendle",
   "beefy",
+  // Phase 2 (yield v8.3) — long-tail venues scored on the Yearn 5-category rubric
+  // (2026-06-15). Slugs match the DeFiLlama `project` carried on auto-discovered
+  // lending rows so the score binds without sourceKey inference.
+  "clearpool",
+  "goldfinch",
+  "3jane-lending",
+  "centrifuge",
+  "flux-finance",
+  "cap",
+  "avantis",
+  "euler-v2",
+  "gearbox",
+  "curve-llamalend",
+  "fluid-lending",
+  "dolomite",
+  "exactly",
+  "fraxlend-v2",
+  "aave-v4",
+  "compound-v2",
+  "felix-cdp",
+  "frankencoin",
+  "kamino-lend",
+  "justlend",
+  "benqi-lending",
+  "aries-markets",
+  "scallop-lend",
+  "echelon-market",
+  "blend-pools-v2",
+  "jupiter-lend",
+  "hyperlend-pooled",
+  "curvance",
+  "sovryn-dex",
 ] as const;
 
 export type YieldRiskConfigProtocol = (typeof YIELD_RISK_CONFIG_PROTOCOLS)[number];
@@ -229,6 +261,416 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
+  // ── Phase 2 long-tail venues (yield v8.3, reviewed 2026-06-15) ──────────────
+  // Uncollateralized / RWA credit (high tier — where `unknown`=0 was most wrong)
+  clearpool: {
+    scores: { audits: 3, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Clearpool is uncollateralized institutional credit; a sub-4-signer multisig with no timelock and direct lender default exposure place it in the high venue-risk tier.",
+    evidence: [
+      "Hacken audits in docs; no top-tier (ToB/OZ/Certora) audit surfaced; live since 2022 with no exploit",
+      "Risk review: multisig under 4 signers and no timelock — upgrades can execute instantly",
+      "Uncollateralized loans to KYC'd institutions; minimal lender protection on borrower default",
+      "Redemption depends on borrower repayment/utilization; TVL ~$28M, modest depth",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  goldfinch: {
+    scores: { audits: 2, centralization: 4, fundsManagement: 5, liquidity: 4, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Goldfinch is uncollateralized RWA credit with realized multi-million-dollar loan losses; strong audits do not offset offchain borrower-default exposure.",
+    evidence: [
+      "CertiK (v1-v2) and Trail of Bits (v2+) audits, reports open-source; live 2021, no contract hack",
+      "Multisig 4+ signers but no timelock documented; community DAO governs parameters",
+      "Uncollateralized RWA trust-through-consensus; ~$7M Stratos loss + ~$20M soured loan (2023)",
+      "Senior Pool 0.5% withdrawal fee; capital locked in illiquid real-world borrower pools",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "3jane-lending": {
+    scores: { audits: 5, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 4 },
+    confidence: "partial",
+    rationale:
+      "3Jane is brand-new uncollateralized credit with no verifiable live audit, offchain legal recovery, and an unproven admin structure — the highest venue risk in the reviewed set.",
+    evidence: [
+      "USD3 Etherscan shows 'No Contract Security Audit Submitted'; Veridise prior work unverified on live contracts",
+      "Multisig/timelock/veto only on roadmap, not verified on a days-old (Nov 2025) protocol",
+      "Fully uncollateralized vs offchain cash flows (zkTLS/Plaid); offchain US legal recovery; sUSD3 first-loss 15%",
+      "Deposits capped ~$50M, small TVL ~$17-35M; first-loss tranche illiquidity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  centrifuge: {
+    scores: { audits: 1, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Centrifuge is mature, heavily-audited RWA tokenization; the medium tier reflects offchain asset-performance exposure and redemption/epoch gating rather than contract risk.",
+    evidence: [
+      "21 independent audits (15 in 2025) incl. Cantina/Spearbit; CertiK Skynet AA; live since 2017, bug bounty",
+      "CP171 moved DAO to Foundation-led (CNF) governance; DAO can reassume; V3 multichain upgradeable",
+      "Tokenized RWA private credit/CLOs/treasuries; offchain default exposure; ~$1.45B TVL",
+      "RWA vaults have redemption/epoch constraints; capital tied to illiquid assets",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "flux-finance": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Flux Finance is a Compound V2 fork lending against tokenized Treasuries; overcollateralized but admin-upgradeable with permissioned liquidations.",
+    evidence: [
+      "Code4rena audit (2024) on Compound V2 changes; built on ToB/OZ/Certora-audited base; $550k Immunefi bounty",
+      "Team self-discloses more centralized than Compound V2; upgradeable admin functions; Ondo/Neptune DAO",
+      "Stablecoins lent vs OUSG (tokenized US Treasuries); RWA dependency; permissioned liquidations",
+      "Compound-style pool gated by utilization; KYC/whitelist required for OUSG liquidators",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  cap: {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Cap routes a 1:1-reserve stablecoin into restaking-backed credit to whitelisted institutional operators; strong audits offset by youth and operator credit risk.",
+    evidence: [
+      "Sherlock (Jul 2025) + Certora (EigenLayer integration); Certora: no single critical centralized actor",
+      "Delegators/operators initially whitelisted; restaking permissionless slashing, no veto; live Aug 2025",
+      "cUSD 1:1 reserve-backed, idle to Aave V3; yield from operator credit; slashing covers default",
+      "cUSD redeemable, ~$500M TVL with Aave buffer; operator credit-recovery delay",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  avantis: {
+    scores: { audits: 3, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Avantis is a perp-DEX LP vault where depositors backstop leveraged traders' PnL; single audit, upgradeable, and market (not credit) principal risk.",
+    evidence: [
+      "Zellic audit (tranche/withdrawal findings fixed); no top-tier multi-firm audit; live on Base Feb 2024, no exploit",
+      "AVNT governance; upgradeable perp DEX admin/vault-manager functions; no timelock detail surfaced",
+      "USDC vault is counterparty to leveraged perp traders; LP principal exposed to trader PnL across 80+ markets",
+      "ERC-4626 avUSDC; withdrawals subject to vault solvency vs open positions",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  // EVM money markets / CDPs
+  "euler-v2": {
+    scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
+    confidence: "verified",
+    rationale:
+      "Euler v2 is a hardened modular relaunch with an exemplary post-2023 security program and full prior-exploit recovery; low venue risk.",
+    evidence: [
+      "60+ reviews by 16+ firms incl. Certora/ToB/OZ; $4M+ spend, formal verification; 2023 v1 exploit fully recovered (~$240M)",
+      "EulerDAO on-chain governance with timelock; permissionless EVK/EVC vaults add per-vault surface; no EOA",
+      "Overcollateralized onchain, provable vault NAV; curator-dependent vault quality; $2B+ TVL",
+      "Deep aggregate liquidity, isolated vaults can be thin; proven 2023 incident response",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  gearbox: {
+    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Gearbox is a well-audited leverage/credit-account protocol; the leverage and curator-credit model lifts funds and liquidity risk above plain money markets.",
+    evidence: [
+      "V3 by ChainSecurity + ABDK, 10+ total audits; public security repo; zero exploits/bad debt",
+      "Gearbox DAO via GEAR, 2-day timelock; guard multisigs 4+ signers veto-only; curators post first-loss stake",
+      "Leveraged credit accounts (looping) increase complexity; curator-set leverage/liquidation params",
+      "Withdrawals depend on pool utilization under leverage; TVL ~$330M concentrated in Lido pool",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "curve-llamalend": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Curve LlamaLend is battle-tested but the complex LLAMMA soft-liquidation design and a 2025 bad-debt event keep funds/liquidity risk at low-medium.",
+    evidence: [
+      "MixBytes/ChainSecurity/StateMind audits; crvUSD criticals fixed pre-deploy; LLAMMA complexity flagged",
+      "Curve DAO governance; v2 moves to LlamaRisk curation + ~7-day vote; no EOA owner",
+      "Overcollateralized via LLAMMA bands; CRV-long market ~$700k bad debt Oct 2025; crvUSD-centric in v1",
+      "Lending-vault liquidity depends on utilization; some markets thin; soft-liquidation slower in crashes",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "fluid-lending": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Fluid's capital-efficient shared liquidity layer concentrates cross-module risk; Guardian pause powers and a recent bad-debt sweep put it at low-medium.",
+    evidence: [
+      "6 audits; Instadapp 6 years no protocol hack; shared liquidity layer is a single concentrated surface",
+      "Guardian multisig can pause subprotocol credit lines; permissioned credit lines; IP moving to Cayman foundation",
+      "Shared liquidity layer concentrates risk; absorbed Resolv upstream bad debt; overcollateralized vaults",
+      "Deep shared layer generally instant; $1.8B+ TVL; multichain; solvent IR during Resolv cleanup",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  dolomite: {
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Dolomite is well-audited but a 2/3 (sub-4-signer) multisig with a sub-48h timelock and very broad asset support drive its centralization risk up to medium.",
+    evidence: [
+      "6 audits (Zeppelin/Bramah/SECBIT/Cyfrin/Zokyo/Guardian); 100% line/branch coverage; immutable core + upgradable modules",
+      "Admin via 2/3 multisig (under 4 signers); timelock under 48h limits user exit window",
+      "Virtual liquidity supports 1000+ assets — broader/newer collateral; dynamic collateral; no hacks since 2022",
+      "Broad asset support means some thin/concentrated markets; multichain Arbitrum/Berachain/Ethereum",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  exactly: {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Exactly is a multiply-audited fixed+variable-rate lender with timelocked governance; smaller scale and maturity-pool fragmentation keep it at low.",
+    evidence: [
+      "Coinspect 5x + ABDK 2x + ChainSafe + Cryptecon audits; Immunefi bounty; admin seize finding fixed via timelock",
+      "Most EXA/admin behind Optimism timelock; EXA DAO via Snapshot; no EOA",
+      "Overcollateralized variable + fixed-rate markets; live Nov 2022; utilization-based fixed pools",
+      "Smaller TVL; fixed-rate maturity pools fragment liquidity; variable pool backstops fixed",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "fraxlend-v2": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Fraxlend v2 is an audited isolated-pair lender; the FRAX-priced-at-$1 assumption and a 2025 WFRAX bad-debt event lift funds/liquidity risk to low-medium.",
+    evidence: [
+      "Trail of Bits Jan 2023; FrxGov ToB Jul 2023; public audit repo; FRAX-priced-at-$1 risk flagged",
+      "veFXS frxGov dual-Governor; Omega 51% short-circuit allows immediate action; AMO modules peg-constrained",
+      "Isolated pairs localize bad debt; FRAX treated as $1 can cause bad debt on depeg; WFRAX llamalend bad-debt event",
+      "Isolated pairs can be thin/concentrated; fToken redemption depends on pair utilization",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "aave-v4": {
+    scores: { audits: 1, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Aave v4 carries best-in-class audits but fresh Mar-2026 hub-and-spoke code plus a live Dec-2025 governance crisis raise centralization/operational risk; still low overall.",
+    evidence: [
+      "345-day review, $1.5M budget, no critical/high; formal verification + fuzzing; Sherlock contest 900+ no criticals",
+      "Aave DAO but Dec 2025 governance crisis; BGD+ACI departed, Labs voting dispute; new v4 code live Mar 2026",
+      "Hub-and-spoke isolates deposit from spoke borrow; hub bad-debt buffer; new architecture unproven",
+      "Deep central liquidity hubs; $24B+ protocol TVL; spokes route from shared hub",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "compound-v2": {
+    scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Compound v2 is battle-tested with 2-day-timelock governance; legacy/deprecated status (superseded by Compound III) is the only material lift, keeping it low.",
+    evidence: [
+      "OpenZeppelin comprehensive + Certora formal verification; multi-year; prior fixBadAccruals was rewards not collateral",
+      "Governor Bravo + 2-day Timelock controls cTokens/Comptroller; COMP holders; no EOA",
+      "Overcollateralized blue-chip cTokens, provable shares; legacy/deprecated for Compound III",
+      "Deep blue-chip pools but declining/legacy; reduced active maintenance vs v3",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "felix-cdp": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Felix is an audited Liquity-v2 fork on Hyperliquid; youth, single-chain concentration, and HYPE/LST collateral with USDC oracle dependency place it at medium.",
+    evidence: [
+      "Dedaub + Coinspect + Three Sigma price-feed audits; Liquity v2 fork inherits audited base; oracle peg-dependency flagged",
+      "Anthias Labs advisory sets LTV/caps; emergency pause, dynamic treasury params; young 2024/2025 protocol",
+      "CDP overcollateralized (40% LTV) with Stability Pool; HYPE/LST collateral concentration; HYPE/USD assumes USDC=$1",
+      "Hyperliquid-only single-ecosystem; Stability Pool + redemption; rapid $1B TVL but short history",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  frankencoin: {
+    scores: { audits: 2, centralization: 1, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Frankencoin is an immutable, oracle-free CHF stablecoin with strong decentralization; slower auction-based liquidation of volatile collateral keeps funds/liquidity risk at low.",
+    evidence: [
+      "ChainSecurity Oct 2023 + Code4rena; separate ChainSecurity CCIP bridge audit; auction design reduces oracle surface",
+      "Immutable non-upgradeable, no admin keys; veto-based FPS governance (2%); oracle-free minter additions",
+      "~200% overcollateralized wrapped BTC/ETH; oracle-free auction liquidation slower for volatile; FPS first-loss",
+      "Auction liquidation slower than instant; FPS bonding-curve mint/redeem; smaller TVL; multichain via audited bridge",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  // App-chain / non-EVM lenders
+  "kamino-lend": {
+    scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
+    confidence: "verified",
+    rationale:
+      "Kamino is the strongest-record Solana lender in the set; oracle and large-supplier concentration are the only soft risks, keeping it low.",
+    evidence: [
+      "9 audits (OtterSec/Halborn/Offside Labs) + Certora formal verification; precision bug fixed pre-exploit; $16B loans zero bad debt",
+      "Multisig treasury with emergency pause/shutdown; KMNO governance 2024; Solana STRIDE program",
+      "Overcollateralized blue-chip SOL/USDC/JLP; RWA markets $1.23B + Chainlink/Anchorage; Pyth oracle + supplier concentration",
+      "Largest Solana protocol, multi-billion TVL, deep pools; instant withdrawals",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  justlend: {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "JustLend is a mature Tron lender with a timelocked DAO; concentrated voting power and Tron/USDD ecosystem exposure temper but do not lift it above low.",
+    evidence: [
+      "CertiK (Apr 2022) + SlowMist + PeckShield audits; no documented hack since 2020",
+      "100% on-chain JST governance with 48hr+ timelock; flagged concentrated voting power",
+      "Overcollateralized, Comptroller-managed collateral factors; $3.9B TVL; Tron/USDD exposure",
+      "$3.9B TVL dominant Tron lender, deep; standard money-market withdrawals",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "benqi-lending": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "BENQI is an established Avalanche lender with a strong audit cadence and a QI safety module; multisig-only admin keeps it at low.",
+    evidence: [
+      "9+ audits, Halborn on retainer per release; no known historical exploit",
+      "Multisig framework, multi-party approval for parameter changes; QI governance; threshold-signer residual risk",
+      "Overcollateralized; QI safety module backstops shortfalls; no admin key can drain; AVAX blue-chip collateral",
+      "Avalanche #1 DeFi by TVL, 38,000+ holders, deep; instant withdrawals",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "aries-markets": {
+    scores: { audits: 3, centralization: 5, fundsManagement: 3, liquidity: 3, operational: 4 },
+    confidence: "partial",
+    rationale:
+      "Aries Markets is the top Aptos lender but a sub-4-signer multisig with no timelock, anonymous team, and a ~90% TVL collapse place it in the high tier.",
+    evidence: [
+      "OtterSec audit (~2 audits); no documented hack since 2022",
+      "Multisig under 4 signers, no timelock (instant malicious upgrade); no governance token, anonymous team",
+      "Overcollateralized lending/margin on Aptos; TVL ~$830M peak to ~$92M late 2025; Move newer collateral",
+      "Top Aptos lender but TVL down ~90%; thinner Aptos liquidity, concentration",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "scallop-lend": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Scallop is a solid Sui lender with three reputable audits and a bounty; an undisclosed multisig config and thinner Sui liquidity keep it at low-medium.",
+    evidence: [
+      "Zellic + OtterSec + MoveBit audits, regular re-audits; bug bounty, open-source, no known exploit",
+      "veSCA governance, decentralization in progress; multisig config not public (scored conservatively); team-led upgrades",
+      "Overcollateralized money market on Sui; TVL ~$102M (peak $195M); Move collateral",
+      "~$100M TVL leading Sui lender, moderate depth; thinner Sui chain",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "echelon-market": {
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Echelon is a fast-growing Aptos lender with isolated markets and Chainlink oracles; a very young DAO and unitemized audits keep it at medium.",
+    evidence: [
+      "Multiple audits cited but firms not itemized (scored conservatively); no documented exploit since 2024",
+      "ELON DAO launched Feb 2026 (very recent); no token most of 2025; multi-chain Aptos/Movement/Initia widens surface",
+      "Isolated markets, Chainlink oracles, sUSDe/BTC collateral; $400M+ deposits; newer Move/long-tail collateral",
+      "$200-400M TVL across emerging chains; thinner liquidity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "blend-pools-v2": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Blend is an immutable, governance-minimized Stellar lending primitive with backstop insurance; thin-chain liquidity is the main residual risk, keeping it at low.",
+    evidence: [
+      "Third-party audited (docs); Soroban immutable contracts; no documented exploit",
+      "Immutable contracts, governance-minimized; permissionless pool creation, auto-rates; no DAO needed",
+      "Overcollateralized isolated pools with backstop insurance module replacing supplier losses; USDC/XLM/EURC",
+      "~$95M TVL, ~$39M loans, leading Stellar lender; thinner Stellar/Soroban depth",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "jupiter-lend": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Jupiter Lend is a deep, well-audited Solana lender but young, with rehypothecation undercutting isolation claims; timelocked admin keeps it at low-medium.",
+    evidence: [
+      "6-7 audits (OtterSec/Offside Labs) + Certora formal verification; no exploit, avoided Oct 2025 crash bad debt",
+      "Function-scoped multisigs, upgrade multisig timelocked; team owns underlying Fluid liquidity layer; launched Aug 2025",
+      "Overcollateralized but rehypothecation shares collateral across vaults; team admitted isolation claims inaccurate; multi-oracle",
+      "$1.6B+ TVL, #1 Solana by supply, deep instant liquidity; 99,000 positions",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "hyperlend-pooled": {
+    scores: { audits: 3, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 4 },
+    confidence: "partial",
+    rationale:
+      "HyperLend is a well-audited but young Aave-fork on the thin, exploit-prone HyperEVM; admin opacity and kHYPE concentration place it at medium.",
+    evidence: [
+      "Ackee/Cantina/Pashov audits (46+ engineer-days); Ackee found critical collateral-theft bug fixed pre-deploy; bounty active",
+      "HPL governance new (airdrop Jan 2026); admin/timelock not clearly documented; Aave/FraxLend fork on young HyperEVM",
+      "Overcollateralized Core/Isolated/P2P pools, BlockAnalitica risk; ~$420M TVL kHYPE-concentrated; exploit-prone ecosystem",
+      "$420M TVL heavily kHYPE-concentrated (~$183M); young chain concentration",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  curvance: {
+    scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 4, operational: 4 },
+    confidence: "low",
+    rationale:
+      "Curvance is a brand-new Monad lender with tiny TVL and unitemized audits; scored conservatively across the board for lack of track record, placing it high.",
+    evidence: [
+      "Audit firms/reports not itemized, funds earmarked for auditing; very new, no track record (scored conservatively)",
+      "CVE/DAO governance, tokenomics unreleased; launched Monad (Nov 2025) upgradeable; unproven admin",
+      "Isolated positions, dual-oracle, circuit breakers, MEV liquidations; low TVL; LST/LRT/Pendle-PT/LP on new chain",
+      "Very small TVL (single-digit millions); brand-new Monad chain, thin/concentrated",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "sovryn-dex": {
+    scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Sovryn is a mature Bitcoin-DeFi lender, but a prior partially-unrecovered lending exploit and thin Rootstock liquidity place it at medium.",
+    evidence: [
+      "Heavily audited per team, active bounty; BUT Oct 2022 lend/borrow exploit ~$1.1M (flash-loan iToken manipulation), ~half recovered",
+      "Bitocracy DAO/SOV on-chain voting; legacy lend/borrow carried exploited code; Rootstock federated peg",
+      "Overcollateralized RBTC/XUSD/USDT; past undercollateralization from price manipulation; treasury reinjected loss",
+      "Thin Rootstock/RSK liquidity, small relative TVL; Bitcoin-sidechain depth limited",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
 } satisfies Record<YieldRiskConfigProtocol, YieldRiskConfigEntry>;
 
 const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol> = {
@@ -246,6 +688,10 @@ const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol
   "morpho-blue": "morpho-blue",
   pendle: "pendle",
   beefy: "beefy",
+  // Phase 2 venue slug variants → canonical reviewed key
+  "clearpool-lending": "clearpool",
+  sovryn: "sovryn-dex",
+  fraxlend: "fraxlend-v2",
 };
 
 function isYieldRiskConfigProtocol(value: string): value is YieldRiskConfigProtocol {
