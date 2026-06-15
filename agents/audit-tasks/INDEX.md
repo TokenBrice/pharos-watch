@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**94/733 done (13%)**  `███░░░░░░░░░░░░░░░░░`
+**97/733 done (13%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 617 | 3 | 0 | 94 | 19 |
+| Count | 613 | 4 | 0 | 97 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 42 | 1 | 0 | 213 |
-| quality | 315 | 43 | 2 | 0 | 263 |
+| redundancy | 266 | 43 | 1 | 0 | 212 |
+| quality | 315 | 45 | 3 | 0 | 260 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -75,7 +75,7 @@
 | ⬜ | [R-046](redundancy/R-046.md) | S | clone | Duplicate CoinLockup component — reviewer module vs shared row-card |  | `src/components/depeg-resolver-reviewer-module.ts` |
 | ⬜ | [R-047](redundancy/R-047.md) | S | clone | Duplicated resolveApiBase() and fetchHeaders() in two sibling scripts |  | `scripts/maintenance/generate-homepage-bootstrap.` |
 | ⬜ | [R-048](redundancy/R-048.md) | S | clone | normalizeStablecoinRows has near-identical field-building blocks for two payload shapes |  | `scripts/maintenance/audit-dex-pricing-source-gap` |
-| 🔄 | [R-049](redundancy/R-049.md) | S | dead-code | Duplicate path string literals in validation.ts shadow canonical API_PATHS entries | codex | `shared/lib/api-endpoints/validation.ts:L16-17` |
+| ✅ | [R-049](redundancy/R-049.md) | S | dead-code | Duplicate path string literals in validation.ts shadow canonical API_PATHS entries | codex | `shared/lib/api-endpoints/validation.ts:L16-17` |
 | ⬜ | [R-050](redundancy/R-050.md) | S | dead-code | Two ExclusionReason enum values are never emitted by the exclusion engine |  | `shared/lib/selector/types.ts:L349,L352; shared/l` |
 | ⬜ | [R-051](redundancy/R-051.md) | S | clone | Duplicate buildReportCardMap implementations |  | `src/lib/stablecoin-lookups.ts:L14-L19, src/hooks` |
 | ⬜ | [R-052](redundancy/R-052.md) | S | clone | Parallel CSV download implementations: csv-export.ts vs exports/csv.ts |  | `src/lib/csv-export.ts:1-20 + src/lib/exports/csv` |
@@ -192,7 +192,7 @@
 | ✅ | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log | codex | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
 | ⬜ | [R-159](redundancy/R-159.md) | S | dead-code | getCoinsByLifecycleStatus accepts a 'dead' status that is unreachable and always returns [ |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [R-160](redundancy/R-160.md) | S | clone | rowsById map constructed independently in lower-ranked and output-helpers for the same uni |  | `shared/lib/selector/lower-ranked.ts:L109-L110; s` |
-| ⬜ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null |  | `src/lib/sidebar-signals.ts:L55-L57` |
+| 🔄 | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null | codex | `src/lib/sidebar-signals.ts:L55-L57` |
 | ⬜ | [R-162](redundancy/R-162.md) | S | clone | MONTH_INDEX and MONTH_LABEL arrays duplicated between attestation-pdf-index and usdh-nativ |  | `worker/src/cron/reserve-adapters/attestation-pdf` |
 | ⬜ | [R-163](redundancy/R-163.md) | S | dead-code | Report-card cache envelope path (generation-mismatch / invalid-envelope) is unreachable at |  | `worker/src/lib/report-card-cache.ts:L102-L130, L` |
 | ⬜ | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology |  | `shared/lib/methodology-versions/redemption-backs` |
@@ -321,14 +321,14 @@
 | ✅ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
-| ⬜ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts |  | `src/app/screener/picker/use-selector.ts:L163-L16` |
+| 🔄 | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
 | ⬜ | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi |  | `shared/lib/selector/answers-to-screener.ts:L84-L` |
 | ⬜ | [Q-022](quality/Q-022.md) | S | error-handling | Silent broad catch on stress_signals_latest hides D1 transient errors from observability |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ✅ | [Q-023](quality/Q-023.md) | S | testing | depeg-incident-utils.ts has no tests despite being the sole parser for pending-depeg UI da | codex | `src/lib/depeg-incident-utils.ts:L57-L80` |
-| ⬜ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> |  | `src/app/screener/picker/handoff.ts:L128` |
-| 🔄 | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
+| ✅ | [Q-024](quality/Q-024.md) | S | type-safety | buildResultSummaryCoordinationProps erases all prop types via Record<string, unknown> | codex | `src/app/screener/picker/handoff.ts:L128` |
+| ✅ | [Q-026](quality/Q-026.md) | S | error-handling | project-tape.ts silently returns ok status when tape projectors throw | codex | `worker/src/cron/project-tape.ts:106-125` |
 | ⬜ | [Q-028](quality/Q-028.md) | S | type-safety | Mini-app error retry passes potentially-null initData directly to loadSession |  | `src/app/pharoswatchbot/app/client.tsx:L344` |
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
@@ -461,7 +461,7 @@
 | ⬜ | [Q-060](quality/Q-060.md) | S | complexity | price-consensus medianPrice uses floor-index, systematically biasing high for even-sized c |  | `worker/src/lib/price-consensus.ts:L248-L251` |
 | ⬜ | [Q-069](quality/Q-069.md) | M | complexity | `validateRedemptionBackstopRegistry` is a 1117-line god function with nested function decl |  | `scripts/lib/redemption-backstop-validation.ts:L1` |
 | ⬜ | [Q-070](quality/Q-070.md) | S | error-handling | audit-seo-render-budget.mjs silently swallows all per-response accounting errors in the Pl |  | `scripts/maintenance/audit-seo-render-budget.mjs:` |
-| ⬜ | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru |  | `worker/src/cron/mint-burn/run-completion.ts:L154` |
+| 🔄 | [Q-077](quality/Q-077.md) | S | naming | validationFailures in mint-burn metadata aliases apiErrors, producing a misleading cron_ru | codex | `worker/src/cron/mint-burn/run-completion.ts:L154` |
 | ⬜ | [Q-084](quality/Q-084.md) | M | complexity | DailyDigest contains an IIFE returning JSX, splitting layout into two unrelated branches i |  | `src/components/daily-digest.tsx:L249-L333` |
 | ⬜ | [Q-085](quality/Q-085.md) | M | complexity | readRedemptionBackstopLiveMetadata is a 220-line monolithic function with 30+ intermediate |  | `worker/src/lib/redemption-backstop-live-metadata` |
 | ⬜ | [Q-087](quality/Q-087.md) | M | type-safety | Hundreds of entries have reconstructed: false with commits: [] — semantically contradictor |  | `shared/data/methodology-changelogs/depeg-dews/v6` |
