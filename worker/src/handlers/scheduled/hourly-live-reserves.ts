@@ -108,15 +108,15 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   try {
     const drift = await checkCollateralDrift(runtime.db);
     if (drift.driftCoins.length > 0) {
-      const summary = drift.driftCoins
+      const driftSummary = drift.driftCoins
         .map((d) => `${d.id}: live=${d.liveScore}, curated=${d.curatedScore} (Δ${d.delta})`)
         .join("\n");
-      console.warn(`[live-reserves] Collateral drift detected:\n${summary}`);
+      console.warn(`[live-reserves] Collateral drift detected:\n${driftSummary}`);
       await sendReserveSyncAlert(
         runtime,
         "collateral-score-drift",
         "Collateral Score Drift",
-        `${drift.driftCoins.length} coin(s) with >15pt live/curated divergence:\n${summary}`,
+        `${drift.driftCoins.length} coin(s) with >15pt live/curated divergence:\n${driftSummary}`,
         { driftCoinCount: drift.driftCoins.length },
       );
     }
@@ -151,15 +151,15 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
       persistentlyStale.length > PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD
       || maxStaleAgeSec > PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC;
     if (shouldAlert) {
-      const summary = persistentlyStale
+      const staleSummary = persistentlyStale
         .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
         .join("\n");
-      console.warn(`[live-reserves] Persistently-stale independent sources:\n${summary}`);
+      console.warn(`[live-reserves] Persistently-stale independent sources:\n${staleSummary}`);
       await sendReserveSyncAlert(
         runtime,
         "persistently-stale-independent-sources",
         "Persistently-stale independent reserve sources",
-        `${persistentlyStale.length} coin(s) configured-live with degraded/error status and last success >14d ago:\n${summary}`,
+        `${persistentlyStale.length} coin(s) configured-live with degraded/error status and last success >14d ago:\n${staleSummary}`,
         {
           staleCoinCount: persistentlyStale.length,
           maxStaleAgeDays: Math.round(maxStaleAgeSec / DAY_SECONDS),
