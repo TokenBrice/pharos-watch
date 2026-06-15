@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -75,10 +75,13 @@ export function FeedbackModal({
     [onOpenChange, reset]
   );
 
-  const pageUrl =
-    typeof window !== "undefined"
-      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
-      : "/";
+  const pageUrl = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? "/"
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    [],
+  );
 
   const handleSubmit = useCallback(async () => {
     setStatus("loading");
