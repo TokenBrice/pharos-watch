@@ -278,7 +278,10 @@ async function loadActivePresetFollowerRows(db: D1Database): Promise<PresetFollo
       )
       .all<PresetFollowerRow>();
     return result.results ?? [];
-  } catch {
+  } catch (err) {
+    // Query failure (e.g. D1 schema drift) would otherwise produce a silently
+    // zeroed lifecycle snapshot; surface it in Cloudflare logs before degrading.
+    console.warn("[telegram-analytics] loadActivePresetFollowerRows failed:", err);
     return [];
   }
 }
@@ -324,7 +327,8 @@ async function loadPendingDeliveryCount(
       .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts")
       .first<PendingCountRow>();
     return { count: coerceCount(row?.pending_count), unavailableFields: [] };
-  } catch {
+  } catch (err) {
+    console.warn("[telegram-analytics] loadPendingDeliveryCount failed:", err);
     return { count: 0, unavailableFields: ["pendingDeliveries"] };
   }
 }
@@ -344,7 +348,8 @@ async function loadPreviousLifecycleSnapshot(
       )
       .bind(day)
       .first<LifecycleSnapshotRow>();
-  } catch {
+  } catch (err) {
+    console.warn("[telegram-analytics] loadPreviousLifecycleSnapshot failed:", err);
     return null;
   }
 }
@@ -483,7 +488,8 @@ async function loadCurrentSnapshotAge(db: D1Database, day: string): Promise<numb
       .bind(day)
       .first<{ snapshot_at: number | string | null }>();
     return coerceNullableTimestamp(row?.snapshot_at);
-  } catch {
+  } catch (err) {
+    console.warn("[telegram-analytics] loadCurrentSnapshotAge failed:", err);
     return null;
   }
 }
