@@ -12,6 +12,8 @@ const OUTPUT_TYPES = join(__dirname, "../../src/generated/depeg-event-search-dat
 const RELATED_OUTPUT = join(__dirname, "../../src/generated/depeg-event-related-data.json");
 const RELATED_OUTPUT_TYPES = join(__dirname, "../../src/generated/depeg-event-related-data.json.d.ts");
 const CHECK_MODE = process.argv.includes("--check");
+// Keep the command-palette bootstrap payload bounded; the client consumes every
+// generated search entry and does not apply a second depeg-event result cap.
 const SEARCH_EVENT_LIMIT = 10;
 
 interface DepegEventEntry extends DepegEvent {
