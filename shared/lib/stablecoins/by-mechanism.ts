@@ -9,6 +9,9 @@ import {
 } from "./registry";
 
 const COMMODITY_PEG_CURRENCIES = new Set(["GOLD", "SILVER"] as const);
+const ACTIVE_META_MAP = ACTIVE_META_BY_ID;
+const PRE_LAUNCH_META_MAP = new Map(PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, coin]));
+const FROZEN_META_MAP = new Map(FROZEN_STABLECOINS.map((coin) => [coin.id, coin]));
 
 function isNotCommodity(coin: StablecoinMeta): boolean {
   return !COMMODITY_PEG_CURRENCIES.has(coin.flags.pegCurrency as "GOLD" | "SILVER");
@@ -75,13 +78,20 @@ export function getCoinsByLifecycleStatus(
   archetype: MechanismArchetype,
   status: "active" | "pre-launch" | "frozen" | "dead",
 ): StablecoinMeta[] {
-  let pool: StablecoinMeta[];
-  if (status === "active") pool = ACTIVE_STABLECOINS;
-  else if (status === "pre-launch") pool = PRE_LAUNCH_STABLECOINS;
-  else if (status === "frozen") pool = FROZEN_STABLECOINS;
-  else return [];
-
-  const registryForPool = new Map(pool.map((c) => [c.id, c]));
+  let pool: readonly StablecoinMeta[];
+  let registryForPool: ReadonlyMap<string, StablecoinMeta>;
+  if (status === "active") {
+    pool = ACTIVE_STABLECOINS;
+    registryForPool = ACTIVE_META_MAP;
+  } else if (status === "pre-launch") {
+    pool = PRE_LAUNCH_STABLECOINS;
+    registryForPool = PRE_LAUNCH_META_MAP;
+  } else if (status === "frozen") {
+    pool = FROZEN_STABLECOINS;
+    registryForPool = FROZEN_META_MAP;
+  } else {
+    return [];
+  }
 
   return pool.filter(
     (coin) =>
