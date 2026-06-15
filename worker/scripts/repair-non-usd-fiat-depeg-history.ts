@@ -32,7 +32,7 @@ import { fetchWithRetry } from "../src/lib/fetch-retry";
 import { normalizeSupportedPegCurrency } from "../src/lib/native-peg-quotes";
 import { buildPriceReasonablenessOptions } from "../src/lib/price-validation";
 import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
-import { createWorkerD1Client } from "./lib/remote-d1";
+import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
 const SQL_BATCH_SIZE = 200;
@@ -131,10 +131,6 @@ function loadDotVarsIfNeeded(): void {
   }
 }
 
-function escapeSqlString(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 function sqlNumber(value: number | null): string {
   return value == null ? "NULL" : Number.isFinite(value) ? String(value) : "NULL";
 }
@@ -160,7 +156,7 @@ function d1BatchExec(statements: string[]): void {
 }
 
 function buildSqlInList(values: string[]): string {
-  return values.map((value) => `'${escapeSqlString(value)}'`).join(", ");
+  return values.map((value) => sqlString(value)).join(", ");
 }
 
 function buildAffectedRange(
@@ -411,14 +407,10 @@ function buildInsertStatements(
   pegType: string,
   events: ReturnType<typeof extractDepegEvents>,
 ): string[] {
-  const escapedStablecoinId = escapeSqlString(stablecoinId);
-  const escapedSymbol = escapeSqlString(symbol);
-  const escapedPegType = escapeSqlString(pegType);
-
   return events.map(
     (event) =>
       `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source) VALUES (` +
-      `'${escapedStablecoinId}', '${escapedSymbol}', '${escapedPegType}', '${escapeSqlString(event.direction)}', ` +
+      `${sqlString(stablecoinId)}, ${sqlString(symbol)}, ${sqlString(pegType)}, ${sqlString(event.direction)}, ` +
       `${event.peakDeviationBps}, ${event.startedAt}, ${sqlNumber(event.endedAt)}, ${sqlNumber(event.startPrice)}, ` +
       `${sqlNumber(event.peakPrice)}, ${sqlNumber(event.recoveryPrice)}, ${sqlNumber(event.pegRef)}, 'backfill');`,
   );

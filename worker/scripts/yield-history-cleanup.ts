@@ -9,7 +9,7 @@ import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../src/lib/yield-history-ownership-handoffs";
-import { createWorkerD1Client } from "./lib/remote-d1";
+import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
 
@@ -83,14 +83,10 @@ function buildYieldHistoryWriterPausePayload(
   };
 }
 
-function escapeSqlString(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 function sqlValue(value: unknown): string {
   if (value == null) return "NULL";
   if (typeof value === "number") return Number.isFinite(value) ? String(value) : "NULL";
-  return `'${escapeSqlString(String(value))}'`;
+  return sqlString(String(value));
 }
 
 function buildTargetWhereClause(target: YieldHistoryCleanupTarget): string {
