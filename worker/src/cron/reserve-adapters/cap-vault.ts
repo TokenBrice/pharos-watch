@@ -110,6 +110,15 @@ export function adaptCapVaultState(args: {
       `Cap vault returned unconfigured asset "${asset.name}" (${asset.address}); exposure is classified high risk`,
     ));
   }
+  const unknownUnpricedAssets = unknownAssets.filter((asset) => (
+    asset.priceUsd == null && !isRecognizedUsdLikeReserve(asset)
+  ));
+  for (const asset of unknownUnpricedAssets) {
+    warnings.push(reserveInfoWarning(
+      "cap-vault-unknown-asset-peg-assumed",
+      `Cap vault unconfigured asset "${asset.name}" (${asset.address}) has no configured priceUsd and is not USD-like; valued at 1 USD per unit, which may misstate reserve totals`,
+    ));
+  }
   const unpricedNonUsdAssets = activeAssets.filter((asset) => (
     asset.configured !== false
     && asset.priceUsd == null

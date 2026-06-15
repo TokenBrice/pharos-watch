@@ -182,6 +182,11 @@ describe("adaptCapVaultState", () => {
     const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
     expect(warning).toBeDefined();
     expect(warning?.effect).toBe("degraded");
+    // Unconfigured, unpriced, non-USD-like assets are valued at $1.00; surface
+    // that the fallback may misstate reserve totals.
+    const pegWarning = result.warnings?.find((w) => w.code === "cap-vault-unknown-asset-peg-assumed");
+    expect(pegWarning).toBeDefined();
+    expect(pegWarning?.severity).toBe("info");
   });
 
   it("fails closed for configured non-USD-like assets without priceUsd", () => {
