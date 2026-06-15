@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
+
 const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const PHAROS_ORIGIN = "https://pharos.watch";
@@ -542,17 +544,6 @@ function retiredInternalRouteMatch(normalizedHref) {
       return normalizedHref.startsWith(normalizedPrefix);
     }) ?? null
   );
-}
-
-function parseSitemapLocs(xml) {
-  const locs = [];
-  const re = /<loc>([^<]+)<\/loc>/g;
-  let m = re.exec(xml);
-  while (m) {
-    locs.push(m[1]);
-    m = re.exec(xml);
-  }
-  return new Set(locs);
 }
 
 function extractJsonLdBlocks(html) {
@@ -1133,7 +1124,7 @@ export function collectSeoStaticCheckResult({
     errors.push("out/sitemap.xml missing");
   } else {
     const sitemapXml = fs.readFileSync(sitemapPath, "utf8");
-    const locs = parseSitemapLocs(sitemapXml);
+    const locs = parseSitemapLocs(sitemapXml, { asSet: true });
     const stabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index/`;
     const alternateStabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index-alt/`;
     if (!locs.has(stabilityIndexUrl)) {

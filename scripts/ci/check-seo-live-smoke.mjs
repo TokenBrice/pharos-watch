@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_BASE_URL = process.env.SEO_LIVE_SMOKE_URL ?? "https://pharos.watch";
@@ -48,17 +49,6 @@ function normalizeBaseUrl(input) {
 
 function resolveRoute(baseUrl, route) {
   return new URL(route.startsWith("/") ? route : `/${route}`, baseUrl).toString();
-}
-
-function parseSitemapLocs(xml) {
-  const locs = [];
-  const re = /<loc>([^<]+)<\/loc>/g;
-  let match = re.exec(xml);
-  while (match) {
-    locs.push(match[1]);
-    match = re.exec(xml);
-  }
-  return locs;
 }
 
 function extractRobots(html) {
