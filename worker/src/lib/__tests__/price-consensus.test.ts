@@ -9,12 +9,12 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("high");
-    expect(result!.price).toBeCloseTo(1.0003, 4);
+    expect(result!.price).toBeCloseTo(1.0002, 6);
     expect(result!.selectedSource).toBe("coingecko");
     expect(result!.source).toContain("coingecko");
   });
 
-  it("uses the upper-middle cluster median for even-sized agreement clusters", () => {
+  it("uses the midpoint median for even-sized agreement clusters", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 0.999, weight: 2 },
       { source: "pyth", price: 1.001, weight: 2 },
@@ -23,7 +23,7 @@ describe("computePriceConsensus", () => {
     const result = computePriceConsensus(sources, 1.0, 50);
 
     expect(result!.confidence).toBe("high");
-    expect(result!.price).toBe(1.001);
+    expect(result!.price).toBe(1.0);
   });
 
   it("returns low confidence when sources diverge", () => {
@@ -92,7 +92,7 @@ describe("computePriceConsensus", () => {
     expect(result!.agreeSources).toEqual(expect.arrayContaining(["coingecko", "defillama"]));
     expect(result!.agreeSources).not.toContain("pyth");
     expect(result!.disagreeSources).toContain("pyth");
-    expect(result!.price).toBe(1.004);
+    expect(result!.price).toBe(1.002);
     expect(result!.selectedSource).toBe("coingecko");
   });
 
@@ -108,7 +108,7 @@ describe("computePriceConsensus", () => {
 
     expect(result!.confidence).toBe("high");
     expect(result!.source).toBe("curve+pyth");
-    expect(result!.price).toBe(0.9942);
+    expect(result!.price).toBe(0.9941);
   });
 
   it("prefers hard-tier cluster over equal-size-equal-weight soft cluster", () => {
@@ -133,7 +133,7 @@ describe("computePriceConsensus", () => {
       { source: "binance", price: 1.0002, weight: 2 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
-    expect(result!.price).toBe(1.0002);
+    expect(result!.price).toBe(1.00015);
     expect(result!.source).toContain("binance");
   });
 
@@ -149,8 +149,8 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, null, 50);
     expect(result!.confidence).toBe("high");
-    // Equal weight — tie broken by proximity to cluster median (1.15)
-    expect(result!.price).toBe(1.15);
+    // Equal weight — tie broken by proximity to cluster median (1.135)
+    expect(result!.price).toBeCloseTo(1.135, 6);
   });
 
   it("keeps fixed-peg clustering rules even when peg reference is temporarily unavailable", () => {
@@ -162,8 +162,8 @@ describe("computePriceConsensus", () => {
     const result = computePriceConsensus(sources, null, 50, { mode: "fixed" });
 
     expect(result!.confidence).toBe("low");
-    expect(result!.source).toBe("defillama");
-    expect(result!.price).toBe(1.008);
+    expect(result!.source).toBe("coingecko");
+    expect(result!.price).toBe(1.0);
   });
 
   it("breaks weight tie by choosing source closest to peg reference", () => {
