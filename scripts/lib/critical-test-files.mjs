@@ -14,6 +14,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
   "worker/src/lib/__tests__/evm-rpc.test.ts",
   "worker/src/lib/__tests__/safety-scores.test.ts",
+  "worker/src/lib/__tests__/safety-score-golden.test.ts",
   "worker/src/lib/__tests__/stablecoins-cache.test.ts",
   "worker/src/lib/__tests__/price-divergence.test.ts",
   "worker/src/lib/__tests__/price-consensus.test.ts",
