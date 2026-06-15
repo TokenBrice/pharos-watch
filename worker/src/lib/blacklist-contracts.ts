@@ -406,20 +406,20 @@ const FRAX_FREEZE_FAMILY = defineEventFamily("frax-freeze", [
 
 // --- MNEE freeze/confiscation event definitions ---
 
-const MNEE_FUNDS_CONFISCATED_TOPIC = "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4"; // FundsConfiscated(address,uint256,address)
-const MNEE_HOLDINGS_BURNT_TOPIC = "0x1b560ad975f2a2685fce792af7ad191c5f1c0bfbbf108c676319be3ccb014ddf"; // HoldingsBurnt(address,uint256)
+const MNEE_FUNDS_CONFISCATED_TOPIC = "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4"; // FundsConfiscated(address indexed,uint256 indexed,address indexed)
+const MNEE_HOLDINGS_BURNT_TOPIC = "0x1b560ad975f2a2685fce792af7ad191c5f1c0bfbbf108c676319be3ccb014ddf"; // HoldingsBurnt(address indexed,uint256 indexed)
 
 const MNEE_EVENT_FAMILY = defineEventFamily("mnee-freeze-confiscation", [
   ...ACCOUNT_FREEZE_EVENT_FAMILY.events,
   {
-    signature: "FundsConfiscated(address,uint256,address)",
+    signature: "FundsConfiscated(address indexed,uint256 indexed,address indexed)",
     topicHash: MNEE_FUNDS_CONFISCATED_TOPIC,
     eventType: "destroy",
     hasAmount: true,
     amountTopicIndex: 2,
   },
   {
-    signature: "HoldingsBurnt(address,uint256)",
+    signature: "HoldingsBurnt(address indexed,uint256 indexed)",
     topicHash: MNEE_HOLDINGS_BURNT_TOPIC,
     eventType: "destroy",
     hasAmount: true,
