@@ -132,10 +132,7 @@ export const HOMEPAGE_DISCOVERY_POOL: readonly HomepageDiscoverySuggestion[] = [
 export const HOMEPAGE_DISCOVERY_ROTATION_POOL: readonly HomepageDiscoverySuggestion[] =
   interleaveDiscoverySuggestions(HOMEPAGE_DISCOVERY_POOL);
 
-export function getHomepageDiscoveryCycleLength(
-  poolLength = HOMEPAGE_DISCOVERY_ROTATION_POOL.length,
-  _visibleCount = HOMEPAGE_DISCOVERY_VISIBLE_COUNT,
-): number {
+export function getHomepageDiscoveryCycleLength(poolLength = HOMEPAGE_DISCOVERY_ROTATION_POOL.length): number {
   if (poolLength <= 0) return 1;
   return Math.max(1, Math.floor(poolLength));
 }
