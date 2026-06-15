@@ -12,6 +12,7 @@ import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
+import type { DigestContentEntry } from "@shared/types";
 import digests from "../../data/digests.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
@@ -37,6 +38,23 @@ interface DepegEventSitemapEntry {
   endedAt: number | null;
   peakDeviationBps: number;
 }
+
+type SitemapDigestEntry = Pick<DigestContentEntry, "date" | "generatedAt" | "digestType">;
+
+export const DIGEST_DAILY_SITEMAP_LIMIT = 14;
+
+export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = [
+  "/methodology/scoring-changelog/",
+  "/methodology/depeg-changelog/",
+  "/methodology/depeg-resolver-changelog/",
+  "/methodology/blacklist-tracker-changelog/",
+  "/methodology/liquidity-score-changelog/",
+  "/methodology/stability-index-changelog/",
+  "/methodology/mint-burn-flow-changelog/",
+  "/methodology/yield-changelog/",
+  "/methodology/pricing-pipeline-changelog/",
+  "/methodology/chain-health-changelog/",
+] as const;
 
 function readDepegEventEntries(): readonly DepegEventSitemapEntry[] {
   const filePath = join(process.cwd(), "data/depeg-events.json");
@@ -93,6 +111,23 @@ function comparisonLastModified(page: (typeof STATIC_COMPARISON_PAGES)[number]):
       lastEdited(buildStablecoinUrl(page.right.id)).getTime(),
     ),
   );
+}
+
+function sortNewestDigestFirst<T extends SitemapDigestEntry>(entries: readonly T[]): T[] {
+  return [...entries].sort((left, right) => {
+    if (right.generatedAt !== left.generatedAt) return right.generatedAt - left.generatedAt;
+    return right.date.localeCompare(left.date);
+  });
+}
+
+export function selectSitemapDigestEntries<T extends SitemapDigestEntry>(entries: readonly T[]): readonly T[] {
+  const weekly = entries.filter((entry) => entry.digestType === "weekly");
+  const daily = sortNewestDigestFirst(entries.filter((entry) => entry.digestType !== "weekly")).slice(
+    0,
+    DIGEST_DAILY_SITEMAP_LIMIT,
+  );
+
+  return sortNewestDigestFirst([...weekly, ...daily]);
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -253,66 +288,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    {
-      url: `${SITE_URL}/methodology/scoring-changelog/`,
-      lastModified: lastEdited("/methodology/scoring-changelog/"),
-      changeFrequency: "monthly",
+    ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS.map((path) => ({
+      url: `${SITE_URL}${path}`,
+      lastModified: lastEdited(path),
+      changeFrequency: "monthly" as const,
       priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/depeg-changelog/`,
-      lastModified: lastEdited("/methodology/depeg-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/depeg-resolver-changelog/`,
-      lastModified: lastEdited("/methodology/depeg-resolver-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/blacklist-tracker-changelog/`,
-      lastModified: lastEdited("/methodology/blacklist-tracker-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/liquidity-score-changelog/`,
-      lastModified: lastEdited("/methodology/liquidity-score-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/stability-index-changelog/`,
-      lastModified: lastEdited("/methodology/stability-index-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/mint-burn-flow-changelog/`,
-      lastModified: lastEdited("/methodology/mint-burn-flow-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/yield-changelog/`,
-      lastModified: lastEdited("/methodology/yield-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/pricing-pipeline-changelog/`,
-      lastModified: lastEdited("/methodology/pricing-pipeline-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/methodology/chain-health-changelog/`,
-      lastModified: lastEdited("/methodology/chain-health-changelog/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
+    })),
     {
       url: `${SITE_URL}/changelog/`,
       lastModified: changelogLastModified(),
@@ -417,7 +398,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  const digestPages: MetadataRoute.Sitemap = digests.map((d) => ({
+  const digestPages: MetadataRoute.Sitemap = selectSitemapDigestEntries(digests).map((d) => ({
     url: `${SITE_URL}/digest/${d.date}/`,
     lastModified: new Date(d.generatedAt * 1000),
     changeFrequency: "never" as const,

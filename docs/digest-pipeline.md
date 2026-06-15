@@ -165,6 +165,10 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 
 After the digest is stored in D1, it is posted to the configured Telegram channel. Delivery is **non-fatal**: a delivery failure logs a warning but never prevents the digest from being stored.
 
+### Web archive and sitemap policy
+
+`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Individual digest detail pages stay indexable, but `src/app/sitemap.ts` only promotes weekly recaps plus the newest bounded daily slice selected by `selectSitemapDigestEntries(...)` (`DIGEST_DAILY_SITEMAP_LIMIT`). Older daily briefs remain reachable from the archive for readers and citations without asking crawlers to treat every generated daily recap as a first-class sitemap URL.
+
 ### Twitter
 
 **File:** `worker/src/lib/twitter.ts`
