@@ -202,6 +202,23 @@ describe("yield source-risk registry", () => {
     });
   });
 
+  it("agrees with Yearn's published yvUSDC risk report (calibration anchor)", () => {
+    // Yearn's own report scores yvUSDC 1.3/5 "Minimal". Its funded legs are
+    // spark-savings (sUSDS) + sparklend; both must derive to `low` so our tiering
+    // neither over- nor under-penalizes the vault vs Yearn's external assessment.
+    // See docs/process/yield-venue-risk-yearn-calibration-2026-06.md
+    for (const venue of ["spark-savings", "sparklend"] as const) {
+      const config = resolveReviewedYieldRiskConfig(venue);
+      expect(config, venue).not.toBeNull();
+      expect(venueRiskTierOf(config!), venue).toBe("low");
+      expect(venueRiskWeightedOf(config!), venue).toBeLessThan(2.5);
+    }
+    // The single-ecosystem (Sky) concentration Yearn flags as its dominant risk —
+    // which per-venue tiering structurally misses — is captured separately.
+    expect(resolveDependencyConcentration("yvusdc-yearn")?.ecosystem).toBe("Sky");
+    expect(resolveDependencyConcentration("yvusdc-yearn")?.severity).toBe("medium");
+  });
+
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {
     const yvusdc = resolveDependencyConcentration("yvusdc-yearn");
     expect(yvusdc?.ecosystem).toBe("Sky");
