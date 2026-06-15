@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**83/733 done (11%)**  `██░░░░░░░░░░░░░░░░░░`
+**86/733 done (12%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 627 | 4 | 0 | 83 | 19 |
+| Count | 624 | 4 | 0 | 86 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 39 | 1 | 0 | 216 |
-| quality | 315 | 35 | 3 | 0 | 270 |
+| redundancy | 266 | 40 | 1 | 0 | 215 |
+| quality | 315 | 37 | 3 | 0 | 268 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -51,7 +51,7 @@
 | ⬜ | [R-022](redundancy/R-022.md) | S | clone | Duplicate readableComponentKey function with divergent implementations |  | `src/app/screener/picker/result-pane.tsx:534-546 ` |
 | ⬜ | [R-023](redundancy/R-023.md) | S | clone | ChartMargin interface defined twice in the same chart-primitives directory |  | `src/components/chart-primitives/axes.tsx:L25-L31` |
 | ⬜ | [R-024](redundancy/R-024.md) | S | clone | countConsecutiveStatus and getLastSuccessfulRun duplicated between cron-card and cron-lane |  | `src/components/status/cron-card.tsx:L39-L55, src` |
-| ⬜ | [R-025](redundancy/R-025.md) | S | dead-code | PharosLogoWithText exported but never imported |  | `src/components/pharos-logo.tsx:L41-L59` |
+| 🔄 | [R-025](redundancy/R-025.md) | S | dead-code | PharosLogoWithText exported but never imported | codex | `src/components/pharos-logo.tsx:L41-L59` |
 | ⬜ | [R-026](redundancy/R-026.md) | S | clone | Data-source label map duplicated across two modules |  | `src/components/yield-detail-section-model.ts:L17` |
 | ✅ | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
 | ✅ | [R-028](redundancy/R-028.md) | S | clone | stringValue / numberValue re-defined locally in 6+ maintenance scripts despite shared expo | codex | `scripts/maintenance/audit-dia-provider-poc.ts:L1` |
@@ -180,7 +180,7 @@
 | ✅ | [R-146](redundancy/R-146.md) | S | dead-code | requireGroupAdminForCallback carries a _db parameter that is never used | codex | `worker/src/api/telegram-webhook-auth.ts:L80-L93` |
 | ⬜ | [R-147](redundancy/R-147.md) | S | clone | DRPC_NETWORK map duplicated in balance-providers.ts and chainlink-feeds.ts |  | `worker/src/cron/blacklist/balance-providers.ts:L` |
 | ⬜ | [R-148](redundancy/R-148.md) | S | wrapper | loadLastRunSec / recordLastRunSec re-implement the shared cache abstraction |  | `worker/src/cron/telegram-inactive-cleanup.ts:L51` |
-| 🔄 | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts | codex | `worker/src/lib/cex-tickers.ts:L65-L68` |
+| ✅ | [R-149](redundancy/R-149.md) | S | clone | cex-tickers.ts duplicates parsePositiveNumber from number-utils.ts | codex | `worker/src/lib/cex-tickers.ts:L65-L68` |
 | ⬜ | [R-150](redundancy/R-150.md) | S | wrapper | Four single-line wrapper functions add no value over direct shouldSkipFreshMatchingCache c |  | `worker/src/lib/telegram-webhook-registration.ts:` |
 | ⬜ | [R-151](redundancy/R-151.md) | S | dead-code | Dead else-if branch in buildCacheStatuses statusFloor finalization |  | `worker/src/lib/api-freshness.ts:L414-L422` |
 | ⬜ | [R-152](redundancy/R-152.md) | S | clone | bigIntToDecimal is a one-line wrapper over decimalNumberFromBigInt |  | `worker/src/lib/bigint.ts:L26-L28` |
@@ -437,8 +437,8 @@
 | ✅ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
 | ✅ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be | codex | `src/components/exploit-notice-banner.tsx:L11-L35` |
 | ✅ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function | codex | `scripts/maintenance/fetch-logos.ts:90-96` |
-| 🔄 | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
-| ⬜ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function |  | `worker/src/cron/sync-live-reserves-run-state.ts:` |
+| ✅ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
+| 🔄 | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function | codex | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ⬜ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key |  | `src/components/status/admin-action-button.tsx:L3` |
 | ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
@@ -516,7 +516,7 @@
 | ⬜ | [Q-199](quality/Q-199.md) | S | error-handling | SectionBanner swallows clipboard write rejection silently |  | `src/components/stablecoin-detail/section-banner.` |
 | ✅ | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link | codex | `src/components/home-alt-mini-cards/supply-moves-` |
 | ⬜ | [Q-201](quality/Q-201.md) | S | complexity | HomeAltHeroChart calls makeScales redundantly — once per area path and once per top-line p |  | `src/components/home-alt-hero-chart.tsx:L119-L173` |
-| 🔄 | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices | codex | `src/components/exploit-notice-banner.tsx:L49` |
+| ✅ | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices | codex | `src/components/exploit-notice-banner.tsx:L49` |
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
 | ⬜ | [Q-204](quality/Q-204.md) | S | error-handling | sourceRiskInverted silent-null contract breaks the special-case detection in scoreRow |  | `shared/lib/selector/normalization.ts:L63, shared` |
 | ⬜ | [Q-205](quality/Q-205.md) | S | type-safety | ApiKeySelfServeCadence is a plain TypeScript union type with no Zod schema — unlike every  |  | `shared/types/api-key-requests.ts:L15-L20` |
@@ -596,7 +596,7 @@
 | ⬜ | [Q-279](quality/Q-279.md) | S | error-handling | sealPublicOutcome has a TOCTOU window: load-then-insert is not atomic, causing a misleadin |  | `worker/src/lib/depeg-resolver-publication-store.` |
 | ⬜ | [Q-280](quality/Q-280.md) | S | complexity | topologicalOrder has no cycle detection; a dependency cycle silently produces a wrong orde |  | `worker/src/lib/report-cards-snapshot-card.ts:L47` |
 | ⬜ | [Q-281](quality/Q-281.md) | S | error-handling | methodology-change kind applied to non-methodology product pivots, diluting the Pharos met |  | `shared/data/annotations/curated-annotations.ts:L` |
-| ⬜ | [Q-282](quality/Q-282.md) | S | dead-code | Dead null-coalescing guards on a non-optional number field (worstCacheRatio) |  | `src/app/admin/sections/reliability-section.tsx:7` |
+| 🔄 | [Q-282](quality/Q-282.md) | S | dead-code | Dead null-coalescing guards on a non-optional number field (worstCacheRatio) | codex | `src/app/admin/sections/reliability-section.tsx:7` |
 | ⬜ | [Q-283](quality/Q-283.md) | S | complexity | YieldIntelligenceMethodologySection is a 302-line single-component file with a long prose  |  | `src/app/methodology/sections/monitoring/yield-in` |
 | ⬜ | [Q-284](quality/Q-284.md) | M | type-safety | stripCommentsAndStrings in check-feature-flag-inlining.mjs does not handle template-litera |  | `scripts/ci/check-feature-flag-inlining.mjs:L52-L` |
 | ⬜ | [Q-285](quality/Q-285.md) | S | error-handling | coin-notice.tsx uses array index as React list key for potentially stable, ordered notices |  | `src/components/coin-notice.tsx:L59` |
