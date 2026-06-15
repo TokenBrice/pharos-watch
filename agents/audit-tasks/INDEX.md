@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**117/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
+**119/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 593 | 4 | 0 | 117 | 19 |
+| Count | 588 | 7 | 0 | 119 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 50 | 1 | 0 | 205 |
-| quality | 315 | 57 | 2 | 0 | 249 |
-| sustainability | 152 | 10 | 1 | 0 | 139 |
+| redundancy | 266 | 50 | 3 | 0 | 203 |
+| quality | 315 | 58 | 4 | 0 | 246 |
+| sustainability | 152 | 11 | 0 | 0 | 139 |
 
 ## redundancy (266)
 
@@ -31,7 +31,7 @@
 | ✅ | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value | codex | `shared/lib/redemption-backstop-configs/queue-red` |
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
-| ⬜ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store |  | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
+| 🔄 | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
@@ -150,7 +150,7 @@
 | ⬜ | [R-116](redundancy/R-116.md) | S | dead-code | Dead `screenerFilterChips` key in buildResultSummaryCoordinationProps spread |  | `src/app/screener/picker/handoff.ts:L136` |
 | ⬜ | [R-117](redundancy/R-117.md) | S | clone | gradeRank() duplicated with divergent NR semantics across two files |  | `src/components/stablecoin-detail/safety-score-hi` |
 | ⬜ | [R-118](redundancy/R-118.md) | S | clone | scheduleIdle() is a near-clone in two component files |  | `src/components/home-alt-hero-chart-gate.tsx:29-4` |
-| ⬜ | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array |  | `src/components/depeg-tracker-table.tsx:L68-L74` |
+| 🔄 | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array | codex | `src/components/depeg-tracker-table.tsx:L68-L74` |
 | ✅ | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta | codex | `shared/lib/stablecoins/schema.ts:L126-L128` |
 | ⬜ | [R-121](redundancy/R-121.md) | S | clone | Same calendar dates aliased under 3-4 different constant names across files |  | `shared/lib/redemption-backstop-configs/review-da` |
 | ⬜ | [R-122](redundancy/R-122.md) | S | clone | Duplicate depeg-step type-guard: isDepegStep vs isDepegStepValue |  | `worker/src/api/telegram-webhook-settings-shared.` |
@@ -337,7 +337,7 @@
 | ⬜ | [Q-041](quality/Q-041.md) | M | clone | Alert-safety explain snapshot re-derives stage scores from rounded baseScore, diverging fr |  | `worker/src/lib/alert-safety-source-cache.ts:L470` |
 | ✅ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh | codex | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
-| ⬜ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple |  | `eslint.config.mjs:147-155` |
+| 🔄 | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
 | ⬜ | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response |  | `src/app/screener/picker/use-selector.ts:L54` |
 | ⬜ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox |  | `src/components/coin-selector.tsx:L205-L207` |
 | ⬜ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard |  | `worker/src/handlers/scheduled/five-minute-telegr` |
@@ -450,7 +450,7 @@
 | ⬜ | [Q-037](quality/Q-037.md) | S | error-handling | Wrong bootstrap-source key passed to resolveBootstrapAllowed for yield-rankings loader |  | `worker/src/cron/dews/source-state/hydration.ts:L` |
 | ⬜ | [Q-038](quality/Q-038.md) | S | error-handling | loadDewsRows always issues two DB queries; legacy table queried even when latest is comple |  | `worker/src/cron/dispatch-telegram-state.ts:L70-L` |
 | ⬜ | [Q-042](quality/Q-042.md) | S | dead-code | DewsInsufficientEvidenceReason variant 'total_weight_below_minimum' is declared but never  |  | `worker/src/lib/dews/types.ts:L107-L111, worker/s` |
-| 🔄 | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" | codex | `src/app/docs/[slug]/page.tsx:L82-L97` |
+| ✅ | [Q-046](quality/Q-046.md) | S | error-handling | External links rendered via ReactMarkdown in the docs page lack rel="noopener noreferrer" | codex | `src/app/docs/[slug]/page.tsx:L82-L97` |
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
@@ -520,7 +520,7 @@
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
 | ⬜ | [Q-204](quality/Q-204.md) | S | error-handling | sourceRiskInverted silent-null contract breaks the special-case detection in scoreRow |  | `shared/lib/selector/normalization.ts:L63, shared` |
 | ⬜ | [Q-205](quality/Q-205.md) | S | type-safety | ApiKeySelfServeCadence is a plain TypeScript union type with no Zod schema — unlike every  |  | `shared/types/api-key-requests.ts:L15-L20` |
-| ⬜ | [Q-206](quality/Q-206.md) | M | error-handling | use-status-history builds /api/status-history URL inline, bypassing the shared API_PATHS h |  | `src/hooks/use-status-history.ts:L18-L25` |
+| 🔄 | [Q-206](quality/Q-206.md) | M | error-handling | use-status-history builds /api/status-history URL inline, bypassing the shared API_PATHS h | codex | `src/hooks/use-status-history.ts:L18-L25` |
 | ⬜ | [Q-207](quality/Q-207.md) | S | clone | TOTAL_VALUE_SELECTOR (0xd4c3eea0) defined independently in two adapter files |  | `worker/src/cron/reserve-adapters/blast-usdb-yiel` |
 | ✅ | [Q-208](quality/Q-208.md) | S | naming | M0 adapter metadata comment `cashUnits: 'milli-usd-to-micro-usd'` is factually wrong | codex | `worker/src/cron/reserve-adapters/m0.ts:L63, L171` |
 | ⬜ | [Q-209](quality/Q-209.md) | S | error-handling | sync-bluechip setTimeout delay does not respect AbortSignal |  | `worker/src/cron/sync-bluechip.ts:L127` |
@@ -604,7 +604,7 @@
 | ⬜ | [Q-287](quality/Q-287.md) | S | complexity | DepegFeed seenIds Set grows without bound across the component lifetime |  | `src/components/depeg-feed.tsx:L44, L85-L94` |
 | ⬜ | [Q-288](quality/Q-288.md) | M | complexity | usePortfolio reads window.location.search directly in getInitialPortfolioState, bypassing  |  | `src/hooks/use-portfolio.ts:L78-L99` |
 | ⬜ | [Q-289](quality/Q-289.md) | S | error-handling | cancelResponseBodyQuietly called after res.json() already consumed body — misleading dead  |  | `worker/src/cron/sync-stablecoins/enrich-prices-d` |
-| ⬜ | [Q-290](quality/Q-290.md) | S | type-safety | rowToDepegEvent silently ignores unknown direction/source values after warning |  | `worker/src/lib/depeg-helpers.ts:356-401` |
+| 🔄 | [Q-290](quality/Q-290.md) | S | type-safety | rowToDepegEvent silently ignores unknown direction/source values after warning | codex | `worker/src/lib/depeg-helpers.ts:356-401` |
 | ⬜ | [Q-291](quality/Q-291.md) | S | naming | formatRouteAvailabilityReviewedAt is exported but semantically identical to inline formatU |  | `worker/src/lib/redemption-backstop-availability.` |
 | ⬜ | [Q-292](quality/Q-292.md) | S | naming | Two METHODOLOGY_SECTIONS nav IDs omit the '-methodology' suffix used by all other entries |  | `src/app/methodology/methodology-shared.tsx:17,21` |
 | ⬜ | [Q-293](quality/Q-293.md) | S | complexity | FundingKpiRow builds branching label objects inline, adding cognitive load |  | `src/components/funding/funding-page-sections.tsx` |
@@ -728,7 +728,7 @@
 | ⬜ | [S-078](sustainability/S-078.md) | S | coupling | toTimestampMs from yield-history-chart-model is imported by a page-level module, coupling  |  | `src/components/yield-history-chart-model.ts:L203` |
 | ⬜ | [S-079](sustainability/S-079.md) | S | config | PEG_FILTER_OPTIONS is a hardcoded three-entry subset with no documentation of the selectio |  | `shared/lib/classification/pegs.ts:L416-L421` |
 | ⬜ | [S-080](sustainability/S-080.md) | S | config | Worker runtime binding order numbers in env-contract registry are non-unique across status |  | `shared/lib/env-contract/registry.ts:L200-272` |
-| 🔄 | [S-081](sustainability/S-081.md) | S | config | render-env-example.ts applies an initial alphabetical sort that is unconditionally discard | codex | `shared/lib/env-contract/render-env-example.ts:L1` |
+| ✅ | [S-081](sustainability/S-081.md) | S | config | render-env-example.ts applies an initial alphabetical sort that is unconditionally discard | codex | `shared/lib/env-contract/render-env-example.ts:L1` |
 | ⬜ | [S-082](sustainability/S-082.md) | S | error-handling | eEARN admin-configurable fee hardcoded as 0 with no enforcement of noted future telemetry |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ⬜ | [S-083](sustainability/S-083.md) | L | complexity | weekly-recap.ts is a 1302-line monolith mixing data collection, aggregation, and LLM orche |  | `worker/src/cron/weekly-recap.ts:L1-L1302` |
 | ⬜ | [S-084](sustainability/S-084.md) | S | naming | Commit hash lengths are inconsistent across entries — 7-char vs 8-char |  | `src/data/changelogs/2026-03-08.ts:L18, src/data/` |
