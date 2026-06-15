@@ -107,11 +107,13 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   } else {
+    const tronRpc = getPublicRpcUrl("tron");
+    if (!tronRpc) throw new Error("No public RPC for tron");
     configs.push({
       chainId: "tron",
       chainName: CHAIN_META.tron.name,
       type: "tron",
-      rpcUrl: getPublicRpcUrl("tron")!,
+      rpcUrl: tronRpc,
       explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   }
