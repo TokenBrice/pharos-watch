@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**127/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
+**129/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 585 | 1 | 0 | 127 | 20 |
+| Count | 580 | 3 | 0 | 129 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 52 | 1 | 0 | 203 |
-| quality | 315 | 63 | 0 | 0 | 244 |
+| redundancy | 266 | 52 | 1 | 0 | 202 |
+| quality | 315 | 65 | 2 | 0 | 240 |
 | sustainability | 152 | 12 | 0 | 0 | 138 |
 
 ## redundancy (266)
@@ -32,7 +32,7 @@
 | ✅ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ✅ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store | codex | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
-| ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
+| 🔄 | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules | codex | `worker/src/api/telegram-webhook-settings-mutatio` |
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
@@ -218,7 +218,7 @@
 | ⬜ | [R-184](redundancy/R-184.md) | S | clone | Identical inline type declarations in depeg-event-related-data.json.d.ts and depeg-event-s |  | `src/generated/depeg-event-related-data.json.d.ts` |
 | ⬜ | [R-185](redundancy/R-185.md) | S | clone | Local CAUSE_OF_DEATH_LABELS in event-card.tsx duplicates shared CAUSE_META |  | `src/components/tape/event-card.tsx:L345-L354` |
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
-| 🔄 | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches | codex | `shared/lib/classification/domain.ts:L63-L71` |
+| 🚫 | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches | codex | `shared/lib/classification/domain.ts:L63-L71` |
 | ⬜ | [R-188](redundancy/R-188.md) | S | wrapper | expandIds and defineBatch are two utilities for the same semantic operation with different |  | `shared/lib/redemption-backstop-configs/shared.ts` |
 | ✅ | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema | codex | `shared/types/yield.ts:L117` |
 | ⬜ | [R-190](redundancy/R-190.md) | S | wrapper | No-op identity wrapper functions pollingDescriptor and staticDescriptor |  | `src/lib/api-query-registry.ts:L126-L132, src/lib` |
@@ -320,7 +320,7 @@
 | ✅ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
 | ✅ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
-| ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
+| 🔄 | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair | codex | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ✅ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
@@ -454,7 +454,7 @@
 | ⬜ | [Q-048](quality/Q-048.md) | S | complexity | Module-scope `readFileSync` at import time in depeg page-data.ts |  | `src/app/depeg/[event]/page-data.ts:L20-L25` |
 | ⬜ | [Q-049](quality/Q-049.md) | M | complexity | getActionGroup groups admin actions by path string matching — fragile coupling to URL stru |  | `src/components/status/admin-actions-panel.tsx:L1` |
 | ⬜ | [Q-050](quality/Q-050.md) | S | complexity | useDesktopViewport in desktop-sidebar.tsx uses a state+effect pattern that can produce an  |  | `src/components/desktop-sidebar.tsx:10-22` |
-| ⬜ | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps |  | `src/components/feedback-modal.tsx:L78-L120` |
+| 🔄 | [Q-052](quality/Q-052.md) | S | error-handling | pageUrl captured outside useCallback causes stale-closure risk and misleading deps | codex | `src/components/feedback-modal.tsx:L78-L120` |
 | ✅ | [Q-053](quality/Q-053.md) | S | error-handling | parsePositiveInteger accepts 0, causing silent wrong behavior for --top and --min-impressi | codex | `scripts/maintenance/analyze-gsc-performance.mjs:` |
 | ✅ | [Q-054](quality/Q-054.md) | S | dead-code | V3997_PROFILE and V4_PROFILE in score-diff script are structurally identical objects — dif | codex | `scripts/maintenance/audit-redemption-v4-score-di` |
 | ✅ | [Q-055](quality/Q-055.md) | S | complexity | getCoinsByLifecycleStatus rebuilds a full Map on every call; called in a hot build-time lo | codex | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
@@ -528,7 +528,7 @@
 | ⬜ | [Q-211](quality/Q-211.md) | S | docs | Generic homepage or section-landing hrefs used for high-severity annotations, violating cu |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ⬜ | [Q-212](quality/Q-212.md) | S | type-safety | Hardcoded magic index accesses into PRINCIPLES_AXIOMS array in AboutPage |  | `src/app/about/page.tsx:L244-L250` |
 | ⬜ | [Q-213](quality/Q-213.md) | S | naming | inspection-board.tsx uses a data-driven colored left-stripe in violation of the repo's fla |  | `src/app/safety-scores/inspection-board.tsx:93` |
-| ⬜ | [Q-214](quality/Q-214.md) | S | naming | Function named `tradingShareStaleExceeded` while the check is named `tradingStaleExceeded` |  | `src/app/screener/picker/client.tsx:L167, L430` |
+| ✅ | [Q-214](quality/Q-214.md) | S | naming | Function named `tradingShareStaleExceeded` while the check is named `tradingStaleExceeded` | codex | `src/app/screener/picker/client.tsx:L167, L430` |
 | ⬜ | [Q-215](quality/Q-215.md) | S | error-handling | check-depeg-operational-integrity.mjs: FAIL/ok output goes to stdout, not stderr |  | `scripts/ci/check-depeg-operational-integrity.mjs` |
 | ⬜ | [Q-216](quality/Q-216.md) | S | naming | ShareBar's topMargin boolean prop is an inverted-concern design smell |  | `src/components/status/request-source-attribution` |
 | ⬜ | [Q-217](quality/Q-217.md) | S | error-handling | depeg-provenance-badges.tsx builds className strings with manual template-literal + .trim( |  | `src/components/depeg-provenance-badges.tsx:71, 8` |
@@ -538,7 +538,7 @@
 | ⬜ | [Q-221](quality/Q-221.md) | S | naming | OXR_LEGACY_LAST_FETCH_KEY is a write-only migration fossil with no expiry path |  | `worker/src/cron/sync-fx-rates-helpers.ts:25, 729` |
 | ⬜ | [Q-222](quality/Q-222.md) | S | complexity | accountable adapter applies renameMap twice to the same bucket name |  | `worker/src/cron/reserve-adapters/accountable.ts:` |
 | ⬜ | [Q-223](quality/Q-223.md) | S | dead-code | D1Result stub in stability-index.ts is unreachable but occupies 10 LOC |  | `worker/src/cron/stability-index.ts:55-67` |
-| ⬜ | [Q-224](quality/Q-224.md) | S | docs | MNEE event signatures omit 'indexed' qualifiers, creating misleading human-readable docume |  | `worker/src/lib/blacklist-contracts.ts:L409-L427` |
+| ✅ | [Q-224](quality/Q-224.md) | S | docs | MNEE event signatures omit 'indexed' qualifiers, creating misleading human-readable docume | codex | `worker/src/lib/blacklist-contracts.ts:L409-L427` |
 | ⬜ | [Q-225](quality/Q-225.md) | S | error-handling | logIndex NaN not guarded in parse.ts — produces corrupted event ID and silent DB collision |  | `worker/src/lib/mint-burn-pipeline/parse.ts:L62-L` |
 | ⬜ | [Q-226](quality/Q-226.md) | S | complexity | result-pane.tsx buildClosestSurvivorsFromOutput uses an unsafe cast to access an optional  |  | `src/app/screener/picker/result-pane.tsx:500-511` |
 | ✅ | [Q-227](quality/Q-227.md) | S | error-handling | build-og-case-studies.mjs silently drops case-study cards when regex-based field extractio | codex | `scripts/maintenance/build-og-case-studies.mjs:68` |
