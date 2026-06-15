@@ -1021,7 +1021,7 @@ const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkP
   },
 } as const;
 
-const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
+const BENCHMARK_PROVIDER_ORDER = [
   "USD_EFFR",
   "EUR",
   "CHF",
@@ -1033,10 +1033,10 @@ const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
   "CAD",
   "RUB",
   "TRY",
-] as const;
+] as const satisfies readonly BenchmarkProviderKey[];
 
 // Degradation reporting keeps AUD below MXN/BRL even though fetch order queries AUD earlier.
-const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
+const BENCHMARK_DEGRADATION_ORDER = [
   "USD_EFFR",
   "EUR",
   "CHF",
@@ -1048,7 +1048,19 @@ const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
   "CAD",
   "RUB",
   "TRY",
-] as const;
+] as const satisfies readonly BenchmarkProviderKey[];
+
+// Compile-time guard: the fetch order and degradation-reporting order must cover
+// the identical key set (only the ordering may differ). Adding a benchmark to one
+// array but not the other is a type error here.
+type _AssertSameBenchmarkKeys =
+  Exclude<(typeof BENCHMARK_PROVIDER_ORDER)[number], (typeof BENCHMARK_DEGRADATION_ORDER)[number]> extends never
+    ? Exclude<(typeof BENCHMARK_DEGRADATION_ORDER)[number], (typeof BENCHMARK_PROVIDER_ORDER)[number]> extends never
+      ? true
+      : ["benchmark key in degradation order missing from provider order"]
+    : ["benchmark key in provider order missing from degradation order"];
+const _assertSameBenchmarkKeys: _AssertSameBenchmarkKeys = true;
+void _assertSameBenchmarkKeys;
 
 async function resolveBenchmarkProvider(params: {
   provider: BenchmarkProvider;
