@@ -260,6 +260,38 @@ describe("hard-block hook outputs", () => {
     expect(output.reason).toContain("pre-push merge gate");
   });
 
+  it("blocks git pushes with repeated -C global options", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "git -C /tmp -C /repo push --no-verify origin main",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("pre-push merge gate");
+  });
+
+  it("blocks git subcommands after git global flags", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "git --no-pager reset --hard HEAD",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("git reset --hard");
+  });
+
   it("blocks raw production deploy commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {

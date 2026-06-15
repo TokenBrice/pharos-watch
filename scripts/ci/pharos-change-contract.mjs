@@ -347,6 +347,30 @@ const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "\n"]);
 const ENV_VALUE_OPTIONS = new Set(["-C", "--chdir", "-S", "--split-string", "-u", "--unset"]);
 const NPX_VALUE_OPTIONS = new Set(["-c", "--call", "-p", "--package", "--cache", "--shell", "--userconfig"]);
 const SHELL_EVAL_COMMANDS = new Set(["bash", "dash", "fish", "sh", "zsh"]);
+const GIT_GLOBAL_VALUE_OPTIONS = new Set([
+  "-C",
+  "-c",
+  "--config-env",
+  "--exec-path",
+  "--git-dir",
+  "--namespace",
+  "--super-prefix",
+  "--work-tree",
+]);
+const GIT_GLOBAL_VALUE_OPTION_PREFIXES = [...GIT_GLOBAL_VALUE_OPTIONS].map((option) => `${option}=`);
+const GIT_GLOBAL_FLAG_OPTIONS = new Set([
+  "--bare",
+  "--help",
+  "--html-path",
+  "--info-path",
+  "--literal-pathspecs",
+  "--man-path",
+  "--no-optional-locks",
+  "--no-pager",
+  "--no-replace-objects",
+  "--paginate",
+  "--version",
+]);
 const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 
 function commandLooksLikePatchPayload(command) {
@@ -666,14 +690,37 @@ function findProtectedWrite(paths) {
   return null;
 }
 
+function gitSubcommandCursor(tokens) {
+  let cursor = 1;
+  while (cursor < tokens.length) {
+    const token = tokens[cursor];
+    if (!token) break;
+
+    if (GIT_GLOBAL_VALUE_OPTIONS.has(token)) {
+      cursor += 2;
+      continue;
+    }
+
+    if (GIT_GLOBAL_VALUE_OPTION_PREFIXES.some((option) => token.startsWith(option))) {
+      cursor += 1;
+      continue;
+    }
+
+    if (GIT_GLOBAL_FLAG_OPTIONS.has(token)) {
+      cursor += 1;
+      continue;
+    }
+
+    break;
+  }
+  return cursor;
+}
+
 function* gitSubcommandTokens(command, subcommand) {
   for (const invocation of getShellCommandInvocations(command)) {
     if (invocation.name !== "git") continue;
     const { tokens } = invocation;
-    let cursor = 1;
-    if (tokens[cursor] === "-C") {
-      cursor += 2;
-    }
+    const cursor = gitSubcommandCursor(tokens);
     if (tokens[cursor] !== subcommand) continue;
     yield tokens.slice(cursor + 1);
   }
