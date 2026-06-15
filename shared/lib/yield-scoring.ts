@@ -94,7 +94,17 @@ export function deriveVenueRiskTier(weighted: number | null | undefined): YieldV
   return "high";
 }
 
-/** Weighted-score below which a scored venue contributes no penalty (blue-chip no-op floor). */
+/**
+ * Weighted-score below which a scored venue contributes no penalty (blue-chip no-op floor).
+ *
+ * This is intentionally BELOW the low/medium tier cutoff (2.5): the tier is a coarse 3-bucket
+ * label for DEWS + display, while the penalty is continuous. So a `low`-tier venue scoring in
+ * the 2.0–2.5 band (e.g. Gearbox, Exactly, Liqwid) is genuinely low-but-not-pristine and carries
+ * a small proportional penalty (≤ 0.075), while only true blue-chips (≤ 2.0) are a zero no-op.
+ * Aligning the two thresholds was rejected: lowering the tier cutoff to 2.0 misclassifies the
+ * 2.00 blue-chips (Yearn, Pendle) into `medium`; raising the knee to 2.5 steepens high-venue
+ * penalties. The continuous curve is more accurate than a hard cliff. (yield v8.292, FU5)
+ */
 export const PYS_VENUE_PENALTY_THRESHOLD = 2.0;
 /** Penalty contribution per weighted-score point above the threshold. */
 export const PYS_VENUE_PENALTY_SLOPE = 0.15;
