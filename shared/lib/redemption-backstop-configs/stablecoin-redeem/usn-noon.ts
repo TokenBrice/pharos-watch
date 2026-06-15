@@ -3,7 +3,7 @@ import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./s
 
 export const USN_NOON_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
   accessModel: "whitelisted-onchain",
-  capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+  capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
   costModel: undisclosedReviewedFee(
     "Noon documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee",
   ),
