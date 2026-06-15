@@ -25,6 +25,7 @@ import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-cards";
 import { getVariantDisplay } from "@shared/lib/variant-display";
+import type { BackingType } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -123,7 +124,7 @@ interface StablecoinOgSignalsInput {
   hasActiveDepeg: boolean;
   flow7d: number | null | undefined;
   pegScore: number | null;
-  backing: string;
+  backing: BackingType;
   governance: string;
   redemptionScore: number | null;
   change24h: number | null;
