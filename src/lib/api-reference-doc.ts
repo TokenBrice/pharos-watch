@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
+import { slug as githubSlug } from "github-slugger";
 import { slugifyId } from "@shared/lib/format";
 
 export interface MarkdownParagraphBlock {
@@ -59,6 +60,12 @@ export interface ApiReferenceEndpointSummary {
   method: "GET" | "POST" | null;
   path: string;
   title: string;
+  /**
+   * Anchor slug as rendered on `/docs/api-reference/`, where headings are slugged
+   * by `rehype-slug` (github-slugger). This differs from `id` (which uses
+   * `slugifyId`), so deep-links must target `docAnchor`, not `id`.
+   */
+  docAnchor: string;
 }
 
 const API_REFERENCE_PATH = path.join(process.cwd(), "docs/api-reference.md");
@@ -405,6 +412,7 @@ export function getPublicApiEndpointSummaries(document: ApiReferenceDocument): A
       method: section.method,
       path,
       title,
+      docAnchor: githubSlug(title),
     };
   });
 }

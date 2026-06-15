@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { slug as githubSlug } from "github-slugger";
 import {
   getConciseApiReferenceSections,
   getPublicApiEndpointSummaries,
@@ -46,8 +47,22 @@ describe("loadApiReferenceDocument", () => {
       method: "GET",
       path: "/api/events",
       title: "GET /api/events",
+      docAnchor: "get-apievents",
     });
     expect(endpoints.some((endpoint) => endpoint.path === "/api/status")).toBe(false);
+  });
+
+  it("exposes a docAnchor matching the rehype-slug anchor rendered on /docs/api-reference/", async () => {
+    const document = await loadApiReferenceDocument();
+    const endpoints = getPublicApiEndpointSummaries(document);
+
+    // /docs/api-reference/ slugs headings with rehype-slug (github-slugger).
+    // docAnchor must match that exactly so the directory deep-links resolve.
+    for (const endpoint of endpoints) {
+      expect(endpoint.docAnchor).toBe(githubSlug(endpoint.title));
+    }
+    // Sanity: docAnchor differs from the slugifyId-derived id for path-bearing endpoints.
+    expect(endpoints[0]?.docAnchor).not.toBe(endpoints[0]?.id);
   });
 
   it("keeps escaped pipe unions inside one table cell", async () => {

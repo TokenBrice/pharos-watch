@@ -322,7 +322,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
         {endpoints.map((endpoint) => (
           <Link
             key={endpoint.id}
-            href="/docs/api-reference/#public-endpoints"
+            href={`/docs/api-reference/#${endpoint.docAnchor}`}
             className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-xl border border-border/55 bg-background/45 px-3 py-2 text-sm hover:bg-muted/45"
           >
             {endpoint.method ? (
