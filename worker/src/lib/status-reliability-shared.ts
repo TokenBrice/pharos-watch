@@ -144,17 +144,13 @@ export function buildStatusProbeRunIdempotencyKey(input: {
   return JSON.stringify(input);
 }
 
-function getErrorMessage(error: unknown): string {
-  return toErrorMessage(error);
-}
-
 export function reportStatusPersistenceIssue(
   report: StatusPersistenceIssueReporter | undefined,
   code: string,
   operation: string,
   error: unknown,
 ): void {
-  const message = getErrorMessage(error);
+  const message = toErrorMessage(error);
   const logKey = `${code}:${operation}`;
   if (!LOGGED_STATUS_PERSISTENCE_FAILURES.has(logKey)) {
     LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
