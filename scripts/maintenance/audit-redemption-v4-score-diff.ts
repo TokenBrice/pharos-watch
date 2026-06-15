@@ -27,7 +27,6 @@ import type {
 const ROOT = process.cwd();
 const DEFAULT_SUPPLY_USD = 1_000_000_000;
 const DEFAULT_DELTA_THRESHOLD = 10;
-const NOW_SEC = Math.floor(Date.UTC(2026, 4, 12) / 1000);
 
 type ComponentWeights = typeof REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS;
 type RouteFamilyCaps = typeof REDEMPTION_ROUTE_FAMILY_CAPS;
@@ -44,6 +43,7 @@ interface ScoreDiffArgs {
   supplyUsd: number;
   threshold: number;
   format: "json" | "markdown";
+  nowSec: number;
   outPath?: string;
   v4ProfilePath?: string;
 }
@@ -84,15 +84,8 @@ interface RouteScoreDiff {
   flagged: boolean;
 }
 
-const V3997_PROFILE: ScoreProfile = {
-  label: "v3.997-static",
-  componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
-  routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
-  outputAssetScores: REDEMPTION_OUTPUT_ASSET_SCORES,
-};
-
-const V4_PROFILE: ScoreProfile = {
-  label: "v4-current",
+const CURRENT_PROFILE: ScoreProfile = {
+  label: "current-scoring-constants",
   componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
   outputAssetScores: REDEMPTION_OUTPUT_ASSET_SCORES,
@@ -103,6 +96,7 @@ function parseArgs(argv: readonly string[]): ScoreDiffArgs {
     supplyUsd: DEFAULT_SUPPLY_USD,
     threshold: DEFAULT_DELTA_THRESHOLD,
     format: "json",
+    nowSec: Math.floor(Date.now() / 1000),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -123,6 +117,9 @@ function parseArgs(argv: readonly string[]): ScoreDiffArgs {
     } else if (arg === "--v4-profile" && next) {
       args.v4ProfilePath = next;
       index += 1;
+    } else if (arg === "--now-sec" && next) {
+      args.nowSec = Number(next);
+      index += 1;
     } else if (arg === "--help") {
       printUsage();
       process.exit(0);
@@ -137,13 +134,16 @@ function parseArgs(argv: readonly string[]): ScoreDiffArgs {
   if (!Number.isFinite(args.threshold) || args.threshold < 0) {
     throw new Error("--threshold must be a non-negative finite number");
   }
+  if (!Number.isInteger(args.nowSec) || args.nowSec <= 0) {
+    throw new Error("--now-sec must be a positive integer Unix timestamp in seconds");
+  }
 
   return args;
 }
 
 function printUsage(): void {
   console.log("Usage: tsx scripts/maintenance/audit-redemption-v4-score-diff.ts [--out <path>] [--format json|markdown]");
-  console.log("       [--threshold <points>] [--supply-usd <usd>] [--v4-profile <json>]");
+  console.log("       [--threshold <points>] [--supply-usd <usd>] [--v4-profile <json>] [--now-sec <unix-sec>]");
 }
 
 function loadV4ProfileOverride(base: ScoreProfile, path: string | undefined): ScoreProfile {
@@ -159,12 +159,12 @@ function loadV4ProfileOverride(base: ScoreProfile, path: string | undefined): Sc
 }
 
 function buildDiffReport(args: ScoreDiffArgs) {
-  const v4Profile = loadV4ProfileOverride(V4_PROFILE, args.v4ProfilePath);
+  const v4Profile = loadV4ProfileOverride(CURRENT_PROFILE, args.v4ProfilePath);
   const rows = Object.entries(REDEMPTION_BACKSTOP_CONFIGS)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([stablecoinId, config]) => {
-      const oldSnapshot = buildRouteSnapshot(stablecoinId, config, V3997_PROFILE, args.supplyUsd, "v3997");
-      const newSnapshot = buildRouteSnapshot(stablecoinId, config, v4Profile, args.supplyUsd, "v4");
+      const oldSnapshot = buildRouteSnapshot(stablecoinId, config, CURRENT_PROFILE, args.supplyUsd, "v3997", args.nowSec);
+      const newSnapshot = buildRouteSnapshot(stablecoinId, config, v4Profile, args.supplyUsd, "v4", args.nowSec);
       return buildDiff(oldSnapshot, newSnapshot, args.threshold);
     });
 
@@ -175,10 +175,11 @@ function buildDiffReport(args: ScoreDiffArgs) {
   return {
     generatedAt: new Date().toISOString(),
     assumptions: {
-      oldProfile: V3997_PROFILE.label,
+      oldProfile: CURRENT_PROFILE.label,
       newProfile: v4Profile.label,
       supplyUsd: args.supplyUsd,
       deltaThreshold: args.threshold,
+      nowSec: args.nowSec,
       liveReserveTelemetry: "not used; reserve-sync routes use configured fallbacks only",
       activeDepegOverlay: "not used; this is a static formula/config diff",
     },
@@ -201,6 +202,7 @@ function buildRouteSnapshot(
   profile: ScoreProfile,
   supplyUsd: number,
   mode: "v3997" | "v4",
+  nowSec: number,
 ): RouteScoreSnapshot {
   const capacity = resolveStaticCapacity(config, supplyUsd, mode);
   const capacityScoring = computeCapacityScore({
@@ -258,7 +260,7 @@ function buildRouteSnapshot(
           reviewedAt: config.reviewedAt,
           holderEligibility: config.holderEligibility ?? resolveDefaultHolderEligibility(config),
           sourceMode: capacity.sourceMode,
-          now: NOW_SEC,
+          now: nowSec,
         }).modelConfidence;
 
   return {
