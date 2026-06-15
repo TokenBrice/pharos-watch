@@ -26,6 +26,7 @@ import {
   HeroSupplyCard,
   HeroTertiaryMetrics,
 } from "./hero-card-metrics";
+import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 import { RecentBlacklistBanner } from "./recent-blacklist-banner";
 export type {
   HeroSignalRailItem,
@@ -128,7 +129,7 @@ export function HeroCardMobileSection({
   activeDepeg,
 }: HeroSectionBaseProps & {
   reportCard: ReportCard | null;
-  tertiaryMetrics: import("./hero-card-metrics").HeroTertiaryMetricConfig[];
+  tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
   return (
     <div className="px-4 py-4 sm:px-5 lg:hidden">
@@ -229,8 +230,8 @@ export function HeroCardDesktopSection({
   trackingSpanDays,
   activeDepeg,
 }: HeroSectionBaseProps & {
-  signalRailItems: import("./hero-card-metrics").HeroSignalRailItem[];
-  tertiaryMetrics: import("./hero-card-metrics").HeroTertiaryMetricConfig[];
+  signalRailItems: HeroSignalRailItem[];
+  tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
   return (
     <div className="hidden px-5 pb-3.5 pt-5 lg:block">
