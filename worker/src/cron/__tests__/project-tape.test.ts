@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { projectTape } from "../project-tape";
+import { projectTape, TAPE_PROJECTOR_JOBS } from "../project-tape";
 
 const SEC = 1_700_000_000;
 
@@ -50,6 +50,32 @@ function dbWithOverride(override: MockTableConfig): MockD1Database {
 }
 
 describe("projectTape", () => {
+  it("returns degraded when a projector fails", async () => {
+    const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
+    const originalJobs = [...jobs];
+    jobs.splice(
+      0,
+      jobs.length,
+      { name: "test.success", run: async () => ({ projected: 2, advanced: null }) },
+      { name: "test.failure", run: async () => { throw new Error("projector failed"); } },
+    );
+
+    try {
+      const result = await projectTape(mockD1([]) as MockD1Database);
+
+      expect(result.status).toBe("degraded");
+      expect(result.itemCount).toBe(2);
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        perClass: {
+          "test.success": 2,
+          "test.failure": -1,
+        },
+      });
+    } finally {
+      jobs.splice(0, jobs.length, ...originalJobs);
+    }
+  });
+
   it("projects depeg.opened with severity scaled by absolute bps", async () => {
     const db = dbWithOverride({
       match: MATCH_DEPEG_OPENED,

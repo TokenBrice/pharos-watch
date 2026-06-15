@@ -120,7 +120,9 @@ export async function projectTape(
     }
   }
 
+  const hasFailure = Object.values(perClass).some((projected) => projected === -1);
   return {
+    status: hasFailure ? "degraded" : "ok",
     itemCount: total,
     metadata: JSON.stringify({ perClass, watermarkAdvanced: advancedAny }),
   };
