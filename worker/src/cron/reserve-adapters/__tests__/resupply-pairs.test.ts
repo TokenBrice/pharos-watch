@@ -182,6 +182,85 @@ describe("resupply-pairs adapter", () => {
     ).toThrow(/unmapped positive-collateral underlying/);
   });
 
+  it("fetches independent pairs with bounded fan-out", async () => {
+    const config: LiveReservesConfig = {
+      adapter: "resupply-pairs",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "reusd-resupply",
+      display: { url: "https://resupply.fi/supply", label: "Resupply markets" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        rpcUrl: "https://ethereum-rpc.publicnode.com",
+        fallbackRpcUrl: "https://eth.llamarpc.com",
+        pairs: [
+          { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
+          { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
+        ],
+        underlyings,
+      },
+    };
+
+    let resolveCurveUnderlying!: (value: `0x${string}`) => void;
+    let resolveFraxUnderlying!: (value: `0x${string}`) => void;
+    const curveUnderlying = new Promise<`0x${string}`>((resolve) => {
+      resolveCurveUnderlying = resolve;
+    });
+    const fraxUnderlying = new Promise<`0x${string}`>((resolve) => {
+      resolveFraxUnderlying = resolve;
+    });
+    const calls: string[] = [];
+
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+      const normalizedContract = normalizeAddress(contract);
+      calls.push(`${normalizedContract}:${data}`);
+      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === UNDERLYING_SELECTOR) {
+        return curveUnderlying;
+      }
+      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === UNDERLYING_SELECTOR) {
+        return fraxUnderlying;
+      }
+      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === COLLATERAL_SELECTOR) {
+        return encodeAddressResult(CURVE_COLLATERAL);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === COLLATERAL_SELECTOR) {
+        return encodeAddressResult(FRAX_COLLATERAL);
+      }
+      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
+        return encodePairAccounting(75n * ONE, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
+        return encodePairAccounting(25n * ONE, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
+        return encodeUint256Result(60n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
+        return encodeUint256Result(40n * ONE);
+      }
+      return null;
+    });
+
+    const resultPromise = fetchResupplyPairsReserves(coin as never, config, signal);
+    await Promise.resolve();
+
+    expect(calls).toContain(`${normalizeAddress(CURVE_PAIR)}:${UNDERLYING_SELECTOR}`);
+    expect(calls).toContain(`${normalizeAddress(FRAX_PAIR)}:${UNDERLYING_SELECTOR}`);
+
+    resolveCurveUnderlying(encodeAddressResult(CRVUSD));
+    resolveFraxUnderlying(encodeAddressResult(FRXUSD));
+
+    const result = await resultPromise;
+    expect(result.metadata).toMatchObject({
+      pairCount: 2,
+      activePairCount: 2,
+      totalBorrowUsd: 100,
+      totalCollateralAssetsUsd: 100,
+    });
+  });
+
   it("reads reviewed pairs and converts collateral shares to assets onchain", async () => {
     const config: LiveReservesConfig = {
       adapter: "resupply-pairs",
