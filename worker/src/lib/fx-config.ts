@@ -38,6 +38,9 @@ export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
   KRW: "peggedKRW",
 };
 
+// Keys are lowercase ISO codes as returned by the fawazahmed0 currency API.
+// Peg values must match REALTIME_FX_CURRENCY_TO_PEG below for the same currencies
+// (asserted by fx-config.test.ts); only the key casing differs by source format.
 export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
   cnh: "peggedCNH",
   rub: "peggedRUB",
@@ -49,6 +52,9 @@ export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
   vnd: "peggedVND",
 };
 
+// Keys are uppercase ISO codes (the realtime source's response format). The
+// secondary block mirrors SECONDARY_FX_CURRENCY_TO_PEG above with uppercased keys;
+// the two must agree on peg values after casing (asserted by fx-config.test.ts).
 export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
   ...PRIMARY_CURRENCY_TO_PEG,
   CNH: "peggedCNH",
