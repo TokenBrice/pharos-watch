@@ -154,6 +154,42 @@ describe("adaptAccountableTypeBreakdown", () => {
     ]);
   });
 
+  it("applies renameMap exactly once even when a renamed value is itself a rename key", () => {
+    // "A" renames to "B", and "B" is also a renameMap key ("B" -> "C").
+    // The rename must resolve "A" -> "B" once; it must NOT cascade to "C".
+    const slices = adaptAccountableTypeBreakdown(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.0,
+          ts: "1773304804848",
+          reserves: {
+            type: {
+              A: 60,
+              B: 40,
+            },
+          },
+        },
+      },
+      {
+        bucket: "type",
+        riskMap: {
+          A: "low",
+          B: "high",
+        },
+        renameMap: {
+          A: "B",
+          B: "C",
+        },
+      },
+    );
+
+    expect(slices).toEqual([
+      { name: "B", pct: 60, risk: "low" },
+      { name: "C", pct: 40, risk: "high" },
+    ]);
+  });
+
   it("maps nested exposure_split values into reserve slices", () => {
     const slices = adaptAccountableTypeBreakdown(
       {

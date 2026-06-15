@@ -139,7 +139,7 @@ function adaptAccountableDashboard(
           }]
         : []),
     ].map(({ name, value, risk, coinId, depType }) => ({
-      name: renameMap[name] ?? name,
+      name,
       value,
       risk,
       ...(coinId ? { coinId } : {}),
