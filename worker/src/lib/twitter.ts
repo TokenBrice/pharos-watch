@@ -8,6 +8,10 @@ export interface TwitterCreds {
   accessTokenSecret: string;
 }
 
+const TRACKED_CASHTAG_SYMBOLS = [...new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol))];
+// eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
+const TRACKED_CASHTAG_PATTERN = new RegExp(`\\b(?:${TRACKED_CASHTAG_SYMBOLS.join("|")})\\b`, "i");
+
 /** RFC 3986 percent-encode (stricter than encodeURIComponent for OAuth). */
 function encode(s: string): string {
   return encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -59,10 +63,7 @@ async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds
  *  Twitter rejects posts containing more than one cashtag, so only the first
  *  match wins; subsequent ticker mentions remain plain text. */
 function injectCashtags(text: string): string {
-  const symbols = [...new Set(ACTIVE_STABLECOINS.map((s) => s.symbol))];
-  // eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
-  const pattern = new RegExp(`\\b(?:${symbols.join("|")})\\b`, "i");
-  return text.replace(pattern, (match) => `$${match.toUpperCase()}`);
+  return text.replace(TRACKED_CASHTAG_PATTERN, (match) => `$${match.toUpperCase()}`);
 }
 
 /** Truncate text to fit within maxLen chars, breaking at a word boundary. */
