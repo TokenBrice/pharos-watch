@@ -38,7 +38,7 @@ describe("adaptM0Current", () => {
         freshnessSource: "dashboard-graphql",
       },
       cashScaleApplied: 1_000,
-      cashUnits: "milli-usd-to-micro-usd",
+      cashUnits: "milli-usd-to-usd",
       totalCashScaled: 27_250_000_000_000,
       normalizedReserveTotal: 194_750_000_000_000,
     });

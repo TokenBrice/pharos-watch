@@ -168,7 +168,7 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
         "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
       ),
       cashScaleApplied: M0_CASH_SCALE,
-      cashUnits: "milli-usd-to-micro-usd",
+      cashUnits: "milli-usd-to-usd",
       ...(timestampSummary != null
         ? {
             earliestCollateralSourceTimestamp: timestampSummary.sourceTimestamp,
