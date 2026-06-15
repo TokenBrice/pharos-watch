@@ -154,8 +154,9 @@ export function filterRetainedPools(pools: LiquidityMetrics["topPools"]): Liquid
   return pools.filter((pool) => {
     if (isBlockedDexId(pool.project)) return false;
     const vol = pool.volumeUsd1d || 0;
+    const volumeMeasured = pool.extra?.measurement?.volumeMeasured !== false;
     if (pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) return false;
-    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) return false;
+    if (volumeMeasured && pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) return false;
     return true;
   });
 }

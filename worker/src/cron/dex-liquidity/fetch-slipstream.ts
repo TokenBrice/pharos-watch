@@ -275,6 +275,9 @@ export async function fetchSlipstreamPools(
         ],
         price: finalSpotPrice,
         tvlUsd,
+        // Sugar v2 exposes reserves and pool price but not trailing volume.
+        // Keep this as unmeasured zero so downstream filters can distinguish
+        // "unknown volume" from a measured no-volume pool.
         volume24hUsd: 0,
         feeRate: normalizeFeeRateFromBps(effectiveFeeBps),
         balances: [reserve0, reserve1],

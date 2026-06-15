@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { accumulateGlobalAggregate, classifyCoverage, collapseDuplicateObservations } from "../scoring-helpers";
+import {
+  accumulateGlobalAggregate,
+  classifyCoverage,
+  collapseDuplicateObservations,
+  filterRetainedPools,
+} from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { DexPriceObs, LiquiditySourceMixByFamily, PoolEntry } from "../types";
 
@@ -237,6 +242,47 @@ describe("collapseDuplicateObservations", () => {
     // Both lack a qualifying key, so both pass through unchanged
     expect(collapsed).toHaveLength(2);
     expect(duplicateGroups).toBe(0);
+  });
+});
+
+describe("filterRetainedPools", () => {
+  it("retains large direct pools when zero volume is explicitly unmeasured", () => {
+    const retained = filterRetainedPools([
+      makePool({
+        poolId: "base:0xslipstream",
+        project: "aerodrome-slipstream",
+        chain: "Base",
+        tvlUsd: 150_000_000,
+        volumeUsd1d: 0,
+        source: "direct_api",
+        extra: {
+          measurement: {
+            tvlMeasured: true,
+            volumeMeasured: false,
+          },
+        },
+      }),
+    ]);
+
+    expect(retained).toHaveLength(1);
+  });
+
+  it("still drops large pools with measured low volume", () => {
+    const retained = filterRetainedPools([
+      makePool({
+        poolId: "ethereum:0xmeasured",
+        tvlUsd: 150_000_000,
+        volumeUsd1d: 0,
+        extra: {
+          measurement: {
+            tvlMeasured: true,
+            volumeMeasured: true,
+          },
+        },
+      }),
+    ]);
+
+    expect(retained).toHaveLength(0);
   });
 });
 
