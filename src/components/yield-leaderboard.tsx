@@ -8,11 +8,7 @@ import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
-import {
-  DataTableEmptyRow,
-  DataTableShell,
-  type DataTableColumn,
-} from "@/components/data-table-shell";
+import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
 import { TablePagination } from "@/components/table-pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +21,6 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
-import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
-import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import {
@@ -145,36 +139,6 @@ function LeaderboardHeading({
   );
 }
 
-const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
-  { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
-  { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "hidden md:table-cell text-right", title: "30-day average annual percentage yield" },
-  { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
-  {
-    id: "pys",
-    label: "PYS",
-    headerAdornment: <MethodologyHint topic="pys" />,
-    sortKey: "pys",
-    className: "hidden md:table-cell text-right",
-    title: "Pharos Yield Score: risk-adjusted yield ranking",
-  },
-  { id: "source", label: "Source", className: "hidden md:table-cell text-left" },
-  { id: "yieldType", label: "Type", sortKey: "yieldType", className: "hidden md:table-cell text-center", title: "Yield mechanism type" },
-  { id: "tvl", label: "TVL", sortKey: "tvl", className: "hidden lg:table-cell text-right", title: "Total value locked in yield source" },
-  {
-    id: "yieldStability",
-    label: "Stability",
-    headerAdornment: <MethodologyHint topic="yieldStability" />,
-    sortKey: "yieldStability",
-    className: "hidden lg:table-cell text-right",
-    title: "Yield stability over 30 days (0-100%)",
-  },
-  { id: "range30d", label: "30d Range", className: "hidden xl:table-cell text-right" },
-  { id: "signals", label: <MethodologyLabel topic="yieldWarnings">Signals</MethodologyLabel>, className: "hidden md:table-cell text-center" },
-  { id: "expand", label: <span className="sr-only">Expand row</span>, className: "hidden md:table-cell w-[44px] text-right" },
-] as const;
-
-const COLUMN_COUNT = YIELD_COLUMNS.length;
-
 const MOBILE_SORT_OPTIONS: Array<{ key: YieldTableSortKey; label: string }> = [
   { key: "pys", label: "PYS" },
   { key: "apy30d", label: "APY" },
@@ -206,11 +170,11 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
     sortKey,
     sortDirection,
     toggleSort,
-    getAriaSortValue,
     sortedRows: sorted,
     effectivePage,
     totalPages,
     paginatedRows: paginated,
+    pageStartIndex,
     rangeStart,
     rangeEnd,
     totalRows,
@@ -297,18 +261,18 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
       </div>
 
       <div className="hidden md:block">
-        <DataTableShell
-          tableId="yield-leaderboard"
-          testId="yield-leaderboard-table"
-          columns={YIELD_COLUMNS}
-          striped
-          containerClassName="-mx-4 max-w-[calc(100%+2rem)] px-4 sm:mx-0 sm:max-w-none sm:px-0"
-          sort={{
-            sortKey,
-            sortDirection,
-            toggleSort,
-            getAriaSortValue,
-          }}
+        <YieldInstrumentBoard
+          rows={paginated}
+          logos={logos}
+          riskFreeRate={riskFreeRate}
+          medianApy={medianApy}
+          pageStartIndex={pageStartIndex}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onToggleSort={toggleSort}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalRows}
           pagination={sorted.length > 0 ? {
             page: effectivePage,
             totalPages,
@@ -319,34 +283,15 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
             onNext: onNextPage,
             noun: "coins",
           } : undefined}
-        >
-          {paginated.map((row) => {
-            const isCompared = compare.has(row.id);
-            const compareDisabled = !isCompared && !compare.canAdd;
-            return (
-              <YieldLeaderboardTableRow
-                key={row.id}
-                row={row}
-                logos={logos}
-                riskFreeRate={riskFreeRate}
-                medianApy={medianApy}
-                columnCount={COLUMN_COUNT}
-                expanded={visibleExpandedId === row.id}
-                isCompared={isCompared}
-                compareDisabled={compareDisabled}
-                onPrefetch={prefetch}
-                onToggleExpanded={handleToggleExpanded}
-                onOpenSourceSheet={setSheetRankingId}
-                onToggleCompare={compare.toggle}
-              />
-            );
-          })}
-          {sorted.length === 0 && (
-            <DataTableEmptyRow colSpan={COLUMN_COUNT}>
-              {emptyMessage ?? "No yield data available."}
-            </DataTableEmptyRow>
-          )}
-        </DataTableShell>
+          expandedId={visibleExpandedId}
+          compareHas={compare.has}
+          compareCanAdd={compare.canAdd}
+          onPrefetch={prefetch}
+          onToggleExpanded={handleToggleExpanded}
+          onOpenSourceSheet={setSheetRankingId}
+          onToggleCompare={compare.toggle}
+          emptyMessage={emptyMessage}
+        />
       </div>
       <YieldSourceSheet
         ranking={sheetRanking}

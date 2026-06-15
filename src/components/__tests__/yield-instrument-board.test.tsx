@@ -3,10 +3,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
+import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
 import { YieldMobileCard } from "@/components/yield-leaderboard";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Table, TableBody } from "@/components/ui/table";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 vi.mock("@/components/yield-history-chart", () => ({
@@ -70,7 +69,7 @@ const baseRow = {
   sourceDepthLens: "moderate",
 } as unknown as YieldViewModelRow;
 
-function renderRow(
+function renderBoard(
   row: YieldViewModelRow,
   expanded: boolean = false,
   overrides: {
@@ -81,24 +80,26 @@ function renderRow(
 ) {
   return render(
     <TooltipProvider>
-      <Table>
-        <TableBody>
-          <YieldLeaderboardTableRow
-            row={row}
-            logos={{}}
-            riskFreeRate={3.5}
-            medianApy={4}
-            columnCount={11}
-            expanded={expanded}
-            isCompared={overrides.isCompared ?? false}
-            compareDisabled={overrides.compareDisabled ?? false}
-            onPrefetch={vi.fn()}
-            onToggleExpanded={vi.fn()}
-            onOpenSourceSheet={vi.fn()}
-            onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
-          />
-        </TableBody>
-      </Table>
+      <YieldInstrumentBoard
+        rows={[row]}
+        logos={{}}
+        riskFreeRate={3.5}
+        medianApy={4}
+        pageStartIndex={0}
+        sortKey="pys"
+        sortDirection="desc"
+        onToggleSort={vi.fn()}
+        rangeStart={1}
+        rangeEnd={1}
+        total={1}
+        expandedId={expanded ? row.id : null}
+        compareHas={() => overrides.isCompared ?? false}
+        compareCanAdd={!(overrides.compareDisabled ?? false)}
+        onPrefetch={vi.fn()}
+        onToggleExpanded={vi.fn()}
+        onOpenSourceSheet={vi.fn()}
+        onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
+      />
     </TooltipProvider>,
   );
 }
@@ -134,7 +135,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe("YieldLeaderboardTableRow", () => {
+describe("YieldInstrumentBoard", () => {
   it("renders the rank-attribution chip when pys delta is material", () => {
     const row = {
       ...baseRow,
@@ -145,7 +146,7 @@ describe("YieldLeaderboardTableRow", () => {
       },
     } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     expect(screen.getByLabelText("Rank change: +3, driver APY")).toBeTruthy();
   });
@@ -160,7 +161,7 @@ describe("YieldLeaderboardTableRow", () => {
       },
     } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     expect(screen.queryByLabelText(/Rank change/)).toBeNull();
   });
@@ -172,7 +173,7 @@ describe("YieldLeaderboardTableRow", () => {
       pysNullReason: "missing-inputs",
     } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     const dashes = screen.getAllByText("—");
     const cursorHelpDash = dashes.find((el) => el.className.includes("cursor-help"));
@@ -180,7 +181,7 @@ describe("YieldLeaderboardTableRow", () => {
   });
 
   it("renders the Deep dive link with proper href", () => {
-    renderRow(baseRow);
+    renderBoard(baseRow);
 
     const link = screen.getByRole("link", { name: "Open full yield analysis for USDT" });
     expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
@@ -188,15 +189,46 @@ describe("YieldLeaderboardTableRow", () => {
 
   it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
     const onToggleCompare = vi.fn();
-    renderRow(baseRow, false, { onToggleCompare });
+    renderBoard(baseRow, false, { onToggleCompare });
 
     fireEvent.click(screen.getByLabelText("Add USDT to compare"));
 
     expect(onToggleCompare).toHaveBeenCalledWith("usdt-tether");
   });
 
-  it("keeps core desktop table and mobile card row affordances in parity", () => {
-    const desktop = renderRow(baseRow);
+  it("renders sort pills wired to the sort handler", () => {
+    const onToggleSort = vi.fn();
+    render(
+      <TooltipProvider>
+        <YieldInstrumentBoard
+          rows={[baseRow]}
+          logos={{}}
+          riskFreeRate={3.5}
+          medianApy={4}
+          pageStartIndex={0}
+          sortKey="pys"
+          sortDirection="desc"
+          onToggleSort={onToggleSort}
+          rangeStart={1}
+          rangeEnd={1}
+          total={1}
+          expandedId={null}
+          compareHas={() => false}
+          compareCanAdd
+          onPrefetch={vi.fn()}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /APY sort/ }));
+    expect(onToggleSort).toHaveBeenCalledWith("apy30d");
+  });
+
+  it("keeps core board and mobile card row affordances in parity", () => {
+    const desktop = renderBoard(baseRow);
     expect(screen.getAllByLabelText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
@@ -205,7 +237,8 @@ describe("YieldLeaderboardTableRow", () => {
       "/stablecoin/usdt-tether/yield",
     );
     expect(desktop.container.textContent).toContain("Aave");
-    expect(desktop.container.textContent).toContain("No warnings");
+    // No warnings → the board surfaces no warning indicator (clean row, tint only).
+    expect(screen.queryByLabelText(/warning signal/)).toBeNull();
     desktop.unmount();
 
     const mobile = renderMobileCard(baseRow);
@@ -221,9 +254,9 @@ describe("YieldLeaderboardTableRow", () => {
   });
 });
 
-describe("YieldLeaderboardTableRow — Why this PYS strip", () => {
+describe("YieldInstrumentBoard — Why this PYS strip", () => {
   it("renders the strip with all four factor cells when expanded with a non-null PYS", () => {
-    renderRow(baseRow, true);
+    renderBoard(baseRow, true);
 
     const strip = screen.getByRole("group", { name: "Why this PYS" });
     expect(strip).toBeTruthy();
@@ -241,26 +274,26 @@ describe("YieldLeaderboardTableRow — Why this PYS strip", () => {
 
   it("hides the strip when expanded with a null PYS but still renders the chart", () => {
     const row = { ...baseRow, pharosYieldScore: null } as YieldViewModelRow;
-    renderRow(row, true);
+    renderBoard(row, true);
 
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
   });
 
   it("does not render the strip when the row is collapsed", () => {
-    renderRow(baseRow, false);
+    renderBoard(baseRow, false);
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
 });
 
-describe("YieldLeaderboardTableRow — cohort percentile chip", () => {
+describe("YieldInstrumentBoard — cohort percentile chip", () => {
   it("renders the percentile chip when cohortPercentile has a numeric value", () => {
     const row = {
       ...baseRow,
       cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
     } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     expect(screen.getByText("p64 of 18")).toBeTruthy();
   });
@@ -271,7 +304,7 @@ describe("YieldLeaderboardTableRow — cohort percentile chip", () => {
       cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
     } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     expect(screen.getByText("small peer set")).toBeTruthy();
   });
@@ -279,7 +312,7 @@ describe("YieldLeaderboardTableRow — cohort percentile chip", () => {
   it("renders nothing when cohortPercentile is null", () => {
     const row = { ...baseRow, cohortPercentile: null } as YieldViewModelRow;
 
-    renderRow(row);
+    renderBoard(row);
 
     expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
     expect(screen.queryByText("small peer set")).toBeNull();
