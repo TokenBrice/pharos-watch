@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -207,8 +208,47 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
 
   const handleDoubleClick = () => onChange(null);
 
+  // Keyboard support for the `role="slider"` contract. ArrowLeft/ArrowRight
+  // shift the brush window by 5% of the domain span; Home/End clear back to
+  // the full domain (null). When no window is set yet, the first arrow press
+  // seeds a centered window covering 25% of the span so keyboard users can
+  // create a selection without a pointer.
+  const handleKeyDown = (e: ReactKeyboardEvent<SVGSVGElement>) => {
+    const step = span * 0.05;
+    if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      onChange(null);
+      return;
+    }
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const current: readonly [number, number] = value ?? [
+      domainFrom + span * 0.375,
+      domainFrom + span * 0.625,
+    ];
+    const win = current[1] - current[0];
+    let lo = current[0] + dir * step;
+    let hi = current[1] + dir * step;
+    if (lo < domainFrom) {
+      lo = domainFrom;
+      hi = lo + win;
+    }
+    if (hi > domainTo) {
+      hi = domainTo;
+      lo = hi - win;
+    }
+    onChange([lo, hi]);
+  };
+
   const fromPx = value ? tsToPx(value[0]) : 0;
   const toPx = value ? tsToPx(value[1]) : 0;
+
+  const rangeDateFmt = (ms: number) =>
+    new Date(ms).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  const ariaValueText = value
+    ? `${rangeDateFmt(value[0])} to ${rangeDateFmt(value[1])}`
+    : `Full range: ${rangeDateFmt(domainFrom)} to ${rangeDateFmt(domainTo)}`;
 
   return (
     <div ref={containerRef} className={cn("relative w-full select-none", className)}>
@@ -216,14 +256,17 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
         width={width}
         height={height}
         role="slider"
+        tabIndex={0}
         aria-label="Brush time window"
         aria-valuemin={domainFrom}
         aria-valuemax={domainTo}
         aria-valuenow={value ? value[0] : domainFrom}
+        aria-valuetext={ariaValueText}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
+        onKeyDown={handleKeyDown}
         style={{ touchAction: "none" }}
       >
         {/* Background track */}
