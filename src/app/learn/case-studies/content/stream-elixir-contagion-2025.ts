@@ -3,7 +3,7 @@ import type { CaseStudy } from "./types";
 export const content: CaseStudy = {
   slug: "stream-elixir-contagion-2025",
   eyebrow: "Composability cascade",
-  title: "Stream Finance: when one fund manager's loss broke three stablecoins",
+  title: "Stream Finance: loss broke three stablecoins",
   subtitle:
     "A ~$93M off-chain trading loss at Stream Finance detonated a ~$285M cross-protocol cascade, because xUSD had been re-hypothecated as leveraged collateral across lending markets that priced it at a hardcoded $1.",
   lead: [

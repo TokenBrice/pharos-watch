@@ -3,7 +3,7 @@ import type { CaseStudy } from "./types";
 export const content: CaseStudy = {
   slug: "usdn-neutrino-2022",
   eyebrow: "Algorithmic collapse",
-  title: "Neutrino USD: the billion-dollar algo death five weeks before Terra",
+  title: "Neutrino USD: the stablecoin collapse before Terra",
   subtitle:
     "A WAVES-collateralized algorithmic stablecoin that broke peg in April 2022 on circular-leverage allegations, never durably recovered, and was quietly retired as the floating index token XTN.",
   lead: [
