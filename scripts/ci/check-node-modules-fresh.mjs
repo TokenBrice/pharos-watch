@@ -22,15 +22,25 @@ const lockfile = resolve(root, "package-lock.json");
 const snapshot = resolve(root, "node_modules/.package-lock.json");
 const nmDir = resolve(root, "node_modules");
 
+const MESSAGE_PREFIX = "[check:node-modules-fresh]";
+
+function info(msg) {
+  console.log(`${MESSAGE_PREFIX} ${msg}`);
+}
+
 function warn(msg) {
-  console.warn(`[check:node-modules-fresh] ${msg}`);
+  console.warn(`${MESSAGE_PREFIX} ${msg}`);
+}
+
+function error(msg) {
+  console.error(`${MESSAGE_PREFIX} ${msg}`);
 }
 
 // node_modules/ missing — always fatal, environment is broken
 try {
   statSync(nmDir);
 } catch {
-  warn("node_modules/ not found. Run `npm ci` before invoking the merge gate.");
+  error("node_modules/ not found. Run `npm ci` before invoking the merge gate.");
   process.exit(1);
 }
 
@@ -49,10 +59,13 @@ try {
 const lockfileMtime = statSync(lockfile).mtimeMs;
 
 if (lockfileMtime > snapshotMtime) {
-  warn(
-    "package-lock.json is newer than node_modules. Run `npm ci` to refresh installed dependencies.",
-  );
+  const message = "package-lock.json is newer than node_modules. Run `npm ci` to refresh installed dependencies.";
+  if (strict) {
+    error(message);
+  } else {
+    info(message);
+  }
   process.exit(strict ? 1 : 0);
 }
 
-warn("node_modules matches package-lock.json.");
+info("node_modules matches package-lock.json.");
