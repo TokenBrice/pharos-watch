@@ -222,7 +222,16 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
 export function computePriceSignal(input: DEWSInput): SignalResult {
   const { price, priceConfidence, prevPriceConfidence } = input;
 
-  // No price at all = maximum concern
+  // No price at all = maximum concern. We deliberately return available:true
+  // (not available:false) so the 100 stress points feed the DEWS score even
+  // when there is no reading — here available:true means "this signal has a
+  // verdict", not "we have a live price". Note this stress does NOT add
+  // market-price evidence: classifyEvidenceKinds() in evidence-policy.ts gates
+  // the market-price kind on signals.diverg + input.price !== null, so a
+  // null-price coin can be pushed up by this 100 yet still be WATCH-capped for
+  // lack of evidence. That asymmetry is intentional (data-unavailability is not
+  // observed depeg evidence); change both call sites together if it ever needs
+  // to count as its own evidence kind.
   if (price === null || price === undefined || !Number.isFinite(price)) {
     return { value: 100, available: true, confidence: null };
   }
