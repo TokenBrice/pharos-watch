@@ -265,7 +265,7 @@ async function runReserveCoinQueue(args: {
   const total = args.orderedCoins.length;
 
   for (const [index, coin] of args.orderedCoins.entries()) {
-    if (args.signal?.aborted) throw args.signal.reason ?? new Error("sync-live-reserves aborted");
+    if (args.signal.aborted) throw args.signal.reason ?? new Error("sync-live-reserves aborted");
     const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
     if (budgetRemaining < args.budgetConfig.minimumAttemptBudgetMs) {
       console.warn(

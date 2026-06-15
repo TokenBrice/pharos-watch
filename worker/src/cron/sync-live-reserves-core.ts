@@ -65,7 +65,7 @@ export async function syncReserveCoin(args: {
   previousState: ReserveSyncStateRecord | null;
   d1FinalizeTimeoutMs?: number;
 }): Promise<ReserveCoinSyncResult> {
-  if (args.signal?.aborted) {
+  if (args.signal.aborted) {
     throw args.signal.reason ?? new Error("sync-live-reserves aborted");
   }
 
