@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, RefObject } from "react";
+import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
 import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { FocusMode, ResolvedLink } from "@/components/contagion-graph-graph";
 import {
@@ -20,51 +20,23 @@ import {
   WIDTH,
   type GraphNode,
   type HubTier,
-  type SupernodeState,
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
+import type { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 
 type PositionMap = ReadonlyMap<string, { x: number; y: number }>;
+type ContagionGraphModel = ReturnType<typeof useContagionGraphModel>;
 
 interface ContagionGraphSvgProps {
-  svgRef: RefObject<SVGSVGElement | null>;
-  nodes: GraphNode[];
-  visibleLinks: ResolvedLink[];
-  visibleNodeIds: Set<string>;
-  positions: PositionMap;
-  dragId: string | null;
-  focusMode: FocusMode;
-  supernodeState: SupernodeState;
+  graph: ContagionGraphModel;
   logos?: Record<string, string>;
   logoZoom?: number;
   nodeScale?: number;
   suppressHubLabels?: boolean;
   showTickerLabels?: boolean;
   fillHeight?: boolean;
-  activeHoveredId: string | null;
-  activeHoveredEdge: number | null;
-  focusedId: string | null;
-  pinnedSelectionId: string | null;
-  pinnedNodeIds: ReadonlySet<string>;
-  connectedNodes: Set<string>;
-  connectedEdges: Set<number>;
-  nodeDistance: Map<string, number>;
-  edgeDistance: Map<number, number>;
   nodeTooltipEl: ReactNode;
   edgeTooltipEl: ReactNode;
-  onPointerMove: (event: PointerEvent<SVGSVGElement>) => void;
-  onPointerUp: () => void;
-  onNodePointerDown: (event: PointerEvent, nodeId: string) => void;
-  onNodeKeyDown: (event: KeyboardEvent, nodeId: string) => void;
-  onNodeMouseEnter: (nodeId: string) => void;
-  onNodeMouseLeave: () => void;
-  onNodeFocus: (nodeId: string) => void;
-  onNodeBlur: () => void;
-  onNodeClick: (nodeId: string) => void;
-  onNodeDoubleClick: (nodeId: string) => void;
-  onEdgeMouseEnter: (edgeIndex: number) => void;
-  onEdgeMouseLeave: () => void;
-  onCanvasClick: () => void;
 }
 
 interface EdgeRenderProps {
@@ -422,47 +394,37 @@ function ContagionGraphNode({
 }
 
 export function ContagionGraphSvg({
-  svgRef,
-  nodes,
-  visibleLinks,
-  visibleNodeIds,
-  positions,
-  dragId,
-  focusMode,
-  supernodeState,
+  graph,
   logos,
   logoZoom = 1,
   nodeScale = 1,
   suppressHubLabels = false,
   showTickerLabels = false,
   fillHeight = false,
-  activeHoveredId,
-  activeHoveredEdge,
-  focusedId,
-  pinnedSelectionId,
-  pinnedNodeIds,
-  connectedNodes,
-  connectedEdges,
-  nodeDistance,
-  edgeDistance,
   nodeTooltipEl,
   edgeTooltipEl,
-  onPointerMove,
-  onPointerUp,
-  onNodePointerDown,
-  onNodeKeyDown,
-  onNodeMouseEnter,
-  onNodeMouseLeave,
-  onNodeFocus,
-  onNodeBlur,
-  onNodeClick,
-  onNodeDoubleClick,
-  onEdgeMouseEnter,
-  onEdgeMouseLeave,
-  onCanvasClick,
 }: ContagionGraphSvgProps) {
+  const {
+    svgRef,
+    nodes,
+    visibleLinks,
+    visibleNodeIds,
+    positions,
+    dragId,
+    focusMode,
+    supernodeState,
+    activeHoveredId,
+    activeHoveredEdge,
+    focusedId,
+    pinnedSelectionId,
+    pinnedNodeIds,
+    connectedNodes,
+    connectedEdges,
+    nodeDistance,
+    edgeDistance,
+  } = graph;
   const handleSvgClick = (event: ReactMouseEvent<SVGSVGElement>) => {
-    if (event.target === event.currentTarget) onCanvasClick();
+    if (event.target === event.currentTarget) graph.handleClearSelection();
   };
   return (
     <svg
@@ -470,9 +432,9 @@ export function ContagionGraphSvg({
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       className={fillHeight ? "w-full lg:h-full" : "w-full"}
       style={{ cursor: dragId ? "grabbing" : "default" }}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
+      onPointerMove={graph.handlePointerMove}
+      onPointerUp={graph.handlePointerUp}
+      onPointerLeave={graph.handlePointerUp}
       onClick={handleSvgClick}
     >
       <ContagionGraphClipPaths nodes={nodes} positions={positions} nodeScale={nodeScale} />
@@ -486,8 +448,8 @@ export function ContagionGraphSvg({
           activeHoveredEdge={activeHoveredEdge}
           connectedEdges={connectedEdges}
           edgeDistance={edgeDistance}
-          onMouseEnter={onEdgeMouseEnter}
-          onMouseLeave={onEdgeMouseLeave}
+          onMouseEnter={graph.handleEdgeMouseEnter}
+          onMouseLeave={graph.handleEdgeMouseLeave}
         />
       ))}
 
@@ -512,14 +474,14 @@ export function ContagionGraphSvg({
             nodeScale={nodeScale}
             suppressHubLabels={suppressHubLabels}
             showTickerLabels={showTickerLabels}
-            onPointerDown={onNodePointerDown}
-            onKeyDown={onNodeKeyDown}
-            onMouseEnter={onNodeMouseEnter}
-            onMouseLeave={onNodeMouseLeave}
-            onFocus={onNodeFocus}
-            onBlur={onNodeBlur}
-            onClick={onNodeClick}
-            onDoubleClick={onNodeDoubleClick}
+            onPointerDown={graph.handlePointerDown}
+            onKeyDown={graph.handleNodeKeyDown}
+            onMouseEnter={graph.handleNodeMouseEnter}
+            onMouseLeave={graph.handleNodeMouseLeave}
+            onFocus={graph.handleNodeFocus}
+            onBlur={graph.handleNodeBlur}
+            onClick={graph.handleNodeClick}
+            onDoubleClick={graph.handleNodeDoubleClick}
           />
         );
       })}

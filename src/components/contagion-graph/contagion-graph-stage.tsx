@@ -52,44 +52,15 @@ export function ContagionGraphStage({
     >
       {overlay}
       <ContagionGraphSvg
-        svgRef={graph.svgRef}
-        nodes={graph.nodes}
-        visibleLinks={graph.visibleLinks}
-        visibleNodeIds={graph.visibleNodeIds}
-        positions={graph.positions}
-        dragId={graph.dragId}
-        focusMode={graph.focusMode}
-        supernodeState={graph.supernodeState}
+        graph={graph}
         logos={logos}
         logoZoom={detailNodePresentation && detailNodeScale === 1 ? 1.33 : 1}
         nodeScale={detailNodeScale}
         suppressHubLabels={Boolean(detailNodePresentation)}
         showTickerLabels={showTickerLabels}
         fillHeight={Boolean(detailNodePresentation)}
-        activeHoveredId={graph.activeHoveredId}
-        activeHoveredEdge={graph.activeHoveredEdge}
-        focusedId={graph.focusedId}
-        pinnedSelectionId={graph.pinnedSelectionId}
-        pinnedNodeIds={graph.pinnedNodeIds}
-        connectedNodes={graph.connectedNodes}
-        connectedEdges={graph.connectedEdges}
-        nodeDistance={graph.nodeDistance}
-        edgeDistance={graph.edgeDistance}
         nodeTooltipEl={nodeTooltipEl}
         edgeTooltipEl={edgeTooltipEl}
-        onPointerMove={graph.handlePointerMove}
-        onPointerUp={graph.handlePointerUp}
-        onNodePointerDown={graph.handlePointerDown}
-        onNodeKeyDown={graph.handleNodeKeyDown}
-        onNodeMouseEnter={graph.handleNodeMouseEnter}
-        onNodeMouseLeave={graph.handleNodeMouseLeave}
-        onNodeFocus={graph.handleNodeFocus}
-        onNodeBlur={graph.handleNodeBlur}
-        onNodeClick={graph.handleNodeClick}
-        onNodeDoubleClick={graph.handleNodeDoubleClick}
-        onEdgeMouseEnter={graph.handleEdgeMouseEnter}
-        onEdgeMouseLeave={graph.handleEdgeMouseLeave}
-        onCanvasClick={graph.handleClearSelection}
       />
       <div
         className="pointer-events-none absolute bottom-2 left-2 hidden max-w-[calc(100%-1rem)] rounded-sm border px-2 py-1.5 backdrop-blur-sm sm:block"
