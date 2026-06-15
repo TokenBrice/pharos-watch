@@ -999,6 +999,58 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
+  it("persists the Telegram sent marker before sending on the happy path", async () => {
+    const db = mockD1(makeBaseTables());
+    await generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    const markerKey = "daily-digest:telegram-sent:2026-03-06";
+    const history = (db as MockD1Database).getHistory();
+    const markerWrites = history.filter(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === markerKey,
+    );
+    const markerDeletes = history.filter(
+      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    );
+    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(markerWrites).toHaveLength(1);
+    // A successful send leaves the marker in place (no rollback).
+    expect(markerDeletes).toHaveLength(0);
+  });
+
+  it("rolls back the Telegram sent marker when delivery fails so the next run can resend", async () => {
+    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(result.metadata).toContain("telegram: failed:");
+
+    const markerKey = "daily-digest:telegram-sent:2026-03-06";
+    const history = (db as MockD1Database).getHistory();
+    const markerWrites = history.filter(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === markerKey,
+    );
+    const markerDeletes = history.filter(
+      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    );
+    // Marker written pre-send, then rolled back when the send threw — leaving
+    // no marker so a subsequent cron run within the same day retries delivery.
+    expect(markerWrites).toHaveLength(1);
+    expect(markerDeletes).toHaveLength(1);
+  });
+
   it("passes digest appendices to Telegram and commits appendix state after a successful send", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",

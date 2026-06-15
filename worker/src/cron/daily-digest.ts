@@ -3,7 +3,7 @@ import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, setCache, deleteCache } from "../lib/db-cache";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
@@ -282,23 +282,33 @@ export async function generateDailyDigest(
       const sentMarker = await getCache(db, markerKey);
 
       if (!sentMarker) {
-        await postDigestToTelegram(
-          digestCopy.digestTitle,
-          digestCopy.digestExtended,
-          date,
-          creds,
-          editionNumber,
-          telegramAppendices?.appendixHtml ?? null,
+        // Write the idempotency marker BEFORE sending so a marker-write
+        // failure leaves the send unattempted (and surfaces as a hard cron
+        // failure via the channel-delivery wrapper) rather than risking a
+        // duplicate send on the next run. If the send itself fails, roll the
+        // marker back so a genuine delivery failure can be retried.
+        await setCache(
+          db,
+          markerKey,
+          JSON.stringify({ sentAt: now, editionNumber }),
         );
         try {
-          await setCache(
-            db,
-            markerKey,
-            JSON.stringify({ sentAt: now, editionNumber }),
+          await postDigestToTelegram(
+            digestCopy.digestTitle,
+            digestCopy.digestExtended,
+            date,
+            creds,
+            editionNumber,
+            telegramAppendices?.appendixHtml ?? null,
           );
         } catch (err) {
-          degradedReasons.push("telegram-send-marker");
-          console.error("[daily-digest] Failed to persist Telegram send marker:", err);
+          try {
+            await deleteCache(db, markerKey);
+          } catch (rollbackErr) {
+            degradedReasons.push("telegram-send-marker-rollback");
+            console.error("[daily-digest] Failed to roll back Telegram send marker after delivery failure:", rollbackErr);
+          }
+          throw err;
         }
       }
       if (telegramAppendices?.metadata.hasAppendix) {
