@@ -140,6 +140,11 @@ function derivePoolVolume24hUsd(
 
   if (candidates.length === 0) return pool.volume24hUsd;
   if (candidates.length === 1) return candidates[0];
+  // For a 2-token pool both sides represent the same economic flow, so the two
+  // USD estimates should be ~equal; averaging smooths reference-vs-derived
+  // divergence. For 3+ token pools (e.g. Balancer) averaging N independent
+  // estimates of the same flow is not meaningful, so keep the raw source value.
+  if (pool.tokens.length !== 2) return pool.volume24hUsd;
   return candidates.reduce((sum, value) => sum + value, 0) / candidates.length;
 }
 
