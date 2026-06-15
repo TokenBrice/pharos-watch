@@ -189,6 +189,50 @@ describe("buildCoverageMatrixModel", () => {
     });
   });
 
+  it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
+    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
+    const dai = TRACKED_META_BY_ID.get("dai-makerdao");
+    const usdt = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(usdc && dai && usdt).toBeTruthy();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 5_000 } },
+          { id: "dai-makerdao", name: "Dai", symbol: "DAI", circulating: { peggedUSD: 2_000 } },
+          { id: "usdt-tether", name: "Tether", symbol: "USDT", circulating: { peggedUSD: 1_000 } },
+        ],
+      } as never),
+      pegSummary: resource({
+        summary: {},
+        coins: [
+          { id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"], priceConfidence: "high" },
+          { id: "dai-makerdao", consensusSources: ["CoinGecko"], priceConfidence: "medium" },
+        ],
+      } as never),
+      dexLiquidity: resource({ "usdc-circle": { coverageClass: "primary" } } as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [{ id: "usdc-circle" }] } as never),
+      mintBurnFlows: resource({
+        gauge: {},
+        hourly: [],
+        coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
+      } as never),
+      reportCards: resource({
+        cards: [{ id: "usdc-circle", overallScore: 90, isDefunct: false, rawInputs: {} }],
+        dependencyGraph: { nodes: [], edges: [] },
+      } as never),
+      activeStablecoins: [usdc!, dai!, usdt!],
+    });
+
+    const summaries = model.featureSummaries;
+    const concentration = (s: (typeof summaries)[number]) => (s.mcapSharePct ?? 0) - s.coveragePct;
+
+    expect(model.widestFeature?.coveragePct).toBe(Math.max(...summaries.map((s) => s.coveragePct)));
+    expect(model.narrowestFeature?.coveragePct).toBe(Math.min(...summaries.map((s) => s.coveragePct)));
+    expect(concentration(model.mostConcentratedFeature!)).toBe(Math.max(...summaries.map(concentration)));
+  });
+
   it("marks redemption coverage as Data n/a when the redemption feed is unavailable", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();

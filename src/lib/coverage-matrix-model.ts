@@ -21,6 +21,7 @@ import {
   buildCoverageRow,
   COVERAGE_FEATURES,
   type CoverageFeatureKey,
+  type CoverageFeatureSummary,
 } from "@/lib/coverage";
 import { buildDependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
 
@@ -182,24 +183,43 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   };
 
   const { pricingSources, authoritativeSources } = buildPricingSourceCounts(input.pegSummary.data);
-  const widestFeature =
-    [...featureSummaries].sort((left, right) => {
-      if (right.coveragePct !== left.coveragePct) {
-        return right.coveragePct - left.coveragePct;
+  // Single O(n) pass tracking three extremes; ties resolve to the earliest
+  // element, matching the prior stable-sort-then-[0] behavior.
+  const featureExtremes = featureSummaries.reduce<{
+    widest: CoverageFeatureSummary | null;
+    narrowest: CoverageFeatureSummary | null;
+    mostConcentrated: CoverageFeatureSummary | null;
+  }>(
+    (acc, summary) => {
+      const mcapShare = summary.mcapSharePct ?? 0;
+      const concentration = mcapShare - summary.coveragePct;
+      if (
+        acc.widest === null ||
+        summary.coveragePct > acc.widest.coveragePct ||
+        (summary.coveragePct === acc.widest.coveragePct && mcapShare > (acc.widest.mcapSharePct ?? 0))
+      ) {
+        acc.widest = summary;
       }
-      return (right.mcapSharePct ?? 0) - (left.mcapSharePct ?? 0);
-    })[0] ?? null;
-  const narrowestFeature =
-    [...featureSummaries].sort((left, right) => {
-      if (left.coveragePct !== right.coveragePct) {
-        return left.coveragePct - right.coveragePct;
+      if (
+        acc.narrowest === null ||
+        summary.coveragePct < acc.narrowest.coveragePct ||
+        (summary.coveragePct === acc.narrowest.coveragePct && mcapShare < (acc.narrowest.mcapSharePct ?? 0))
+      ) {
+        acc.narrowest = summary;
       }
-      return (left.mcapSharePct ?? 0) - (right.mcapSharePct ?? 0);
-    })[0] ?? null;
-  const mostConcentratedFeature =
-    [...featureSummaries].sort(
-      (left, right) => (right.mcapSharePct ?? 0) - right.coveragePct - ((left.mcapSharePct ?? 0) - left.coveragePct),
-    )[0] ?? null;
+      if (
+        acc.mostConcentrated === null ||
+        concentration > (acc.mostConcentrated.mcapSharePct ?? 0) - acc.mostConcentrated.coveragePct
+      ) {
+        acc.mostConcentrated = summary;
+      }
+      return acc;
+    },
+    { widest: null, narrowest: null, mostConcentrated: null },
+  );
+  const widestFeature = featureExtremes.widest;
+  const narrowestFeature = featureExtremes.narrowest;
+  const mostConcentratedFeature = featureExtremes.mostConcentrated;
 
   const isStablecoinDataUnavailable = input.stablecoins.data === undefined && !!input.stablecoins.error;
   const isInitialDataLoading = coverageQueries.some((query) => query.data === undefined && !query.error);
