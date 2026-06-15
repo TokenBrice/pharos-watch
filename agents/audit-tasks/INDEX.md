@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**146/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
+**148/733 done (20%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 555 | 11 | 0 | 146 | 21 |
+| Count | 553 | 11 | 0 | 148 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 56 | 1 | 0 | 198 |
-| quality | 315 | 77 | 9 | 0 | 221 |
+| quality | 315 | 79 | 9 | 0 | 219 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -338,10 +338,10 @@
 | ✅ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh | codex | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
-| 🔄 | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
+| ✅ | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
 | ✅ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox | opus-05 | `src/components/coin-selector.tsx:L205-L207` |
 | ✅ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard | opus-06 | `worker/src/handlers/scheduled/five-minute-telegr` |
-| 🔄 | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
+| ✅ | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri | opus-07 | `worker/src/api/telegram-store/forget.ts:L9-L31` |
 | ✅ | [Q-058](quality/Q-058.md) | S | error-handling | inferErrorClass misclassifies errors whose message contains the substring 'http' | opus-08 | `worker/src/cron/blacklist/amount-recovery.ts:L87` |
 | 🔄 | [Q-059](quality/Q-059.md) | S | error-handling | recordDirectApiOutcome records the circuit outcome twice on telemetry read failure | opus-09 | `worker/src/cron/dex-liquidity/orchestrator-phase` |
 | ✅ | [Q-061](quality/Q-061.md) | S | error-handling | Single try/catch across all three CEX venue fetches silently skips venues after the first  | opus-10 | `worker/src/lib/cex-orderbooks.ts:L218-L228` |
@@ -354,7 +354,7 @@
 | 🔄 | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
-| ⬜ | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract |  | `src/lib/coverage-matrix-model.ts:185-202` |
+| 🔄 | [Q-073](quality/Q-073.md) | S | complexity | coverage-matrix-model.ts: three separate O(n log n) sorts over featureSummaries to extract | opus-06 | `src/lib/coverage-matrix-model.ts:185-202` |
 | ⬜ | [Q-074](quality/Q-074.md) | S | error-handling | backfillTronFromLedger returns {updated: 0} mid-loop when budget is reached, discarding al |  | `worker/src/cron/blacklist/amount-recovery.ts:L71` |
 | ⬜ | [Q-075](quality/Q-075.md) | S | type-safety | Unsafe Number(bigint) fallback for token balances loses precision on large reserves |  | `worker/src/cron/dex-liquidity/fetch-fluid.ts:L13` |
 | ⬜ | [Q-076](quality/Q-076.md) | M | complexity | supply7dOutcome evaluates wrong coin when symbol ranking changes day-over-day |  | `worker/src/cron/daily-digest/digest-next-trigger` |
@@ -626,7 +626,7 @@
 | ⬜ | [Q-309](quality/Q-309.md) | M | complexity | buildAddressPriceTargetsByProvider is a long, multi-responsibility function with several h |  | `worker/src/lib/address-price-providers/index.ts:` |
 | ⬜ | [Q-310](quality/Q-310.md) | S | type-safety | Provider metadata copies arbitrary upstream fields (any) into quote.metadata without valid |  | `worker/src/lib/address-price-providers/moralis.t` |
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
-| ⬜ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio |  | `functions/stablecoin/[[path]].ts:1-21` |
+| 🔄 | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio | codex | `functions/stablecoin/[[path]].ts:1-21` |
 | ✅ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
 | ⬜ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna |  | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
