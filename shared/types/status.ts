@@ -695,6 +695,7 @@ export interface YieldHealthSummary {
     sourceFamilyAdapterRecommendationCount: number | null;
     lendingAllowlistRecommendationCount: number | null;
     staleAutoLendingOverrideCount: number | null;
+    staleVenueRiskScoreCount: number | null;
     headlineGaps: YieldCoverageAuditQueueItem[];
     recommendationCandidates: YieldCoverageAuditQueueItem[];
     allowedActions: YieldCoverageAuditQueueAction[];

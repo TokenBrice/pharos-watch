@@ -353,6 +353,11 @@ describe("loadYieldHealthSummary", () => {
             }],
             lendingAllowlistRecommendationCount: 5,
             staleAutoLendingOverrideCount: 0,
+            staleVenueRiskScoreCount: 2,
+            staleVenueRiskScores: [
+              { protocol: "aave-v3", reviewedAt: "2026-05-15", ageDays: 109, confidence: "verified" },
+              { protocol: "maple", reviewedAt: "2026-06-09", ageDays: 94, confidence: "partial" },
+            ],
           }),
         },
       ]),
@@ -388,7 +393,7 @@ describe("loadYieldHealthSummary", () => {
     });
     expect(summary.coverageAudit).toMatchObject({
       headlineGapCount: 5,
-      recommendationCandidateCount: 9,
+      recommendationCandidateCount: 11,
       manifestMissingCount: 1,
       yieldBearingMissingFromRankingsCount: 1,
       unmatchedHighTvlPoolCount: 2,
@@ -397,6 +402,7 @@ describe("loadYieldHealthSummary", () => {
       sourceFamilyAdapterRecommendationCount: 1,
       lendingAllowlistRecommendationCount: 5,
       staleAutoLendingOverrideCount: 0,
+      staleVenueRiskScoreCount: 2,
       allowedActions: ["accept", "dismiss", "intentional-gap", "watch"],
       queuePersistence: "deferred",
     });
@@ -418,6 +424,11 @@ describe("loadYieldHealthSummary", () => {
         expect.objectContaining({
           kind: "source-family-adapter",
           title: "aave-v3",
+        }),
+        expect.objectContaining({
+          kind: "stale-venue-risk-score",
+          title: "aave-v3",
+          actionHint: "watch",
         }),
       ]),
     );

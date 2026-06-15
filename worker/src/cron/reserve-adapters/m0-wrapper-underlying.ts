@@ -13,6 +13,7 @@ import {
 import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode";
 import { resolveCoinContractAddress } from "./evm";
 import {
+  buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
@@ -274,6 +275,11 @@ export async function fetchM0WrapperUnderlyingReserves(
     totalSupplyRaw,
     wrapperDecimals,
   );
+  const warnings = buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `M0 wrapper underlying balance covers ${pct}% of wrapper supply`,
+    coverageRatio: collateralizationRatio,
+  });
   const sliceConfig = parseSliceConfig(params);
 
   return {
@@ -286,6 +292,7 @@ export async function fetchM0WrapperUnderlyingReserves(
         ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
       },
     ],
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "m0-wrapper-underlying-balance",

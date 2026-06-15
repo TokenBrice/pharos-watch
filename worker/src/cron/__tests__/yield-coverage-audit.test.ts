@@ -431,6 +431,12 @@ describe("identifyCoverageGaps", () => {
         apy: null,
         requiredMinTvlUsd: null,
       }],
+      staleVenueRiskScores: [{
+        protocol: "aave-v3",
+        reviewedAt: "2026-05-15",
+        ageDays: 109,
+        confidence: "verified",
+      }],
     });
 
     expect(queue).toMatchObject({
@@ -477,6 +483,13 @@ describe("identifyCoverageGaps", () => {
             queueQualifiedPoolCount: 1,
             passedCategoryGate: true,
           }),
+        }),
+        expect.objectContaining({
+          kind: "stale-venue-risk-score",
+          id: "stale-venue-risk-score:aave-v3",
+          title: "aave-v3",
+          actionHint: "watch",
+          project: "aave-v3",
         }),
       ]),
     );

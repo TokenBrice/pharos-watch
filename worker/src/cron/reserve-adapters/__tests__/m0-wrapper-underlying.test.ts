@@ -136,4 +136,44 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
       },
     });
   });
+
+  it("degrades under-backed wrappers instead of publishing score-grade coverage", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
+      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(100_000_000_000000n) });
+      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
+      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(92_000_000_000000n) });
+      }
+      return null;
+    });
+
+    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
+    const result = await fetchM0WrapperUnderlyingReserves(
+      { id: "wm-m0", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
+      baseConfig(),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalSupplyRaw: "100000000000000",
+      underlyingBalanceRaw: "92000000000000",
+      collateralizationRatio: 0.92,
+      redemption: {
+        capacityUsd: 92_000_000,
+        capacityRatioOfSupply: 0.92,
+      },
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "reserve-undercollateralized",
+        effect: "degraded",
+        severity: "warning",
+      }),
+    ]);
+  });
 });

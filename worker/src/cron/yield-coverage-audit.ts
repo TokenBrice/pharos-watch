@@ -48,6 +48,7 @@ import type {
 } from "@shared/types/status";
 import type { YieldAdapterLifecycle } from "@shared/types/yield";
 import type { DlPool } from "./yield-sync/types";
+import type { StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
 import { findStaleVenueRiskScores } from "./yield-sync/source-risk";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
@@ -547,6 +548,7 @@ export function buildCoverageAuditOperatorQueue({
   staleAutoLendingOverrides = [],
   quarantineReadyToRestore = [],
   nowMs = Date.now(),
+  staleVenueRiskScores = findStaleVenueRiskScores(nowMs),
 }: {
   gaps: CoverageGaps;
   manifestMissingIds: string[];
@@ -554,6 +556,7 @@ export function buildCoverageAuditOperatorQueue({
   staleAutoLendingOverrides?: StaleAutoLendingOverride[];
   quarantineReadyToRestore?: QuarantineRestoreCandidate[];
   nowMs?: number;
+  staleVenueRiskScores?: StaleVenueRiskScore[];
 }): CoverageAuditOperatorQueue {
   const headlineGaps: CoverageAuditQueueItem[] = [
     ...manifestMissingIds.map((stablecoinId) => ({
@@ -606,7 +609,7 @@ export function buildCoverageAuditOperatorQueue({
       actionHint: "accept" as const,
       stablecoinIds: [candidate.stablecoinId],
     })),
-    ...findStaleVenueRiskScores(nowMs).map((stale) => ({
+    ...staleVenueRiskScores.map((stale) => ({
       id: queueId("stale-venue-risk-score", stale.protocol),
       kind: "stale-venue-risk-score" as const,
       title: stale.protocol,
@@ -904,15 +907,18 @@ export async function runYieldCoverageAudit(
     chainRpcs,
     signal,
   });
+  const nowMs = Date.now();
+  const staleVenueRiskScores = findStaleVenueRiskScores(nowMs);
   const operatorQueue = buildCoverageAuditOperatorQueue({
     gaps,
     manifestMissingIds,
     yieldBearingMissingFromRankings,
     staleAutoLendingOverrides,
     quarantineReadyToRestore: quarantineProbe.readyToRestore,
+    staleVenueRiskScores,
   });
 
-  const reportedAt = Math.floor(Date.now() / 1000);
+  const reportedAt = Math.floor(nowMs / 1000);
   const report = {
     reportedAt,
     totalDlPools: dlPools.length,
@@ -941,6 +947,8 @@ export async function runYieldCoverageAudit(
     sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
     staleAutoLendingOverrides,
+    staleVenueRiskScores,
+    staleVenueRiskScoreCount: staleVenueRiskScores.length,
     operatorQueue,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
@@ -966,6 +974,7 @@ export async function runYieldCoverageAudit(
     gaps.sourceFamilyAdapterRecommendations.length +
     gaps.lendingAllowlistRecommendations.length +
     staleAutoLendingOverrides.length +
+    staleVenueRiskScores.length +
     quarantineProbe.readyToRestore.length +
     manifestMissingIds.length +
     yieldBearingMissingFromRankings.length;
@@ -987,6 +996,7 @@ export async function runYieldCoverageAudit(
       sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
       lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
       staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
+      staleVenueRiskScoreCount: staleVenueRiskScores.length,
       exactPoolOverrideCount: explicitPoolOverrides.length,
       exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
       protocolCategoryStatus: protocolCategoryLookup.meta.status,

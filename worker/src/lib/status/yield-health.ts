@@ -435,6 +435,26 @@ function legacyProtocolQueueItem(
   };
 }
 
+function legacyStaleVenueRiskScoreQueueItem(row: Record<string, unknown>): YieldCoverageAuditQueueItem | null {
+  const protocol = getString(row.protocol) ?? getString(row.project) ?? getString(row.title);
+  if (!protocol) return null;
+  const reviewedAt = getString(row.reviewedAt);
+  const ageDays = getNumber(row.ageDays);
+  const confidence = getString(row.confidence);
+  const ageText = ageDays != null ? ` (${Math.round(ageDays)}d ago)` : "";
+  const confidenceText = confidence && confidence !== "verified" ? `, ${confidence} confidence` : "";
+  return {
+    id: `stale-venue-risk-score:${protocol}`,
+    kind: "stale-venue-risk-score",
+    title: protocol,
+    detail: reviewedAt
+      ? `Venue-risk score last reviewed ${reviewedAt}${ageText}${confidenceText}; re-verify audits, governance, and TVL.`
+      : "Venue-risk score needs re-verification.",
+    actionHint: "watch",
+    project: protocol,
+  };
+}
+
 function objectArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
     ? value.map(getObject).filter((row): row is Record<string, unknown> => row != null)
@@ -496,6 +516,9 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
     ),
     ...objectArray(payload?.lendingAllowlistRecommendations).map((row) =>
       legacyProtocolQueueItem("lending-allowlist", row),
+    ),
+    ...objectArray(payload?.staleVenueRiskScores).map((row) =>
+      legacyStaleVenueRiskScoreQueueItem(row),
     ),
   ].filter((item): item is YieldCoverageAuditQueueItem => item != null);
 
@@ -677,6 +700,11 @@ export async function loadYieldHealthSummary(
     "staleAutoLendingOverrideCount",
     "staleAutoLendingOverrides",
   );
+  const staleVenueRiskScoreCount = getCount(
+    coverageAuditPayload,
+    "staleVenueRiskScoreCount",
+    "staleVenueRiskScores",
+  );
   const headlineGapCount = sumKnown([
     manifestMissingCount,
     yieldBearingMissingFromRankingsCount,
@@ -688,6 +716,7 @@ export async function loadYieldHealthSummary(
     nativeExactPoolRecommendationCount,
     sourceFamilyAdapterRecommendationCount,
     lendingAllowlistRecommendationCount,
+    staleVenueRiskScoreCount,
   ]);
   const coverageAuditQueue = buildCoverageAuditQueue(coverageAuditPayload);
   const comparisonAnchorFreshness = buildComparisonAnchorFreshnessSummary(crons);
@@ -745,6 +774,7 @@ export async function loadYieldHealthSummary(
       sourceFamilyAdapterRecommendationCount,
       lendingAllowlistRecommendationCount,
       staleAutoLendingOverrideCount,
+      staleVenueRiskScoreCount,
       ...coverageAuditQueue,
     },
     sourceRiskCoverage,
