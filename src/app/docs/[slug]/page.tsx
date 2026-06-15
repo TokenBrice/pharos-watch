@@ -90,7 +90,7 @@ const mdxComponents = {
       );
     }
     return (
-      <a href={resolved} className="pharos-prose-link">
+      <a href={resolved} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
         {children}
       </a>
     );

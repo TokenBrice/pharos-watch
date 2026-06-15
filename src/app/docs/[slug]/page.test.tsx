@@ -13,6 +13,13 @@ vi.mock("next/link", () => ({
 }));
 
 describe("DocPage", () => {
+  it("marks external markdown links as new-tab safe links", async () => {
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "data-pipeline" }) }));
+
+    expect(html).toContain('href="https://gold-api.com"');
+    expect(html).toContain('href="https://gold-api.com" target="_blank" rel="noopener noreferrer"');
+  });
+
   it("renders markdown tables through the shared table primitives", async () => {
     const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "design-tokens" }) }));
 
