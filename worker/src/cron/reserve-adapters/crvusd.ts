@@ -1,9 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { toErrorMessage } from "../../lib/error-utils";
-import type {  LiveReserveSnapshotMetadata,
-  LiveReserveWarning,
-  LiveReservesConfig,
-} from "@shared/types/live-reserves";
+import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { Abi } from "abitype";
@@ -278,7 +275,8 @@ async function readEthereumContract(
       chainRpcs: ctx?.chainRpcs,
       extraRpcUrls: ETHEREUM_RPC_URLS,
       ...(gas ? { gas } : {}),
-    }));
+    }),
+  );
   if (!raw) {
     throw new Error(`crvUSD Yield Basis read failed for ${functionName} on ${address}`);
   }
@@ -297,7 +295,10 @@ function safeInt256ToNumber(value: bigint, label: string): number {
   return asNumber;
 }
 
-async function fetchLlammaMarketDescriptors(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketDescriptor[]> {
+async function fetchLlammaMarketDescriptors(
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<LlammaMarketDescriptor[]> {
   const countRaw = (await readEthereumContract(
     CURVE_CONTROLLER_FACTORY,
     CURVE_CONTROLLER_FACTORY_ABI,
@@ -310,49 +311,47 @@ async function fetchLlammaMarketDescriptors(signal: AbortSignal, ctx?: AdapterCo
     throw new Error(`crvUSD ControllerFactory n_collaterals invalid: ${String(countRaw)}`);
   }
 
-  const descriptors: LlammaMarketDescriptor[] = [];
-  for (let marketId = 0; marketId < marketCount; marketId += 1) {
-    throwIfAborted(signal);
-    const [collateralAddress, controllerAddress, ammAddress] = await Promise.all([
-      readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "collaterals", signal, ctx, [
-        BigInt(marketId),
-      ]) as Promise<string>,
-      readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "controllers", signal, ctx, [
-        BigInt(marketId),
-      ]) as Promise<string>,
-      readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "amms", signal, ctx, [
-        BigInt(marketId),
-      ]) as Promise<string>,
-    ]);
-    const [symbolRaw, minBandRaw, maxBandRaw] = await Promise.all([
-      readEthereumContract(collateralAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
-      readEthereumContract(ammAddress, CURVE_AMM_ABI, "min_band", signal, ctx),
-      readEthereumContract(ammAddress, CURVE_AMM_ABI, "max_band", signal, ctx),
-    ]);
-    if (typeof symbolRaw !== "string") {
-      throw new Error(`crvUSD LLAMMA symbol unreadable for market ${marketId}`);
-    }
-    const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
-    const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
-    if (maxBand < minBand) continue;
-    descriptors.push({
-      marketId,
-      collateralAddress,
-      controllerAddress,
-      ammAddress,
-      symbol: symbolRaw,
-      minBand,
-      maxBand,
-    });
-  }
+  const descriptors = await Promise.all(
+    Array.from({ length: marketCount }, async (_, marketId): Promise<LlammaMarketDescriptor | null> => {
+      throwIfAborted(signal);
+      const [collateralAddress, controllerAddress, ammAddress] = await Promise.all([
+        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "collaterals", signal, ctx, [
+          BigInt(marketId),
+        ]) as Promise<string>,
+        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "controllers", signal, ctx, [
+          BigInt(marketId),
+        ]) as Promise<string>,
+        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "amms", signal, ctx, [
+          BigInt(marketId),
+        ]) as Promise<string>,
+      ]);
+      const [symbolRaw, minBandRaw, maxBandRaw] = await Promise.all([
+        readEthereumContract(collateralAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
+        readEthereumContract(ammAddress, CURVE_AMM_ABI, "min_band", signal, ctx),
+        readEthereumContract(ammAddress, CURVE_AMM_ABI, "max_band", signal, ctx),
+      ]);
+      if (typeof symbolRaw !== "string") {
+        throw new Error(`crvUSD LLAMMA symbol unreadable for market ${marketId}`);
+      }
+      const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
+      const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
+      if (maxBand < minBand) return null;
+      return {
+        marketId,
+        collateralAddress,
+        controllerAddress,
+        ammAddress,
+        symbol: symbolRaw,
+        minBand,
+        maxBand,
+      };
+    }),
+  );
 
-  return descriptors;
+  return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
 }
 
-async function fetchLlammaMarketExposures(
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<LlammaMarketExposure[]> {
+async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketExposure[]> {
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
 
@@ -470,53 +469,54 @@ async function fetchYieldBasisMarketPositions(
     throw new Error(`crvUSD Yield Basis market_count invalid: ${String(marketCountRaw)}`);
   }
 
-  const positions: YieldBasisMarketPosition[] = [];
-  for (let marketId = 0; marketId < marketCount; marketId += 1) {
-    throwIfAborted(signal);
-    const market = (await readEthereumContract(YIELD_BASIS_FACTORY, YIELD_BASIS_FACTORY_ABI, "markets", signal, ctx, [
-      BigInt(marketId),
-    ])) as readonly [string, string, string, string, string, string, string];
-    const assetAddress = market[0];
-    const ltAddress = market[3];
-    const [symbolRaw, decimalsRaw, totalSupply] = await Promise.all([
-      readEthereumContract(assetAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
-      readEthereumContract(assetAddress, ERC20_METADATA_ABI, "decimals", signal, ctx),
-      readEthereumContract(ltAddress, YIELD_BASIS_LT_ABI, "totalSupply", signal, ctx),
-    ]);
+  const positions = await Promise.all(
+    Array.from({ length: marketCount }, async (_, marketId): Promise<YieldBasisMarketPosition | null> => {
+      throwIfAborted(signal);
+      const market = (await readEthereumContract(YIELD_BASIS_FACTORY, YIELD_BASIS_FACTORY_ABI, "markets", signal, ctx, [
+        BigInt(marketId),
+      ])) as readonly [string, string, string, string, string, string, string];
+      const assetAddress = market[0];
+      const ltAddress = market[3];
+      const [symbolRaw, decimalsRaw, totalSupply] = await Promise.all([
+        readEthereumContract(assetAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
+        readEthereumContract(assetAddress, ERC20_METADATA_ABI, "decimals", signal, ctx),
+        readEthereumContract(ltAddress, YIELD_BASIS_LT_ABI, "totalSupply", signal, ctx),
+      ]);
 
-    if (typeof symbolRaw !== "string") {
-      throw new Error(`crvUSD Yield Basis symbol unreadable for market ${marketId}`);
-    }
+      if (typeof symbolRaw !== "string") {
+        throw new Error(`crvUSD Yield Basis symbol unreadable for market ${marketId}`);
+      }
 
-    const assetDecimals = validateDecimals(decimalsRaw, `crvUSD Yield Basis decimals for market ${marketId}`);
+      const assetDecimals = validateDecimals(decimalsRaw, `crvUSD Yield Basis decimals for market ${marketId}`);
 
-    const supply = totalSupply as bigint;
-    if (supply <= 0n) continue;
+      const supply = totalSupply as bigint;
+      if (supply <= 0n) return null;
 
-    // Newer YB markets can revert on preview_withdraw(totalSupply); preview_emergency_withdraw
-    // still exposes the full-market external asset balance without relying on that swap path.
-    const emergencyWithdraw = (await readEthereumContract(
-      ltAddress,
-      YIELD_BASIS_LT_ABI,
-      "preview_emergency_withdraw",
-      signal,
-      ctx,
-      [supply],
-      YIELD_BASIS_VIEW_GAS,
-    )) as readonly [bigint, bigint];
-    const assetAmount = emergencyWithdraw[0];
-    if (assetAmount <= 0n) continue;
+      // Newer YB markets can revert on preview_withdraw(totalSupply); preview_emergency_withdraw
+      // still exposes the full-market external asset balance without relying on that swap path.
+      const emergencyWithdraw = (await readEthereumContract(
+        ltAddress,
+        YIELD_BASIS_LT_ABI,
+        "preview_emergency_withdraw",
+        signal,
+        ctx,
+        [supply],
+        YIELD_BASIS_VIEW_GAS,
+      )) as readonly [bigint, bigint];
+      const assetAmount = emergencyWithdraw[0];
+      if (assetAmount <= 0n) return null;
 
-    positions.push({
-      marketId,
-      symbol: symbolRaw,
-      assetAddress,
-      assetDecimals,
-      assetAmount,
-    });
-  }
+      return {
+        marketId,
+        symbol: symbolRaw,
+        assetAddress,
+        assetDecimals,
+        assetAmount,
+      };
+    }),
+  );
 
-  return positions;
+  return positions.filter((position): position is YieldBasisMarketPosition => position != null);
 }
 
 async function fetchYieldBasisMarketExposures(
