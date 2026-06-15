@@ -543,6 +543,134 @@ function getTrendClass(hasPreviousValue: boolean, currentValue: number, previous
   return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
 }
 
+/**
+ * Resolves the peg score that should drive hero presentation: the worker-side
+ * value only when this is a non-NAV coin with a populated score, otherwise
+ * `null`. Hoisted so the peg rail item, peg tertiary metric and `earlyPegScore`
+ * share a single source of truth instead of repeating the nav/peg guard.
+ */
+function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummaryCoin | null): number | null {
+  if (isNavToken || pegScoreResult?.pegScore == null) return null;
+  return pegScoreResult.pegScore;
+}
+
+function buildMarketTrends(
+  mcap: number,
+  prevDay: number | null,
+  prevWeek: number | null,
+  prevMonth: number | null,
+): Omit<HeroCardViewModel["market"], "supply"> {
+  const safePrevDay = posOrNull(prevDay);
+  const safePrevWeek = posOrNull(prevWeek);
+  const safePrevMonth = posOrNull(prevMonth);
+  return {
+    mcap,
+    safePrevDay,
+    safePrevWeek,
+    hasPrevMonth: safePrevMonth !== null,
+    safePrevMonth,
+    prevDayTrendClass: getTrendClass(safePrevDay !== null, mcap, safePrevDay ?? 0),
+    prevWeekTrendClass: getTrendClass(safePrevWeek !== null, mcap, safePrevWeek ?? 0),
+    prevMonthTrendClass: getTrendClass(safePrevMonth !== null, mcap, safePrevMonth ?? 0),
+  };
+}
+
+function buildTertiaryMetrics(
+  dewsDisplay: HeroDewsDisplay,
+  dewsAccent: string | undefined,
+  pegScoreDisplay: HeroDisplayValue,
+  pegScoreAccent: string | undefined,
+  liqDisplay: HeroDisplayValue,
+  liqAccent: string | undefined,
+  excessYieldDisplay: HeroDisplayValue,
+  performanceVsUsdDisplay: HeroDisplayValue | null,
+): HeroTertiaryMetricViewModel[] {
+  return [
+    {
+      key: "dews",
+      label: "DEWS",
+      methodologyTopic: "dewsBand",
+      display: dewsDisplay,
+      accentClass: dewsAccent,
+    },
+    {
+      key: "peg-score",
+      label: "Peg Score",
+      mobileLabel: "Peg",
+      methodologyTopic: "pegScore",
+      display: pegScoreDisplay,
+      accentClass: pegScoreAccent,
+    },
+    {
+      key: "liquidity",
+      label: "Liquidity",
+      mobileLabel: "Liq",
+      methodologyTopic: "liquidityScore",
+      display: liqDisplay,
+      accentClass: liqAccent,
+    },
+    {
+      key: "excess-yield",
+      label: "30d Excess",
+      methodologyTopic: "pys",
+      display: excessYieldDisplay,
+    },
+    ...(performanceVsUsdDisplay
+      ? [
+          {
+            key: "performance-vs-usd" as const,
+            label: "1Y vs USD" as const,
+            display: performanceVsUsdDisplay,
+          },
+        ]
+      : []),
+  ];
+}
+
+function buildSignalRailItems(
+  reportCard: ReportCard | null,
+  isNavToken: boolean,
+  effectivePegScore: number | null,
+  liquidityData: DexLiquidityData | undefined,
+  dewsDisplay: HeroDewsDisplay,
+): HeroSignalRailItemViewModel[] {
+  return [
+    {
+      key: "safety",
+      label: "Safety",
+      primary: reportCard?.overallGrade ?? "—",
+      secondary: reportCard?.overallScore != null ? `${reportCard.overallScore}/100` : null,
+      href: "#report-card",
+      colorClass: reportCard?.overallGrade ? REPORT_CARD_GRADE_COLORS[reportCard.overallGrade] : HERO_MUTED_CLASS,
+    },
+    {
+      key: "peg",
+      label: "Peg",
+      primary: effectivePegScore != null ? String(effectivePegScore) : isNavToken ? "NAV" : "—",
+      secondary: null,
+      href: "#report-card",
+      colorClass: effectivePegScore != null ? pegScoreColor(effectivePegScore) : HERO_MUTED_CLASS,
+    },
+    {
+      key: "liquidity",
+      label: "Liquidity",
+      primary: liquidityData?.liquidityScore != null ? String(Math.round(liquidityData.liquidityScore)) : "—",
+      secondary: liquidityData?.poolCount != null ? `${liquidityData.poolCount} pools` : null,
+      href: "#liquidity",
+      colorClass:
+        liquidityData?.liquidityScore != null ? getScoreColor(liquidityData.liquidityScore) : HERO_MUTED_CLASS,
+    },
+    {
+      key: "dews",
+      label: "DEWS",
+      primary: dewsDisplay.value,
+      secondary: dewsDisplay.sub ?? null,
+      href: "#report-card",
+      colorClass: dewsDisplay.color,
+    },
+  ];
+}
+
 export function buildStablecoinDetailHeroViewModel({
   coin,
   coinData,
@@ -588,18 +716,10 @@ export function buildStablecoinDetailHeroViewModel({
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;
 
-  const safePrevDay = posOrNull(prevDay);
-  const safePrevWeek = posOrNull(prevWeek);
-  const safePrevMonth = posOrNull(prevMonth);
-  const hasPrevDay = safePrevDay !== null;
-  const hasPrevWeek = safePrevWeek !== null;
-  const hasPrevMonth = safePrevMonth !== null;
-  const prevDayValue = safePrevDay ?? 0;
-  const prevWeekValue = safePrevWeek ?? 0;
-  const prevMonthValue = safePrevMonth ?? 0;
+  const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
 
   const earlyPegScore =
-    !isNavToken && pegScoreResult !== null && pegScoreResult.pegScore !== null && pegScoreResult.trackingSpanDays < 30;
+    effectivePegScore !== null && pegScoreResult !== null && pegScoreResult.trackingSpanDays < 30;
 
   const pegScoreDisplay = buildPegScoreDisplay(isNavToken, pegScoreResult, recordedDepegEventCount);
   const liqDisplay = buildLiquidityDisplay(liquidityData);
@@ -611,46 +731,16 @@ export function buildStablecoinDetailHeroViewModel({
   const dewsAccent = buildDewsAccent(stressSignal);
   const limitedDepegCoverageNote = buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps);
 
-  const tertiaryMetrics: HeroTertiaryMetricViewModel[] = [
-    {
-      key: "dews",
-      label: "DEWS",
-      methodologyTopic: "dewsBand",
-      display: dewsDisplay,
-      accentClass: dewsAccent,
-    },
-    {
-      key: "peg-score",
-      label: "Peg Score",
-      mobileLabel: "Peg",
-      methodologyTopic: "pegScore",
-      display: pegScoreDisplay,
-      accentClass: pegScoreAccent,
-    },
-    {
-      key: "liquidity",
-      label: "Liquidity",
-      mobileLabel: "Liq",
-      methodologyTopic: "liquidityScore",
-      display: liqDisplay,
-      accentClass: liqAccent,
-    },
-    {
-      key: "excess-yield",
-      label: "30d Excess",
-      methodologyTopic: "pys",
-      display: excessYieldDisplay,
-    },
-    ...(performanceVsUsdDisplay
-      ? [
-          {
-            key: "performance-vs-usd" as const,
-            label: "1Y vs USD" as const,
-            display: performanceVsUsdDisplay,
-          },
-        ]
-      : []),
-  ];
+  const tertiaryMetrics = buildTertiaryMetrics(
+    dewsDisplay,
+    dewsAccent,
+    pegScoreDisplay,
+    pegScoreAccent,
+    liqDisplay,
+    liqAccent,
+    excessYieldDisplay,
+    performanceVsUsdDisplay,
+  );
 
   const passportItems = buildHeroPassportItems(passport);
 
@@ -664,43 +754,7 @@ export function buildStablecoinDetailHeroViewModel({
       }
     : null;
 
-  const signalRailItems: HeroSignalRailItemViewModel[] = [
-    {
-      key: "safety",
-      label: "Safety",
-      primary: reportCard?.overallGrade ?? "—",
-      secondary: reportCard?.overallScore != null ? `${reportCard.overallScore}/100` : null,
-      href: "#report-card",
-      colorClass: reportCard?.overallGrade ? REPORT_CARD_GRADE_COLORS[reportCard.overallGrade] : HERO_MUTED_CLASS,
-    },
-    {
-      key: "peg",
-      label: "Peg",
-      primary:
-        !isNavToken && pegScoreResult?.pegScore != null ? String(pegScoreResult.pegScore) : isNavToken ? "NAV" : "—",
-      secondary: null,
-      href: "#report-card",
-      colorClass:
-        !isNavToken && pegScoreResult?.pegScore != null ? pegScoreColor(pegScoreResult.pegScore) : HERO_MUTED_CLASS,
-    },
-    {
-      key: "liquidity",
-      label: "Liquidity",
-      primary: liquidityData?.liquidityScore != null ? String(Math.round(liquidityData.liquidityScore)) : "—",
-      secondary: liquidityData?.poolCount != null ? `${liquidityData.poolCount} pools` : null,
-      href: "#liquidity",
-      colorClass:
-        liquidityData?.liquidityScore != null ? getScoreColor(liquidityData.liquidityScore) : HERO_MUTED_CLASS,
-    },
-    {
-      key: "dews",
-      label: "DEWS",
-      primary: dewsDisplay.value,
-      secondary: dewsDisplay.sub ?? null,
-      href: "#report-card",
-      colorClass: dewsDisplay.color,
-    },
-  ];
+  const signalRailItems = buildSignalRailItems(reportCard, isNavToken, effectivePegScore, liquidityData, dewsDisplay);
 
   return {
     coin,
@@ -726,17 +780,7 @@ export function buildStablecoinDetailHeroViewModel({
       isNavToken,
       limitedDepegCoverageNote,
     },
-    market: {
-      mcap,
-      supply,
-      safePrevDay,
-      safePrevWeek,
-      hasPrevMonth,
-      safePrevMonth,
-      prevDayTrendClass: getTrendClass(hasPrevDay, mcap, prevDayValue),
-      prevWeekTrendClass: getTrendClass(hasPrevWeek, mcap, prevWeekValue),
-      prevMonthTrendClass: getTrendClass(hasPrevMonth, mcap, prevMonthValue),
-    },
+    market: { ...buildMarketTrends(mcap, prevDay, prevWeek, prevMonth), supply },
     peg: {
       earlyPegScore,
       trackingSpanDays: pegScoreResult?.trackingSpanDays ?? 0,
