@@ -147,9 +147,11 @@ export function ContentTable({
   rowHeaderColumnId,
   ...frameProps
 }: ContentTableProps) {
-  if (process.env.NODE_ENV !== "production") {
-    assertContentTableRowsMatchColumns(columns, rows, rowHeaderColumnId);
-  }
+  // Run unconditionally: this is a static export, so SSG executes under
+  // NODE_ENV=production. A dev-only guard would never fire during build,
+  // letting a column/row mismatch ship as a silently broken table. The
+  // O(columns×rows) check is negligible.
+  assertContentTableRowsMatchColumns(columns, rows, rowHeaderColumnId);
 
   return (
     <ContentTableFrame {...frameProps}>
