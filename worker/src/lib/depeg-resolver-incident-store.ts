@@ -672,14 +672,6 @@ async function linkSealedNearbyIncidentTail(
     consumedAt: nowSec,
     consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
   });
-  await db
-    .prepare(
-      `INSERT INTO depeg_resolver_incident_event_links
-       (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-       VALUES (?, ?, 'repair_replacement', ?, ?, ?)`,
-    )
-    .bind(row.incident_key, event.eventId, linkAuthorization.id, nowSec, AUTOMATED_SEALED_TAIL_LINK_NOTE)
-    .run();
 
   const currentAuthorization = await authorizeEventRepair(db, {
     eventId: event.eventId,
@@ -699,32 +691,44 @@ async function linkSealedNearbyIncidentTail(
     consumedAt: nowSec,
     consumer: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
   });
-  await db
-    .prepare(
-      `INSERT INTO depeg_resolver_incident_revisions
-       (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
-       VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
-    )
-    .bind(
-      row.incident_key,
-      row.current_event_id,
-      event.eventId,
-      AUTOMATED_SEALED_TAIL_CURRENT_REASON,
-      currentAuthorization.id,
-      nowSec,
-      AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-    )
-    .run();
-  await db
-    .prepare(
-      `UPDATE depeg_resolver_incidents
-       SET current_event_id = ?,
-           current_started_at = ?,
-           updated_at = ?
-       WHERE incident_key = ?`,
-    )
-    .bind(event.eventId, event.startedAt, nowSec, row.incident_key)
-    .run();
+
+  // The two authorize/consume pairs above must run sequentially because the
+  // INSERTs/UPDATE below depend on their generated authorization ids. Those
+  // three mechanical writes are atomic via db.batch(); the residual partial-
+  // state window is between authorization consumption and this batch.
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_event_links
+         (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+         VALUES (?, ?, 'repair_replacement', ?, ?, ?)`,
+      )
+      .bind(row.incident_key, event.eventId, linkAuthorization.id, nowSec, AUTOMATED_SEALED_TAIL_LINK_NOTE),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_revisions
+         (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+      )
+      .bind(
+        row.incident_key,
+        row.current_event_id,
+        event.eventId,
+        AUTOMATED_SEALED_TAIL_CURRENT_REASON,
+        currentAuthorization.id,
+        nowSec,
+        AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
+      ),
+    db
+      .prepare(
+        `UPDATE depeg_resolver_incidents
+         SET current_event_id = ?,
+             current_started_at = ?,
+             updated_at = ?
+         WHERE incident_key = ?`,
+      )
+      .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
+  ]);
 
   return mapIncidentRow(
     {
