@@ -326,9 +326,8 @@ function checkWorkerLimitsDoc(failures: Failure[]): void {
   expectNumber(failures, file, "circuit probe interval minutes", circuitNumbers[1] ?? null, CIRCUIT_PROBE_INTERVAL_SEC / 60);
 }
 
-function checkChainsApiDoc(failures: Failure[]): void {
+function checkChainsApiDoc(failures: Failure[], doc: string): void {
   const file = "docs/api-reference.md";
-  const doc = read(file);
 
   expectEqual(
     failures,
@@ -365,9 +364,8 @@ function getCacheExampleNumber(doc: string, cacheKey: string, field: string): nu
   return match?.[1] ? Number(match[1]) : null;
 }
 
-function checkApiFreshnessDoc(failures: Failure[]): void {
+function checkApiFreshnessDoc(failures: Failure[], doc: string): void {
   const file = "docs/api-reference.md";
-  const doc = read(file);
   const metaRows = [
     { row: "`GET /api/stablecoins`", expected: API_FRESHNESS_MAX_AGE_SEC.stablecoins },
     { row: "`GET /api/bluechip-ratings`", expected: API_FRESHNESS_MAX_AGE_SEC.bluechip },
@@ -505,6 +503,7 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
 
 export function runDocSyncChecks(): Failure[] {
   const failures: Failure[] = [];
+  const apiReferenceDoc = read("docs/api-reference.md");
 
   checkMethodologyVersions(failures);
   checkMethodologyCommitProvenance(failures);
@@ -513,9 +512,9 @@ export function runDocSyncChecks(): Failure[] {
   checkDewsDoc(failures);
   checkLiquidityDoc(failures);
   checkWorkerLimitsDoc(failures);
-  checkApiFreshnessDoc(failures);
+  checkApiFreshnessDoc(failures, apiReferenceDoc);
   checkStatusDashboardDoc(failures);
-  checkChainsApiDoc(failures);
+  checkChainsApiDoc(failures, apiReferenceDoc);
   checkChainsPageDoc(failures);
   checkRedemptionBackstopsDoc(failures);
 
