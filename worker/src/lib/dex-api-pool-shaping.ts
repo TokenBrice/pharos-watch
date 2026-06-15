@@ -42,10 +42,12 @@ export function isEligibleDirectApiPool(
 }
 
 export function isPreferredDirectApiPool(
-  pool: Pick<DexApiPool, "tvlUsd" | "volume24hUsd">,
+  pool: Pick<DexApiPool, "source" | "tvlUsd" | "volume24hUsd">,
   minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
 ): boolean {
-  return isEligibleDirectApiPool(pool, minTvlUsd) && Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0;
+  if (!isEligibleDirectApiPool(pool, minTvlUsd)) return false;
+  if (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0) return true;
+  return pool.source === "aerodrome-slipstream" || pool.source === "velodrome-slipstream";
 }
 
 function toPositiveFiniteNumberOrNull(value: number | null | undefined): number | null {
