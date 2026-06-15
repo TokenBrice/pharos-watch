@@ -235,14 +235,20 @@ export async function runEventReconciliation(
 
   for (const candidate of candidates) {
     const config = getEthereumConfig(candidate.asset);
-    const row = await fetchReceiptRow(
-      client,
-      config,
-      candidate.address.toLowerCase(),
-      candidate.tx_hash.toLowerCase() as `0x${string}`,
-    );
-    if (row) {
-      insertedRows.push(row);
+    try {
+      const row = await fetchReceiptRow(
+        client,
+        config,
+        candidate.address.toLowerCase(),
+        candidate.tx_hash.toLowerCase() as `0x${string}`,
+      );
+      if (row) {
+        insertedRows.push(row);
+      }
+    } catch (error) {
+      dependencies.log?.(
+        `Skipping ${candidate.asset} ${candidate.tx_hash}: receipt fetch failed (${error instanceof Error ? error.message : String(error)})`,
+      );
     }
   }
 

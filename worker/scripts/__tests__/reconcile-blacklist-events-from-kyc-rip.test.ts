@@ -54,6 +54,27 @@ describe("event kyc.rip reconciliation", () => {
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();
   });
 
+  it("skips a candidate (and logs) when its receipt fetch fails instead of aborting the run", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
+    const d1 = createRemoteD1Mock([]);
+    const client = {
+      getTransactionReceipt: vi.fn().mockRejectedValue(new Error("rate limited")),
+      getBlock: vi.fn(),
+    } as never;
+    const log = vi.fn();
+
+    const summary = await runEventReconciliation(
+      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+      { fetchImpl, d1, client, log },
+    );
+
+    expect(summary.mode).toBe("apply");
+    expect(summary.candidates).toBe(1);
+    expect(summary.inserted).toBe(0);
+    expect(d1.executeStatementsMock).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("receipt fetch failed"));
+  });
+
   it("queries D1 in apply mode and skips inserts for already-known addresses", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
     const d1 = createRemoteD1Mock([
