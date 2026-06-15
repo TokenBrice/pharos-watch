@@ -30,7 +30,6 @@ import {
   SafetyControlsPanel,
   SafetyEmptyState,
   SafetyHeadlineStats,
-  SafetyLandscapeCard,
   SafetyResultsSummary,
   SafetyScoresLoadingState,
   SafetySimulationBanner,
@@ -193,13 +192,6 @@ export function ReportCardsClient() {
       />
 
       <SafetyHeadlineStats stats={headlineStats} />
-
-      <SafetyLandscapeCard
-        gradeCounts={gradeCounts}
-        totalCards={totalCards}
-        activeFilter={gradeFilter}
-        onFilterChange={setGradeFilter}
-      />
 
       <StressTestPanel
         stressTest={stressTest}
