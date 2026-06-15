@@ -22,7 +22,7 @@ export function useSvgId(prefix: string): string {
   return `${prefix}-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 }
 
-interface ChartMargin {
+export interface ChartMargin {
   top: number;
   right: number;
   bottom: number;

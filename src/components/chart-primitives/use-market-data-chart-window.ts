@@ -4,18 +4,11 @@ import { useMemo } from "react";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
-import { usePlotInsets } from "@/components/chart-primitives/axes";
+import { usePlotInsets, type ChartMargin } from "@/components/chart-primitives/axes";
 import { useChartSyncHandlers, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 
 interface TimePoint {
   ts: number;
-}
-
-interface ChartMargin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
 }
 
 export function useMarketDataChartWindow<T extends TimePoint>({
