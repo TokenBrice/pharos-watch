@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTemplate, type SelectorInput, type SelectorOutput, type SelectorRecommendation } from "@shared/lib/selector";
+import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-labels";
 import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
 import { Bot, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -526,23 +527,12 @@ function buildWhyText(rec: SelectorRecommendation): string {
     .filter((component) => component.rawValue != null)
     .sort((a, b) => b.contribution - a.contribution)[0];
   if (strongest) {
-    return `${rec.symbol} ranked here because ${readableComponentKey(strongest.key)} contributed ${strongest.contribution.toFixed(1)} points from a ${Math.round(strongest.rawValue ?? strongest.normalizedValue ?? 0)} reading.`;
+    const componentLabel =
+      selectorComponentReadingLabel(strongest.key) ??
+      strongest.key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+    return `${rec.symbol} ranked here because ${componentLabel} contributed ${strongest.contribution.toFixed(1)} points from a ${Math.round(strongest.rawValue ?? strongest.normalizedValue ?? 0)} reading.`;
   }
   return `${rec.symbol} passed the selected profile filters and ranked under the current ${PROFILE_LABEL[rec.profile]} weight set.`;
-}
-
-function readableComponentKey(key: string): string {
-  const labels: Record<string, string> = {
-    resilience: "resilience",
-    dependencyRisk: "dependency risk",
-    pharosYieldScore: "Pharos Yield Score",
-    pegScoreNow: "current peg score",
-    liquidity: "liquidity",
-    dewsInverted: "DEWS stress",
-    safetyOverall: "Safety Score",
-    pegStabilityHistory: "peg history",
-  };
-  return labels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
 
 function humanizeSelectorError(reason: string): string {
