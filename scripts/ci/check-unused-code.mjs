@@ -112,7 +112,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/stablecoins/schema.ts::findDuplicateStablecoinCatalogIds",
   "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract",
   "shared/lib/yield-scoring.ts::PYS_DEFAULT_SAFETY_SCORE",
-  "src/components/pharos-logo.tsx::PharosLogoWithText",
   "src/components/providers.tsx::ToastContext",
   "src/components/providers.tsx::useToastContext",
   "src/components/ui/badge.tsx::badgeVariants",

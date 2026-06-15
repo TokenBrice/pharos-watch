@@ -34,27 +34,3 @@ export function PharosLogo({ size = 32, className, priority = false }: PharosLog
     </div>
   );
 }
-
-/**
- * Pharos logo with text lockup for headers.
- */
-export function PharosLogoWithText({ 
-  size = 32, 
-  className,
-  textClassName,
-  priority = false,
-}: PharosLogoProps & { textClassName?: string }) {
-  return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <PharosLogo size={size} priority={priority} />
-      <span 
-        className={cn(
-          "font-mono tabular-nums text-[1.05rem] font-semibold uppercase tracking-[0.18em]",
-          textClassName
-        )}
-      >
-        PHAROS
-      </span>
-    </div>
-  );
-}
