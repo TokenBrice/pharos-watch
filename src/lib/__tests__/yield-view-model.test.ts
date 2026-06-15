@@ -218,17 +218,6 @@ describe("buildYieldViewModel", () => {
     });
   });
 
-  it("exposes only current-payload comparable sets", () => {
-    const model = buildYieldViewModel(rows, {});
-
-    expect(model.comparableSets.map((set) => set.basis)).toEqual(
-      expect.arrayContaining(["yield-type", "peg", "benchmark", "warning-state", "source-confidence", "tvl", "source-depth"]),
-    );
-    expect(model.comparableSets.map((set) => set.basis)).not.toEqual(
-      expect.arrayContaining(["chain", "venue", "risk-tier", "deployment-place"]),
-    );
-  });
-
   it("returns a useful filtered empty state", () => {
     const model = buildYieldViewModel(rows, { q: "zzzz" });
 

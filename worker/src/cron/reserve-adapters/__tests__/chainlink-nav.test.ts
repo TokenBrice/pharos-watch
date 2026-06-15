@@ -4,7 +4,7 @@ import {
   adaptChainlinkNavResponse,
   parseOndoPriceData,
   type ChainlinkNavParams,
-} from "../chainlink-nav";
+} from "../chainlink-nav-core";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -138,14 +138,14 @@ describe("parseOndoPriceData", () => {
   });
 });
 
-describe("fetchChainlinkNavReserves Ondo methods", () => {
+describe("fetchChainlinkNavCore Ondo methods", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("reads getPriceData directly and marks freshness verified", async () => {
     const helpers = await import("../helpers");
-    const { fetchChainlinkNavReserves } = await import("../chainlink-nav");
+    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
     const updatedAt = 1_775_684_339;
     const rawPriceData = "0x"
       + "00000000000000000000000000000000000000000000000639e961576659e000"
@@ -179,7 +179,7 @@ describe("fetchChainlinkNavReserves Ondo methods", () => {
       },
     };
 
-    const result = await fetchChainlinkNavReserves(
+    const result = await fetchChainlinkNavCore(
       {} as never,
       config as never,
       new AbortController().signal,
@@ -198,7 +198,7 @@ describe("fetchChainlinkNavReserves Ondo methods", () => {
 
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {
     const helpers = await import("../helpers");
-    const { fetchChainlinkNavReserves } = await import("../chainlink-nav");
+    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
 
     vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
       if (opts.data === "0x313ce567") return 6n; // decimals()
@@ -234,7 +234,7 @@ describe("fetchChainlinkNavReserves Ondo methods", () => {
       },
     };
 
-    const result = await fetchChainlinkNavReserves(
+    const result = await fetchChainlinkNavCore(
       {} as never,
       config as never,
       new AbortController().signal,

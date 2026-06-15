@@ -133,13 +133,6 @@ export interface YieldCohortPercentile {
   cohortKey: string;
 }
 
-export interface YieldComparableSet {
-  key: string;
-  label: string;
-  count: number;
-  basis: "yield-type" | "peg" | "benchmark" | "warning-state" | "source-confidence" | "tvl" | "source-depth";
-}
-
 export type YieldViewModelRow = YieldRanking & {
   peg: PegCurrency | null;
   viewRank: number;
@@ -191,7 +184,6 @@ export interface YieldViewModel {
     description: string;
     suggestions: YieldEmptyStateSuggestion[];
   };
-  comparableSets: YieldComparableSet[];
   comparisonLabel: string;
   stats: YieldViewModelStats;
   presets: YieldPresetState[];
@@ -891,36 +883,6 @@ function buildStats(
   };
 }
 
-function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableSet[] {
-  const sets = new Map<string, YieldComparableSet>();
-  const add = (basis: YieldComparableSet["basis"], key: string, label: string) => {
-    const id = `${basis}:${key}`;
-    const current = sets.get(id);
-    if (current) {
-      current.count += 1;
-    } else {
-      sets.set(id, { key: id, label, basis, count: 1 });
-    }
-  };
-
-  for (const facet of facets) {
-    const row = facet.row;
-    add("yield-type", row.yieldType, YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType);
-    if (facet.peg) add("peg", facet.peg, `${getYieldPegLabel(facet.peg)} peg`);
-    add("benchmark", facet.benchmarkKey, `${facet.benchmarkKey} benchmark`);
-    add("warning-state", facet.hasWarning ? "warning" : "no-warning", facet.hasWarning ? "Warning rows" : "No-warning rows");
-    if (facet.confidenceTier) add("source-confidence", facet.confidenceTier, `${facet.confidenceTier} confidence`);
-    add("tvl", row.sourceTvlUsd === null ? "unknown" : "available", row.sourceTvlUsd === null ? "TVL unknown" : "TVL available");
-    add("source-depth", facet.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[facet.sourceDepthLens].label} source depth`);
-  }
-
-  return Array.from(sets.values()).sort((a, b) => {
-    const basisCompare = a.basis.localeCompare(b.basis);
-    if (basisCompare !== 0) return basisCompare;
-    return b.count - a.count || a.label.localeCompare(b.label);
-  });
-}
-
 function buildEmptyState(
   totalRows: number,
   visibleRows: readonly YieldViewModelRow[],
@@ -1218,7 +1180,6 @@ export function buildYieldViewModel(
     totalRows: rowFacets.length,
     visibleRows,
     emptyState: buildEmptyState(rowFacets.length, visibleRows, rowFacets, filters, filterOptions),
-    comparableSets: buildComparableSets(visibleFacets),
     comparisonLabel,
     stats: buildStats(visibleRows, buildOptionsParams),
     presets,

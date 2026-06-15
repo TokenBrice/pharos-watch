@@ -11,7 +11,7 @@ import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
 import { fetchCentrifugeVaultReserves } from "./centrifuge-vault";
 import { fetchCircleReserves } from "./circle-transparency";
-import { fetchChainlinkNavReserves } from "./chainlink-nav";
+import { fetchChainlinkNavCore } from "./chainlink-nav-core";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
@@ -73,7 +73,7 @@ const ADAPTER_FNS = {
   "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
   "centrifuge-vault": fetchCentrifugeVaultReserves,
-  "chainlink-nav": fetchChainlinkNavReserves,
+  "chainlink-nav": fetchChainlinkNavCore,
   "circle-transparency": fetchCircleReserves,
   "chainlink-por": fetchChainlinkPorReserves,
   "collateral-positions-api": fetchCollateralPositionsApiReserves,
