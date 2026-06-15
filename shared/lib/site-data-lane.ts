@@ -95,6 +95,7 @@ export function isSiteDataAllowedUiHostname(
   hostname: string,
   env: SiteDataUiOriginEnv = {},
 ): boolean {
+  // Preview deployments are intentionally allowed to read this public GET-only lane.
   return resolveSiteDataAllowedUiHostnames(env).has(hostname) || isPagesAppHostname(hostname);
 }
 
