@@ -42,6 +42,7 @@ const CMC_QUOTE_MAX_AGE_SEC = 60 * 60;
 const CMC_FETCH_COOLDOWN_SEC = 3600;
 const CMC_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
 const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/category";
+const CMC_STABLECOIN_CATEGORY_ID = "604f2753ebccdd50cd175fc1";
 const CMC_LAST_FETCH_CACHE_KEY = "cmc_last_fetch";
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
@@ -121,7 +122,7 @@ export async function runCmcPass(
     }
 
     if (shouldCall) {
-      const url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD";
+      const url = `https://${CMC_CATEGORY_ENDPOINT}?id=${CMC_STABLECOIN_CATEGORY_ID}&limit=${CMC_CATEGORY_LIMIT}&convert=USD`;
       const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
       const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
       const cmcRes = await fetchWithRetry(
