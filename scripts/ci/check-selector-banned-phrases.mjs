@@ -34,10 +34,6 @@ const SCAN_TARGETS = [
   { kind: "dir", path: "shared/lib/selector", extensions: [".ts"], excludeBasenames: ["why-keys.ts", "what-to-watch-templates.ts"] },
   { kind: "dir", path: "src/app/screener/picker", extensions: [".ts", ".tsx"] },
   { kind: "dir", path: "src/components/selector", extensions: [".ts", ".tsx"] },
-  // The editorial doc itself teaches the banned phrases (§1/§2/§8/§10 contain quoted "do not
-  // write" examples and the ban-list table). Only the §4 worked examples ship as ground-truth
-  // editorial prose, so the scan is scoped to that section. Section bounds are derived from
-  // the `## 4.` / `## 5.` heading pair at runtime.
   {
     kind: "file",
     path: "scripts/fixtures/selector-editorial-examples.md",
@@ -90,15 +86,6 @@ async function collectFiles(target) {
       throw new Error(`required scan target missing: ${target.path}`);
     }
     return [{ path: abs, sectionBounds: null }];
-  }
-  if (target.kind === "file-section") {
-    if (!(await pathExists(abs))) {
-      throw new Error(`required scan target missing: ${target.path}`);
-    }
-    return [{
-      path: abs,
-      sectionBounds: { startHeading: target.startHeading, endHeading: target.endHeading },
-    }];
   }
   if (!(await pathExists(abs))) {
     throw new Error(`required scan target missing: ${target.path}`);
