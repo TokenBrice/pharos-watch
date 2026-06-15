@@ -103,7 +103,7 @@ function runWrangler(database, remote) {
       }
       if (rows.length > 0) {
         failures++;
-        console.log(`FAIL ${check.name}: ${rows.length} row(s)`);
+        console.error(`FAIL ${check.name}: ${rows.length} row(s)`);
         console.log(JSON.stringify(rows.slice(0, 20), null, 2));
       } else {
         console.log(`ok ${check.name}`);
