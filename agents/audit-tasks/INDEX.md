@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**119/733 done (16%)**  `███░░░░░░░░░░░░░░░░░`
+**121/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 588 | 7 | 0 | 119 | 19 |
+| Count | 587 | 6 | 0 | 121 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 50 | 3 | 0 | 203 |
-| quality | 315 | 58 | 4 | 0 | 246 |
+| redundancy | 266 | 51 | 2 | 0 | 203 |
+| quality | 315 | 59 | 4 | 0 | 245 |
 | sustainability | 152 | 11 | 0 | 0 | 139 |
 
 ## redundancy (266)
@@ -150,7 +150,7 @@
 | ⬜ | [R-116](redundancy/R-116.md) | S | dead-code | Dead `screenerFilterChips` key in buildResultSummaryCoordinationProps spread |  | `src/app/screener/picker/handoff.ts:L136` |
 | ⬜ | [R-117](redundancy/R-117.md) | S | clone | gradeRank() duplicated with divergent NR semantics across two files |  | `src/components/stablecoin-detail/safety-score-hi` |
 | ⬜ | [R-118](redundancy/R-118.md) | S | clone | scheduleIdle() is a near-clone in two component files |  | `src/components/home-alt-hero-chart-gate.tsx:29-4` |
-| 🔄 | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array | codex | `src/components/depeg-tracker-table.tsx:L68-L74` |
+| ✅ | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array | codex | `src/components/depeg-tracker-table.tsx:L68-L74` |
 | ✅ | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta | codex | `shared/lib/stablecoins/schema.ts:L126-L128` |
 | ⬜ | [R-121](redundancy/R-121.md) | S | clone | Same calendar dates aliased under 3-4 different constant names across files |  | `shared/lib/redemption-backstop-configs/review-da` |
 | ⬜ | [R-122](redundancy/R-122.md) | S | clone | Duplicate depeg-step type-guard: isDepegStep vs isDepegStepValue |  | `worker/src/api/telegram-webhook-settings-shared.` |
@@ -440,7 +440,7 @@
 | ✅ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block | codex | `worker/src/handlers/scheduled/hourly-live-reserv` |
 | ✅ | [Q-021](quality/Q-021.md) | S | naming | persistLiveReserveCursorState misleadingly names a cleanup-only deletion function | codex | `worker/src/cron/sync-live-reserves-run-state.ts:` |
 | ✅ | [Q-025](quality/Q-025.md) | S | type-safety | isSupplyBackfillAction hardcodes the path string instead of using the shared key | codex | `src/components/status/admin-action-button.tsx:L3` |
-| 🔄 | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic | codex | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
+| ✅ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic | codex | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
 | ✅ | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user | codex | `src/lib/chart-export.ts:15-17` |
@@ -489,7 +489,7 @@
 | ⬜ | [Q-138](quality/Q-138.md) | M | complexity | KpiBar component accumulates 27 hook calls and ~250 lines of pre-render data wrangling |  | `src/components/kpi-bar.tsx:40-370` |
 | ⬜ | [Q-141](quality/Q-141.md) | S | complexity | compare-pages.ts: build-time throw on module evaluation can produce opaque build errors |  | `src/lib/compare-pages.ts:L142, L50-L74` |
 | ⬜ | [Q-151](quality/Q-151.md) | M | error-handling | SVG sanitizer does not strip `href` / `xlink:href` attributes enabling CSS-based data exfi |  | `src/app/alt-pegs/fiat-world-atlas/world-map.tsx:` |
-| ⬜ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness |  | `src/components/selector/selector-shortlist-card.` |
+| 🔄 | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent | codex | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ✅ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
