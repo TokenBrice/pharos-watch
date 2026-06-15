@@ -152,7 +152,7 @@ export async function completeMintBurnRun(input: {
     contractsSkipped: input.contractsSkipped,
     contractsDeferredExtended: input.contractsDeferredExtended,
     apiErrors: input.apiErrors,
-    validationFailures: input.apiErrors,
+    validationFailures: 0,
     fallbackMode: null,
     burnClassification: {
       effectiveBurns: input.effectiveBurns,
