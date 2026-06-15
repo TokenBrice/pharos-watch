@@ -86,8 +86,8 @@ function markRecoveryAttempt(
 
 function inferErrorClass(error: unknown): BlacklistRecoveryErrorClass {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-  if (message.includes("http")) return "provider_http_error";
-  if (message.includes("timeout")) return "provider_timeout";
+  if (message.includes("timeout") || message.includes("timed out")) return "provider_timeout";
+  if (/\b[45]\d{2}\b/.test(message)) return "provider_http_error";
   return "provider_null";
 }
 
