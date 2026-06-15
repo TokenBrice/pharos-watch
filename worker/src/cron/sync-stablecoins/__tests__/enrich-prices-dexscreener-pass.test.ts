@@ -150,7 +150,7 @@ describe("runDexScreenerPass", () => {
     });
   });
 
-  it("keeps exact fallback prices on the upper-middle median for even pool counts", async () => {
+  it("averages the two middle exact fallback prices for even pool counts", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
@@ -190,7 +190,7 @@ describe("runDexScreenerPass", () => {
     const result = await runDexScreenerPass([asset], undefined, undefined);
 
     expect(result).toMatchObject({ resolved: 1, failures: [] });
-    expect(asset.price).toBe(1.01);
+    expect(asset.price).toBe(1.0);
     expect(asset.priceSource).toBe("dexscreener-exact");
     expect(asset.priceConfidence).toBe("fallback");
   });

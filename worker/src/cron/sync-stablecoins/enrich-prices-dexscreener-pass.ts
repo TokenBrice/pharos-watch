@@ -1,4 +1,5 @@
 import { DS_CHAIN_MAP, resolveChainId } from "@shared/lib/chains";
+import { median } from "@shared/lib/stats";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   CIRCUIT_SOURCE,
@@ -105,12 +106,6 @@ function getDexPairTrackedTokenSymbol(pair: Awaited<ReturnType<typeof fetchDsTok
   return null;
 }
 
-function medianDexPrice(prices: number[]): number | null {
-  if (prices.length === 0) return null;
-  const sorted = [...prices].sort((left, right) => left - right);
-  return sorted[Math.floor(sorted.length / 2)] ?? null;
-}
-
 function resolveDexScreenerAddressPrice(
   asset: PeggedAsset,
   target: DexScreenerTarget,
@@ -131,7 +126,7 @@ function resolveDexScreenerAddressPrice(
     })
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
 
-  const price = medianDexPrice(prices);
+  const price = median(prices);
   if (price == null) return null;
 
   return isUsableFallbackPrice(asset, price, fxRates) ? price : null;
