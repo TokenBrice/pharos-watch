@@ -796,6 +796,71 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
   });
 
+  it("rethrows non-missing-table tape_events failures instead of failing open", async () => {
+    const incident = {
+      incidentKey: "ddr2:tape-query-fault",
+      eventId: 94,
+      currentEventId: 94,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          { id: 94, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+        ],
+      },
+      {
+        match: "FROM tape_events",
+        rows: [],
+        throwError: new Error("D1_ERROR: database is locked"),
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    await expect(
+      buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
+    ).rejects.toThrow("D1_ERROR: database is locked");
+  });
+
+  it("tolerates a missing tape_events table by falling back to other evidence", async () => {
+    const incident = {
+      incidentKey: "ddr2:tape-missing-table",
+      eventId: 95,
+      currentEventId: 95,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          { id: 95, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+        ],
+      },
+      {
+        match: "FROM tape_events",
+        rows: [],
+        throwError: new Error("D1_ERROR: no such table: tape_events"),
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+    expect(snapshot.rows).toHaveLength(1);
+  });
+
   it("does not backdate overlapping day-precision terminal evidence before lock", async () => {
     const startedAt = USR_FROZEN_AT - 12 * 3600;
     const eligibleAt = startedAt + 86_400;

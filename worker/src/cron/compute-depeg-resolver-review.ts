@@ -30,6 +30,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
+import { logWorkerEvent } from "../lib/structured-log";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
   DdrCanonicalIncident,
@@ -293,9 +294,24 @@ async function loadTapeTerminalEvidenceByStablecoinId(
         const evidence = tapeTerminalEvidence(row);
         if (evidence) evidenceByStablecoinId.set(row.coin_id, evidence);
       }
-    } catch {
+    } catch (err) {
       // Older local/test databases may not have tape_events. Registry and
       // cemetery metadata remain the authoritative terminal evidence sources.
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("no such table")) continue;
+      // Any other failure (transient D1 overload, malformed query, binding
+      // fault) would silently drop terminal evidence and misclassify incidents
+      // as non-terminal — surface it instead of failing open.
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        job: "compute-depeg-resolver-review",
+        event: "tape_terminal_evidence_query_failed",
+        source: "tape_events",
+        message: "Failed to load tape terminal evidence",
+        error: err,
+      });
+      throw err;
     }
   }
 
