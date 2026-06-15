@@ -244,3 +244,10 @@ export const GT_PROBE_RUN_BUDGET_MS = 90_000;
  * retry cannot consume the outer budget.
  */
 export const ANTHROPIC_TIMEOUT_MS = 12 * 60_000;
+
+/**
+ * Anthropic model used for digest/recap editorial generation.
+ * Single source of truth shared by the implementation and its tests so a model
+ * upgrade is a one-line change. A deliberate product decision, not an env var.
+ */
+export const DIGEST_MODEL = "claude-opus-4-7";

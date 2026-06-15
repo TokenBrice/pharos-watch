@@ -13,7 +13,6 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChainCohortLattice } from "@/components/chains/chain-cohort-lattice";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatCompactUsd, formatSignedPercent, getNetColor } from "@shared/lib/format";
@@ -393,8 +392,6 @@ export function ChainsLeaderboardClient() {
         />
 
         <SelectedHarborPanel entry={selectedHarbor} />
-
-        <ChainCohortLattice chains={chartChains} />
 
         {/* Table */}
         <p className="sm:hidden font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">

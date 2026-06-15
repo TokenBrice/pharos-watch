@@ -152,7 +152,7 @@ import {
   validateDigestModelOutput,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
-import { ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";
 import {
   collectPsiContributors,
   collectYieldAnomalies,
@@ -498,7 +498,7 @@ describe("generateDailyDigest", () => {
       messages: { content: string }[];
       stream?: boolean;
     };
-    expect(anthropicBody.model).toBe("claude-opus-4-7");
+    expect(anthropicBody.model).toBe(DIGEST_MODEL);
     expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
     expect(anthropicBody.output_config).toEqual({ effort: "xhigh" });
     expect(anthropicBody.max_tokens).toBe(64000);

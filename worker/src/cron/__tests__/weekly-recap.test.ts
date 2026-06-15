@@ -19,6 +19,7 @@ import { generateWeeklyRecap } from "../weekly-recap";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { DIGEST_MODEL } from "../../lib/constants";
 
 const VALID_WEEKLY_EXTENDED = [
   "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
@@ -207,7 +208,7 @@ describe("generateWeeklyRecap", () => {
       output_config?: { effort: string };
       system: string;
     };
-    expect(weeklyBody.model).toBe("claude-opus-4-7");
+    expect(weeklyBody.model).toBe(DIGEST_MODEL);
     expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
     expect(weeklyBody.output_config).toEqual({ effort: "xhigh" });
     expect(weeklyBody.max_tokens).toBe(64000);

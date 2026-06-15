@@ -4,7 +4,7 @@ import type {
   DigestValidationProfile,
 } from "../daily-digest/response";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 import { recordCronFailure } from "../../lib/cron-logger";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
@@ -107,7 +107,7 @@ export async function requestDigestCopy(
         "Accept": "text/event-stream",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-7",
+        model: DIGEST_MODEL,
         max_tokens: options.maxTokens,
         thinking: { type: "adaptive" },
         // `max` has no constraint on thinking depth and caused runaway adaptive
