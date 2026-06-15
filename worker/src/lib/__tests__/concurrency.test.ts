@@ -57,6 +57,23 @@ describe("mapWithConcurrency", () => {
     expect(started.length).toBeLessThan(items.length);
   });
 
+  it("stops scheduling new work after a task rejects with undefined", async () => {
+    const started: number[] = [];
+    const cap = 2;
+    const items = [0, 1, 2, 3, 4, 5];
+
+    await expect(
+      mapWithConcurrency(items, cap, async (i) => {
+        started.push(i);
+        if (i === 1) throw undefined;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return i;
+      }),
+    ).rejects.toThrow("mapWithConcurrency task rejected");
+
+    expect(started).toEqual([0, 1]);
+  });
+
   it("rejects when maxInFlight is not a positive integer", async () => {
     await expect(mapWithConcurrency([1], 0, async (n) => n)).rejects.toThrow(RangeError);
     await expect(mapWithConcurrency([1], -1, async (n) => n)).rejects.toThrow(RangeError);

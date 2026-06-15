@@ -34,7 +34,7 @@ export async function mapWithConcurrency<T, R>(
 
   const worker = async (): Promise<void> => {
     for (;;) {
-      if (firstError !== undefined && firstError !== errorSentinel) return;
+      if (firstError !== undefined) return;
       const i = nextIndex++;
       if (i >= items.length) return;
       try {
