@@ -212,6 +212,13 @@ export interface CronResult {
   status?: "ok" | "degraded" | "error" | "skipped_locked";
   /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
   error?: string;
+  /**
+   * Affirmative discriminant set only on results produced by the cron-stage
+   * abort builders (see `buildAbortedCronStageResult`). Lets `isAbortResult`
+   * identify the abort sentinel without relying on the absence of fields from
+   * other stage result shapes.
+   */
+  aborted?: true;
 }
 
 export interface CronProgressUpdate {

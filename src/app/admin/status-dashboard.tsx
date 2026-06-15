@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { NoticeRail } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ import { useAutoExpand } from "./use-auto-expand";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { PipelineSection } from "./sections/pipeline-section";
 import { ReliabilitySection } from "./sections/reliability-section";
-import { CronsSection, type CronGroup } from "./sections/crons-section";
+import { CronsSection } from "./sections/crons-section";
 import { ActionsSection } from "./sections/actions-section";
 import { CredentialsSection } from "./sections/credentials-section";
 import { CommsSection } from "./sections/comms-section";
 import { HistorySection } from "./sections/history-section";
-import { getCronSeverity } from "./cron-severity";
+import { getCronSeverity, sortCronGroupsBySeverity } from "./cron-severity";
 import { TriageSummary } from "./status-dashboard/triage-summary";
 
 export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
@@ -50,6 +50,19 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
   const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useAutoExpand(false);
 
+  // model.cronGroups is rebuilt every render but is a pure derivation of
+  // data.crons, so key the sort on data.crons: cron groups only need
+  // re-sorting when the underlying cron data changes, not on every poll tick.
+  const cronGroups = model?.cronGroups;
+  const { activeCronGroups, healthyCronGroups } = useMemo(() => {
+    const sorted = sortCronGroupsBySeverity(cronGroups ?? []);
+    return {
+      activeCronGroups: sorted.filter((group) => group.entries.some(([, cron]) => getCronSeverity(cron) > 0)),
+      healthyCronGroups: sorted.filter((group) => group.entries.every(([, cron]) => getCronSeverity(cron) === 0)),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cronGroups is a pure derivation of data?.crons
+  }, [data?.crons]);
+
   if (isLoading) {
     return (
       <div className="py-20 text-center">
@@ -79,7 +92,6 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     browserProbeSummary,
     clientDataAgeSec,
     clientDataStale,
-    cronGroups,
     latestTransition,
     notices,
     overallCauseCount,
@@ -92,22 +104,6 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     statusHoldingAge,
   } = model;
   const statusEvaluatedAt = data.state.lastEvaluatedAt;
-  const sortedCronGroups = cronGroups
-    .map((group) => ({
-      ...group,
-      entries: [...group.entries].sort(([, a], [, b]) => getCronSeverity(b) - getCronSeverity(a)),
-    }))
-    .sort((a, b) => {
-      const aSeverity = Math.max(...a.entries.map(([, cron]) => getCronSeverity(cron)), 0);
-      const bSeverity = Math.max(...b.entries.map(([, cron]) => getCronSeverity(cron)), 0);
-      return bSeverity - aSeverity;
-    });
-  const activeCronGroups: CronGroup[] = sortedCronGroups.filter((group) =>
-    group.entries.some(([, cron]) => getCronSeverity(cron) > 0),
-  );
-  const healthyCronGroups: CronGroup[] = sortedCronGroups.filter((group) =>
-    group.entries.every(([, cron]) => getCronSeverity(cron) === 0),
-  );
 
   const sectionNodes: Partial<Record<DashboardSectionId, ReactNode>> = {
     pipeline: (

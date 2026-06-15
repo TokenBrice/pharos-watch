@@ -1,93 +1,36 @@
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { MethodologyDiagramFlow } from "../../methodology-shared";
 
 export function SafetyScoresScoringDetails() {
   return (
     <>
-      <div className="hidden md:flex flex-col items-center gap-3">
-        <div className="grid grid-cols-4 gap-3 w-full">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Exit Liquidity</p>
-            <p className="text-xs text-muted-foreground mt-0.5">30%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Resilience</p>
-            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Decentralization</p>
-            <p className="text-xs text-muted-foreground mt-0.5">15%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Dependency Risk</p>
-            <p className="text-xs text-muted-foreground mt-0.5">25%</p>
-          </div>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">Weighted Average</p>
-          <p className="text-xs text-muted-foreground mt-0.5">base score</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">&times; Peg Multiplier</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            (pegScore / 100)<sup>0.40</sup>
-          </p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border border-amber-500/40 p-3 text-center w-64">
-          <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX or redemption signal</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">Final Grade</p>
-          <p className="text-xs text-muted-foreground mt-0.5">A+ through F</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-3 md:hidden">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Exit Liquidity</p>
-            <p className="text-xs text-muted-foreground">30%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Resilience</p>
-            <p className="text-xs text-muted-foreground">20%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Decentralization</p>
-            <p className="text-xs text-muted-foreground">15%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Dep. Risk</p>
-            <p className="text-xs text-muted-foreground">25%</p>
-          </div>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">Weighted Average</p>
-          <p className="text-xs text-muted-foreground mt-0.5">base score</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">&times; Peg Multiplier</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            (pegScore / 100)<sup>0.40</sup>
-          </p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border border-amber-500/40 p-3 text-center">
-          <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX or redemption signal</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">Final Grade</p>
-          <p className="text-xs text-muted-foreground mt-0.5">A+ through F</p>
-        </div>
-      </div>
+      <MethodologyDiagramFlow
+        inputCols={4}
+        inputs={[
+          { title: "Exit Liquidity", subtitle: "30%" },
+          { title: "Resilience", subtitle: "20%" },
+          { title: "Decentralization", subtitle: "15%" },
+          { title: "Dependency Risk", shortTitle: "Dep. Risk", subtitle: "25%" },
+        ]}
+        steps={[
+          { title: "Weighted Average", subtitle: "base score", className: "md:w-64" },
+          {
+            title: <>&times; Peg Multiplier</>,
+            subtitle: (
+              <>
+                (pegScore / 100)<sup>0.40</sup>
+              </>
+            ),
+            className: "md:w-64",
+          },
+          {
+            title: <>&times; No-Liquidity Penalty</>,
+            subtitle: <>0.9&times; if no DEX or redemption signal</>,
+            className: "md:w-64 border-amber-500/40",
+          },
+          { title: "Final Grade", subtitle: "A+ through F", className: "md:w-64" },
+        ]}
+      />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Base Dimensions (weighted average)</h3>

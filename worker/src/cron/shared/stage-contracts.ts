@@ -40,6 +40,7 @@ export function buildAbortedCronStageResult(options: CronStageAbortOptions): Cro
   };
 
   return {
+    aborted: true,
     status: "degraded",
     itemCount: 0,
     metadata: options.serializeMetadata ? options.serializeMetadata(metadata) : JSON.stringify(metadata),

@@ -1,7 +1,7 @@
 import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
-export { formatCompactUsdShort } from "./format-compact-usd-short";
+export { formatCompactUsdShort, formatCompactUsdShortLowerK } from "./format-compact-usd-short";
 
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
 function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
@@ -35,6 +35,12 @@ export function formatCompactUsd(value: number): string {
   if (Math.abs(value) >= 1e6) return abbreviateNumber(value, 1, "$");
   if (Math.abs(value) >= 1e3) return abbreviateNumber(value, 0, "$");
   return `${value < 0 ? "-" : ""}$${Math.abs(value).toFixed(0)}`;
+}
+
+/** Signed compact-USD: same tiered abbreviation as formatCompactUsd, with a leading + for positives. */
+export function formatSignedCompactUsd(value: number): string {
+  if (!Number.isFinite(value)) return "N/A";
+  return `${value > 0 ? "+" : ""}${formatCompactUsd(value)}`;
 }
 
 export function formatCompactCount(value: number): string {

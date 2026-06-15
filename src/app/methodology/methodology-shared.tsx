@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -177,6 +177,76 @@ export function MethodologyDiagramArrow({
       }
     >
       {direction === "right" ? "\u2192" : "\u2193"}
+    </div>
+  );
+}
+
+export type MethodologyDiagramInput = {
+  title: ReactNode;
+  shortTitle?: ReactNode;
+  subtitle?: ReactNode;
+};
+
+export type MethodologyDiagramStep = {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  /** Static accent classes for the desktop card (e.g. fixed width, accent border). */
+  className?: string;
+};
+
+const DIAGRAM_GRID_COLS: Record<2 | 4, string> = {
+  2: "grid grid-cols-2 gap-2 w-full md:gap-3",
+  4: "grid grid-cols-2 gap-2 w-full md:grid-cols-4 md:gap-3",
+};
+
+/**
+ * Renders the shared methodology "inputs grid -> stacked steps" flow diagram with a
+ * single responsive layout instead of duplicated desktop/mobile subtrees. Inputs render
+ * in a responsive grid; each step renders as a stacked card separated by down arrows.
+ */
+export function MethodologyDiagramFlow({
+  inputs,
+  inputCols,
+  inputGridClassName,
+  steps,
+}: {
+  inputs: MethodologyDiagramInput[];
+  inputCols: 2 | 4;
+  /** Extra static classes for the inputs grid wrapper (e.g. md:max-w-md centering). */
+  inputGridClassName?: string;
+  steps: MethodologyDiagramStep[];
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className={cn(DIAGRAM_GRID_COLS[inputCols], inputGridClassName)}>
+        {inputs.map((input, index) => (
+          <MethodologyDiagramCard
+            key={index}
+            title={
+              input.shortTitle ? (
+                <>
+                  <span className="md:hidden">{input.shortTitle}</span>
+                  <span className="hidden md:inline">{input.title}</span>
+                </>
+              ) : (
+                input.title
+              )
+            }
+            titleClassName="text-xs md:text-base"
+            subtitle={input.subtitle}
+          />
+        ))}
+      </div>
+      {steps.map((step, index) => (
+        <Fragment key={index}>
+          <MethodologyDiagramArrow />
+          <MethodologyDiagramCard
+            className={cn("w-full", step.className)}
+            title={step.title}
+            subtitle={step.subtitle}
+          />
+        </Fragment>
+      ))}
     </div>
   );
 }

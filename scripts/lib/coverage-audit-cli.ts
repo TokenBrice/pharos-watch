@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getCirculatingRaw } from "../../shared/lib/supply";
-import { isRecord } from "@shared/lib/type-guards";
+import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 
-export { isRecord };
+export { isRecord, numberValue, stringValue };
 
 export const PROD_ORIGIN = "https://pharos.watch";
 export const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards`;
@@ -11,16 +11,6 @@ export const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 
 export interface UnknownRecord {
   [key: string]: unknown;
-}
-
-export function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-export function stringValue(value: unknown, { trim = true }: { trim?: boolean } = {}): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = trim ? value.trim() : value;
-  return normalized.length > 0 ? normalized : null;
 }
 
 export function extractStablecoinRows(payload: unknown): UnknownRecord[] {

@@ -489,14 +489,12 @@ export async function runDepegPipeline(
   return { depegErrorCount, depegErrors, providerDiagnostics };
 }
 
-/** Type guard: true when the pipeline returned a CronResult (abort). */
+/** Type guard: true when the pipeline returned the abort sentinel CronResult. */
 export function isAbortResult(result: unknown): result is CronResult {
   return (
     typeof result === "object" &&
     result !== null &&
-    "metadata" in result &&
-    !("rejectedCount" in result) &&
-    !("depegErrorCount" in result) &&
-    !("written" in result)
+    "aborted" in result &&
+    (result as { aborted?: unknown }).aborted === true
   );
 }

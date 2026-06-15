@@ -124,10 +124,13 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
       .filter((coin) => coin.symbol.toLowerCase().includes(q) || coin.name.toLowerCase().includes(q) || coin.stablecoinId.includes(q))
       .slice(0, 8);
   }, [query, state.catalog.searchableCoins]);
-  const suggestions = useMemo(() => {
-    const map = new Map(state.catalog.searchableCoins.map((coin) => [coin.stablecoinId, coin]));
-    return SUGGESTED_SEARCH_IDS.map((id) => map.get(id)).filter((coin): coin is NonNullable<typeof coin> => Boolean(coin));
-  }, [state.catalog.searchableCoins]);
+  const suggestions = useMemo(
+    () =>
+      SUGGESTED_SEARCH_IDS.map((id) => catalogById.get(id)).filter(
+        (coin): coin is NonNullable<typeof coin> => Boolean(coin),
+      ),
+    [catalogById],
+  );
   const queryLength = query.trim().length;
 
   return (

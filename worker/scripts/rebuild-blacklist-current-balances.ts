@@ -227,6 +227,7 @@ async function main() {
   const [config] = matchingConfigs;
   const etherscanApiKey = process.env.ETHERSCAN_API_KEY ?? process.env.ETHERSCAN_V2_API_KEY ?? null;
   const trongridApiKey = process.env.TRONGRID_API_KEY ?? null;
+  const drpcApiKey = process.env.DRPC_API_KEY ?? null;
   const chainRpcs = buildChainRpcs(process.env.ALCHEMY_API_KEY, process.env.DRPC_API_KEY);
   const limiter = createRateLimiter(Math.max(1, options.requestsPerSecond));
   const budget = createBudget(1_000_000);
@@ -323,6 +324,7 @@ async function main() {
             config,
             next.address,
             etherscanApiKey,
+            drpcApiKey,
             limiter,
             budget,
             AbortSignal.timeout(15_000),

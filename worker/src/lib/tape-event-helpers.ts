@@ -3,6 +3,7 @@ import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
+import { formatCompactUsdShortLowerK } from "@shared/lib/format";
 import type { TapeEventRow } from "./tape-event-types";
 
 /** Stable per-row hash for the wire `event_id`. djb2 → 8 hex chars. */
@@ -77,13 +78,8 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   return "notice";
 }
 
-export function formatUsdShort(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(value / 1_000)}k`;
-  return `$${Math.round(value)}`;
-}
+/** @deprecated tape-feed alias for the shared formatCompactUsdShortLowerK helper. */
+export const formatUsdShort = formatCompactUsdShortLowerK;
 
 export function truncateSummary(summary: string): string {
   return summary.length > 180 ? `${summary.slice(0, 177)}…` : summary;

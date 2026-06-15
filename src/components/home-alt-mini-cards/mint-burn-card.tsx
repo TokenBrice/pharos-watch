@@ -6,16 +6,8 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@/lib/urls";
-
-function formatNetFlowUsd(value: number): string {
-  const abs = Math.abs(value);
-  const sign = value >= 0 ? "+" : "-";
-  if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}$${abs.toFixed(0)}`;
-}
 
 interface Mover {
   id: string;
@@ -70,7 +62,7 @@ export function MintBurnCard(): React.JSX.Element {
               : "text-red-700 dark:text-red-400"
           }`}
         >
-          {gauge ? `Net ${formatNetFlowUsd(totalNet)}` : "Net flow"}
+          {gauge ? `Net ${formatSignedCompactUsd(totalNet)}` : "Net flow"}
         </p>
       </div>
       <ul

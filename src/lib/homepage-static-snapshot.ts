@@ -1,7 +1,16 @@
 import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import {
+  HOMEPAGE_COHORT_BUCKET_IDS,
+  type HomepageCohortBucketKey,
+} from "@/lib/homepage-cohort-config";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { numberValue } from "@shared/lib/type-guards";
+
+const COHORT_BUCKET_BY_ID = new Map<string, HomepageCohortBucketKey>(
+  (Object.entries(HOMEPAGE_COHORT_BUCKET_IDS) as Array<[HomepageCohortBucketKey, readonly string[]]>)
+    .flatMap(([bucket, ids]) => ids.map((id) => [id, bucket] as const)),
+);
 
 interface TopStablecoinsDatasetRow {
   id?: unknown;
@@ -51,12 +60,16 @@ export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
       nonUsdUsd += circulatingUsd;
     }
 
-    if (row.id === "usdt-tether") {
-      usdt += circulatingUsd;
-    } else if (row.id === "usdc-circle") {
-      usdc += circulatingUsd;
-    } else if (row.id === "usds-sky" || row.id === "dai-makerdao") {
-      sky += circulatingUsd;
+    switch (COHORT_BUCKET_BY_ID.get(row.id)) {
+      case "usdt":
+        usdt += circulatingUsd;
+        break;
+      case "usdc":
+        usdc += circulatingUsd;
+        break;
+      case "sky":
+        sky += circulatingUsd;
+        break;
     }
   }
 

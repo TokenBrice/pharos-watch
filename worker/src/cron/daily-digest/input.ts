@@ -206,16 +206,32 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
   const { safetyScores, safetyGrades } = await collectSafetyScores(ctx, mentionedSymbols, degradedReasons);
 
-  const resolvedDepegs = await collectResolvedDepegs(ctx);
-  const mintBurnFlows = await collectMintBurnFlows(ctx);
-  const dewsStress = await collectDewsStress(ctx, degradedReasons);
+  // These eight collectors are independent (no cross-collector inputs) and only
+  // issue D1 queries, so run them concurrently. They mutate degradedReasons via
+  // dedup-guarded markCollectorDegraded, which is safe under the single-threaded
+  // event loop. collectHistoricalContext/collectGradeTransitions stay sequential
+  // because they depend on displayScore/displayBand and safetyGrades.
+  const [
+    resolvedDepegs,
+    mintBurnFlows,
+    dewsStress,
+    psiContributors,
+    yieldAnomalies,
+    liquidityShifts,
+    crossDayTrends,
+    totalMcapAth,
+  ] = await Promise.all([
+    collectResolvedDepegs(ctx),
+    collectMintBurnFlows(ctx),
+    collectDewsStress(ctx, degradedReasons),
+    collectPsiContributors(ctx),
+    collectYieldAnomalies(ctx, degradedReasons),
+    collectLiquidityShifts(ctx),
+    collectCrossDayTrends(ctx, degradedReasons),
+    collectTotalMcapAth(ctx),
+  ]);
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, degradedReasons);
-  const psiContributors = await collectPsiContributors(ctx);
-  const yieldAnomalies = await collectYieldAnomalies(ctx, degradedReasons);
-  const liquidityShifts = await collectLiquidityShifts(ctx);
-  const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
-  const totalMcapAth = await collectTotalMcapAth(ctx);
 
   const inputData: DigestInputData = {
       digestVersion: 2,

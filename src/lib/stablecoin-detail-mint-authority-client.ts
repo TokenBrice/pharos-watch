@@ -1,9 +1,29 @@
 import type { StablecoinMeta } from "@shared/types";
+import {
+  MINT_AUTHORITY_CONFIDENCE_VALUES,
+  MINT_AUTHORITY_CONTROL_ROLE_VALUES,
+  MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
+  MINT_AUTHORITY_MINT_PATH_VALUES,
+  MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
+  MINT_AUTHORITY_POSTURE_VALUES,
+  MINT_AUTHORITY_TYPE_VALUES,
+} from "@shared/types";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 
 type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
 type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
+
+/**
+ * Validates a string against an enum's allowlist before narrowing it. The
+ * source profile is Zod-validated at build time, but a future schema migration
+ * or malformed static asset could otherwise let an out-of-range enum string
+ * flow into MAS scoring and display without any runtime error. Returns null on
+ * an unrecognized value so callers can fail safe (drop the field/projection).
+ */
+function enumValue<T extends string>(value: string | null, allowed: readonly T[]): T | null {
+  return value != null && (allowed as readonly string[]).includes(value) ? (value as T) : null;
+}
 
 function canRaiseCapValue(value: unknown): MintAuthorityClientControlSummary["canRaiseCap"] | null {
   return value === true || value === false || value === "unknown" ? value : null;
@@ -54,18 +74,23 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   if (!isRecord(value)) return null;
 
   const label = stringValue(value.label);
-  const role = stringValue(value.role);
-  const authorityType = stringValue(value.authorityType);
-  const directMintAbility = stringValue(value.directMintAbility);
+  const role = enumValue(stringValue(value.role), MINT_AUTHORITY_CONTROL_ROLE_VALUES);
+  const authorityType = enumValue(stringValue(value.authorityType), MINT_AUTHORITY_TYPE_VALUES);
+  const directMintAbility = enumValue(
+    stringValue(value.directMintAbility),
+    MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
+  );
   if (!label || !role || !authorityType || !directMintAbility) return null;
 
   // Mint-authority metadata is Zod-validated during the stablecoin-data build;
-  // this client projection only strips malformed loose JSON before exposing it.
+  // this client projection re-validates enum fields against their allowlists so
+  // an out-of-range value (e.g. from a future schema drift) is dropped rather
+  // than silently exposed.
   const summary: MintAuthorityClientControlSummary = {
     label,
-    role: role as MintAuthorityClientControlSummary["role"],
-    authorityType: authorityType as MintAuthorityClientControlSummary["authorityType"],
-    directMintAbility: directMintAbility as MintAuthorityClientControlSummary["directMintAbility"],
+    role,
+    authorityType,
+    directMintAbility,
   };
 
   const chain = stringValue(value.chain);
@@ -75,7 +100,10 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   const timelockDelaySec = numberValue(value.timelockDelaySec);
   const capDescription = stringValue(value.capDescription);
   const canRaiseCap = canRaiseCapValue(value.canRaiseCap);
-  const modulesOrGuardsStatus = stringValue(value.modulesOrGuardsStatus);
+  const modulesOrGuardsStatus = enumValue(
+    stringValue(value.modulesOrGuardsStatus),
+    MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
+  );
   const keyCustodyAttestation = buildKeyCustodyAttestation(value.keyCustodyAttestation);
 
   if (chain) summary.chain = chain;
@@ -86,7 +114,7 @@ function buildControlSummary(value: unknown): MintAuthorityClientControlSummary 
   if (capDescription) summary.capDescription = capDescription;
   if (canRaiseCap != null) summary.canRaiseCap = canRaiseCap;
   if (modulesOrGuardsStatus) {
-    summary.modulesOrGuardsStatus = modulesOrGuardsStatus as MintAuthorityClientControlSummary["modulesOrGuardsStatus"];
+    summary.modulesOrGuardsStatus = modulesOrGuardsStatus;
   }
   if (keyCustodyAttestation) summary.keyCustodyAttestation = keyCustodyAttestation;
 
@@ -97,18 +125,19 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
   const profile = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
   if (!profile) return null;
 
-  const mintPath = stringValue(profile.mintPath);
-  const authorityPosture = stringValue(profile.authorityPosture);
-  const confidence = stringValue(profile.confidence);
+  const mintPath = enumValue(stringValue(profile.mintPath), MINT_AUTHORITY_MINT_PATH_VALUES);
+  const authorityPosture = enumValue(stringValue(profile.authorityPosture), MINT_AUTHORITY_POSTURE_VALUES);
+  const confidence = enumValue(stringValue(profile.confidence), MINT_AUTHORITY_CONFIDENCE_VALUES);
   const summaryText = stringValue(profile.summary);
   if (!mintPath || !authorityPosture || !confidence || !summaryText) return null;
 
-  // The source profile is build-validated; casts here keep the browser payload
-  // narrow without duplicating the full metadata schema in frontend code.
+  // The source profile is build-validated; these enum fields feed the MAS score,
+  // so they are re-validated against their allowlists before narrowing — an
+  // unrecognized value drops the projection rather than flowing into scoring.
   const summary: MintAuthorityClientSummary = {
-    mintPath: mintPath as MintAuthorityClientSummary["mintPath"],
-    authorityPosture: authorityPosture as MintAuthorityClientSummary["authorityPosture"],
-    confidence: confidence as MintAuthorityClientSummary["confidence"],
+    mintPath,
+    authorityPosture,
+    confidence,
     summary: summaryText,
   };
 

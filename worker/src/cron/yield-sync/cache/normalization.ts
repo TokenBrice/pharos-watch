@@ -1,5 +1,5 @@
 import type { YieldBenchmarkKey } from "@shared/types/yield";
-import { isRecord } from "@shared/lib/type-guards";
+import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import { RISK_FREE_RATE_FALLBACK } from "../../../lib/constants";
 import { toFiniteNumber } from "../../../lib/number-utils";
 import {
@@ -30,9 +30,7 @@ export function toStringArray(value: unknown): string[] {
   );
 }
 
-export function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
+export { isFiniteNumber };
 
 export function isNullableFiniteNumber(value: unknown): value is number | null | undefined {
   return value == null || isFiniteNumber(value);
