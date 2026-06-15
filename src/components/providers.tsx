@@ -63,8 +63,6 @@ function AppProviders({ children }: { children: React.ReactNode }) {
     setCommandPaletteOpen(true);
   }, []);
 
-  const handleFocusSearch = openGlobalCommandPalette;
-
   useEffect(() => {
     function handleOpenCommandPalette() {
       openGlobalCommandPalette();
@@ -126,7 +124,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
           break;
         case "/":
           event.preventDefault();
-          handleFocusSearch();
+          openGlobalCommandPalette();
           break;
       }
     }
@@ -137,7 +135,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
       window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
       window.removeEventListener("keydown", handleGlobalOverlayKeyDown);
     };
-  }, [handleFocusSearch, openGlobalCommandPalette, toggleTheme]);
+  }, [openGlobalCommandPalette, toggleTheme]);
 
   return (
     <ToastContext.Provider value={{ addToast }}>
