@@ -35,6 +35,17 @@ function sseResponse(events: SseEvent[], opts?: { chunkSplitPattern?: number[] }
   return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
+function rawSseResponse(encoded: string): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(encoded));
+      controller.close();
+    },
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
 function happyPathEvents(textChunks: string[]): SseEvent[] {
   return [
     { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
@@ -62,6 +73,24 @@ describe("accumulateAnthropicStream", () => {
     const response = sseResponse(events, { chunkSplitPattern: [5, 10, 50, 30, 70, 200, 1] });
     const text = await accumulateAnthropicStream(response);
     expect(text).toBe("alpha beta gamma");
+  });
+
+  it("joins multiple data lines in one SSE frame with newlines", async () => {
+    const response = rawSseResponse(
+      [
+        "event: content_block_delta",
+        "data: {\"type\":\"content_block_delta\",\"index\":0,",
+        "data: \"delta\":{\"type\":\"text_delta\",\"text\":\"split payload\"}}",
+        "",
+        "event: message_stop",
+        "data: {\"type\":\"message_stop\"}",
+        "",
+        "",
+      ].join("\n"),
+    );
+
+    const text = await accumulateAnthropicStream(response);
+    expect(text).toBe("split payload");
   });
 
   it("ignores thinking_delta events (extended thinking)", async () => {

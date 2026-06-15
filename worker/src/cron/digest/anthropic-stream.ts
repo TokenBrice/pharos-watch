@@ -110,8 +110,8 @@ function handleFrame(frame: string): FrameResult {
   for (const line of frame.split("\n")) {
     if (line.startsWith("event:")) eventType = line.slice(6).trim();
     else if (line.startsWith("data:")) {
-      const existing: string = dataStr ?? "";
-      dataStr = existing + line.slice(5).trim();
+      const value = line.slice(5);
+      dataStr = dataStr == null ? value : `${dataStr}\n${value}`;
     }
   }
   if (!eventType || dataStr == null) return {};
