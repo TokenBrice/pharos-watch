@@ -10,7 +10,7 @@
  * helpers so each surface stays narrow.
  *
  * Each callback updates D1 then edits the message in place via
- * `editMessageText`. If the edit fails (e.g. message too old, identical
+ * `editMessage`. If the edit fails (e.g. message too old, identical
  * content rejected by Telegram), the handler sends a fresh message instead.
  */
 

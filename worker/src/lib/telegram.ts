@@ -490,42 +490,6 @@ export async function editMessage(
 }
 
 /**
- * Edit an existing chat message's text in place. Used by inline-keyboard
- * flows that want to re-render the same message rather than send a new one
- * (e.g. /list watchlist management pagination).
- *
- * Returns `true` on a 200 response. Body is drained to stay under the
- * Workers 6-connection cap. Callers should treat a `false` return as a hint
- * to fall back to sending a fresh message.
- */
-export async function editMessageText(
-  chatId: string,
-  messageId: number,
-  text: string,
-  botToken: string,
-  options: { replyMarkup?: unknown; disableWebPagePreview?: boolean } = {},
-): Promise<boolean> {
-  const res = await fetch(
-    `https://api.telegram.org/bot${botToken}/editMessageText`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: "HTML",
-        ...(options.disableWebPagePreview && { disable_web_page_preview: true }),
-        ...(options.replyMarkup != null && { reply_markup: options.replyMarkup }),
-      }),
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  await drainResponseBody(res);
-  return res.ok;
-}
-
-/**
  * Answer a Telegram callback_query. Required to dismiss the spinner on the
  * user's tapped button within a few seconds. Body is drained to stay under the
  * Workers 6-connection cap.
