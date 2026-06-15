@@ -5,6 +5,7 @@
  */
 
 import { isKnownStablecoinId } from "./webhook-callbacks/_shared";
+import type { SubscriberRow } from "./telegram-webhook-shared";
 
 export { isKnownStablecoinId };
 
@@ -42,4 +43,12 @@ export function isSafetyModeCode(value: string): value is SafetyModeCode {
 
 export function isDepegStep(value: unknown): value is DepegStep {
   return value === 100 || value === 250 || value === 500;
+}
+
+export function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {
+  if (!subscriber) return false;
+  if (type === "dews") return Boolean(subscriber.global_alert_dews);
+  if (type === "depeg") return Boolean(subscriber.global_alert_depeg);
+  if (type === "safety") return Boolean(subscriber.global_alert_safety);
+  return Boolean(subscriber.global_alert_launch);
 }

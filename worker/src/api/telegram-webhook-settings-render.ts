@@ -16,6 +16,7 @@ import {
   DEWS_BAND_CODES,
   GLOBAL_ALERT_TYPES,
   SAFETY_MODE_CODES,
+  subscriberHasGlobal,
   type GlobalAlertType,
   type SafetyModeCode,
 } from "./telegram-webhook-settings-shared";
@@ -152,14 +153,6 @@ function buildDepegRow(coinId: string, depegStep: number | "off"): Array<{ text:
 }
 
 // ---------- Small helpers ----------
-
-function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {
-  if (!subscriber) return false;
-  if (type === "dews") return Boolean(subscriber.global_alert_dews);
-  if (type === "depeg") return Boolean(subscriber.global_alert_depeg);
-  if (type === "safety") return Boolean(subscriber.global_alert_safety);
-  return Boolean(subscriber.global_alert_launch);
-}
 
 const TYPE_LABELS: Record<GlobalAlertType, string> = {
   dews: "DEWS",

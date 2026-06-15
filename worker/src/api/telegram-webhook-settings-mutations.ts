@@ -11,6 +11,7 @@ import {
   isDepegStep,
   isDewsBandCode,
   isSafetyModeCode,
+  subscriberHasGlobal,
   type DewsBandValue,
   type GlobalAlertType,
   type SafetyModeValue,
@@ -22,7 +23,6 @@ import {
   unixNow,
   upsertSubscriberRow,
 } from "./telegram-webhook-store";
-import type { SubscriberRow } from "./telegram-webhook-shared";
 
 export async function toggleGlobalAlert(
   db: D1Database,
@@ -300,12 +300,4 @@ function prepareLaunch(
       `)
       .bind(chatId, coinId, enabled ? 1 : 0),
   ];
-}
-
-function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {
-  if (!subscriber) return false;
-  if (type === "dews") return Boolean(subscriber.global_alert_dews);
-  if (type === "depeg") return Boolean(subscriber.global_alert_depeg);
-  if (type === "safety") return Boolean(subscriber.global_alert_safety);
-  return Boolean(subscriber.global_alert_launch);
 }
