@@ -113,7 +113,12 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
       return errorResponse(400, "Invalid limit parameter");
     }
 
-    const maxAttempts = typeof body.maxAttempts === "number" ? Math.trunc(body.maxAttempts) : maxAttemptsParam;
+    // Clamp the body override to the same 0..10000 bounds the query path enforces
+    // so a negative/out-of-range body value cannot disable the attempt-count filter.
+    const maxAttempts =
+      typeof body.maxAttempts === "number" && Number.isFinite(body.maxAttempts)
+        ? Math.min(10_000, Math.max(0, Math.trunc(body.maxAttempts)))
+        : maxAttemptsParam;
 
     const chainId = readBodyOrQueryStringParam(body, url.searchParams, "chainId")?.toLowerCase() ?? null;
     const stablecoinInput = readBodyOrQueryStringParam(body, url.searchParams, "stablecoin")?.toUpperCase() ?? null;

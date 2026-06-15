@@ -195,6 +195,38 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     expect(selectCall?.sql).toContain("contract_address IS NULL OR config_key IS NULL");
   });
 
+  it("clamps a negative body-supplied maxAttempts to 0 instead of disabling the attempt-count filter", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST",
+      adminKey: "secret-key",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: true, maxAttempts: -5 }),
+    });
+
+    const response = await handleRemediateBlacklistAmountGaps(
+      db,
+      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      true,
+      request,
+      testChainRpcs,
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as { filters: { maxAttempts: number } };
+    expect(body.filters.maxAttempts).toBe(0);
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
+    // maxAttempts clamped to 0 means the COALESCE(amount_attempt_count, 0) <= ? guard is skipped,
+    // not a negative bound that would silently match every row.
+    expect(selectCall?.sql).not.toContain("COALESCE(amount_attempt_count, 0) <= ?");
+  });
+
   it("updates rows to resolved when historical balance recovery returns zero", async () => {
     vi.mocked(fetchEvmTokenBalance).mockResolvedValue(0);
 
