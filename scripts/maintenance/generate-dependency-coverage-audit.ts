@@ -26,6 +26,7 @@ import {
   readRequiredJsonFile,
   resolveGeneratedAt,
   sortByMarketCapOrRank,
+  stringValue,
   writeOutputFile,
 } from "../lib/coverage-audit-cli";
 
@@ -154,10 +155,6 @@ interface CliOptions {
   check: boolean;
   baselinePath: string;
   generatedAt: string | null;
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
 function dependencyTypeValue(value: unknown): DependencyType {

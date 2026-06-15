@@ -17,6 +17,12 @@ export function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+export function stringValue(value: unknown, { trim = true }: { trim?: boolean } = {}): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = trim ? value.trim() : value;
+  return normalized.length > 0 ? normalized : null;
+}
+
 export function extractStablecoinRows(payload: unknown): UnknownRecord[] {
   const envelope = isRecord(payload) && isRecord(payload.payload) ? payload.payload : payload;
   const rows = Array.isArray(envelope)

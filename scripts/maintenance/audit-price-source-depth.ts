@@ -13,9 +13,11 @@ import {
   formatUsd,
   isRecord,
   markdownValue,
+  numberValue,
   PROD_ORIGIN,
   PROD_STABLECOINS_URL,
   readJsonFile,
+  stringValue,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
 
@@ -207,14 +209,6 @@ export function bucketSourceDepth(count: number): DepthBucket {
   if (count >= 5) return "5+";
   if (count <= 0) return "0";
   return String(count) as DepthBucket;
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function normalizeStringArray(value: unknown): string[] {

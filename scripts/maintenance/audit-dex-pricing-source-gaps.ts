@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
-import { isRecord, type UnknownRecord } from "../lib/coverage-audit-cli";
+import { isRecord, numberValue, stringValue, type UnknownRecord } from "../lib/coverage-audit-cli";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
@@ -146,14 +146,6 @@ interface CliOptions {
   reportPath: string | null;
   format: "markdown" | "json";
   generatedAt: string | null;
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function asRecordArray(value: unknown): UnknownRecord[] {

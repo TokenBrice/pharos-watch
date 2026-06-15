@@ -24,6 +24,7 @@ import {
   readRequiredJsonFile,
   resolveGeneratedAt,
   sortByMarketCapOrRank,
+  stringValue,
   writeOutputFile,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
@@ -333,10 +334,6 @@ interface CliOptions {
   generatedAt: string | null;
 }
 
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
 function boolValue(value: unknown): boolean {
   return value === true;
 }
@@ -356,7 +353,7 @@ function buildMarketCapMap(stablecoinsPayload: unknown | undefined): Map<string,
 
   const map = new Map<string, number>();
   for (const row of extractStablecoinRows(stablecoinsPayload)) {
-    const id = stringValue(row.id);
+    const id = stringValue(row.id, { trim: false });
     if (!id) continue;
     map.set(id, marketCapForStablecoinRow(row));
   }
@@ -412,14 +409,14 @@ function summarizeReportCards(
   }
 
   const activeRows = rows.filter((row) => {
-    const id = stringValue(row.id);
+    const id = stringValue(row.id, { trim: false });
     return id != null && activeIds.has(id);
   });
   const collateralFromLiveIds = new Set<string>();
   let dependencyFromLiveActiveCount = 0;
 
   for (const row of activeRows) {
-    const id = stringValue(row.id);
+    const id = stringValue(row.id, { trim: false });
     const rawInputs = isRecord(row.rawInputs) ? row.rawInputs : {};
     if (id && boolValue(rawInputs.collateralFromLive)) {
       collateralFromLiveIds.add(id);

@@ -13,7 +13,7 @@ import {
   type L2BeatChainRiskSnapshot,
   type L2BeatRiskField,
 } from "../../shared/lib/chains/l2beat-risk";
-import { isRecord, markdownValue, readJsonFile, resolveGeneratedAt } from "../lib/coverage-audit-cli";
+import { isRecord, markdownValue, readJsonFile, resolveGeneratedAt, stringValue } from "../lib/coverage-audit-cli";
 
 const L2BEAT_SUMMARY_URL = "https://l2beat.com/api/scaling/summary";
 
@@ -125,10 +125,6 @@ export function parseArgs(argv: string[]): CliOptions {
   }
 
   return options;
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
 function booleanValue(value: unknown): boolean | null {
