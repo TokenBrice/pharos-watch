@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**72/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
+**74/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 638 | 4 | 0 | 72 | 19 |
+| Count | 637 | 3 | 0 | 74 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 34 | 1 | 0 | 221 |
-| quality | 315 | 29 | 3 | 0 | 276 |
+| redundancy | 266 | 35 | 0 | 0 | 221 |
+| quality | 315 | 30 | 3 | 0 | 275 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -220,7 +220,7 @@
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
 | ⬜ | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches |  | `shared/lib/classification/domain.ts:L63-L71` |
 | ⬜ | [R-188](redundancy/R-188.md) | S | wrapper | expandIds and defineBatch are two utilities for the same semantic operation with different |  | `shared/lib/redemption-backstop-configs/shared.ts` |
-| 🔄 | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema | codex | `shared/types/yield.ts:L117` |
+| ✅ | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema | codex | `shared/types/yield.ts:L117` |
 | ⬜ | [R-190](redundancy/R-190.md) | S | wrapper | No-op identity wrapper functions pollingDescriptor and staticDescriptor |  | `src/lib/api-query-registry.ts:L126-L132, src/lib` |
 | ⬜ | [R-191](redundancy/R-191.md) | S | clone | Both coverage/mint-authority.ts and mint-authority-display.ts define nearly identical per- |  | `src/lib/coverage/mint-authority.ts:61-93 + src/l` |
 | ⬜ | [R-192](redundancy/R-192.md) | S | dead-code | Watchlist legacy dual-write keeps stale storage keys alive indefinitely |  | `src/hooks/use-watchlist.ts:L73-L81` |
@@ -504,7 +504,7 @@
 | ⬜ | [Q-187](quality/Q-187.md) | L | type-safety | StatusResponseSchema and StatusHistoryResponseSchema use passthrough().transform(v => v as |  | `shared/types/status.ts:L1046, L1056` |
 | ⬜ | [Q-188](quality/Q-188.md) | S | error-handling | snapshot-safety-grade-history uses manual signal?.aborted throws instead of throwIfAborted |  | `worker/src/cron/snapshot-safety-grade-history.ts` |
 | ⬜ | [Q-189](quality/Q-189.md) | S | naming | cronLeaseQueryFailed silently excluded from CronHealthSnapshot despite influencing orphan  |  | `worker/src/lib/status/cron-health.ts:L8-L23 (int` |
-| 🔄 | [Q-190](quality/Q-190.md) | S | dead-code | Unused parameter _visibleCount in getHomepageDiscoveryCycleLength | codex | `src/lib/homepage-discovery.ts:L135-L141` |
+| ✅ | [Q-190](quality/Q-190.md) | S | dead-code | Unused parameter _visibleCount in getHomepageDiscoveryCycleLength | codex | `src/lib/homepage-discovery.ts:L135-L141` |
 | ⬜ | [Q-191](quality/Q-191.md) | S | naming | stats.totalCommits name misrepresents its meaning |  | `src/data/changelogs/types.ts:L27, src/components` |
 | ✅ | [Q-192](quality/Q-192.md) | S | error-handling | parse-version-upload.mjs: no error handling around per-line JSON.parse of wrangler JSONL o | codex | `.github/scripts/parse-version-upload.mjs:L11` |
 | ✅ | [Q-193](quality/Q-193.md) | S | type-safety | generate-reserve-coverage-audit.ts uses `file://${process.argv[1]}` template string for ma | codex | `scripts/maintenance/generate-reserve-coverage-au` |
@@ -514,7 +514,7 @@
 | ⬜ | [Q-197](quality/Q-197.md) | S | naming | `takeaways[4]` in `usr-resolv-2026.ts` is a multi-sentence prose paragraph, violating the  |  | `src/app/learn/case-studies/content/usr-resolv-20` |
 | ✅ | [Q-198](quality/Q-198.md) | S | complexity | check-cron-connection-budget.ts: printReport couples to global CRON_CONNECTION_BUDGET, byp | codex | `scripts/ci/check-cron-connection-budget.ts:L183-` |
 | ⬜ | [Q-199](quality/Q-199.md) | S | error-handling | SectionBanner swallows clipboard write rejection silently |  | `src/components/stablecoin-detail/section-banner.` |
-| ⬜ | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link |  | `src/components/home-alt-mini-cards/supply-moves-` |
+| 🔄 | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link | codex | `src/components/home-alt-mini-cards/supply-moves-` |
 | ⬜ | [Q-201](quality/Q-201.md) | S | complexity | HomeAltHeroChart calls makeScales redundantly — once per area path and once per top-line p |  | `src/components/home-alt-hero-chart.tsx:L119-L173` |
 | ⬜ | [Q-202](quality/Q-202.md) | S | error-handling | ExploitNoticeBanner uses list index as React key for critical security notices |  | `src/components/exploit-notice-banner.tsx:L49` |
 | ⬜ | [Q-203](quality/Q-203.md) | S | error-handling | formatSchemaIssues truncates Zod errors to 8 issues, potentially hiding validation failure |  | `shared/lib/stablecoins/schema.ts:L398-L406` |
