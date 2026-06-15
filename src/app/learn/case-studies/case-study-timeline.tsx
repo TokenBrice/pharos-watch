@@ -6,6 +6,31 @@ const SEVERITY_DOT: Record<CaseStudySeverity, string> = {
   low: "bg-muted-foreground/60",
 };
 
+const SEVERITY_LEGEND: readonly { severity: CaseStudySeverity; label: string }[] = [
+  { severity: "high", label: "High" },
+  { severity: "med", label: "Medium" },
+  { severity: "low", label: "Low" },
+];
+
+function TimelineSeverityLegend() {
+  return (
+    <ul
+      aria-label="Severity legend"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground"
+    >
+      {SEVERITY_LEGEND.map(({ severity, label }) => (
+        <li key={severity} className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className={`inline-block h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[severity]}`}
+          />
+          <span className="font-mono">{label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function formatTimelineDate(dateISO: string): string {
   // Day-precision ISO ("2023-03-11") rendered without timezone drift.
   const [y, m, d] = dateISO.split("T")[0].split("-").map(Number);
@@ -24,7 +49,9 @@ export function CaseStudyTimeline({
   entries: readonly CaseStudyTimelineEntry[];
 }) {
   return (
-    <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
+    <div className="space-y-5">
+      <TimelineSeverityLegend />
+      <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
       {entries.map((entry, i) => (
         <li key={i} className="relative">
           <span
@@ -54,8 +81,9 @@ export function CaseStudyTimeline({
               </a>
             ) : null}
           </div>
-        </li>
-      ))}
-    </ol>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }

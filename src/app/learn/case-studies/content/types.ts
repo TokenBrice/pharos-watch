@@ -66,6 +66,8 @@ export interface CaseStudy {
   /** One-sentence standfirst; also the hub-card summary (line-clamped). */
   readonly subtitle: string;
   readonly lead: readonly string[];
+  /** Optional 3–4 bullet TL;DR, rendered as a "Key takeaways" block above the chart. */
+  readonly takeaways?: readonly string[];
 
   /**
    * Tracked coin id (matches `shared/data/stablecoins/coins/<id>.json`). Links to
