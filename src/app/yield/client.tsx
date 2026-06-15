@@ -8,7 +8,6 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
@@ -180,17 +179,15 @@ export function YieldClient() {
 
   if (!data) {
     return (
-      <SectionErrorBoundary name="Yield">
-        <div className="space-y-6">
-          <QueryErrorNotice
-            error={error}
-            hasData={false}
-            onRetry={() => {
-              void refetch();
-            }}
-          />
-        </div>
-      </SectionErrorBoundary>
+      <div className="space-y-6">
+        <QueryErrorNotice
+          error={error}
+          hasData={false}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </div>
     );
   }
 
@@ -198,13 +195,6 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice
-        error={error}
-        hasData={!!data}
-        onRetry={() => {
-          void refetch();
-        }}
-      />
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
       {data.warnings && data.warnings.length > 0 ? (
         <section aria-label="Yield API warnings" className="space-y-2">
