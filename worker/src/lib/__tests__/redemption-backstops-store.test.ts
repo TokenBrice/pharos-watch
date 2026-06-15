@@ -361,7 +361,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     ["immediate capacity ratio above 1", { immediate_capacity_ratio: 1.01 }],
     ["negative fee bps", { fee_bps: -1 }],
     ["negative updated timestamp", { updated_at: -1 }],
-  ])("rejects malformed numeric row values (%s)", async (_label, overrides) => {
+  ])("skips malformed numeric row values rather than aborting the decode (%s)", async (_label, overrides) => {
     const db = mockD1([
       {
         match: "FROM redemption_backstop",
@@ -369,9 +369,11 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       },
     ]);
 
-    await expect(loadLegacyRedemptionBackstopCurrentMap(db)).rejects.toBeInstanceOf(
-      RedemptionBackstopSnapshotUnavailableError,
-    );
+    // A schema-invalid row is logged and skipped so a single bad row cannot
+    // take down the whole snapshot decode; it is simply absent from the map.
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
+    expect(result["eurc-circle"]).toBeUndefined();
+    expect(Object.keys(result)).toEqual([]);
   });
 
   it("prefers the latest completed run when loading a snapshot", async () => {
@@ -469,6 +471,51 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
             methodology_version: "1.1",
           },
         ],
+      },
+      {
+        match: "WHERE snapshot_run_id = ?",
+        matchBinds: ["run-valid"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-valid");
+    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+  });
+
+  it("falls back to an earlier completed run when a row in the newest run fails schema validation", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [
+          {
+            run_id: "run-bad-row",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "1.1",
+          },
+          {
+            run_id: "run-valid",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: "WHERE snapshot_run_id = ?",
+        matchBinds: ["run-bad-row"],
+        // Malformed row is skipped during decode, so the run's row count (0)
+        // falls short of written_count (1) and the run is rejected.
+        rows: [makeRealisticRow({ snapshot_run_id: "run-bad-row", score: 101 })],
       },
       {
         match: "WHERE snapshot_run_id = ?",

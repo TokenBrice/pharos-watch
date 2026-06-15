@@ -272,7 +272,7 @@ export function normalizeRedemptionBackstopRunMetadata(
   return decoded.payload ?? {};
 }
 
-function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
+function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
   const details = parseDetails(row.details_json);
   const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
   const capacityConfidence =
@@ -347,14 +347,29 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   };
   const parsed = RedemptionBackstopEntrySchema.safeParse(entry);
   if (!parsed.success) {
-    throw new Error(`Invalid redemption backstop row for ${row.stablecoin_id}: ${parsed.error.message}`);
+    console.warn(
+      "[redemption-backstop] skipped malformed row",
+      JSON.stringify({ stablecoinId: row.stablecoin_id, error: parsed.error.message }),
+    );
+    return null;
   }
   return parsed.data;
 }
 
 function decodeBackstopRows(rows: readonly RedemptionBackstopRow[], errorMessage: string): RedemptionBackstopMap {
   try {
-    return Object.fromEntries(rows.map((row) => [row.stablecoin_id, toEntry(row)]));
+    const map: RedemptionBackstopMap = {};
+    for (const row of rows) {
+      const entry = toEntry(row);
+      // Skip individual rows that fail schema validation rather than letting a
+      // single malformed row abort the entire snapshot decode. Skipped rows
+      // make the run row count fall short of written_count, so the caller's
+      // count guard rejects the run and falls through to an older valid run.
+      if (entry) {
+        map[row.stablecoin_id] = entry;
+      }
+    }
+    return map;
   } catch (error) {
     throw new RedemptionBackstopSnapshotUnavailableError(errorMessage, {
       cause: error,
