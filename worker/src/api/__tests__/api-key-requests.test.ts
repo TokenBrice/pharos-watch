@@ -612,6 +612,45 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM admin_action_audit").get()).toEqual({ count: 1 });
   });
 
+  it("leaves the linked key active when the status flip loses a race (0 rows changed)", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    const issued = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+    expect(issued.status).toBe(201);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
+
+    // Simulate a concurrent status change between the initial select and the
+    // status-flip UPDATE: the moment the reject UPDATE is prepared, flip the
+    // request to a terminal status so the WHERE clause matches 0 rows.
+    const racingDb = {
+      ...db,
+      prepare: (sql: string) => {
+        if (sql.includes("UPDATE api_key_requests SET status = 'rejected'")) {
+          sqlite.prepare("UPDATE api_key_requests SET status = 'expired' WHERE request_id = ?").run(requestId);
+        }
+        return db.prepare(sql);
+      },
+    } as unknown as D1Database;
+
+    const response = await handleApiKeyRequestReject(
+      racingDb,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, {}, { "X-Pharos-Admin": "1" }),
+    );
+
+    expect(response.status).toBe(409);
+    // The key must NOT have been deactivated and no revocation marker written,
+    // because the status flip short-circuited before any key mutation.
+    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_self_serve_revocations").get()).toEqual({ count: 0 });
+  });
+
   it("deactivates and records a revocation marker when admins reject an issued self-serve request", async () => {
     await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     const token = extractVerificationToken(sentEmails[0]);

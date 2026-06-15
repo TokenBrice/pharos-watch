@@ -81,14 +81,28 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
     if (row.status !== "pending_verification" && row.status !== "issued") {
       return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
     }
+    const linkedKeyPrefix = row.linked_key_prefix;
     if (row.api_key_id != null) {
-      const linkedKeyPrefix = row.linked_key_prefix;
       const mismatch = row.linked_key_tier !== "self-serve"
         || row.linked_key_owner_email !== row.normalized_email
         || !linkedKeyPrefix;
       if (mismatch) {
         return adminErrorResponse(409, "Linked API key does not match the self-serve request");
       }
+    }
+    // Flip the request status first: D1 has no multi-statement transactions, so
+    // the 0-changes guard must short-circuit before any key mutation. Otherwise
+    // a concurrent status change leaves the key deactivated while the request
+    // still reads pending/issued.
+    const updated = await db.prepare(
+      "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ? AND status IN ('pending_verification', 'issued')",
+    )
+      .bind(nowSec, nowSec, requestId)
+      .run();
+    if ((updated.meta?.changes ?? 0) === 0) {
+      return adminErrorResponse(409, "API key request state changed before rejection");
+    }
+    if (row.api_key_id != null && linkedKeyPrefix) {
       await recordSelfServeRevocation(db, {
         apiKeyId: row.api_key_id,
         keyPrefix: linkedKeyPrefix,
@@ -102,14 +116,6 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
         requestId,
         nowSec,
       });
-    }
-    const updated = await db.prepare(
-      "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ? AND status IN ('pending_verification', 'issued')",
-    )
-      .bind(nowSec, nowSec, requestId)
-      .run();
-    if ((updated.meta?.changes ?? 0) === 0) {
-      return adminErrorResponse(409, "API key request state changed before rejection");
     }
     await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
     await recordRequestAdminAction(db, {
