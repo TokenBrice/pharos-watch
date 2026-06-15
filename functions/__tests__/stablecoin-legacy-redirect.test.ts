@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { onRequest } from "../stablecoin/[[path]]";
+import { onRequest, resolveLegacyStablecoinRedirect } from "../stablecoin/[[path]]";
 
 function makeContext(request: Request) {
   const assetsFetch = vi.fn(async () => new Response("asset", { status: 200 }));
@@ -63,5 +63,21 @@ describe("stablecoin legacy redirects", () => {
     await onRequest(ctx);
 
     expect(ctx.assetsFetch).toHaveBeenCalledWith(request);
+  });
+
+  it("does not build redirects from malformed generated target IDs", () => {
+    expect(
+      resolveLegacyStablecoinRedirect(
+        new URL("https://pharos.watch/stablecoin/343/?utm_source=google"),
+        {
+          "343": "../admin",
+        },
+      ),
+    ).toBeNull();
+    expect(
+      resolveLegacyStablecoinRedirect(new URL("https://pharos.watch/stablecoin/344/"), {
+        "344": "https://evil.example/stablecoin/usdc-circle",
+      }),
+    ).toBeNull();
   });
 });
