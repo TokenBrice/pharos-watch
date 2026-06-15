@@ -1,6 +1,7 @@
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { errorResponse } from "./api-response";
+import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
 
 export type NumericRangePolicy = "clamp" | "reject";
 
@@ -93,19 +94,12 @@ export function readBodyOrQueryStringParam(
 export function encodeJsonCursor(payload: unknown): string {
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return bytesToBase64Url(bytes);
 }
 
 function decodeJsonCursorPayload(value: string): unknown | null {
   try {
-    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
-    const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const bytes = base64UrlToBytes(value);
     return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
   } catch {
     return null;

@@ -1,6 +1,7 @@
 import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -40,13 +41,14 @@ export async function runCoingeckoOnchainAddressProvider(
         `/onchain/networks/${providerChainId}/tokens/multi/${batch.map((target) => target.address).join(",")}`,
         apiKey,
       );
-      const { json, diagnostic } = await fetchProviderJson({
+      const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
         provider: "coingecko-onchain-address",
         url,
         candidateCount: batch.length,
         signal,
         init: { headers: cgHeaders({}, apiKey) },
       });
+      let diagnostic = rawDiagnostic;
       const data = isRecord(json) && Array.isArray(json.data) ? json.data : null;
       if (data) {
         const matchedCountBefore = quotes.length;
@@ -92,9 +94,7 @@ export async function runCoingeckoOnchainAddressProvider(
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {
-        diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected CoinGecko onchain tokens/multi payload";
-        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+        diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected CoinGecko onchain tokens/multi payload");
       }
       diagnostics.push(diagnostic);
     }

@@ -7,6 +7,7 @@ import {
 } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import {
+  DEPEG_EVENTS_DEPEGROW_COLUMNS,
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
@@ -52,7 +53,7 @@ export async function hydrateDepegDetection(
 
   throwIfAborted(signal);
   const openResult = await db
-    .prepare("SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NULL")
+    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NULL`)
     .all<DepegRow>();
 
   return {

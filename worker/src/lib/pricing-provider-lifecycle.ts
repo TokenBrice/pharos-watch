@@ -58,6 +58,23 @@ export function buildBlockedProviderDiagnostic(
   });
 }
 
+export function buildCapSkipDiagnostic(
+  provider: { source: PricingProviderDiagnosticSource; label: string },
+  cappedTargets: number,
+): PricingProviderAttemptDiagnostic {
+  return {
+    source: provider.source,
+    stage: "primary",
+    endpoint: `${provider.source}:request-cap`,
+    status: null,
+    ok: true,
+    success: true,
+    candidateCount: cappedTargets,
+    errorClass: "cap",
+    errorMessage: `Skipped ${cappedTargets} ${provider.label} target${cappedTargets === 1 ? "" : "s"} after request cap`,
+  };
+}
+
 export async function recoverProviderOnNoCandidates(params: {
   db?: D1Database;
   circuitSource: string;
@@ -130,6 +147,18 @@ export function applyJsonParseFailureDiagnostic(
     errorClass: errorClassFor(error),
     errorMessage: errorMessageFor(error),
     rejectionReasonCounts: { "malformed-json": 1 },
+  };
+}
+
+export function applyInvalidShapeDiagnostic(
+  diagnostic: PricingProviderAttemptDiagnostic,
+  errorMessage: string,
+): PricingProviderAttemptDiagnostic {
+  return {
+    ...diagnostic,
+    errorClass: "invalid-shape",
+    errorMessage,
+    rejectionReasonCounts: { "invalid-shape": 1 },
   };
 }
 

@@ -3,8 +3,10 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { isValidIanaTimezone } from "../../cron/telegram-quiet-hours";
 import { setSubscriberTimezone } from "../telegram-webhook-store";
+import { isGroupChatType } from "../telegram-webhook-auth";
 import {
   callbackChatType,
+  callbackUsername,
   hasExactParts,
   requireAdminForMutatingCallback,
   type CallbackHandler,
@@ -20,8 +22,7 @@ export const handleTimezoneCallback: CallbackHandler = async ({ db, botToken, cb
     await answerCallbackQuery(cb.id, botToken, { text: "Unknown timezone." });
     return;
   }
-  const chatType = callbackChatType(cb);
-  const isGroup = chatType === "group" || chatType === "supergroup";
+  const isGroup = isGroupChatType(callbackChatType(cb));
   if (
     isGroup &&
     !(await requireAdminForMutatingCallback(
@@ -35,7 +36,7 @@ export const handleTimezoneCallback: CallbackHandler = async ({ db, botToken, cb
     return;
   }
   try {
-    await setSubscriberTimezone(db, chatId, isGroup ? null : cb.from?.username ?? null, zone);
+    await setSubscriberTimezone(db, chatId, callbackUsername(cb), zone);
     await recordTelegramUsageEvent(db, {
       eventType: "timezone_change",
       actionDetail: "quick_pick",

@@ -203,9 +203,6 @@ export function validateGlobalSetCommand(command: ParsedSetCommand): string | nu
   if (command.setting === "safety" && command.enabled && command.mode != null) {
     return "Global safety alerts support all/off only. Upgrade-only and downgrade-only remain per-coin settings.";
   }
-  if (command.setting === "launch") {
-    return null;
-  }
   return null;
 }
 

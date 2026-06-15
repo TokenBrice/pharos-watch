@@ -3,6 +3,7 @@ import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { removeSubscriptions } from "../telegram-webhook-store";
+import { isGroupChatType } from "../telegram-webhook-auth";
 import { loadChatSubscriptions, renderManageWatchlistPage } from "./manage";
 import {
   callbackChatType,
@@ -55,8 +56,7 @@ async function handleManageUnsub(
 
   // Apply the same admin gate used by /unsubscribe so a single group member
   // cannot remove subscriptions out from under the rest of the chat.
-  const chatType = callbackChatType(cb);
-  const isGroup = chatType === "group" || chatType === "supergroup";
+  const isGroup = isGroupChatType(callbackChatType(cb));
   if (
     isGroup &&
     !(await requireAdminForMutatingCallback(

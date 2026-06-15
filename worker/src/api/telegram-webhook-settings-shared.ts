@@ -4,7 +4,9 @@
  * the render builders, and the mutation helpers can each stay narrow.
  */
 
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isKnownStablecoinId } from "./webhook-callbacks/_shared";
+
+export { isKnownStablecoinId };
 
 /** Default UTC quiet-hours window used when the user toggles quiet hours on
  * without specifying a range. Mirrors the typical late-night window; users who
@@ -28,10 +30,6 @@ export type DepegStep = (typeof DEPEG_STEPS)[number];
 
 export function isGlobalAlertType(value: string): value is GlobalAlertType {
   return (GLOBAL_ALERT_TYPES as readonly string[]).includes(value);
-}
-
-export function isKnownStablecoinId(id: string | undefined): id is string {
-  return typeof id === "string" && TRACKED_META_BY_ID.has(id);
 }
 
 export function isDewsBandCode(value: string): value is DewsBandCode {

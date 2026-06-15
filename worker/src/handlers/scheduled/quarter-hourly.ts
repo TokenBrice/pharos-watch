@@ -66,25 +66,20 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }
 
-  if (stablecoinsCacheSafe) {
-    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal))).summary);
-  } else {
-    outcomes.push(summarizeSkippedScheduledJob("snapshot-supply", "stablecoins-cache-unsafe"));
-  }
+  const runIfCacheSafe = async (
+    job: string,
+    fn: Parameters<typeof runBestEffortScheduledJobWithOutcome>[3],
+  ): Promise<void> => {
+    if (stablecoinsCacheSafe) {
+      outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn)).summary);
+    } else {
+      outcomes.push(summarizeSkippedScheduledJob(job, "stablecoins-cache-unsafe"));
+    }
+  };
 
-  if (stablecoinsCacheSafe) {
-    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal))).summary);
-  } else {
-    outcomes.push(summarizeSkippedScheduledJob("snapshot-chain-supply", "stablecoins-cache-unsafe"));
-  }
-
-  if (stablecoinsCacheSafe) {
-    outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "publish-report-card-cache", (signal) =>
-      publishReportCardCache(runtime.db, signal),
-    )).summary);
-  } else {
-    outcomes.push(summarizeSkippedScheduledJob("publish-report-card-cache", "stablecoins-cache-unsafe"));
-  }
+  await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
+  await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
+  await runIfCacheSafe("publish-report-card-cache", (signal) => publishReportCardCache(runtime.db, signal));
 
   outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
     computeDepegResolver({

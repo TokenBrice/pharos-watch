@@ -1,5 +1,6 @@
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import { throwIfAborted } from "../abort";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   fetchProviderJson,
@@ -30,12 +31,13 @@ export async function runDexPaprikaAddressProvider(
     if (Date.now() >= deadlineMs) break;
     attemptedRequests += 1;
     const url = `https://api.dexpaprika.com/networks/${target.providerChainId}/tokens/${target.address}`;
-    const { json, diagnostic } = await fetchProviderJson({
+    const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
       provider: "dexpaprika-address",
       url,
       candidateCount: 1,
       signal,
     });
+    let diagnostic = rawDiagnostic;
     if (isRecord(json)) {
       const matchedCountBefore = quotes.length;
       const responseAddress = getTokenAddressFromRecord(json);
@@ -73,25 +75,13 @@ export async function runDexPaprikaAddressProvider(
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {
-      diagnostic.errorClass = "invalid-shape";
-      diagnostic.errorMessage = "Expected DexPaprika token detail object";
-      diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+      diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexPaprika token detail object");
     }
     diagnostics.push(diagnostic);
   }
 
   if (cappedTargets > 0) {
-    diagnostics.push({
-      source: "dexpaprika-address",
-      stage: "primary",
-      endpoint: "dexpaprika-address:request-cap",
-      status: null,
-      ok: true,
-      success: true,
-      candidateCount: cappedTargets,
-      errorClass: "cap",
-      errorMessage: `Skipped ${cappedTargets} DexPaprika target${cappedTargets === 1 ? "" : "s"} after request cap`,
-    });
+    diagnostics.push(buildCapSkipDiagnostic({ source: "dexpaprika-address", label: "DexPaprika" }, cappedTargets));
   }
 
   return {

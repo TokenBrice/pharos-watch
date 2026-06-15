@@ -6,7 +6,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { buildInClause } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import type { DepegRow } from "../lib/depeg-helpers";
+import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
 import {
   buildPriceValidationContext,
   loadPriceValidationReferences,
@@ -259,7 +259,7 @@ function parseAuditRequest(url: URL, request?: Request): ParsedAuditRequest | Re
 async function loadClosedDepegEvents(db: D1Database): Promise<DepegRow[]> {
   const allClosedEvents = await db
     .prepare(
-      "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at",
+      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at`,
     )
     .all<DepegRow>();
   return allClosedEvents.results ?? [];
@@ -268,7 +268,7 @@ async function loadClosedDepegEvents(db: D1Database): Promise<DepegRow[]> {
 async function loadAllDepegEvents(db: D1Database): Promise<DepegRow[]> {
   const allEvents = await db
     .prepare(
-      "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
+      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events ORDER BY stablecoin_id, started_at`,
     )
     .all<DepegRow>();
   return allEvents.results ?? [];
@@ -425,16 +425,21 @@ function pickSyntheticSplitKeeper(rows: DepegRow[]): DepegRow {
   return rows[0];
 }
 
-function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
-  const keeper = pickSyntheticSplitKeeper(rows);
-  const first = rows[0];
-  const tail = rows[rows.length - 1];
-  let worst = keeper;
+function pickWorstPeakRow(rows: DepegRow[], seed: DepegRow): DepegRow {
+  let worst = seed;
   for (const row of rows) {
     if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
       worst = row;
     }
   }
+  return worst;
+}
+
+function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
+  const keeper = pickSyntheticSplitKeeper(rows);
+  const first = rows[0];
+  const tail = rows[rows.length - 1];
+  const worst = pickWorstPeakRow(rows, keeper);
   const gapSeconds: number[] = [];
   for (let i = 1; i < rows.length; i++) {
     gapSeconds.push(Math.max(0, rows[i].started_at - (rows[i - 1].ended_at ?? rows[i].started_at)));
@@ -542,11 +547,8 @@ function projectSyntheticSplitDepegEvents(
     const keeper = pickSyntheticSplitKeeper(group);
     const first = group[0];
     const tail = group[group.length - 1];
-    let worst = keeper;
+    const worst = pickWorstPeakRow(group, keeper);
     for (const row of group) {
-      if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
-        worst = row;
-      }
       if (row.id !== keeper.id) {
         removedIds.add(row.id);
       }
@@ -737,12 +739,7 @@ function planSyntheticSplitRepair(
     const keeper = pickSyntheticSplitKeeper(group);
     const first = group[0];
     const tail = group[group.length - 1];
-    let worst = keeper;
-    for (const row of group) {
-      if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
-        worst = row;
-      }
-    }
+    const worst = pickWorstPeakRow(group, keeper);
 
     statements.push(
       db

@@ -93,6 +93,14 @@ export async function evaluateAccessGate(
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
+  const siteApiAllowed = (): AccessGateResult => ({
+    isAdmin,
+    isSiteProxy: true,
+    apiKey: null,
+    requestLane: "site-api",
+    response: null,
+  });
+
   const isPreviewRequest = isWorkerPreviewRequest(request);
   const isSiteApiRequest = url.hostname === SITE_API_HOSTNAME;
   const hasSiteProxyCredential = await hasValidSiteProxyCredential(request, env);
@@ -108,7 +116,7 @@ export async function evaluateAccessGate(
       response.headers.set("Allow", SITE_DATA_ALLOWED_METHOD);
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response };
     }
-    return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
+    return siteApiAllowed();
   }
 
   if (
@@ -117,7 +125,7 @@ export async function evaluateAccessGate(
     && isSiteDataAllowedMethod(request.method)
     && isSiteDataAllowedApiPath(url.pathname)
   ) {
-    return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
+    return siteApiAllowed();
   }
 
   if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {

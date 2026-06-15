@@ -1,10 +1,10 @@
 import { buildSyncMetadata } from "./shared";
 import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
+import { reportCronProgress } from "../../lib/cron-progress";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   buildAbortedCronStageResult,
-  reportCronStage,
   returnIfCronStageAborted,
   type CronStageContext,
   type CronStageProgress,
@@ -24,7 +24,7 @@ export async function reportStablecoinsStage(
   message: string,
   options?: Omit<CronStageProgress, "stage" | "message">,
 ): Promise<void> {
-  await reportCronStage(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage,
     message,
     itemsDone: options?.itemsDone,

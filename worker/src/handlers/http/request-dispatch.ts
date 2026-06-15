@@ -47,6 +47,14 @@ export async function handleHttpRequestImpl(
   const url = new URL(request.url);
   const edgeCache = createEdgeCacheContext(request, url);
   let cached: Response | null = null;
+  const commonSourceConfig = {
+    request,
+    db: env.DB,
+    execCtx: ctx,
+    pathname: url.pathname,
+    attributionDisabled: isRequestSourceAttributionDisabled(env),
+    apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
+  };
   const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
   if (fastGate) {
     cached = await readEdgeCache(edgeCache);
@@ -55,17 +63,12 @@ export async function handleHttpRequestImpl(
         ? checkCachedPublicApiReadFastRateLimit(fastGate.apiKey)
         : null;
       const recordRequestSource = createRequestSourceRecorder({
-        request,
-        db: env.DB,
-        execCtx: ctx,
+        ...commonSourceConfig,
         isAdmin: fastGate.isAdmin,
         isSiteProxy: fastGate.isSiteProxy,
         apiKeyId: fastGate.apiKey?.id ?? null,
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
-        pathname: url.pathname,
-        attributionDisabled: isRequestSourceAttributionDisabled(env),
-        apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
       });
       recordRequestSource();
       return finalizeResponse(fastRateLimitResponse ?? cached, origin, ctx);
@@ -80,17 +83,12 @@ export async function handleHttpRequestImpl(
     response: gateResponse,
   } = await evaluateAccessGate(request, url, env);
   const recordRequestSource = createRequestSourceRecorder({
-    request,
-    db: env.DB,
-    execCtx: ctx,
+    ...commonSourceConfig,
     isAdmin,
     isSiteProxy,
     apiKeyId: apiKey?.id ?? null,
     apiKeyTrafficClass: apiKey?.trafficClass ?? null,
     requestLane,
-    pathname: url.pathname,
-    attributionDisabled: isRequestSourceAttributionDisabled(env),
-    apiKeyAttributionDisabled: isApiKeyRequestAttributionDisabled(env),
   });
   if (gateResponse) {
     recordRequestSource();

@@ -1,6 +1,8 @@
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
+import { hasConfiguredValue } from "@shared/lib/env-utils";
 import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
-import { bytesToBase64Url, hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
+import { hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
+import { bytesToBase64Url } from "../../lib/base64url";
 import {
   ApiKeySelfServeRequestSchema,
   ApiKeySelfServeVerifySchema,
@@ -24,10 +26,6 @@ const PUBLIC_ENDPOINT_PATHS = new Set(
 const PUBLIC_ENDPOINT_TEMPLATES = new Set([
   "/api/stablecoin/:id",
 ]);
-
-function hasConfiguredValue(value: string | undefined): value is string {
-  return Boolean(value?.trim());
-}
 
 function dependencyUnavailable(message = SELF_SERVE_SERVICE_UNAVAILABLE): Response {
   return errorResponse(503, message, { noStore: true, retryAfterSec: 60 });

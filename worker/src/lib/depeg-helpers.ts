@@ -38,6 +38,10 @@ export interface DepegRow {
   provenance_replay_version?: string | null;
 }
 
+/** Column list (in DepegRow declaration order) for the 13-column depeg_events SELECT shape. */
+export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
+  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source";
+
 export interface DexPriceRow {
   stablecoin_id: string;
   dex_price_usd: number;

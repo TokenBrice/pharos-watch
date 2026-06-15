@@ -1,3 +1,4 @@
+import { isRecord } from "@shared/lib/type-guards";
 import { parseDestructiveOperationMode } from "./destructive-operation-guard";
 
 const DEFAULT_PROVIDER_URL = "https://api.kyc.rip/v1/tools/ban-list";
@@ -70,10 +71,6 @@ class RetryableHttpError extends Error {
   constructor(readonly status: number) {
     super(`kyc.rip returned retryable HTTP ${status}`);
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 function parsePositiveInteger(value: string, flag: string): number {

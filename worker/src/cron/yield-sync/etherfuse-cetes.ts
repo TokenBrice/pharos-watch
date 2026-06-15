@@ -3,6 +3,7 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { isRecord } from "@shared/lib/type-guards";
 
 export const ETHERFUSE_CETES_BENCHMARK_SOURCE = "etherfuse-cetes-current-issuance";
 export const ETHERFUSE_CETES_SOURCE_KEY = `protocol-api:${ETHERFUSE_CETES_BENCHMARK_SOURCE}`;
@@ -24,10 +25,6 @@ export interface EtherfuseCetesIssuance {
   startingTokenAmount: number | null;
   endingTokenAmount: number | null;
   currentTokenAmount: number | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function parseFiniteNumber(value: unknown): number | null {

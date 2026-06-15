@@ -9,6 +9,7 @@ import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
+import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
@@ -316,9 +317,7 @@ export async function generateDailyDigest(
     },
   });
 
-  const qualityMetadata = digestCopy.qualityIssues.length > 0
-    ? `, quality: ${digestCopy.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
-    : "";
+  const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
 
   await reportDigestProgress(reportProgress, {
     stage: "complete",

@@ -35,7 +35,6 @@ export interface TelegramRouteFields {
 
 export interface DigestRouteFields {
   anthropicApiKey: string | null;
-  telegramCreds: TelegramCreds | null;
 }
 
 export interface FeedbackRouteFields {

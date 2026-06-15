@@ -1,6 +1,6 @@
 import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
-import { getConfiguredValue } from "@shared/lib/env-utils";
+import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
 import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
 export const DEFAULT_OPS_API_ORIGIN = OPS_API_ORIGIN;
@@ -49,8 +49,8 @@ export function resolvePagesOpsUiAccessConfig(
 
 export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssue[] {
   const issues: OpsProxyEnvIssue[] = [];
-  const hasTokenId = typeof env.OPS_API_SERVICE_TOKEN_ID === "string" && env.OPS_API_SERVICE_TOKEN_ID.trim().length > 0;
-  const hasTokenSecret = typeof env.OPS_API_SERVICE_TOKEN_SECRET === "string" && env.OPS_API_SERVICE_TOKEN_SECRET.trim().length > 0;
+  const hasTokenId = hasConfiguredValue(env.OPS_API_SERVICE_TOKEN_ID);
+  const hasTokenSecret = hasConfiguredValue(env.OPS_API_SERVICE_TOKEN_SECRET);
 
   if (hasTokenId !== hasTokenSecret) {
     issues.push({
@@ -59,8 +59,8 @@ export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssu
     });
   }
 
-  const hasAccessTeamDomain = typeof env.CF_ACCESS_TEAM_DOMAIN === "string" && env.CF_ACCESS_TEAM_DOMAIN.trim().length > 0;
-  const hasOpsUiAud = typeof env.CF_ACCESS_OPS_UI_AUD === "string" && env.CF_ACCESS_OPS_UI_AUD.trim().length > 0;
+  const hasAccessTeamDomain = hasConfiguredValue(env.CF_ACCESS_TEAM_DOMAIN);
+  const hasOpsUiAud = hasConfiguredValue(env.CF_ACCESS_OPS_UI_AUD);
   if (!hasAccessTeamDomain || !hasOpsUiAud) {
     issues.push({
       code: "ops-access-ui-incomplete",

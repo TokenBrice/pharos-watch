@@ -6,6 +6,7 @@ import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { setCache } from "../lib/db-cache";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
+import { startOfUtcDaySec } from "../lib/time-constants";
 
 const CACHE_MAX_AGE_SEC = 1200;
 const CACHE_DEGRADED_AGE_SEC = 600;
@@ -78,10 +79,7 @@ export async function snapshotSupply(
   // previous 20h wall-clock cooldown drifted the write time through the whole
   // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
   // date-keying pins the write to the first healthy run after UTC midnight.
-  const now = new Date();
-  const snapshotDate = Math.floor(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
-  );
+  const snapshotDate = startOfUtcDaySec();
   const lastWrite = await getCompletedSupplySnapshot(db);
   throwIfAborted(signal);
   if (lastWrite?.snapshotDate === snapshotDate) {

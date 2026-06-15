@@ -232,7 +232,7 @@ export async function fetchRedstonePrices(
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[redstone] Fetch failed:", err);
-    return { kind: "upstream-error", value: results, reason: errorMessage(err) };
+    return { kind: "upstream-error", value: results, reason: toErrorMessage(err) };
   }
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {
@@ -242,8 +242,4 @@ export async function fetchRedstonePrices(
     return { kind: "upstream-error", value: results, reason: "RedStone returned no usable prices" };
   }
   return { kind: "ok", value: results };
-}
-
-function errorMessage(err: unknown): string {
-  return toErrorMessage(err);
 }

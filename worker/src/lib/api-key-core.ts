@@ -12,6 +12,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { errorResponse } from "./api-utils";
 import { bytesToHex } from "./hash";
+import { bytesToBase64Url } from "./base64url";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const API_KEY_PREFIX_BYTES = 8;
@@ -314,14 +315,6 @@ function normalizeOptionalExpiresAt(
     return Number.parseInt(trimmed, 10);
   }
   return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
-}
-
-export function bytesToBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const value of bytes) {
-    binary += String.fromCharCode(value);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 export function randomBytes(length: number): Uint8Array {

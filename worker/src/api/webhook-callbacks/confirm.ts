@@ -18,6 +18,7 @@ import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import type { ConfirmBulkPayload, PendingAction, PendingActionType } from "../telegram-webhook-shared";
 import {
   callbackChatType,
+  callbackUsername,
   hasExactParts,
   requireAdminForMutatingCallback,
   type CallbackHandler,
@@ -221,8 +222,7 @@ async function handleBulkConfirmCallback(
   if (!pendingAction) return;
 
   // Confirm path: execute the deferred action, then clear pending.
-  const chatType = cb.message?.chat?.type ?? "private";
-  const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+  const username = callbackUsername(cb);
   try {
     await executeConfirmedBulk(db, chatId, username, pendingAction.payload);
   } catch (err) {

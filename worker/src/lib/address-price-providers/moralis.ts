@@ -5,6 +5,7 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
@@ -43,7 +44,7 @@ export async function runMoralisAddressProvider(
       if (attemptedRequests >= MORALIS_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       attemptedRequests += 1;
       const url = `https://deep-index.moralis.io/api/v2.2/erc20/prices?chain=${encodeURIComponent(providerChainId)}`;
-      const { json, diagnostic } = await fetchProviderJson({
+      const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
         provider: "moralis-address",
         url,
         init: {
@@ -59,6 +60,7 @@ export async function runMoralisAddressProvider(
         candidateCount: batch.length,
         signal,
       });
+      let diagnostic = rawDiagnostic;
       const rows = Array.isArray(json)
         ? json
         : isRecord(json) && Array.isArray(json.result)
@@ -113,9 +115,7 @@ export async function runMoralisAddressProvider(
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {
-        diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected Moralis token price array";
-        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+        diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Moralis token price array");
       }
       diagnostics.push(diagnostic);
     }

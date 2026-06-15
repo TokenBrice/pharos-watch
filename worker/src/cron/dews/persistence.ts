@@ -8,6 +8,7 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { writeDewsPublishedGeneration } from "../../lib/dews-publication-pointer";
 import type { DewsComputedRow } from "./contracts";
 import { toErrorMessage } from "../../lib/error-utils";
+import { startOfUtcDaySec } from "../../lib/time-constants";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const DEWS_TABLES = new Set([
@@ -141,10 +142,6 @@ async function deleteLatestStressSignalRowsForIds(
   });
 }
 
-function getTodayMidnightUtcSec(now = new Date()): number {
-  return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000);
-}
-
 function buildStressSignalsEnvelope(result: DewsComputedRow): string {
   return JSON.stringify({
     signals: result.signals,
@@ -267,7 +264,7 @@ export async function persistDewsResults(params: {
   const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
   await deleteLatestStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
 
-  const todayMidnight = getTodayMidnightUtcSec();
+  const todayMidnight = startOfUtcDaySec();
   const existing = await runWithOverloadRetry(() =>
     params.db
       .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")

@@ -11,7 +11,7 @@ import {
   recordTelegramUsageEvent,
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
-import { acquireTelegramCommandCooldown } from "./telegram-webhook-store";
+import { acquireTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
@@ -174,10 +174,6 @@ async function parseMiniAppRequestJson<T>(
   return parsed.data;
 }
 
-function nowSec(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
 function sourceCategory(auth?: TelegramMiniAppAuthContext | null, startParam?: string | null): string {
   return (auth?.startParam ?? startParam)?.trim() ? "startapp" : "menu_or_main_app";
 }
@@ -296,7 +292,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     const cooldown = await acquireTelegramCommandCooldown(db, {
       chatId: auth.userId,
       commandKey: "mini-app:session",
-      nowSec: nowSec(),
+      nowSec: unixNow(),
       cooldownSec: SESSION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
@@ -317,7 +313,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     if (!auth.canMutatePrivateChat) await recordMiniAppEvent(db, { eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs: Date.now() - start });
 
     return jsonResponse(await loadTelegramMiniAppState(db, auth, {
-      nowSec: nowSec(),
+      nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
     }), NO_STORE);
   },
@@ -349,7 +345,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     const cooldown = await acquireTelegramCommandCooldown(db, {
       chatId: auth.userId,
       commandKey: MUTATION_COOLDOWN_KEY,
-      nowSec: nowSec(),
+      nowSec: unixNow(),
       cooldownSec: MUTATION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
@@ -391,7 +387,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       latencyMs: Date.now() - start,
     });
     return jsonResponse(await loadTelegramMiniAppState(db, auth, {
-      nowSec: nowSec(),
+      nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
     }), NO_STORE);
   },

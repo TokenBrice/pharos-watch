@@ -39,6 +39,8 @@ import {
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_DAYS = 30;
 const MAX_BACKFILL_WINDOW_DAYS = 90;
+const SUPPLY_HISTORY_UPSERT_SQL =
+  "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)";
 const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
   "autousd-auto-finance",
   "eearn-ember",
@@ -417,9 +419,7 @@ async function backfillHistoricalOnChainSupply(
 
     stmts.push(
       db
-        .prepare(
-          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-        )
+        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
         .bind(meta.id, snapshotDate, supply, null),
     );
   }
@@ -550,9 +550,7 @@ async function backfillHistoricalTotalSupply(
 
     stmts.push(
       db
-        .prepare(
-          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-        )
+        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
         .bind(meta.id, snapshotDate, circulatingUsd, price),
     );
   }
@@ -647,9 +645,7 @@ async function backfillCommodity(
       seenSnapshotDates.add(snapshotDate);
       stmts.push(
         db
-          .prepare(
-            "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-          )
+          .prepare(SUPPLY_HISTORY_UPSERT_SQL)
           .bind(id, snapshotDate, resolvedMcap, price),
       );
     }
@@ -724,9 +720,7 @@ async function backfillCommodity(
     if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
     stmts.push(
       db
-        .prepare(
-          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-        )
+        .prepare(SUPPLY_HISTORY_UPSERT_SQL)
         .bind(id, snapshotDate, mcap, price),
     );
   }
@@ -1003,9 +997,7 @@ async function executeBackfillSupplyHistory(
 
       stmts.push(
         db
-          .prepare(
-            "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-          )
+          .prepare(SUPPLY_HISTORY_UPSERT_SQL)
           .bind(meta.id, snapshotDate, marketCapUsd, price),
       );
     }

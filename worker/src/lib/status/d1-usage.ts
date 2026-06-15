@@ -1,6 +1,7 @@
 import type { D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
 import { cancelResponseBodyQuietly } from "../response-body";
+import { isRecord } from "@shared/lib/type-guards";
 
 interface D1DatabaseInfoResult {
   uuid?: string;
@@ -13,17 +14,11 @@ interface D1DatabaseInfoResult {
   } | null;
 }
 
-type UnknownRecord = Record<string, unknown>;
-
 class D1UsagePayloadError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "D1UsagePayloadError";
   }
-}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 function toNumber(value: unknown): number | null {

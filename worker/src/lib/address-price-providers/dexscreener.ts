@@ -1,6 +1,7 @@
 import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
 import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
 import { throwIfAborted } from "../abort";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
   fetchProviderJson,
@@ -103,12 +104,13 @@ export async function runDexScreenerAddressProvider(
       if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       attemptedRequests += 1;
       const url = `https://api.dexscreener.com/tokens/v1/${providerChainId}/${batch.map((target) => target.address).join(",")}`;
-      const { json, diagnostic } = await fetchProviderJson({
+      const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
         provider: "dexscreener-address",
         url,
         candidateCount: batch.length,
         signal,
       });
+      let diagnostic = rawDiagnostic;
       if (Array.isArray(json)) {
         const pairs = json.filter(isDsPair);
         const batchQuotes = buildDexScreenerQuotes(batch, pairs, nowSec, rejectedTargets);
@@ -120,9 +122,7 @@ export async function runDexScreenerAddressProvider(
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {
-        diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected DexScreener token-address response array";
-        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+        diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexScreener token-address response array");
       }
       diagnostics.push(diagnostic);
       if (!diagnostic.success) {
@@ -135,17 +135,7 @@ export async function runDexScreenerAddressProvider(
   const attemptedTargets = Math.min(targets.length, DEXSCREENER_ADDRESS_MAX_REQUESTS * 30);
   const cappedTargets = Math.max(0, targets.length - attemptedTargets);
   if (cappedTargets > 0) {
-    diagnostics.push({
-      source: "dexscreener-address",
-      stage: "primary",
-      endpoint: "dexscreener-address:request-cap",
-      status: null,
-      ok: true,
-      success: true,
-      candidateCount: cappedTargets,
-      errorClass: "cap",
-      errorMessage: `Skipped ${cappedTargets} DexScreener target${cappedTargets === 1 ? "" : "s"} after request cap`,
-    });
+    diagnostics.push(buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets));
   }
 
   return {

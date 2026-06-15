@@ -5,6 +5,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { startOfUtcDaySec } from "../lib/time-constants";
 
 const CACHE_MAX_AGE_SEC = 1200;
 
@@ -27,10 +28,7 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
 
   // One snapshot per UTC day, keyed on the marker's stored snapshotDate.
   // See snapshot-supply.ts for the drift rationale.
-  const now = new Date();
-  const snapshotDate = Math.floor(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000,
-  );
+  const snapshotDate = startOfUtcDaySec();
   const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
   if (lastWrite) {
     let lastSnapshotDate: unknown;

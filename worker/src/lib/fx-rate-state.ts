@@ -5,6 +5,7 @@ import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
+import { startOfUtcDaySec } from "./time-constants";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -163,11 +164,6 @@ export function getFxRatesMetaKey(): string {
   return FX_RATES_META_KEY;
 }
 
-function startOfUtcDaySec(nowSec: number): number {
-  const now = new Date(nowSec * 1000);
-  return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000);
-}
-
 function formatUtcDate(dayStartSec: number): string {
   return new Date(dayStartSec * 1000).toISOString().slice(0, 10);
 }
@@ -251,7 +247,7 @@ function countBusinessDailyPublishesBehind(sourceDaySec: number, expectedDaySec:
 }
 
 function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
-  const dayStartSec = startOfUtcDaySec(nowSec);
+  const dayStartSec = startOfUtcDaySec(new Date(nowSec * 1000));
   if (!isBusinessDailyPublishDay(dayStartSec)) {
     return previousBusinessDailyPublishDaySec(dayStartSec);
   }
@@ -262,7 +258,7 @@ function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
 }
 
 function resolveCalendarDailyExpectedDaySec(nowSec: number): number {
-  const dayStartSec = startOfUtcDaySec(nowSec);
+  const dayStartSec = startOfUtcDaySec(new Date(nowSec * 1000));
   const hourUtc = new Date(nowSec * 1000).getUTCHours();
   return hourUtc >= FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC
     ? dayStartSec

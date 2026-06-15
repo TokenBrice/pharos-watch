@@ -567,6 +567,27 @@ async function runExternalProductionProbes(
   return probes;
 }
 
+function shouldSendAlert(
+  guard: {
+    persistenceSucceeded: boolean;
+    triggered: boolean;
+    streakMet: boolean;
+    lastAlertAt: number | null;
+  },
+  now: number,
+  cooldownSec: number,
+): boolean {
+  return (
+    guard.persistenceSucceeded &&
+    guard.triggered &&
+    guard.streakMet &&
+    (
+      guard.lastAlertAt == null ||
+      now - guard.lastAlertAt >= cooldownSec
+    )
+  );
+}
+
 export async function runStatusSelfCheck(
   db: D1Database,
   selfUrl?: string,
@@ -705,22 +726,26 @@ export async function runStatusSelfCheck(
     discrepancyState.consecutiveDivergent,
   );
 
-  const shouldDiscrepancyAlert =
-    discrepancyState.persistenceSucceeded &&
-    discrepancy.hasDivergence &&
-    discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK &&
-    (
-      discrepancyState.lastAlertAt == null ||
-      now - discrepancyState.lastAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
-    );
-  const shouldProbeFailureAlert =
-    discrepancyState.persistenceSucceeded &&
-    hasProbeFailure &&
-    discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD &&
-    (
-      discrepancyState.lastProbeAlertAt == null ||
-      now - discrepancyState.lastProbeAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
-    );
+  const shouldDiscrepancyAlert = shouldSendAlert(
+    {
+      persistenceSucceeded: discrepancyState.persistenceSucceeded,
+      triggered: discrepancy.hasDivergence,
+      streakMet: discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK,
+      lastAlertAt: discrepancyState.lastAlertAt,
+    },
+    now,
+    STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
+  );
+  const shouldProbeFailureAlert = shouldSendAlert(
+    {
+      persistenceSucceeded: discrepancyState.persistenceSucceeded,
+      triggered: hasProbeFailure,
+      streakMet: discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD,
+      lastAlertAt: discrepancyState.lastProbeAlertAt,
+    },
+    now,
+    STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
+  );
   const probeComparisonAlertSegment =
     `internal=${internalExternalDiscrepancy.internalStatus}, external=${internalExternalDiscrepancy.externalStatus}, ` +
     `comparison=${internalExternalDiscrepancy.reason}, comparisonDelta=${internalExternalDiscrepancy.severityDelta}`;

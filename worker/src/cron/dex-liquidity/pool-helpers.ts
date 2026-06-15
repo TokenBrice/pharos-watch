@@ -356,6 +356,11 @@ export function buildSymbolLookups(): SymbolLookups {
     }
   >();
   const globalAddressOwners = new Map<string, Set<string>>();
+  const addAddressOwner = (address: string, id: string) => {
+    const owners = globalAddressOwners.get(address.toLowerCase()) ?? new Set<string>();
+    owners.add(id);
+    globalAddressOwners.set(address.toLowerCase(), owners);
+  };
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of meta.contracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
@@ -367,9 +372,7 @@ export function buildSymbolLookups(): SymbolLookups {
           typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
         source: "contract",
       });
-      const owners = globalAddressOwners.get(contract.address.toLowerCase()) ?? new Set<string>();
-      owners.add(meta.id);
-      globalAddressOwners.set(contract.address.toLowerCase(), owners);
+      addAddressOwner(contract.address, meta.id);
     }
     for (const contract of meta.tradedContracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
@@ -383,9 +386,7 @@ export function buildSymbolLookups(): SymbolLookups {
           source: "tradedContract",
         });
       }
-      const owners = globalAddressOwners.get(contract.address.toLowerCase()) ?? new Set<string>();
-      owners.add(meta.id);
-      globalAddressOwners.set(contract.address.toLowerCase(), owners);
+      addAddressOwner(contract.address, meta.id);
     }
   }
 

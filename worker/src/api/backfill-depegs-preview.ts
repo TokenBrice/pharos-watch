@@ -3,6 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { HistoricalMarketSourceDiagnostics } from "./backfill-price-sources";
 import type { BackfillEvent } from "./backfill-depegs-extraction";
 import { existingRowOverlapsReplayWindow, type BackfillReplayWindow } from "./backfill-depegs-window";
+import { DEPEG_EVENTS_DEPEGROW_COLUMNS } from "../lib/depeg-helpers";
 
 const BACKFILL_DIFF_SAMPLE_LIMIT = 20;
 
@@ -168,7 +169,7 @@ export async function loadExistingReplayRows(
 ): Promise<ExistingReplayRows> {
   const existingRows = await db
     .prepare(
-      "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at`,
     )
     .bind(stablecoinId)
     .all<ExistingDepegEventRow>();

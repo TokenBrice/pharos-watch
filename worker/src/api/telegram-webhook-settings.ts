@@ -42,6 +42,7 @@ import {
   isKnownStablecoinId,
 } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { isGroupChatType } from "./telegram-webhook-auth";
 
 // Re-export for tests so existing imports keep working.
 export {
@@ -111,7 +112,7 @@ export async function handleSettingsCallback(
     return;
   }
   const chatType = cb.message?.chat?.type ?? "private";
-  const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+  const username = isGroupChatType(chatType) ? null : cb.from?.username ?? null;
   const target: RenderTarget = { mode: "edit", messageId };
 
   if (subAction === "home") {

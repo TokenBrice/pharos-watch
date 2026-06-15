@@ -1,4 +1,5 @@
 import { sleepWithSignal } from "../abort";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import type {
   AddressPriceProviderRuntimeConfig,
   AddressPriceProviderRunResult,
@@ -40,7 +41,7 @@ export async function runBirdeyeAddressProvider(
     }
     attemptedRequests += 1;
     const url = `https://public-api.birdeye.so/defi/price?address=${encodeURIComponent(target.address)}&include_liquidity=true&ui_amount_mode=raw`;
-    const { json, diagnostic } = await fetchProviderJson({
+    const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
       provider: "birdeye-address",
       url,
       init: {
@@ -52,6 +53,7 @@ export async function runBirdeyeAddressProvider(
       candidateCount: 1,
       signal,
     });
+    let diagnostic = rawDiagnostic;
     const data = isRecord(json) && isRecord(json.data) ? json.data : null;
     if (data) {
       const matchedCountBefore = quotes.length;
@@ -83,9 +85,7 @@ export async function runBirdeyeAddressProvider(
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {
-      diagnostic.errorClass = "invalid-shape";
-      diagnostic.errorMessage = "Expected Birdeye price data object";
-      diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+      diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Birdeye price data object");
     }
     diagnostics.push(diagnostic);
   }

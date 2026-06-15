@@ -3,7 +3,6 @@ import {
   SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS,
   SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
   SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
-  isProductionSiteDataHostname,
   resolveSiteApiOrigin,
   validatePagesSiteDataProxyEnv,
 } from "../lib/site-api-env";
@@ -27,13 +26,6 @@ describe("site-data env contract", () => {
       .toBe("https://site-api.pharos.watch");
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "site-api.pharos.watch" }))
       .toBe("https://site-api.pharos.watch");
-  });
-
-  it("identifies production site-data hostnames", () => {
-    expect(isProductionSiteDataHostname("pharos.watch")).toBe(true);
-    expect(isProductionSiteDataHostname("ops.pharos.watch")).toBe(true);
-    expect(isProductionSiteDataHostname("stablecoin-dashboard.pages.dev")).toBe(false);
-    expect(isProductionSiteDataHostname("127.0.0.1")).toBe(false);
   });
 
   it("flags missing SITE_API_ORIGIN, secret, and DB", () => {

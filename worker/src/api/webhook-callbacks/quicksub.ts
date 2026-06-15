@@ -5,6 +5,7 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 import { upsertSubscriberAndSubscriptions } from "../telegram-webhook-store";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
+import { isGroupChatType } from "../telegram-webhook-auth";
 import {
   callbackChatType,
   hasExactParts,
@@ -21,7 +22,7 @@ export const handleQuickSubCallback: CallbackHandler = async ({ db, botToken, cb
     return;
   }
   const chatType = callbackChatType(cb);
-  const isGroup = chatType === "group" || chatType === "supergroup";
+  const isGroup = isGroupChatType(chatType);
   // Group chats route through the same admin gate as the slash commands so
   // a single member cannot rewrite the chat's subscription state.
   if (

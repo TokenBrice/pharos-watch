@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   buildAbortedCronStageResult,
   readCronAbortReason,
-  reportCronStage,
   returnIfCronStageAborted,
 } from "../shared/stage-contracts";
 
@@ -42,25 +41,5 @@ describe("cron stage contracts", () => {
 
   it("returns null when the stage has not been aborted", () => {
     expect(returnIfCronStageAborted({ signal: new AbortController().signal, stage: "intake" })).toBeNull();
-  });
-
-  it("reports normalized stage progress through the cron reporter", async () => {
-    const reportProgress = vi.fn(async () => {});
-
-    await reportCronStage(reportProgress, {
-      stage: "publish",
-      message: "Writing cache",
-      itemsDone: 3,
-      itemsTotal: 5,
-      metadata: { cacheKey: "yield-rankings" },
-    });
-
-    expect(reportProgress).toHaveBeenCalledWith({
-      stage: "publish",
-      message: "Writing cache",
-      itemsDone: 3,
-      itemsTotal: 5,
-      metadata: { cacheKey: "yield-rankings" },
-    });
   });
 });

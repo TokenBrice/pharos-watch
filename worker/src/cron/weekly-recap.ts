@@ -18,6 +18,7 @@ import {
   runDigestChannelDelivery,
 } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
+import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
@@ -1230,9 +1231,7 @@ export async function generateWeeklyRecap(
     telegramStatus,
   });
 
-  const qualityMetadata = digestCopy.qualityIssues.length > 0
-    ? `, quality: ${digestCopy.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
-    : "";
+  const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
 
   await reportDigestProgress(reportProgress, {
     stage: "complete",

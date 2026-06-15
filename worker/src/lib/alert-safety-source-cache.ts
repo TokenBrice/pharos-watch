@@ -6,7 +6,7 @@ import {
   PEG_MULTIPLIER_EXPONENT,
 } from "@shared/lib/report-card-core";
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
-import { round1 } from "@shared/lib/math";
+import { round1, roundScore } from "@shared/lib/math";
 import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
@@ -119,7 +119,7 @@ function roundStageScore(value: number | null): number | null {
 }
 
 function clampAndRoundFinalScore(value: number | null): number | null {
-  return value == null ? null : Math.max(0, Math.min(100, Math.round(value)));
+  return value == null ? null : roundScore(value);
 }
 
 function truncateDetail(value: string): string {

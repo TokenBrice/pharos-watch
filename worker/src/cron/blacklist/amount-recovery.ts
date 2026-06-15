@@ -503,6 +503,27 @@ export async function backfillAmounts(
     return { runtimeBudgetReached: true };
   }
 
+  const buildAttemptUpdate = (
+    eventId: string,
+    attemptAtSec: number,
+    errorClass: BlacklistRecoveryErrorClass | null,
+    provider: BlacklistRecoveryProvider,
+    status?: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous",
+  ): D1PreparedStatement => {
+    const statusClause = status !== undefined ? `,\n               amount_status = ?` : "";
+    const stmt = db.prepare(
+      `UPDATE blacklist_events
+           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = ?,
+               amount_last_provider = ?${statusClause}
+           WHERE id = ?`,
+    );
+    return status !== undefined
+      ? stmt.bind(attemptAtSec, errorClass, provider, status, eventId)
+      : stmt.bind(attemptAtSec, errorClass, provider, eventId);
+  };
+
   const result = await db
     .prepare(
       `/* blacklist-amount-recovery-evm-candidates */
@@ -556,6 +577,7 @@ export async function backfillAmounts(
     }
     if (blacklistSubrequestBudgetReached(runBudget)) break;
 
+    const attemptAt = Math.floor(Date.now() / 1000);
     const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
     const config = row.config_key
       ? getBlacklistConfigByKey(row.config_key)
@@ -567,18 +589,11 @@ export async function backfillAmounts(
           })();
     if (!config) {
       stmts.push(
-        db.prepare(
-          `UPDATE blacklist_events
-           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = ?,
-               amount_last_provider = ?
-           WHERE id = ?`,
-        ).bind(
-          Math.floor(Date.now() / 1000),
+        buildAttemptUpdate(
+          row.id,
+          attemptAt,
           row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
           "none",
-          row.id,
         ),
       );
       continue;
@@ -593,12 +608,9 @@ export async function backfillAmounts(
     let amountStatus: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous" = "provider_failed";
     let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
     let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
-    const attemptAt = Math.floor(Date.now() / 1000);
 
-    if (config.chain.type === "tron") {
-      // Tron rows are resolved by backfillTronFromLedger; skip in per-row backfill.
-      continue;
-    } else if (config.chain.evmChainId != null) {
+    // Tron rows are resolved by backfillTronFromLedger; SQL filters chain_id != 'tron'.
+    if (config.chain.evmChainId != null) {
       const recovered = await recoverEvmAmountFromEventOrHistory({
         row,
         config,
@@ -656,28 +668,9 @@ export async function backfillAmounts(
     } else {
       const wasLegacyDerived = row.amount_source === "derived";
       if (wasLegacyDerived) {
-        stmts.push(
-          db.prepare(
-            `UPDATE blacklist_events
-             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-                 amount_last_attempted_at = ?,
-                 amount_last_error_class = ?,
-                 amount_last_provider = ?
-             WHERE id = ?`,
-          ).bind(attemptAt, lastErrorClass, lastProvider, row.id),
-        );
+        stmts.push(buildAttemptUpdate(row.id, attemptAt, lastErrorClass, lastProvider));
       } else {
-        stmts.push(
-          db.prepare(
-            `UPDATE blacklist_events
-             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-                 amount_last_attempted_at = ?,
-                 amount_last_error_class = ?,
-                 amount_last_provider = ?,
-                 amount_status = ?
-             WHERE id = ?`,
-          ).bind(attemptAt, lastErrorClass, lastProvider, amountStatus, row.id),
-        );
+        stmts.push(buildAttemptUpdate(row.id, attemptAt, lastErrorClass, lastProvider, amountStatus));
       }
     }
   }
@@ -695,7 +688,8 @@ export async function backfillTronFromLedger(
   options: { runBudget?: BlacklistRunBudget; signal?: AbortSignal } = {},
 ): Promise<{ updated: number }> {
   throwIfAborted(options.signal);
-  if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+  const budgetReached = () => options.runBudget != null && blacklistRuntimeBudgetReached(options.runBudget);
+  if (budgetReached()) {
     return { updated: 0 };
   }
 
@@ -717,7 +711,7 @@ export async function backfillTronFromLedger(
   const lookups: TronLedgerLookup[] = [];
   for (const row of candidates.results ?? []) {
     throwIfAborted(options.signal);
-    if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+    if (budgetReached()) {
       return { updated: 0 };
     }
     const scopedBalanceId = buildBlacklistContractBalanceKey(
@@ -739,7 +733,7 @@ export async function backfillTronFromLedger(
   const uniqueBalanceIds = [...new Set(lookups.map((lookup) => lookup.balanceId))];
   for (const chunk of chunkArray(uniqueBalanceIds, TRON_LEDGER_LOOKUP_CHUNK_SIZE)) {
     throwIfAborted(options.signal);
-    if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+    if (budgetReached()) {
       return { updated: 0 };
     }
     const { sql, binds } = buildInClause(chunk);
@@ -768,7 +762,7 @@ export async function backfillTronFromLedger(
 
   if (matchedByEventId.size === 0) return { updated: 0 };
   throwIfAborted(options.signal);
-  if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+  if (budgetReached()) {
     return { updated: 0 };
   }
 

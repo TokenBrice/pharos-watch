@@ -16,7 +16,7 @@ import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
@@ -78,6 +78,13 @@ const CACHE_HEADERS = {
   "Content-Type": "image/png",
   "Cache-Control": API_CACHE_PROFILES.ogImage,
 };
+
+function ogErrorResponse(msg: string, status: number, extra?: Record<string, string>): Response {
+  return new Response(msg, {
+    status,
+    headers: { "Content-Type": "text/plain", ...extra },
+  });
+}
 
 // ---------------------------------------------------------------------------
 // SVG → PNG render pipeline
@@ -178,13 +185,10 @@ export function deriveStablecoinOgCardData({
 async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Response> {
   const resolved = resolveOrReject(coinId);
   if (resolved instanceof Response) {
-    return new Response("Unknown stablecoin", { status: 404, headers: { "Content-Type": "text/plain" } });
+    return ogErrorResponse("Unknown stablecoin", 404);
   }
   const id = resolved.canonicalId;
 
-  if (!READABLE_IDS.has(id)) {
-    return new Response("Unknown stablecoin", { status: 404, headers: { "Content-Type": "text/plain" } });
-  }
   const isFrozen = FROZEN_IDS.has(id);
 
   // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline,
@@ -239,13 +243,13 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
-    return new Response("Data not yet available", { status: 503, headers: { "Content-Type": "text/plain" } });
+    return ogErrorResponse("Data not yet available", 503);
   }
 
   const { peggedAssets, fxFallbackRates } = stablecoinsPayload.payload;
   const coin = peggedAssets.find((a) => a.id === id);
   if (!coin) {
-    return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
+    return ogErrorResponse("Stablecoin not found in cache", 404);
   }
 
   const meta = TRACKED_META_BY_ID.get(id);
@@ -566,14 +570,14 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
 
 async function handleChainOg(db: D1Database, chainId: string): Promise<Response> {
   if (!CHAIN_META[chainId]) {
-    return new Response("Unknown chain", { status: 404, headers: { "Content-Type": "text/plain" } });
+    return ogErrorResponse("Unknown chain", 404);
   }
 
   const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
   if (stablecoinsResult.kind !== "ok") {
-    return new Response("Data not yet available", {
-      status: 503,
-      headers: { "Content-Type": "text/plain", "Retry-After": "60", "Cache-Control": "no-store" },
+    return ogErrorResponse("Data not yet available", 503, {
+      "Retry-After": "60",
+      "Cache-Control": "no-store",
     });
   }
 
@@ -645,7 +649,7 @@ export async function handleOg(db: D1Database, path: string): Promise<Response |
       try {
         coinId = decodeURIComponent(stablecoinMatch[1]);
       } catch {
-        return new Response("Malformed URI", { status: 400, headers: { "Content-Type": "text/plain" } });
+        return ogErrorResponse("Malformed URI", 400);
       }
       return await handleStablecoinOg(db, coinId);
     }
@@ -680,14 +684,10 @@ export async function handleOg(db: D1Database, path: string): Promise<Response |
     // so the CDN does not pin a failure response, and surface error.name for
     // diagnostics without leaking the full message.
     const errorClass = err instanceof Error ? err.name : "UnknownError";
-    return new Response("OG image generation failed", {
-      status: 503,
-      headers: {
-        "Content-Type": "text/plain",
-        "Retry-After": "60",
-        "Cache-Control": "no-store",
-        "X-Render-Error-Class": errorClass,
-      },
+    return ogErrorResponse("OG image generation failed", 503, {
+      "Retry-After": "60",
+      "Cache-Control": "no-store",
+      "X-Render-Error-Class": errorClass,
     });
   }
 }

@@ -1,11 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
-import { getConfiguredValue } from "@shared/lib/env-utils";
-import {
-  OPS_UI_HOSTNAME,
-  SITE_HOSTNAME,
-  normalizeOrigin,
-} from "@shared/lib/runtime-origins";
+import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
+import { normalizeOrigin } from "@shared/lib/runtime-origins";
 
 export interface SiteDataProxyEnv {
   DB?: D1Database;
@@ -24,10 +20,6 @@ export const SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("pagesSit
 export const SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("pagesSiteData", "optional");
 export const SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesSiteData");
 
-export function isProductionSiteDataHostname(hostname: string): boolean {
-  return hostname === SITE_HOSTNAME || hostname === OPS_UI_HOSTNAME;
-}
-
 export function resolveSiteApiOrigin(
   env: Pick<SiteDataProxyEnv, "SITE_API_ORIGIN">,
 ): string | null {
@@ -45,7 +37,7 @@ export function resolveSiteApiOrigin(
 export function validatePagesSiteDataProxyEnv(
   env: SiteDataProxyEnv,
 ): SiteDataProxyEnvIssue[] {
-  const hasSecret = typeof env.SITE_API_SHARED_SECRET === "string" && env.SITE_API_SHARED_SECRET.trim().length > 0;
+  const hasSecret = hasConfiguredValue(env.SITE_API_SHARED_SECRET);
   const issues: SiteDataProxyEnvIssue[] = [];
 
   if (!getConfiguredValue(env.SITE_API_ORIGIN)) {

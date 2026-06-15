@@ -1,4 +1,3 @@
-import { reportCronProgress } from "../../lib/cron-progress";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 
 export interface CronStageContext {
@@ -24,13 +23,6 @@ interface CronStageAbortOptions {
   signal?: AbortSignal;
   stage: string;
   serializeMetadata?: (metadata: CronStageAbortMetadata) => string;
-}
-
-export async function reportCronStage(
-  reportProgress: CronProgressReporter | undefined,
-  progress: CronStageProgress,
-): Promise<void> {
-  await reportCronProgress(reportProgress, progress);
 }
 
 export function readCronAbortReason(signal?: AbortSignal): string {

@@ -5,6 +5,7 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
   emptyProviderResult,
@@ -46,7 +47,7 @@ export async function runAlchemyAddressProvider(
     if (Date.now() >= deadlineMs) break;
     attemptedRequests += 1;
     const url = `https://api.g.alchemy.com/prices/v1/${encodeURIComponent(apiKey)}/tokens/by-address`;
-    const { json, diagnostic } = await fetchProviderJson({
+    const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
       provider: "alchemy-address",
       url,
       endpoint: "api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address",
@@ -63,6 +64,7 @@ export async function runAlchemyAddressProvider(
       candidateCount: batch.length,
       signal,
     });
+    let diagnostic = rawDiagnostic;
     const rows = isRecord(json) && Array.isArray(json.data) ? json.data : null;
     if (rows) {
       const matchedCountBefore = quotes.length;
@@ -96,9 +98,7 @@ export async function runAlchemyAddressProvider(
       diagnostic.success = true;
       successfulRequests += 1;
     } else if (json != null) {
-      diagnostic.errorClass = "invalid-shape";
-      diagnostic.errorMessage = "Expected Alchemy prices data array";
-      diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+      diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Alchemy prices data array");
     }
     diagnostics.push(diagnostic);
   }

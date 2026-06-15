@@ -3,6 +3,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
+import { startOfUtcDaySec } from "../../lib/time-constants";
 import type { PeggedAsset } from "./enrich-prices";
 import { parseStablecoinsCachePayload } from "./shared";
 
@@ -171,7 +172,7 @@ export async function fillMissingSupplyHistory(
   const utcMidnight = (daysAgo: number): number => {
     const date = new Date(nowMs);
     date.setUTCDate(date.getUTCDate() - daysAgo);
-    return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000);
+    return startOfUtcDaySec(date);
   };
 
   const date1d = utcMidnight(1);
