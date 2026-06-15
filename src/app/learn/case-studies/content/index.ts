@@ -56,10 +56,6 @@ export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   apxusdDatCollateral,
 ];
 
-export const CASE_STUDY_ORDER: readonly string[] = CASE_STUDY_LIST.map(
-  (study) => study.slug,
-);
-
 export const CASE_STUDIES: Record<string, CaseStudy> = Object.fromEntries(
   CASE_STUDY_LIST.map((study) => [study.slug, study]),
 );

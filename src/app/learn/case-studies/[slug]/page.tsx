@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { CASE_STUDIES, CASE_STUDY_ORDER, getCaseStudy } from "../content";
+import { CASE_STUDIES, CASE_STUDY_LIST, getCaseStudy } from "../content";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { CaseStudyBody } from "../case-study-body";
 import { CaseStudyPageShell } from "../case-study-page-shell";
 
-const CASE_STUDY_SLUGS = new Set<string>(CASE_STUDY_ORDER);
+const CASE_STUDY_SLUGS = new Set(CASE_STUDY_LIST.map((study) => study.slug));
 
 export function generateStaticParams() {
-  return CASE_STUDY_ORDER.map((slug) => ({ slug }));
+  return CASE_STUDY_LIST.map((study) => ({ slug: study.slug }));
 }
 
 export async function generateMetadata({

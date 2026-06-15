@@ -5,7 +5,7 @@ import { PUBLIC_DATASET_TOPICS } from "@shared/lib/api-endpoints/datasets";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import { CASE_STUDY_ORDER } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -421,9 +421,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    ...CASE_STUDY_ORDER.map((slug) => ({
-      url: `${SITE_URL}/learn/case-studies/${slug}/`,
-      lastModified: lastEdited(`/learn/case-studies/${slug}/`),
+    ...CASE_STUDY_LIST.map((study) => ({
+      url: `${SITE_URL}/learn/case-studies/${study.slug}/`,
+      lastModified: lastEdited(`/learn/case-studies/${study.slug}/`),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

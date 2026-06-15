@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import {
   CASE_STUDY_LIST,
-  CASE_STUDY_ORDER,
   CASE_STUDIES,
   caseStudySlugForEvent,
 } from "../content";
@@ -34,7 +33,7 @@ const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
 describe("case-study content", () => {
   it("ships twenty-four studies with unique slugs", () => {
     expect(CASE_STUDY_LIST).toHaveLength(24);
-    expect(new Set(CASE_STUDY_ORDER).size).toBe(CASE_STUDY_LIST.length);
+    expect(new Set(CASE_STUDY_LIST.map((study) => study.slug)).size).toBe(CASE_STUDY_LIST.length);
   });
 
   it("keys CASE_STUDIES by slug", () => {
