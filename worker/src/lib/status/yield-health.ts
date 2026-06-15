@@ -29,6 +29,7 @@ const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "lending-allowlist",
   "stale-auto-lending-override",
   "quarantine-ready-to-restore",
+  "stale-venue-risk-score",
 ] satisfies YieldCoverageAuditQueueItemKind[];
 const SOURCE_RISK_COVERAGE_FIELDS = [
   "sourceRiskScore",

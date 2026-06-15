@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
   buildYieldSourceRisk,
+  findStaleVenueRiskScores,
   resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
@@ -238,6 +239,19 @@ describe("yield source-risk registry", () => {
     // which per-venue tiering structurally misses — is captured separately.
     expect(resolveDependencyConcentration("yvusdc-yearn")?.ecosystem).toBe("Sky");
     expect(resolveDependencyConcentration("yvusdc-yearn")?.severity).toBe("medium");
+  });
+
+  it("flags venue-risk scores older than the max age for re-review", () => {
+    // Every entry was reviewed 2026-05-15..2026-06-15, so nothing is stale soon after.
+    expect(findStaleVenueRiskScores(Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
+
+    // ~109 days after the oldest cohort (2026-05-15), those entries cross 90d.
+    const stale = findStaleVenueRiskScores(Date.parse("2026-09-01T00:00:00Z"));
+    expect(stale.length).toBeGreaterThan(0);
+    expect(stale.every((s) => s.ageDays > 90)).toBe(true);
+    expect(stale.map((s) => s.protocol)).toContain("aave-v3"); // reviewed 2026-05-15
+    expect(stale.map((s) => s.protocol)).not.toContain("clearpool"); // reviewed 2026-06-15 (~78d)
+    expect(stale[0]!.ageDays).toBeGreaterThanOrEqual(stale[stale.length - 1]!.ageDays); // oldest first
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {

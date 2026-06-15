@@ -1042,6 +1042,38 @@ export function resolveDependencyConcentration(
   return YIELD_DEPENDENCY_CONCENTRATION[stablecoinId] ?? null;
 }
 
+/** Venue-risk scores older than this are flagged for re-review (yield v8.292). */
+export const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
+
+export interface StaleVenueRiskScore {
+  protocol: YieldRiskConfigProtocol;
+  reviewedAt: string;
+  ageDays: number;
+  confidence: YieldRiskConfigEntry["confidence"];
+}
+
+/**
+ * Venue-risk scores encode point-in-time facts (audit counts, governance events,
+ * TVL) and rot. Returns entries whose `reviewedAt` is older than `maxAgeDays` so
+ * the monthly yield-coverage audit can queue them for re-verification.
+ */
+export function findStaleVenueRiskScores(
+  nowMs: number,
+  maxAgeDays: number = VENUE_RISK_SCORE_MAX_AGE_DAYS,
+): StaleVenueRiskScore[] {
+  const stale: StaleVenueRiskScore[] = [];
+  for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
+    const entry = YIELD_RISK_CONFIG[protocol];
+    const reviewedMs = Date.parse(`${entry.reviewedAt}T00:00:00Z`);
+    if (!Number.isFinite(reviewedMs)) continue;
+    const ageDays = Math.floor((nowMs - reviewedMs) / 86_400_000);
+    if (ageDays > maxAgeDays) {
+      stale.push({ protocol, reviewedAt: entry.reviewedAt, ageDays, confidence: entry.confidence });
+    }
+  }
+  return stale.sort((a, b) => b.ageDays - a.ageDays);
+}
+
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

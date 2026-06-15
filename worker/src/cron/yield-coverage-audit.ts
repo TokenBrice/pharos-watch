@@ -48,6 +48,7 @@ import type {
 } from "@shared/types/status";
 import type { YieldAdapterLifecycle } from "@shared/types/yield";
 import type { DlPool } from "./yield-sync/types";
+import { findStaleVenueRiskScores } from "./yield-sync/source-risk";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
@@ -545,12 +546,14 @@ export function buildCoverageAuditOperatorQueue({
   yieldBearingMissingFromRankings,
   staleAutoLendingOverrides = [],
   quarantineReadyToRestore = [],
+  nowMs = Date.now(),
 }: {
   gaps: CoverageGaps;
   manifestMissingIds: string[];
   yieldBearingMissingFromRankings: string[];
   staleAutoLendingOverrides?: StaleAutoLendingOverride[];
   quarantineReadyToRestore?: QuarantineRestoreCandidate[];
+  nowMs?: number;
 }): CoverageAuditOperatorQueue {
   const headlineGaps: CoverageAuditQueueItem[] = [
     ...manifestMissingIds.map((stablecoinId) => ({
@@ -602,6 +605,16 @@ export function buildCoverageAuditOperatorQueue({
       detail: `${candidate.chain} ${candidate.sourceKey} probe returned ${candidate.exchangeRate}`,
       actionHint: "accept" as const,
       stablecoinIds: [candidate.stablecoinId],
+    })),
+    ...findStaleVenueRiskScores(nowMs).map((stale) => ({
+      id: queueId("stale-venue-risk-score", stale.protocol),
+      kind: "stale-venue-risk-score" as const,
+      title: stale.protocol,
+      detail: `Venue-risk score last reviewed ${stale.reviewedAt} (${stale.ageDays}d ago${
+        stale.confidence && stale.confidence !== "verified" ? `, ${stale.confidence} confidence` : ""
+      }); re-verify audits, governance, and TVL.`,
+      actionHint: "watch" as const,
+      project: stale.protocol,
     })),
   ];
 

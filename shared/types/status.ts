@@ -614,7 +614,8 @@ export type YieldCoverageAuditQueueItemKind =
   | "source-family-adapter"
   | "lending-allowlist"
   | "stale-auto-lending-override"
-  | "quarantine-ready-to-restore";
+  | "quarantine-ready-to-restore"
+  | "stale-venue-risk-score";
 
 export interface YieldCoverageAuditQueueItem {
   id: string;
