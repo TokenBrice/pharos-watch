@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { StatusPageAction } from "@shared/lib/api-endpoints";
+import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { adminMutation } from "@/lib/admin-access";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +34,7 @@ export function AdminActionButton({
   fullWidth = true,
   onFinished,
 }: AdminActionButtonProps) {
-  const isSupplyBackfillAction = action.path === "/api/backfill-supply-history";
+  const isSupplyBackfillAction = action.path === API_PATHS.backfillSupplyHistory();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);

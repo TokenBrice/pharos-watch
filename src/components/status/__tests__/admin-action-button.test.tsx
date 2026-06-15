@@ -2,13 +2,13 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StatusPageAction } from "@shared/lib/api-endpoints";
+import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 
 function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
     label: "Backfill Supply",
-    path: "/api/backfill-supply-history",
+    path: API_PATHS.backfillSupplyHistory(),
     confirm: "Backfill supply history snapshots?",
     destructive: false,
     method: "POST",
@@ -77,4 +77,3 @@ describe("AdminActionButton", () => {
     ).toBeNull();
   });
 });
-
