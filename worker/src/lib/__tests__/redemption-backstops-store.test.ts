@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
 import {
   getRedemptionBackstopVersionAt,
-  toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
@@ -1304,7 +1304,7 @@ describe("resolveSnapshotMethodologyVersion", () => {
     const result = resolveSnapshotMethodologyVersion(coins, 1_750_000_000);
 
     expect(result.version).toBe("3.97");
-    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel("3.97"));
+    expect(result.versionLabel).toBe(toMethodologyVersionLabel("3.97"));
   });
 
   it("falls back to getRedemptionBackstopVersionAt when no entry matches the updatedAt", () => {
@@ -1317,7 +1317,7 @@ describe("resolveSnapshotMethodologyVersion", () => {
     const result = resolveSnapshotMethodologyVersion(coins, queryAt);
 
     expect(result.version).toBe(expectedVersion);
-    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel(expectedVersion));
+    expect(result.versionLabel).toBe(toMethodologyVersionLabel(expectedVersion));
   });
 
   it("falls back to getRedemptionBackstopVersionAt when updatedAt is zero", () => {
@@ -1329,6 +1329,6 @@ describe("resolveSnapshotMethodologyVersion", () => {
     const result = resolveSnapshotMethodologyVersion(coins, 0);
 
     expect(result.version).toBe(expectedVersion);
-    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel(expectedVersion));
+    expect(result.versionLabel).toBe(toMethodologyVersionLabel(expectedVersion));
   });
 });

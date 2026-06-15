@@ -37,8 +37,8 @@ import {
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   getRedemptionBackstopVersionAt,
-  toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
@@ -371,7 +371,7 @@ export function resolveSnapshotMethodologyVersion(
     if (latestEntry?.methodologyVersion) {
       return {
         version: latestEntry.methodologyVersion,
-        versionLabel: toRedemptionBackstopVersionLabel(latestEntry.methodologyVersion),
+        versionLabel: toMethodologyVersionLabel(latestEntry.methodologyVersion),
       };
     }
   }
@@ -379,7 +379,7 @@ export function resolveSnapshotMethodologyVersion(
   const version = getRedemptionBackstopVersionAt(updatedAt);
   return {
     version,
-    versionLabel: toRedemptionBackstopVersionLabel(version),
+    versionLabel: toMethodologyVersionLabel(version),
   };
 }
 
@@ -620,7 +620,7 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
   const snapshotMethodology = loaded.methodologyVersion
     ? {
         version: loaded.methodologyVersion,
-        versionLabel: toRedemptionBackstopVersionLabel(loaded.methodologyVersion),
+        versionLabel: toMethodologyVersionLabel(loaded.methodologyVersion),
       }
     : resolveSnapshotMethodologyVersion(coins, updatedAt);
 

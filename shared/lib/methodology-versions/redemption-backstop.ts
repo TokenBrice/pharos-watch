@@ -2,7 +2,7 @@ import { REDEMPTION_BACKSTOP_V1 } from "../../data/methodology-changelogs/redemp
 import { REDEMPTION_BACKSTOP_V2 } from "../../data/methodology-changelogs/redemption-backstop/v2";
 import { REDEMPTION_BACKSTOP_V3 } from "../../data/methodology-changelogs/redemption-backstop/v3";
 import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemption-backstop/v4";
-import { createMethodologyVersion, toMethodologyVersionLabel } from "./base";
+import { createMethodologyVersion } from "./base";
 
 const redemptionBackstop = createMethodologyVersion({
   currentVersion: "4.13",
@@ -29,9 +29,6 @@ export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = redemptionBackstop.changelog
 
 /** Resolve Redemption Backstop methodology version active at a given Unix timestamp (seconds). */
 export const getRedemptionBackstopVersionAt = redemptionBackstop.getVersionAt;
-
-/** Display-ready label for a historical Redemption Backstop methodology version. */
-export const toRedemptionBackstopVersionLabel = toMethodologyVersionLabel;
 
 /** Reconstructed changelog data. */
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG = redemptionBackstop.changelog;
