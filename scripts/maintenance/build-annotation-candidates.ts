@@ -200,18 +200,37 @@ function dedupe(candidates: Candidate[]): Candidate[] {
   return out;
 }
 
+function indexExistingFingerprints(existingBody: string): Set<string> {
+  // Walk the queue body, tracking the current `## date` section so each row's
+  // identity (date + coinId + kind) is captured precisely. A plain substring
+  // scan over the whole body is lossy: dates recur in editorial comments and
+  // footers, so an `includes(date)` check degenerates and can suppress
+  // legitimate new candidates.
+  const seen = new Set<string>();
+  let currentDate: string | null = null;
+  for (const line of existingBody.split("\n")) {
+    const header = line.match(/^##\s+(\d{4}-\d{2}-\d{2})\s*$/);
+    if (header) {
+      currentDate = header[1];
+      continue;
+    }
+    if (currentDate == null) continue;
+    const row = line.match(/^-\s+([^|]+?)\s+\|\s+([^|]+?)\s+\|/);
+    if (row) {
+      seen.add(`${currentDate}|${row[1]}|${row[2]}`);
+    }
+  }
+  return seen;
+}
+
 function filterAgainstExisting(
   candidates: Candidate[],
   existingBody: string,
 ): Candidate[] {
-  // The queue body is editorial — a simple substring scan is enough to
-  // suppress duplicates produced by overlapping runs. The skill that
-  // drains the queue is the canonical de-duper.
-  return candidates.filter((c) => {
-    const fingerprint = `${c.coinId} | ${c.kind} |`;
-    if (!existingBody.includes(fingerprint)) return true;
-    return !existingBody.includes(c.date) || !existingBody.includes(c.coinId + " | " + c.kind);
-  });
+  const existing = indexExistingFingerprints(existingBody);
+  return candidates.filter(
+    (c) => !existing.has(`${c.date}|${c.coinId}|${c.kind}`),
+  );
 }
 
 function renderRow(c: Candidate): string {
