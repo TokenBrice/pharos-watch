@@ -28,8 +28,8 @@ const VALID_ARCHETYPES = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 const VALID_OUTCOMES = new Set(["survived", "wounded", "died"]);
 
 describe("case-study content", () => {
-  it("ships ten studies with unique slugs", () => {
-    expect(CASE_STUDY_LIST).toHaveLength(10);
+  it("ships eleven studies with unique slugs", () => {
+    expect(CASE_STUDY_LIST).toHaveLength(11);
     expect(new Set(CASE_STUDY_ORDER).size).toBe(CASE_STUDY_LIST.length);
   });
 

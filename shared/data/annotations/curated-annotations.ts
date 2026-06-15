@@ -1736,14 +1736,16 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
   ],
   "apxusd-apyx": [
     {
-      // 2026-06-04 — STRC (Strategy preferred equity) traded below its $100
-      // par as BTC fell under $63K, dragging apxUSD's reserve value; apxUSD
-      // briefly slipped to ~$0.93 before mean-reverting. Apyx framed it as
-      // expected behavior for a preferred-equity-backed dollar, not a break.
-      ts: Date.UTC(2026, 5, 4),
+      // 2026-06-02 — STRC (Strategy preferred equity, ~62% of reserve) traded
+      // below par as Bitcoin fell, dragging apxUSD's reserve value; the
+      // incident opened on June 2 at ~$0.99 and drove a recorded low of
+      // ~$0.89 (−1,059 bps). It did not mean-revert: still active as of
+      // mid-June 2026 (~$0.96). CoinDesk reported it on June 4, with Apyx
+      // framing it as expected behavior for a preferred-equity-backed dollar.
+      ts: Date.UTC(2026, 5, 2),
       kind: "depeg",
-      label: "STRC preferred-equity drawdown — apxUSD depeg low ~$0.93",
-      severity: "med",
+      label: "STRC drawdown — apxUSD depeg low ~$0.89 (−1,059 bps), unresolved",
+      severity: "high",
       href: "https://www.coindesk.com/markets/2026/06/04/apyx-s-stablecoin-suffers-a-brief-depeg-protocol-says-its-a-feature-not-bug",
     },
   ],

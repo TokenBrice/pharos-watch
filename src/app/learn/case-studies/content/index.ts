@@ -9,6 +9,7 @@ import { content as ironTitan2021 } from "./iron-titan-2021";
 import { content as feiProtocol } from "./fei-protocol";
 import { content as usrResolv2026 } from "./usr-resolv-2026";
 import { content as pmusdPreciousMetals } from "./pmusd-precious-metals";
+import { content as apxusdDatCollateral } from "./apxusd-dat-collateral";
 
 /**
  * Canonical display + sitemap order. Tier 1 (one per archetype, marquee) first,
@@ -25,6 +26,7 @@ export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   feiProtocol,
   usrResolv2026,
   pmusdPreciousMetals,
+  apxusdDatCollateral,
 ];
 
 export const CASE_STUDY_ORDER: readonly string[] = CASE_STUDY_LIST.map(
