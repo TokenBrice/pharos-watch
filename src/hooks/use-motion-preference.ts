@@ -20,10 +20,25 @@ const motionPreferenceStorage = createBrowserStorageStore<MotionPreference>({
   decode: (raw) => (isMotionPreference(raw) ? raw : null),
 });
 
+function readSystemReduced(ssrDefault = false): boolean {
+  if (typeof window === "undefined") return ssrDefault;
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? ssrDefault;
+}
+
+/**
+ * Resolve a motion preference into the single boolean "should motion be reduced?"
+ * that components honor. An explicit "full" override always wins over the OS
+ * media query; "system" defers to the OS signal.
+ */
+export function getEffectiveReducedMotion(pref: MotionPreference, ssrDefault = false): boolean {
+  if (pref === "full") return false;
+  if (pref === "reduced") return true;
+  return readSystemReduced(ssrDefault);
+}
+
 function applyToBody(pref: MotionPreference) {
   if (typeof document === "undefined") return;
-  const systemReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-  const effectiveReduced = pref === "reduced" || (pref === "system" && systemReduced);
+  const effectiveReduced = getEffectiveReducedMotion(pref);
   const motionValue = pref === "full" ? "full" : effectiveReduced ? "reduced" : null;
   const roots = [document.documentElement, document.body];
 
@@ -73,6 +88,17 @@ function getSnapshot(): MotionPreference {
 function getServerSnapshot(): MotionPreference {
   return "system";
 }
+
+/**
+ * Low-level store accessors so other hooks (e.g. usePrefersReducedMotion) can
+ * derive their result from the same single source of truth instead of reading
+ * the OS media query a second time and diverging from the user's override.
+ */
+export const motionPreferenceStore = {
+  subscribe,
+  getSnapshot,
+  getServerSnapshot,
+};
 
 export interface MotionPreferenceApi {
   preference: MotionPreference;

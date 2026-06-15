@@ -27,11 +27,17 @@ describe("usePrefersReducedMotion", () => {
 
   it("reacts to browser preference changes", () => {
     const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    // Real MediaQueryList objects mutate `matches` before dispatching `change`;
+    // usePrefersReducedMotion treats the event as a signal and re-reads the live
+    // value from the shared motion-preference store.
+    const mediaState = { matches: false };
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
-        matches: false,
+        get matches() {
+          return mediaState.matches;
+        },
         media: query,
         onchange: null,
         addEventListener: vi.fn((event: string, listener: (changeEvent: MediaQueryListEvent) => void) => {
@@ -51,6 +57,7 @@ describe("usePrefersReducedMotion", () => {
     expect(result.current).toBe(false);
 
     act(() => {
+      mediaState.matches = true;
       for (const listener of listeners) {
         listener({ matches: true } as MediaQueryListEvent);
       }

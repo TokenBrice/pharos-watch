@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+import {
+  getEffectiveReducedMotion,
+  motionPreferenceStore,
+} from "./use-motion-preference";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -8,24 +12,31 @@ interface UsePrefersReducedMotionOptions {
   ssrDefault?: boolean;
 }
 
-function readPrefersReducedMotion(ssrDefault: boolean): boolean {
-  if (typeof window === "undefined") return ssrDefault;
-  return window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? ssrDefault;
-}
-
+/**
+ * Effective "should motion be reduced?" boolean. Derives from the shared
+ * motion-preference store so an explicit user override (system/reduced/full)
+ * is honored, falling back to the OS media query when set to "system". OS-level
+ * changes also re-render so callers stay in sync without polling the media
+ * query independently.
+ */
 export function usePrefersReducedMotion({
   ssrDefault = false,
 }: UsePrefersReducedMotionOptions = {}): boolean {
-  const [isReduced, setIsReduced] = useState(() => readPrefersReducedMotion(ssrDefault));
+  const subscribe = (onChange: () => void) => {
+    const unsubscribeStore = motionPreferenceStore.subscribe(onChange);
+    const media = typeof window !== "undefined" ? window.matchMedia?.(REDUCED_MOTION_QUERY) : undefined;
+    media?.addEventListener("change", onChange);
+    return () => {
+      unsubscribeStore();
+      media?.removeEventListener("change", onChange);
+    };
+  };
 
-  useEffect(() => {
-    const media = window.matchMedia?.(REDUCED_MOTION_QUERY);
-    if (!media) return;
+  const getSnapshot = () =>
+    getEffectiveReducedMotion(motionPreferenceStore.getSnapshot(), ssrDefault);
 
-    const handleChange = (event: MediaQueryListEvent) => setIsReduced(event.matches);
-    media.addEventListener("change", handleChange);
-    return () => media.removeEventListener("change", handleChange);
-  }, []);
+  const getServerSnapshot = () =>
+    getEffectiveReducedMotion(motionPreferenceStore.getServerSnapshot(), ssrDefault);
 
-  return isReduced;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
