@@ -6,9 +6,18 @@ import {
   FRONTEND_API_QUERY_RUNTIME_REGISTRY,
   type FrontendApiQueryDescriptor,
 } from "@/lib/api-query-runtime-registry";
+// Shared version/helpers also consumed by homepage-bootstrap.ts. This runtime
+// module deliberately stays Zod-free (hand-rolled normalizeApiMeta below, no
+// descriptor.schema validation) to keep Zod out of the inline-hydration bundle.
+import {
+  HOMEPAGE_BOOTSTRAP_VERSION,
+  isSeedableQuery,
+  normalizeSource,
+  normalizeTimestamp,
+  queryUpdatedAtMs,
+} from "@/lib/homepage-bootstrap-shared";
 
 export const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
-const HOMEPAGE_BOOTSTRAP_VERSION = 1;
 
 const registry = FRONTEND_API_QUERY_RUNTIME_REGISTRY;
 
@@ -39,14 +48,6 @@ export interface HomepageBootstrapPayload {
   generatedAt: number;
   source: string | null;
   queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
-}
-
-function normalizeTimestamp(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
-function normalizeSource(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function normalizeDependencyMeta(value: unknown): Record<string, ApiDependencyMeta> | undefined {
@@ -135,22 +136,6 @@ export function normalizeHomepageBootstrapPayload(raw: unknown): HomepageBootstr
     source: normalizeSource(raw.source),
     queries,
   };
-}
-
-function queryUpdatedAtMs(fetchedAt: number): number {
-  return fetchedAt < 10_000_000_000 ? fetchedAt * 1000 : fetchedAt;
-}
-
-function descriptorMaxAgeMs(descriptor: FrontendApiQueryDescriptor<unknown>): number {
-  return (descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000) * 1000;
-}
-
-function isSeedableQuery(
-  query: HomepageBootstrapQuery,
-  descriptor: FrontendApiQueryDescriptor<unknown>,
-  nowMs: number,
-): boolean {
-  return nowMs - queryUpdatedAtMs(query.fetchedAt) <= descriptorMaxAgeMs(descriptor);
 }
 
 export function countSeedableHomepageBootstrapQueries(

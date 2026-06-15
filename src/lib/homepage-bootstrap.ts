@@ -2,8 +2,17 @@ import type { QueryClient } from "@tanstack/react-query";
 import { isRecord } from "@shared/lib/type-guards";
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "@/lib/api-query-registry";
+// Shared version/helpers also consumed by homepage-bootstrap-runtime.ts; this
+// module adds the Zod-validating layer (ApiMetaSchema, descriptor.schema).
+import {
+  HOMEPAGE_BOOTSTRAP_VERSION,
+  isSeedableQuery,
+  normalizeSource,
+  normalizeTimestamp,
+  queryUpdatedAtMs,
+} from "@/lib/homepage-bootstrap-shared";
 
-export const HOMEPAGE_BOOTSTRAP_VERSION = 1;
+export { HOMEPAGE_BOOTSTRAP_VERSION };
 
 const registry = FRONTEND_API_QUERY_REGISTRY;
 
@@ -34,14 +43,6 @@ export interface HomepageBootstrapPayload {
   generatedAt: number;
   source: string | null;
   queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
-}
-
-function normalizeTimestamp(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
-function normalizeSource(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function normalizeQuery(
@@ -109,22 +110,6 @@ export function validateHomepageBootstrapPayloadData(payload: HomepageBootstrapP
     }
   }
   return errors;
-}
-
-function queryUpdatedAtMs(fetchedAt: number): number {
-  return fetchedAt < 10_000_000_000 ? fetchedAt * 1000 : fetchedAt;
-}
-
-function descriptorMaxAgeMs(descriptor: FrontendApiQueryDescriptor<unknown>): number {
-  return (descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000) * 1000;
-}
-
-function isSeedableQuery(
-  query: HomepageBootstrapQuery,
-  descriptor: FrontendApiQueryDescriptor<unknown>,
-  nowMs: number,
-): boolean {
-  return nowMs - queryUpdatedAtMs(query.fetchedAt) <= descriptorMaxAgeMs(descriptor);
 }
 
 export function countSeedableHomepageBootstrapQueries(
