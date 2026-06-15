@@ -10,7 +10,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
-import type { DigestRiskSignal } from "@shared/types";
+import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,13 @@ function tsToDateSlug(ts: number): string {
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
   const date = tsToDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
+}
+
+export function resolveLatestDailyDigestSlug(
+  entries: readonly Pick<DigestArchiveEntry, "generatedAt" | "digestType">[],
+): string | null {
+  const latestDaily = entries.find((entry) => (entry.digestType ?? "daily") !== "weekly");
+  return latestDaily ? tsToDateSlug(latestDaily.generatedAt) : null;
 }
 
 function tsToMonthKey(ts: number): string {
@@ -127,15 +134,15 @@ export function DigestArchiveClient() {
     return data?.digests.find((d) => d.digestType === "weekly") ?? null;
   }, [data]);
 
-  // Skip only today's digest (shown in broadsheet above), filter by month
-  const latestSlug = data?.digests[0] ? tsToDateSlug(data.digests[0].generatedAt) : null;
+  // Skip only today's daily digest (shown in broadsheet above), filter by month.
+  const latestDailySlug = useMemo(() => resolveLatestDailyDigestSlug(data?.digests ?? []), [data]);
   const wireDigests = useMemo(() => {
     if (!data?.digests || !activeMonth) return [];
     return data.digests.filter((d) => {
-      if (tsToDateSlug(d.generatedAt) === latestSlug) return false;
+      if (latestDailySlug && tsToDateSlug(d.generatedAt) === latestDailySlug) return false;
       return tsToMonthKey(d.generatedAt) === activeMonth;
     });
-  }, [data, activeMonth, latestSlug]);
+  }, [data, activeMonth, latestDailySlug]);
 
   if (isLoading) {
     return (
@@ -190,7 +197,7 @@ export function DigestArchiveClient() {
         <DailyDigest
           variant="preview"
           hideMasthead
-          detailHref={latestSlug ? `/digest/${latestSlug}/` : undefined}
+          detailHref={latestDailySlug ? `/digest/${latestDailySlug}/` : undefined}
         />
       </section>
 
