@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**153/733 done (21%)**  `████░░░░░░░░░░░░░░░░`
+**155/733 done (21%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 547 | 12 | 0 | 153 | 21 |
+| Count | 547 | 10 | 0 | 155 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 57 | 0 | 0 | 198 |
-| quality | 315 | 83 | 11 | 0 | 213 |
+| quality | 315 | 85 | 9 | 0 | 213 |
 | sustainability | 152 | 13 | 1 | 0 | 136 |
 
 ## redundancy (266)
@@ -350,7 +350,7 @@
 | ⬜ | [Q-064](quality/Q-064.md) | S | type-safety | MethodologySectionShell silently drops the version badge when only one of two coupled opti |  | `src/app/methodology/methodology-shared.tsx:60,63` |
 | ⬜ | [Q-065](quality/Q-065.md) | S | error-handling | ContentTable column/row mismatch validation is dev-only, silent in production builds |  | `src/components/table/content-table.tsx:L150-L153` |
 | ✅ | [Q-066](quality/Q-066.md) | S | error-handling | role="alert" inside aria-live="polite" container creates conflicting live-region semantics | opus-03 | `src/components/toast-container.tsx:L39, L69-L70` |
-| 🔄 | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
+| ✅ | [Q-067](quality/Q-067.md) | S | type-safety | BADGE_PILL_BASE string concatenated with Tailwind class strings bypasses purge safety | opus-04 | `src/components/key-info-card.tsx:L43, L253, L273` |
 | 🔄 | [Q-068](quality/Q-068.md) | S | type-safety | SVG clipPath IDs in yield-scatter-plot are not globally unique when multiple chart instanc | opus-05 | `src/components/yield-scatter-plot.tsx:L139-L171` |
 | 🚫 | [Q-071](quality/Q-071.md) | M | error-handling | build-og-learn-images.mjs generates SVGs but never converts them to PNGs — the check:og-le |  | `scripts/maintenance/build-og-learn-images.mjs:L1` |
 | ⬜ | [Q-072](quality/Q-072.md) | M | clone | Hardcoded 4% APY benchmark in yield-source diverges from per-coin benchmarkRate used by th |  | `shared/lib/selector/yield-source.ts:L75; shared/` |
@@ -626,7 +626,7 @@
 | ⬜ | [Q-309](quality/Q-309.md) | M | complexity | buildAddressPriceTargetsByProvider is a long, multi-responsibility function with several h |  | `worker/src/lib/address-price-providers/index.ts:` |
 | ⬜ | [Q-310](quality/Q-310.md) | S | type-safety | Provider metadata copies arbitrary upstream fields (any) into quote.metadata without valid |  | `worker/src/lib/address-price-providers/moralis.t` |
 | ⬜ | [Q-311](quality/Q-311.md) | M | complexity | Front-end view-model modules approach god-module size, mixing config tables, parsing, face |  | `src/lib/yield-view-model.ts:1-1247 (33 exports; ` |
-| 🔄 | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio | codex | `functions/stablecoin/[[path]].ts:1-21` |
+| ✅ | [Q-312](quality/Q-312.md) | S | type-safety | Legacy stablecoin redirect JSON is cast to Record<string,string> with no runtime validatio | codex | `functions/stablecoin/[[path]].ts:1-21` |
 | ✅ | [Q-313](quality/Q-313.md) | S | error-handling | Site-data cache existence check via cached!==null doesn't distinguish negative cache or er | codex | `functions/_site-data/[[path]].ts:159-166` |
 | ⬜ | [Q-314](quality/Q-314.md) | S | security | Pages site-data origin gate accepts any *.pages.dev preview subdomain via isPagesAppHostna |  | `functions/lib/site-data-origin.ts:6-22; shared/l` |
 | 🚫 | [Q-315](quality/Q-315.md) | S | security | Telegram callback queries are not re-authorized in private chats beyond the chat binding |  | `worker/src/api/telegram-webhook-callbacks.ts:49-` |
