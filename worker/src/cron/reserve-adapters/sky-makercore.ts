@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { rethrowIfAborted } from "../../lib/abort";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
@@ -171,7 +172,8 @@ async function fetchSkyLitePsmUsdcCapacity(signal: AbortSignal, ctx?: AdapterCon
       capacityUsd: decimalNumberFromBigInt(balanceRaw, SKY_LITE_PSM_USDC_DECIMALS),
       capacityRaw: balanceRaw.toString(),
     };
-  } catch {
+  } catch (error) {
+    rethrowIfAborted(error, signal);
     return null;
   }
 }

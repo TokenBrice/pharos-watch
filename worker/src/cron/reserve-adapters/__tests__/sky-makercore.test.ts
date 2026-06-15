@@ -221,4 +221,20 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
     expect(result.metadata?.details).toMatchObject({ litePsmCapacity: "unavailable" });
   });
+
+  it("propagates aborts from the optional LitePSM capacity read", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      count: 2,
+      results: [
+        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
+        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+      ],
+    });
+    const controller = new AbortController();
+    const reason = new Error("cron timed out");
+    controller.abort(reason);
+    vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc aborted"));
+
+    await expect(fetchSkyMakercoreReserves(coin, config, controller.signal)).rejects.toBe(reason);
+  });
 });
