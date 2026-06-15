@@ -6,7 +6,6 @@ import {
   KINESIS_KAU_HORIZON,
   KINESIS_KAG_HORIZON,
 } from "../lib/constants";
-import { setCache } from "../lib/db-cache";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import type { CronResult } from "../lib/cron-logger";
 
@@ -71,7 +70,7 @@ function extractFields(record: unknown): KinesisCirculationData | null {
  * `/coin_in_circulation` endpoint for both KAU and KAG chains.
  *
  * Writes circulation to the `onchain_supply` table for independent supply
- * verification.  Caches full totals for future mint/redemption delta computation.
+ * verification.
  */
 export async function syncKinesisSupply(
   db: D1Database,
@@ -118,18 +117,6 @@ export async function syncKinesisSupply(
         )
         .bind(config.stablecoinId, config.chain, parsed.circulation, nowSec)
         .run();
-
-      // Cache full totals for future flow-delta computation
-      await setCache(
-        db,
-        `kinesis-${config.chain}-totals`,
-        JSON.stringify({
-          circulation: parsed.circulation,
-          mint: parsed.mint,
-          redemption: parsed.redemption,
-          fetchedAt: nowSec,
-        }),
-      );
 
       await recordOutcome(db, config.circuitSource, true);
       synced++;

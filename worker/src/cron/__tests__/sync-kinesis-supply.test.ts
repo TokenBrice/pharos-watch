@@ -9,13 +9,8 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
 
-vi.mock("../../lib/db-cache", () => ({
-  setCache: vi.fn(async () => {}),
-}));
-
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { setCache } from "../../lib/db-cache";
 import { syncKinesisSupply, parseKinesisResponse } from "../sync-kinesis-supply";
 
 function makeDb() {
@@ -105,7 +100,6 @@ describe("syncKinesisSupply", () => {
   beforeEach(() => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(recordOutcome).mockResolvedValue(undefined);
-    vi.mocked(setCache).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -133,11 +127,6 @@ describe("syncKinesisSupply", () => {
     // Verify DB upserts
     expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
     expect(bindFn).toHaveBeenCalledWith("kag-kinesis", "kinesis-kag", 3_742_495, 1_700_000_000);
-
-    // Verify cache writes
-    expect(setCache).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(setCache).mock.calls[0]![1]).toBe("kinesis-kinesis-kau-totals");
-    expect(vi.mocked(setCache).mock.calls[1]![1]).toBe("kinesis-kinesis-kag-totals");
   });
 
   it("skips a chain when its circuit breaker is open", async () => {
