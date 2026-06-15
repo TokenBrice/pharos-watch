@@ -46,6 +46,11 @@ function getLastSuccessfulRun(runs: RecentRun[]): RecentRun | null {
   return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
 }
 
+function getCronStatusColor(status: string | undefined): string {
+  const statusColors: Readonly<Record<string, string>> = CRON_STATUS_COLORS;
+  return status == null ? "bg-muted text-muted-foreground" : statusColors[status] ?? "bg-muted text-muted-foreground";
+}
+
 function getRowTone(row: CronLaneRow): string {
   const latestStatus = row.cron.lastRun?.status;
   if (row.cron.telemetryUnknown) return "border-l-slate-500/60";
@@ -103,7 +108,7 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronLaneRow; nowSeconds: nu
           <h3 className="text-sm font-semibold text-foreground">{row.display.label}</h3>
           <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{row.job}</p>
         </div>
-        <Badge className={`text-xs ${CRON_STATUS_COLORS[lastRun?.status as keyof typeof CRON_STATUS_COLORS] ?? "bg-muted text-muted-foreground"}`}>
+        <Badge className={`text-xs ${getCronStatusColor(lastRun?.status)}`}>
           {lastRun?.status ?? (row.cron.telemetryUnknown ? "unknown" : "no-runs")}
         </Badge>
       </div>
@@ -255,7 +260,7 @@ export function CronLaneTable({ groups, nowSeconds, emptyLabel }: CronLaneTableP
                         onClick={() => setSelectedJob(row.job)}
                         className="pharos-focus-ring rounded-sm text-left"
                       >
-                        <Badge className={`text-xs ${CRON_STATUS_COLORS[lastRun?.status as keyof typeof CRON_STATUS_COLORS] ?? "bg-muted text-muted-foreground"}`}>
+                        <Badge className={`text-xs ${getCronStatusColor(lastRun?.status)}`}>
                           {lastRun?.status ?? (row.cron.telemetryUnknown ? "unknown" : "none")}
                         </Badge>
                       </button>
