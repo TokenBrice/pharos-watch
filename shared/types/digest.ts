@@ -425,8 +425,62 @@ export const UsdsStatusResponseSchema = z.object({
 });
 export type UsdsStatusResponse = z.infer<typeof UsdsStatusResponseSchema>;
 
+// Validate the impactful fields actually rendered by digest-snapshot.tsx so
+// snapshot drift/corruption is caught at the contract boundary, while keeping
+// .passthrough() to preserve the many other DigestInputData fields untouched.
+// Fields are optional (the consumer applies ?? fallbacks and older snapshots
+// may omit them); the goal is type-safety, not presence enforcement.
 const DigestSnapshotInputDataSchema = z
-  .object({})
+  .object({
+    totalMcapUsd: z.number().optional(),
+    mcap7dDelta: z.number().optional(),
+    activeDepegCount: z.number().optional(),
+    topDepegs: z
+      .array(
+        z
+          .object({
+            symbol: z.string(),
+            bps: z.number(),
+            mcapUsd: z.number(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+    stabilityIndex: z
+      .object({
+        score: z.number(),
+        band: z.string(),
+        components: z
+          .object({
+            severity: z.number(),
+            breadth: z.number(),
+            trend: z.number(),
+          })
+          .passthrough(),
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
+    biggestSupplyChange: z
+      .object({
+        symbol: z.string(),
+        name: z.string(),
+        changeUsd: z.number(),
+        currentMcap: z.number(),
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
+    safetyScores: z
+      .object({
+        mentionedCoins: z.array(z.object({ symbol: z.string() }).passthrough()),
+        medianGrade: z.string(),
+        aboveBCount: z.number(),
+        fCount: z.number(),
+      })
+      .passthrough()
+      .optional(),
+  })
   .passthrough()
   .transform((value): DigestInputData => value as unknown as DigestInputData);
 
