@@ -24,6 +24,7 @@ import {
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { decodeAddressWord, decodeBoolWord } from "./abi-decode";
+import { normalizeEvmAddress } from "./evm";
 import { validateDecimals } from "./slice-math";
 
 interface ReserveProtocolDtfBasketEntry {
@@ -76,17 +77,12 @@ const COLLATERAL_STATUS_SOUND = 0n;
 const COLLATERAL_STATUS_IFFY = 1n;
 const COLLATERAL_STATUS_DISABLED = 2n;
 
-function normalizeAddress(value: string | undefined): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed && /^0x[0-9a-f]{40}$/.test(trimmed) ? trimmed : null;
-}
-
 function buildDescriptorMap(
   assets: readonly ReserveProtocolDtfAssetDescriptor[] | undefined,
 ): Map<string, ReserveProtocolDtfAssetDescriptor> {
   const descriptors = new Map<string, ReserveProtocolDtfAssetDescriptor>();
   for (const asset of assets ?? []) {
-    const address = normalizeAddress(asset.address);
+    const address = normalizeEvmAddress(asset.address);
     if (address) descriptors.set(address, asset);
   }
   return descriptors;
@@ -95,12 +91,12 @@ function buildDescriptorMap(
 function findDtfRow(rows: readonly ReserveProtocolDtfRow[], coin: StablecoinMeta): ReserveProtocolDtfRow | null {
   const contractAddresses = new Set(
     (coin.contracts ?? [])
-      .map((contract) => normalizeAddress(contract.address))
+      .map((contract) => normalizeEvmAddress(contract.address))
       .filter((address): address is string => address != null),
   );
 
   for (const row of rows) {
-    const address = normalizeAddress(row.address);
+    const address = normalizeEvmAddress(row.address);
     if (address && contractAddresses.has(address)) return row;
   }
 
@@ -201,7 +197,7 @@ export function adaptReserveProtocolDtfRows(
     if (pct == null) continue;
     totalWeight += pct;
 
-    const address = normalizeAddress(component.address);
+    const address = normalizeEvmAddress(component.address);
     const descriptor = address ? descriptorByAddress.get(address) : undefined;
     if (!descriptor) {
       unknownWeight += pct;
@@ -376,7 +372,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
     const price = decodePriceResult(rawPrice, entry.address);
     const value = decimalNumberFromBigInt(entry.quantity * price.mid, tokenDecimals + PRICE_DECIMALS);
     totalValue += value;
-    const normalizedAddress = normalizeAddress(entry.address);
+    const normalizedAddress = normalizeEvmAddress(entry.address);
     const descriptor = normalizedAddress ? descriptorByAddress.get(normalizedAddress) : undefined;
     componentMetadata.push({
       tokenAddress: entry.address,

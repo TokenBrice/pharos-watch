@@ -11,7 +11,7 @@ import {
   encodeBalanceOfCallData,
 } from "../../lib/evm-selectors";
 import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode";
-import { resolveCoinContractAddress } from "./evm";
+import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
@@ -39,11 +39,11 @@ interface SliceConfig {
 }
 
 function normalizeAddress(address: string): `0x${string}` {
-  const lower = address.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(lower)) {
+  const normalized = normalizeEvmAddress(address);
+  if (!normalized) {
     throw new Error(`${ADAPTER_KEY} invalid EVM address: ${address}`);
   }
-  return lower as `0x${string}`;
+  return normalized as `0x${string}`;
 }
 
 function encodeCanSwapViaPathCall(

@@ -15,6 +15,7 @@ import {
   slicesFromValues,
 } from "./helpers";
 import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
+import { normalizeEvmAddress } from "./evm";
 
 interface ResupplyUnderlyingDescriptor {
   address: string;
@@ -71,11 +72,6 @@ interface RedemptionTelemetryInput {
   guard: RedemptionGuardSnapshot;
 }
 
-function normalizeAddress(value: string | undefined): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed && /^0x[0-9a-f]{40}$/.test(trimmed) ? trimmed : null;
-}
-
 function parseAddressResult(raw: string | null, context: string): `0x${string}` {
   const address = decodeAddressWord(raw);
   if (!address) {
@@ -85,7 +81,7 @@ function parseAddressResult(raw: string | null, context: string): `0x${string}` 
 }
 
 function parseConfiguredAddress(value: string, context: string): `0x${string}` {
-  const address = normalizeAddress(value);
+  const address = normalizeEvmAddress(value);
   if (!address) {
     throw new Error(`resupply-pairs ${context} is not a valid address`);
   }
@@ -97,7 +93,7 @@ function buildUnderlyingMap(
 ): Map<string, ResupplyUnderlyingDescriptor> {
   const byAddress = new Map<string, ResupplyUnderlyingDescriptor>();
   for (const underlying of underlyings ?? []) {
-    const address = normalizeAddress(underlying.address);
+    const address = normalizeEvmAddress(underlying.address);
     if (address) byAddress.set(address, underlying);
   }
   return byAddress;
@@ -223,7 +219,7 @@ export function adaptResupplyPairSnapshots(
       continue;
     }
 
-    const underlyingAddress = normalizeAddress(snapshot.underlyingAddress);
+    const underlyingAddress = normalizeEvmAddress(snapshot.underlyingAddress);
     const descriptor = underlyingAddress ? underlyingByAddress.get(underlyingAddress) : undefined;
     if (!underlyingAddress || !descriptor) {
       throw new Error(`resupply-pairs unmapped positive-collateral underlying ${snapshot.underlyingAddress}`);
