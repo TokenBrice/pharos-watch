@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**53/733 done (7%)**  `█░░░░░░░░░░░░░░░░░░░`
+**56/733 done (8%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 661 | 0 | 0 | 53 | 19 |
+| Count | 653 | 5 | 0 | 56 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 29 | 0 | 0 | 227 |
-| quality | 315 | 16 | 0 | 0 | 292 |
+| redundancy | 266 | 29 | 2 | 0 | 225 |
+| quality | 315 | 19 | 3 | 0 | 286 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -169,7 +169,7 @@
 | ✅ | [R-135](redundancy/R-135.md) | S | dead-code | Redundant local variable assignments for stablecoin counts in AboutPage | codex | `src/app/about/page.tsx:L231-L243` |
 | ⬜ | [R-136](redundancy/R-136.md) | S | dead-code | `entries` field on `MethodologyChangelogRouteDefinition` is exposed but never consumed ext |  | `src/app/methodology/changelog-route-factory.tsx:` |
 | ⬜ | [R-137](redundancy/R-137.md) | S | dead-code | feedPages and datasetPages are permanently empty arrays in sitemap.ts |  | `src/app/sitemap.ts:462-484` |
-| ⬜ | [R-138](redundancy/R-138.md) | S | wrapper | fieldClassName() is a zero-argument function returning a constant string |  | `src/components/status/api-keys-panel-parts.tsx:L` |
+| 🔄 | [R-138](redundancy/R-138.md) | S | wrapper | fieldClassName() is a zero-argument function returning a constant string | codex | `src/components/status/api-keys-panel-parts.tsx:L` |
 | ⬜ | [R-139](redundancy/R-139.md) | S | clone | intensity is clamped twice in the FlowMachine pipeline |  | `src/components/flow-machine-scene.tsx:49-53, src` |
 | ⬜ | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette |  | `src/components/providers.tsx:L66, L129, L140` |
 | ⬜ | [R-141](redundancy/R-141.md) | S | clone | `sleep` defined independently in sync-from-api.ts and smoke-runtime.mjs |  | `scripts/lib/sync-from-api.ts:L64, scripts/lib/sm` |
@@ -208,7 +208,7 @@
 | 🚫 | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
 | ✅ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
-| ⬜ | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union |  | `worker/src/api/api-key-requests/rate-limit.ts:14` |
+| 🔄 | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union | codex | `worker/src/api/api-key-requests/rate-limit.ts:14` |
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
 | ⬜ | [R-180](redundancy/R-180.md) | S | clone | normalizeStringArray duplicated between response.ts and digest-intelligence.ts |  | `worker/src/cron/daily-digest/response.ts:L128-L1` |
@@ -316,7 +316,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| ⬜ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar |  | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
+| 🔄 | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
 | ⬜ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry |  | `shared/lib/redemption-backstop-configs/factory.t` |
 | ⬜ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read |  | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ⬜ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat |  | `worker/src/lib/price-validation.ts:L191-L197` |
@@ -433,8 +433,8 @@
 |---|---|---|---|---|---|---|
 | ✅ | [Q-005](quality/Q-005.md) | S | complexity | buildCompositionLayout contains unreachable guard conditions | codex | `src/app/chains/[chain]/view-model.ts:17-29` |
 | ✅ | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb | codex | `shared/lib/selector/yield-source.ts:L70-L71` |
-| ⬜ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA |  | `src/components/selector/selector-shortlist-card.` |
-| ⬜ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise |  | `scripts/maintenance/serve-static-export.mjs:L119` |
+| ✅ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA | codex | `src/components/selector/selector-shortlist-card.` |
+| 🔄 | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise | codex | `scripts/maintenance/serve-static-export.mjs:L119` |
 | ⬜ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be |  | `src/components/exploit-notice-banner.tsx:L11-L35` |
 | ⬜ | [Q-018](quality/Q-018.md) | S | error-handling | fetch-logos.ts defers Node.js built-in imports (fs, path, url) to inside an async function |  | `scripts/maintenance/fetch-logos.ts:90-96` |
 | ⬜ | [Q-020](quality/Q-020.md) | S | complexity | runFourHourlyReserveSyncSlot shadows outer `summary` variable inside a try block |  | `worker/src/handlers/scheduled/hourly-live-reserv` |
@@ -473,7 +473,7 @@
 | ⬜ | [Q-106](quality/Q-106.md) | M | complexity | syncStablecoins entry-point has 9 positional parameters — ordering errors are undetectable |  | `worker/src/cron/sync-stablecoins.ts:L22-L32` |
 | ⬜ | [Q-107](quality/Q-107.md) | M | error-handling | Preset failure count incremented on any partial failure but only reset on full success |  | `worker/src/cron/dispatch-telegram-alerts.ts:L469` |
 | ⬜ | [Q-109](quality/Q-109.md) | M | complexity | buildPrimarySourceCandidates is a 300-line monolith with eight distinct responsibilities |  | `worker/src/lib/primary-price-collector.ts:L240-L` |
-| ⬜ | [Q-114](quality/Q-114.md) | S | complexity | UptimeBar.buildDaySegments is O(days × transitions) — inner loop does not advance a cursor |  | `src/components/status/uptime-bar.tsx:L33-L80` |
+| ✅ | [Q-114](quality/Q-114.md) | S | complexity | UptimeBar.buildDaySegments is O(days × transitions) — inner loop does not advance a cursor | codex | `src/components/status/uptime-bar.tsx:L33-L80` |
 | ⬜ | [Q-115](quality/Q-115.md) | S | type-safety | Treemap content prop supplied with zero-value placeholder props — type unsafety via dummy  |  | `src/components/reserve-treemap.tsx:L205` |
 | ⬜ | [Q-116](quality/Q-116.md) | M | complexity | ContagionGraph re-runs useContagionGraphModel twice for the same dataset when fullscreen o |  | `src/components/contagion-graph.tsx:L20-L68` |
 | ⬜ | [Q-117](quality/Q-117.md) | L | complexity | analyze-gsc-coverage.mjs is a 954-line monolith with a bespoke CSV parser, ZIP reader, and |  | `scripts/maintenance/analyze-gsc-coverage.mjs:1-9` |
@@ -490,10 +490,10 @@
 | ⬜ | [Q-141](quality/Q-141.md) | S | complexity | compare-pages.ts: build-time throw on module evaluation can produce opaque build errors |  | `src/lib/compare-pages.ts:L142, L50-L74` |
 | ⬜ | [Q-151](quality/Q-151.md) | M | error-handling | SVG sanitizer does not strip `href` / `xlink:href` attributes enabling CSS-based data exfi |  | `src/app/alt-pegs/fiat-world-atlas/world-map.tsx:` |
 | ⬜ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness |  | `src/components/selector/selector-shortlist-card.` |
-| ⬜ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent |  | `src/components/yield-scatter-plot.tsx:L165` |
+| 🔄 | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent | codex | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ✅ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
-| ⬜ | [Q-179](quality/Q-179.md) | S | complexity | `docs/api-reference.md` is read twice in the same `runDocSyncChecks` call |  | `scripts/lib/doc-sync/checks.ts:L329-L415` |
+| ✅ | [Q-179](quality/Q-179.md) | S | complexity | `docs/api-reference.md` is read twice in the same `runDocSyncChecks` call | codex | `scripts/lib/doc-sync/checks.ts:L329-L415` |
 | ⬜ | [Q-180](quality/Q-180.md) | S | security | Hardcoded personal email address in a user-visible error message |  | `src/lib/api-key-self-serve.ts:88` |
 | ⬜ | [Q-181](quality/Q-181.md) | S | dead-code | psiPresent metadata field is always true in snapshot-public-dataset.ts |  | `worker/src/cron/snapshot-public-dataset.ts:454` |
 | ✅ | [Q-182](quality/Q-182.md) | S | docs | check-phishing-signatures.mjs: spec comment diverges from implementation; 'yellow' severit | codex | `scripts/ci/check-phishing-signatures.mjs:L7-L11,` |
