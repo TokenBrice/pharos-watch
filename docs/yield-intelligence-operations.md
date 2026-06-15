@@ -19,6 +19,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `BIMA sUSBD`
   - `Etherfuse CETES current-issuance`
   - `Hashnote USYC`
+  - `Midas mMEV NAV oracle`
   - `Ondo USDY oracle`
   - `Zephyr ZYS`
   - `B.Protocol LQTY-only`

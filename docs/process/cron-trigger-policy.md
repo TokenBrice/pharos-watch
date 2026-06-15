@@ -9,7 +9,7 @@ The worker declares **~19 cron expressions** in `worker/wrangler.toml`. Each exp
 Cloudflare Workers enforce a **6 concurrent `fetch()` connection** limit per cron trigger invocation. Every job dispatched within a single trigger slot competes for that shared pool. The constraint is documented in:
 
 - `docs/worker-and-api-limits.md` — see "Connection-budget operating assumption"
-- `docs/worker-infrastructure.md` — section "Cron triggers"
+- `docs/worker-infrastructure.md` — section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget"
 
 ## Target
 
