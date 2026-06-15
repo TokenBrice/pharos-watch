@@ -22,8 +22,6 @@ const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
   "stability-index-samples",
 ]);
 
-export { isMissingTableError };
-
 export function isBootstrapAllowedMissingTableSource(source: string): boolean {
   return BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES.has(source);
 }
