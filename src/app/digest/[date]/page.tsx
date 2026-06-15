@@ -5,7 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
 import { EditorialMasthead } from "@/components/editorial-masthead";
-import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel } from "@/lib/digest";
+import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -146,47 +146,44 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <li>
-              <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">Dashboard</Link>
+              <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">Digest Archive</Link>
+              <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">
+                Digest Archive
+              </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li aria-current="page" className="text-foreground">{formatted}</li>
+            <li aria-current="page" className="text-foreground">
+              {formatted}
+            </li>
           </ol>
         </nav>
         <p className="pharos-kicker">{editionKicker}</p>
-        <h1 className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}>{digest.title}</h1>
+        <h1
+          className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}
+        >
+          {digest.title}
+        </h1>
       </div>
 
       <article className="space-y-6">
         <div className="pharos-card-shell rounded-[1.5rem] px-5 py-5">
           <p className="pharos-kicker">Executive Summary</p>
-          <p
-            className="mt-3 text-[1.1rem] leading-8 text-foreground/92"
-            style={EDITORIAL_BODY_STYLE}
-          >
+          <p className="mt-3 text-[1.1rem] leading-8 text-foreground/92" style={EDITORIAL_BODY_STYLE}>
             {digest.text}
           </p>
         </div>
 
         <div className="mx-auto max-w-[68ch] space-y-4">
           {extendedParagraphs.map((para, i) => {
-            const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-            const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-            const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+            const { headerText, bodyText } = parseDigestParagraph(para);
             return (
-              <p
-                key={i}
-                className="text-[1.05rem] leading-8 text-foreground/92"
-                style={EDITORIAL_BODY_STYLE}
-              >
-                {headerText && (
-                  <span className="font-semibold tracking-wide">
-                    {headerText}.{" "}
-                  </span>
-                )}
+              <p key={i} className="text-[1.05rem] leading-8 text-foreground/92" style={EDITORIAL_BODY_STYLE}>
+                {headerText && <span className="font-semibold tracking-wide">{headerText}. </span>}
                 {bodyText}
               </p>
             );
@@ -219,7 +216,10 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         </div>
       </section>
 
-      <nav aria-label="Digest navigation" className="flex items-center justify-between pt-4 border-t border-border/50 text-sm">
+      <nav
+        aria-label="Digest navigation"
+        className="flex items-center justify-between pt-4 border-t border-border/50 text-sm"
+      >
         {older ? (
           <Link
             href={`/digest/${older.date}/`}

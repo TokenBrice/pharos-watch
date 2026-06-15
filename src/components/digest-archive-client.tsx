@@ -11,7 +11,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
-import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE } from "@/lib/digest";
+import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE, parseDigestParagraph } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
@@ -43,9 +43,7 @@ function formatMonthLabel(key: string): string {
 }
 
 function formatWireDate(ts: number): string {
-  return new Date(ts * 1000)
-    .toLocaleDateString("en-US", { day: "numeric", month: "short" })
-    .toUpperCase();
+  return new Date(ts * 1000).toLocaleDateString("en-US", { day: "numeric", month: "short" }).toUpperCase();
 }
 
 function formatWeeklyMasthead(ts: number): string {
@@ -61,12 +59,16 @@ function formatArchiveRiskSignal(signal: DigestRiskSignal): string {
   return `${signal.symbol} ${Math.abs(signal.bps)}bps`;
 }
 
-function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
+function WeeklyTeaser({
+  entry,
+}: {
+  entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number };
+}) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
   if (paragraphs.length === 0) return null;
 
   // First sentence as teaser, stripping any bold markdown headers
-  const raw = paragraphs[0].replace(/\*\*.*?\*\*\s*/, "");
+  const raw = parseDigestParagraph(paragraphs[0]).bodyText;
   const teaser = raw.split(/(?<=\.)\s/)[0] || raw;
 
   const weeklyLabel = entry.editionNumber ? `Pharos Weekly Recap #${entry.editionNumber}` : "Pharos Weekly Recap";
@@ -77,9 +79,7 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
         <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
           {weeklyLabel}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {formatWeeklyMasthead(entry.generatedAt)}
-        </p>
+        <p className="text-xs text-muted-foreground">{formatWeeklyMasthead(entry.generatedAt)}</p>
       </div>
       <h3 className="mt-2 text-lg font-bold tracking-tight" style={EDITORIAL_BODY_STYLE}>
         {entry.digestTitle || "The Week in Review"}
@@ -178,11 +178,7 @@ export function DigestArchiveClient() {
   }
 
   if (!data || data.digests.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-8">
-        No digests yet. Check back tomorrow.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground py-8">No digests yet. Check back tomorrow.</p>;
   }
 
   return (
@@ -217,110 +213,116 @@ export function DigestArchiveClient() {
         {monthOptions.length > 1 && (
           <div>
             <select
-            aria-label="Filter by month"
-            value={activeMonth ?? ""}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-sm bg-background border border-border rounded px-3 py-2 min-h-[44px] md:min-h-0 md:py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            {monthOptions.map((m) => (
-              <option key={m.key} value={m.key} className="bg-background text-foreground">
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Wire table */}
-      <div role="region" aria-live="polite" aria-label="Digest archive list">
-        {wireDigests.length === 0 && (
-          <p className="text-sm text-muted-foreground py-4">
-            No other digests this month.
-          </p>
-        )}
-        {wireDigests.map((d) => {
-          const isWeekly = d.digestType === "weekly";
-          return (
-            <Link
-              key={d.generatedAt}
-              href={`/digest/${toDigestSlug(d.generatedAt, d.digestType ?? "daily")}/`}
-              className={cn(
-                "pharos-focus-ring flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
-                isWeekly
-                  ? "py-3.5 border-border/60 bg-muted/25 hover:bg-muted/40"
-                  : "py-3 md:py-2.5 border-border/30 hover:bg-muted/20",
-              )}
+              aria-label="Filter by month"
+              value={activeMonth ?? ""}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="text-sm bg-background border border-border rounded px-3 py-2 min-h-[44px] md:min-h-0 md:py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">
-                {formatWireDate(d.generatedAt)}
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")} style={EDITORIAL_META_STYLE}>
-                  {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
-                  {isWeekly && (
-                    <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
-                    </span>
-                  )}
-                  {d.riskSignal && (
-                    <span
-                      className={cn(
-                        "rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider",
-                        d.riskSignal.severity === "critical"
-                          ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
-                          : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-                      )}
-                    >
-                      {formatArchiveRiskSignal(d.riskSignal)}
-                    </span>
-                  )}
-                  {!isWeekly && d.editionNumber != null && (
-                    <span className="font-mono text-[0.65rem] text-muted-foreground/70">
-                      #{d.editionNumber}
-                    </span>
-                  )}
+              {monthOptions.map((m) => (
+                <option key={m.key} value={m.key} className="bg-background text-foreground">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Wire table */}
+        <div role="region" aria-live="polite" aria-label="Digest archive list">
+          {wireDigests.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4">No other digests this month.</p>
+          )}
+          {wireDigests.map((d) => {
+            const isWeekly = d.digestType === "weekly";
+            return (
+              <Link
+                key={d.generatedAt}
+                href={`/digest/${toDigestSlug(d.generatedAt, d.digestType ?? "daily")}/`}
+                className={cn(
+                  "pharos-focus-ring flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
+                  isWeekly
+                    ? "py-3.5 border-border/60 bg-muted/25 hover:bg-muted/40"
+                    : "py-3 md:py-2.5 border-border/30 hover:bg-muted/20",
+                )}
+              >
+                <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">
+                  {formatWireDate(d.generatedAt)}
                 </span>
-                {(d.psiBand || d.totalMcapUsd != null || d.riskSignal) && (
-                  <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                <div className="flex-1 min-w-0">
+                  <span
+                    className={cn(
+                      "truncate flex items-center gap-1.5",
+                      isWeekly ? "text-sm font-semibold" : "text-sm font-medium",
+                    )}
+                    style={EDITORIAL_META_STYLE}
+                  >
+                    {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
+                    {isWeekly && (
+                      <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
+                      </span>
+                    )}
                     {d.riskSignal && (
-                      <span className={cn(
-                        "text-xs font-mono font-medium",
-                        d.riskSignal.severity === "critical"
-                          ? "text-red-700 dark:text-red-300"
-                          : "text-amber-700 dark:text-amber-300",
-                      )}>
+                      <span
+                        className={cn(
+                          "rounded border px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider",
+                          d.riskSignal.severity === "critical"
+                            ? "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300"
+                            : "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                        )}
+                      >
                         {formatArchiveRiskSignal(d.riskSignal)}
                       </span>
                     )}
-                    {d.psiBand && d.psiScore != null && (
-                      <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}>
-                        {d.psiBand} {d.psiScore.toFixed(1)}
-                      </span>
+                    {!isWeekly && d.editionNumber != null && (
+                      <span className="font-mono text-[0.65rem] text-muted-foreground/70">#{d.editionNumber}</span>
                     )}
-                    {d.totalMcapUsd != null && (
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {formatCurrency(d.totalMcapUsd, 0)}
-                      </span>
-                    )}
-                  </div>
+                  </span>
+                  {(d.psiBand || d.totalMcapUsd != null || d.riskSignal) && (
+                    <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                      {d.riskSignal && (
+                        <span
+                          className={cn(
+                            "text-xs font-mono font-medium",
+                            d.riskSignal.severity === "critical"
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {formatArchiveRiskSignal(d.riskSignal)}
+                        </span>
+                      )}
+                      {d.psiBand && d.psiScore != null && (
+                        <span
+                          className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
+                        >
+                          {d.psiBand} {d.psiScore.toFixed(1)}
+                        </span>
+                      )}
+                      {d.totalMcapUsd != null && (
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {formatCurrency(d.totalMcapUsd, 0)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {d.psiBand && d.psiScore != null && (
+                  <span
+                    className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
+                  >
+                    {d.psiBand} {d.psiScore.toFixed(1)}
+                  </span>
                 )}
-              </div>
-              {d.psiBand && d.psiScore != null && (
-                <span
-                  className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
-                >
-                  {d.psiBand} {d.psiScore.toFixed(1)}
-                </span>
-              )}
-              {d.totalMcapUsd != null && (
-                <span className="text-xs font-mono text-muted-foreground shrink-0 hidden sm:inline">
-                  {formatCurrency(d.totalMcapUsd, 0)}
-                </span>
-              )}
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
-            </Link>
-          );
-        })}
+                {d.totalMcapUsd != null && (
+                  <span className="text-xs font-mono text-muted-foreground shrink-0 hidden sm:inline">
+                    {formatCurrency(d.totalMcapUsd, 0)}
+                  </span>
+                )}
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

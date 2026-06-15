@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
-import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE, parseDigestParagraph } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { digestDisplay } from "@/lib/fonts/digest";
@@ -64,14 +64,6 @@ interface DigestFullDisplayProps {
   riskTape?: DigestRiskTapeItem[] | null;
 }
 
-function parseDigestParagraph(paragraph: string): { headerText: string | null; bodyText: string } {
-  const headerMatch = paragraph.match(/^\*\*(.+?)\*\*\s*/);
-  return {
-    headerText: headerMatch?.[1]?.replace(/\.+$/, "") ?? null,
-    bodyText: headerMatch ? paragraph.slice(headerMatch[0].length) : paragraph,
-  };
-}
-
 interface DigestParagraphListProps {
   paragraphs: string[];
   getParagraphClassName: (index: number) => string;
@@ -117,9 +109,7 @@ export function DigestFullDisplay({
   return (
     <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
       <div className="border-t border-b border-border py-3 text-left">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">{dateString}</p>
       </div>
 
@@ -137,10 +127,9 @@ export function DigestFullDisplay({
 
         <DigestParagraphList
           paragraphs={paragraphs}
-          getParagraphClassName={(index) => cn(
-            "text-[1.05rem] leading-8 text-foreground/92",
-            index === 0 && "border-l-2 border-border/60 pl-4 italic",
-          )}
+          getParagraphClassName={(index) =>
+            cn("text-[1.05rem] leading-8 text-foreground/92", index === 0 && "border-l-2 border-border/60 pl-4 italic")
+          }
         />
 
         {ctaHref && ctaLabel && (
@@ -199,7 +188,9 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
         <div className={cn(isPreview ? "grid gap-5 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)]" : "space-y-3")}>
           <div className="space-y-3">
             {isPreview && <Skeleton className="h-3 w-36" />}
-            <Skeleton className={cn("w-full", isPreview ? "h-20 max-w-[20rem] sm:max-w-[24rem]" : "h-10 max-w-[28rem]")} />
+            <Skeleton
+              className={cn("w-full", isPreview ? "h-20 max-w-[20rem] sm:max-w-[24rem]" : "h-10 max-w-[28rem]")}
+            />
           </div>
           <div className="space-y-3">
             <Skeleton className="h-4 w-full" />
@@ -210,9 +201,7 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
     );
   }
 
-  const editionLabel = data?.editionNumber
-    ? `Pharos Daily Digest #${data.editionNumber}`
-    : "Pharos Daily Digest";
+  const editionLabel = data?.editionNumber ? `Pharos Daily Digest #${data.editionNumber}` : "Pharos Daily Digest";
 
   if (!isPreview) {
     return (
@@ -239,9 +228,7 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
             {editionLabel}
           </p>
           {data?.generatedAt && (
-            <p className="mt-0.5 text-xs text-muted-foreground/85">
-              {formatMasthead(data.generatedAt)}
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground/85">{formatMasthead(data.generatedAt)}</p>
           )}
         </div>
       )}
@@ -251,10 +238,12 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
           <div className="flex min-w-0 flex-col gap-4">
             <DigestParagraphList
               paragraphs={visibleParagraphs}
-              getParagraphClassName={(index) => cn(
-                "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                index === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
-              )}
+              getParagraphClassName={(index) =>
+                cn(
+                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                  index === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+                )
+              }
             />
             {shouldShowCta && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
@@ -284,11 +273,7 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
 
         const title = data?.digestTitle || "Signal & Noise";
         const compactIntelligence = (
-          <DigestIntelligencePanel
-            compact
-            nextTriggers={data?.nextTriggers}
-            riskTape={data?.riskTape}
-          />
+          <DigestIntelligencePanel compact nextTriggers={data?.nextTriggers} riskTape={data?.riskTape} />
         );
 
         return detailHref ? (
