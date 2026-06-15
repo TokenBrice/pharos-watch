@@ -10,7 +10,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.13` update: eligible medium-confidence follow-ups now use same-run reserve-sync capacity for `cdp-enosys`, `meusd-mezo`, `wm-m0`, `usdsc-startale`, and `reusd-re-protocol`. Verified entries with paused/zero live capacity, queue-only exits, or reserve-incomplete PSM-only telemetry remain deliberately unpromoted.
+Latest `v4.13` update: eligible medium-confidence follow-ups now use same-run reserve-sync capacity for `cdp-enosys`, `meusd-mezo`, `wm-m0`, `usdsc-startale`, and `reusd-re-protocol`. A review-time adapter dry run at 2026-06-15 10:09 UTC measured $120.9M of current live-direct capacity across those routes: $84.2M wM, $25.4M Re Protocol reUSD, $4.8M USDSC, $3.5M Mezo meUSD, and $3.0M Enosys CDP. Verified entries with paused/zero live capacity, queue-only exits, or reserve-incomplete PSM-only telemetry remain deliberately unpromoted.
 
 Previous `v4.12` update: a verified medium-confidence upgrade tranche replaces eligible undisclosed-fee placeholders with fixed or formula fee evidence, while Sky `DAI`/`USDS` now read the LitePSM `USDC` pocket directly on-chain for same-run live-direct capacity. Routes with admin-configurable, silent, or missing fee/capacity evidence remain deliberately unpromoted.
 

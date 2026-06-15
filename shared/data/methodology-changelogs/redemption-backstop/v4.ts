@@ -13,6 +13,7 @@ export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
       "`meusd-mezo` now uses a dedicated Mezo native ActivePool adapter that reads live collateral balance, protocol debt, TCR/MCR route health, and current redemption-rate telemetry directly from Mezo contracts",
       "`wm-m0` and `usdsc-startale` now use an M0 wrapper-underlying adapter for current M balance capacity; USDSC additionally verifies the Soneium SwapFacility route and approved swapper before emitting whitelisted-primary direct capacity",
       "`reusd-re-protocol` now parses Re Protocol's official metrics payload for instant redemption vault capacity instead of relying only on reviewed fallback ratios, while retaining the queued-route fallback because excess redemptions can still spill to the queue",
+      "Review-time adapter dry run at 2026-06-15 10:09 UTC measured $120.9M of current live-direct capacity across the upgraded routes: $84.2M wM, $25.4M Re Protocol reUSD, $4.8M USDSC, $3.5M Mezo meUSD, and $3.0M Enosys CDP",
       "Aster asUSDF, Hyperbeat hbUSDT, Inverse DOLA, and Piku USP remain unpromoted because the verified live route is unavailable, paused/zero-capacity, or queue-only; DUSD Alto and Lista lisUSD have verified PSM candidates but need a clean reserve-composition plus live-capacity side-channel before promotion",
     ],
     commits: [],
