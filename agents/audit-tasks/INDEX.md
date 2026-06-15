@@ -3,16 +3,16 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**21/733 done (3%)**  `█░░░░░░░░░░░░░░░░░░░`
+**23/733 done (3%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 711 | 1 | 0 | 21 | 0 |
+| Count | 708 | 2 | 0 | 23 | 0 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 11 | 1 | 0 | 254 |
+| redundancy | 266 | 13 | 2 | 0 | 251 |
 | quality | 315 | 5 | 0 | 0 | 310 |
 | sustainability | 152 | 5 | 0 | 0 | 147 |
 
@@ -22,7 +22,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| ⬜ | [R-001](redundancy/R-001.md) | M | naming | Two divergent functions named classifyLiquidityEvidence classify the same public field dif |  | `worker/src/api/dex-liquidity-history.ts:15-51 + ` |
+| 🔄 | [R-001](redundancy/R-001.md) | M | naming | Two divergent functions named classifyLiquidityEvidence classify the same public field dif | codex | `worker/src/api/dex-liquidity-history.ts:15-51 + ` |
 
 ### Medium (88)
 
@@ -53,7 +53,7 @@
 | ⬜ | [R-024](redundancy/R-024.md) | S | clone | countConsecutiveStatus and getLastSuccessfulRun duplicated between cron-card and cron-lane |  | `src/components/status/cron-card.tsx:L39-L55, src` |
 | ⬜ | [R-025](redundancy/R-025.md) | S | dead-code | PharosLogoWithText exported but never imported |  | `src/components/pharos-logo.tsx:L41-L59` |
 | ⬜ | [R-026](redundancy/R-026.md) | S | clone | Data-source label map duplicated across two modules |  | `src/components/yield-detail-section-model.ts:L17` |
-| 🔄 | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
+| ✅ | [R-027](redundancy/R-027.md) | S | clone | Exact clone of canListen/allocatePort/resolveStaticExportPort across two scripts | codex | `scripts/maintenance/lighthouse-static-export.mjs` |
 | ⬜ | [R-028](redundancy/R-028.md) | S | clone | stringValue / numberValue re-defined locally in 6+ maintenance scripts despite shared expo |  | `scripts/maintenance/audit-dia-provider-poc.ts:L1` |
 | ⬜ | [R-029](redundancy/R-029.md) | M | clone | Structural clone: api-query-registry.ts and api-query-runtime-registry.ts |  | `src/lib/api-query-registry.ts:L1-L361, src/lib/a` |
 | ⬜ | [R-030](redundancy/R-030.md) | S | clone | Double console.log for directApiSkippedUntracked behind identical guard |  | `worker/src/cron/dex-liquidity/orchestrator-phase` |
@@ -189,7 +189,7 @@
 | ⬜ | [R-155](redundancy/R-155.md) | S | dead-code | scopeNodeIds Set in computeVisibleGraph is redundant with the nodeIds loop |  | `src/components/contagion-graph-graph.ts:58-95` |
 | ⬜ | [R-156](redundancy/R-156.md) | S | clone | Three private formatDeviation functions with near-identical logic |  | `src/app/depeg/[event]/page.tsx:78-85 + src/app/d` |
 | ⬜ | [R-157](redundancy/R-157.md) | S | dead-code | capitalize() in selector-mobile-form duplicates selectorProfileLabel from shared |  | `src/components/selector/selector-mobile-form.tsx` |
-| ⬜ | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log |  | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
+| 🔄 | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log | codex | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
 | ⬜ | [R-159](redundancy/R-159.md) | S | dead-code | getCoinsByLifecycleStatus accepts a 'dead' status that is unreachable and always returns [ |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [R-160](redundancy/R-160.md) | S | clone | rowsById map constructed independently in lower-ranked and output-helpers for the same uni |  | `shared/lib/selector/lower-ranked.ts:L109-L110; s` |
 | ⬜ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null |  | `src/lib/sidebar-signals.ts:L55-L57` |
@@ -199,7 +199,7 @@
 | ⬜ | [R-165](redundancy/R-165.md) | M | clone | Desktop/mobile diagram JSX trees duplicated verbatim in two methodology sections |  | `src/app/methodology/sections/core-sections-prici` |
 | ⬜ | [R-166](redundancy/R-166.md) | S | wrapper | createAboutEditorialSection is a single-consumer factory wrapper |  | `src/app/about/editorial-helpers.tsx:L9-L31, src/` |
 | ⬜ | [R-167](redundancy/R-167.md) | S | clone | Venue resolution logic duplicated across `venueFromInput` and `compareVenueParam` |  | `src/app/screener/picker/handoff.ts:L77-L111` |
-| ⬜ | [R-168](redundancy/R-168.md) | S | dead-code | DEFAULT_BASE_URL module-level constant in check-seo-live-smoke.mjs is a dead fallback |  | `scripts/ci/check-seo-live-smoke.mjs:L5, L15, L42` |
+| ✅ | [R-168](redundancy/R-168.md) | S | dead-code | DEFAULT_BASE_URL module-level constant in check-seo-live-smoke.mjs is a dead fallback | codex | `scripts/ci/check-seo-live-smoke.mjs:L5, L15, L42` |
 | ⬜ | [R-169](redundancy/R-169.md) | S | dead-code | Local formatPercent duplicates shared/lib/format.formatPercentFromRatio |  | `src/components/depeg-resolver-reviewer-module.ts` |
 | ⬜ | [R-170](redundancy/R-170.md) | S | wrapper | flow-machine-scene-shredder.tsx performs a one-shot matchMedia read inside useState initia |  | `src/components/flow-machine-scene-shredder.tsx:L` |
 | ⬜ | [R-171](redundancy/R-171.md) | S | clone | FeedbackModal dynamic import duplicated across FeedbackButton and MobileUtilityDock |  | `src/components/feedback-button.tsx:L7-L10, src/c` |
