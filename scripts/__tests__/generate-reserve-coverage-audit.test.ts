@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
 import type { StablecoinMeta } from "../../shared/types";
 import {
+  REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
   buildReserveCoverageAudit,
   parseArgs,
   renderReserveCoverageAuditMarkdown,
@@ -150,6 +151,27 @@ describe("generate-reserve-coverage-audit", () => {
     expect(markdown).toContain("- Live-enabled independent: 1");
     expect(markdown).toContain("- live-a");
     expect(markdown).toContain("## Highest-Market-Cap Curated-Only Active Candidates");
+  });
+
+  it("warns when a reviewed source-quality note no longer matches an active stablecoin", () => {
+    // busd0-usual is in activeCoins, so its note is in sync; every other
+    // table key is stale relative to this synthetic active list.
+    const audit = buildReserveCoverageAudit({
+      activeCoins,
+      generatedAt: "2026-06-03T00:00:00.000Z",
+    });
+
+    const staleKeys = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES).filter((id) => id !== "busd0-usual");
+    expect(staleKeys.length).toBeGreaterThan(0);
+    for (const id of staleKeys) {
+      expect(audit.warnings).toContain(
+        `Reviewed reserve source-quality note for "${id}" no longer matches any active stablecoin.`,
+      );
+    }
+    // The in-sync key must not produce a stale warning.
+    expect(audit.warnings).not.toContain(
+      'Reviewed reserve source-quality note for "busd0-usual" no longer matches any active stablecoin.',
+    );
   });
 
   it("parses CLI options", () => {
