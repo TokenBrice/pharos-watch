@@ -331,14 +331,10 @@ export async function apiFetchWithMeta<T>(
     };
   }
 
-  try {
-    return { data: validateApiPayload(path, data, schema, contractMode), meta };
-  } catch (err) {
-    if (schema && data !== json && err instanceof SchemaValidationError) {
-      return { data: validateApiPayload(path, json, schema, contractMode), meta };
-    }
-    throw err;
-  }
+  // Validate the stripped body. A failure here is not recoverable by
+  // re-validating the un-stripped `json` (which still carries `_meta`); a
+  // consumer that needs the raw envelope should use `apiFetch` instead.
+  return { data: validateApiPayload(path, data, schema, contractMode), meta };
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<StablecoinReservesResponse | null> {
