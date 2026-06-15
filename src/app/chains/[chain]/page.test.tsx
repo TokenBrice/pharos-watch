@@ -78,4 +78,17 @@ describe("ChainProfilePage", () => {
     expect(JSON.stringify(jsonLd)).not.toContain("\"Product\"");
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
+
+  it("renders the IOTA profile with its tracked stablecoin deployment anchor", async () => {
+    const html = renderToStaticMarkup(
+      await ChainProfilePage({ params: Promise.resolve({ chain: "iota" }) }),
+    );
+
+    expect(html).toContain("IOTA Stablecoins: VUSD, Supply &amp; Risk");
+    expect(html).toContain("IOTA has 1 tracked deployment");
+    expect(html).toContain("Tracked Stablecoins On IOTA");
+    expect(html).toContain('href="/stablecoin/vusd-virtue"');
+    expect(html).toContain("Virtue USD");
+    expect(html).toContain("VUSD");
+  });
 });

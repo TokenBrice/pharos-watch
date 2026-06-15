@@ -19,6 +19,7 @@ describe("ChainsPage", () => {
 
     expect(html).toContain("Chain Profile Directory");
     expect(html).toContain('href="/chains/ethereum"');
+    expect(html).toContain('href="/chains/iota"');
     expect(html).toContain("tracked deployment");
     expect(html).not.toContain("sr-only");
 
@@ -56,6 +57,13 @@ describe("ChainsPage", () => {
             "@type": "WebPage",
             "@id": "https://pharos.watch/chains/ethereum/#webpage",
             url: "https://pharos.watch/chains/ethereum/",
+          }),
+        }),
+        expect.objectContaining({
+          item: expect.objectContaining({
+            "@type": "WebPage",
+            "@id": "https://pharos.watch/chains/iota/#webpage",
+            url: "https://pharos.watch/chains/iota/",
           }),
         }),
       ]),
