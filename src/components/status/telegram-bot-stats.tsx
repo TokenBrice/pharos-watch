@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import type { StatusResponse, StatusSectionError, TelegramAlertType } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 
 const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
   dews: "DEWS",
@@ -11,7 +12,6 @@ const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
   launch: "Launch",
 };
 
-const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;
 const TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS * 2;
 
 interface TelegramBotStatsProps {

@@ -1,4 +1,5 @@
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
+import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
@@ -130,7 +131,7 @@ export interface TelegramChatHealthDiagnostics {
   recentFailureClass: string | null;
 }
 
-const SNAPSHOT_REFRESH_INTERVAL_SEC = 15 * 60;
+const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS;
 const DELIVERY_DIAGNOSTIC_BATCH_SIZE = 100;
 const ACTIVE_SUBSCRIPTION_FLAGS = `alert_dews = 1
   OR alert_depeg = 1

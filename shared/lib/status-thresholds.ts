@@ -162,6 +162,14 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
   sourceRiskCoverageRatio: 0.75,
 } as const;
 
+// --- Telegram lifecycle snapshot cadence ---
+/**
+ * Worker cadence (seconds) for refreshing the Telegram current-lifecycle snapshot.
+ * Source of truth for the producer (worker/src/lib/telegram-usage-analytics.ts) and the
+ * status UI's "snapshot stale" badge, so the threshold cannot drift between the two.
+ */
+export const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;
+
 // --- Discovery scan ---
 /** Minimum mcap (USD) for a coin to surface in the discovery scan. Below this, the universe is too noisy to be actionable. */
 export const DISCOVERY_MIN_MCAP = 5_000_000;
