@@ -142,10 +142,10 @@ export function ApiKeysPanel() {
               editingKeyId={editingKeyId}
               onEdit={(keyId) => setEditingKeyId((current) => current === keyId ? null : keyId)}
               onDeactivate={(keyId) => runKeyAction(async () => {
-                await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${keyId}/deactivate`);
+                await postAdminJson<ApiKeyMutationResponse>(API_PATHS.apiKeyDeactivate(keyId));
               }, keyId)}
               onRotate={(keyId) => runKeyAction(async () => {
-                const response = await postAdminJson<ApiKeyRotateResponse>(`/api/api-keys/${keyId}/rotate`);
+                const response = await postAdminJson<ApiKeyRotateResponse>(API_PATHS.apiKeyRotate(keyId));
                 setRevealedToken({
                   label: `Rotated ${response.key.name}`,
                   token: requirePlaintextToken(response, "rotated"),
@@ -171,17 +171,17 @@ export function ApiKeysPanel() {
                   }))}
                   onSave={() => runKeyAction(async () => {
                     const response = await postAdminJson<ApiKeyMutationResponse>(
-                      `/api/api-keys/${key.id}/update`,
+                      API_PATHS.apiKeyUpdate(key.id),
                       buildUpdateApiKeyPayload(draft),
                     );
                     setDrafts((previous) => ({ ...previous, [key.id]: buildEditableKeyState(response.key) }));
                     setEditingKeyId(null);
                   }, key.id)}
                   onDeactivate={() => runKeyAction(async () => {
-                    await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${key.id}/deactivate`);
+                    await postAdminJson<ApiKeyMutationResponse>(API_PATHS.apiKeyDeactivate(key.id));
                   }, key.id)}
                   onRotate={() => runKeyAction(async () => {
-                    const response = await postAdminJson<ApiKeyRotateResponse>(`/api/api-keys/${key.id}/rotate`);
+                    const response = await postAdminJson<ApiKeyRotateResponse>(API_PATHS.apiKeyRotate(key.id));
                     setRevealedToken({
                       label: `Rotated ${response.key.name}`,
                       token: requirePlaintextToken(response, "rotated"),

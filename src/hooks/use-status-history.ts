@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
+import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
 import type { StatusHistoryResponse } from "@shared/types";
 import { StatusHistoryResponseSchema } from "@shared/types/status";
 import { CRON_1MIN } from "@/lib/cron-intervals";
@@ -18,11 +19,10 @@ const WINDOW_TO_SECONDS: Record<StatusHistoryWindow, number> = {
 function buildStatusHistoryPath(window: StatusHistoryWindow): string {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const from = nowSeconds - WINDOW_TO_SECONDS[window];
-  const params = new URLSearchParams({
-    limit: "100",
-    from: String(from),
+  return buildQueryPath(API_PATHS.statusHistoryBase(), {
+    limit: 100,
+    from,
   });
-  return `/api/status-history?${params.toString()}`;
 }
 
 export function useStatusHistory(
