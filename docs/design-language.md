@@ -244,8 +244,7 @@ Numbers are consistently mono/tabular where precision matters:
 
 ### Common Grids
 
-- KPI grid (dense analytics): `grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5`
-- Home feature grid: `grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5`
+- KPI grid (dense analytics): `grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5`
 - Home snapshot desktop partition: `hidden lg:grid grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30`
 
 ### Chip/Pill Layout
@@ -384,7 +383,7 @@ The **desktop sidebar** navigation active state no longer uses a left stripe (Ju
 
 ```tsx
 className =
-  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 bg-gradient-to-b from-background/40 to-transparent p-4";
+  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col p-4";
 ```
 
 ### Logo Containers

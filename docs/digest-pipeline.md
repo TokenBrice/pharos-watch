@@ -51,7 +51,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Total mcap ATH | derived from `daily_digest` archive (`json_extract` on stored `totalMcapUsd`) | Anchors current total mcap against its Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
-| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
+| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>15 simultaneous changes excluded) |
 | PSI contributors | `stability_index_samples` (input_snapshot) | Top 3 coins driving PSI severity by market impact (|bps| x mcap x factor) |
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
 | DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
@@ -174,7 +174,7 @@ After the digest is stored in D1, it is posted to the configured Telegram channe
 **File:** `worker/src/lib/twitter.ts`
 
 - Auth: **OAuth 1.0a** signed with `crypto.subtle.HMAC-SHA1` (no third-party library)
-- Format: `{title}\n\n{text}` — a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed
+- Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed
 - Endpoint: `POST https://api.twitter.com/2/tweets`
 
 **Required secrets:**
@@ -194,8 +194,9 @@ If any of the four are absent, Twitter posting is skipped silently.
 
 - Auth: bot token embedded in the request URL (no OAuth)
 - Parse mode: **HTML** — title is wrapped in `<b>`, link uses `<a href>`
-- Format:
+- Format (the `Pharos Daily Digest #N` kicker is prepended whenever an edition number is present, which is the normal case):
   ```
+  Pharos Daily Digest #N
   <b>{title}</b>
 
   {extended}
