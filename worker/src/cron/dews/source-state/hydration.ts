@@ -10,6 +10,7 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../../lib/cache-json";
+import { isMissingTableError } from "../../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity";
 import {
   CONTRACT_CONFIGS,
@@ -124,8 +125,11 @@ async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<Prev
         : latestStmt.bind(completedAt)
     ).all<PreviousStressSignalRow>();
     latestRows = rows.results ?? [];
-  } catch {
+  } catch (error) {
     latestRows = [];
+    if (!isMissingTableError(error)) {
+      ctx.registerSourceFailure("stress-signals-latest", error);
+    }
   }
 
   const legacyStmt = ctx.db.prepare(
