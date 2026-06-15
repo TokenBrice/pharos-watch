@@ -110,10 +110,6 @@ export const SUPERNODE_CONFIG = {
 // Pure helper functions
 // ---------------------------------------------------------------------------
 
-export function percentile(values: number[], q: number): number {
-  return percentileLinear(values, q * 100) ?? 0;
-}
-
 export function minMaxNormalize(ids: string[], valueById: Map<string, number>): Map<string, number> {
   if (!ids.length) return new Map<string, number>();
   let min = Number.POSITIVE_INFINITY;
@@ -328,10 +324,10 @@ export function buildSupernodeState(
   const sortedByScore = [...ids].sort((a, b) => (scoreById.get(b) ?? 0) - (scoreById.get(a) ?? 0));
   const scores = sortedByScore.map((id) => scoreById.get(id) ?? 0);
 
-  const pCoreEnter = percentile(scores, SUPERNODE_CONFIG.corePercentile);
-  const pCoreHold = percentile(scores, SUPERNODE_CONFIG.coreHoldPercentile);
-  const pSecondaryEnter = percentile(scores, SUPERNODE_CONFIG.secondaryPercentile);
-  const pSecondaryHold = percentile(scores, SUPERNODE_CONFIG.secondaryHoldPercentile);
+  const pCoreEnter = percentileLinear(scores, SUPERNODE_CONFIG.corePercentile * 100) ?? 0;
+  const pCoreHold = percentileLinear(scores, SUPERNODE_CONFIG.coreHoldPercentile * 100) ?? 0;
+  const pSecondaryEnter = percentileLinear(scores, SUPERNODE_CONFIG.secondaryPercentile * 100) ?? 0;
+  const pSecondaryHold = percentileLinear(scores, SUPERNODE_CONFIG.secondaryHoldPercentile * 100) ?? 0;
 
   const tierById = new Map<string, HubTier>(ids.map((id) => [id, 0]));
 

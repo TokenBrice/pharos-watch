@@ -1,6 +1,6 @@
 import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
-import { sleepWithSignal } from "../abort";
+import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import {
@@ -32,6 +32,7 @@ export async function runCoingeckoOnchainAddressProvider(
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
     for (const batch of chunk(chainTargets, 30)) {
+      throwIfAborted(signal);
       if (attemptedRequests >= CG_ONCHAIN_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       if (attemptedRequests > 0) {
         await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);

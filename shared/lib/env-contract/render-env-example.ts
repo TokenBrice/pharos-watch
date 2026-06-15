@@ -117,11 +117,7 @@ export function renderEnvExample(): string {
     }
 
     if (section.key === "pagesOptional") {
-      const ordered = bindings.slice().sort((left, right) => {
-        const leftOrder = left.runtimes.pagesSiteData?.order ?? Number.MAX_SAFE_INTEGER;
-        const rightOrder = right.runtimes.pagesSiteData?.order ?? Number.MAX_SAFE_INTEGER;
-        return leftOrder - rightOrder;
-      });
+      const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "pagesSiteData"));
       for (const binding of ordered) {
         lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import {
   ChartDataTable,
   capDataForTable,
@@ -44,8 +44,7 @@ export function ScoreChart({
   excludeEvents?: string[];
   showHeader?: boolean;
 }) {
-  const rawGradientId = useId();
-  const psiScoreGradientId = `psi-score-${rawGradientId.replace(/:/g, "")}`;
+  const psiScoreGradientId = useSvgId("psi-score");
   const chartRef = useRef<HTMLDivElement>(null);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");

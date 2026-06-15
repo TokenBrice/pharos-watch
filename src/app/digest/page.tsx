@@ -4,6 +4,7 @@ import { Send } from "lucide-react";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { formatDigestDateLabel } from "@/lib/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -28,16 +29,7 @@ const digestEntries = digests as {
 const weeklyDigestEntries = digestEntries.filter((entry) => entry.digestType === "weekly").slice(0, 8);
 
 function formatDigestDate(dateStr: string): string {
-  const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
-  const [year, month, day] = parts;
-  const date = new Date(year, month - 1, day);
-  if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatDigestDateLabel(dateStr, "short");
 }
 
 export default function DigestArchivePage() {

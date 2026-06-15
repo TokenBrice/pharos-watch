@@ -1,4 +1,4 @@
-import { sleepWithSignal } from "../abort";
+import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import type {
   AddressPriceProviderRuntimeConfig,
@@ -35,6 +35,7 @@ export async function runBirdeyeAddressProvider(
   let attemptedRequests = 0;
 
   for (const target of targets.filter((entry) => entry.providerChainId === "solana").slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
+    throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     if (attemptedRequests > 0) {
       await sleepWithSignal(BIRDEYE_REQUEST_SPACING_MS, signal);

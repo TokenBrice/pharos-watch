@@ -33,6 +33,7 @@ import {
   type ElevatedCoin,
 } from "@/components/dews-summary-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { useSvgId } from "@/components/chart-primitives/axes";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
@@ -86,8 +87,7 @@ function DEWSDot({
   ariaLabel: string;
   registerRef: (id: string, node: SVGGElement | null) => void;
 }) {
-  const rawClipId = useId();
-  const logoClipId = `dews-logo-${rawClipId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const logoClipId = useSvgId("dews-logo");
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
   const showLogo = coin.band !== "WATCH" && Boolean(coin.logoUrl);
@@ -347,7 +347,7 @@ function DEWSRadar({
   compact?: boolean;
 }) {
   const uid = useId();
-  const wakeGradId = `dews-wake-${uid}`;
+  const wakeGradId = useSvgId("dews-wake");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isFinePointer, setIsFinePointer] = useState(false);
 

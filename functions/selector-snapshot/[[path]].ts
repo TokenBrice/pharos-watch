@@ -7,6 +7,7 @@ import {
   isSelectorSnapshotSid,
   validateSelectorSnapshot,
 } from "@shared/lib/selector/snapshot";
+import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 
@@ -26,7 +27,7 @@ const STANDARD_RESPONSE_HEADERS = {
   "Cache-Control": "no-store",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
-  "X-Robots-Tag": "noindex, nofollow",
+  "X-Robots-Tag": NOINDEX_HEADER_VALUE,
 } as const;
 const SNAPSHOT_BODY_ENCODER = new TextEncoder();
 

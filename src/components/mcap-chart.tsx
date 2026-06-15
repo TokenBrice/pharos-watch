@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area, ReferenceDot } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -14,7 +14,7 @@ import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
@@ -56,8 +56,7 @@ export function McapChart({
   cardClassName,
   embedded = false,
 }: McapChartProps) {
-  const rawGradientId = useId();
-  const mcapGradientId = `mcap-${rawGradientId.replace(/:/g, "")}`;
+  const mcapGradientId = useSvgId("mcap");
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);

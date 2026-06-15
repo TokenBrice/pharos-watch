@@ -546,7 +546,7 @@ export default function PharosWatchBotPage() {
                     <span className="text-muted-foreground">Telegram</span>
                   </p>
                   <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground tabular-nums">
-                    10 controls
+                    {MINI_APP_FEATURES.length} controls
                   </span>
                 </div>
 

@@ -9,13 +9,14 @@ import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
+import { formatIsoDate } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { CURATED_ANNOTATIONS } from "@shared/data/annotations/curated-annotations";
+import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import type { ChartAnnotation } from "@shared/types/chart-annotation";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { EDITORIAL_BODY_STYLE, splitDigestParagraphs } from "@/lib/digest";
@@ -43,8 +44,8 @@ interface CuratedMatch {
 }
 
 function findCuratedAnnotation(event: DepegEventEntry): CuratedMatch | null {
-  const annotations = CURATED_ANNOTATIONS[event.stablecoinId];
-  if (!annotations || annotations.length === 0) return null;
+  const annotations = getCuratedAnnotations(event.stablecoinId);
+  if (annotations.length === 0) return null;
   const eventMs = event.startedAt * 1000;
   const candidates = annotations
     .filter((annotation) => annotation.kind === "depeg")
@@ -63,10 +64,6 @@ function findCuratedAnnotation(event: DepegEventEntry): CuratedMatch | null {
   });
   const top = ranked[0];
   return { label: top.label, href: top.href, severity: top.severity };
-}
-
-function formatIsoDate(seconds: number): string {
-  return new Date(seconds * 1000).toISOString().slice(0, 10);
 }
 
 function formatLongDate(seconds: number): string {

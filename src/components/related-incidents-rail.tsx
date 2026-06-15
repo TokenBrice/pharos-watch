@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatIsoDate } from "@shared/lib/format";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
 
@@ -50,10 +51,6 @@ function toRelatedItem(event: RelatedEventEntry): RelatedItem {
     peakDeviationBps: event.peakDeviationBps,
     direction: event.direction,
   };
-}
-
-function formatIsoDate(seconds: number): string {
-  return new Date(seconds * 1000).toISOString().slice(0, 10);
 }
 
 function formatDeviation(bps: number): string {

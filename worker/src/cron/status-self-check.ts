@@ -175,15 +175,15 @@ function buildInternalExternalDiscrepancy(
         : severityDelta < 0
           ? "internal-worse"
           : "in-sync";
-  const hasDivergence = internal != null && external != null && severityDelta !== 0;
+  const planesDiverge = internal != null && external != null && severityDelta !== 0;
 
   return {
-    hasDivergence,
+    hasDivergence: planesDiverge,
     severityDelta,
     internalStatus,
     externalStatus,
     reason,
-    details: hasDivergence ? `internal=${internalStatus}, external=${externalStatus}, delta=${severityDelta}` : null,
+    details: planesDiverge ? `internal=${internalStatus}, external=${externalStatus}, delta=${severityDelta}` : null,
   };
 }
 

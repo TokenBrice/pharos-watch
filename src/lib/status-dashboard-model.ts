@@ -3,6 +3,7 @@ import { deriveStatusActionRecommendations } from "@/lib/status/action-recommend
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { percentileNearestRank } from "@shared/lib/stats";
 
 export type DashboardSectionId =
   | "overview"
@@ -83,13 +84,6 @@ const SEVERITY_RANK = {
   info: 2,
 } as const;
 
-function percentile(values: number[], p: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
-  return sorted[index] ?? null;
-}
-
 function getProbeDisplayStatus(
   probe: EndpointProbeResult,
 ): "healthy" | "degraded" | "stale" {
@@ -163,7 +157,7 @@ export function buildBrowserProbeSummary(
     failCount,
     degradedCount,
     staleCount,
-    p95LatencyMs: percentile(latencies, 95),
+    p95LatencyMs: percentileNearestRank(latencies, 95),
     status,
     updatedAt: updatedAtMs > 0 ? Math.floor(updatedAtMs / 1000) : null,
   };

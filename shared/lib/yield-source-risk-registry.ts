@@ -202,6 +202,7 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
+  // `scores` must stay in sync with the canonical `morpho-blue` entry below; only the rationale/evidence are intentionally distinct.
   morpho: {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
     confidence: "verified",
@@ -215,6 +216,7 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
+  // `scores` must stay in sync with the canonical `morpho-blue` entry below; only the rationale/evidence are intentionally distinct.
   "morpho-v1": {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 2, operational: 2 },
     confidence: "verified",

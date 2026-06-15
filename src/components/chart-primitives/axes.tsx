@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ComponentProps, type CSSProperties, type ReactNode } from "react";
+import { useId, useMemo, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,16 @@ const MONO_AXIS_TICK = {
   fill: "var(--color-muted-foreground)",
 } as const;
 export const MONO_Y_AXIS_WIDTH = 68;
+
+/**
+ * Returns a stable, SVG-safe id built from React's `useId()` with the given
+ * prefix. Strips any characters that are illegal in SVG `id`/`url(#...)`
+ * references so the value can be used for gradients, clip paths, etc.
+ */
+export function useSvgId(prefix: string): string {
+  const rawId = useId();
+  return `${prefix}-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
 
 interface ChartMargin {
   top: number;

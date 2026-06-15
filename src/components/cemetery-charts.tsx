@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   PieChart,
   Pie,
@@ -17,7 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
-import { ChartAreaGradient, ChartLegendChip } from "@/components/chart-primitives/axes";
+import { CategoricalXAxis, ChartAreaGradient, ChartLegendChip, useSvgId } from "@/components/chart-primitives/axes";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
@@ -234,16 +234,7 @@ function DeathsByYearChart({ entries }: { entries: CemeteryEntries }) {
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
-                dataKey="year"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
+              <CategoricalXAxis dataKey="year" />
               <YAxis
                 yAxisId="left"
                 tick={{
@@ -408,8 +399,7 @@ function filterCollidingInflections(
 }
 
 function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
-  const rawGradientId = useId();
-  const destroyedGradientId = `destroyed-${rawGradientId.replace(/:/g, "")}`;
+  const destroyedGradientId = useSvgId("destroyed");
   const [logScale, setLogScale] = useState(false);
 
   const data = useMemo<CumulativePoint[]>(() => {
@@ -468,15 +458,8 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
                 <ChartAreaGradient id={destroyedGradientId} color={CHART_RED} />
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
+              <CategoricalXAxis
                 dataKey="date"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
                 interval={Math.max(0, Math.floor(chartData.length / 8))}
               />
               <YAxis

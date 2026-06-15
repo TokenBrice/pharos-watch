@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/lib/utils";
 import { CardTitle } from "@/components/ui/card";
 import { DETAIL_SECTION_TITLE_CLASS } from "./section-title-class";

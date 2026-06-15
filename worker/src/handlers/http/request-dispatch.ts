@@ -116,7 +116,7 @@ export async function handleHttpRequestImpl(
       env,
       execCtx: ctx,
       trustedAdmin: isAdmin,
-      routeDependencies: resolvedRoute.routeDependencies,
+      routeDependencies: resolvedRoute.routeMatch.dependencies,
     }),
     resolvedRoute,
   );

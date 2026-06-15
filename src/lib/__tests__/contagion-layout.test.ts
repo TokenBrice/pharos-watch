@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   ALL_NODE_LIMIT,
-  percentile,
   minMaxNormalize,
   deterministicJitter,
   clampGraphPosition,
@@ -72,39 +71,6 @@ function mockCard(id: string, symbol: string, grade: ReportCardGrade = "B", isDe
     isDefunct,
   };
 }
-
-// ---------------------------------------------------------------------------
-// percentile
-// ---------------------------------------------------------------------------
-
-describe("percentile", () => {
-  it("returns 0 for an empty array", () => {
-    expect(percentile([], 0.5)).toBe(0);
-  });
-
-  it("returns the single element for a one-element array", () => {
-    expect(percentile([42], 0.5)).toBe(42);
-    expect(percentile([42], 0)).toBe(42);
-    expect(percentile([42], 1)).toBe(42);
-  });
-
-  it("returns the minimum at q=0", () => {
-    expect(percentile([10, 20, 30], 0)).toBe(10);
-  });
-
-  it("returns the maximum at q=1", () => {
-    expect(percentile([10, 20, 30], 1)).toBe(30);
-  });
-
-  it("interpolates at q=0.5 (median) for even-count array", () => {
-    expect(percentile([10, 20, 30, 40], 0.5)).toBe(25);
-  });
-
-  it("interpolates correctly for an unsorted input", () => {
-    const result = percentile([30, 10, 20], 0.5);
-    expect(result).toBe(20);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // minMaxNormalize

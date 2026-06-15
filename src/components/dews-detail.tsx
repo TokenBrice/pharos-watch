@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AreaChart, Area, ReferenceLine } from "recharts";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
@@ -10,7 +10,7 @@ import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -116,8 +116,7 @@ interface DEWSDetailProps {
 }
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
-  const rawGradientId = useId();
-  const dewsGradientId = `dews-${rawGradientId.replace(/:/g, "")}`;
+  const dewsGradientId = useSvgId("dews");
   const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();

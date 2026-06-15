@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { Compass } from "lucide-react";
+import { Compass, ExternalLink } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -18,9 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { MethodologyContextKey } from "@/lib/methodology-context";
 import { formatCurrency, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
@@ -28,63 +25,10 @@ import { PsiLighthouseScene } from "./psi-lighthouse-scene";
 import type {
   HistoryStatItem,
   PsiBeamDimmerLane,
+  PsiComponentPoint,
   PsiContributorRow,
   PsiEventTimelineRow,
 } from "./view-model";
-
-export interface StabilityComponentScores {
-  severity: number;
-  breadth: number;
-  stressBreadth: number;
-  trend: number;
-}
-
-// Aligned 1:1 with the Beam Dimmer tone colors (severity=red, breadth=orange,
-// stressBreadth=amber, trend=green) so the hero snapshot and the over-time
-// panels read as the same four signals.
-export const STABILITY_COMPONENT_COLORS = {
-  severity: CHART_RED,
-  breadth: CHART_ORANGE,
-  stressBreadth: CHART_AMBER,
-  trend: CHART_GREEN,
-} as const;
-
-export const STABILITY_COMPONENT_DETAIL: Array<{
-  key: keyof StabilityComponentScores;
-  label: string;
-  topic: MethodologyContextKey;
-  sign: string;
-  color: string;
-}> = [
-  {
-    key: "severity",
-    label: "Severity",
-    topic: "psiSeverity",
-    sign: "\u2212",
-    color: STABILITY_COMPONENT_COLORS.severity,
-  },
-  {
-    key: "breadth",
-    label: "Breadth",
-    topic: "psiBreadth",
-    sign: "\u2212",
-    color: STABILITY_COMPONENT_COLORS.breadth,
-  },
-  {
-    key: "stressBreadth",
-    label: "Stress Breadth",
-    topic: "psiStressBreadth",
-    sign: "\u2212",
-    color: STABILITY_COMPONENT_COLORS.stressBreadth,
-  },
-  {
-    key: "trend",
-    label: "Trend",
-    topic: "psiTrend",
-    sign: "+",
-    color: STABILITY_COMPONENT_COLORS.trend,
-  },
-];
 
 const CONTRIBUTOR_HEAD_CLASS =
   "h-auto px-0 pb-2 pr-4 text-xs uppercase tracking-wider";
@@ -216,6 +160,7 @@ export function StabilityIndexPanel({
   daysInBand,
   historyStats,
   lanes,
+  componentData,
 }: {
   band: string;
   score: number;
@@ -224,6 +169,7 @@ export function StabilityIndexPanel({
   daysInBand: number;
   historyStats: HistoryStatItem[];
   lanes: PsiBeamDimmerLane[];
+  componentData: PsiComponentPoint[];
 }) {
   const conditionBand = band as ConditionBand;
   const colorClass = PSI_BAND_CLASSES[conditionBand] ?? "text-foreground";
@@ -245,9 +191,9 @@ export function StabilityIndexPanel({
           <p className="text-xs text-muted-foreground">Updated every 30 min</p>
         </div>
 
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-7">
-          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
-            <PsiLighthouseScene band={band} score={score} />
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-stretch xl:gap-7">
+          <div className="mx-auto aspect-[376/288] w-full max-w-sm overflow-hidden rounded-lg xl:mx-0 xl:aspect-auto xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
+            <PsiLighthouseScene band={band} score={score} fill />
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4 xl:pt-1">
@@ -286,7 +232,7 @@ export function StabilityIndexPanel({
             <PsiHistoryStatsGrid items={historyStats} layout="compact" />
 
             <div className="border-t border-border/60 pt-4">
-              <PsiBeamDimmers lanes={lanes} columns={2} density="compact" />
+              <PsiBeamDimmers lanes={lanes} series={componentData} columns={2} density="compact" />
             </div>
           </div>
         </div>

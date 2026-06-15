@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
 
-export const INLINE_LINK_CLASS =
-  "pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue";
-
 type AboutEditorialSectionProps = {
   eyebrow: string;
   title: string;

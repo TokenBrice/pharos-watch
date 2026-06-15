@@ -21,6 +21,23 @@ export const EDITORIAL_META_STYLE: React.CSSProperties = {
 };
 
 /**
+ * Format a digest date string ("YYYY-MM-DD" or "YYYY-MM-DD-weekly") into a
+ * localized label, with the month rendered in the requested style.
+ */
+export function formatDigestDateLabel(dateStr: string, monthStyle: "long" | "short"): string {
+  const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString("en-US", {
+    month: monthStyle,
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/**
  * Split digest text into paragraphs by double newlines.
  */
 export function splitDigestParagraphs(text: string | null | undefined): string[] {

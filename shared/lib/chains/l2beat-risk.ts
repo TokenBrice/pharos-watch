@@ -837,8 +837,7 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
   const snapshot = L2BEAT_CHAIN_RISK_SNAPSHOT[projectId];
   const stageScore = L2BEAT_STAGE_SCORES[snapshot.stage];
   const riskScore = computeL2BeatRiskScore(snapshot);
-  // Same formula as computeL2BeatChainEnvironmentScore(snapshot), reusing the values already computed above.
-  const score = Math.round(stageScore * L2BEAT_STAGE_WEIGHT + riskScore * L2BEAT_RISK_WEIGHT);
+  const score = computeL2BeatChainEnvironmentScore(snapshot);
 
   return {
     source: "l2beat",

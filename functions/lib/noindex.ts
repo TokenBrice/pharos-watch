@@ -1,4 +1,4 @@
-const NOINDEX_HEADER_VALUE = "noindex, nofollow";
+export const NOINDEX_HEADER_VALUE = "noindex, nofollow";
 
 export function withNoindex(response: Response): Response {
   const wrapped = new Response(response.body, response);

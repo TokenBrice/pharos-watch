@@ -1,7 +1,7 @@
 import {
-  getEndpointDefinition,
   getEndpointAllowedMethods,
   validateAllowedEndpointMethods,
+  type EndpointDefinition,
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
 
@@ -16,13 +16,15 @@ import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/sha
 
 export interface ResolvedRoute {
   routeMatch: RouteMatch;
-  routeDependencies: readonly RouteDependency[];
   methodValidation: EndpointMethodValidationError | null;
 }
 
-function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
+function addAdminGetNoStoreHeader(
+  endpoint: EndpointDefinition | undefined,
+  request: Request | undefined,
+  response: Response,
+): Response {
   if (request?.method !== "GET") return response;
-  const endpoint = getEndpointDefinition(path);
   if (!endpoint?.adminRequired) return response;
   return noStoreResponse(response);
 }
@@ -55,7 +57,6 @@ export function resolveRoute(url: URL, method: string): ResolvedRoute | null {
 
   return {
     routeMatch,
-    routeDependencies: routeMatch.dependencies,
     methodValidation: validateRouteMatchMethod(url, method, routeMatch),
   };
 }
@@ -84,7 +85,7 @@ async function handleRouteWithErrorBoundary(
     response = errorResponse(500, "Internal Server Error");
   }
 
-  const responseWithHeaders = addAdminGetNoStoreHeader(routeMatch.endpoint?.path ?? path, routeCtx.request, response);
+  const responseWithHeaders = addAdminGetNoStoreHeader(routeMatch.endpoint, routeCtx.request, response);
   return stripHeadBody(routeCtx.request, responseWithHeaders);
 }
 

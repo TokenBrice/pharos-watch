@@ -107,7 +107,6 @@ describe("handleHttpRequestImpl", () => {
     mocks.createEdgeCacheContext.mockReturnValue({ cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false });
     mocks.readEdgeCache.mockResolvedValue(null);
     mocks.resolveRoute.mockReturnValue({
-      routeDependencies: ["coingeckoApiKey"],
       methodValidation: null,
       routeMatch: { dependencies: ["coingeckoApiKey"], methods: ["GET"], handle: vi.fn() },
     });
@@ -261,7 +260,6 @@ describe("handleHttpRequestImpl", () => {
     const edgeCacheContext = { cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false };
     const routeContext = { hydrated: true };
     const resolvedRoute = {
-      routeDependencies: ["coingeckoApiKey"],
       methodValidation: null,
       routeMatch: { dependencies: ["coingeckoApiKey"], methods: ["GET"], handle: vi.fn() },
     };

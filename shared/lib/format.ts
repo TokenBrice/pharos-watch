@@ -154,6 +154,11 @@ export function formatTrackingSpanSeconds(seconds: number): string {
   return formatTrackingSpanDays(Math.floor(seconds / DAY_SECONDS));
 }
 
+/** Format an epoch-seconds timestamp as an ISO date string ("YYYY-MM-DD"). */
+export function formatIsoDate(seconds: number): string {
+  return new Date(seconds * 1000).toISOString().slice(0, 10);
+}
+
 export function formatEventDate(timestamp: number): string {
   if (!Number.isFinite(timestamp)) return "N/A";
   const date = new Date(timestamp * 1000);

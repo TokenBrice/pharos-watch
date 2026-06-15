@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatIsoDate } from "@shared/lib/format";
 import {
   INDEXABLE_DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
@@ -9,10 +10,6 @@ import {
 } from "@/app/depeg/[event]/config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
-
-function formatDate(epochSeconds: number): string {
-  return new Date(epochSeconds * 1000).toISOString().slice(0, 10);
-}
 
 function formatDeviationBps(bps: number): string {
   if (!Number.isFinite(bps) || bps <= 0) return "—";
@@ -63,7 +60,7 @@ export function DepegEventArchive() {
                 className="pharos-focus-ring flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm hover:bg-muted/40"
               >
                 <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {formatDate(event.startedAt)}
+                  {formatIsoDate(event.startedAt)}
                 </span>
                 <span className="font-semibold text-foreground">
                   {event.symbol}

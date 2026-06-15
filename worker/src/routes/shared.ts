@@ -82,10 +82,6 @@ export interface RouteDependencyFieldMap {
   telegram: TelegramRouteFields;
 }
 
-type Optionalize<T> = {
-  [K in keyof T]?: T[K];
-};
-
 type UnionToIntersection<U> = (
   U extends unknown ? (value: U) => void : never
 ) extends ((value: infer I) => void)
@@ -100,12 +96,12 @@ type RequiredRouteDependencyFields<Deps extends readonly RouteDependency[]> =
     : UnionToIntersection<RouteDependencyFieldMap[Deps[number]]>;
 
 /** Full context shape used by generic routing internals before a route narrows its dependencies. */
-export type FullRouteContext = RouteContext & Optionalize<AllRouteDependencyFields>;
+export type FullRouteContext = RouteContext & Partial<AllRouteDependencyFields>;
 
 /** Context seen by a route once its declared dependencies have been hydrated. */
 export type RouteContextFor<Deps extends readonly RouteDependency[]> =
   RouteContext &
-  Omit<Optionalize<AllRouteDependencyFields>, keyof RequiredRouteDependencyFields<Deps>> &
+  Omit<Partial<AllRouteDependencyFields>, keyof RequiredRouteDependencyFields<Deps>> &
   RequiredRouteDependencyFields<Deps>;
 
 export type StaticRouteHandler<K extends EndpointKey> = (context: RouteContextFor<EndpointDependenciesForKey<K>>) => Promise<Response>;

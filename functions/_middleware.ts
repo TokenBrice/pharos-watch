@@ -5,6 +5,7 @@ import {
   isTelegramMiniAppPath,
 } from "@shared/lib/site-csp";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { NOINDEX_HEADER_VALUE } from "./lib/noindex";
 import { isHtmlResponse } from "./lib/proxy-utils";
 
 interface MiddlewareEnv {
@@ -131,7 +132,7 @@ function addCspHeaders(headers: Headers, nonce: string, options: { telegramMiniA
   headers.delete("Content-Length");
   if (options.telegramMiniApp) {
     headers.delete("X-Frame-Options");
-    headers.set("X-Robots-Tag", "noindex, nofollow");
+    headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
   }
 }
 

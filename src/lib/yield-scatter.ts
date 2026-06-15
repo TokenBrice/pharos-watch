@@ -25,10 +25,6 @@ function roundUp(value: number, step: number) {
   return Math.ceil(value / step) * step;
 }
 
-function percentile(sortedValues: number[], p: number) {
-  return percentileLinear(sortedValues, p * 100) ?? 0;
-}
-
 export function computeSafetyDomain(scores: number[], isMobile: boolean): [number, number] {
   if (scores.length === 0) return [0, 100];
 
@@ -162,8 +158,8 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
   const sorted = [...apys].sort((a, b) => a - b);
   const naturalMax = sorted[sorted.length - 1];
   const paddedMax = roundUp(Math.max(riskFreeRate + 4, naturalMax * 1.08), APY_AXIS_STEP);
-  const q75 = percentile(sorted, 0.75);
-  const q90 = percentile(sorted, 0.9);
+  const q75 = percentileLinear(sorted, 75) ?? 0;
+  const q90 = percentileLinear(sorted, 90) ?? 0;
   const candidateThreshold = roundUp(Math.max(riskFreeRate + 6, q75 + 3, q90 * 1.25), APY_AXIS_STEP);
   const clippedCount = sorted.filter((value) => value > candidateThreshold).length;
   const maxOutliers = Math.max(1, Math.floor(sorted.length * APY_OUTLIER_SHARE));

@@ -5,7 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
 import { EditorialMasthead } from "@/components/editorial-masthead";
-import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel } from "@/lib/digest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -46,16 +46,7 @@ export function generateStaticParams() {
 }
 
 function formatDate(dateStr: string): string {
-  const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
-  const [y, m, d] = parts;
-  const date = new Date(y, m - 1, d);
-  if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatDigestDateLabel(dateStr, "long");
 }
 
 function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDate: string): string {

@@ -356,8 +356,9 @@ async function handleTelegramMessageUpdate(args: {
     replyToChatWithMarkup: replyWithMarkup,
   };
 
+  let parsedCommand: ParsedTelegramCommand | null = null;
   try {
-    const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
+    parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
     if (parsedCommand && isGroupChatType(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
       return finishOk();
     }
@@ -413,7 +414,6 @@ async function handleTelegramMessageUpdate(args: {
     });
     return finishOk();
   } catch (err) {
-    const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
     if (parsedCommand) {
       await recordCommandUsage(
         db,

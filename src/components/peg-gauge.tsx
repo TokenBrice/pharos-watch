@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useSvgId } from "@/components/chart-primitives/axes";
 
 interface PegGaugeProps {
   /** Deviation from peg in basis points */
@@ -30,8 +30,7 @@ function toXY(angleDeg: number, r: number): [number, number] {
 }
 
 export function PegGauge({ deviationBps, className }: PegGaugeProps) {
-  const rawId = useId();
-  const gradId = `gauge-${rawId.replace(/:/g, "")}`;
+  const gradId = useSvgId("gauge");
 
   const angleDeg = bpsToAngle(deviationBps);
   const needleR = R - SW / 2 - 3;
