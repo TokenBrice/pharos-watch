@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { bytesToHex } from "./hash";
+import { timingSafeCompare } from "./auth";
 
 export type TelegramMiniAppAuthErrorCode =
   | "invalid-auth"
@@ -41,15 +42,6 @@ const warnedNovelMiniAppChatTypes = new Set<string>();
 async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
-}
-
-function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
 }
 
 function parseUser(rawUser: string | null): { id: string; username: string | null; firstName: string | null } {
@@ -113,7 +105,7 @@ export async function validateTelegramMiniAppInitData(
   for (const token of candidateTokens) {
     const secret = await hmacSha256(encoder.encode("WebAppData"), token);
     const expectedHash = bytesToHex(await hmacSha256(secret, dataCheckString));
-    if (constantTimeEqual(expectedHash, providedHash)) {
+    if (await timingSafeCompare(expectedHash, providedHash)) {
       signatureValid = true;
       break;
     }
