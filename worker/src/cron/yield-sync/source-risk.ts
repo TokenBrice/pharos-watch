@@ -28,7 +28,7 @@ export const YIELD_RISK_CONFIG_PROTOCOLS = [
   "morpho-blue",
   "pendle",
   "beefy",
-  // Phase 2 (yield v8.3) — long-tail venues scored on the Yearn 5-category rubric
+  // Phase 2 (yield v8.292) — long-tail venues scored on the Yearn 5-category rubric
   // (2026-06-15). Slugs match the DeFiLlama `project` carried on auto-discovered
   // lending rows so the score binds without sourceKey inference.
   "clearpool",
@@ -68,7 +68,7 @@ export interface YieldRiskConfigEntry {
   /**
    * Yearn-style 5-category venue-risk sub-scores (each 1..5, higher = riskier).
    * The coarse {@link YieldVenueRiskTier} and the PYS venue penalty are DERIVED
-   * from these via the shared yield-scoring helpers (yield v8.3).
+   * from these via the shared yield-scoring helpers (yield v8.292).
    */
   scores: YieldVenueRiskScores;
   rationale: string;
@@ -262,7 +262,7 @@ export const YIELD_RISK_CONFIG = {
     reviewedAt: "2026-06-09",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
   },
-  // ── Phase 2 long-tail venues (yield v8.3, reviewed 2026-06-15) ──────────────
+  // ── Phase 2 long-tail venues (yield v8.292, reviewed 2026-06-15) ──────────────
   // Uncollateralized / RWA credit (high tier — where `unknown`=0 was most wrong)
   clearpool: {
     scores: { audits: 3, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 3 },
@@ -718,7 +718,7 @@ export function resolveReviewedYieldRiskConfig(
 
 /**
  * Reviewer-set cross-venue dependency concentration, keyed by stablecoin id
- * (yield v8.3). Captures the risk that per-venue tiering structurally misses —
+ * (yield v8.292). Captures the risk that per-venue tiering structurally misses —
  * e.g. a vault whose strategy legs all sit behind one governance ecosystem, the
  * single risk Yearn's own yvUSDC report flags as dominant. Not auto-derived:
  * only set where the concentration is documented, so missing entries stay

@@ -335,7 +335,7 @@ function evaluateYieldSourceGroup(
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
       (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
-    // Reviewer-set cross-venue dependency concentration (yield v8.3): resolve by
+    // Reviewer-set cross-venue dependency concentration (yield v8.292): resolve by
     // stablecoin id and attach it so it both penalizes PYS and surfaces on the row.
     const dependencyConcentration =
       sourceRisk?.dependencyConcentration ?? resolveDependencyConcentration(stablecoinId);

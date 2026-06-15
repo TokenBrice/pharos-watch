@@ -46,7 +46,7 @@ export function computeSourceRiskScoreFromPenalty(
 }
 
 /**
- * Yearn-style venue-risk rubric (yield v8.3). Five category sub-scores, each an
+ * Yearn-style venue-risk rubric (yield v8.292). Five category sub-scores, each an
  * integer 1..5 where higher = riskier, weighted into a 1..5 venue-risk score that
  * derives the coarse {@link YieldVenueRiskTier} and a continuous PYS penalty.
  * See `worker/src/cron/yield-sync/source-risk.ts` for the scored venue registry.
@@ -142,12 +142,12 @@ export interface PysSourceRiskPenaltyInput {
   observationCount30d?: number | null;
   venueRiskTier?: string | null;
   /**
-   * Weighted 1..5 venue-risk score (yield v8.3). When present, the continuous
+   * Weighted 1..5 venue-risk score (yield v8.292). When present, the continuous
    * {@link computeVenuePenaltyFromWeighted} curve replaces the coarse
    * `venueRiskTier` branch; absent → legacy tier branch (rollback-safe).
    */
   venueRiskWeighted?: number | null;
-  /** Reviewer-set cross-venue dependency concentration (yield v8.3). */
+  /** Reviewer-set cross-venue dependency concentration (yield v8.292). */
   dependencyConcentrationSeverity?: YieldDependencyConcentrationSeverity | null;
 }
 
