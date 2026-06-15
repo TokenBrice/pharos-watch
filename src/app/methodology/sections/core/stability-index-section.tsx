@@ -6,8 +6,7 @@ import { ContentTable } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
-  MethodologyDiagramArrow,
-  MethodologyDiagramCard,
+  MethodologyDiagramFlow,
   MethodologyFacts,
   MethodologySectionShell,
   WorkedExample,
@@ -142,30 +141,19 @@ export function StabilityIndexMethodologySection() {
                   </code>
                   <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
                 </div>
-                <div className="hidden md:flex flex-col items-center gap-3">
-                  <div className="grid grid-cols-4 gap-3 w-full">
-                    <MethodologyDiagramCard title="Severity" subtitle="0–68" />
-                    <MethodologyDiagramCard title="Breadth" subtitle="0–17" />
-                    <MethodologyDiagramCard title="Stress Breadth" subtitle="0–5" />
-                    <MethodologyDiagramCard title="Trend" subtitle="−5 to +5" />
-                  </div>
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-80" title="Compute PSI" subtitle="100 − penalties + trend" />
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-80 border-cyan-500/40" title="Condition Band" subtitle="BEDROCK through MELTDOWN" />
-                </div>
-                <div className="flex flex-col items-center gap-3 md:hidden">
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    <MethodologyDiagramCard title="Severity" titleClassName="text-xs text-foreground font-medium" subtitle="0–68" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Breadth" titleClassName="text-xs text-foreground font-medium" subtitle="0–17" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Stress Breadth" titleClassName="text-xs text-foreground font-medium" subtitle="0–5" subtitleClassName="text-xs text-muted-foreground" />
-                    <MethodologyDiagramCard title="Trend" titleClassName="text-xs text-foreground font-medium" subtitle="−5 to +5" subtitleClassName="text-xs text-muted-foreground" />
-                  </div>
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-full" title="Compute PSI" subtitle="100 − penalties + trend" />
-                  <MethodologyDiagramArrow />
-                  <MethodologyDiagramCard className="w-full border-cyan-500/40" title="Condition Band" subtitle="BEDROCK through MELTDOWN" />
-                </div>
+                <MethodologyDiagramFlow
+                  inputCols={4}
+                  inputs={[
+                    { title: "Severity", subtitle: "0–68" },
+                    { title: "Breadth", subtitle: "0–17" },
+                    { title: "Stress Breadth", subtitle: "0–5" },
+                    { title: "Trend", subtitle: "−5 to +5" },
+                  ]}
+                  steps={[
+                    { title: "Compute PSI", subtitle: "100 − penalties + trend", className: "md:w-80" },
+                    { title: "Condition Band", subtitle: "BEDROCK through MELTDOWN", className: "md:w-80 border-cyan-500/40" },
+                  ]}
+                />
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Components</h3>
                   <ContentTable
