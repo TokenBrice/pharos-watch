@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**70/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
+**72/733 done (10%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 642 | 2 | 0 | 70 | 19 |
+| Count | 641 | 1 | 0 | 72 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 34 | 0 | 0 | 222 |
-| quality | 315 | 27 | 2 | 0 | 279 |
+| redundancy | 266 | 34 | 1 | 0 | 221 |
+| quality | 315 | 29 | 0 | 0 | 279 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -220,7 +220,7 @@
 | ⬜ | [R-186](redundancy/R-186.md) | S | clone | renderDelta and renderMetric are near-identical local render helpers in telegram-bot-stats |  | `src/components/status/telegram-bot-stats.tsx:L24` |
 | ⬜ | [R-187](redundancy/R-187.md) | S | dead-code | getBackingLabelShort contains unreachable legacy-alias branches |  | `shared/lib/classification/domain.ts:L63-L71` |
 | ⬜ | [R-188](redundancy/R-188.md) | S | wrapper | expandIds and defineBatch are two utilities for the same semantic operation with different |  | `shared/lib/redemption-backstop-configs/shared.ts` |
-| ⬜ | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema |  | `shared/types/yield.ts:L117` |
+| 🔄 | [R-189](redundancy/R-189.md) | S | dead-code | z.lazy forward reference in YieldHistoryPointSchema is unnecessary — YieldSourceRiskSchema | codex | `shared/types/yield.ts:L117` |
 | ⬜ | [R-190](redundancy/R-190.md) | S | wrapper | No-op identity wrapper functions pollingDescriptor and staticDescriptor |  | `src/lib/api-query-registry.ts:L126-L132, src/lib` |
 | ⬜ | [R-191](redundancy/R-191.md) | S | clone | Both coverage/mint-authority.ts and mint-authority-display.ts define nearly identical per- |  | `src/lib/coverage/mint-authority.ts:61-93 + src/l` |
 | ⬜ | [R-192](redundancy/R-192.md) | S | dead-code | Watchlist legacy dual-write keeps stale storage keys alive indefinitely |  | `src/hooks/use-watchlist.ts:L73-L81` |
@@ -317,7 +317,7 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ✅ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
-| 🔄 | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
+| ✅ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
 | ⬜ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read |  | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
@@ -499,7 +499,7 @@
 | ✅ | [Q-182](quality/Q-182.md) | S | docs | check-phishing-signatures.mjs: spec comment diverges from implementation; 'yellow' severit | codex | `scripts/ci/check-phishing-signatures.mjs:L7-L11,` |
 | ✅ | [Q-183](quality/Q-183.md) | S | complexity | injectCashtags rebuilds a large RegExp from all tracked stablecoin symbols on every call | codex | `worker/src/lib/twitter.ts:L61-L66` |
 | 🚫 | [Q-184](quality/Q-184.md) | S | naming | pricing-pipeline/v1.ts uses 4-space indentation; all other changelog data files use 2-spac |  | `shared/data/methodology-changelogs/pricing-pipel` |
-| 🔄 | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component | codex | `src/app/learn/case-studies/case-study-share.tsx:` |
+| ✅ | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component | codex | `src/app/learn/case-studies/case-study-share.tsx:` |
 | ✅ | [Q-186](quality/Q-186.md) | S | naming | check-node-modules-fresh.mjs uses console.warn for all output including success, making CI | codex | `scripts/ci/check-node-modules-fresh.mjs:L25-L58` |
 | ⬜ | [Q-187](quality/Q-187.md) | L | type-safety | StatusResponseSchema and StatusHistoryResponseSchema use passthrough().transform(v => v as |  | `shared/types/status.ts:L1046, L1056` |
 | ⬜ | [Q-188](quality/Q-188.md) | S | error-handling | snapshot-safety-grade-history uses manual signal?.aborted throws instead of throwIfAborted |  | `worker/src/cron/snapshot-safety-grade-history.ts` |
