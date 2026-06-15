@@ -1,3 +1,4 @@
+import { DAY_MS as EVENT_MATCH_DAY_MS } from "@/lib/constants";
 import type { CaseStudy } from "./types";
 import { content as usdcSvb2023 } from "./usdc-svb-2023";
 import { content as terraUst2022 } from "./terra-ust-2022";
@@ -79,8 +80,6 @@ export const CASE_STUDY_BY_CEMETERY_ID: Record<string, CaseStudy> = Object.fromE
 export const CASE_STUDY_BY_DEPEG_SLUG: Record<string, CaseStudy> = Object.fromEntries(
   CASE_STUDY_LIST.filter((s) => s.depegEventSlug).map((s) => [s.depegEventSlug!, s]),
 );
-
-const EVENT_MATCH_DAY_MS = 86_400_000;
 
 /**
  * Resolve the case study that covers a charted event for `coinId` at `tsMs`.

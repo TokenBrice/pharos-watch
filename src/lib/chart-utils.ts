@@ -1,5 +1,6 @@
+import { DAY_MS } from "@/lib/constants";
+
 /** Compute padded Y-axis domain for Recharts charts. */
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function computeChartYDomain(
   values: number[],

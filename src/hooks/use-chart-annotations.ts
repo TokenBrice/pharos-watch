@@ -10,6 +10,7 @@ import type {
 } from "@shared/types/chart-annotation";
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import { caseStudySlugForEvent } from "@/app/learn/case-studies/content";
+import { DAY_MS } from "@/lib/constants";
 import { CRON_1H } from "@/lib/cron-intervals";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
 import { useApiQueryWithMeta } from "./use-api-query";
@@ -44,7 +45,6 @@ interface UseChartAnnotationsResult {
 }
 
 const EMPTY_ANNOTATIONS: ChartAnnotation[] = [];
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 // `apiFetchWithMeta` lifts `_meta` off the body before schema parsing.
 const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });

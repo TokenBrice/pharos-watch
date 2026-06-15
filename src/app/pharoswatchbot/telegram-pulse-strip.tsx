@@ -7,6 +7,7 @@ import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { clampScore } from "@shared/lib/math";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
@@ -31,7 +32,6 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 const TELEGRAM_ESTIMATED_CAPACITY_WATCHERS = 5_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);

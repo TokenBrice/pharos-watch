@@ -1,10 +1,9 @@
 import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
 import { eventClassSlug } from "@/lib/tape-collapse";
+import { DAY_MS } from "@/lib/constants";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeEvent } from "@shared/types/tape-event";
-
-const DAY_MS = 86_400_000;
 
 export const HIGHLIGHT_DURATION_MS = 2000;
 export const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;

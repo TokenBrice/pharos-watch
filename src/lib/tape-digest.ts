@@ -1,11 +1,11 @@
 import { collapseByCoinClass, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
+import { DAY_MS } from "@/lib/constants";
 import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
 import { formatCompactUsd } from "@shared/lib/format";
 import { SEVERITY_RANK, type TapeEventSeverity } from "@shared/types/tape-event";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { tapeClassLabel } from "@/lib/tape-class-style";
 
-const DAY_MS = 86_400_000;
 const DIGEST_THRESHOLD = 3;
 
 export interface DigestedClass {
