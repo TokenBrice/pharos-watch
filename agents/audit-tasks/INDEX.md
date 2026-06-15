@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**134/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
+**136/733 done (19%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 576 | 2 | 0 | 134 | 21 |
+| Count | 574 | 2 | 0 | 136 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 53 | 1 | 0 | 201 |
-| quality | 315 | 69 | 0 | 0 | 238 |
-| sustainability | 152 | 12 | 1 | 0 | 137 |
+| redundancy | 266 | 54 | 1 | 0 | 200 |
+| quality | 315 | 69 | 1 | 0 | 237 |
+| sustainability | 152 | 13 | 0 | 0 | 137 |
 
 ## redundancy (266)
 
@@ -44,7 +44,7 @@
 | ⬜ | [R-015](redundancy/R-015.md) | S | clone | Two functionally identical price-observation merge functions coexist |  | `worker/src/cron/dex-liquidity/subgraph-helpers.t` |
 | ⬜ | [R-016](redundancy/R-016.md) | S | clone | buildPoolIdentity called twice on the same DexScreener pair per iteration |  | `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` |
 | ⬜ | [R-017](redundancy/R-017.md) | S | clone | Identical BAND_RANK literal duplicated from shared THREAT_BAND_ORDER |  | `worker/src/cron/daily-digest/editorial-candidate` |
-| 🔄 | [R-018](redundancy/R-018.md) | S | dead-code | Local throwIfAborted in sync-redemption-backstops.ts duplicates lib/abort export | codex | `worker/src/cron/sync-redemption-backstops.ts:L32` |
+| ✅ | [R-018](redundancy/R-018.md) | S | dead-code | Local throwIfAborted in sync-redemption-backstops.ts duplicates lib/abort export | codex | `worker/src/cron/sync-redemption-backstops.ts:L32` |
 | ⬜ | [R-019](redundancy/R-019.md) | S | wrapper | safety-score-data.ts is a single-consumer indirection with no reuse value |  | `shared/lib/methodology-versions/safety-score-dat` |
 | ⬜ | [R-020](redundancy/R-020.md) | S | dead-code | Dead `markdown` and `markdownParagraphs` fields computed and stored but never read |  | `src/app/methodology/sections/methodology-content` |
 | ⬜ | [R-021](redundancy/R-021.md) | S | clone | Hardcoded BOT_USERNAME in CoinInsightPanel duplicates PHAROSWATCHBOT_BOT_URL constant |  | `src/app/pharoswatchbot/app/components/CoinInsigh` |
@@ -242,7 +242,7 @@
 | ⬜ | [R-208](redundancy/R-208.md) | S | wrapper | computeChainEnvironmentScore is a thin single-line wrapper that is only used in tests |  | `shared/lib/chains/health.ts:L145-147` |
 | ⬜ | [R-209](redundancy/R-209.md) | S | clone | commodity-median reimplements the existing medianOf helper inline |  | `shared/lib/commodity-median.ts:74-82` |
 | ⬜ | [R-210](redundancy/R-210.md) | S | dead-code | SELECTOR_YIELD_PEG_CURRENCIES and isSelectorYieldPegCurrency are identical to ELIGIBLE set |  | `shared/lib/selector/types.ts:L32-L53` |
-| ⬜ | [R-211](redundancy/R-211.md) | S | wrapper | api-key-format.ts is a three-line file that wraps a one-line Date call |  | `src/lib/api-key-format.ts:1-3` |
+| 🔄 | [R-211](redundancy/R-211.md) | S | wrapper | api-key-format.ts is a three-line file that wraps a one-line Date call | codex | `src/lib/api-key-format.ts:1-3` |
 | ⬜ | [R-212](redundancy/R-212.md) | S | clone | Divergent deterministic hash algorithms for layout jitter (contagion vs. DEWS radar) |  | `src/lib/contagion-layout.ts:129-135, src/lib/dew` |
 | ⬜ | [R-213](redundancy/R-213.md) | S | dead-code | viewRank / rankWithinSet / comparableSetLabel are computed per row but never read in produ |  | `src/lib/yield-view-model.ts:148-150, 750-760` |
 | ⬜ | [R-214](redundancy/R-214.md) | S | clone | Duplicated BACKFILL_MIN_CONFIRM_POINTS constant across extraction and replay modules |  | `worker/src/api/backfill-depegs-extraction.ts:14 ` |
@@ -338,7 +338,7 @@
 | ✅ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh | codex | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
 | ✅ | [Q-045](quality/Q-045.md) | M | dead-code | ESLint /api/ path enforcement rule does not catch TemplateLiteral constructions — multiple | codex | `eslint.config.mjs:147-155` |
-| ⬜ | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response |  | `src/app/screener/picker/use-selector.ts:L54` |
+| 🔄 | [Q-047](quality/Q-047.md) | M | type-safety | Unvalidated `as SelectorOutput` cast on snapshot network response | codex | `src/app/screener/picker/use-selector.ts:L54` |
 | ⬜ | [Q-051](quality/Q-051.md) | S | error-handling | aria-selected misused as keyboard-focus indicator in CoinSelector listbox |  | `src/components/coin-selector.tsx:L205-L207` |
 | ⬜ | [Q-056](quality/Q-056.md) | S | type-safety | Non-null assertion on TELEGRAM_BOT_TOKEN inside closure built before the guard |  | `worker/src/handlers/scheduled/five-minute-telegr` |
 | ⬜ | [Q-057](quality/Q-057.md) | S | error-handling | unsubscribeAll does not reset alert_snooze_until_ts, leaving chat silenced after unsubscri |  | `worker/src/api/telegram-store/forget.ts:L9-L31` |
@@ -722,7 +722,7 @@
 | ✅ | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const | codex | `worker/src/cron/prune-cron-history.ts:10` |
 | ⬜ | [S-073](sustainability/S-073.md) | S | testing | Filename-to-dateRange.to convention is untested |  | `src/data/changelogs/__tests__/index.test.ts:L28-` |
 | ⬜ | [S-074](sustainability/S-074.md) | M | complexity | Projector boilerplate (watermark read, since/until, limit, dryRun) is copy-pasted across 6 |  | `worker/src/lib/tape-projectors/score.ts:L40-L46,` |
-| 🔄 | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal | codex | `worker/src/cron/sync-live-reserves.ts:268, worke` |
+| ✅ | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal | codex | `worker/src/cron/sync-live-reserves.ts:268, worke` |
 | ⬜ | [S-076](sustainability/S-076.md) | S | coupling | LRU delete+set promotion in getCachedApiKeyByPrefix is undocumented, creating maintenance  |  | `worker/src/lib/api-key-core.ts:L404-L418` |
 | ⬜ | [S-077](sustainability/S-077.md) | S | docs | timeline/page.tsx stamps TIMELINE_DATE_MODIFIED with build-time new Date() at module scope |  | `src/app/timeline/page.tsx:25` |
 | ⬜ | [S-078](sustainability/S-078.md) | S | coupling | toTimestampMs from yield-history-chart-model is imported by a page-level module, coupling  |  | `src/components/yield-history-chart-model.ts:L203` |
