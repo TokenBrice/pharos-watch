@@ -5,6 +5,9 @@ export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>[
 export type YieldSourceDepthLens = "deep" | "moderate" | "thin" | "unknown";
 
 export type YieldSourceRiskDriverKey =
+  | "high-risk-venue"
+  | "elevated-risk-venue"
+  | "concentrated-dependency"
   | "reward-heavy"
   | "thin-source-depth"
   | "stale-source"
@@ -95,6 +98,34 @@ export function getYieldSourceRiskDrivers(params: {
   const observationCount30d = finiteNumber(sourceRisk?.observationCount30d);
   const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
   const drivers: YieldSourceRiskDriver[] = [];
+
+  // Venue + concentration drivers lead because protocol risk outweighs data-quality
+  // signals. Gated on populated evidence, so unknown/low venues stay a no-op.
+  const venueRiskWeighted = finiteNumber(sourceRisk?.venueRiskWeighted);
+  const venueWeightedSuffix =
+    venueRiskWeighted !== null ? ` (venue risk ${venueRiskWeighted.toFixed(1)}/5)` : "";
+  if (sourceRisk?.venueRiskTier === "high") {
+    drivers.push({
+      key: "high-risk-venue",
+      label: "high-risk venue",
+      description: `The yield venue scores high on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.`,
+    });
+  } else if (sourceRisk?.venueRiskTier === "medium") {
+    drivers.push({
+      key: "elevated-risk-venue",
+      label: "elevated-risk venue",
+      description: `The yield venue scores medium on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.`,
+    });
+  }
+
+  const concentration = sourceRisk?.dependencyConcentration ?? null;
+  if (concentration) {
+    drivers.push({
+      key: "concentrated-dependency",
+      label: `${concentration.ecosystem} concentration`,
+      description: concentration.note,
+    });
+  }
 
   if (rewardShare !== null && rewardShare > 0.5) {
     drivers.push({

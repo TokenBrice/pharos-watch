@@ -28,6 +28,30 @@ describe("yield source risk UI helpers", () => {
     expect(formatYieldSourceRiskDriverSummary(drivers)).toContain("reward-heavy");
   });
 
+  it("surfaces venue-risk and dependency-concentration drivers from populated evidence", () => {
+    const high = getYieldSourceRiskDrivers({
+      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 4.4 },
+    });
+    expect(high.map((driver) => driver.key)).toContain("high-risk-venue");
+    expect(high[0]?.description).toContain("4.4/5");
+
+    const concentrated = getYieldSourceRiskDrivers({
+      sourceRisk: {
+        venueRiskTier: "low",
+        dependencyConcentration: {
+          ecosystem: "Sky",
+          severity: "medium",
+          note: "Funded debt sits behind Sky governance.",
+          reviewedAt: "2026-06-15",
+        },
+      },
+    });
+    expect(concentrated.map((driver) => driver.label)).toContain("Sky concentration");
+
+    // Unknown/low venue with no concentration is a no-op.
+    expect(getYieldSourceRiskDrivers({ sourceRisk: { venueRiskTier: "unknown" } })).toEqual([]);
+  });
+
   it("keeps missing source-risk evidence neutral", () => {
     expect(getYieldSourceRiskDrivers({ sourceRisk: null })).toEqual([]);
     expect(getYieldSourceRiskDrivers({ sourceRisk: buildSourceRiskGoldenFixture("missing-safety") })).toEqual([]);
