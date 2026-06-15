@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**126/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
+**127/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 585 | 2 | 0 | 126 | 20 |
+| Count | 585 | 1 | 0 | 127 | 20 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 52 | 1 | 0 | 203 |
 | quality | 315 | 63 | 0 | 0 | 244 |
-| sustainability | 152 | 11 | 1 | 0 | 138 |
+| sustainability | 152 | 12 | 0 | 0 | 138 |
 
 ## redundancy (266)
 
@@ -719,7 +719,7 @@
 | ✅ | [S-069](sustainability/S-069.md) | S | config | build-l2beat-bridge-route-candidates.ts uses fragile suffix-match to detect its own entry  | codex | `scripts/maintenance/build-l2beat-bridge-route-ca` |
 | ⬜ | [S-070](sustainability/S-070.md) | S | docs | fetch-slipstream.ts zero volume is undocumented as a known API limitation |  | `worker/src/cron/dex-liquidity/fetch-slipstream.t` |
 | ⬜ | [S-071](sustainability/S-071.md) | S | config | Footer lighthouse beam animation is injected via dangerouslySetInnerHTML while all other p |  | `src/components/footer.tsx:31-43, 48` |
-| 🔄 | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const | codex | `worker/src/cron/prune-cron-history.ts:10` |
+| ✅ | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const | codex | `worker/src/cron/prune-cron-history.ts:10` |
 | ⬜ | [S-073](sustainability/S-073.md) | S | testing | Filename-to-dateRange.to convention is untested |  | `src/data/changelogs/__tests__/index.test.ts:L28-` |
 | ⬜ | [S-074](sustainability/S-074.md) | M | complexity | Projector boilerplate (watermark read, since/until, limit, dryRun) is copy-pasted across 6 |  | `worker/src/lib/tape-projectors/score.ts:L40-L46,` |
 | ⬜ | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal |  | `worker/src/cron/sync-live-reserves.ts:268, worke` |
