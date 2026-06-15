@@ -40,7 +40,7 @@ describe("stablecoin OG card data", () => {
       hasActiveDepeg: false,
       flow7d: null,
       pegScore: 95,
-      backing: "fiat",
+      backing: "rwa-backed",
       governance: "centralized",
       redemptionScore: 85,
       change24h: 0.5,
@@ -50,7 +50,7 @@ describe("stablecoin OG card data", () => {
     expect(data.flow7d).toBe(5_000_000);
     expect(data.sparklineData).toEqual([1.0001, 0.9998]);
     expect(data.pegScore).toBe(95);
-    expect(data.backing).toBe("fiat");
+    expect(data.backing).toBe("rwa-backed");
     expect(data.governance).toBe("centralized");
     // PSI should not be on individual coin cards
     expect((data as unknown as Record<string, unknown>).psiScore).toBeUndefined();
@@ -72,7 +72,7 @@ describe("stablecoin OG card data", () => {
           sparklineData: [0.999, 1.001],
           hasActiveDepeg: false,
           pegScore: 92,
-          backing: "fiat",
+          backing: "rwa-backed",
           governance: "centralized",
           redemptionScore: 88,
           change24h: 0.25,
@@ -85,7 +85,7 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("7D FLOW");
     expect(markup).toContain("PEG SCORE");
     expect(markup).toContain("BACKING");
-    expect(markup).toContain("Fiat");
+    expect(markup).toContain("RWA");
     expect(markup).toContain("CeFi");
   });
 
@@ -172,7 +172,7 @@ describe("stablecoin OG card data", () => {
           sparklineData: [0.995, 1.0],
           hasActiveDepeg: false,
           pegScore: 88,
-          backing: "rwa",
+          backing: "rwa-backed",
           governance: "centralized-dependent",
           redemptionScore: 75,
           change24h: 0.1,
