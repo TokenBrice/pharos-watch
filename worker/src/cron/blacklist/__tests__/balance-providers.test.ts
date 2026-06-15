@@ -125,11 +125,32 @@ describe("fetchEvmTokenCurrentBalance", () => {
       ethereumConfig,
       "0x0000000000000000000000000000000000000abc",
       "test-key",
+      null, // no dRPC
       async (fn) => fn(),
       createBudget(10),
     );
 
     expect(amount).toBe(50);
+  });
+
+  it("tries dRPC before Etherscan for the current-balance snapshot when configured", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(url);
+      // All providers fail so the full fallback chain is exercised.
+      return new Response(JSON.stringify({ result: null }), { status: 200 });
+    }));
+
+    await fetchEvmTokenCurrentBalance(
+      ethereumConfig,
+      "0x0000000000000000000000000000000000000abc",
+      null, // no etherscan key
+      "test-drpc-key",
+      async (fn) => fn(),
+      createBudget(10),
+    );
+
+    expect(calls.some((url) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
   });
 });
 

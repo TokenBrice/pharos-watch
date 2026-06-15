@@ -79,7 +79,7 @@ async function fetchBalanceViaDrpc(
   chainId: string,
   contractAddress: string,
   address: string,
-  blockNumber: number,
+  blockNumberOrTag: number | "latest",
   drpcApiKey: string,
   decimals: number,
   budget: SubrequestBudget,
@@ -91,7 +91,7 @@ async function fetchBalanceViaDrpc(
   if (!network) return null;
 
   const data = encodeBalanceOfCallData(address);
-  const blockTag = "0x" + blockNumber.toString(16);
+  const blockTag = blockNumberOrTag === "latest" ? "latest" : "0x" + blockNumberOrTag.toString(16);
 
   try {
     budget.count++;
@@ -217,12 +217,29 @@ export async function fetchEvmTokenCurrentBalance(
   config: ContractEventConfig,
   address: string,
   etherscanApiKey: string | null,
+  drpcApiKey: string | null,
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
   if (config.chain.evmChainId == null) return null;
+
+  // Mirror fetchEvmTokenBalance: dRPC -> chain-RPC -> Etherscan, so current-balance
+  // snapshots use the same primary provider as the historical path when dRPC is configured.
+  if (drpcApiKey) {
+    const drpcAmount = await fetchBalanceViaDrpc(
+      config.chain.chainId,
+      config.contractAddress,
+      address,
+      "latest",
+      drpcApiKey,
+      config.decimals,
+      budget,
+      signal,
+    );
+    if (drpcAmount != null) return drpcAmount;
+  }
 
   const rpcAmount = await fetchBalanceViaChainRpc(
     config.chain.chainId,

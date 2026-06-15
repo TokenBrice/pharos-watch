@@ -64,6 +64,7 @@ async function fetchCurrentBalanceForAddress(
     config,
     address,
     context.etherscanApiKey,
+    context.drpcApiKey,
     context.etherscanLimiter,
     context.runBudget.subrequestBudget,
     context.signal,
