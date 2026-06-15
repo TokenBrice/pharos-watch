@@ -164,7 +164,7 @@ export function SelectorClient() {
   }, [output]);
 
   const showMobileForm = hydrated && isMobile && typeof state.step === "number" && state.step >= 2 && state.profile != null;
-  const tradingStaleExceeded = tradingShareStaleExceeded(output);
+  const tradingDataStaleExceeded = isTradingDataStale(output);
 
   if (!hydrated) {
     return (
@@ -197,7 +197,7 @@ export function SelectorClient() {
           onEditAnswer={handleEditAnswer}
           onRelax={(key) => dispatch({ type: "relax", constraint: key })}
           onCopyShareLink={handleCopyShareLink}
-          tradingStaleExceeded={tradingStaleExceeded}
+          tradingStaleExceeded={tradingDataStaleExceeded}
           shareFallbackUrl={shareFallbackUrl}
           sessionRecovered={sessionRecovered}
         />
@@ -427,7 +427,7 @@ async function copyToClipboard(text: string): Promise<void> {
   }
 }
 
-function tradingShareStaleExceeded(output: SelectorOutput | null): boolean {
+function isTradingDataStale(output: SelectorOutput | null): boolean {
   if (!output || output.profile !== "trading") return false;
   const enforceAllKeys = output.input.pegCurrency === "USD";
   const limits: Record<string, number> = {
