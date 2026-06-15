@@ -11,6 +11,12 @@ export const content: CaseStudy = {
     "The defense mechanism was called direct incentives. Selling FEI below a dollar triggered a burn penalty that scaled with the size of the deviation, while buying back toward the peg earned a reward. The intent was to make running for the exit expensive enough that the peg would self-correct. In practice the design inverted: FEI traded below a dollar almost immediately, the burn penalty trapped holders who wanted out, and each algorithmic reweight became the single best moment to dump, restarting the slide.",
     "Fei survived the launch shock and eventually clawed back to parity, then removed direct incentives entirely in a V2 redesign. But the deeper problem, that PCV is not the same thing as guaranteed redeemability, was never fully resolved. After Fei merged with Rari Capital to form Tribe DAO and an $80M reentrancy exploit drained the merged lending markets in April 2022, governance fractured. By August 2022, in the aftermath of Terra's collapse, Tribe DAO voted to wind the project down. The asset was effectively abandoned.",
   ],
+  takeaways: [
+    "Reflexive incentives are fragile peg defenses: FEI's burn penalty on sub-peg sells trapped holders instead of creating buyers, and each algorithmic reweight became the best moment to dump — it depegged to ~$0.73 within days of launch.",
+    "Protocol Controlled Value is not redeemability: owning reserves is not the same as giving every holder a clean, guaranteed claim to par.",
+    "Merger complexity compounds failure — binding the stablecoin to Rari's Fuse lending markets meant an $80M reentrancy exploit became an existential question for the peg.",
+    "When a governance vote, not a market, decides an asset's fate, the signal is the politics of loss allocation: Tribe DAO chose to wind down and redeem FEI 1:1 for DAI in August 2022.",
+  ],
   archetype: "algorithmic",
   outcome: "died",
   eventDateLabel: "2021–2022",

@@ -11,6 +11,12 @@ export const content: CaseStudy = {
     "On 2020-03-12 — Black Thursday — a roughly 50% intraday ETH crash collided with Ethereum gas congestion. Maker's price oracle stalled and then dropped more than 20% in a single update, mass-liquidating vaults at the same moment the network was too congested for liquidators to bid. Collateral auctions cleared at near-zero prices, leaving the protocol with millions in bad debt. Maker minted and auctioned MKR to recapitalize, and Dai then traded above peg for weeks as demand outran the contracted supply.",
     "On 2023-03-11 the threat came from the opposite direction. Dai had grown heavily backed by USDC routed through its Peg Stability Module. When Silicon Valley Bank's collapse stranded part of Circle's reserves and USDC depegged, that weakness passed straight through the PSM into Dai, which fell to roughly $0.85. The throughline across both events: a CDP's resilience is only as good as its liquidation infrastructure and the quality of whatever sits behind its peg-stability rails. Dai survived both, but neither left it unchanged.",
   ],
+  takeaways: [
+    "Two different shocks, one mechanism: Black Thursday 2020 attacked Dai's liquidation machinery (endogenous), while 2023 inherited USDC's SVB reserve risk through the PSM (transmitted).",
+    "In 2020, gas congestion stalled the oracle and froze keeper bots, so collateral auctions cleared at near-zero bids — ~$8.3M of ETH lost across ~1,461 auctions, ~5.67M Dai undercollateralized.",
+    "The MKR debt-auction backstop recapitalized the protocol without an emergency shutdown — resilience came from a willingness to dilute MKR and restructure, not from a flawless original design.",
+    "By 2023 roughly half of Dai's backing was USDC via the PSM, which inverted from stabilizer to transmission line and pulled Dai to ~$0.85; a nominally decentralized coin's largest risk was a bank.",
+  ],
   primaryCoinId: "dai-makerdao",
   relatedCoins: [
     {
@@ -24,6 +30,8 @@ export const content: CaseStudy = {
   eventWindow: {
     startISO: "2020-03-12",
     endISO: "2023-03-13",
+    peakDeviationBps: -1500,
+    lowPrice: 0.85,
   },
   timeline: [
     {

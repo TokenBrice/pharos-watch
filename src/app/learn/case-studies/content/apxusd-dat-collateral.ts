@@ -2,7 +2,8 @@ import type { CaseStudy } from "./types";
 
 /**
  * June 2026 (ongoing) — Apyx's apxUSD, an "RWA-backed" dollar whose reserve is
- * roughly 62% Strategy preferred equity (STRC), slides into a downside depeg as
+ * majority Strategy preferred equity (STRC) — around 62% per Apyx's own
+ * Accountable dashboard — slides into a downside depeg as
  * Bitcoin falls and the preferred shares trade below par. The asset class is
  * labelled real-world, but the dominant leg is Bitcoin-correlated, so the
  * reserve weakened exactly when a dollar should hold. The incident opened on
@@ -16,11 +17,18 @@ export const content: CaseStudy = {
   subtitle:
     "Apyx markets apxUSD as an RWA-backed dollar, but roughly 62% of its reserve is Strategy preferred equity — a Bitcoin-correlated asset that fell with crypto in early June 2026, opening a downside depeg that is still unresolved.",
   lead: [
-    "apxUSD is a dollar stablecoin issued through Apyx and facilitated by Preference Capital (BVI) Ltd. under British Virgin Islands law. It is mintable 1:1 and described as real-world-asset-backed, but the composition of that backing is unusual. About 62% of the reserve is STRC — preferred equity issued by Strategy, the largest corporate Bitcoin treasury — with a fractional sliver of Strive's SATA preferred, and the remaining ~38% in cash and short-term U.S. Treasury Bills (including USDC) for liquidity. The label says RWA; the dominant leg is a claim on a company whose balance sheet is Bitcoin.",
+    "apxUSD is a dollar stablecoin issued through Apyx and facilitated by Preference Capital (BVI) Ltd. under British Virgin Islands law. It is mintable 1:1 and described as real-world-asset-backed, but the composition of that backing is unusual. By Apyx's own Accountable reserve dashboard, the majority of the reserve — around 62% — is STRC, preferred equity issued by Strategy, the largest corporate Bitcoin treasury, with a fractional sliver of Strive's SATA preferred and the remaining share in cash and short-term U.S. Treasury Bills (including USDC) for liquidity. CoinDesk's reporting confirms preferred equity is the majority leg but does not publish a precise split; the label says RWA, and the dominant leg is a claim on a company whose balance sheet is Bitcoin.",
     "On June 2, 2026, that distinction stopped being academic. As Bitcoin fell and Strategy's preferred shares traded below their par value, apxUSD's reserve marked down with it. The token slid from about $0.99 to a recorded low near $0.89 — a peak deviation of roughly −1,059 basis points, around 10.6% below par. Two days later CoinDesk reported the break, and Apyx framed it publicly as expected behaviour for a preferred-equity-backed dollar rather than a failure. The cash-and-Treasury buffer, sized at under 40% of reserves, could not absorb a drawdown on a leg nearly twice its size.",
     "The episode has not closed. Pharos still flags the June incident as an active depeg, and as of mid-June 2026 apxUSD trades near $0.96 — roughly 378 basis points under par — with a DISTRESSED status, a Safety grade of D (49/100), a DEWS reading of WATCH (29/100), and circulating supply down about 8.6% over thirty days as holders exit. Because the token remains live and is structurally scarred rather than decommissioned, Pharos classifies the outcome as wounded. This study treats apxUSD as a case of correlated collateral: an RWA dollar whose reserve was, in substance, long the very asset its peg was supposed to be stable against.",
   ],
+  takeaways: [
+    "The 'RWA-backed' label hides the risk: the majority leg (~62% per Apyx's dashboard) is Strategy's STRC preferred equity, a Bitcoin-correlated asset that falls when a dollar most needs to hold.",
+    "When crypto sold off in June 2026, reserve and stress shared a common factor — the cash/T-Bill buffer was sized below the volatile leg, so apxUSD slid to ~$0.89 and was still depegged (~$0.96) mid-June.",
+    "Redemption is whitelisted, so retail's only exit is a thin Curve market; the participants who can arbitrage par lose the incentive to defend it exactly when the reserve is falling.",
+    "An issuer calling a depeg 'a feature, not a bug' is telling you the design permits the price to move with its collateral — take it literally.",
+  ],
   primaryCoinId: "apxusd-apyx",
+  depegEventSlug: "apxusd-2026-06-02",
   relatedCoins: [
     {
       coinId: "apyusd-apyx",
@@ -143,7 +151,7 @@ export const content: CaseStudy = {
   ],
   sources: [
     {
-      label: "CoinDesk — Apyx's stablecoin suffers a brief depeg; protocol says it's a feature, not a bug (June 4, 2026)",
+      label: "CoinDesk — Apyx's STRC collateralized stablecoin suffers a brief depeg (June 4, 2026)",
       href: "https://www.coindesk.com/markets/2026/06/04/apyx-s-stablecoin-suffers-a-brief-depeg-protocol-says-its-a-feature-not-bug",
     },
     {

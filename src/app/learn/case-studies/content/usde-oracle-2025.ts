@@ -11,7 +11,14 @@ export const content: CaseStudy = {
     "The distinction matters because the failure mode here is the opposite of a backing failure. A backing failure shows up everywhere at once and persists until reserves are repaired or the asset is wound down. What happened on Binance was a pricing-and-liquidity artifact: the exchange referenced its own thin order book to value USDe used as margin collateral, and with deposits and withdrawals impaired, the arbitrageurs who normally close that gap could not. The print fed forced liquidations, the liquidations deepened the print, and the loop ran until conditions eased.",
     "USDe survived the episode with its collateral and redemption mechanics untouched, but the event left a real scar in confidence and supply. This case study separates the venue print from an actual peg break, walks through how the delta-neutral design held, and draws out what a practitioner should monitor when a stablecoin doubles as exchange margin collateral.",
   ],
+  takeaways: [
+    "The ~$0.65 low was a single-venue oracle artifact: Binance priced USDe off its own thin order book during impaired settlement, so the arbitrage loop that would close the gap was severed.",
+    "It was the opposite of a backing failure — deep on-chain pools held within ~100 bps of par and primary mint-and-redeem cleared at $1 the entire time, redeeming ~$2B in 24 hours while staying overcollateralized.",
+    "Collateral pricing is a system property: the same USDe was sound and catastrophically mispriced at once, depending only on which oracle a venue trusted.",
+    "Surviving is not being unscarred — confidence and supply still bled ~$8B over the following months even though the mechanism performed as designed.",
+  ],
   primaryCoinId: "usde-ethena",
+  depegEventSlug: "usde-2025-10-10",
   archetype: "synthetic-delta-neutral",
   outcome: "survived",
   eventDateLabel: "October 2025",
@@ -44,7 +51,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2025-10-11",
       headline: "Primary redemption absorbs the run; print recovers",
-      body: "Ethena's mint-and-redeem channel cleared at one dollar as supply fell sharply over the following 24 hours, with the protocol reporting roughly $2 billion redeemed and supply contracting from about $9 billion toward $6 billion without basis positions needing to be unwound. Independent attestors reported USDe remained overcollateralized by roughly $66 million across the event.",
+      body: "Ethena's mint-and-redeem channel cleared at one dollar as supply fell sharply, with the protocol reporting roughly $2 billion redeemed within about 24 hours — and redemption capacity reaching ~$6 billion almost immediately — without basis positions needing to be unwound. Independent attestors reported USDe remained overcollateralized by roughly $66 million across the event.",
       severity: "med",
     },
     {
@@ -76,7 +83,7 @@ export const content: CaseStudy = {
       heading: "How the delta-neutral design held",
       paragraphs: [
         "The deleveraging that caused the chaos elsewhere was, mechanically, favorable to Ethena's backing. As spot crypto fell, the short perpetual hedges that offset the BTC and ETH collateral moved into profit, which cushions rather than erodes the dollar value of the position. This is the structural difference from an undercollateralized algorithmic design, where a falling market and a falling token reinforce each other into a death spiral.",
-        "The redemption record is the cleaner proof. Supply contracted by roughly a third over a short window while primary redemption kept clearing at par, and the protocol reported it did not need to unwind basis positions to honor that flow because a large share of backing already sat in liquid stablecoins. Independent attestors reported the book stayed modestly overcollateralized throughout, on the order of $66 million, rather than tipping into a shortfall.",
+        "The redemption record is the cleaner proof. The protocol reported roughly $2 billion redeemed within about 24 hours while primary redemption kept clearing at par, and it did not need to unwind basis positions to honor that flow because a large share of backing already sat in liquid stablecoins. Independent attestors reported the book stayed modestly overcollateralized throughout, on the order of $66 million, rather than tipping into a shortfall. The bleed did not stop at the event window: USDe's market value fell from roughly $14.7 billion on the eve of the crash toward about $6 billion over the following two months — on the order of $8 billion in net outflows — as capital rotated into overcollateralized alternatives, a sustained confidence drain rather than a single-day shock.",
         "The genuine exposure the delta-neutral model carries is venue and counterparty risk on the hedge, and auto-deleveraging is its sharpest edge. When an exchange's insurance fund is exhausted, it can force-close profitable positions — which can include Ethena's protective shorts — leaving the corresponding spot temporarily unhedged. The mitigant is that hedges can be re-established and profit-and-loss realized to restore neutrality, and that backing is spread across multiple venues and custodians rather than concentrated on one exchange.",
       ],
     },

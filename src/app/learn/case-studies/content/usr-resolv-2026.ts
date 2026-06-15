@@ -8,10 +8,17 @@ export const content: CaseStudy = {
     "USR was a delta-neutral synthetic dollar with an insurance tranche and real-time reserve attestations. None of it mattered once a single privileged key could mint unbacked supply with no cap.",
   lead: [
     "Resolv USD (USR) was a delta-neutral synthetic dollar: long spot ETH and BTC on-chain, balanced by equal-and-opposite short perpetual futures on centralized venues, with a junior RLP tranche meant to absorb negative funding and liquidation risk. On paper the collateral always netted to roughly a dollar, and an Apostro feed published reserve figures in real time. That design answered the question most synthetic-dollar critiques ask first: is the hedge sound?",
-    "On 22 March 2026 a different question got answered. Beginning around 02:21 UTC, the privileged role that finalizes mint requests in USR's issuance contract was driven to mint roughly 80M USR against on the order of $100K-$200K of deposited stablecoins. The role sat behind a single externally owned account with no oracle check, no amount validation, and no maximum-mint guard, so a 100K USDC deposit could return about 50M USR, iterated until tens of millions of unbacked tokens existed. USR fell below $0.80 within minutes and printed as low as roughly $0.025 on Curve; Pharos recorded a low near $0.098, a peak deviation around -9025 bps.",
+    "On 22 March 2026 a different question got answered. Beginning around 02:21 UTC, the privileged role that finalizes mint requests in USR's issuance contract was driven to mint roughly 80M USR against the order of $100K-$200K of deposited stablecoins. The role sat behind a single externally owned account with no oracle check, no amount validation, and no maximum-mint guard, so a 100K USDC deposit could return about 50M USR, iterated until tens of millions of unbacked tokens existed. USR fell below $0.80 within minutes and printed as low as roughly $0.025 on Curve; Pharos recorded a low near $0.098, a peak deviation around -9025 bps.",
+  ],
+  takeaways: [
+    "Minting authority, not hedge design, was the failure point: a single EOA could complete mints with no oracle check, no per-transaction amount limit, and no supply cap.",
+    "On 22 March 2026 ~80M unbacked USR were minted against six figures of real collateral and sold for ~$25M of ETH; USR fell below $0.80 within minutes and printed as low as ~$0.025.",
+    "A sound delta-neutral book and real-time reserve attestation protect the value of issued supply — they say nothing about whether tokens can be issued without assets behind them.",
+    "Burns and an allowlist trimmed the net loss toward ~$34M, but the arithmetic was fixed once the supply existed; USR was left ~55% collateralized and frozen on 27 April 2026.",
     "This was a minting-authority failure, not a hedge-design failure. The delta-neutral book and the attested reserves were never the weak point; the weak point was the control surface that could create supply faster than any reserve could back it. The attacker converted the minted USR through DEXs into roughly $25M of ETH. The RLP insurance layer was wiped out, a downstream lender lost a multi-million-dollar position, and USR never recovered: by April the protocol carried roughly $95M of assets against roughly $173M of liabilities. The asset was frozen on 27 April 2026.",
   ],
   primaryCoinId: "usr-resolv",
+  depegEventSlug: "usr-2026-03-22",
   archetype: "synthetic-delta-neutral",
   outcome: "died",
   eventDateLabel: "March 2026",

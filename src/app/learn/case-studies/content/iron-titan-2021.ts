@@ -11,6 +11,12 @@ export const content: CaseStudy = {
     "On 16 June 2021 that arbitrage inverted. Large holders pulled liquidity and sold, IRON slipped below peg, and the redemption path began minting fresh TITAN into a falling market. A lagging ten-minute price oracle valued TITAN higher than its collapsing spot price, handing arbitrageurs a guaranteed spread that they pressed relentlessly. TITAN's supply hyperinflated from a planned cap toward tens of trillions of tokens and its price ran from the mid-sixties to effectively zero within a single trading session.",
     "Total value locked had crested in the multi-billion-dollar range days earlier, and losses were widely cited at around $2 billion — though that headline figure mostly reflected vaporized paper gains rather than dollars paid in. Mark Cuban, who described himself as a liquidity provider rather than a backer, was among those caught in the collapse, which pushed the failure into mainstream coverage. The team described it in their post-mortem as the world's first large-scale crypto bank run. It was also, in hindsight, a near-exact rehearsal of the reflexive death spiral that would destroy TerraUSD and LUNA the following May — a warning the wider market largely ignored.",
   ],
+  takeaways: [
+    "IRON's redemption minted its volatile share token TITAN rather than transferring it, so sub-peg selling printed fresh TITAN into a falling market — a reflexive loop with no floor above zero.",
+    "A lagging ten-minute price oracle valued TITAN above spot during a fast crash, handing arbitrageurs a guaranteed spread that drained the system; oracle design was part of the attack surface, not a detail.",
+    "Partial collateralization softened the landing — the USDC reserve let IRON holders still redeem ~$0.74-$0.75 — but it did not remove the reflexive core that took TITAN to zero.",
+    "The morning wave's recovery was the trap: surviving a tremor only reloaded the same mechanism, eleven months before the same structure destroyed UST and LUNA.",
+  ],
   archetype: "algorithmic",
   outcome: "died",
   eventDateLabel: "June 2021",

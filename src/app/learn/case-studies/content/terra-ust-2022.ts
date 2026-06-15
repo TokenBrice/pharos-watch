@@ -9,7 +9,13 @@ export const content: CaseStudy = {
   lead: [
     "TerraUSD held its dollar peg through reflexivity, not reserves. The protocol let anyone burn $1 of UST to mint $1 of its sister token LUNA, or burn $1 of LUNA to mint one UST. As long as LUNA carried a deep, confident market, that two-way convertibility kept UST near par. The design had no cash, no Treasuries, and no collateral pool to fall back on — only the assumption that LUNA's market capitalization would stay comfortably larger than the UST it was meant to absorb.",
     "Most of the demand was rented. Anchor, Terra's flagship lending market, advertised a roughly 20% yield on UST deposits, and by spring 2022 around three-quarters of all UST sat parked there. That yield was subsidized rather than earned, and the subsidy reserve was visibly draining. When a wave of withdrawals hit a thinning on-chain liquidity base in early May, UST slipped below a dollar and the convertibility mechanism — designed to defend the peg — instead became the accelerant.",
-    "Within a week UST traded near ten cents, LUNA's supply ballooned from a few hundred million tokens into the trillions, and the Terra chain was halted twice to fend off a governance takeover. Peak UST market value of roughly $18.77B was effectively gone, and the shock rippled outward: USDT briefly traded under a dollar, MIM cracked, and several leveraged crypto lenders later failed.",
+    "Within a week UST had fallen to the ~$0.10 dime level by May 12 and kept sliding toward a few cents in the sessions that followed, LUNA's supply ballooned from a few hundred million tokens into the trillions, and the Terra chain was halted twice to fend off a governance takeover. Peak UST market value of roughly $18.77B was effectively gone, and the shock rippled outward: USDT briefly traded under a dollar, MIM cracked, and several leveraged crypto lenders later failed.",
+  ],
+  takeaways: [
+    "An uncollateralized mint-burn peg defended only by a sister token (LUNA) has no floor: the same convertibility that holds par in calm markets becomes an unlimited dilution engine in a run.",
+    "Demand was rented, not earned — ~75% of UST sat in Anchor chasing a subsidized ~20% yield, so the float left together the moment that subsidy looked unsustainable.",
+    "Once LUNA's market cap fell below the UST it backstopped, the math guaranteed not everyone could exit at par; spending the LFG Bitcoin reserve only delayed recognition.",
+    "At ~$18.77B peak value erased it remains the largest stablecoin failure on record, and its contagion (USDT, MIM, leveraged lenders) reset how the market reads reflexive backing.",
   ],
   relatedCoins: [
     {
@@ -71,7 +77,7 @@ export const content: CaseStudy = {
     {
       dateISO: "2022-05-13",
       headline: "Second halt and a delegation freeze; UST near zero",
-      body: "The chain was halted again and patched to disable LUNA delegations, locking down governance while assets remained on the network. LUNA was effectively worthless and UST stayed far below peg. Peak UST value of roughly $18.77B had been erased.",
+      body: "The chain was halted again and patched to disable LUNA delegations, locking down governance while assets remained on the network. LUNA was effectively worthless and UST kept falling below the ~$0.10 dime level of May 12 toward a few cents in later sessions. Peak UST value of roughly $18.77B had been erased.",
       severity: "high",
     },
   ],
