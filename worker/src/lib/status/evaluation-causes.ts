@@ -14,6 +14,7 @@ import {
   STATUS_RESERVE_REPEATED_TRUNCATION_COUNT,
 } from "./evaluation-state";
 import { formatRatio } from "./format";
+import { getSourceFailureMessage } from "./section-errors";
 
 function formatPersistentStaleIndependentFeeds(
   coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
@@ -58,19 +59,6 @@ export function withRunbook(cause: StatusCause): StatusCause {
 
 function pushCause(bucket: StatusCause[], cause: StatusCause): void {
   bucket.push(withRunbook(cause));
-}
-
-function sourceFailureMessage(source: DataQuality["sourceFailures"][number]["source"]): string {
-  switch (source) {
-    case "active-depegs":
-      return "Active depeg metrics unavailable.";
-    case "blacklist-gaps":
-      return "Blacklist gap metrics unavailable.";
-    case "onchain-supply":
-      return "Onchain supply diagnostics unavailable.";
-    case "stablecoins-cache":
-      return "Stablecoins cache unavailable.";
-  }
 }
 
 export function synthesizeOverallCauses(
@@ -373,7 +361,7 @@ export function buildDataQualityCauses(input: {
       code,
       layer: "data-quality",
       severity: "info",
-      message: sourceFailureMessage(failure.source),
+      message: getSourceFailureMessage(failure.source),
     });
   }
 

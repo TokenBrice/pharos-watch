@@ -14,6 +14,7 @@ import {
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
+import { getSourceFailureMessage } from "./section-errors";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
 
@@ -25,17 +26,9 @@ function recordDataQualityFailure(
   if (bucket.some((entry) => entry.source === source)) {
     return;
   }
-  const message =
-    source === "stablecoins-cache"
-      ? "Stablecoins cache unavailable."
-      : source === "blacklist-gaps"
-        ? "Blacklist gap metrics unavailable."
-        : source === "active-depegs"
-          ? "Active depeg metrics unavailable."
-          : "Onchain supply diagnostics unavailable.";
   bucket.push({
     source,
-    message,
+    message: getSourceFailureMessage(source),
   });
 }
 
