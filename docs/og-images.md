@@ -118,7 +118,7 @@ npm run check:og-case-studies
 
 ### When to renew
 
-- After adding, removing, or renaming a case-study slug in `CASE_STUDY_LIST`.
+- After adding, removing, or renaming a case-study content module in `src/app/learn/case-studies/content/` (the build auto-discovers cards from that directory and reads each module's `slug`).
 - After changing a case-study title, eyebrow, or outcome that appears on the card (subtitle and eventDateLabel are not rendered on the OG card).
 - After changing the shared case-study OG template.
 

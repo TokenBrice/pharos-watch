@@ -134,7 +134,7 @@ The cadence field is rendered alongside the tier badge as supporting text (e.g. 
 `StablecoinMeta` carries three optional editorial fields used by the detail-page hero and mechanism diagram. None of these change scoring — they only affect how a coin is presented:
 
 - `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR when `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is on (see [process/feature-flags.md](process/feature-flags.md)).
-- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-backed`, `cdp`, `delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
+- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-cash`, `cdp`, `synthetic-delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
 - `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
 
 ## Show Your Work

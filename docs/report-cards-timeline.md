@@ -2,7 +2,7 @@
 
 Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.12 (2026-02-25 → 2026-06-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
-> Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the 10 most recent.
+> Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the most recent entries.
 
 ## v8.12 — Bridge-route risk enters Decentralization (2026-06-12)
 

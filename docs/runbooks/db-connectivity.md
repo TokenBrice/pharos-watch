@@ -23,4 +23,4 @@ Triggered by `StatusCause.code`:
 ## Prevention
 
 - `status-self-check` flags `db_unhealthy` on the first failure; the hysteresis policy holds `stale` for 180s minimum before recovery. Short blips are absorbed.
-- Long-running migrations should be batched so each statement stays under D1's 30s per-statement limit (see `docs/worker-and-api-limits.md`).
+- Long-running migrations should be batched so each statement stays under D1's 30s per-statement limit.

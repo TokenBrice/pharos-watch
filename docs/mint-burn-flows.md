@@ -73,7 +73,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
+Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
 
 ### Representative Stablecoins
 
@@ -205,8 +205,6 @@ Events are also classified by `flow_type` (`standard`, `bridge_transfer`, or `at
 - `{ source: "data", slot }` — read a 32-byte word from `log.data` at `slot * 32` and take the low-20 bytes as the address. Implemented via the new `readDataWord` helper in `worker/src/lib/evm-logs.ts`.
 
 When omitted, the default is the Transfer convention: mint → `topics[2]` (recipient), burn → `topics[1]` (sender).
-
-reUSD's `Deposited(address user, address token, uint256 amount)` event has all three params unindexed, so its counterparty previously resolved to `null`. The mint config now sets `counterpartyEncoding: { source: "data", slot: 0 }` to correctly populate the depositor address.
 
 ---
 

@@ -7,7 +7,7 @@ runtime ingestion would create a "two-author" inconsistency).
 ## Why an anchor
 
 Yield v8.292 replaced the hand-set 3-bucket venue tier with a Yearn-style 5-category
-weighted rubric and scored 29 new venues. Before trusting our own scores we cross-checked
+weighted rubric and scored 49 new venues (registry grew from 12 to 61). Before trusting our own scores we cross-checked
 them against Yearn's **own published risk report** for a vault we already track, to confirm
 the rubric lands where a battle-tested external assessment lands.
 
@@ -58,11 +58,3 @@ penalty that the two independently-`low` legs never produced.
 - The vault re-diversifies away from Sky (e.g. a new non-Sky strategy is funded) → revisit
   the `dependencyConcentration` entry.
 - Our `spark-savings` / `sparklend` category scores change such that either leg leaves `low`.
-
-## Byproduct (deferred)
-
-`shared/data/stablecoins/coins/yvusdc-yearn.json` prose still lists "Aave, Compound, Morpho,
-Sky" as routed strategies; the Morpho leg was revoked (now ~100% Sky). Deferred from this
-methodology change to avoid regenerating the `coins.generated.*` artifacts in the same diff;
-fix via the normal coin-data refresh path. The runtime concentration signal already reflects
-the accurate ~100%-Sky reality.

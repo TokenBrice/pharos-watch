@@ -60,7 +60,7 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route, and primary navigation places it first in the `Reference` group (the `NAV_GROUPS` entry keyed `"info"`).
-- `/about/` is now the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, `Coverage`, API Reference, and Changelog are grouped around it in the reference module. Learn surfaces such as Mechanisms stay in the Learn navigation group; `Status` stays in Monitor, and `Start Here` remains the conditional bottom-nav shortcut and footer link.
+- `/about/` is now the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, `Coverage`, API Reference, and Changelog are grouped around it in the reference module. Learn surfaces such as Mechanisms stay in the Learn navigation group; `Status` stays in Monitor, and `Start Here` remains the conditional bottom-nav shortcut.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route

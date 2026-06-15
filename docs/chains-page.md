@@ -43,7 +43,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
 - `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
 - `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's exact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
-- `ChainCohortLattice`, a top-chain 90d trajectory small-multiple section after the selected-harbor panel. It renders nothing until 90d series data is wired client-side (`seriesByChain`): an all-placeholder band under a "coming soon" label read as live charts contradicted by their own header. Per-tile placeholders remain for chains missing series once data partially lands.
+- `ChainCohortLattice`, a top-chain 90d trajectory small-multiple section after the selected-harbor panel. It renders nothing (returns `null`) until 90d series data is wired client-side (`seriesByChain`): no placeholder band and no header are emitted when no real series exists. Per-tile placeholders remain for chains missing series once data partially lands.
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryFreshnessNotices` (preset `"chains"`, which wraps the stale-data banner) plus `QueryErrorNotice` with retry in the no-data error state
 - skeleton loading states (KPI grid + table rows)
@@ -109,7 +109,7 @@ Current live methodology version is `1.4`.
 Factors:
 
 - `quality`: supply-weighted Safety Score average; unrated coins default to `40`, but the factor returns `null` if rated supply is below 50% of chain supply
-- `chainEnvironment`: L2BEAT snapshot first for matched scaling projects, scored from stage plus Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure; unmatched chains fall back to the resilience tier mapping from `shared/lib/chains/index.ts` (`1 -> 100`, `2 -> 60`, `3 -> 20`). The API also returns `chainEnvironmentEvidence` so clients can distinguish L2BEAT-backed rows from fallback-tier rows and show the snapshot date.
+- `chainEnvironment`: L2BEAT snapshot first for matched scaling projects, scored from stage plus Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure; unmatched chains fall back to the resilience tier mapping from `shared/lib/chains/health.ts` (`CHAIN_ENVIRONMENT_SCORES`, re-exported via `shared/lib/chain-health.ts`: `1 -> 100`, `2 -> 60`, `3 -> 20`). The API also returns `chainEnvironmentEvidence` so clients can distinguish L2BEAT-backed rows from fallback-tier rows and show the snapshot date.
 - `concentration`: `100 * (1 - HHI)`
 - `pegStability`: supply-weighted peg proximity; missing prices contribute a neutral `50`
 - `backingDiversity`: normalized Shannon entropy across the two active backing cohorts, `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.

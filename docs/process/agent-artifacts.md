@@ -49,5 +49,7 @@ Current saved workflows:
 - `compliance-research` — broad MiCA + GENIUS compliance research and verification pass.
 - `code-health-broad` — broad code-health review pipeline that fans out domain finders, verifies findings, clusters them, and writes an `agents/code-health-report.md` scratch report.
 - `mixed-verify` — reusable mixed-model verification harness for static-data checks, audits, and reviews.
+- `docs-verify` — verify the whole `/docs` corpus against actual code and adjudicate doc-vs-code discrepancies.
+- `docs-verify-remediate` — apply the adjudicated doc-vs-code fixes from `findings.json`, one agent per doc.
 
 Generated reports from these workflows should stay under ignored scratch paths such as `/agents/` unless their durable rules are distilled into `/docs/`.

@@ -1,10 +1,21 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.291`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.292`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent.
+
+## v8.292 - Yearn-Style 5-Category Venue Risk and Dependency Concentration (June 15, 2026)
+
+- Each reviewed venue now carries five Yearn-style sub-scores — audits (20%), centralization (30%), funds management (30%), liquidity (15%), operational (5%), each 1–5 with higher = riskier — weighted into a 1–5 venue-risk score; the coarse `venueRiskTier` is now derived from that score (Minimal+Low → low, Medium → medium, Elevated+High → high) rather than hand-set
+- The PYS venue penalty moves from the flat low/medium/high buckets (0 / +0.15 / +0.35) to a continuous curve `max(0, weighted − 2.0) × 0.15`; it is calibration-preserving (weighted ≤ 2.0 → 0, 3.0 → +0.15, 4.0 → +0.30, 5.0 → +0.45) and only applies when a venue carries category scores, so unscored venues stay neutral
+- The reviewed venue registry expands from 12 to 61, scoring the previously-unscored long tail (uncollateralized/RWA credit, newer EVM money markets, CDPs, app-chain lenders, and a second wave of risky allowlist venues); scores bind from the DeFiLlama `project` slug carried on auto-discovered lending rows, and remaining unreviewed venues continue to resolve `unknown` and stay neutral
+- A reviewer-set `dependencyConcentration` sub-signal (keyed by stablecoin id, not auto-derived) adds +0.10 (medium) or +0.20 (high) to the source-risk penalty; seeded with `yvusdc-yearn` = Sky (medium) for its ~100% Sky-governance debt coupling
+- Newly-scored medium/high venues also feed the DEWS structured-venue Yield Anomaly branch (DEWS v6.09); no DEWS threshold changed
+- PYS formula shape, benchmark selection, history semantics, and publication guards are otherwise unchanged
+
+---
 
 ## v8.291 - RUB Benchmark and Audit-Queue Coverage Repairs (June 11, 2026)
 
@@ -111,13 +122,3 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 - AUD benchmark refresh now reads the Reserve Bank of Australia F1 money-market CSV cash-rate target instead of the FRED 3-month interbank mirror
 - Retained-last-market fallback semantics and PYS scoring math are unchanged; the update is a benchmark source-roster and freshness reliability change
 
----
-
-## v8.21 - Anchor Freshness and Published Coverage Guards (June 6, 2026)
-
-- Derived on-chain and price-derived rows now treat comparison anchors older than 14 days as stale freshness evidence
-- Rows with stale anchors carry `anchor-stale` decision evidence and publish the existing `data-stale` warning even when the current source observation was fetched in the current hourly run
-- The hourly publisher now compares candidate rankings against the previous public cache for yield-bearing rows, non-yield-bearing lending-opportunity rows, and total ranking count before replacing the public snapshot
-- Severe lending-opportunity or total ranking collapses return a degraded no-op instead of silently overwriting the previous public rankings with partial supplemental coverage
-- Layer 3 DeFiLlama fallback no longer accepts substring-only symbol matches; exact normalized symbols still match, and prefixed/suffixed wrappers require underlying-token address corroboration
-- PYS scoring math, source confidence tiers, and source-risk penalty calibration are unchanged
