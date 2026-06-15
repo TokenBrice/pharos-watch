@@ -1,7 +1,8 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
+import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -34,10 +35,6 @@ const ADAPTER_KEY = "liquity-v2-branches";
 const DEFAULT_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
 const DEFAULT_SHUTDOWN_SELECTOR = "0x06ff8dfb"; // hasBeenShutDown()
 const DEFAULT_DEBT_DECIMALS = 18;
-const ERC4626_ASSET_SELECTOR = "0x38d52e0f"; // asset()
-const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114"; // totalAssets()
-const ERC20_TOTAL_SUPPLY_SELECTOR = "0x18160ddd"; // totalSupply()
-const ERC20_DECIMALS_SELECTOR = "0x313ce567"; // decimals()
 const BRANCH_PRICE_SELECTOR = "0x0fdb11cf"; // fetchPrice()
 const BRANCH_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
 
@@ -122,7 +119,7 @@ async function tryAdaptErc4626ShareEntry(
     }),
     fetchOnchainUint256({
       contract: entry.branch.token.address,
-      data: ERC20_TOTAL_SUPPLY_SELECTOR,
+      data: TOTAL_SUPPLY_SELECTOR,
       signal,
       ctx,
       rpcUrl: params.rpcUrl,
@@ -133,7 +130,7 @@ async function tryAdaptErc4626ShareEntry(
     }),
     fetchOnchainRawCall({
       contract: assetAddress,
-      data: ERC20_DECIMALS_SELECTOR,
+      data: DECIMALS_SELECTOR,
       signal,
       ctx,
       rpcUrl: params.rpcUrl,
