@@ -19,7 +19,14 @@ export { MIN_DEPEG_PAGE_DEVIATION_BPS };
 
 function readDepegEventEntries(): readonly DepegEventEntry[] {
   const filePath = join(process.cwd(), "data/depeg-events.json");
-  return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventEntry[];
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventEntry[];
+  } catch (cause) {
+    throw new Error(
+      `Failed to read depeg events from ${filePath}; run scripts/maintenance/sync-depeg-events.ts before building.`,
+      { cause },
+    );
+  }
 }
 
 const ALL_ENTRIES = readDepegEventEntries();
