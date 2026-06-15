@@ -2,6 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
 import {
@@ -172,27 +173,6 @@ function readParams(config: LiveReservesConfig): GhoParams {
       risk: trackedModule.risk,
     })),
   };
-}
-
-async function mapWithConcurrency<T, TResult>(
-  values: readonly T[],
-  concurrency: number,
-  mapper: (value: T) => Promise<TResult>,
-): Promise<TResult[]> {
-  if (values.length === 0) return [];
-  const limit = Math.max(1, Math.min(concurrency, values.length));
-  const results = new Array<TResult>(values.length);
-  let nextIndex = 0;
-
-  await Promise.all(Array.from({ length: limit }, async () => {
-    while (nextIndex < values.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await mapper(values[currentIndex]);
-    }
-  }));
-
-  return results;
 }
 
 async function loadFacilitators(
