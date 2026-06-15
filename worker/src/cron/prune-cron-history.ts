@@ -7,7 +7,7 @@ import { createCronResult } from "../lib/cron-result";
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
 // housekeeping pass is the single place that prunes cron observability rows.
-const SLOT_EXECUTION_RETENTION_SEC = 14 * 24 * 60 * 60;
+const SLOT_EXECUTION_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 
 export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
