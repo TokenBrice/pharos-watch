@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**42/733 done (6%)**  `█░░░░░░░░░░░░░░░░░░░`
+**44/733 done (6%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 671 | 1 | 0 | 42 | 19 |
+| Count | 667 | 3 | 0 | 44 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 25 | 0 | 0 | 231 |
-| quality | 315 | 9 | 1 | 0 | 298 |
+| redundancy | 266 | 25 | 3 | 0 | 228 |
+| quality | 315 | 11 | 0 | 0 | 297 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -29,7 +29,7 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ⬜ | [R-002](redundancy/R-002.md) | S | clone | REVIEWED_YIELD_EXPANSION_AT defined independently in two files with identical value |  | `shared/lib/redemption-backstop-configs/queue-red` |
-| ⬜ | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files |  | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
+| 🔄 | [R-003](redundancy/R-003.md) | S | clone | formatRatio duplicated across two status files | codex | `worker/src/lib/status/evaluation-causes.ts:L17-L` |
 | ✅ | [R-004](redundancy/R-004.md) | S | clone | parseSitemapLocs duplicated across check-seo-static.mjs and check-seo-live-smoke.mjs | codex | `scripts/ci/check-seo-static.mjs:L547-L558, scrip` |
 | ⬜ | [R-005](redundancy/R-005.md) | S | clone | clearSetupState duplicates clearPendingDisambiguation from the store |  | `worker/src/api/telegram-webhook-setup.ts:L201-L2` |
 | ⬜ | [R-006](redundancy/R-006.md) | S | clone | Duplicate subscriberHasGlobal function in mutations and render modules |  | `worker/src/api/telegram-webhook-settings-mutatio` |
@@ -151,7 +151,7 @@
 | ⬜ | [R-117](redundancy/R-117.md) | S | clone | gradeRank() duplicated with divergent NR semantics across two files |  | `src/components/stablecoin-detail/safety-score-hi` |
 | ⬜ | [R-118](redundancy/R-118.md) | S | clone | scheduleIdle() is a near-clone in two component files |  | `src/components/home-alt-hero-chart-gate.tsx:29-4` |
 | ⬜ | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array |  | `src/components/depeg-tracker-table.tsx:L68-L74` |
-| ⬜ | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta |  | `shared/lib/stablecoins/schema.ts:L126-L128` |
+| 🔄 | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta | codex | `shared/lib/stablecoins/schema.ts:L126-L128` |
 | ⬜ | [R-121](redundancy/R-121.md) | S | clone | Same calendar dates aliased under 3-4 different constant names across files |  | `shared/lib/redemption-backstop-configs/review-da` |
 | ⬜ | [R-122](redundancy/R-122.md) | S | clone | Duplicate depeg-step type-guard: isDepegStep vs isDepegStepValue |  | `worker/src/api/telegram-webhook-settings-shared.` |
 | ⬜ | [R-123](redundancy/R-123.md) | S | clone | SyncBlacklistApiErrorConfig type is private in sync-support.ts but re-declared inline in s |  | `worker/src/cron/blacklist/sync-support.ts:L29-L3` |
@@ -207,7 +207,7 @@
 | ⬜ | [R-173](redundancy/R-173.md) | S | wrapper | getResolvedDynamicEndpointDescriptor performs a redundant third descriptor lookup for admi |  | `shared/lib/api-endpoints/validation.ts:L181-193` |
 | 🚫 | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
-| ⬜ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row |  | `worker/src/handlers/scheduled/preflight-skip.ts:` |
+| 🔄 | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
 | ⬜ | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union |  | `worker/src/api/api-key-requests/rate-limit.ts:14` |
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
@@ -431,7 +431,7 @@
 
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
-| ⬜ | [Q-005](quality/Q-005.md) | S | complexity | buildCompositionLayout contains unreachable guard conditions |  | `src/app/chains/[chain]/view-model.ts:17-29` |
+| ✅ | [Q-005](quality/Q-005.md) | S | complexity | buildCompositionLayout contains unreachable guard conditions | codex | `src/app/chains/[chain]/view-model.ts:17-29` |
 | ⬜ | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb |  | `shared/lib/selector/yield-source.ts:L70-L71` |
 | ⬜ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA |  | `src/components/selector/selector-shortlist-card.` |
 | ⬜ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise |  | `scripts/maintenance/serve-static-export.mjs:L119` |
@@ -492,7 +492,7 @@
 | ⬜ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness |  | `src/components/selector/selector-shortlist-card.` |
 | ⬜ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent |  | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
-| 🔄 | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
+| ✅ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
 | ⬜ | [Q-179](quality/Q-179.md) | S | complexity | `docs/api-reference.md` is read twice in the same `runDocSyncChecks` call |  | `scripts/lib/doc-sync/checks.ts:L329-L415` |
 | ⬜ | [Q-180](quality/Q-180.md) | S | security | Hardcoded personal email address in a user-visible error message |  | `src/lib/api-key-self-serve.ts:88` |
 | ⬜ | [Q-181](quality/Q-181.md) | S | dead-code | psiPresent metadata field is always true in snapshot-public-dataset.ts |  | `worker/src/cron/snapshot-public-dataset.ts:454` |
