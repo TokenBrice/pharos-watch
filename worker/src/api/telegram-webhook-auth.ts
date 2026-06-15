@@ -78,7 +78,6 @@ async function getFreshChatMemberForAuthorization(
 }
 
 export async function requireGroupAdminForCallback(
-  _db: D1Database,
   botToken: string,
   callbackQueryId: string,
   chatId: string,

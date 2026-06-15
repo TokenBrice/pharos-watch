@@ -95,7 +95,6 @@ export async function requireAdminForMutatingCallback(
   denialText: string = "Only group admins can change alert settings.",
 ): Promise<boolean> {
   const allowed = await requireGroupAdminForCallback(
-    db,
     botToken,
     cb.id,
     chatId,
