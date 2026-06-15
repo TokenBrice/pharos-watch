@@ -203,7 +203,7 @@ async function fetchAnalytics(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+        query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: d1AnalyticsAdaptiveGroupsFilter_InputObject) {
           viewer {
             accounts(filter: {accountTag: $accountTag}) {
               d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
