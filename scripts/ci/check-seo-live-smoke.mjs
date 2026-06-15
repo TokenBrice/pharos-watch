@@ -3,7 +3,6 @@
 import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
-const DEFAULT_BASE_URL = process.env.SEO_LIVE_SMOKE_URL ?? "https://pharos.watch";
 const SITEMAP_CONCURRENCY = 8;
 const JS_DISABLED_ROUTES = [
   { route: "/", minMainChars: 800, minLinks: 20 },
@@ -40,7 +39,7 @@ function parseArgs(argv) {
 }
 
 function normalizeBaseUrl(input) {
-  const url = new URL(input || DEFAULT_BASE_URL);
+  const url = new URL(input);
   url.pathname = "/";
   url.search = "";
   url.hash = "";
