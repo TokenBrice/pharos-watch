@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { deviationColorClass } from "@/lib/severity-colors";
 import { formatPegDeviation, getNetColor } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_IDS as ACTIVE_IDS, CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -133,18 +134,11 @@ function useMovers(data: StablecoinData[] | undefined) {
 /* ─── Color helpers ─────────────────────────────────────────────── */
 
 /**
- * Sign-aware depeg color and icon:
- * - Below peg (negative bps): red + TrendingDown — insolvency/redemption concern
- * - Above peg (positive bps): amber + TrendingUp — liquidity premium
- * - Near peg (<10 bps absolute): muted
+ * Sign-aware depeg trend icon (color comes from the shared deviationColorClass):
+ * - Below peg (negative bps): TrendingDown — insolvency/redemption concern
+ * - Above peg (positive bps): TrendingUp — liquidity premium
+ * - Near peg (<10 bps absolute): no icon
  */
-function depegColorClass(bps: number): string {
-  const abs = Math.abs(bps);
-  if (abs < 10) return "text-muted-foreground";
-  if (bps < 0) return "text-red-700 dark:text-red-400";
-  return "text-amber-700 dark:text-amber-400";
-}
-
 function DepegIcon({ bps }: { bps: number }) {
   const abs = Math.abs(bps);
   if (abs < 10) return null;
@@ -204,7 +198,7 @@ function DepegEntry({
       staggerIndex={staggerIndex}
     >
       <span
-        className={`ml-auto inline-flex shrink-0 items-center gap-0.5 pharos-numeric text-xs font-semibold ${depegColorClass(entry.bps)}`}
+        className={`ml-auto inline-flex shrink-0 items-center gap-0.5 pharos-numeric text-xs font-semibold ${deviationColorClass(Math.abs(entry.bps))}`}
       >
         <DepegIcon bps={entry.bps} />
         {deviation}

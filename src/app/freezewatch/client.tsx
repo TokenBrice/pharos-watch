@@ -92,6 +92,9 @@ export default function FreezeWatchClient() {
     stablecoinFilter !== "all"
       ? stablecoins?.find((coin) => coin.symbol === stablecoinFilter)
       : null;
+  const focusedCoinId =
+    focusedCoin?.id ??
+    (stablecoinFilter !== "all" ? coinIdBySymbol(stablecoinFilter) : null);
 
   return (
     <FeaturePageShell
@@ -106,10 +109,10 @@ export default function FreezeWatchClient() {
         "Live issuer freeze, release, and wipe events — with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
       ]}
     >
-      {focusedCoin ? (
+      {focusedCoinId ? (
         <CoinCrossTrackerHatnote
-          coinId={focusedCoin.id}
-          coinSymbol={focusedCoin.symbol}
+          coinId={focusedCoinId}
+          coinSymbol={stablecoinFilter}
           currentTracker="freezewatch"
         />
       ) : null}

@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/table";
-import { METHODOLOGY_LINK_CLASS, MethodologyDetails } from "../../methodology-shared";
+import { METHODOLOGY_LINK_CLASS, MethodologyDetails, MethodologyDiagramFlow } from "../../methodology-shared";
 
 const DEWS_SIGNAL_KEYS = Object.keys(DEWS_SIGNAL_WEIGHTS) as DewsSignalKey[];
 
@@ -104,51 +104,18 @@ function PegScoreTechnicalDetails() {
         </p>
       </div>
 
-      <div className="hidden md:flex flex-col items-center gap-3">
-        <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Time-at-Peg</p>
-            <p className="text-xs text-muted-foreground mt-0.5">50%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Event Severity</p>
-            <p className="text-xs text-muted-foreground mt-0.5">50%</p>
-          </div>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">&minus; Penalties</p>
-          <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="rounded-lg border p-3 text-center w-64">
-          <p className="text-foreground font-medium">PegScore</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-3 md:hidden">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Time-at-Peg</p>
-            <p className="text-xs text-muted-foreground">50%</p>
-          </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium text-xs">Event Severity</p>
-            <p className="text-xs text-muted-foreground">50%</p>
-          </div>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">&minus; Penalties</p>
-          <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
-        </div>
-        <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-        <div className="w-full rounded-lg border p-3 text-center">
-          <p className="text-foreground font-medium">PegScore</p>
-          <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-        </div>
-      </div>
+      <MethodologyDiagramFlow
+        inputCols={2}
+        inputGridClassName="md:max-w-md"
+        inputs={[
+          { title: "Time-at-Peg", subtitle: "50%" },
+          { title: "Event Severity", subtitle: "50%" },
+        ]}
+        steps={[
+          { title: <>&minus; Penalties</>, subtitle: "active depeg + spread", className: "md:w-64" },
+          { title: "PegScore", subtitle: <>0&ndash;100</>, className: "md:w-64" },
+        ]}
+      />
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">PegScore Components</h3>

@@ -28,6 +28,7 @@ describe("cron stage contracts", () => {
     });
 
     expect(result).toEqual({
+      aborted: true,
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({

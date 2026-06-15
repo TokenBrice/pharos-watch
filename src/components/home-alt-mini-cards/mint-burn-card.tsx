@@ -94,7 +94,7 @@ export function MintBurnCard(): React.JSX.Element {
                         : "text-red-700 dark:text-red-400"
                     }
                   >
-                    {formatNetFlowUsd(row.netFlow24hUsd)}
+                    {formatSignedCompactUsd(row.netFlow24hUsd)}
                   </span>
                 </Link>
               </li>

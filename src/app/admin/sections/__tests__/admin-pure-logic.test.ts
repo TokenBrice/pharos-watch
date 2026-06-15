@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CronRun, CronStatus, StatusResponse } from "@shared/types";
-import { getCronSeverity } from "@/app/admin/cron-severity";
+import { getCronSeverity, sortCronGroupsBySeverity } from "@/app/admin/cron-severity";
+import type { CronGroup } from "@/app/admin/sections/cron-lane-types";
 import { countConsecutiveStatus, getLastSuccessfulRun } from "@/app/admin/sections/cron-lane-table";
 import { deriveInitialPipelineTab } from "@/app/admin/sections/pipeline-section";
 
@@ -46,6 +47,53 @@ describe("getCronSeverity", () => {
 
   it("returns 0 when healthy with an ok last run", () => {
     expect(getCronSeverity(makeCron({ lastRun: run("ok") }))).toBe(0);
+  });
+});
+
+describe("sortCronGroupsBySeverity", () => {
+  function makeGroup(key: string, crons: CronStatus[]): CronGroup {
+    return {
+      key,
+      title: key,
+      badge: key,
+      description: key,
+      entries: crons.map((cron, i) => [`${key}-${i}`, cron]),
+    };
+  }
+
+  it("orders groups by their highest-severity entry, descending", () => {
+    const healthy = makeGroup("healthy", [makeCron({ lastRun: run("ok") })]);
+    const degraded = makeGroup("degraded", [makeCron({ lastRun: run("degraded") })]);
+    const unhealthy = makeGroup("unhealthy", [makeCron({ healthy: false })]);
+
+    const sorted = sortCronGroupsBySeverity([healthy, degraded, unhealthy]);
+
+    expect(sorted.map((g) => g.key)).toEqual(["unhealthy", "degraded", "healthy"]);
+  });
+
+  it("sorts entries within a group by descending severity", () => {
+    const group = makeGroup("mixed", [
+      makeCron({ lastRun: run("ok") }),
+      makeCron({ healthy: false }),
+      makeCron({ lastRun: run("degraded") }),
+    ]);
+
+    const [sorted] = sortCronGroupsBySeverity([group]);
+
+    expect(sorted.entries.map(([, cron]) => getCronSeverity(cron))).toEqual([2, 1, 0]);
+  });
+
+  it("does not mutate the input groups or their entries", () => {
+    const group = makeGroup("mixed", [makeCron({ lastRun: run("ok") }), makeCron({ healthy: false })]);
+    const originalOrder = group.entries.map(([id]) => id);
+
+    sortCronGroupsBySeverity([group]);
+
+    expect(group.entries.map(([id]) => id)).toEqual(originalOrder);
+  });
+
+  it("returns an empty array for no groups", () => {
+    expect(sortCronGroupsBySeverity([])).toEqual([]);
   });
 });
 
