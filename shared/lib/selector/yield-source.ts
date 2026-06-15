@@ -68,7 +68,7 @@ function yieldSourceScore(candidate: YieldSourceCandidate, input: SelectorInput)
   const venue = venueMatchesPreference(candidate, input) ? 100 : 35;
   const risk =
     candidate.sourceRiskScore != null
-      ? sourceRiskInverted(candidate.sourceRiskScore) ?? riskTierScore(candidate.venueRiskTier)
+      ? sourceRiskInverted(candidate.sourceRiskScore)
       : riskTierScore(candidate.venueRiskTier);
   const depth = sourceDepthScore(candidate);
   const freshness = sourceFreshnessScore(candidate);
