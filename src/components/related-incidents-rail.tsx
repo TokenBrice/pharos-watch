@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatIsoDate } from "@shared/lib/format";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
+import type { DepegEventSearchEntry } from "@shared/types/market";
 
 const ARCHETYPE_BY_COIN = new Map(
   CLIENT_TRACKED_STABLECOINS.map((coin) => [coin.id, coin.mechanismArchetype] as const),
@@ -31,19 +32,14 @@ interface RelatedItem {
   direction: "above" | "below";
 }
 
-interface RelatedEventEntry extends RelatedItem {
-  stablecoinId: string;
-  pegType: string;
-}
-
 interface RelatedGroup {
   label: string;
   items: RelatedItem[];
 }
 
-const RELATED_DEPEG_EVENTS = depegEventRelatedData as readonly RelatedEventEntry[];
+const RELATED_DEPEG_EVENTS = depegEventRelatedData as readonly DepegEventSearchEntry[];
 
-function toRelatedItem(event: RelatedEventEntry): RelatedItem {
+function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
   return {
     slug: event.slug,
     symbol: event.symbol,

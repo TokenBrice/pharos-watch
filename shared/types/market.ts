@@ -325,6 +325,16 @@ export interface DepegEvent {
   } | null;
 }
 
+export interface DepegEventSearchEntry {
+  slug: string;
+  stablecoinId: DepegEvent["stablecoinId"];
+  symbol: DepegEvent["symbol"];
+  pegType: DepegEvent["pegType"];
+  direction: DepegEvent["direction"];
+  peakDeviationBps: DepegEvent["peakDeviationBps"];
+  startedAt: DepegEvent["startedAt"];
+}
+
 const DepegEventSchema = z.object({
   id: z.number(),
   stablecoinId: z.string(),
