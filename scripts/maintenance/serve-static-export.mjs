@@ -262,11 +262,10 @@ export function createStaticExportServer({
       }
 
       try {
-        const isSiteDataRequest = isSiteDataPath;
-        const resolveSiteDataUpstreamPath = isSiteDataRequest
+        const resolveSiteDataUpstreamPath = isSiteDataPath
           ? await getSiteDataResolver()
           : null;
-        const upstreamPath = isSiteDataRequest
+        const upstreamPath = isSiteDataPath
           ? resolveSiteDataUpstreamPath(requestUrl.pathname)
           : requestUrl.pathname;
         if (!upstreamPath) {
@@ -278,13 +277,13 @@ export function createStaticExportServer({
         const siteProxySecret = (process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET ?? "").trim();
         const proxyHeaders = buildForwardedRequestHeaders(
           req,
-          isSiteDataRequest && siteProxySecret
+          isSiteDataPath && siteProxySecret
             ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret }
             : {},
         );
         const requestBody = await readRequestBody(req, method);
         const upstream = await proxyApiRequest(
-          `${(isSiteDataRequest ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
+          `${(isSiteDataPath ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
           method,
           proxyHeaders,
           requestBody,
