@@ -440,7 +440,7 @@ async function recomputePsiRanges(ranges: Array<{ startDay: number; endDay: numb
     const body = await fetchOpsJson<{
       daysBackfilled?: number;
       daysChanged?: number;
-    }>(`/api/backfill-stability-index?startDay=${startDay}&endDay=${endDay}`, {
+    }>(API_PATHS.backfillStabilityIndex({ startDay, endDay }), {
       method: "POST",
     });
     totalDaysBackfilled += body.daysBackfilled ?? 0;

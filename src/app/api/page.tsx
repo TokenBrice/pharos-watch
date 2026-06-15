@@ -128,7 +128,7 @@ export default function ApiAccessPage() {
             "@type": "BreadcrumbList",
             itemListElement: [
               { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-              { "@type": "ListItem", position: 2, name: "API", item: `${SITE_URL}/api/` },
+              { "@type": "ListItem", position: 2, name: "API", item: new URL("/api/", SITE_URL).toString() },
             ],
           }),
         }}

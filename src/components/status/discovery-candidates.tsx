@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { adminMutation } from "@/lib/admin-access";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
 import { useState } from "react";
@@ -49,7 +50,7 @@ export function DiscoveryCandidatesCard({
   const handleDismiss = async (id: number) => {
     setDismissError(null);
     try {
-      await adminMutation(`/api/discovery-candidates/${id}/dismiss`);
+      await adminMutation(API_PATHS.discoveryCandidateDismiss(id));
       setDismissed((prev) => new Set([...prev, id]));
       onDismissed?.();
     } catch (err) {

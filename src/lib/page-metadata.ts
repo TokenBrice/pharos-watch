@@ -9,6 +9,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
@@ -238,7 +239,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       description,
       canonical: buildStablecoinUrl(coin.id),
       // Preserve OG image so social previews render the same card as live coins.
-      ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
+      ogImage: buildApiOgImageUrl(API_PATHS.ogStablecoin(coin.id)),
     });
   }
 
@@ -257,7 +258,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
     title: buildStablecoinStatusTitle(coin),
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
-    ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
+    ogImage: buildApiOgImageUrl(API_PATHS.ogStablecoin(coin.id)),
   });
 }
 

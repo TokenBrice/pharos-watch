@@ -72,7 +72,7 @@ export function handleApiKeyUpdate(
   db: D1Database,
   id: number,
   trustedAdmin = false,
-  request: Request = fallbackAdminRequest(`/api/api-keys/${id}/update`),
+  request: Request = fallbackAdminRequest(API_PATHS.apiKeyUpdate(id)),
 ): Promise<Response> {
   return handleApiKeyUpdateRoute({ db, apiKeyId: id, trustedAdmin, request });
 }
@@ -103,7 +103,7 @@ export function handleApiKeyRotate(
   db: D1Database,
   id: number,
   trustedAdmin = false,
-  request: Request = fallbackAdminRequest(`/api/api-keys/${id}/rotate`),
+  request: Request = fallbackAdminRequest(API_PATHS.apiKeyRotate(id)),
   apiKeyHashPepper?: string,
 ): Promise<Response> {
   return handleApiKeyRotateRoute({ db, apiKeyId: id, trustedAdmin, request, apiKeyHashPepper });

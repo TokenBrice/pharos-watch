@@ -91,6 +91,7 @@ export const API_PATHS = {
   chains: () => "/api/chains",
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  ogStablecoin: (stablecoinId: string) => `/api/og/stablecoin/${encodeURIComponent(stablecoinId)}`,
   ogChain: (chainId: string) => `/api/og/chain/${chainId}`,
   ogDepeg: () => "/api/og/depeg",
   ogSafetyScores: () => "/api/og/safety-scores",
@@ -152,7 +153,11 @@ export const API_PATHS = {
   backfillSupplyHistory: () => "/api/backfill-supply-history",
   backfillCgPrices: () => "/api/backfill-cg-prices",
   backfillYieldHistory: () => "/api/backfill-yield-history",
-  backfillStabilityIndex: () => "/api/backfill-stability-index",
+  backfillStabilityIndex: (params?: { startDay?: string; endDay?: string }) =>
+    buildQueryPath("/api/backfill-stability-index", {
+      startDay: params?.startDay,
+      endDay: params?.endDay,
+    }),
   backfillMintBurnPrices: () => "/api/backfill-mint-burn-prices",
   backfillMintBurn: () => "/api/backfill-mint-burn",
   backfillTape: () => "/api/backfill-tape",
@@ -161,6 +166,7 @@ export const API_PATHS = {
   auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),
   backfillDews: () => "/api/backfill-dews",
   discoveryCandidates: () => "/api/discovery-candidates",
+  discoveryCandidateDismiss: (id: number) => `/api/discovery-candidates/${id}/dismiss`,
   resetCronLease: (params?: { job?: string }) =>
     buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
   resetCircuitBreaker: (params?: { circuit?: string }) =>
