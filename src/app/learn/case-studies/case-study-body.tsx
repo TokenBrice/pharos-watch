@@ -25,6 +25,9 @@ import type { CaseStudy } from "./content/types";
 
 const WORDS_PER_MINUTE = 200;
 
+/** slug -> position in CASE_STUDY_LIST, built once so neighbour math avoids repeated O(n) scans. */
+const CASE_STUDY_INDEX_BY_SLUG = new Map(CASE_STUDY_LIST.map((study, index) => [study.slug, index]));
+
 /** Reading time in minutes from the lead + narrative body (~200 wpm, min 1). */
 function estimateReadingMinutes(study: CaseStudy): number {
   const text = [
@@ -94,12 +97,12 @@ function pickRelatedStudies(study: CaseStudy, max = 3): CaseStudy[] {
   const sameArchetype = others.filter((s) => s.archetype === study.archetype);
   const picked = [...sameArchetype];
   if (picked.length < max) {
-    const index = CASE_STUDY_LIST.findIndex((s) => s.slug === study.slug);
+    const index = CASE_STUDY_INDEX_BY_SLUG.get(study.slug) ?? -1;
     const byDistance = others
       .filter((s) => !picked.includes(s))
       .map((s) => ({
         study: s,
-        distance: Math.abs(CASE_STUDY_LIST.indexOf(s) - index),
+        distance: Math.abs((CASE_STUDY_INDEX_BY_SLUG.get(s.slug) ?? -1) - index),
       }))
       .sort((a, b) => a.distance - b.distance)
       .map((entry) => entry.study);
@@ -112,7 +115,7 @@ function pickRelatedStudies(study: CaseStudy, max = 3): CaseStudy[] {
 }
 
 function PrevNextPager({ study }: { study: CaseStudy }) {
-  const index = CASE_STUDY_LIST.findIndex((s) => s.slug === study.slug);
+  const index = CASE_STUDY_INDEX_BY_SLUG.get(study.slug) ?? -1;
   if (index === -1 || CASE_STUDY_LIST.length < 2) return null;
   const count = CASE_STUDY_LIST.length;
   // Wrap-around so the archive reads as a continuous loop.
