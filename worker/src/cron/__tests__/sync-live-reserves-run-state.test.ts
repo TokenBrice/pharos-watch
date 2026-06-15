@@ -56,7 +56,7 @@ describe("recordDeferredTail", () => {
     const db = makeBatchRecordingDb(batchSizes);
     const coins = Array.from({ length: 61 }, (_value, index) => makeCoin(`coin-${index}`));
 
-    const result = await recordDeferredTail(db, coins, new Set(), 1_700_000_000);
+    const result = await recordDeferredTail(db, coins, 1_700_000_000);
 
     expect(result).toEqual({
       deferredCoins: 61,
@@ -67,7 +67,9 @@ describe("recordDeferredTail", () => {
       cursorTailFailedAt: null,
       cursorTailError: null,
       runBudgetTruncationCount: 1,
+      additionalBreakerKeys: expect.any(Set),
     });
+    expect(result.additionalBreakerKeys.size).toBe(1);
     expect(batchSizes).toEqual([100, 22]);
   });
 
@@ -76,7 +78,7 @@ describe("recordDeferredTail", () => {
     const history: Array<{ sql: string; binds: unknown[] }> = [];
     const db = makeBatchRecordingDb(batchSizes, history);
 
-    await recordDeferredTail(db, [makeCoin("coin-a"), makeCoin("coin-b")], new Set(), 1_700_000_000);
+    await recordDeferredTail(db, [makeCoin("coin-a"), makeCoin("coin-b")], 1_700_000_000);
 
     const cursorWrites = history.filter((entry) => (
       entry.sql.includes("INSERT OR REPLACE INTO cache")
@@ -148,7 +150,7 @@ describe("recordDeferredTail", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    const result = await recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000);
+    const result = await recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000);
 
     expect(result.cursorTailState).toBe("complete");
     expect(cursorWriteAttempts).toBe(3);
@@ -165,7 +167,7 @@ describe("recordDeferredTail", () => {
     const controller = new AbortController();
     controller.abort(new Error("cron timed out"));
 
-    await expect(recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000, controller.signal))
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000, controller.signal))
       .rejects.toThrow("cron timed out");
 
     expect(history.some((entry) => entry.binds[0] === "live-reserves:run-cursor")).toBe(false);
@@ -205,7 +207,7 @@ describe("recordDeferredTail", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    await recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000);
+    await recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000);
 
     expect(batchSizes).toEqual([2]);
     const cursorReadEvent = history.find((entry) => (
@@ -246,7 +248,7 @@ describe("recordDeferredTail", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    await expect(recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000))
+    await expect(recordDeferredTail(db, [makeCoin("coin-a")], 1_700_000_000))
       .rejects.toThrow("Failed to record deferred reserve tail state: batch unavailable");
 
     const cursorWrites = history.filter((entry) => (

@@ -49,6 +49,8 @@ export interface RecordDeferredTailResult {
   cursorTailFailedAt: number | null;
   cursorTailError: string | null;
   runBudgetTruncationCount: number;
+  /** Breaker keys for the deferred coins; merge into the run's breaker-key set. */
+  additionalBreakerKeys: Set<string>;
 }
 
 export function rotateConfiguredCoins(
@@ -125,13 +127,13 @@ async function deleteLiveReserveCursorState(db: D1Database, signal?: AbortSignal
 export async function recordDeferredTail(
   db: D1Database,
   remainingCoins: readonly ConfiguredCoin[],
-  breakerKeys: Set<string>,
   attemptedAt: number,
   signal?: AbortSignal,
 ): Promise<RecordDeferredTailResult> {
   throwIfAborted(signal);
   const deferredCoins = remainingCoins.length;
   const nextCursorStablecoinId = remainingCoins[0]?.id ?? null;
+  const additionalBreakerKeys = new Set<string>();
   let previousCursorState: LoadedLiveReserveCursorState | null = null;
   try {
     previousCursorState = await loadLiveReserveCursorState(db);
@@ -180,7 +182,7 @@ export async function recordDeferredTail(
   for (const remaining of remainingCoins) {
     const remainingConfig = remaining.liveReservesConfig!;
     const remainingBreakerKey = breakerKeyForConfig(remainingConfig);
-    breakerKeys.add(remainingBreakerKey);
+    additionalBreakerKeys.add(remainingBreakerKey);
     statements.push(
       buildReserveSyncRecordDeferredStatement(db, {
         stablecoinId: remaining.id,
@@ -262,6 +264,7 @@ export async function recordDeferredTail(
     cursorTailFailedAt,
     cursorTailError,
     runBudgetTruncationCount,
+    additionalBreakerKeys,
   };
 }
 

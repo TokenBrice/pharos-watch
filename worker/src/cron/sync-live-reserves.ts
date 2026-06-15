@@ -274,10 +274,12 @@ async function runReserveCoinQueue(args: {
       const deferred = await recordDeferredTail(
         args.db,
         args.orderedCoins.slice(index),
-        breakerKeys,
         Math.floor(Date.now() / 1000),
         args.signal,
       );
+      for (const key of deferred.additionalBreakerKeys) {
+        breakerKeys.add(key);
+      }
       deferredCoins = deferred.deferredCoins;
       nextCursorStablecoinId = deferred.nextCursorStablecoinId;
       cursorTailState = deferred.cursorTailState;
