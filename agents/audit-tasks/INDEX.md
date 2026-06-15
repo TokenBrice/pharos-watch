@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**125/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
+**126/733 done (17%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 586 | 3 | 0 | 125 | 19 |
+| Count | 585 | 2 | 0 | 126 | 20 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 52 | 1 | 0 | 203 |
-| quality | 315 | 62 | 1 | 0 | 245 |
+| quality | 315 | 63 | 0 | 0 | 244 |
 | sustainability | 152 | 11 | 1 | 0 | 138 |
 
 ## redundancy (266)
@@ -368,7 +368,7 @@
 | ⬜ | [Q-093](quality/Q-093.md) | S | error-handling | yield-history-chart-model onSourceChange is a noop when externalSourceKey is set, silently |  | `src/components/yield-history-chart-model.ts:L373` |
 | ✅ | [Q-094](quality/Q-094.md) | S | error-handling | yield-venue-risk-calibration.ts reads .env.local by splitting on '=' which breaks values c | codex | `scripts/maintenance/yield-venue-risk-calibration` |
 | ⬜ | [Q-095](quality/Q-095.md) | S | error-handling | filterAgainstExisting in build-annotation-candidates uses fragile substring matching that  |  | `scripts/maintenance/build-annotation-candidates.` |
-| ⬜ | [Q-096](quality/Q-096.md) | S | type-safety | isActiveStablecoinMeta silently treats undefined status as active |  | `shared/lib/stablecoins/status.ts:L3-L5` |
+| 🚫 | [Q-096](quality/Q-096.md) | S | type-safety | isActiveStablecoinMeta silently treats undefined status as active | codex | `shared/lib/stablecoins/status.ts:L3-L5` |
 | ⬜ | [Q-097](quality/Q-097.md) | M | complexity | runSimulation O(n²) post-simulation collision pass runs synchronously on the main thread w |  | `src/lib/contagion-layout.ts:493-543` |
 | ⬜ | [Q-098](quality/Q-098.md) | S | error-handling | backfill-cg-prices has no per-coin error isolation; one bad response aborts the whole batc |  | `worker/src/api/backfill-cg-prices.ts:53-176` |
 | ⬜ | [Q-100](quality/Q-100.md) | M | complexity | Mutable closure variable nextReplyMarkup in makeActionRunner creates ordering-sensitive im |  | `worker/src/api/webhook-commands/action-runner.ts` |
@@ -489,7 +489,7 @@
 | ⬜ | [Q-138](quality/Q-138.md) | M | complexity | KpiBar component accumulates 27 hook calls and ~250 lines of pre-render data wrangling |  | `src/components/kpi-bar.tsx:40-370` |
 | ⬜ | [Q-141](quality/Q-141.md) | S | complexity | compare-pages.ts: build-time throw on module evaluation can produce opaque build errors |  | `src/lib/compare-pages.ts:L142, L50-L74` |
 | ⬜ | [Q-151](quality/Q-151.md) | M | error-handling | SVG sanitizer does not strip `href` / `xlink:href` attributes enabling CSS-based data exfi |  | `src/app/alt-pegs/fiat-world-atlas/world-map.tsx:` |
-| 🔄 | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness | codex | `src/components/selector/selector-shortlist-card.` |
+| ✅ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness | codex | `src/components/selector/selector-shortlist-card.` |
 | ✅ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent | codex | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ✅ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
