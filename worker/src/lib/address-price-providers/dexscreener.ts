@@ -2,13 +2,13 @@ import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
 import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
 import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { median } from "@shared/lib/stats";
 import {
   chunk,
   fetchProviderJson,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
-  median,
 } from "./shared";
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import type { PricingProviderRejectionReason } from "../pricing-provider-diagnostics";

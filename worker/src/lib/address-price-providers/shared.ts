@@ -63,12 +63,6 @@ export function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-export function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.floor(sorted.length / 2)] ?? null;
-}
-
 export function incrementReason(
   reasons: Partial<Record<PricingProviderRejectionReason, number>>,
   reason: PricingProviderRejectionReason,

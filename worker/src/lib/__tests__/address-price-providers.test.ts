@@ -184,9 +184,9 @@ describe("address price providers", () => {
     expect(result.successfulRequests).toBe(1);
   });
 
-  it("keeps DexScreener address prices on the upper-middle median for even pool counts", async () => {
+  it("averages the two middle DexScreener address prices for even pool counts", async () => {
     const target = makeDexScreenerTarget(0, {
-      stablecoinId: "upper-middle",
+      stablecoinId: "even-median",
       symbol: "USDV",
       address: "0x0000000000000000000000000000000000000001",
     });
@@ -216,7 +216,8 @@ describe("address price providers", () => {
     );
 
     expect(result.quotes).toHaveLength(1);
-    expect(result.quotes[0]?.priceUsd).toBe(1.01);
+    // Canonical median averages the two middle quotes: (0.99 + 1.01) / 2.
+    expect(result.quotes[0]?.priceUsd).toBe(1.0);
   });
 
   it("does not continue DexScreener address batches after an upstream refusal", async () => {
