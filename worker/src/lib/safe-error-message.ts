@@ -17,8 +17,14 @@ export function safeErrorMessage(error: unknown, maxLength: number = 200): strin
   return "Unknown error";
 }
 
-function sanitize(message: string, maxLength: number): string {
-  const stripped = message
+/**
+ * Strips obvious SQL fragments and likely-PII (email-like strings, URLs) from
+ * an error message without truncating. Exposed so structured logging can
+ * sanitize every error it records, not just the few call-sites that use
+ * {@link safeErrorMessage} directly.
+ */
+export function stripSensitive(message: string): string {
+  return message
     // Strip common SQL DML keywords + trailing fragment up to the next sentence boundary.
     .replace(/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b[^.\n]*/gi, "[sql]")
     // Strip email-like patterns.
@@ -26,5 +32,9 @@ function sanitize(message: string, maxLength: number): string {
     // Strip URLs.
     .replace(/https?:\/\/\S+/gi, "[url]")
     .trim();
+}
+
+function sanitize(message: string, maxLength: number): string {
+  const stripped = stripSensitive(message);
   return stripped.length > maxLength ? `${stripped.slice(0, maxLength)}…` : stripped;
 }

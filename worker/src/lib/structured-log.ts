@@ -1,3 +1,5 @@
+import { stripSensitive } from "./safe-error-message";
+
 export type WorkerLogLevel = "debug" | "info" | "warn" | "error";
 export type WorkerLogScope = "http" | "api" | "status" | "admin" | "lib";
 
@@ -60,13 +62,13 @@ function classifyError(error: unknown): ErrorLogFields | null {
   if (error instanceof Error) {
     return {
       errorName: error.name || "Error",
-      errorMessage: (error.message || String(error)).slice(0, MAX_STRING_CHARS),
-      ...(error.stack ? { errorStack: error.stack.slice(0, MAX_STACK_CHARS) } : {}),
+      errorMessage: stripSensitive(error.message || String(error)).slice(0, MAX_STRING_CHARS),
+      ...(error.stack ? { errorStack: stripSensitive(error.stack).slice(0, MAX_STACK_CHARS) } : {}),
     };
   }
   return {
     errorName: "NonError",
-    errorMessage: String(error).slice(0, MAX_STRING_CHARS),
+    errorMessage: stripSensitive(String(error)).slice(0, MAX_STRING_CHARS),
   };
 }
 
