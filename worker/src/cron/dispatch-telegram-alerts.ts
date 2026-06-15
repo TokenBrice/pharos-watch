@@ -301,9 +301,10 @@ async function executeEventlessFastPath({
   await writeSnapshots(db, currentSnapshots);
   await writePresetFailureCount(db, 0);
 
-  const result = emptyResult(false, chatsWithActiveSnooze);
-  result.eventsDetected.suppressedMethodologyChanges = suppressedMethodologyChanges;
-  Object.assign(result, {
+  const base = emptyResult(false, chatsWithActiveSnooze);
+  const result: DispatchResult = {
+    ...base,
+    eventsDetected: { ...base.eventsDetected, suppressedMethodologyChanges },
     messagesSent: drainResult.sent,
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
@@ -326,7 +327,7 @@ async function executeEventlessFastPath({
     ...safetySourceFields(safetySourceAssessment, false),
     suppressedSafetyChangesAtSeed,
     eventlessFastPath: true,
-  } satisfies Partial<DispatchResult>);
+  };
 
   const hasSuccessfulEffect =
     result.messagesSent > 0 ||
