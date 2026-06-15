@@ -1,5 +1,5 @@
 import { deriveEffectiveDependencies } from "../dependency-derivation";
-import type { DependencyWeight, StablecoinMeta, VariantKind } from "../../types";
+import type { StablecoinMeta, VariantKind } from "../../types";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./registry";
 import { isActiveStablecoinMeta } from "./status";
 import { createVariantRelationshipHelpers } from "./variant-relationships";
@@ -10,11 +10,7 @@ function hasTrackedVariantMeta(
   return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
 }
 
-export function deriveVariantAwareDependencies(
-  meta: Pick<StablecoinMeta, "variantOf" | "dependencies" | "reserves">,
-): DependencyWeight[] {
-  return deriveEffectiveDependencies(meta);
-}
+export { deriveEffectiveDependencies as deriveVariantAwareDependencies };
 
 const variantHelpers = createVariantRelationshipHelpers({
   activeMetaById: ACTIVE_META_BY_ID,

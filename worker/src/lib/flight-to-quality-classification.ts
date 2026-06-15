@@ -1,9 +1,20 @@
+import { GRADE_THRESHOLDS } from "@shared/lib/report-cards";
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
 import type { ReportCardCachePayload } from "./report-card-cache";
 
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
-const SAFE_SCORE_THRESHOLD = 65;
-const RISKY_SCORE_THRESHOLD = 50;
+
+function getGradeThresholdMin(grade: "B-" | "C-"): number {
+  const threshold = GRADE_THRESHOLDS.find((entry) => entry.grade === grade);
+  if (!threshold) {
+    throw new Error(`Missing report-card grade threshold for ${grade}`);
+  }
+  return threshold.min;
+}
+
+// Flight-to-quality treats B- and better as safe, while scores below C- are risky.
+const SAFE_SCORE_THRESHOLD = getGradeThresholdMin("B-");
+const RISKY_SCORE_THRESHOLD = getGradeThresholdMin("C-");
 
 export interface FlightToQualityClassification {
   safeIds: Set<string>;
