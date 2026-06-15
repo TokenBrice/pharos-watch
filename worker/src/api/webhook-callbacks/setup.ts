@@ -1,5 +1,5 @@
 import { answerCallbackQuery } from "../../lib/telegram";
-import { unixNow } from "../telegram-webhook-store";
+import { loadPendingDisambiguation, unixNow } from "../telegram-webhook-store";
 import {
   handleSetupBranch,
   handleSetupCancel,
@@ -48,17 +48,7 @@ export async function handleSetupCallback(
     return;
   }
 
-  const stateRow = await db
-    .prepare(
-      "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-    )
-    .bind(chatId)
-    .first<{
-      action_type: string | null;
-      action_payload: string | null;
-      expires_at: number;
-      initiator_user_id: string | null;
-    }>();
+  const stateRow = await loadPendingDisambiguation(db, chatId);
   const isActiveSetup =
     stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
   const state = isActiveSetup
