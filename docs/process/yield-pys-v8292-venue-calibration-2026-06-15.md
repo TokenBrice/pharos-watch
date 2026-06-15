@@ -11,17 +11,38 @@ The script fetches `/api/yield-rankings` (still on the pre-deploy methodology), 
 each row's source-risk penalty and PYS under the new model, and diffs against the published
 value.
 
+Snapshot taken after the full registry expansion (61 reviewed venues: 41 from the initial
+rollout + 20 from FU3 Wave 2).
+
 ## Headline
 
 - **180 live rows. Reconstruction validity 180/180** — every row's old PYS recomputes within
   ±1 of the published value using the published penalty, so the deltas below are trustworthy.
-- **23 rows touched** by the new venue/concentration model. **16 PYS decreases, 0 increases**
-  (7 rows changed penalty but rounded to 0 PYS delta).
-- **Largest drop: fxUSD −5 PYS** (41 → 36). **Mean drop −1.63 PYS.**
+- **35 rows touched** by the new venue/concentration model. **22 PYS decreases, 0 increases**
+  (13 rows changed penalty but rounded to 0 PYS delta).
+- **Largest drop: AUSD −7 PYS** (40 → 33, via Upshift → high institutional credit).
+  **Mean drop −1.91 PYS.**
 - **Zero rows hit PYS 0; zero ranking dropouts.** The v8.21 publication-regression guard keys
   on lending-opportunity / total **row count**, which is unchanged — not at risk.
 
-## All movers
+## All movers (≤ −1 PYS)
+
+| Coin | ΔPYS | PYS | Penalty | Driver |
+|---|---:|---|---|---|
+| AUSD | −7 | 40→33 | 1.00→1.232 | upshift → high |
+| fxUSD | −5 | 41→36 | 1.10→1.235 | morpho-blue → medium |
+| HYUSD | −4 | 20→16 | 1.00→1.225 | loopscale → high |
+| DLLR | −3 | 18→15 | 1.00→1.202 | sovryn-dex → medium |
+| tGBP | −2 | 16→14 | 1.463→1.688 | loopscale → high |
+| USDT | −2 | 15→13 | 1.10→1.28 | maple → medium |
+| EURCV | −2 | 15→13 | 1.00→1.135 | morpho-blue → medium |
+| XUSD | −2 | 11→9 | 1.00→1.202 | sovryn-dex → medium |
+| USD3 | −2 | 7→5 | 1.30→1.72 | 3jane-lending → high |
+| DJED, USDM | −1 | — | 1.00→1.045 | liqwid → low (weighted 2.30) |
+| reUSD, ZCHF, FEUSD, RLUSD, JUPUSD, PYUSD, USDTB, syrupUSDT, USDX, iUSD, MSUSD | −1 | — | small step | morpho-blue / felix / jupiter / clearpool / echelon / vesper |
+| yvUSDC-1, cUSDO, USDO, gtUSDC, pathUSD, USDA, EUSD, FRAX, USDsui, … | 0 | — | small penalty step | various low/medium venues + Sky concentration |
+
+## Earlier (41-venue) snapshot
 
 | Coin | ΔPYS | PYS | Penalty | Driver |
 |---|---:|---|---|---|

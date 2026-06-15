@@ -60,6 +60,27 @@ export const YIELD_RISK_CONFIG_PROTOCOLS = [
   "hyperlend-pooled",
   "curvance",
   "sovryn-dex",
+  // FU3 Wave 2 (yield v8.292, reviewed 2026-06-15) — risky unscored allowlist venues
+  "truefi",
+  "radiant-v2",
+  "wildcat-protocol",
+  "gains-network",
+  "venus-core-pool",
+  "moonwell-lending",
+  "silo-v2",
+  "sturdy-v2",
+  "vesper",
+  "convex-finance",
+  "liqwid",
+  "lista-lending",
+  "loopscale",
+  "navi-lending",
+  "zest-v2",
+  "resupply",
+  "termmax",
+  "upshift",
+  "tectonic",
+  "openeden-usdo",
 ] as const;
 
 export type YieldRiskConfigProtocol = (typeof YIELD_RISK_CONFIG_PROTOCOLS)[number];
@@ -668,6 +689,287 @@ export const YIELD_RISK_CONFIG = {
       "Bitocracy DAO/SOV on-chain voting; legacy lend/borrow carried exploited code; Rootstock federated peg",
       "Overcollateralized RBTC/XUSD/USDT; past undercollateralization from price manipulation; treasury reinjected loss",
       "Thin Rootstock/RSK liquidity, small relative TVL; Bitcoin-sidechain depth limited",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  // ── FU3 Wave 2 venues (yield v8.292, reviewed 2026-06-15) ──────────────────
+  truefi: {
+    scores: { audits: 3, centralization: 3, fundsManagement: 5, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "TrueFi is uncollateralized DeFi credit; trust-based borrower accounting and realized default history put it in the high tier despite a DAO-timelocked admin.",
+    evidence: [
+      "ChainSecurity audited TrueFi; no top-tier multi-firm coverage surfaced",
+      "Ownership migrated multisig to DAO Timelock (TFIP-7/42); TRU governs borrowers/params",
+      "Uncollateralized credit to whitelisted borrowers; defaults absorbed by SAFU + TRU slashing",
+      "TVL collapsed from ~$1B peak to single-digit millions; redemption depends on loan maturity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "radiant-v2": {
+    scores: { audits: 5, centralization: 5, fundsManagement: 4, liquidity: 5, operational: 5 },
+    confidence: "verified",
+    rationale:
+      "Radiant Capital suffered a ~$50M unrecovered Oct-2024 exploit and is in wind-down; it scores near-worst across audits, centralization, liquidity, and operational.",
+    evidence: [
+      "Oct-2024 ~$50M exploit (DPRK-attributed) unrecovered; Jan-2024 flash-loan drained ~$4.5M",
+      "Exploit hijacked the multisig via malware-signed ownership transfer / proxy implementation swap",
+      "Cross-chain Aave-fork; once >$300M deposits, now a ~$2.2M TVL husk in maintenance/exit mode",
+      "18+ months of failed recovery; depositor remediation unresolved",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "wildcat-protocol": {
+    scores: { audits: 3, centralization: 2, fundsManagement: 5, liquidity: 5, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Wildcat is undercollateralized credit with borrower-defined terms; its low protocol-admin surface is outweighed by maximal funds/liquidity trust risk, placing it high.",
+    evidence: [
+      "Publicly audited + onchain monitoring + bug bounty; specific top-firm names not surfaced; V2 launched Feb 2025",
+      "Settlement-layer design: protocol cannot freeze/liquidate; markets controlled by the borrower alone",
+      "Undercollateralized credit on borrower reputation; ~$150M outstanding, no collateral backstop",
+      "Borrower-defined withdrawal terms; funds locked at borrower discretion until repaid",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "gains-network": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Gains Network (gTrade) is a leveraged-perps vault, not a money market; a 14-day timelock and overcollateralization buffer keep it at low-medium.",
+    evidence: [
+      "Multiple CertiK audits + Immunefi bounty; no major hack of Gains itself across heavy iteration",
+      "gToken vault upgradeable behind a 14-day timelock; moving to GNS/veGNS governance",
+      "ERC-4626 gToken vault backstops leveraged-trading PnL; can go undercollateralized in stress",
+      "Epoch-based withdrawal queue (1-3 epochs) prevents PnL front-running",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "venus-core-pool": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Venus Core Pool is an established overcollateralized BNB-chain money market; its 2025 $27M incident was user phishing (fully recovered), not a contract flaw — low venue risk.",
+    evidence: [
+      "Audited by Quantstamp, Code4rena, PeckShield, Hacken; active bounty; Sep-2025 $27M phishing loss recovered",
+      "XVS governance with 48-hour timelock + tiered VIPs + AccessControlManager",
+      "Overcollateralized onchain market with borrow/supply caps and fine-grained pause",
+      "Compound-fork instant supply/withdraw subject to utilization; deep liquidity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "moonwell-lending": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Moonwell is an overcollateralized multichain Compound-fork; a Mar-2026 governance-attack vector lifts centralization to 3, keeping it at low.",
+    evidence: [
+      "Halborn + Code4rena audits + Immunefi bounty; Gauntlet/Warden risk management",
+      "WELL DAO governance; Mar-2026 governance attack (MIP-R39) sought market/oracle admin, lacked circuit breakers",
+      "Overcollateralized lending on Base/Optimism/Moonbeam with tiered collateral factors and caps",
+      "Compound-fork instant supply/withdraw; deep multichain liquidity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "silo-v2": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Silo v2 is overcollateralized isolated-pair lending with immutable per-market silos; permissionless market creation and thin newer markets raise funds/liquidity risk to medium.",
+    evidence: [
+      "2025 audits: Sigma Prime, Certora (formal verification), Code4rena, Cantina; Immunefi bounty",
+      "Immutable per-market silos; permissionless market creation; Silo Vaults add curator trust",
+      "Overcollateralized isolated pairs contain risk; permissionless listing risks low-quality collateral",
+      "Isolated-market depth varies sharply by pair; thin newer markets concentrate liquidity",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "sturdy-v2": {
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Sturdy v2 is an overcollateralized two-tier silo + aggregator design; a v1 hack history, manager trust, and no bad-debt reserves keep it at medium.",
+    evidence: [
+      "ChainSecurity audited v2 ('high level of security'); v1 had a Jun-2023 ~$800K read-only reentrancy exploit",
+      "STRDY governance; aggregator managers control allocation and silo whitelisting",
+      "Overcollateralized but no bad-debt reserve accrual flagged; Bittensor-subnet allocation dependency",
+      "Isolated pairs with shared-liquidity aggregation; smaller TVL, moderate depth",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  vesper: {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Vesper is a yield aggregator (not a money market) routing into external protocols; composed strategy risk and a 2021 oracle-hack history put it at medium.",
+    evidence: [
+      "50+ audits across pools/strategies; Immunefi bounty; Nov-2021 ~$3.37M oracle attack on a Lend Beta pool",
+      "vVSP DAO governance; strategy keepers/managers retain operational control",
+      "Yield-aggregator vaults route into external lending/LP protocols, exposing underlying-protocol risk",
+      "Grow/Earn vault shares generally redeemable; modest TVL vs 2021 peak",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "convex-finance": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Convex is a Curve LP-boosting / veCRV staking layer (NOT a lending/credit venue); immutable contracts, never exploited, with blue-chip Curve LP underlying — low venue risk.",
+    evidence: [
+      "MixBytes + additional audits + bounty; 2022 bugs patched pre-exploit; never hacked; immutable since 2021",
+      "Immutable contracts but vlCVX/multisig governance is concentrated (governance-capture risk)",
+      "Stakes Curve LP into gauges; underlying assets are blue-chip Curve LP positions",
+      "Curve LP staking generally instant withdrawal; deep TVL (peaked >$10B); cvxCRV exit only via secondary market",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  liqwid: {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 4, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Liqwid is the mature Cardano lending leader with a no-admin DAO design; thin eUTXO liquidity and LQ-heavy collateral are the main residual risks, keeping it at low.",
+    evidence: [
+      "Tweag + MLabs Plutus audits; 1500+ liquidations, no protocol exploit; Immunefi bounty",
+      "LQ-holder DAO via Agora; no privileged admin keys by design; upgrades gated through governance",
+      "Overcollateralized non-custodial qToken market; ADA + LQ ~90% of deposits (concentration)",
+      "Thin Cardano liquidity ~$70-100M TVL concentrated in two assets",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "lista-lending": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Lista Lending is a well-audited Binance-adjacent BNB-chain CDP/isolated lender with a documented timelock and deep liquidity — the lowest-risk venue in the Wave 2 set.",
+    evidence: [
+      "PeckShield, SlowMist, CertiK, Veridise, BlockSec audits; Immunefi bounty + Risk Fund; no exploit",
+      "veLISTA governance with a documented 24-hour timelock; YZi Labs (Binance) backed",
+      "Overcollateralized MakerDAO-style CDP + isolated markets with per-market risk parameters",
+      "Deep BNB Chain liquidity ~$1B+ lending TVL; isolated/P2P vaults can queue under high utilization",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  loopscale: {
+    scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Loopscale recovered fully from an Apr-2025 ~$5.8M oracle exploit but remains young, tokenless, and team-controlled with exotic collateral — high tier.",
+    evidence: [
+      "OShield audit Jan-Feb 2025; Sec3 still underway at the hack; Apr-2025 ~$5.8M oracle exploit (fully recovered)",
+      "No token/DAO; team-controlled admin with undisclosed multisig; pause/withdrawal-disable powers used in incident",
+      "Overcollateralized fixed-rate isolated markets; exotic RateX PT collateral caused the exploit",
+      "~$97M TVL recovered, single-chain Solana; withdrawals were halted during the incident",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "navi-lending": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "NAVI is the largest Sui lender with strong Move audits; team-retained mint/freeze controls and young-chain risk cap it at low.",
+    evidence: [
+      "OtterSec + MoveBit (Move-specialist, formal verification) audits; no reported exploit",
+      "veToken governance launched 2025; mint/freeze controls reportedly remain with the team; MSafe multisig",
+      "Overcollateralized SUI/USDC/USDT/wETH/wBTC with health-factor liquidations and isolated pools",
+      "Largest Sui TVL ~$400M+; unified liquidity pool instant within utilization; young chain limits dispersion",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "zest-v2": {
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Zest is the largest Stacks BTC lender with a timelocked multisig; novel unproven BitVM vaults and thin Bitcoin-L2 liquidity raise it to medium.",
+    evidence: [
+      "Least Authority (2023) + Coinfabrik (2024) audits; Immunefi bounty; no bad debt over 1500+ liquidations",
+      "V2 multisig governance with timelock (threshold/delay undisclosed); ZEST governance token",
+      "Overcollateralized BTC/sBTC/STX/USDC; new BitVM-verified Bitcoin Collateral Vaults are novel/unproven",
+      "Thin Stacks/Bitcoin-L2 liquidity ~$100M peak; cross-chain borrow adds settlement latency",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  resupply: {
+    scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "Resupply (Convex/Yearn sub-DAO) recovered fully from a Jun-2025 ~$9.6M oracle exploit; composable stablecoin-CDP collateral and the preventable flaw keep it at medium.",
+    evidence: [
+      "Audited yet hit a Jun-2025 ~$9.6M donation/oracle exploit (empty-vault price flaw); bad debt fully repaid",
+      "Convex/Yearn sub-DAO with RSUP governance; coordinated DAO crisis response; upgrade delay not documented",
+      "reUSD backed by yield-bearing stablecoin CDP collateral (other protocols' LP/vault tokens — composability risk)",
+      "reUSD liquidity declined post-exploit; ~$38M insurance pool backstopped the recovery",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  termmax: {
+    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "TermMax is a well-audited 4-of-6-multisig fixed-rate isolated lender; tokenized-equity/RWA collateral and maturity lockups raise it to medium.",
+    evidence: [
+      "Multiple audit rounds (93% DeFiSafety); Immunefi + Cantina; Hypernative monitoring; no exploit since Apr-2025",
+      "4-of-6 multisig with timelock on critical changes; TMX governance planned but not live",
+      "Fixed-rate isolated markets with curator-managed vaults; exotic tokenized-equity (Ondo) collateral",
+      "~$30-50M TVL multichain; fixed maturities create term lockups",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  upshift: {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "verified",
+    rationale:
+      "Upshift is an institutional credit-vault provider lending to KYC'd market makers via a prime broker; a sub-4-signer multisig, no timelock, and offchain counterparty exposure put it high.",
+    evidence: [
+      "Hacken, OtterSec, ChainSecurity, Sigma Prime, Zellic audits; hit by $292M Kelp/LayerZero bridge contagion freeze",
+      "Multisig under 4 signers, no documented timelock; role-based operator sets APR/loans",
+      "Credit lending to KYC'd market makers via August prime broker; offchain/CeFi strategies and custody exposure",
+      "Loans have terms/durations with redemption queues; ~$550M peak TVL, strategy-dependent unwinds",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  tectonic: {
+    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    rationale:
+      "Tectonic is a mature audited Compound-fork on Cronos; overcollateralized but single-chain concentration and an opaque admin threshold keep it at medium.",
+    evidence: [
+      "CertiK + SlowMist audits; Chainlink + Band oracles; no major exploit found; mature since 2021",
+      "TONIC/xTONIC governance; isolated pools (Main/Veno/DeFi); Cronos-team-adjacent control, threshold undisclosed",
+      "Overcollateralized Compound-style market with a community insurance pool for bad debt",
+      "~$120M+ TVL concentrated on Cronos; smaller-cap isolated pools thinner",
+    ],
+    reviewedAt: "2026-06-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  "openeden-usdo": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 2, operational: 2 },
+    confidence: "verified",
+    rationale:
+      "OpenEden USDO is a regulated T-bill-backed stablecoin venue; strong ratings/custody are offset by offchain RWA dependency and centralized issuer mint/redeem control — medium.",
+    evidence: [
+      "Chainlink CCIP + Proof-of-Reserve; S&P AA+f and Moody's A fund ratings; onchain PoR",
+      "BMA-licensed issuer (OpenEden Digital); EDEN governance; issuer can pause/freeze and controls mint/redeem",
+      "RWA-backed by tokenized US Treasuries with BNY custodian (offchain custody dependency)",
+      "24/7 instant TBILL mint/redeem ~$277M TVL; T-bill settlement adds some latency",
     ],
     reviewedAt: "2026-06-15",
     reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,

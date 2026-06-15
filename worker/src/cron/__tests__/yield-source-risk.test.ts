@@ -73,6 +73,27 @@ const WAVE_2_REVIEWED_TIERS = {
   "hyperlend-pooled": "medium",
   curvance: "high",
   "sovryn-dex": "medium",
+  // FU3 Wave 2 — derived tiers.
+  truefi: "high",
+  "radiant-v2": "high",
+  "wildcat-protocol": "high",
+  "gains-network": "low",
+  "venus-core-pool": "low",
+  "moonwell-lending": "low",
+  "silo-v2": "medium",
+  "sturdy-v2": "medium",
+  vesper: "medium",
+  "convex-finance": "low",
+  liqwid: "low",
+  "lista-lending": "low",
+  loopscale: "high",
+  "navi-lending": "low",
+  "zest-v2": "medium",
+  resupply: "medium",
+  termmax: "medium",
+  upshift: "high",
+  tectonic: "medium",
+  "openeden-usdo": "medium",
 } as const;
 
 describe("yield source-risk registry", () => {
