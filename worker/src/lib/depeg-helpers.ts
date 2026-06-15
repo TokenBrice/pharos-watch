@@ -349,17 +349,20 @@ export function buildInsertDepegEventStmt(
     );
 }
 
-const VALID_DIRECTIONS = new Set(["above", "below"]);
-const VALID_SOURCES = new Set(["live", "backfill"]);
+function parseDepegDirection(row: DepegRow): DepegEvent["direction"] {
+  if (row.direction === "above" || row.direction === "below") return row.direction;
+  throw new Error(`[depeg-helpers] Invalid direction "${row.direction}" for event ${row.id}`);
+}
+
+function parseDepegSource(row: DepegRow): DepegEvent["source"] {
+  if (row.source === "live" || row.source === "backfill") return row.source;
+  throw new Error(`[depeg-helpers] Invalid source "${row.source}" for event ${row.id}`);
+}
 
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {
-  if (!VALID_DIRECTIONS.has(row.direction)) {
-    console.warn(`[depeg-helpers] Invalid direction "${row.direction}" for event ${row.id}, defaulting to "below"`);
-  }
-  if (!VALID_SOURCES.has(row.source)) {
-    console.warn(`[depeg-helpers] Invalid source "${row.source}" for event ${row.id}, defaulting to "live"`);
-  }
+  const direction = parseDepegDirection(row);
+  const source = parseDepegSource(row);
   let provenance: DepegEvent["provenance"] = null;
   if (row.provenance_json) {
     try {
@@ -385,7 +388,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     stablecoinId: row.stablecoin_id,
     symbol: row.symbol,
     pegType: row.peg_type,
-    direction: VALID_DIRECTIONS.has(row.direction) ? row.direction as "above" | "below" : "below",
+    direction,
     peakDeviationBps: row.peak_deviation_bps,
     startedAt: row.started_at,
     endedAt: row.ended_at,
@@ -393,7 +396,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     peakPrice: row.peak_price,
     recoveryPrice: row.recovery_price,
     pegReference: row.peg_reference,
-    source: VALID_SOURCES.has(row.source) ? row.source as "live" | "backfill" : "live",
+    source,
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
     provenance,

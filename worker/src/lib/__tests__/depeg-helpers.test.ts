@@ -4,7 +4,7 @@ import {
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
 } from "../depeg-trust-policy";
-import { buildInsertDepegEventStmt, rowToDepegEvent } from "../depeg-helpers";
+import { buildInsertDepegEventStmt, rowToDepegEvent, type DepegRow } from "../depeg-helpers";
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
@@ -179,6 +179,24 @@ describe("isAuthoritativeDepegPegReference", () => {
 });
 
 describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
+  const baseDepegRow = {
+    id: 1,
+    stablecoin_id: "usdt-tether",
+    symbol: "USDT",
+    peg_type: "peggedUSD",
+    direction: "below",
+    peak_deviation_bps: -120,
+    started_at: 100,
+    ended_at: null,
+    start_price: 0.988,
+    peak_price: 0.985,
+    recovery_price: null,
+    peg_reference: 1,
+    source: "live",
+    confirmation_sources: null,
+    pending_reason: null,
+  } satisfies DepegRow;
+
   it("buildInsertDepegEventStmt binds confirmation_sources and pending_reason", () => {
     const bindCalls: unknown[][] = [];
     const db = {
@@ -209,21 +227,29 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
 
   it("rowToDepegEvent exposes confirmation_sources and pending_reason (null-safe)", () => {
     const event = rowToDepegEvent({
-      id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-      direction: "below", peak_deviation_bps: -120, started_at: 100, ended_at: null,
-      start_price: 0.988, peak_price: 0.985, recovery_price: null, peg_reference: 1, source: "live",
+      ...baseDepegRow,
       confirmation_sources: "Pool", pending_reason: "large-cap+low-confidence",
     });
     expect(event.confirmationSources).toBe("Pool");
     expect(event.pendingReason).toBe("large-cap+low-confidence");
 
     const legacy = rowToDepegEvent({
-      id: 2, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
-      direction: "below", peak_deviation_bps: -120, started_at: 100, ended_at: null,
-      start_price: 0.988, peak_price: 0.985, recovery_price: null, peg_reference: 1, source: "live",
-      confirmation_sources: null, pending_reason: null,
+      ...baseDepegRow,
+      id: 2,
     });
     expect(legacy.confirmationSources).toBeNull();
     expect(legacy.pendingReason).toBeNull();
+  });
+
+  it("rejects invalid stored direction values instead of coercing them", () => {
+    expect(() => rowToDepegEvent({ ...baseDepegRow, direction: "sideways" })).toThrow(
+      '[depeg-helpers] Invalid direction "sideways" for event 1',
+    );
+  });
+
+  it("rejects invalid stored source values instead of coercing them", () => {
+    expect(() => rowToDepegEvent({ ...baseDepegRow, source: "manual" })).toThrow(
+      '[depeg-helpers] Invalid source "manual" for event 1',
+    );
   });
 });
