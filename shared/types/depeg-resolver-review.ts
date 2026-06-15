@@ -287,7 +287,6 @@ export const DdrrV2CoverageRowSchema = DdrrV2BaseRowSchema.extend({
   kind: z.literal("coverage"),
   predictionState: z.enum(DDRR_COVERAGE_PREDICTION_STATE_VALUES),
   actualEndedAt: z.number().int().nonnegative().nullable(),
-  terminalEvidenceInterval: DdrrTerminalEvidenceIntervalSchema.nullable(),
   terminalEvidenceSourceDate: z.string().nullable(),
   coverageCause: z.enum(DDRR_COVERAGE_CAUSE_VALUES),
   operationalCoverageCause: z.enum(DDRR_COVERAGE_CAUSE_VALUES).nullable(),
