@@ -8,19 +8,14 @@ import type {
 } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
+import { THREAT_BAND_ORDER } from "@shared/lib/classification";
 import {
   getDepegEditorialImpactScore,
   getDepegMarketImpactScore,
   isCriticalDepegRisk,
 } from "@shared/lib/digest-risk";
 
-const BAND_RANK: Record<string, number> = {
-  CALM: 0,
-  WATCH: 1,
-  ALERT: 2,
-  WARNING: 3,
-  DANGER: 4,
-};
+const BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
 function candidateId(kind: DigestEditorialCandidateKind, parts: string[]): string {
   return [kind, ...parts]
