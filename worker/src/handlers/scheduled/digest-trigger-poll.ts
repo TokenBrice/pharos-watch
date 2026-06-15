@@ -62,11 +62,11 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     ], { budgetOnlyJobs: 1 });
   }
 
-  let result: CronResult | void = undefined;
+  let result: CronResult | null = null;
   let caught: unknown = null;
 
   try {
-    result = await runtime.runLeasedCron("daily-digest", (signal, reportProgress) =>
+    result = (await runtime.runLeasedCron("daily-digest", (signal, reportProgress) =>
       generateDailyDigest(
         runtime.db,
         runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -76,14 +76,13 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         signal,
         reportProgress,
       ),
-    );
+    )) ?? null;
   } catch (err) {
     caught = err;
     console.error(`[digest-trigger-poll] daily-digest failed for request ${payload.requestId}:`, err);
   }
 
-  const leaseLocked =
-    (result as CronResult | null | undefined)?.status === "skipped_locked";
+  const leaseLocked = result?.status === "skipped_locked";
 
   // Preserve the flag when the 08:05 scheduled run holds the lease so the next
   // poll can retry. Clear it on every other outcome (ok, degraded, error,
@@ -103,13 +102,13 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   } else if (leaseLocked) {
     outcome = "skipped_locked";
   } else {
-    const status = (result as CronResult | null | undefined)?.status;
+    const status = result?.status;
     if (status === "degraded" || status === "error") {
       outcome = status;
     } else if (status === "skipped_locked") {
       outcome = "skipped_locked";
-    } else if (typeof (result as CronResult | null | undefined)?.metadata === "string"
-      && ((result as CronResult).metadata!.startsWith("skipped:"))) {
+    } else if (typeof result?.metadata === "string"
+      && result.metadata.startsWith("skipped:")) {
       outcome = "skipped";
     }
   }
@@ -135,6 +134,6 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   return buildScheduledSlotSummary([
     caught
       ? summarizeThrownScheduledJob("daily-digest", caught)
-      : summarizeCronResult("daily-digest", result as CronResult | null | undefined),
+      : summarizeCronResult("daily-digest", result),
   ], { budgetOnlyJobs: 1 });
 }

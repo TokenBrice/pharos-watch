@@ -18,7 +18,11 @@ import { toErrorMessage } from "../lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;
+const REALTIME_OVERLAY_MAX_DIVERGENCE = 0.05;
 const CHAINLINK_METAL_PEG_KEYS = new Set<string>(["peggedGOLD", "peggedSILVER"]);
+const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
+const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
+const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
 
 function isChainlinkMetalPegKey(pegKey: string): pegKey is MetalPegKey {
   return CHAINLINK_METAL_PEG_KEYS.has(pegKey);
@@ -475,7 +479,7 @@ export class FxSyncRunState {
       const currentRate = this.usableRates[pegKey];
       if (currentRate != null) {
         const delta = Math.abs(realtimeRate - currentRate) / currentRate;
-        if (delta <= 0.05) {
+        if (delta <= REALTIME_OVERLAY_MAX_DIVERGENCE) {
           if (this.validateRate(pegKey, realtimeRate, this.prevRates[pegKey])) {
             applyRealtimeRate(pegKey, realtimeRate);
           }
@@ -722,9 +726,6 @@ export async function runOpenExchangeRatesOverlay(
     return "unavailable";
   }
 
-  const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
-  const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
-  const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
   const [lastAttempt, legacyLastFetch] = await Promise.all([
     db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
     db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),

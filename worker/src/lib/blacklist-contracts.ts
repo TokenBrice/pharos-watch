@@ -882,9 +882,6 @@ export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map
 );
 
 const CONTRACT_CONFIG_BY_KEY = new Map(CONTRACT_CONFIGS.map((config) => [config.configKey, config]));
-const CONTRACT_CONFIG_BY_CHAIN_AND_ADDRESS = new Map(
-  CONTRACT_CONFIGS.map((config) => [buildBlacklistConfigKey(config.chain.chainId, config.contractAddress), config]),
-);
 
 function buildBlacklistConfigKey(chainId: string, contractAddress: string): string {
   return `${chainId}-${contractAddress.toLowerCase()}`;
@@ -898,7 +895,7 @@ export function getBlacklistConfigByContract(
   chainId: string,
   contractAddress: string,
 ): ContractEventConfig | undefined {
-  return CONTRACT_CONFIG_BY_CHAIN_AND_ADDRESS.get(buildBlacklistConfigKey(chainId, contractAddress));
+  return CONTRACT_CONFIG_BY_KEY.get(buildBlacklistConfigKey(chainId, contractAddress));
 }
 
 export function getBlacklistConfigsForSymbolAndChain(

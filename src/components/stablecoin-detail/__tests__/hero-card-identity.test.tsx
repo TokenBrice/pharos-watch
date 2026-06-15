@@ -3,7 +3,7 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReportCard, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 const { isHeroVerdictEnabledMock } = vi.hoisted(() => ({
   isHeroVerdictEnabledMock: vi.fn(),
@@ -46,11 +46,6 @@ const BASE_COIN: StablecoinMeta = {
   mechanismArchetype: "fiat-cash",
 };
 
-const INSTITUTIONAL_REPORT_CARD = {
-  overallGrade: "A",
-  rawInputs: { canBeBlacklisted: false },
-} as unknown as ReportCard;
-
 const INSTITUTIONAL_VERDICT = {
   archetype: "institutional-default",
   label: "Institutional Default",
@@ -68,7 +63,6 @@ const UNCATEGORIZED_VERDICT = {
 
 const COMMON_PROPS = {
   infrastructures: [],
-  reportCard: null,
   verdict: INSTITUTIONAL_VERDICT,
   variantParent: null,
   variantChipClass: null,
@@ -125,7 +119,7 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
     );
 
     const heading = container.querySelector("h2");
@@ -151,7 +145,7 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
     const { container } = render(
-      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
     );
 
     const heading = container.querySelector("h2");
@@ -172,7 +166,6 @@ describe("HeroDesktopIdentity verdict pill", () => {
       <HeroDesktopIdentity
         coin={BASE_COIN}
         {...COMMON_PROPS}
-        reportCard={INSTITUTIONAL_REPORT_CARD}
         verdict={DISTRESSED_VERDICT}
       />,
     );
@@ -207,7 +200,7 @@ describe("HeroDesktopIdentity verdict pill", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
     const { container } = render(
-      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
     );
 
     expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();

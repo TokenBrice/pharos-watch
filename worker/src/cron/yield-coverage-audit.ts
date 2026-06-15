@@ -919,14 +919,12 @@ export async function runYieldCoverageAudit(
   });
 
   const reportedAt = Math.floor(nowMs / 1000);
-  const report = {
-    reportedAt,
+  // The 13 count fields shared between the persisted report payload and the
+  // CronResult metadata. The two payloads otherwise diverge deliberately.
+  const auditCounts = {
     totalDlPools: dlPools.length,
     coveredPoolCount: coveredPools.size,
     manifestYieldBearingCount: YIELD_ADAPTER_MANIFEST.length,
-    manifestMissingIds,
-    intentionalGapIds,
-    yieldBearingMissingFromRankings,
     unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
     missingProtocolCount: gaps.missingProtocols.length,
     protocolRecommendationCount: gaps.protocolRecommendations.length,
@@ -935,8 +933,16 @@ export async function runYieldCoverageAudit(
     lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
     staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
     exactPoolOverrideCount: explicitPoolOverrides.length,
-    exactPoolOverrideYieldBearingCount: exactPoolOverrideYieldBearingIds.length,
     exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
+    staleVenueRiskScoreCount: staleVenueRiskScores.length,
+  };
+  const report = {
+    reportedAt,
+    ...auditCounts,
+    manifestMissingIds,
+    intentionalGapIds,
+    yieldBearingMissingFromRankings,
+    exactPoolOverrideYieldBearingCount: exactPoolOverrideYieldBearingIds.length,
     exactPoolOverrideYieldBearingIds,
     exactPoolOverrideNonYieldBearingOpportunityIds,
     exactPoolOverrides: explicitPoolOverrides,
@@ -948,7 +954,6 @@ export async function runYieldCoverageAudit(
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
     staleAutoLendingOverrides,
     staleVenueRiskScores,
-    staleVenueRiskScoreCount: staleVenueRiskScores.length,
     operatorQueue,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
@@ -983,22 +988,10 @@ export async function runYieldCoverageAudit(
     status: "ok",
     itemCount,
     metadata: JSON.stringify({
-      totalDlPools: dlPools.length,
-      coveredPoolCount: coveredPools.size,
-      manifestYieldBearingCount: YIELD_ADAPTER_MANIFEST.length,
+      ...auditCounts,
       manifestMissingCount: manifestMissingIds.length,
       intentionalGapCount: intentionalGapIds.length,
       yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
-      unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
-      missingProtocolCount: gaps.missingProtocols.length,
-      protocolRecommendationCount: gaps.protocolRecommendations.length,
-      nativeExactPoolRecommendationCount: gaps.nativeExactPoolRecommendations.length,
-      sourceFamilyAdapterRecommendationCount: gaps.sourceFamilyAdapterRecommendations.length,
-      lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
-      staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
-      staleVenueRiskScoreCount: staleVenueRiskScores.length,
-      exactPoolOverrideCount: explicitPoolOverrides.length,
-      exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
       protocolCategoryStatus: protocolCategoryLookup.meta.status,
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,

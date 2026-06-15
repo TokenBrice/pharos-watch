@@ -22,7 +22,7 @@ import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
-import { rollupDigestInputs } from "./daily-digest/collectors-shared";
+import { rollupDigestInputs, type RollupSummary } from "./daily-digest/collectors-shared";
 import { DEWS_BAND_RANK } from "./daily-digest/digest-intelligence-utils";
 
 const WEEKLY_SYSTEM_PROMPT = [
@@ -474,23 +474,11 @@ function parseDailyRows(
   return parsed;
 }
 
-function buildWeeklyInputData(
-  currentDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
-  priorDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[] = [],
-): WeeklyInputData | null {
-  const parsed = parseDailyRows(currentDailyRows);
-  const priorParsed = parseDailyRows(priorDailyRows);
-  if (parsed.length < 5) return null;
+interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskLeaderboard"> {
+  allDepegSignals: WeeklyDepegSignal[];
+}
 
-  const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
-  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
-  const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
-
-  if (psiScores.length === 0 || mcaps.length === 0) return null;
-
-  const current = rollupDigestInputs(parsed.map((d) => d.inputData));
-  const dominantBand = current.psiDominantBand;
-
+function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   const allDepegSignals = parsed.flatMap((d) => [
     ...(d.inputData.topDepegs ?? []).map((depeg) => {
       const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
@@ -621,6 +609,24 @@ function buildWeeklyInputData(
     (row) => Math.abs(row.scoreDelta) * row.mcapUsd,
   );
 
+  return {
+    allDepegSignals,
+    topDepegSignals,
+    topSupplySignals,
+    topDewsChanges,
+    maxAlertPlusMcapUsd,
+    topPressureSignals,
+    topBlacklistEvents,
+    topGradeTransitions,
+    topYieldAnomalies,
+    topLiquidityShifts,
+  };
+}
+
+function buildWeeklySpikeMetrics(
+  parsed: WeeklyParsedRow[],
+  allDepegSignals: WeeklyDepegSignal[],
+): WeeklySpikeMetrics {
   const psiObservations = parsed
     .map((d) => d.inputData.stabilityIndex ? { date: d.date, score: d.inputData.stabilityIndex.score, band: d.inputData.stabilityIndex.band } : null)
     .filter((entry): entry is { date: string; score: number; band: string } => entry !== null);
@@ -629,12 +635,69 @@ function buildWeeklyInputData(
     .filter((entry): entry is { date: string; score: number } => entry !== null);
   const maxDepegByBps = [...allDepegSignals].sort((a, b) => b.bps - a.bps || b.impactScore - a.impactScore)[0];
   const maxDepegByImpact = [...allDepegSignals].sort((a, b) => b.impactScore - a.impactScore || b.bps - a.bps)[0];
-  const spikeMetrics: WeeklySpikeMetrics = {
+  return {
     minPsi: psiObservations.length > 0 ? [...psiObservations].sort((a, b) => a.score - b.score)[0] : null,
     minGauge: gaugeObservations.length > 0 ? [...gaugeObservations].sort((a, b) => a.score - b.score)[0] : null,
     maxDepeg: toSpikeDepeg(maxDepegByBps),
     maxDepegImpact: toSpikeDepeg(maxDepegByImpact),
   };
+}
+
+function buildWeeklyWowDeltas(
+  current: RollupSummary,
+  priorParsed: WeeklyParsedRow[],
+): WeeklyInputData["weekOverWeekDeltas"] {
+  if (priorParsed.length < 5) return null;
+  const prior = rollupDigestInputs(priorParsed.map((d) => d.inputData));
+  return {
+    mcap: {
+      current: current.mcapEnd,
+      prior: prior.mcapEnd,
+      deltaPct: prior.mcapEnd > 0 ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
+    },
+    psi: { current: current.psiMid, prior: prior.psiMid, delta: current.psiMid - prior.psiMid },
+    psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
+    activeDepegObservations: { current: current.activeDepegObs, prior: prior.activeDepegObs },
+    uniqueDepegSignals: { current: current.uniqueDepegSignals, prior: prior.uniqueDepegSignals },
+    blacklistEvents: { current: current.blacklistEvents, prior: prior.blacklistEvents },
+    blacklistUsd: { current: current.blacklistUsd, prior: prior.blacklistUsd },
+    gradeTransitions: { current: current.gradeTransitions, prior: prior.gradeTransitions },
+    gauge: { current: current.gaugeMid, prior: prior.gaugeMid },
+    dataCoverage: { currentDays: current.days, priorDays: prior.days },
+  };
+}
+
+function buildWeeklyInputData(
+  currentDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
+  priorDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[] = [],
+): WeeklyInputData | null {
+  const parsed = parseDailyRows(currentDailyRows);
+  const priorParsed = parseDailyRows(priorDailyRows);
+  if (parsed.length < 5) return null;
+
+  const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
+  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
+  const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
+
+  if (psiScores.length === 0 || mcaps.length === 0) return null;
+
+  const current = rollupDigestInputs(parsed.map((d) => d.inputData));
+  const dominantBand = current.psiDominantBand;
+
+  const { allDepegSignals, ...topSignalsResult } = collectWeeklyTopSignals(parsed);
+  const {
+    topDepegSignals,
+    topSupplySignals,
+    topDewsChanges,
+    maxAlertPlusMcapUsd,
+    topPressureSignals,
+    topBlacklistEvents,
+    topGradeTransitions,
+    topYieldAnomalies,
+    topLiquidityShifts,
+  } = topSignalsResult;
+
+  const spikeMetrics = buildWeeklySpikeMetrics(parsed, allDepegSignals);
 
   const riskLeaderboard = buildWeeklyRiskLeaderboard({
     depegs: topDepegSignals,
@@ -647,26 +710,7 @@ function buildWeeklyInputData(
     supplySignals: topSupplySignals,
   });
 
-  let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
-  if (priorParsed.length >= 5) {
-    const prior = rollupDigestInputs(priorParsed.map((d) => d.inputData));
-    weekOverWeekDeltas = {
-      mcap: {
-        current: current.mcapEnd,
-        prior: prior.mcapEnd,
-        deltaPct: prior.mcapEnd > 0 ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
-      },
-      psi: { current: current.psiMid, prior: prior.psiMid, delta: current.psiMid - prior.psiMid },
-      psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
-      activeDepegObservations: { current: current.activeDepegObs, prior: prior.activeDepegObs },
-      uniqueDepegSignals: { current: current.uniqueDepegSignals, prior: prior.uniqueDepegSignals },
-      blacklistEvents: { current: current.blacklistEvents, prior: prior.blacklistEvents },
-      blacklistUsd: { current: current.blacklistUsd, prior: prior.blacklistUsd },
-      gradeTransitions: { current: current.gradeTransitions, prior: prior.gradeTransitions },
-      gauge: { current: current.gaugeMid, prior: prior.gaugeMid },
-      dataCoverage: { currentDays: current.days, priorDays: prior.days },
-    };
-  }
+  const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed);
 
   return {
     weekStartDate: parsed[0].date,

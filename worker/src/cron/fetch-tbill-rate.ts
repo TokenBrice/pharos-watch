@@ -1151,19 +1151,29 @@ export async function fetchTbillRate(
     throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
     const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
+    const uniformCircuitOpenKeys = [
+      "USD_EFFR",
+      "EUR",
+      "CHF",
+      "GBP",
+      "JPY",
+      "MXN",
+      "BRL",
+      "AUD",
+      "CAD",
+      "RUB",
+      "TRY",
+    ] as const;
+    const uniformBenchmarks = {} as Record<
+      (typeof uniformCircuitOpenKeys)[number],
+      ParsedYieldBenchmarkMeta | null
+    >;
+    for (const key of uniformCircuitOpenKeys) {
+      uniformBenchmarks[key] = buildRetainedBenchmark(previous[key] ?? null, "circuit-open");
+    }
     const benchmarks: ParsedYieldBenchmarkRegistry = {
       USD: usdBenchmark,
-      USD_EFFR: buildRetainedBenchmark(previous.USD_EFFR ?? null, "circuit-open"),
-      EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
-      CHF: buildRetainedBenchmark(previous.CHF, "circuit-open"),
-      GBP: buildRetainedBenchmark(previous.GBP, "circuit-open"),
-      JPY: buildRetainedBenchmark(previous.JPY, "circuit-open"),
-      MXN: buildRetainedBenchmark(previous.MXN, "circuit-open"),
-      BRL: buildRetainedBenchmark(previous.BRL, "circuit-open"),
-      AUD: buildRetainedBenchmark(previous.AUD, "circuit-open"),
-      CAD: buildRetainedBenchmark(previous.CAD, "circuit-open"),
-      RUB: buildRetainedBenchmark(previous.RUB, "circuit-open"),
-      TRY: buildRetainedBenchmark(previous.TRY, "circuit-open"),
+      ...uniformBenchmarks,
       SGD: null,
     };
     await writeStructuredBenchmarks(db, benchmarks);

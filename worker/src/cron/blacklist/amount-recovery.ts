@@ -39,6 +39,8 @@ import {
 // Conservative hourly recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
 const BACKFILL_BATCH_SIZE = 100;
+// Independent cap that happens to share the same value as BACKFILL_BATCH_SIZE;
+// keep separate so either can be tuned without affecting the other.
 const TRON_LEDGER_BACKFILL_BATCH_SIZE = 100;
 const TRON_LEDGER_LOOKUP_CHUNK_SIZE = 90;
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";

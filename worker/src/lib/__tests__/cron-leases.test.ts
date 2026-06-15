@@ -4,6 +4,7 @@ import {
   CRON_ABANDONED_JOB_GRACE_MS,
   CronJobAbandonedError,
   CronLeaseLostError,
+  CronTimeoutError,
   isRetriableD1OverloadError,
   releaseCronLease,
   renewCronLease,
@@ -714,6 +715,124 @@ describe("runCronWithLease", () => {
     ac.abort(new Error("stop now"));
     await vi.advanceTimersByTimeAsync(10);
     await stopExpectation;
+
+    const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
+    expect(reacquired).toBe(true);
+  });
+
+  it("rejects with CronTimeoutError when the timeout abort wins but the job then fulfills in grace", async () => {
+    const db = makeLeaseDb();
+    const ac = new AbortController();
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      // Job ignores the abort and fulfills shortly after, inside the grace window.
+      async () => new Promise((resolve) => setTimeout(() => resolve("done"), 10)),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 30, abortSignal: ac.signal },
+    );
+
+    let captured: unknown;
+    const timeoutExpectation = runPromise.catch((err) => {
+      captured = err;
+    });
+    // A non-Error abort reason makes the wrapper fall back to its CronTimeoutError.
+    ac.abort("timeout");
+    await vi.advanceTimersByTimeAsync(10);
+    await timeoutExpectation;
+
+    expect(captured).toBeInstanceOf(CronTimeoutError);
+  });
+
+  it("classifies an abandoned job with stopReason 'timeout' when the timeout abort fires", async () => {
+    const db = makeLeaseDb();
+    const ac = new AbortController();
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      async () => new Promise(() => {}),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 30, abortSignal: ac.signal },
+    );
+
+    let captured: CronJobAbandonedError | undefined;
+    const abandonedExpectation = runPromise.catch((err) => {
+      captured = err as CronJobAbandonedError;
+    });
+    ac.abort("timeout");
+    await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
+    await abandonedExpectation;
+
+    expect(captured).toBeInstanceOf(CronJobAbandonedError);
+    expect(captured!.metadata.stopReason).toBe("timeout");
+  });
+
+  it("classifies an abandoned job with stopReason 'lease_lost' when renewals fail", async () => {
+    const renewOutcomes = [0, 0];
+    const renewLostDb = {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            if (sql.includes("UPDATE cron_leases")) {
+              return { success: true, meta: { changes: renewOutcomes.shift() ?? 0 } };
+            }
+            if (sql.includes("DELETE FROM cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const runPromise = runCronWithLease(
+      renewLostDb,
+      "sync-stablecoins",
+      async () => new Promise(() => {}),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 1, maxRenewFailures: 2 },
+    );
+
+    let captured: CronJobAbandonedError | undefined;
+    const abandonedExpectation = runPromise.catch((err) => {
+      captured = err as CronJobAbandonedError;
+    });
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
+    await abandonedExpectation;
+
+    expect(captured).toBeInstanceOf(CronJobAbandonedError);
+    expect(captured!.metadata.stopReason).toBe("lease_lost");
+  });
+
+  it("releases the lease when the job rejects in the same tick the stop signal fires", async () => {
+    const db = makeLeaseDb();
+    const ac = new AbortController();
+    const runPromise = runCronWithLease(
+      db,
+      "sync-stablecoins",
+      async ({ signal }) =>
+        new Promise((_resolve, reject) => {
+          // Job rejects almost simultaneously with the abort observation.
+          const rejectSoon = () => {
+            setTimeout(() => reject(signal.reason), 0);
+          };
+          if (signal.aborted) {
+            rejectSoon();
+            return;
+          }
+          signal.addEventListener("abort", () => rejectSoon(), { once: true });
+        }),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 30, abortSignal: ac.signal },
+    );
+
+    const settled = runPromise.catch(() => {});
+    ac.abort(new Error("stop now"));
+    await vi.advanceTimersByTimeAsync(0);
+    await settled;
 
     const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
     expect(reacquired).toBe(true);
