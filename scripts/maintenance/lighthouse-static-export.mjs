@@ -14,6 +14,8 @@ const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_THRESHOLD = 95;
 const DEFAULT_THROTTLING_METHOD = "devtools";
 const DEFAULT_FORM_FACTOR = "mobile";
+// Keep Lighthouse out of the default install because this is an advisory local
+// probe; the pinned npx package makes the runtime-download tradeoff explicit.
 const LIGHTHOUSE_PACKAGE = process.env.LIGHTHOUSE_PACKAGE?.trim() || "lighthouse@13.3.0";
 const ENV_FILE = path.resolve(".env.local");
 const VALID_FORM_FACTORS = new Set(["mobile", "desktop"]);
