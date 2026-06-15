@@ -7,12 +7,12 @@
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 606 | 3 | 0 | 105 | 19 |
+| Count | 605 | 4 | 0 | 105 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 46 | 1 | 0 | 209 |
+| redundancy | 266 | 46 | 2 | 0 | 208 |
 | quality | 315 | 50 | 2 | 0 | 256 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
@@ -116,7 +116,7 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ⬜ | [R-071](redundancy/R-071.md) | M | clone | ISO date formatter (epoch->YYYY-MM-DD) re-implemented inline ~30x in worker despite export |  | `shared/lib/format.ts:158-160 (canonical formatIs` |
-| ⬜ | [R-075](redundancy/R-075.md) | S | clone | parseDigestParagraph duplicates bold-header stripping already done in consumers of lib/dig |  | `src/components/daily-digest.tsx:L67-L72` |
+| 🔄 | [R-075](redundancy/R-075.md) | S | clone | parseDigestParagraph duplicates bold-header stripping already done in consumers of lib/dig | codex | `src/components/daily-digest.tsx:L67-L72` |
 | ⬜ | [R-076](redundancy/R-076.md) | S | clone | StablecoinChartResponseSchema and UsdsStatusResponseSchema are domain-mislocated in digest |  | `shared/types/digest.ts:L393-L427` |
 | ⬜ | [R-077](redundancy/R-077.md) | S | clone | formatNetFlowUsd in mint-burn-card duplicates shared compact-USD formatting with a minor p |  | `src/components/home-alt-mini-cards/mint-burn-car` |
 | ⬜ | [R-078](redundancy/R-078.md) | S | wrapper | useCoverageMatrixQueryResource is a trivial useMemo wrapper used only once |  | `src/hooks/use-coverage-matrix-model.ts:L28-L40` |
