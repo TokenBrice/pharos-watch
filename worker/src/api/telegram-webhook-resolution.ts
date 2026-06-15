@@ -59,12 +59,12 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   actionType: PendingActionType;
   actionPayload: TActionPayload;
   initiatorUserId: string | null;
-  reply: (message: string) => Promise<void>;
+  reply: (message: string, options?: { replyMarkup?: unknown }) => Promise<void>;
   replyWithMarkup?: (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
   onComplete: (
     coins: ResolvedCoin[],
     options: { clearPending: boolean },
-  ) => Promise<string>;
+  ) => Promise<{ message: string; replyMarkup?: unknown }>;
   alertTypes?: Set<string>;
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
@@ -133,8 +133,8 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
     return;
   }
 
-  const message = await onComplete(resolution.coins, {
+  const { message, replyMarkup } = await onComplete(resolution.coins, {
     clearPending: clearPendingOnTerminal,
   });
-  await reply(message);
+  await reply(message, replyMarkup ? { replyMarkup } : undefined);
 }

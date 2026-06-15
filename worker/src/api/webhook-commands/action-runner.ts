@@ -330,17 +330,14 @@ export function makeActionRunner(
   gate?: BulkGate,
   runnerOptions: ActionRunnerOptions = {},
 ): BoundActionRunner {
-  let nextReplyMarkup: unknown | undefined;
-  const reply = async (message: string) => {
+  const reply = async (message: string, options?: { replyMarkup?: unknown }) => {
     if (message === GATED_SENTINEL) return;
-    const replyMarkup = nextReplyMarkup;
-    nextReplyMarkup = undefined;
     await sendAuditedTelegramReply(
       context.db,
       context.chatId,
       message,
       botToken,
-      replyMarkup ? { replyMarkup } : undefined,
+      options?.replyMarkup ? { replyMarkup: options.replyMarkup } : undefined,
     );
   };
   return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
@@ -367,15 +364,16 @@ export function makeActionRunner(
       },
       onComplete: async (coins, resolutionOptions) => {
         if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
+          const message = await persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
+          return { message };
         }
         const message = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
-        nextReplyMarkup = runnerOptions.replyMarkupForCompletion?.({
+        const replyMarkup = runnerOptions.replyMarkupForCompletion?.({
           actionType,
           coins,
           payload: actionPayload as ActionPayloadMap[CompletionActionType],
         });
-        return message;
+        return { message, replyMarkup };
       },
     });
 }
