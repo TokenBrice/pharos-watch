@@ -136,6 +136,9 @@ export function useCompareShareActions({
           }
         }
       }
+    } catch (error) {
+      console.warn("Share image render failed:", error);
+      showToast("Couldn't generate the share image", 3000);
     } finally {
       setShareLoading(false);
     }
@@ -205,10 +208,13 @@ export function useCompareShareActions({
       anchor.click();
       URL.revokeObjectURL(url);
       trackEvent("comparison_exported", { method: "download", coin_count: comparisonCoins.length });
+    } catch (error) {
+      console.warn("Share image render failed:", error);
+      showToast("Couldn't generate the share image", 3000);
     } finally {
       setShareLoading(false);
     }
-  }, [buildShareData, comparisonCoins]);
+  }, [buildShareData, comparisonCoins, showToast]);
 
   return {
     shareLoading,

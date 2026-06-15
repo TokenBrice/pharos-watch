@@ -93,4 +93,32 @@ describe("useCompareShareActions", () => {
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
   });
+
+  it("surfaces an error toast when the share image fails to render", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    shareImageMocks.renderCompareShareImage.mockImplementation(() => {
+      throw new Error("canvas allocation failed");
+    });
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    const { result } = renderHook(() =>
+      useCompareShareActions({
+        comparisonCoins: [makeCoin("usdc-circle", "USDC"), makeCoin("usdt-tether", "USDT")],
+        logos: {},
+        pegRates: {},
+        radarCards: [],
+        dimensionOrder: [],
+        dimensionLabels: {},
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleTwitterShare();
+    });
+
+    expect(result.current.toast).toBe("Couldn't generate the share image");
+    expect(warnSpy).toHaveBeenCalled();
+    // The Twitter intent still opens so the user can tweet without the image.
+    expect(openSpy).toHaveBeenCalled();
+  });
 });
