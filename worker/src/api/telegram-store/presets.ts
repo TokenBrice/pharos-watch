@@ -97,7 +97,7 @@ export async function removePresetSubscriptions(
 ): Promise<void> {
   const statements = prepareRemovePresetSubscriptionStatements(db, chatId, presetIds);
   if (statements.length === 0) return;
-  await statements[0].run();
+  await db.batch(statements);
 }
 
 export async function loadPresetSubscriptions(
