@@ -23,6 +23,7 @@ export async function unsubscribeAll(db: D1Database, chatId: string): Promise<vo
                 global_alert_safety = 0,
                 global_alert_launch = 0,
                 global_depeg_worsening_bps_step = NULL,
+                alert_snooze_until_ts = NULL,
                 last_active_at = ?
           WHERE chat_id = ?`,
       )
