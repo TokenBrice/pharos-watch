@@ -65,7 +65,6 @@ export {
   readCachedJsonOr503,
   resetCacheJsonParseFailureCountersForTests,
   safeJsonParse,
-  safeJsonParseWithContext,
   type CachedJsonReadResult,
 } from "./api-cache-read";
 export { buildPaginatedEventResponse, fetchPaginatedEvents, parsePaginatedEventParams } from "./api-pagination";

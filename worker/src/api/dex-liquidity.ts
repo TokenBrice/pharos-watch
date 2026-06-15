@@ -1,6 +1,6 @@
 import {
   withErrorHandler,
-  safeJsonParseWithContext,
+  safeJsonParse,
   addFreshnessHeaders,
   jsonResponse,
 } from "../lib/api-utils";
@@ -119,8 +119,8 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,
-      protocolTvl: safeJsonParseWithContext<Record<string, number>>(row.protocol_tvl_json, {}, `dex-liquidity:${id}:protocol_tvl_json`),
-      chainTvl: safeJsonParseWithContext<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
+      protocolTvl: safeJsonParse<Record<string, number>>(row.protocol_tvl_json, {}, `dex-liquidity:${id}:protocol_tvl_json`),
+      chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
       topPools: normalizeTopPools(row.top_pools_json),
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
@@ -132,7 +132,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeJsonParseWithContext<unknown[] | null>(dexPrice?.price_sources_json, null, `dex-liquidity:${id}:price_sources_json`),
+      priceSources: safeJsonParse<unknown[] | null>(dexPrice?.price_sources_json, null, `dex-liquidity:${id}:price_sources_json`),
       // v2 fields
       effectiveTvlUsd: row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
@@ -144,10 +144,10 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       liquidityEvidenceClass,
       hasMeasuredLiquidityEvidence,
       trendworthy,
-      sourceMix: safeJsonParseWithContext<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}, `dex-liquidity:${id}:source_mix_json`),
+      sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}, `dex-liquidity:${id}:source_mix_json`),
       balanceMeasuredTvlUsd,
       organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
-      scoreComponents: safeJsonParseWithContext<unknown>(row.score_components_json, null, `dex-liquidity:${id}:score_components_json`),
+      scoreComponents: safeJsonParse<unknown>(row.score_components_json, null, `dex-liquidity:${id}:score_components_json`),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
     };

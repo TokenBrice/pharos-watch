@@ -48,20 +48,6 @@ export function safeJsonParse<T>(json: string | null | undefined, fallback: T, c
   }
 }
 
-export function safeJsonParseWithContext<T>(
-  json: string | null | undefined,
-  fallback: T,
-  context: string,
-): T {
-  if (json == null) return fallback;
-  try {
-    return JSON.parse(json) as T;
-  } catch (err) {
-    recordJsonParseFailure(context, toErrorMessage(err));
-    return fallback;
-  }
-}
-
 export type CachedJsonReadResult<T> =
   | { status: "missing" }
   | { status: "ok"; data: T }
