@@ -1,4 +1,3 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
@@ -10,6 +9,8 @@ import {
   breakerKeyForConfig,
   classifyFailure,
   isReserveAdapterAttemptChainError,
+  type ConfiguredCoin,
+  type LiveReserveConfig,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import {
@@ -21,10 +22,6 @@ import {
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
-
-const _CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
-type ConfiguredCoin = (typeof _CONFIGURED_COINS)[number];
-type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
 
 export type ReserveCoinSyncStatus = "synced" | "failed" | "skipped";
 
