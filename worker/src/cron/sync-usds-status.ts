@@ -116,6 +116,8 @@ export async function syncUsdsStatus(
 
   const statusResult = UsdsStatusResponseSchema.safeParse({
     freezeCapabilityPresent,
+    // Deprecated alias mirroring freezeCapabilityPresent — capability presence
+    // is the only observable signal here, not actual freeze use. See audit Q-238.
     freezeActive: freezeCapabilityPresent,
     implementationAddress,
     lastChecked: syncStartSec,
