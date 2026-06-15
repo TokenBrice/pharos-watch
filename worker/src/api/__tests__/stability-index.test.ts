@@ -69,6 +69,29 @@ describe("handleStabilityIndex contract tests", () => {
     }
   });
 
+  it("serves full history: detail query is unbounded and omits the per-row input_snapshot blob", async () => {
+    // Regression guard: a LIMIT here truncates the chart's date range and drops the
+    // historical event annotations (events go back to 2018); input_snapshot is a heavy
+    // per-row blob that must not be read across the full history. See psi-replay backfill.
+    const guardDb = mockD1([
+      { match: "stability_index_samples", rows: [sampleRow], first: sampleRow },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+    await handleStabilityIndex(guardDb, new URL("https://x/api/stability-index?detail=true"));
+
+    const bulkHistoryQuery = guardDb
+      .getHistory()
+      .find(
+        (q) =>
+          /FROM stability_index\b/.test(q.sql) &&
+          !/stability_index_samples/.test(q.sql) &&
+          /computed_at, score/.test(q.sql),
+      );
+    expect(bulkHistoryQuery).toBeDefined();
+    expect(bulkHistoryQuery!.sql).not.toMatch(/\bLIMIT\b/i);
+    expect(bulkHistoryQuery!.sql).not.toMatch(/input_snapshot/);
+  });
+
   it("reconstructs methodology version from timestamps when DB version is null", async () => {
     const legacySample = {
       stored_at: 1772068000, // PSI v1.3 window
