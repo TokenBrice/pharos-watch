@@ -554,7 +554,7 @@ async function handlePendingActionBeforeDispatch(args: {
   }
   if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
     if (!canActOnPending(pendingAction, actorUserId)) {
-      await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
+      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return "finished";
     }
     await clearPendingDisambiguation(db, chatId);
