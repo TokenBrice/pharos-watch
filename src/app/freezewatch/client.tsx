@@ -128,14 +128,6 @@ export default function FreezeWatchClient() {
         ]}
       />
 
-      {stablecoinFilter !== "all" && coinIdBySymbol(stablecoinFilter) ? (
-        <CoinCrossTrackerHatnote
-          coinId={coinIdBySymbol(stablecoinFilter)!}
-          coinSymbol={stablecoinFilter}
-          currentTracker="freezewatch"
-        />
-      ) : null}
-
       <section className="space-y-3 animate-in fade-in duration-300">
         <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
           <FreezableSupplyMeter
