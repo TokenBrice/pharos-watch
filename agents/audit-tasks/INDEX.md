@@ -3,18 +3,18 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**133/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
+**134/733 done (18%)**  `████░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 578 | 1 | 0 | 133 | 21 |
+| Count | 576 | 2 | 0 | 134 | 21 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 53 | 0 | 0 | 202 |
-| quality | 315 | 68 | 1 | 0 | 238 |
-| sustainability | 152 | 12 | 0 | 0 | 138 |
+| redundancy | 266 | 53 | 1 | 0 | 201 |
+| quality | 315 | 69 | 0 | 0 | 238 |
+| sustainability | 152 | 12 | 1 | 0 | 137 |
 
 ## redundancy (266)
 
@@ -44,7 +44,7 @@
 | ⬜ | [R-015](redundancy/R-015.md) | S | clone | Two functionally identical price-observation merge functions coexist |  | `worker/src/cron/dex-liquidity/subgraph-helpers.t` |
 | ⬜ | [R-016](redundancy/R-016.md) | S | clone | buildPoolIdentity called twice on the same DexScreener pair per iteration |  | `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` |
 | ⬜ | [R-017](redundancy/R-017.md) | S | clone | Identical BAND_RANK literal duplicated from shared THREAT_BAND_ORDER |  | `worker/src/cron/daily-digest/editorial-candidate` |
-| ⬜ | [R-018](redundancy/R-018.md) | S | dead-code | Local throwIfAborted in sync-redemption-backstops.ts duplicates lib/abort export |  | `worker/src/cron/sync-redemption-backstops.ts:L32` |
+| 🔄 | [R-018](redundancy/R-018.md) | S | dead-code | Local throwIfAborted in sync-redemption-backstops.ts duplicates lib/abort export | codex | `worker/src/cron/sync-redemption-backstops.ts:L32` |
 | ⬜ | [R-019](redundancy/R-019.md) | S | wrapper | safety-score-data.ts is a single-consumer indirection with no reuse value |  | `shared/lib/methodology-versions/safety-score-dat` |
 | ⬜ | [R-020](redundancy/R-020.md) | S | dead-code | Dead `markdown` and `markdownParagraphs` fields computed and stored but never read |  | `src/app/methodology/sections/methodology-content` |
 | ⬜ | [R-021](redundancy/R-021.md) | S | clone | Hardcoded BOT_USERNAME in CoinInsightPanel duplicates PHAROSWATCHBOT_BOT_URL constant |  | `src/app/pharoswatchbot/app/components/CoinInsigh` |
@@ -320,7 +320,7 @@
 | ✅ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
 | ✅ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
-| 🔄 | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair | codex | `worker/src/cron/reserve-adapters/resupply-pairs.` |
+| ✅ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair | codex | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ✅ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
@@ -722,7 +722,7 @@
 | ✅ | [S-072](sustainability/S-072.md) | S | config | SLOT_EXECUTION_RETENTION_SEC computed with raw 60-second multiplier instead of named const | codex | `worker/src/cron/prune-cron-history.ts:10` |
 | ⬜ | [S-073](sustainability/S-073.md) | S | testing | Filename-to-dateRange.to convention is untested |  | `src/data/changelogs/__tests__/index.test.ts:L28-` |
 | ⬜ | [S-074](sustainability/S-074.md) | M | complexity | Projector boilerplate (watermark read, since/until, limit, dryRun) is copy-pasted across 6 |  | `worker/src/lib/tape-projectors/score.ts:L40-L46,` |
-| ⬜ | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal |  | `worker/src/cron/sync-live-reserves.ts:268, worke` |
+| 🔄 | [S-075](sustainability/S-075.md) | S | coupling | Unnecessary optional chain on a statically-typed non-optional AbortSignal | codex | `worker/src/cron/sync-live-reserves.ts:268, worke` |
 | ⬜ | [S-076](sustainability/S-076.md) | S | coupling | LRU delete+set promotion in getCachedApiKeyByPrefix is undocumented, creating maintenance  |  | `worker/src/lib/api-key-core.ts:L404-L418` |
 | ⬜ | [S-077](sustainability/S-077.md) | S | docs | timeline/page.tsx stamps TIMELINE_DATE_MODIFIED with build-time new Date() at module scope |  | `src/app/timeline/page.tsx:25` |
 | ⬜ | [S-078](sustainability/S-078.md) | S | coupling | toTimestampMs from yield-history-chart-model is imported by a page-level module, coupling  |  | `src/components/yield-history-chart-model.ts:L203` |
