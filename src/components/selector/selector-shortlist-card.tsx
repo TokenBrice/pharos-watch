@@ -313,7 +313,6 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
               ? "min-h-10 rounded-full border border-foreground/60 bg-foreground px-3.5 font-medium text-background hover:bg-foreground/90"
               : "rounded-sm font-medium text-foreground underline underline-offset-4 hover:text-foreground",
           )}
-          aria-label={`Open ${rec.name} detail page`}
           aria-labelledby={`${headlineId} open-detail-label-${rec.id}`}
         >
           <span id={`open-detail-label-${rec.id}`}>Open detail</span>
