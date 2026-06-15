@@ -229,8 +229,8 @@ describe("YieldInstrumentBoard", () => {
 
   it("keeps core board and mobile card row affordances in parity", () => {
     const desktop = renderBoard(baseRow);
-    expect(screen.getAllByLabelText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByLabelText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" }).getAttribute("href")).toBe(

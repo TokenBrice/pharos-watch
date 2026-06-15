@@ -329,7 +329,8 @@ function YieldInstrumentRowBase({
         {/* APY (gauged) */}
         <div className="min-w-0">
           <MetricLabel>APY 30d</MetricLabel>
-          <div className="font-mono text-lg font-semibold leading-none tabular-nums" aria-label={labels.apySrLabel}>
+          <div className="font-mono text-lg font-semibold leading-none tabular-nums">
+            <span className="sr-only">{labels.apySrLabel}</span>
             <span aria-hidden="true">{labels.apyLabel}</span>
           </div>
           <div className="mt-1.5">
@@ -368,7 +369,8 @@ function YieldInstrumentRowBase({
         {/* PYS (gauged, hero) */}
         <div className="min-w-0">
           <MetricLabel>PYS</MetricLabel>
-          <div aria-label={labels.pysSrLabel}>
+          <div>
+            <span className="sr-only">{labels.pysSrLabel}</span>
             <YieldPysValue
               row={row}
               grade={grade}
@@ -410,7 +412,8 @@ function YieldInstrumentRowBase({
         {/* TVL (plain, lg+) */}
         <div className="hidden min-w-0 lg:block">
           <MetricLabel>TVL</MetricLabel>
-          <div className="font-mono text-sm font-medium tabular-nums" aria-label={labels.tvlSrLabel}>
+          <div className="font-mono text-sm font-medium tabular-nums">
+            <span className="sr-only">{labels.tvlSrLabel}</span>
             <span aria-hidden="true">{labels.tvlLabel}</span>
           </div>
         </div>
@@ -418,7 +421,8 @@ function YieldInstrumentRowBase({
         {/* Stability (plain, lg+) */}
         <div className="hidden min-w-0 lg:block">
           <MetricLabel>Stability</MetricLabel>
-          <div className="font-mono text-sm font-medium tabular-nums" aria-label={labels.stabilitySrLabel}>
+          <div className="font-mono text-sm font-medium tabular-nums">
+            <span className="sr-only">{labels.stabilitySrLabel}</span>
             {labels.stabilityPct !== null ? (
               <span aria-hidden="true">{labels.stabilityPct}%</span>
             ) : (
