@@ -6,6 +6,7 @@ import { CHART_AMBER, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SL
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { useSvgId } from "@/components/chart-primitives/axes";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
@@ -134,19 +135,20 @@ interface LogoScatterShapeProps {
   payload?: ScatterDataPoint;
   emphasized?: boolean;
   compact?: boolean;
+  idPrefix?: string;
 }
 
 function sanitizeSvgId(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false }: LogoScatterShapeProps) {
+function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false, idPrefix = "yield-logo" }: LogoScatterShapeProps) {
   if (typeof cx !== "number" || typeof cy !== "number" || !payload) return null;
 
   const diameter = compact ? 14 : 16;
   const radius = diameter / 2;
   const haloRadius = radius + (emphasized ? 3 : 2);
-  const clipId = `yield-logo-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
+  const clipId = `${idPrefix}-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
   const ringStroke = emphasized ? CHART_BLUE : safetyTierColor(payload.x);
 
   return (
@@ -332,14 +334,16 @@ export function YieldScatterPlot({
     [onDotClick],
   );
 
+  const logoIdPrefix = useSvgId("yield-logo");
+
   const renderLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} />,
-    [compactMarker],
+    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} idPrefix={logoIdPrefix} />,
+    [compactMarker, logoIdPrefix],
   );
 
   const renderActiveLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} emphasized />,
-    [compactMarker],
+    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} emphasized idPrefix={logoIdPrefix} />,
+    [compactMarker, logoIdPrefix],
   );
   const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
     benchmarkLabel,
