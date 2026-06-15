@@ -93,7 +93,6 @@ function mapTrackedSubgraphPriceObservations(config: {
 
 export async function fetchUniV3Data(
   graphApiKey: string | null,
-  _symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
@@ -182,7 +181,6 @@ export async function fetchUniV3Data(
 
 export async function fetchAerodromeData(
   graphApiKey: string | null,
-  _symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   chainAddressToId: Map<string, string>,
   signal?: AbortSignal,

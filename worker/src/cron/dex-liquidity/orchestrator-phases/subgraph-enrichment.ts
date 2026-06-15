@@ -27,7 +27,6 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   try {
     const uniV3Data = await fetchUniV3Data(
       params.graphApiKey,
-      params.symbolToIds,
       params.symbolToChainScopedIds,
       params.chainAddressToId,
       params.signal,
@@ -47,7 +46,6 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   try {
     const aeroData = await fetchAerodromeData(
       params.graphApiKey,
-      params.symbolToIds,
       params.symbolToChainScopedIds,
       params.chainAddressToId,
       params.signal,

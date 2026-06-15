@@ -326,7 +326,6 @@ export async function buildCurveLookups(
 /** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. */
 export async function fetchUniV3Data(
   graphApiKey: string | null,
-  symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
@@ -334,7 +333,6 @@ export async function fetchUniV3Data(
 ): Promise<UniV3Lookups> {
   return fetchUniV3SubgraphData(
     graphApiKey,
-    symbolToIds,
     symbolToChainScopedIds,
     chainAddressToId,
     signal,
@@ -345,7 +343,6 @@ export async function fetchUniV3Data(
 /** Fetch Aerodrome subgraph data for price observations and pool stability flags. */
 export async function fetchAerodromeData(
   graphApiKey: string | null,
-  symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
@@ -353,7 +350,6 @@ export async function fetchAerodromeData(
 ): Promise<AerodromeLookups> {
   return fetchAerodromeSubgraphData(
     graphApiKey,
-    symbolToIds,
     symbolToChainScopedIds,
     chainAddressToId,
     signal,
