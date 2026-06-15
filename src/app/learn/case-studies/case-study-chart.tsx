@@ -2,6 +2,7 @@
 
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import type { CaseStudyDataWidget } from "./content/types";
 
 /**
@@ -11,16 +12,22 @@ import type { CaseStudyDataWidget } from "./content/types";
  * real series exists; historical pre-collection events omit `dataWidgets`.
  */
 export function CaseStudyChart({ widget }: { widget: CaseStudyDataWidget }) {
-  const { data } = useSupplyHistory(widget.coinId);
+  const { data, error } = useSupplyHistory(widget.coinId);
 
   return (
     <figure className="overflow-hidden rounded-xl border border-border/50 bg-card/40">
-      <PegDeviationChart
-        data={data ?? []}
-        pegCurrency="USD"
-        stablecoinId={widget.coinId}
-        embedded
-      />
+      {error ? (
+        <div className="px-4 py-4 sm:px-6">
+          <QueryErrorNotice error={error} hasData={data.length > 0} />
+        </div>
+      ) : (
+        <PegDeviationChart
+          data={data}
+          pegCurrency="USD"
+          stablecoinId={widget.coinId}
+          embedded
+        />
+      )}
       <figcaption className="border-t border-border/40 px-4 py-3 text-[13px] leading-relaxed text-muted-foreground sm:px-6">
         {widget.caption}
       </figcaption>
