@@ -435,7 +435,7 @@ Key types:
 
 ## Portfolio Analyzer & Stress Test
 
-Collapsible panel on `/safety-scores` between the grade distribution bar and card grid. Two sections stacked vertically:
+Collapsible panel on `/safety-scores` between the headline stats and the controls/card grid. Two sections stacked vertically:
 
 ### Portfolio Analyzer
 
@@ -463,7 +463,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 
 ## Frontend
 
-- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with grade distribution bar, core settlement rail strip/sort affordance, portfolio/stress panel integration, simulation mode. Core settlement rail membership is a frontend view-model classification and specifically requires a reviewed offchain issuer exit route.
+- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with core settlement rail strip/sort affordance, portfolio/stress panel integration, simulation mode, and headline safety stats. Core settlement rail membership is a frontend view-model classification and specifically requires a reviewed offchain issuer exit route.
 - **Portfolio & stress panel**: `src/components/stress-test-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown; the mobile grade strip wraps and keeps the score-breakdown disclosure on its own row so the chart keeps usable width. The title and key opaque dimensions (`Resilience`, `Dependency Risk`) now expose contextual methodology hints, and the card footer links directly back to the Safety Score methodology / changelog.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
@@ -485,7 +485,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI                                                                                                           |
 | `src/components/report-card-mini.tsx`                               | Compact grid tile with simulation mode support                                                                                                        |
 | `src/components/radar-chart.tsx`                                    | Recharts radar visualization                                                                                                                          |
-| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, grade distribution, simulation mode                                                                                |
+| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, headline safety stats, and simulation mode                                                                          |
 | `src/hooks/api-hooks.ts`                                            | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()`                                                                      |
 | `src/hooks/use-portfolio.ts`                                        | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
 | `src/hooks/use-stress-test.ts`                                      | Stress test state, `computeStressedGrades` invocation, impact calculation                                                                             |
