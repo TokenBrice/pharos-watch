@@ -81,7 +81,7 @@ export function getDewsFreshness(
   nowSeconds: number,
   staleAfterSeconds: number,
 ): DewsFreshness {
-  if (!computedAt || !Number.isFinite(computedAt)) {
+  if (computedAt == null || !Number.isFinite(computedAt)) {
     return { ageSeconds: null, stale: false, label: null };
   }
 
