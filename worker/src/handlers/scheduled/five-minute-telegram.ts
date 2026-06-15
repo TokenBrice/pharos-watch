@@ -65,7 +65,10 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
   }
 }
 
-function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+function buildTelegramSlotGroups(
+  runtime: ScheduledRuntimeContext,
+  botToken: string,
+): ScheduledSlotGroup[] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
   return [
     {
@@ -78,7 +81,7 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
           run: (signal, reportProgress) =>
             dispatchTelegramAlerts(
               runtime.db,
-              runtime.env.TELEGRAM_BOT_TOKEN!,
+              botToken,
               signal,
               sharedTelegramState,
               reportProgress,
@@ -114,7 +117,9 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram scheduled lane";
-    const groups = buildTelegramSlotGroups(runtime);
+    // Token is absent: groups are only enumerated for skip-summaries; the task
+    // closures are never invoked, so an empty token placeholder is unused.
+    const groups = buildTelegramSlotGroups(runtime, "");
     const skippedJobs = [
       summarizeSkippedScheduledJob("telegram-registration-reconciliation", "missing-telegram-bot-token"),
       ...flattenScheduledSlotGroupTasks(groups).map((task) =>
@@ -163,6 +168,10 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     (result) => ({ expectedUrl: result.expectedUrl }),
   );
 
-  const summary = await runScheduledSlotGroups(runtime, "five-minute telegram slot", buildTelegramSlotGroups(runtime));
+  const summary = await runScheduledSlotGroups(
+    runtime,
+    "five-minute telegram slot",
+    buildTelegramSlotGroups(runtime, runtime.env.TELEGRAM_BOT_TOKEN),
+  );
   return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 1 });
 }
