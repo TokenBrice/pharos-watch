@@ -205,26 +205,44 @@ export async function getMintBurnReconciliation(
     }>
   ).filter((asset) => trackedIds.has(asset.id));
 
-  const [flowRows, firstSeenRows] = await Promise.all([
-    db
-      .prepare(
-        `SELECT /* pharos:status-derived:mint-burn-24h */
-           stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(now - 24 * 3600)
-      .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
-    db
-      .prepare(
-        `SELECT /* pharos:status-derived:mint-burn-first-hour */
-           stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
-         FROM mint_burn_hourly
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .all<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>(),
-  ]);
+  let flowRows: D1Result<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>;
+  let firstSeenRows: D1Result<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>;
+  try {
+    [flowRows, firstSeenRows] = await Promise.all([
+      db
+        .prepare(
+          `SELECT /* pharos:status-derived:mint-burn-24h */
+             stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .bind(now - 24 * 3600)
+        .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
+      db
+        .prepare(
+          `SELECT /* pharos:status-derived:mint-burn-first-hour */
+             stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
+           FROM mint_burn_hourly
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .all<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>(),
+    ]);
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "mint_burn_reconciliation_query_failed",
+      route: "status",
+      source: "mint_burn_hourly",
+      message: "Failed mint-burn reconciliation query",
+      error: err,
+    });
+    // Rethrow so the call site surfaces sectionErrors.mintBurnReconciliation,
+    // keeping a transient D1 failure distinguishable from the legitimate
+    // bootstrap case where no mint-burn data exists yet (returns rows: []).
+    throw err;
+  }
 
   const flowMap = new Map(
     (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
