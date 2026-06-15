@@ -90,6 +90,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     blockedUsersCleanupFailed: readMetadataNumber(record.blockedUsersCleanupFailed),
     cappedAtLimit: readMetadataBoolean(record.cappedAtLimit) === true,
     snapshotSeeded: readMetadataBoolean(record.snapshotSeeded) === true,
+    eventlessFastPath: readMetadataBoolean(record.eventlessFastPath) === true,
     skipped: readMetadataString(record.skipped) ?? readMetadataString(record.skippedReason),
     freshAttempted: readMetadataNumber(record.freshAttempted),
     freshSent: readMetadataNumber(record.freshSent),

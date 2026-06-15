@@ -229,7 +229,8 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.subscribersNotified).toBe(0);
     expect(metadata.safetyAlertSourceState).toBe("missing");
     expect(metadata.safetyAlertsSuppressed).toBe(true);
-    expect(mockSetCache).toHaveBeenCalledTimes(4);
+    expect(mockSetCache).toHaveBeenCalledTimes(5);
+    expect(mockSetCache).toHaveBeenCalledWith(db, "telegram:preset-query-failure-count", "0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 

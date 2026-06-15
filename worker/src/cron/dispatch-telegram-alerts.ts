@@ -164,6 +164,553 @@ function safetySourceFields(
   };
 }
 
+type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
+type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
+
+interface SeedPathContext {
+  db: D1Database;
+  currentSnapshots: DispatchSnapshotState["currentSnapshots"];
+  safetySnapshotNeedsSeed: boolean;
+  safetySourceAssessment: AlertSafetySourceAssessment;
+  suppressedSafetyChangesAtSeed: number;
+  pendingCapacityBefore: PendingCapacitySnapshot;
+  chatsWithActiveSnooze: number;
+  sharedState?: TelegramDispatchSharedState;
+  reportProgress?: CronProgressReporter;
+}
+
+interface EventlessFastPathContext {
+  db: D1Database;
+  botToken: string;
+  currentSnapshots: DispatchSnapshotState["currentSnapshots"];
+  safetySourceAssessment: AlertSafetySourceAssessment;
+  suppressedMethodologyChanges: number;
+  suppressedSafetyChangesAtSeed: number;
+  pendingCapacityBefore: PendingCapacitySnapshot;
+  nowSec: number;
+  chatsWithActiveSnooze: number;
+  signal?: AbortSignal;
+  sharedState?: TelegramDispatchSharedState;
+  reportProgress?: CronProgressReporter;
+}
+
+interface FullFanoutPathContext {
+  db: D1Database;
+  botToken: string;
+  snapshotState: DispatchSnapshotState;
+  events: DispatchEvents;
+  pendingCapacityBefore: PendingCapacitySnapshot;
+  nowSec: number;
+  dispatchStartedAtMs: number;
+  chatsWithActiveSnooze: number;
+  signal?: AbortSignal;
+  sharedState?: TelegramDispatchSharedState;
+  reportProgress?: CronProgressReporter;
+}
+
+async function executeSeedPath({
+  db,
+  currentSnapshots,
+  safetySnapshotNeedsSeed,
+  safetySourceAssessment,
+  suppressedSafetyChangesAtSeed,
+  pendingCapacityBefore,
+  chatsWithActiveSnooze,
+  sharedState,
+  reportProgress,
+}: SeedPathContext): Promise<DispatchResult> {
+  await reportDigestProgress(reportProgress, {
+    stage: "snapshot-seed",
+    message: "Seeding Telegram alert snapshots",
+    providerFamily: "d1",
+    itemsDone: 0,
+    itemsTotal: 4,
+    metadata: {
+      safetySnapshotNeedsSeed,
+      suppressedSafetyChangesAtSeed,
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  await writeSnapshots(db, currentSnapshots);
+  await writePresetFailureCount(db, 0);
+  await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
+  const result = emptyResult(true, chatsWithActiveSnooze);
+  result.pendingCapacityBefore = pendingCapacityBefore;
+  result.pendingCapacityAfter = pendingCapacityBefore;
+  Object.assign(result, pendingCapacityFields(pendingCapacityBefore));
+  Object.assign(
+    result,
+    safetySourceFields(
+      safetySourceAssessment,
+      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+    ),
+  );
+  result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
+  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Seeded Telegram alert snapshots without fanout",
+    providerFamily: "telegram-dispatch",
+    itemsDone: 4,
+    itemsTotal: 4,
+    metadata: {
+      snapshotSeeded: true,
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  return result;
+}
+
+async function executeEventlessFastPath({
+  db,
+  botToken,
+  currentSnapshots,
+  safetySourceAssessment,
+  suppressedMethodologyChanges,
+  suppressedSafetyChangesAtSeed,
+  pendingCapacityBefore,
+  nowSec,
+  chatsWithActiveSnooze,
+  signal,
+  sharedState,
+  reportProgress,
+}: EventlessFastPathContext): Promise<DispatchResult> {
+  await reportDigestProgress(reportProgress, {
+    stage: "pending-drain",
+    message: "Draining due Telegram pending rows on eventless run",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: Math.max(pendingCapacityBefore.due, 1),
+    metadata: {
+      eventlessFastPath: true,
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  const drainResult = pendingCapacityBefore.due > 0
+    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
+    : emptyDrainResult();
+  const expiredCount = pendingCapacityBefore.expired > 0
+    ? await cleanupExpiredPendingAlerts(db, nowSec)
+    : 0;
+  const pendingCapacityAfter =
+    pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0
+      ? await readPendingCapacitySnapshot(db, nowSec)
+      : pendingCapacityBefore;
+  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+
+  await writeSnapshots(db, currentSnapshots);
+  await writePresetFailureCount(db, 0);
+
+  const result = emptyResult(false, chatsWithActiveSnooze);
+  result.eventsDetected.suppressedMethodologyChanges = suppressedMethodologyChanges;
+  Object.assign(result, {
+    messagesSent: drainResult.sent,
+    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
+    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+    pendingAttempted: drainResult.attempted,
+    pendingDrained: drainResult.sent,
+    pendingSent: drainResult.sent,
+    pendingRetryQueued: drainResult.retryQueued,
+    pendingDropped: drainResult.dropped,
+    pendingDroppedTtlExpired: expiredCount,
+    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+    pendingDeferred: drainResult.deferred,
+    pendingRateLimited: drainResult.rateLimited,
+    pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingExpired: expiredCount,
+    ...pendingCapacityFields(pendingCapacityAfter),
+    pendingCapacityBefore,
+    pendingCapacityAfter,
+    chatsWithActiveSnooze,
+    ...safetySourceFields(safetySourceAssessment, false),
+    suppressedSafetyChangesAtSeed,
+    eventlessFastPath: true,
+  } satisfies Partial<DispatchResult>);
+
+  const hasSuccessfulEffect =
+    result.messagesSent > 0 ||
+    result.blockedUsersCleanedUp > 0 ||
+    result.pendingAttempted === 0;
+  await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Completed eventless Telegram dispatch",
+    providerFamily: "telegram-dispatch",
+    itemsDone: drainResult.attempted,
+    itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
+    metadata: {
+      eventlessFastPath: true,
+      countTotals: {
+        pendingAttempted: drainResult.attempted,
+        pendingSent: drainResult.sent,
+        pendingDeferred: drainResult.deferred,
+        pendingDropped: drainResult.dropped,
+      },
+      deferredTail: pendingTailState(pendingCapacityAfter),
+    },
+  });
+  return result;
+}
+
+async function executeFullFanoutPath({
+  db,
+  botToken,
+  snapshotState,
+  events,
+  pendingCapacityBefore,
+  nowSec,
+  dispatchStartedAtMs,
+  chatsWithActiveSnooze,
+  signal,
+  sharedState,
+  reportProgress,
+}: FullFanoutPathContext): Promise<DispatchResult> {
+  const {
+    dewsChanges,
+    depegTriggered,
+    depegResolved,
+    depegWorsening,
+    safetyChanges,
+    launchPromoted,
+    suppressedMethodologyChanges,
+    dewsIds,
+    depegIds,
+    safetyIds,
+    launchIds,
+  } = events;
+  const { currentSnapshots, safetySnapshotNeedsSeed, safetySourceAssessment } = snapshotState;
+  const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
+
+  await reportDigestProgress(reportProgress, {
+    stage: "fanout-load",
+    message: "Loading Telegram fanout subscriber inputs",
+    providerFamily: "telegram-dispatch",
+    itemsDone: 0,
+    itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length, 1),
+    metadata: {
+      countTotals: {
+        dewsIds: dewsIds.length,
+        depegIds: depegIds.length,
+        safetyIds: safetyIds.length,
+        launchIds: launchIds.length,
+      },
+    },
+  });
+  const fanoutQueryStartedAtMs = Date.now();
+  const {
+    directDewsSubs,
+    directDepegSubs,
+    directSafetySubs,
+    launchSubs,
+    presetDewsResult,
+    presetDepegResult,
+    presetSafetyResult,
+    globalDewsSubs,
+    globalDepegSubs,
+    globalSafetySubs,
+    globalLaunchSubs,
+    perCoinSnoozeMap,
+  } = await loadFanoutSubscriptionInputs(
+    db,
+    { dewsIds, depegIds, safetyIds, launchIds },
+    {
+      loadSubscriberRowsBatch,
+      loadPresetSubscriberRowsBatch,
+      loadGlobalSubscriberRows,
+      loadPerCoinSnoozeMap,
+    },
+  );
+  const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
+  const fanoutBuildStartedAtMs = Date.now();
+
+  const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
+  const presetQueryFailures = presetResults.filter((r) => r.kind === "query-failed").length;
+  const presetResolutionFailures = presetResults.filter((r) => r.kind === "resolution-failed").length;
+
+  if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
+    const failureCount = (await readPresetFailureCount(db)) + 1;
+    await writePresetFailureCount(db, failureCount);
+  }
+
+  const presetDewsSubs = presetDewsResult.kind === "ok" ? presetDewsResult.rows : new Map<string, SubscriberRow[]>();
+  const presetDepegSubs = presetDepegResult.kind === "ok" ? presetDepegResult.rows : new Map<string, SubscriberRow[]>();
+  const presetSafetySubs = presetSafetyResult.kind === "ok" ? presetSafetyResult.rows : new Map<string, SubscriberRow[]>();
+  const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
+  const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
+  const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
+
+  throwIfAborted(signal);
+
+  const alertsByChat = new Map<string, AlertsByChatEntry>();
+  routeAlertEvents(
+    dewsChanges,
+    dewsSubs,
+    globalDewsSubs,
+    alertsByChat,
+    (alerts) => alerts.dews,
+    (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
+    perCoinSnoozeMap,
+  );
+  routeAlertEvents(
+    depegTriggered,
+    depegSubs,
+    globalDepegSubs,
+    alertsByChat,
+    (alerts) => alerts.depegTriggered,
+    (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
+    perCoinSnoozeMap,
+  );
+  routeAlertEvents(
+    depegResolved,
+    depegSubs,
+    globalDepegSubs,
+    alertsByChat,
+    (alerts) => alerts.depegResolved,
+    (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
+    perCoinSnoozeMap,
+  );
+  routeAlertEvents(
+    depegWorsening,
+    depegSubs,
+    globalDepegSubs,
+    alertsByChat,
+    (alerts) => alerts.depegWorsening,
+    shouldIncludeDepegWorsening,
+    perCoinSnoozeMap,
+  );
+  routeAlertEvents(
+    safetyChanges,
+    safetySubs,
+    globalSafetySubs,
+    alertsByChat,
+    (alerts) => alerts.safety,
+    shouldIncludeSafetyForSubscriber,
+    perCoinSnoozeMap,
+  );
+  routeAlertEvents(
+    launchPromoted,
+    launchSubs,
+    globalLaunchSubs,
+    alertsByChat,
+    (alerts) => alerts.launch,
+    undefined,
+    perCoinSnoozeMap,
+  );
+
+  const subscriberQueue = buildSubscriberQueue(
+    alertsByChat,
+    (entry) =>
+      !hasEscalation(entry.alerts) ||
+      isQuietHoursActive(
+        nowSec,
+        entry.quietHoursEnabled,
+        entry.quietHoursStartUtc,
+        entry.quietHoursEndUtc,
+        entry.timezone,
+      ),
+  );
+  const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
+  const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
+  const freshCandidateChats = subscriberQueue.length;
+  const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
+  await reportDigestProgress(reportProgress, {
+    stage: "fanout-built",
+    message: "Built Telegram subscriber fanout queue",
+    providerFamily: "telegram-dispatch",
+    itemsDone: freshCandidateCount,
+    itemsTotal: Math.max(freshCandidateCount, 1),
+    metadata: {
+      countTotals: {
+        freshCandidateChats,
+        freshCandidateCount,
+        presetQueryFailures,
+        presetResolutionFailures,
+      },
+      cursor: {
+        fanoutQueryMs,
+        fanoutBuildMs,
+      },
+      perAlertTypeTargets,
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
+
+  const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
+  await reportDigestProgress(reportProgress, {
+    stage: "pending-drain",
+    message: "Draining Telegram pending queue before fresh sends",
+    providerFamily: "telegram-api",
+    itemsDone: 0,
+    itemsTotal: Math.max(pendingCapacityBefore.due, 1),
+    metadata: {
+      cursor: {
+        maxPriority: drainOnlyRiskPriority,
+      },
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  const drainResult = await drainPendingQueue(
+    db,
+    botToken,
+    TELEGRAM_PENDING_DRAIN_BUDGET,
+    signal,
+    { maxPriority: drainOnlyRiskPriority },
+  );
+
+  const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
+    loadChatsInBackoff(db, nowSec),
+    readTelegramGlobalBackoff(db, nowSec),
+  ]);
+
+  await reportDigestProgress(reportProgress, {
+    stage: "delivery",
+    message: "Sending Telegram subscriber alerts",
+    providerFamily: "telegram-api",
+    itemsDone: drainResult.attempted,
+    itemsTotal: Math.max(drainResult.attempted + freshCandidateCount, 1),
+    metadata: {
+      countTotals: {
+        pendingAttempted: drainResult.attempted,
+        pendingSent: drainResult.sent,
+        freshCandidateChats,
+        freshCandidateCount,
+      },
+      cursor: {
+        globalBackoffUntil,
+        chatsInBackoff: chatsInBackoff.size,
+      },
+      deferredTail: pendingTailState(pendingCapacityBefore),
+    },
+  });
+  const {
+    subscribersNotified,
+    freshSent,
+    freshPermanentFailures,
+    blockedUsersCleanedUp,
+    blockedUsersCleanupFailed,
+    freshAttempted,
+    freshRetryQueued,
+    freshOverflow,
+    freshDeferredPerChat,
+    pendingEnqueued,
+    cappedAtLimit,
+    perAlertType,
+  } = await deliverTelegramSubscriberQueue({
+    db,
+    botToken,
+    subscriberQueue,
+    drainResult,
+    maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
+    nowSec,
+    chatsInBackoff,
+    globalBackoffUntil,
+    dispatchStartedAtMs,
+    terminalTargetKeys: await pruneAlreadyTerminalSubscribers(db, subscriberQueue),
+    signal,
+  });
+  await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
+
+  await writeSnapshots(db, currentSnapshots);
+  const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
+  const pendingCapacityAfter = await readPendingCapacitySnapshot(db, nowSec);
+  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+  if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
+    await writePresetFailureCount(db, 0);
+  }
+
+  const result: DispatchResult = {
+    eventsDetected: {
+      dews: dewsChanges.length,
+      depeg: depegTriggered.length + depegResolved.length + depegWorsening.length,
+      depegTriggered: depegTriggered.length,
+      depegResolved: depegResolved.length,
+      depegWorsening: depegWorsening.length,
+      safety: safetyChanges.length,
+      launch: launchPromoted.length,
+      suppressedMethodologyChanges,
+    },
+    subscribersNotified,
+    messagesSent: freshSent + drainResult.sent,
+    blockedUsersCleanedUp,
+    blockedUsersCleanupFailed,
+    cappedAtLimit,
+    snapshotSeeded: false,
+    pendingAttempted: drainResult.attempted,
+    pendingDrained: drainResult.sent,
+    pendingSent: drainResult.sent,
+    pendingRetryQueued: drainResult.retryQueued,
+    pendingDropped: drainResult.dropped,
+    pendingDroppedTtlExpired: expiredCount,
+    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+    pendingDeferred: drainResult.deferred,
+    pendingRateLimited: drainResult.rateLimited,
+    pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingEnqueued,
+    pendingExpired: expiredCount,
+    ...pendingCapacityFields(pendingCapacityAfter),
+    pendingCapacityBefore,
+    pendingCapacityAfter,
+    freshAttempted,
+    freshSent,
+    freshRetryQueued,
+    freshPermanentFailures,
+    freshDeferredPerChat,
+    freshCandidateChats,
+    freshCandidateCount,
+    freshOverflow,
+    chatsWithActiveSnooze,
+    ...safetySourceFields(
+      safetySourceAssessment,
+      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+    ),
+    presetQueryFailures,
+    presetResolutionFailures,
+    presetFailure: presetQueryFailures > 0 || presetResolutionFailures > 0,
+    perAlertType,
+    perAlertTypeTargets,
+    fanoutQueryMs,
+    fanoutBuildMs,
+    fanoutTotalMs: fanoutQueryMs + fanoutBuildMs,
+    suppressedSafetyChangesAtSeed,
+  };
+
+  const attemptedMessages = result.pendingAttempted + result.freshAttempted;
+  const hasSuccessfulEffect =
+    result.messagesSent > 0 || result.blockedUsersCleanedUp > 0 || attemptedMessages === 0;
+  const systemicFreshFailure = recordSystemicFreshFailure(result);
+  await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect && !systemicFreshFailure);
+  await reportDigestProgress(reportProgress, {
+    stage: "complete",
+    message: "Completed Telegram subscriber dispatch",
+    providerFamily: "telegram-dispatch",
+    itemsDone: result.messagesSent,
+    itemsTotal: Math.max(result.pendingAttempted + result.freshAttempted, 1),
+    metadata: {
+      countTotals: {
+        messagesSent: result.messagesSent,
+        subscribersNotified,
+        freshAttempted,
+        freshSent,
+        freshRetryQueued,
+        freshOverflow,
+        pendingAttempted: drainResult.attempted,
+        pendingDrained: drainResult.sent,
+        pendingEnqueued,
+        pendingDeferred: drainResult.deferred,
+        pendingDropped: drainResult.dropped,
+      },
+      cappedAtLimit,
+      systemicFreshFailure,
+      deferredTail: pendingTailState(pendingCapacityAfter),
+    },
+  });
+
+  return result;
+}
+
 export async function dispatchTelegramAlerts(
   db: D1Database,
   botToken: string,
@@ -247,43 +794,16 @@ export async function dispatchTelegramAlerts(
     });
 
     if (mustSeedSnapshots) {
-      await reportDigestProgress(reportProgress, {
-        stage: "snapshot-seed",
-        message: "Seeding Telegram alert snapshots",
-        providerFamily: "d1",
-        itemsDone: 0,
-        itemsTotal: 4,
-        metadata: {
-          safetySnapshotNeedsSeed,
-          suppressedSafetyChangesAtSeed,
-          deferredTail: pendingTailState(pendingCapacityBefore),
-        },
-      });
-      await writeSnapshots(db, currentSnapshots);
-      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-      const result = emptyResult(true, chatsWithActiveSnooze);
-      result.pendingCapacityBefore = pendingCapacityBefore;
-      result.pendingCapacityAfter = pendingCapacityBefore;
-      Object.assign(result, pendingCapacityFields(pendingCapacityBefore));
-      Object.assign(
-        result,
-        safetySourceFields(
-          safetySourceAssessment,
-          safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-        ),
-      );
-      result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
-      assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
-      await reportDigestProgress(reportProgress, {
-        stage: "complete",
-        message: "Seeded Telegram alert snapshots without fanout",
-        providerFamily: "telegram-dispatch",
-        itemsDone: 4,
-        itemsTotal: 4,
-        metadata: {
-          snapshotSeeded: true,
-          deferredTail: pendingTailState(pendingCapacityBefore),
-        },
+      const result = await executeSeedPath({
+        db,
+        currentSnapshots,
+        safetySnapshotNeedsSeed,
+        safetySourceAssessment,
+        suppressedSafetyChangesAtSeed,
+        pendingCapacityBefore,
+        chatsWithActiveSnooze,
+        sharedState,
+        reportProgress,
       });
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
@@ -345,409 +865,47 @@ export async function dispatchTelegramAlerts(
       !safetySnapshotNeedsSeed;
 
     if (canUseEventlessFastPath) {
-      await reportDigestProgress(reportProgress, {
-        stage: "pending-drain",
-        message: "Draining due Telegram pending rows on eventless run",
-        providerFamily: "telegram-api",
-        itemsDone: 0,
-        itemsTotal: Math.max(pendingCapacityBefore.due, 1),
-        metadata: {
-          eventlessFastPath: true,
-          deferredTail: pendingTailState(pendingCapacityBefore),
-        },
-      });
-      const drainResult = pendingCapacityBefore.due > 0
-        ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
-        : emptyDrainResult();
-      const expiredCount = pendingCapacityBefore.expired > 0
-        ? await cleanupExpiredPendingAlerts(db, nowSec)
-        : 0;
-      const pendingCapacityAfter =
-        pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0
-          ? await readPendingCapacitySnapshot(db, nowSec)
-          : pendingCapacityBefore;
-      assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
-
-      await writeSnapshots(db, currentSnapshots);
-      await writePresetFailureCount(db, 0);
-
-      const result = emptyResult(false, chatsWithActiveSnooze);
-      result.eventsDetected.suppressedMethodologyChanges = suppressedMethodologyChanges;
-      Object.assign(result, {
-        messagesSent: drainResult.sent,
-        blockedUsersCleanedUp: drainResult.blockedCleanedUp,
-        blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-        pendingAttempted: drainResult.attempted,
-        pendingDrained: drainResult.sent,
-        pendingSent: drainResult.sent,
-        pendingRetryQueued: drainResult.retryQueued,
-        pendingDropped: drainResult.dropped,
-        pendingDroppedTtlExpired: expiredCount,
-        pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
-        pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
-        pendingDeferred: drainResult.deferred,
-        pendingRateLimited: drainResult.rateLimited,
-        pendingRetryAfterSec: drainResult.retryAfterSec,
-        pendingExpired: expiredCount,
-        ...pendingCapacityFields(pendingCapacityAfter),
-        pendingCapacityBefore,
-        pendingCapacityAfter,
-        chatsWithActiveSnooze,
-        ...safetySourceFields(safetySourceAssessment, false),
+      const result = await executeEventlessFastPath({
+        db,
+        botToken,
+        currentSnapshots,
+        safetySourceAssessment,
+        suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
-      } satisfies Partial<DispatchResult>);
-      (result as DispatchResult & { eventlessFastPath: boolean }).eventlessFastPath = true;
-
-      const hasSuccessfulEffect =
-        result.messagesSent > 0 ||
-        result.blockedUsersCleanedUp > 0 ||
-        result.pendingAttempted === 0;
-      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
-      await reportDigestProgress(reportProgress, {
-        stage: "complete",
-        message: "Completed eventless Telegram dispatch",
-        providerFamily: "telegram-dispatch",
-        itemsDone: drainResult.attempted,
-        itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
-        metadata: {
-          eventlessFastPath: true,
-          countTotals: {
-            pendingAttempted: drainResult.attempted,
-            pendingSent: drainResult.sent,
-            pendingDeferred: drainResult.deferred,
-            pendingDropped: drainResult.dropped,
-          },
-          deferredTail: pendingTailState(pendingCapacityAfter),
-        },
+        pendingCapacityBefore,
+        nowSec,
+        chatsWithActiveSnooze,
+        signal,
+        sharedState,
+        reportProgress,
       });
-
       return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
     }
 
-    await reportDigestProgress(reportProgress, {
-      stage: "fanout-load",
-      message: "Loading Telegram fanout subscriber inputs",
-      providerFamily: "telegram-dispatch",
-      itemsDone: 0,
-      itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length, 1),
-      metadata: {
-        countTotals: {
-          dewsIds: dewsIds.length,
-          depegIds: depegIds.length,
-          safetyIds: safetyIds.length,
-          launchIds: launchIds.length,
-        },
-      },
-    });
-    const fanoutQueryStartedAtMs = Date.now();
-    const {
-      directDewsSubs,
-      directDepegSubs,
-      directSafetySubs,
-      launchSubs,
-      presetDewsResult,
-      presetDepegResult,
-      presetSafetyResult,
-      globalDewsSubs,
-      globalDepegSubs,
-      globalSafetySubs,
-      globalLaunchSubs,
-      perCoinSnoozeMap,
-    } = await loadFanoutSubscriptionInputs(
-      db,
-      { dewsIds, depegIds, safetyIds, launchIds },
-      {
-        loadSubscriberRowsBatch,
-        loadPresetSubscriberRowsBatch,
-        loadGlobalSubscriberRows,
-        loadPerCoinSnoozeMap,
-      },
-    );
-    const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
-    const fanoutBuildStartedAtMs = Date.now();
-
-    const presetResults = [presetDewsResult, presetDepegResult, presetSafetyResult];
-    const presetQueryFailures = presetResults.filter((r) => r.kind === "query-failed").length;
-    const presetResolutionFailures = presetResults.filter((r) => r.kind === "resolution-failed").length;
-
-    if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
-      const failureCount = (await readPresetFailureCount(db)) + 1;
-      await writePresetFailureCount(db, failureCount);
-    }
-
-    const presetDewsSubs = presetDewsResult.kind === "ok" ? presetDewsResult.rows : new Map<string, SubscriberRow[]>();
-    const presetDepegSubs = presetDepegResult.kind === "ok" ? presetDepegResult.rows : new Map<string, SubscriberRow[]>();
-    const presetSafetySubs = presetSafetyResult.kind === "ok" ? presetSafetyResult.rows : new Map<string, SubscriberRow[]>();
-    const dewsSubs = mergeSubscriberMaps(directDewsSubs, presetDewsSubs);
-    const depegSubs = mergeSubscriberMaps(directDepegSubs, presetDepegSubs);
-    const safetySubs = mergeSubscriberMaps(directSafetySubs, presetSafetySubs);
-
-    throwIfAborted(signal);
-
-    const alertsByChat = new Map<string, AlertsByChatEntry>();
-    routeAlertEvents(
-      dewsChanges,
-      dewsSubs,
-      globalDewsSubs,
-      alertsByChat,
-      (alerts) => alerts.dews,
-      (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
-      perCoinSnoozeMap,
-    );
-    routeAlertEvents(
-      depegTriggered,
-      depegSubs,
-      globalDepegSubs,
-      alertsByChat,
-      (alerts) => alerts.depegTriggered,
-      (sub, event) => meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step),
-      perCoinSnoozeMap,
-    );
-    routeAlertEvents(
-      depegResolved,
-      depegSubs,
-      globalDepegSubs,
-      alertsByChat,
-      (alerts) => alerts.depegResolved,
-      (sub, event) => meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step),
-      perCoinSnoozeMap,
-    );
-    routeAlertEvents(
-      depegWorsening,
-      depegSubs,
-      globalDepegSubs,
-      alertsByChat,
-      (alerts) => alerts.depegWorsening,
-      shouldIncludeDepegWorsening,
-      perCoinSnoozeMap,
-    );
-    routeAlertEvents(
-      safetyChanges,
-      safetySubs,
-      globalSafetySubs,
-      alertsByChat,
-      (alerts) => alerts.safety,
-      shouldIncludeSafetyForSubscriber,
-      perCoinSnoozeMap,
-    );
-    routeAlertEvents(
-      launchPromoted,
-      launchSubs,
-      globalLaunchSubs,
-      alertsByChat,
-      (alerts) => alerts.launch,
-      undefined,
-      perCoinSnoozeMap,
-    );
-
-    const subscriberQueue = buildSubscriberQueue(
-      alertsByChat,
-      (entry) =>
-        !hasEscalation(entry.alerts) ||
-        isQuietHoursActive(
-          nowSec,
-          entry.quietHoursEnabled,
-          entry.quietHoursStartUtc,
-          entry.quietHoursEndUtc,
-          entry.timezone,
-        ),
-    );
-    const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
-    const perAlertTypeTargets = buildPerAlertTypeTargets(subscriberQueue);
-    const freshCandidateChats = subscriberQueue.length;
-    const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
-    await reportDigestProgress(reportProgress, {
-      stage: "fanout-built",
-      message: "Built Telegram subscriber fanout queue",
-      providerFamily: "telegram-dispatch",
-      itemsDone: freshCandidateCount,
-      itemsTotal: Math.max(freshCandidateCount, 1),
-      metadata: {
-        countTotals: {
-          freshCandidateChats,
-          freshCandidateCount,
-          presetQueryFailures,
-          presetResolutionFailures,
-        },
-        cursor: {
-          fanoutQueryMs,
-          fanoutBuildMs,
-        },
-        perAlertTypeTargets,
-        deferredTail: pendingTailState(pendingCapacityBefore),
-      },
-    });
-    const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
-
-    const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
-    await reportDigestProgress(reportProgress, {
-      stage: "pending-drain",
-      message: "Draining Telegram pending queue before fresh sends",
-      providerFamily: "telegram-api",
-      itemsDone: 0,
-      itemsTotal: Math.max(pendingCapacityBefore.due, 1),
-      metadata: {
-        cursor: {
-          maxPriority: drainOnlyRiskPriority,
-        },
-        deferredTail: pendingTailState(pendingCapacityBefore),
-      },
-    });
-    const drainResult = await drainPendingQueue(
+    const result = await executeFullFanoutPath({
       db,
       botToken,
-      TELEGRAM_PENDING_DRAIN_BUDGET,
-      signal,
-      { maxPriority: drainOnlyRiskPriority },
-    );
-
-    const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
-      loadChatsInBackoff(db, nowSec),
-      readTelegramGlobalBackoff(db, nowSec),
-    ]);
-
-    await reportDigestProgress(reportProgress, {
-      stage: "delivery",
-      message: "Sending Telegram subscriber alerts",
-      providerFamily: "telegram-api",
-      itemsDone: drainResult.attempted,
-      itemsTotal: Math.max(drainResult.attempted + freshCandidateCount, 1),
-      metadata: {
-        countTotals: {
-          pendingAttempted: drainResult.attempted,
-          pendingSent: drainResult.sent,
-          freshCandidateChats,
-          freshCandidateCount,
-        },
-        cursor: {
-          globalBackoffUntil,
-          chatsInBackoff: chatsInBackoff.size,
-        },
-        deferredTail: pendingTailState(pendingCapacityBefore),
-      },
-    });
-    const {
-      subscribersNotified,
-      freshSent,
-      freshPermanentFailures,
-      blockedUsersCleanedUp,
-      blockedUsersCleanupFailed,
-      freshAttempted,
-      freshRetryQueued,
-      freshOverflow,
-      freshDeferredPerChat,
-      pendingEnqueued,
-      cappedAtLimit,
-      perAlertType,
-    } = await deliverTelegramSubscriberQueue({
-      db,
-      botToken,
-      subscriberQueue,
-      drainResult,
-      maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
-      nowSec,
-      chatsInBackoff,
-      globalBackoffUntil,
-      dispatchStartedAtMs,
-      terminalTargetKeys: await pruneAlreadyTerminalSubscribers(db, subscriberQueue),
-      signal,
-    });
-    await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
-
-    await writeSnapshots(db, currentSnapshots);
-    const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-    const pendingCapacityAfter = await readPendingCapacitySnapshot(db, nowSec);
-    assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
-    if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
-      await writePresetFailureCount(db, 0);
-    }
-
-    const result: DispatchResult = {
-      eventsDetected: {
-        dews: dewsChanges.length,
-        depeg: depegTriggered.length + depegResolved.length + depegWorsening.length,
-        depegTriggered: depegTriggered.length,
-        depegResolved: depegResolved.length,
-        depegWorsening: depegWorsening.length,
-        safety: safetyChanges.length,
-        launch: launchPromoted.length,
+      snapshotState,
+      events: {
+        dewsChanges,
+        depegTriggered,
+        depegResolved,
+        depegWorsening,
+        safetyChanges,
+        launchPromoted,
         suppressedMethodologyChanges,
+        dewsIds,
+        depegIds,
+        safetyIds,
+        launchIds,
       },
-      subscribersNotified,
-      messagesSent: freshSent + drainResult.sent,
-      blockedUsersCleanedUp,
-      blockedUsersCleanupFailed,
-      cappedAtLimit,
-      snapshotSeeded: false,
-      pendingAttempted: drainResult.attempted,
-      pendingDrained: drainResult.sent,
-      pendingSent: drainResult.sent,
-      pendingRetryQueued: drainResult.retryQueued,
-      pendingDropped: drainResult.dropped,
-      pendingDroppedTtlExpired: expiredCount,
-      pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
-      pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
-      pendingDeferred: drainResult.deferred,
-      pendingRateLimited: drainResult.rateLimited,
-      pendingRetryAfterSec: drainResult.retryAfterSec,
-      pendingEnqueued,
-      pendingExpired: expiredCount,
-      ...pendingCapacityFields(pendingCapacityAfter),
       pendingCapacityBefore,
-      pendingCapacityAfter,
-      freshAttempted,
-      freshSent,
-      freshRetryQueued,
-      freshPermanentFailures,
-      freshDeferredPerChat,
-      freshCandidateChats,
-      freshCandidateCount,
-      freshOverflow,
+      nowSec,
+      dispatchStartedAtMs,
       chatsWithActiveSnooze,
-      ...safetySourceFields(
-        safetySourceAssessment,
-        safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-      ),
-      presetQueryFailures,
-      presetResolutionFailures,
-      presetFailure: presetQueryFailures > 0 || presetResolutionFailures > 0,
-      perAlertType,
-      perAlertTypeTargets,
-      fanoutQueryMs,
-      fanoutBuildMs,
-      fanoutTotalMs: fanoutQueryMs + fanoutBuildMs,
-      suppressedSafetyChangesAtSeed,
-    };
-
-    const attemptedMessages = result.pendingAttempted + result.freshAttempted;
-    const hasSuccessfulEffect =
-      result.messagesSent > 0 || result.blockedUsersCleanedUp > 0 || attemptedMessages === 0;
-    const systemicFreshFailure = recordSystemicFreshFailure(result);
-    await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect && !systemicFreshFailure);
-    await reportDigestProgress(reportProgress, {
-      stage: "complete",
-      message: "Completed Telegram subscriber dispatch",
-      providerFamily: "telegram-dispatch",
-      itemsDone: result.messagesSent,
-      itemsTotal: Math.max(result.pendingAttempted + result.freshAttempted, 1),
-      metadata: {
-        countTotals: {
-          messagesSent: result.messagesSent,
-          subscribersNotified,
-          freshAttempted,
-          freshSent,
-          freshRetryQueued,
-          freshOverflow,
-          pendingAttempted: drainResult.attempted,
-          pendingDrained: drainResult.sent,
-          pendingEnqueued,
-          pendingDeferred: drainResult.deferred,
-          pendingDropped: drainResult.dropped,
-        },
-        cappedAtLimit,
-        systemicFreshFailure,
-        deferredTail: pendingTailState(pendingCapacityAfter),
-      },
+      signal,
+      sharedState,
+      reportProgress,
     });
 
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };

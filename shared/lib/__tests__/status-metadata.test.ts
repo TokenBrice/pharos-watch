@@ -62,6 +62,7 @@ describe("status-metadata", () => {
       blockedUsersCleanupFailed: 0,
       cappedAtLimit: true,
       snapshotSeeded: false,
+      eventlessFastPath: false,
       skipped: "circuit-open",
       freshAttempted: 4,
       freshSent: 3,

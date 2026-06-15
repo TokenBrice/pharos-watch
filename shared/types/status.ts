@@ -471,6 +471,7 @@ export interface TelegramDispatchCronResult {
   blockedUsersCleanupFailed: number;
   cappedAtLimit: boolean;
   snapshotSeeded: boolean;
+  eventlessFastPath?: boolean;
   skipped?: string | null;
   freshAttempted: number;
   freshSent: number;
@@ -523,6 +524,7 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable 
   blockedUsersCleanupFailed: number | null;
   cappedAtLimit: boolean;
   snapshotSeeded: boolean;
+  eventlessFastPath: boolean;
   skipped: string | null;
   freshAttempted: number | null;
   freshSent: number | null;
