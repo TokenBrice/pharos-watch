@@ -23,7 +23,7 @@ import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
-import { inferVenueProtocol, resolveReviewedYieldRiskConfig } from "./source-risk";
+import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
@@ -335,6 +335,13 @@ function evaluateYieldSourceGroup(
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
       (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
+    // Reviewer-set cross-venue dependency concentration (yield v8.3): resolve by
+    // stablecoin id and attach it so it both penalizes PYS and surfaces on the row.
+    const dependencyConcentration =
+      sourceRisk?.dependencyConcentration ?? resolveDependencyConcentration(stablecoinId);
+    if (dependencyConcentration && !sourceRisk?.dependencyConcentration) {
+      sourceRisk = { ...(sourceRisk ?? {}), dependencyConcentration };
+    }
     const sourceRiskPenaltyInput =
       sourceRisk?.sourceRiskPenalty ??
       derivePysSourceRiskPenalty({
@@ -345,7 +352,7 @@ function evaluateYieldSourceGroup(
         observationCount30d,
         venueRiskTier: resolvedVenueRiskTier,
         venueRiskWeighted: resolvedVenueRiskWeighted,
-        dependencyConcentrationSeverity: sourceRisk?.dependencyConcentration?.severity ?? null,
+        dependencyConcentrationSeverity: dependencyConcentration?.severity ?? null,
       });
     const pysComponents = computePysComponents({
       apy30d,

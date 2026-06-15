@@ -1,4 +1,5 @@
 import type {
+  YieldDependencyConcentration,
   YieldDeploymentPlace,
   YieldSourceRisk,
   YieldVenueRiskTier,
@@ -713,6 +714,30 @@ export function resolveReviewedYieldRiskConfig(
 ): YieldRiskConfigEntry | null {
   const protocol = normalizeYieldRiskConfigProtocol(venueProtocol);
   return protocol == null ? null : YIELD_RISK_CONFIG[protocol];
+}
+
+/**
+ * Reviewer-set cross-venue dependency concentration, keyed by stablecoin id
+ * (yield v8.3). Captures the risk that per-venue tiering structurally misses —
+ * e.g. a vault whose strategy legs all sit behind one governance ecosystem, the
+ * single risk Yearn's own yvUSDC report flags as dominant. Not auto-derived:
+ * only set where the concentration is documented, so missing entries stay
+ * neutral. See `agents/yearn-risk-pys-plan.md` §3.3.
+ */
+export const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
+  "yvusdc-yearn": {
+    ecosystem: "Sky",
+    severity: "medium",
+    note: "Funded debt sits almost entirely in Sky-governed venues (sUSDS savings plus Spark Lend); a Sky incident would affect both legs simultaneously. Matches Yearn's own risk report flagging ~100% Sky-governance coupling.",
+    reviewedAt: "2026-06-15",
+  },
+};
+
+export function resolveDependencyConcentration(
+  stablecoinId: string | null | undefined,
+): YieldDependencyConcentration | null {
+  if (typeof stablecoinId !== "string") return null;
+  return YIELD_DEPENDENCY_CONCENTRATION[stablecoinId] ?? null;
 }
 
 function finiteNumber(value: unknown): number | null {

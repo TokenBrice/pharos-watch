@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
   buildYieldSourceRisk,
+  resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
   venueRiskWeightedOf,
@@ -199,6 +200,15 @@ describe("yield source-risk registry", () => {
       venueChain: "ethereum",
       venueRiskTier: "low",
     });
+  });
+
+  it("resolves reviewer-set dependency concentration by stablecoin id", () => {
+    const yvusdc = resolveDependencyConcentration("yvusdc-yearn");
+    expect(yvusdc?.ecosystem).toBe("Sky");
+    expect(yvusdc?.severity).toBe("medium");
+    expect(yvusdc?.note.length ?? 0).toBeGreaterThan(0);
+    expect(resolveDependencyConcentration("usdc-circle")).toBeNull();
+    expect(resolveDependencyConcentration(null)).toBeNull();
   });
 
   it("normalizes sourceRiskScore from the resolved sourceRiskPenalty", () => {
