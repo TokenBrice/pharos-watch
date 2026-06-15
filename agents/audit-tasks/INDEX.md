@@ -7,13 +7,13 @@
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 641 | 1 | 0 | 72 | 19 |
+| Count | 638 | 4 | 0 | 72 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
 | redundancy | 266 | 34 | 1 | 0 | 221 |
-| quality | 315 | 29 | 0 | 0 | 279 |
+| quality | 315 | 29 | 3 | 0 | 276 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -318,7 +318,7 @@
 |---|---|---|---|---|---|---|
 | ✅ | [Q-007](quality/Q-007.md) | S | security | gitSubcommandTokens bypass: multiple -C flags or git global options defeat agent hook guar | codex | `scripts/ci/pharos-change-contract.mjs:L669-L681` |
 | ✅ | [Q-010](quality/Q-010.md) | M | dead-code | WeakMap override-reason metadata is inaccessible on the merged top-level registry | codex | `shared/lib/redemption-backstop-configs/factory.t` |
-| ⬜ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read |  | `worker/src/cron/reserve-adapters/sky-makercore.t` |
+| 🔄 | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
 | ⬜ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts |  | `src/app/screener/picker/use-selector.ts:L163-L16` |
@@ -504,7 +504,7 @@
 | ⬜ | [Q-187](quality/Q-187.md) | L | type-safety | StatusResponseSchema and StatusHistoryResponseSchema use passthrough().transform(v => v as |  | `shared/types/status.ts:L1046, L1056` |
 | ⬜ | [Q-188](quality/Q-188.md) | S | error-handling | snapshot-safety-grade-history uses manual signal?.aborted throws instead of throwIfAborted |  | `worker/src/cron/snapshot-safety-grade-history.ts` |
 | ⬜ | [Q-189](quality/Q-189.md) | S | naming | cronLeaseQueryFailed silently excluded from CronHealthSnapshot despite influencing orphan  |  | `worker/src/lib/status/cron-health.ts:L8-L23 (int` |
-| ⬜ | [Q-190](quality/Q-190.md) | S | dead-code | Unused parameter _visibleCount in getHomepageDiscoveryCycleLength |  | `src/lib/homepage-discovery.ts:L135-L141` |
+| 🔄 | [Q-190](quality/Q-190.md) | S | dead-code | Unused parameter _visibleCount in getHomepageDiscoveryCycleLength | codex | `src/lib/homepage-discovery.ts:L135-L141` |
 | ⬜ | [Q-191](quality/Q-191.md) | S | naming | stats.totalCommits name misrepresents its meaning |  | `src/data/changelogs/types.ts:L27, src/components` |
 | ✅ | [Q-192](quality/Q-192.md) | S | error-handling | parse-version-upload.mjs: no error handling around per-line JSON.parse of wrangler JSONL o | codex | `.github/scripts/parse-version-upload.mjs:L11` |
 | ✅ | [Q-193](quality/Q-193.md) | S | type-safety | generate-reserve-coverage-audit.ts uses `file://${process.argv[1]}` template string for ma | codex | `scripts/maintenance/generate-reserve-coverage-au` |
@@ -545,7 +545,7 @@
 | ⬜ | [Q-228](quality/Q-228.md) | S | error-handling | useCompareShareActions silently swallows all canvas/render errors in handleTwitterShare |  | `src/hooks/use-compare-share-actions.ts:L123-L150` |
 | ⬜ | [Q-229](quality/Q-229.md) | S | docs | fieldNotes word-count constraint is JSDoc-only and unverifiable at authoring time |  | `src/data/changelogs/types.ts:L21-26` |
 | ⬜ | [Q-230](quality/Q-230.md) | S | complexity | pickRelatedStudies performs two O(n) linear scans per call inside an O(n) loop |  | `src/app/learn/case-studies/case-study-body.tsx:L` |
-| ⬜ | [Q-231](quality/Q-231.md) | S | error-handling | RefreshCountdown timer only counts up but never drives an actual refresh — stale seconds s |  | `src/components/status/refresh-countdown.tsx:L1-L` |
+| 🔄 | [Q-231](quality/Q-231.md) | S | error-handling | RefreshCountdown timer only counts up but never drives an actual refresh — stale seconds s | codex | `src/components/status/refresh-countdown.tsx:L1-L` |
 | ⬜ | [Q-232](quality/Q-232.md) | M | naming | Hardcoded AI model name in DigestNameplate creates a brittle sustainability dependency |  | `src/components/digest-nameplate.tsx:L39` |
 | ⬜ | [Q-233](quality/Q-233.md) | S | type-safety | ApiKeySelfServeIssueResponse hardcodes rateLimitPerMinute: 30 as a literal type — unnecess |  | `shared/types/api-key-requests.ts:L51` |
 | ⬜ | [Q-234](quality/Q-234.md) | S | type-safety | backfill-mint-burn block-range bounds validation is dead for any supplied param |  | `worker/src/api/backfill-mint-burn.ts:112-131,189` |
