@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**56/733 done (8%)**  `██░░░░░░░░░░░░░░░░░░`
+**59/733 done (8%)**  `██░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 653 | 5 | 0 | 56 | 19 |
+| Count | 653 | 2 | 0 | 59 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 29 | 2 | 0 | 225 |
-| quality | 315 | 19 | 3 | 0 | 286 |
+| redundancy | 266 | 31 | 0 | 0 | 225 |
+| quality | 315 | 20 | 2 | 0 | 286 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -169,7 +169,7 @@
 | ✅ | [R-135](redundancy/R-135.md) | S | dead-code | Redundant local variable assignments for stablecoin counts in AboutPage | codex | `src/app/about/page.tsx:L231-L243` |
 | ⬜ | [R-136](redundancy/R-136.md) | S | dead-code | `entries` field on `MethodologyChangelogRouteDefinition` is exposed but never consumed ext |  | `src/app/methodology/changelog-route-factory.tsx:` |
 | ⬜ | [R-137](redundancy/R-137.md) | S | dead-code | feedPages and datasetPages are permanently empty arrays in sitemap.ts |  | `src/app/sitemap.ts:462-484` |
-| 🔄 | [R-138](redundancy/R-138.md) | S | wrapper | fieldClassName() is a zero-argument function returning a constant string | codex | `src/components/status/api-keys-panel-parts.tsx:L` |
+| ✅ | [R-138](redundancy/R-138.md) | S | wrapper | fieldClassName() is a zero-argument function returning a constant string | codex | `src/components/status/api-keys-panel-parts.tsx:L` |
 | ⬜ | [R-139](redundancy/R-139.md) | S | clone | intensity is clamped twice in the FlowMachine pipeline |  | `src/components/flow-machine-scene.tsx:49-53, src` |
 | ⬜ | [R-140](redundancy/R-140.md) | S | dead-code | Redundant alias `handleFocusSearch` that is the same function as `openGlobalCommandPalette |  | `src/components/providers.tsx:L66, L129, L140` |
 | ⬜ | [R-141](redundancy/R-141.md) | S | clone | `sleep` defined independently in sync-from-api.ts and smoke-runtime.mjs |  | `scripts/lib/sync-from-api.ts:L64, scripts/lib/sm` |
@@ -208,7 +208,7 @@
 | 🚫 | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
 | ✅ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
-| 🔄 | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union | codex | `worker/src/api/api-key-requests/rate-limit.ts:14` |
+| ✅ | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union | codex | `worker/src/api/api-key-requests/rate-limit.ts:14` |
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
 | ⬜ | [R-180](redundancy/R-180.md) | S | clone | normalizeStringArray duplicated between response.ts and digest-intelligence.ts |  | `worker/src/cron/daily-digest/response.ts:L128-L1` |
@@ -490,7 +490,7 @@
 | ⬜ | [Q-141](quality/Q-141.md) | S | complexity | compare-pages.ts: build-time throw on module evaluation can produce opaque build errors |  | `src/lib/compare-pages.ts:L142, L50-L74` |
 | ⬜ | [Q-151](quality/Q-151.md) | M | error-handling | SVG sanitizer does not strip `href` / `xlink:href` attributes enabling CSS-based data exfi |  | `src/app/alt-pegs/fiat-world-atlas/world-map.tsx:` |
 | ⬜ | [Q-175](quality/Q-175.md) | S | naming | Typo in function name: precisStaleness instead of preciseStaleness |  | `src/components/selector/selector-shortlist-card.` |
-| 🔄 | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent | codex | `src/components/yield-scatter-plot.tsx:L165` |
+| ✅ | [Q-176](quality/Q-176.md) | S | dead-code | Deprecated SVG xlinkHref attribute left alongside the modern href equivalent | codex | `src/components/yield-scatter-plot.tsx:L165` |
 | ⬜ | [Q-177](quality/Q-177.md) | S | type-safety | supply-ratio capacityModel missing confidence field in usn-noon.ts and yusd-aegis.ts |  | `shared/lib/redemption-backstop-configs/stablecoi` |
 | ✅ | [Q-178](quality/Q-178.md) | S | complexity | yield-venue-risk-calibration.ts: main() body is not indented inside the function braces | codex | `scripts/maintenance/yield-venue-risk-calibration` |
 | ✅ | [Q-179](quality/Q-179.md) | S | complexity | `docs/api-reference.md` is read twice in the same `runDocSyncChecks` call | codex | `scripts/lib/doc-sync/checks.ts:L329-L415` |

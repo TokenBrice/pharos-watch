@@ -63,15 +63,15 @@ function buildDaySegments(
       ? (sorted[0].to as DaySegment["status"])
       : (sorted[0].from as DaySegment["status"]) ?? "unknown";
 
+  let transitionIndex = 0;
   for (const day of segments) {
     const dayStart = new Date(day.date).getTime() / 1000;
     const dayEnd = dayStart + 86400;
 
     // Apply any transitions that happened before or during this day
-    for (const t of sorted) {
-      if (t.at < dayEnd) {
-        runningStatus = t.to as DaySegment["status"];
-      }
+    while (transitionIndex < sorted.length && sorted[transitionIndex].at < dayEnd) {
+      runningStatus = sorted[transitionIndex].to as DaySegment["status"];
+      transitionIndex += 1;
     }
 
     day.status = runningStatus;
