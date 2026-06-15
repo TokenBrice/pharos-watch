@@ -34,6 +34,24 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(filters.safetyPegStabilityMin).toBe(80);
   });
 
+  it("peg floors match the engine's exclusion helpers (Q-019)", () => {
+    const floor = (profile: "treasury" | "yield" | "trading", tol: "zero" | "tight" | "moderate") =>
+      selectorAnswersToScreenerFilters(makeInput({ profile, depegTolerance: tol })).filters
+        .safetyPegStabilityMin;
+    // Treasury → treasuryPegScoreFloor
+    expect([floor("treasury", "zero"), floor("treasury", "tight"), floor("treasury", "moderate")]).toEqual([
+      80, 70, 60,
+    ]);
+    // Yield → yieldPegScoreFloor
+    expect([floor("yield", "zero"), floor("yield", "tight"), floor("yield", "moderate")]).toEqual([
+      65, 55, 45,
+    ]);
+    // Trading → tradingPegScoreFloor (moderate=70 was the stale 75)
+    expect([floor("trading", "zero"), floor("trading", "tight"), floor("trading", "moderate")]).toEqual([
+      85, 80, 70,
+    ]);
+  });
+
   it("Treasury × horizon=6mplus raises dependency-risk floor to 65", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "treasury", horizon: "6mplus" }),
