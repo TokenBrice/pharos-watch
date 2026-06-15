@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, writeFileSync } from "fs";
-import { extname, join, relative, resolve } from "path";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { extname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 
 export const TARGET_FILES = [
