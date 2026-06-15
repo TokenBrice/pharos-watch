@@ -15,7 +15,6 @@ export const content: CaseStudy = {
     "On 22 March 2026 ~80M unbacked USR were minted against six figures of real collateral and sold for ~$25M of ETH; USR fell below $0.80 within minutes and printed as low as ~$0.025.",
     "A sound delta-neutral book and real-time reserve attestation protect the value of issued supply — they say nothing about whether tokens can be issued without assets behind them.",
     "Burns and an allowlist trimmed the net loss toward ~$34M, but the arithmetic was fixed once the supply existed; USR was left ~55% collateralized and frozen on 27 April 2026.",
-    "This was a minting-authority failure, not a hedge-design failure. The delta-neutral book and the attested reserves were never the weak point; the weak point was the control surface that could create supply faster than any reserve could back it. The attacker converted the minted USR through DEXs into roughly $25M of ETH. The RLP insurance layer was wiped out, a downstream lender lost a multi-million-dollar position, and USR never recovered: by April the protocol carried roughly $95M of assets against roughly $173M of liabilities. The asset was frozen on 27 April 2026.",
   ],
   primaryCoinId: "usr-resolv",
   depegEventSlug: "usr-2026-03-22",
