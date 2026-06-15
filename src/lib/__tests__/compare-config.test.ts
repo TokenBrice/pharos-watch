@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FROZEN_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
-import { COMPARE_COIN_OPTIONS, resolveCompareSelectedIds } from "../compare-config";
+import { COMPARE_COIN_OPTIONS, COMPARISON_PRESETS, resolveCompareSelectedIds } from "../compare-config";
 
 describe("resolveCompareSelectedIds", () => {
   it("keeps canonical ids only", () => {
@@ -28,6 +28,16 @@ describe("COMPARE_COIN_OPTIONS", () => {
     for (const option of COMPARE_COIN_OPTIONS) {
       const expected = FROZEN_IDS.has(option.id);
       expect(option.frozen === true).toBe(expected);
+    }
+  });
+});
+
+describe("COMPARISON_PRESETS", () => {
+  it("references only ids present in the readable registry", () => {
+    for (const preset of COMPARISON_PRESETS) {
+      for (const id of preset.coins) {
+        expect(READABLE_IDS.has(id)).toBe(true);
+      }
     }
   });
 });
