@@ -18,6 +18,29 @@ import digests from "@data/digests.json";
 const allDigests = digests as DigestContentEntry[];
 const digestByDate = new Map(allDigests.map((d) => [d.date, d]));
 
+const DIGEST_RESEARCH_LINKS = [
+  {
+    href: "/stability-index/",
+    label: "Pharos Stability Index",
+    description: "Market-regime context behind the digest's PSI references.",
+  },
+  {
+    href: "/depeg/",
+    label: "Depeg tracker",
+    description: "Active and resolved peg events that feed daily and weekly recaps.",
+  },
+  {
+    href: "/flows/",
+    label: "Mint/burn flows",
+    description: "Supply pressure and Bank Run Gauge inputs behind the archive.",
+  },
+  {
+    href: "/safety-scores/",
+    label: "Safety scores",
+    description: "Current report-card grades and stress-test context for mentioned stablecoins.",
+  },
+] as const;
+
 export function generateStaticParams() {
   return allDigests.map((d) => ({ date: d.date }));
 }
@@ -181,6 +204,29 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
       </article>
 
       <DigestSnapshot date={digest.date} />
+
+      <section aria-labelledby="digest-research-links" className="space-y-3 border-t border-border/50 pt-5">
+        <div className="space-y-1">
+          <p className="pharos-kicker">Research Context</p>
+          <h2 id="digest-research-links" className="text-base font-semibold text-foreground">
+            Follow the signals behind this {isWeekly ? "weekly recap" : "daily digest"}
+          </h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {DIGEST_RESEARCH_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
+            >
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                {link.label}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{link.description}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <nav aria-label="Digest navigation" className="flex items-center justify-between pt-4 border-t border-border/50 text-sm">
         {older ? (

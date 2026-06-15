@@ -29,6 +29,17 @@ const compareHubFaqItems = [
   },
 ] as const;
 
+const PRIORITY_COMPARISON_SLUGS = new Set([
+  "usde-ethena-vs-susde-ethena",
+  "lusd-liquity-vs-bold-liquity",
+  "paxg-paxos-vs-xaut-tether",
+  "usdt-tether-vs-tusd-trueusd",
+  "usdt-tether-vs-usdd-tron-dao-reserve",
+  "usdc-circle-vs-usdg-paxos",
+]);
+
+const priorityComparisonPages = STATIC_COMPARISON_PAGES.filter((page) => PRIORITY_COMPARISON_SLUGS.has(page.slug));
+
 export const metadata = buildPageMetadata({
   title: "Compare Stablecoins: Side-by-Side Analysis",
   description: compareDescription,
@@ -66,7 +77,7 @@ function ComparePairDirectory() {
     <section aria-labelledby="compare-pair-directory-title" className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Indexed Pair Directory</p>
+          <p className="pharos-kicker">Static Pair Directory</p>
           <h2 id="compare-pair-directory-title" className="text-lg font-semibold tracking-tight text-foreground">
             Popular stablecoin comparisons
           </h2>
@@ -83,6 +94,37 @@ function ComparePairDirectory() {
           <ArrowRight aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
+
+      {priorityComparisonPages.length > 0 ? (
+        <section aria-labelledby="priority-comparison-title" className="space-y-3 border-y border-border/60 py-4">
+          <div className="space-y-1.5">
+            <p className="pharos-kicker">Priority Paths</p>
+            <h3 id="priority-comparison-title" className="text-base font-semibold text-foreground">
+              High-intent comparison briefs
+            </h3>
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              These selected pair pages cover high-intent wrapper, gold-token, Liquity, and issuer-substitute searches.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {priorityComparisonPages.map((page) => (
+              <Link
+                key={page.href}
+                href={page.href}
+                className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
+              >
+                <p className="font-mono text-xs text-muted-foreground">
+                  {page.left.symbol} / {page.right.symbol}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                  {page.shortTitle}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{page.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {STATIC_COMPARISON_PAGES.map((page) => (

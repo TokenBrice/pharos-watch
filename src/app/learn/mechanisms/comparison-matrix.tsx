@@ -1,6 +1,7 @@
+import Link from "next/link";
 import type { MechanismArchetype } from "@shared/types";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import { getMechanismArchetypeLabel } from "@shared/lib/classification";
+import { getMechanismArchetypeLabel, getMechanismExplainerPath } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import {
   TableBody,
@@ -190,7 +191,12 @@ export function MechanismComparisonMatrix() {
                     i % 2 === 1 ? "bg-muted/10" : "bg-background",
                   )}
                 >
-                  {getMechanismArchetypeLabel(archetype)}
+                  <Link
+                    href={getMechanismExplainerPath(archetype)}
+                    className="pharos-focus-ring rounded-sm underline-offset-4 hover:text-frost-blue hover:underline"
+                  >
+                    {getMechanismArchetypeLabel(archetype)}
+                  </Link>
                 </TableHead>
                 {COLUMNS.map((col) => (
                   <TableCell

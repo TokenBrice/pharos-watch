@@ -326,7 +326,7 @@ The archive page has two zones:
 
 The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, optional active-depeg **risk badge**, **PSI badge** (pill colored by condition band), and **total market cap**. A month picker dropdown filters the table by month. PSI, mcap, and risk data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd`, `riskSignal` — parsed from the stored `input_data` JSON).
 
-The archive route also emits server-rendered digest links for crawlability plus `CollectionPage` / `ItemList` JSON-LD over the checked-in `data/digests.json` entries. Detail pages remain the canonical `Article` surfaces for individual digests.
+The archive route also emits a visible server-rendered weekly recap cluster, server-rendered digest links for crawlability, plus `CollectionPage` / `ItemList` JSON-LD over the checked-in `data/digests.json` entries. Detail pages remain the canonical `Article` surfaces for individual digests.
 
 ### Detail pages
 
@@ -338,7 +338,7 @@ The archive route also emits server-rendered digest links for crawlability plus 
 
 Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query. The snapshot API filters target rows by requested type, so daily and weekly rows generated on the same UTC date cannot shadow each other.
 
-Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus a deterministic intelligence panel and up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The intelligence panel renders `riskTape`, yesterday's trigger outcomes, "what changed", and next triggers when present in stored `input_data`. The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Includes JSON-LD Article structured data and prev/next navigation.
+Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus a deterministic intelligence panel and up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). The intelligence panel renders `riskTape`, yesterday's trigger outcomes, "what changed", and next triggers when present in stored `input_data`. The Active Depegs card uses `/api/digest-snapshot` depeg episodes active on that date, ordered by absolute deviation, with stored `input_data.topDepegs` only as fallback. If snapshot context fails or has no usable input data, the page renders a small unavailable-state card instead of silently dropping the section. Detail pages also render a small research-context link grid back to PSI, depeg, flow, and safety-score surfaces. Includes JSON-LD Article structured data and prev/next navigation.
 
 ---
 

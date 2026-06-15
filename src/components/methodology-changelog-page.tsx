@@ -39,6 +39,7 @@ export function MethodologyChangelogPage({
   jsonLdIdentifier,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
+    { id: "overview", label: "Overview" },
     { id: "latest-updates", label: "Latest" },
     ...entries.map((entry) => ({
       id: methodologyChangelogEntryId(entry.version),
@@ -99,6 +100,40 @@ export function MethodologyChangelogPage({
 
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{lead}</p>
       </div>
+
+      <section
+        id="overview"
+        className="scroll-mt-28 rounded-[1.5rem] border border-border/60 bg-card/70 px-5 py-5 sm:px-6"
+      >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
+          <div className="space-y-2">
+            <p className="pharos-kicker">What This Controls</p>
+            <h2 className="text-xl font-semibold text-foreground">{title} version history</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Use this changelog to trace how Pharos changed the related scoring, data-source, threshold, or
+              interpretation rules over time. The latest card below is the current public contract; older entries are
+              retained so historical charts and citations can be read against the rules active at the time.
+            </p>
+          </div>
+          <div className="space-y-2 rounded-2xl border border-border/50 bg-background/45 px-4 py-4">
+            <p className="pharos-kicker">Primary References</p>
+            <div className="flex flex-col gap-2 text-sm">
+              <Link
+                href="/methodology/"
+                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue"
+              >
+                Read the current methodology
+              </Link>
+              <Link
+                href="/docs/"
+                className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue"
+              >
+                Browse the public docs archive
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <LongformScrollspyNav
         sections={navSections}

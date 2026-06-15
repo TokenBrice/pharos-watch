@@ -19,6 +19,31 @@ import { MechanismComparisonMatrix } from "./comparison-matrix";
 import { ARCHETYPE_CONTENT } from "./content";
 import { ExplainerPageShell } from "./explainer-page-shell";
 
+const FEATURED_MECHANISM_PATHS: ReadonlyArray<{
+  archetype: MechanismArchetype;
+  label: string;
+  description: string;
+}> = [
+  {
+    archetype: "rwa-credit-fund",
+    label: "RWA credit fund stablecoins",
+    description:
+      "Start here for credit-fund collateral, NAV marks, redemption gates, and why off-chain loan books fail differently from T-bills.",
+  },
+  {
+    archetype: "tbill",
+    label: "Tokenized Treasury stablecoins",
+    description:
+      "Compare the cleaner short-duration Treasury model before reading credit-fund designs with longer asset and gate risk.",
+  },
+  {
+    archetype: "algorithmic",
+    label: "Algorithmic stablecoins",
+    description:
+      "Use the reflexive failure model as the contrast case for undercollateralized designs and collapse-style case studies.",
+  },
+];
+
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mechanism Explainers",
   description:
@@ -53,6 +78,39 @@ export default function MechanismExplainersHub() {
         }}
       />
       <MechanismJsonLd />
+      <section aria-labelledby="mechanism-start-here-title" className="space-y-4 border-y border-border/60 py-5">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Start Here</p>
+          <h2 id="mechanism-start-here-title" className="text-xl font-semibold text-foreground">
+            Collateral paths to read first
+          </h2>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            Three high-signal explainers for readers comparing off-chain collateral, fund gates, and reflexive peg
+            mechanics.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {FEATURED_MECHANISM_PATHS.map((item) => (
+            <Link
+              key={item.archetype}
+              href={getMechanismExplainerPath(item.archetype)}
+              className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
+            >
+              <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                {item.label}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
+                Read the explainer
+                <ArrowUpRight
+                  className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
       <MechanismComparisonMatrix />
       <ol className="divide-y divide-border/60">
         {MECHANISM_ARCHETYPE_VALUES.map((archetype: MechanismArchetype, index: number) => {

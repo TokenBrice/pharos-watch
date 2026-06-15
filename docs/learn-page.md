@@ -26,7 +26,7 @@ The case-study detail route is static-exported through `generateStaticParams()` 
 
 ## Case Studies
 
-`CASE_STUDY_LIST` in `src/app/learn/case-studies/content/index.ts` is the canonical display, sitemap, and static-param order. The hub renders the list as editorial rows with an outcome chip (`survived`, `wounded`, `died`) and archetype accent from `ARCHETYPE_VISUALS`.
+`CASE_STUDY_LIST` in `src/app/learn/case-studies/content/index.ts` is the canonical display, sitemap, and static-param order. The hub first renders a small server-rendered "Start Here" cluster for evergreen reflexive-collapse studies, then renders the full list as editorial rows with an outcome chip (`survived`, `wounded`, `died`) and archetype accent from `ARCHETYPE_VISUALS`.
 
 Each detail page renders:
 

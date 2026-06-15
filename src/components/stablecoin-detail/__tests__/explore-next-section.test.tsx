@@ -41,4 +41,29 @@ describe("ExploreNextSection", () => {
       "/screener/?mechanisms=cdp&lifecycle=active",
     );
   });
+
+  it("links static comparison tiles to the crawlable brief, not only the live tool", () => {
+    render(
+      <ExploreNextSection
+        coin={coin}
+        related={[]}
+        staticComparisonPages={[
+          {
+            href: "/compare/test-cdp-dollar-vs-usdc-circle/",
+            shortTitle: "TCDP vs USDC",
+            leftId: "test-cdp-dollar",
+            rightId: "usdc-circle",
+            counterpartId: "usdc-circle",
+            counterpartSymbol: "USDC",
+            counterpartName: "USD Coin",
+          },
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Open static comparison brief: TCDP vs USDC" }).getAttribute("href"),
+    ).toBe("/compare/test-cdp-dollar-vs-usdc-circle/");
+  });
 });

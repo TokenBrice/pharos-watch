@@ -179,14 +179,14 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
 
           {staticComparisonPages.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Side-by-side comparisons with structural context.</p>
+              <p className="text-xs text-muted-foreground">Static comparison briefs with structural context.</p>
               <div className="grid gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 sm:grid-cols-2 xl:grid-cols-3">
                 {staticComparisonPages.map((page) => (
                   <Link
                     key={page.href}
-                    href={buildLiveCompareUrl([page.leftId, page.rightId])}
+                    href={page.href}
                     className="pharos-focus-ring group flex min-h-12 items-center gap-2.5 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent"
-                    aria-label={`Open live comparison: ${page.shortTitle}`}
+                    aria-label={`Open static comparison brief: ${page.shortTitle}`}
                     title={page.counterpartName}
                   >
                     <StablecoinLogo src={logos[page.counterpartId]} name={page.counterpartName} size={18} />

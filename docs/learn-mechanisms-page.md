@@ -70,7 +70,7 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 9. **"Tracked universe"** (`TrackedCoinList`) — kicker + `<h2>` + `<ul>` of all active coins via `getActiveByArchetype` (variants nested). Each row: mono ticker + name + right arrow (no note). Footer links to the screener plus `+N upcoming` / `+N frozen` deep-links.
 10. **"Continue reading"** — section above a top border. 2-column grid of color-on-hover row links (text + bottom border turn `frost-blue` on hover), with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`06`) + tracked/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
+The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a server-rendered "Start Here" cluster for high-signal collateral/failure-mode paths, a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. The matrix links each mechanism label directly to its archetype explainer so the first comparison surface is also a crawlable deep-link hub. Each table-of-contents row: numbered index (`01`–`06`) + tracked/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
 ---
 

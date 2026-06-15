@@ -25,6 +25,21 @@ const digestEntries = digests as {
   digestType?: "daily" | "weekly";
 }[];
 
+const weeklyDigestEntries = digestEntries.filter((entry) => entry.digestType === "weekly").slice(0, 8);
+
+function formatDigestDate(dateStr: string): string {
+  const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function DigestArchivePage() {
   return (
     <FeaturePageShell
@@ -82,6 +97,36 @@ export default function DigestArchivePage() {
           Join the Pharos Telegram channel&nbsp;&rarr;
         </Link>
       </CalloutBanner>
+
+      {weeklyDigestEntries.length > 0 ? (
+        <section aria-labelledby="weekly-recap-index" className="space-y-4 border-y border-border/60 py-5">
+          <div className="space-y-2">
+            <p className="pharos-kicker">Weekly Recaps</p>
+            <h2 id="weekly-recap-index" className="text-xl font-semibold text-foreground">
+              Weekly market recaps
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              Weekly recaps synthesize the daily tape into higher-signal archive pages for market context, PSI shifts,
+              depeg pressure, flows, liquidity, and safety-grade movement.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {weeklyDigestEntries.map((entry) => (
+              <Link
+                key={entry.date}
+                href={`/digest/${entry.date}/`}
+                className="pharos-focus-ring group block rounded-lg border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:bg-accent"
+              >
+                <p className="font-mono text-xs uppercase text-muted-foreground">{formatDigestDate(entry.date)}</p>
+                <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                  {entry.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{entry.text}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <DigestArchiveClient />
 

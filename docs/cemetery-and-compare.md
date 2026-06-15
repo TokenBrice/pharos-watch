@@ -112,7 +112,7 @@ Primary files:
 ### Route shell and SEO
 
 - `src/app/compare/page.tsx` is the indexable live comparison entry point. It uses `buildPageMetadata(...)` with canonical `/compare/`, serves the live client through `createClientFeaturePage(...)`, and keeps the client tool as the primary on-page workflow.
-- The `/compare/` page also server-renders a crawlable pair directory from `STATIC_COMPARISON_PAGES` plus a compare FAQ. The directory links to every static pair brief and to matching live compare-tool URLs; the FAQ emits FAQ JSON-LD through `FaqSection`.
+- The `/compare/` page also server-renders a crawlable pair directory from `STATIC_COMPARISON_PAGES` plus a compare FAQ. The directory includes a priority static-pair cluster for high-intent wrapper, gold-token, Liquity, and issuer-substitute searches, then links to every static pair brief and to matching live compare-tool URLs; the FAQ emits FAQ JSON-LD through `FaqSection`.
 - `src/app/compare/[slug]/page.tsx` is the indexable static comparison surface. It statically generates params from `STATIC_COMPARISON_PAGES`, builds per-page metadata from each page descriptor, and calls `notFound()` for unknown slugs.
 - Static comparison URLs follow `/compare/<left-id>-vs-<right-id>/`, with metadata/title/description derived from `src/lib/compare-pages.ts`.
 - Static comparison pages emit route-specific `WebPage` + `ItemList` JSON-LD from `buildStaticComparisonJsonLd(...)`, including the two compared stablecoins as `Thing` nodes and the visible comparison rows as `PropertyValue` items.
