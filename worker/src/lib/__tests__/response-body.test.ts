@@ -53,6 +53,7 @@ describe("cancelResponseBodyQuietly", () => {
   it("cancels the body when present", async () => {
     const cancel = vi.fn(async () => undefined);
     const response = {
+      bodyUsed: false,
       body: { cancel },
     } as unknown as Response;
 
@@ -60,8 +61,20 @@ describe("cancelResponseBodyQuietly", () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
+  it("does not cancel responses whose body has already been consumed", async () => {
+    const cancel = vi.fn(async () => undefined);
+    const response = {
+      bodyUsed: true,
+      body: { cancel },
+    } as unknown as Response;
+
+    await expect(cancelResponseBodyQuietly(response)).resolves.toBeUndefined();
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
   it("swallows cancellation errors", async () => {
     const response = {
+      bodyUsed: false,
       body: {
         cancel: vi.fn(async () => {
           throw new Error("cannot cancel");
