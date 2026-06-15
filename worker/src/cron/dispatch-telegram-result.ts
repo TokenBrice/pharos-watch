@@ -1,5 +1,5 @@
 import type { TelegramDispatchCronResult } from "@shared/types";
-import { TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending-queue";
+import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending-queue";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
 import type { readPendingCapacitySnapshot } from "./telegram-pending-queue";
@@ -62,7 +62,7 @@ function emptyPendingCapacity() {
     oldestDuePendingAgeSec: null,
     estimatedDrainTimeSec: 0,
     drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
-    dispatchIntervalSec: 5 * 60,
+    dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
   } satisfies Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
 }
 
