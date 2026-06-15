@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**44/733 done (6%)**  `█░░░░░░░░░░░░░░░░░░░`
+**47/733 done (6%)**  `█░░░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 667 | 3 | 0 | 44 | 19 |
+| Count | 661 | 6 | 0 | 47 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 25 | 3 | 0 | 228 |
-| quality | 315 | 11 | 0 | 0 | 297 |
+| redundancy | 266 | 27 | 2 | 0 | 227 |
+| quality | 315 | 12 | 4 | 0 | 292 |
 | sustainability | 152 | 8 | 0 | 0 | 142 |
 
 ## redundancy (266)
@@ -151,14 +151,14 @@
 | ⬜ | [R-117](redundancy/R-117.md) | S | clone | gradeRank() duplicated with divergent NR semantics across two files |  | `src/components/stablecoin-detail/safety-score-hi` |
 | ⬜ | [R-118](redundancy/R-118.md) | S | clone | scheduleIdle() is a near-clone in two component files |  | `src/components/home-alt-hero-chart-gate.tsx:29-4` |
 | ⬜ | [R-119](redundancy/R-119.md) | S | dead-code | getDepegRowPegSeries is a no-op stub wrapping a fixed placeholder array |  | `src/components/depeg-tracker-table.tsx:L68-L74` |
-| 🔄 | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta | codex | `shared/lib/stablecoins/schema.ts:L126-L128` |
+| ✅ | [R-120](redundancy/R-120.md) | S | clone | isReadableStablecoinStatus duplicates isReadableStablecoinMeta | codex | `shared/lib/stablecoins/schema.ts:L126-L128` |
 | ⬜ | [R-121](redundancy/R-121.md) | S | clone | Same calendar dates aliased under 3-4 different constant names across files |  | `shared/lib/redemption-backstop-configs/review-da` |
 | ⬜ | [R-122](redundancy/R-122.md) | S | clone | Duplicate depeg-step type-guard: isDepegStep vs isDepegStepValue |  | `worker/src/api/telegram-webhook-settings-shared.` |
 | ⬜ | [R-123](redundancy/R-123.md) | S | clone | SyncBlacklistApiErrorConfig type is private in sync-support.ts but re-declared inline in s |  | `worker/src/cron/blacklist/sync-support.ts:L29-L3` |
 | ⬜ | [R-124](redundancy/R-124.md) | S | clone | CrawlStats zero-initialization object literal copy-pasted three times |  | `worker/src/cron/dex-liquidity/fetch-crawlers.ts:` |
 | ⬜ | [R-125](redundancy/R-125.md) | S | clone | Two private getMetaString helpers with identical signatures |  | `worker/src/cron/daily-digest/response.ts:L264-L2` |
 | ⬜ | [R-126](redundancy/R-126.md) | S | dead-code | toAttemptMessage is a single-line pass-through wrapper with no added value |  | `worker/src/cron/sync-live-reserves-shared.ts:189` |
-| ⬜ | [R-127](redundancy/R-127.md) | S | dead-code | Dead re-export of isMissingTableError in source-state/fallback.ts |  | `worker/src/cron/dews/source-state/fallback.ts:14` |
+| 🔄 | [R-127](redundancy/R-127.md) | S | dead-code | Dead re-export of isMissingTableError in source-state/fallback.ts | codex | `worker/src/cron/dews/source-state/fallback.ts:14` |
 | ⬜ | [R-128](redundancy/R-128.md) | S | clone | sumPegBucketValues duplicates shared sumPegBuckets |  | `worker/src/cron/sync-stablecoins/phase-helpers.t` |
 | ⬜ | [R-129](redundancy/R-129.md) | S | clone | toPositiveFiniteNumber defined three times with diverging return types |  | `worker/src/cron/sync-stablecoins/supplemental-as` |
 | 🚫 | [R-130](redundancy/R-130.md) | S | dead-code | loadDexLiquidityMap is an exported thin wrapper with zero callers |  | `worker/src/lib/dex-liquidity.ts:L58-L63` |
@@ -207,7 +207,7 @@
 | ⬜ | [R-173](redundancy/R-173.md) | S | wrapper | getResolvedDynamicEndpointDescriptor performs a redundant third descriptor lookup for admi |  | `shared/lib/api-endpoints/validation.ts:L181-193` |
 | 🚫 | [R-174](redundancy/R-174.md) | S | dead-code | variant-display.badgeClass is never read and is byte-identical to chipClass |  | `shared/lib/variant-display.ts:8-34` |
 | ⬜ | [R-175](redundancy/R-175.md) | S | clone | Parallel CSV download implementation in csv-export.ts and exports/csv.ts |  | `src/lib/csv-export.ts:1-20, src/lib/exports/csv.` |
-| 🔄 | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
+| ✅ | [R-176](redundancy/R-176.md) | S | dead-code | Duplicate metadata key skipped/skippedReason in preflight-skip log row | codex | `worker/src/handlers/scheduled/preflight-skip.ts:` |
 | ⬜ | [R-177](redundancy/R-177.md) | S | dead-code | Dead members in ApiKeyRequestRateLimitScope union |  | `worker/src/api/api-key-requests/rate-limit.ts:14` |
 | ⬜ | [R-178](redundancy/R-178.md) | S | clone | Preset label lookup duplicated between setup wizard and action-runner |  | `worker/src/api/telegram-webhook-setup.ts:L93-L98` |
 | ⬜ | [R-179](redundancy/R-179.md) | S | wrapper | token-batch-runner.ts is a 3-line file exporting a single interface used nowhere directly |  | `worker/src/cron/dex-liquidity/token-batch-runner` |
@@ -432,7 +432,7 @@
 | | ID | E | Category | Title | Owner | Loc |
 |---|---|---|---|---|---|---|
 | ✅ | [Q-005](quality/Q-005.md) | S | complexity | buildCompositionLayout contains unreachable guard conditions | codex | `src/app/chains/[chain]/view-model.ts:17-29` |
-| ⬜ | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb |  | `shared/lib/selector/yield-source.ts:L70-L71` |
+| 🔄 | [Q-006](quality/Q-006.md) | S | dead-code | Dead null-coalescence in yield-source risk scoring (sourceRiskInverted always returns numb | codex | `shared/lib/selector/yield-source.ts:L70-L71` |
 | ⬜ | [Q-008](quality/Q-008.md) | S | type-safety | aria-label and aria-labelledby both set on the same Link in selector-shortlist-card — ARIA |  | `src/components/selector/selector-shortlist-card.` |
 | ⬜ | [Q-009](quality/Q-009.md) | S | complexity | serve-static-export.mjs introduces a redundant alias that adds a full module-level promise |  | `scripts/maintenance/serve-static-export.mjs:L119` |
 | ⬜ | [Q-017](quality/Q-017.md) | S | error-handling | exploit-notice-banner URL parser drops all but the first URL and silently discards text be |  | `src/components/exploit-notice-banner.tsx:L11-L35` |
@@ -497,7 +497,7 @@
 | ⬜ | [Q-180](quality/Q-180.md) | S | security | Hardcoded personal email address in a user-visible error message |  | `src/lib/api-key-self-serve.ts:88` |
 | ⬜ | [Q-181](quality/Q-181.md) | S | dead-code | psiPresent metadata field is always true in snapshot-public-dataset.ts |  | `worker/src/cron/snapshot-public-dataset.ts:454` |
 | ✅ | [Q-182](quality/Q-182.md) | S | docs | check-phishing-signatures.mjs: spec comment diverges from implementation; 'yellow' severit | codex | `scripts/ci/check-phishing-signatures.mjs:L7-L11,` |
-| ⬜ | [Q-183](quality/Q-183.md) | S | complexity | injectCashtags rebuilds a large RegExp from all tracked stablecoin symbols on every call |  | `worker/src/lib/twitter.ts:L61-L66` |
+| 🔄 | [Q-183](quality/Q-183.md) | S | complexity | injectCashtags rebuilds a large RegExp from all tracked stablecoin symbols on every call | codex | `worker/src/lib/twitter.ts:L61-L66` |
 | 🚫 | [Q-184](quality/Q-184.md) | S | naming | pricing-pipeline/v1.ts uses 4-space indentation; all other changelog data files use 2-spac |  | `shared/data/methodology-changelogs/pricing-pipel` |
 | ⬜ | [Q-185](quality/Q-185.md) | S | naming | window.setTimeout used instead of global setTimeout in client component |  | `src/app/learn/case-studies/case-study-share.tsx:` |
 | ✅ | [Q-186](quality/Q-186.md) | S | naming | check-node-modules-fresh.mjs uses console.warn for all output including success, making CI | codex | `scripts/ci/check-node-modules-fresh.mjs:L25-L58` |
@@ -512,7 +512,7 @@
 | ⬜ | [Q-195](quality/Q-195.md) | S | naming | Hardcoded 55-minute OXR rate-limit window lacks named constant |  | `worker/src/cron/sync-fx-rates-helpers.ts:738` |
 | ⬜ | [Q-196](quality/Q-196.md) | S | type-safety | dateRange.from/to are untyped strings; sort correctness relies on undocumented format assu |  | `src/data/changelogs/types.ts:L16, src/data/chang` |
 | ⬜ | [Q-197](quality/Q-197.md) | S | naming | `takeaways[4]` in `usr-resolv-2026.ts` is a multi-sentence prose paragraph, violating the  |  | `src/app/learn/case-studies/content/usr-resolv-20` |
-| ⬜ | [Q-198](quality/Q-198.md) | S | complexity | check-cron-connection-budget.ts: printReport couples to global CRON_CONNECTION_BUDGET, byp |  | `scripts/ci/check-cron-connection-budget.ts:L183-` |
+| 🔄 | [Q-198](quality/Q-198.md) | S | complexity | check-cron-connection-budget.ts: printReport couples to global CRON_CONNECTION_BUDGET, byp | codex | `scripts/ci/check-cron-connection-budget.ts:L183-` |
 | ⬜ | [Q-199](quality/Q-199.md) | S | error-handling | SectionBanner swallows clipboard write rejection silently |  | `src/components/stablecoin-detail/section-banner.` |
 | ⬜ | [Q-200](quality/Q-200.md) | S | naming | Malformed aria-label on the peak supply-move link |  | `src/components/home-alt-mini-cards/supply-moves-` |
 | ⬜ | [Q-201](quality/Q-201.md) | S | complexity | HomeAltHeroChart calls makeScales redundantly — once per area path and once per top-line p |  | `src/components/home-alt-hero-chart.tsx:L119-L173` |
@@ -522,7 +522,7 @@
 | ⬜ | [Q-205](quality/Q-205.md) | S | type-safety | ApiKeySelfServeCadence is a plain TypeScript union type with no Zod schema — unlike every  |  | `shared/types/api-key-requests.ts:L15-L20` |
 | ⬜ | [Q-206](quality/Q-206.md) | M | error-handling | use-status-history builds /api/status-history URL inline, bypassing the shared API_PATHS h |  | `src/hooks/use-status-history.ts:L18-L25` |
 | ⬜ | [Q-207](quality/Q-207.md) | S | clone | TOTAL_VALUE_SELECTOR (0xd4c3eea0) defined independently in two adapter files |  | `worker/src/cron/reserve-adapters/blast-usdb-yiel` |
-| ⬜ | [Q-208](quality/Q-208.md) | S | naming | M0 adapter metadata comment `cashUnits: 'milli-usd-to-micro-usd'` is factually wrong |  | `worker/src/cron/reserve-adapters/m0.ts:L63, L171` |
+| ✅ | [Q-208](quality/Q-208.md) | S | naming | M0 adapter metadata comment `cashUnits: 'milli-usd-to-micro-usd'` is factually wrong | codex | `worker/src/cron/reserve-adapters/m0.ts:L63, L171` |
 | ⬜ | [Q-209](quality/Q-209.md) | S | error-handling | sync-bluechip setTimeout delay does not respect AbortSignal |  | `worker/src/cron/sync-bluechip.ts:L127` |
 | ⬜ | [Q-210](quality/Q-210.md) | S | type-safety | isUsableGeckoId filters via substring 'wrong' — undocumented sentinel, possible false posi |  | `worker/src/cron/sync-stablecoins/enrich-prices-p` |
 | ⬜ | [Q-211](quality/Q-211.md) | S | docs | Generic homepage or section-landing hrefs used for high-severity annotations, violating cu |  | `shared/data/annotations/curated-annotations.ts:L` |
@@ -556,7 +556,7 @@
 | ⬜ | [Q-239](quality/Q-239.md) | S | security | dexscreener.ts spoofs a Chrome browser User-Agent and browser headers |  | `worker/src/lib/dexscreener.ts:L14-L22` |
 | ⬜ | [Q-240](quality/Q-240.md) | S | type-safety | GraphQL query in D1 analytics fetch uses the wrong CF variable type annotation |  | `worker/src/lib/status/d1-usage.ts:L206` |
 | ⬜ | [Q-241](quality/Q-241.md) | S | testing | dews source-state fallback.ts at 66.7% coverage with no direct tests for resolveBootstrapA |  | `worker/src/cron/dews/source-state/fallback.ts:L3` |
-| ⬜ | [Q-242](quality/Q-242.md) | S | type-safety | SummaryItem.href accepts any string with no path/URL contract |  | `src/data/changelogs/types.ts:L11` |
+| 🔄 | [Q-242](quality/Q-242.md) | S | type-safety | SummaryItem.href accepts any string with no path/URL contract | codex | `src/data/changelogs/types.ts:L11` |
 | ⬜ | [Q-243](quality/Q-243.md) | S | type-safety | SectionKicker requires className even when no extra styling is needed |  | `src/app/learn/_shared/section-primitives.tsx:16` |
 | ⬜ | [Q-244](quality/Q-244.md) | S | complexity | CurrencyFlag inlines all flag SVGs at module level rather than deferring unused paths |  | `src/app/yield/currency-flag.tsx:L30-L136` |
 | ⬜ | [Q-245](quality/Q-245.md) | S | error-handling | forgetMe dispatches through optimistic mutate instead of imperative performMutation |  | `src/app/pharoswatchbot/app/use-mini-app-mutation` |
