@@ -1,6 +1,7 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { escapeHtml } from "../lib/telegram";
+import { formatTelegramAge } from "../lib/telegram-format-age";
 import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
@@ -353,15 +354,7 @@ function formatSnoozeDuration(seconds: number): string {
 }
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
-  if (ts == null || !Number.isFinite(ts)) return "";
-  const ageSec = Math.max(0, nowSec - ts);
-  return formatRelativeAgeSeconds(ageSec, {
-    suffix: "old",
-    nowLabel: "fresh",
-    nowThresholdSec: 90,
-    rounding: "round",
-    dayThresholdSec: 172800,
-  });
+  return formatTelegramAge(ts, nowSec);
 }
 
 function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {

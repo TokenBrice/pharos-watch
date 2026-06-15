@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../lib/telegram";
+import { formatTelegramAge } from "../../lib/telegram-format-age";
 import { loadTelegramChatHealthDiagnostics } from "../../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "../../cron/telegram-quiet-hours";
 import {
@@ -31,12 +32,12 @@ function coerceCount(value: unknown): number {
 }
 
 function formatAge(ts: number | null, nowSec: number): string {
-  if (ts == null) return "Not recorded yet";
-  const age = Math.max(0, nowSec - ts);
-  if (age < 90) return "just now";
-  if (age < 90 * 60) return `${Math.round(age / 60)} min ago`;
-  if (age < 48 * 3600) return `${Math.round(age / 3600)} h ago`;
-  return `${Math.round(age / 86400)} d ago`;
+  return formatTelegramAge(ts, nowSec, {
+    invalidFallback: "Not recorded yet",
+    suffix: "ago",
+    nowLabel: "just now",
+    unitStyle: "short",
+  });
 }
 
 function formatSnooze(untilTs: number | null | undefined, nowSec: number): string {

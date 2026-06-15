@@ -1,7 +1,7 @@
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
+import { formatTelegramAge } from "../lib/telegram-format-age";
 import type { ReportCard, DimensionKey } from "@shared/types/report-cards";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
@@ -19,15 +19,7 @@ const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
-  if (ts == null || !Number.isFinite(ts)) return "unknown age";
-  const ageSec = Math.max(0, nowSec - ts);
-  return formatRelativeAgeSeconds(ageSec, {
-    suffix: "old",
-    nowLabel: "fresh",
-    nowThresholdSec: 90,
-    rounding: "round",
-    dayThresholdSec: 172800,
-  });
+  return formatTelegramAge(ts, nowSec, { invalidFallback: "unknown age" });
 }
 
 function truncate(text: string, max = 220): string {
