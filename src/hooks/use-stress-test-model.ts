@@ -3,6 +3,7 @@ import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/sta
 import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
+import { buildReportCardLookup } from "@/lib/stablecoin-lookups";
 import { parseEnumSearchParam, parseStablecoinIdSearchParam } from "@/lib/url-storage-codecs";
 
 export interface StressTestImpact {
@@ -81,10 +82,7 @@ export function parseStressSelectionFromSearch(
 }
 
 export function buildReportCardMap(reportData: ReportCardsResponse | undefined): Map<string, ReportCard> {
-  if (!reportData) return new Map();
-  const cardMap = new Map<string, ReportCard>();
-  for (const card of reportData.cards) cardMap.set(card.id, card);
-  return cardMap;
+  return buildReportCardLookup(reportData?.cards);
 }
 
 export function buildTargetableCoins(reportData: ReportCardsResponse | undefined): StressTargetableCoin[] {

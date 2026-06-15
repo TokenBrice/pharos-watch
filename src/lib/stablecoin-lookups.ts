@@ -11,9 +11,20 @@ export function buildPegSummaryCoinMap(
   return map;
 }
 
+export function buildReportCardLookup(
+  cards: readonly ReportCard[] | null | undefined,
+): Map<string, ReportCard> {
+  const map = new Map<string, ReportCard>();
+  if (!cards) return map;
+  for (const card of cards) {
+    map.set(card.id, card);
+  }
+  return map;
+}
+
 export function buildReportCardMap(
   cards: readonly ReportCard[] | null | undefined,
 ): Record<string, ReportCard> | undefined {
   if (!cards) return undefined;
-  return Object.fromEntries(cards.map((card) => [card.id, card]));
+  return Object.fromEntries(buildReportCardLookup(cards));
 }
