@@ -1,3 +1,5 @@
+import { createServer } from "node:net";
+
 export function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -84,6 +86,57 @@ export function normalizeRoute(input) {
 
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function canListen(host, port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once("error", () => {
+      resolve(false);
+    });
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen({ host, port });
+  });
+}
+
+export function allocatePort(host, { errorMessage = "Could not allocate local port" } = {}) {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.once("listening", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      server.close(() => {
+        if (port == null) {
+          reject(new Error(errorMessage));
+        } else {
+          resolve(port);
+        }
+      });
+    });
+    server.listen({ host, port: 0 });
+  });
+}
+
+export async function resolveStaticExportPort(
+  host,
+  {
+    env = process.env,
+    preferredPort = 4173,
+    allocationErrorMessage,
+    onFallback,
+  } = {},
+) {
+  const explicitPort = env.STATIC_EXPORT_PORT?.trim();
+  if (explicitPort) return Number.parseInt(explicitPort, 10);
+
+  if (await canListen(host, preferredPort)) return preferredPort;
+
+  const fallbackPort = await allocatePort(host, { errorMessage: allocationErrorMessage });
+  onFallback?.({ host, preferredPort, fallbackPort });
+  return fallbackPort;
 }
 
 export function formatError(error) {

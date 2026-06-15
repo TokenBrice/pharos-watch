@@ -3,11 +3,10 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { access, rm, writeFile, readFile } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { sleep } from "../lib/smoke-runtime.mjs";
+import { resolveStaticExportPort, sleep } from "../lib/smoke-runtime.mjs";
 
 const OUT_DIR = new URL("../../out", import.meta.url).pathname;
 const SERVER_LOG = join(tmpdir(), `pages-smoke-server-${process.pid}.log`);
@@ -49,52 +48,6 @@ function buildBaseUrl(host, port) {
   return `http://${hostname}:${port}`;
 }
 
-function canListen(host, port) {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once("error", () => {
-      resolve(false);
-    });
-    server.once("listening", () => {
-      server.close(() => resolve(true));
-    });
-    server.listen({ host, port });
-  });
-}
-
-function allocatePort(host) {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.once("error", reject);
-    server.once("listening", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : null;
-      server.close(() => {
-        if (port == null) {
-          reject(new Error("Could not allocate local static-export smoke port"));
-        } else {
-          resolve(String(port));
-        }
-      });
-    });
-    server.listen({ host, port: 0 });
-  });
-}
-
-async function resolveStaticExportPort(host) {
-  const explicitPort = process.env.STATIC_EXPORT_PORT?.trim();
-  if (explicitPort) return explicitPort;
-
-  const preferredPort = "4173";
-  if (await canListen(host, Number.parseInt(preferredPort, 10))) {
-    return preferredPort;
-  }
-
-  const fallbackPort = await allocatePort(host);
-  console.warn(`[pages-smoke] ${host}:${preferredPort} is already in use; using ${host}:${fallbackPort}.`);
-  return fallbackPort;
-}
-
 // ------------------------------------------------------------------
 // Server lifecycle
 // ------------------------------------------------------------------
@@ -104,14 +57,19 @@ const siteProxySecret = firstNonEmpty(
   process.env.SITE_API_SHARED_SECRET,
 );
 const staticExportHost = process.env.STATIC_EXPORT_HOST ?? "127.0.0.1";
-const staticExportPort = await resolveStaticExportPort(staticExportHost);
+const staticExportPort = await resolveStaticExportPort(staticExportHost, {
+  allocationErrorMessage: "Could not allocate local static-export smoke port",
+  onFallback: ({ host, preferredPort, fallbackPort }) => {
+    console.warn(`[pages-smoke] ${host}:${preferredPort} is already in use; using ${host}:${fallbackPort}.`);
+  },
+});
 const staticExportBaseUrl = buildBaseUrl(staticExportHost, staticExportPort);
 const serverEnv = {
   ...process.env,
   ...(apiKey ? { STATIC_EXPORT_API_KEY: apiKey } : {}),
   ...(siteProxySecret ? { STATIC_EXPORT_SITE_API_SHARED_SECRET: siteProxySecret } : {}),
   STATIC_EXPORT_HOST: staticExportHost,
-  STATIC_EXPORT_PORT: staticExportPort,
+  STATIC_EXPORT_PORT: String(staticExportPort),
   ...pickEnv("STATIC_EXPORT_"),
 };
 

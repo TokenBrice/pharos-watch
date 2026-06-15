@@ -3,11 +3,11 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
-import { createServer } from "node:net";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { createStaticExportServer } from "./serve-static-export.mjs";
+import { resolveStaticExportPort } from "../lib/smoke-runtime.mjs";
 
 const OUT_DIR = path.resolve("out");
 const DEFAULT_HOST = "127.0.0.1";
@@ -111,47 +111,6 @@ function timestampSlug(date = new Date()) {
 
 function buildBaseUrl(host, port) {
   return `http://${host}:${port}`;
-}
-
-function canListen(host, port) {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once("error", () => {
-      resolve(false);
-    });
-    server.once("listening", () => {
-      server.close(() => resolve(true));
-    });
-    server.listen({ host, port });
-  });
-}
-
-function allocatePort(host) {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.once("error", reject);
-    server.once("listening", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : null;
-      server.close(() => {
-        if (port == null) {
-          reject(new Error("Could not allocate local Lighthouse port"));
-        } else {
-          resolve(port);
-        }
-      });
-    });
-    server.listen({ host, port: 0 });
-  });
-}
-
-async function resolveStaticExportPort(host) {
-  const explicitPort = process.env.STATIC_EXPORT_PORT?.trim();
-  if (explicitPort) return Number.parseInt(explicitPort, 10);
-
-  const preferredPort = 4173;
-  if (await canListen(host, preferredPort)) return preferredPort;
-  return allocatePort(host);
 }
 
 async function waitForReady(url) {
@@ -258,7 +217,9 @@ async function main() {
 
   if (!targetUrl) {
     const host = process.env.STATIC_EXPORT_HOST?.trim() || DEFAULT_HOST;
-    const port = await resolveStaticExportPort(host);
+    const port = await resolveStaticExportPort(host, {
+      allocationErrorMessage: "Could not allocate local Lighthouse port",
+    });
     const app = createStaticExportServer({ host, port, rootDir: OUT_DIR });
     server = app.server;
     await app.listen();

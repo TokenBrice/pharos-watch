@@ -1,6 +1,14 @@
+import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import { parseBoolean, parseCliOptions, readCliValue } from "../lib/smoke-runtime.mjs";
+import {
+  allocatePort,
+  canListen,
+  parseBoolean,
+  parseCliOptions,
+  readCliValue,
+  resolveStaticExportPort,
+} from "../lib/smoke-runtime.mjs";
 
 describe("smoke-runtime CLI helpers", () => {
   it("parses boolean-ish env values with a fallback", () => {
@@ -27,5 +35,51 @@ describe("smoke-runtime CLI helpers", () => {
 
   it("reports missing option values with the option name", () => {
     expect(() => readCliValue(["--url"], 0, "--url")).toThrow("--url requires a value");
+  });
+
+  it("allocates numeric local ports for smoke servers", async () => {
+    const port = await allocatePort("127.0.0.1");
+
+    expect(Number.isInteger(port)).toBe(true);
+    expect(port).toBeGreaterThan(0);
+    expect(await canListen("127.0.0.1", port)).toBe(true);
+  });
+
+  it("resolves explicit and fallback static-export ports as numbers", async () => {
+    expect(
+      await resolveStaticExportPort("127.0.0.1", {
+        env: { STATIC_EXPORT_PORT: "49231" },
+      }),
+    ).toBe(49231);
+
+    const server = createServer();
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen({ host: "127.0.0.1", port: 0 }, resolve);
+    });
+    const address = server.address();
+    const preferredPort = typeof address === "object" && address ? address.port : null;
+    expect(preferredPort).toBeTypeOf("number");
+
+    const fallbackCalls = [];
+    try {
+      const fallbackPort = await resolveStaticExportPort("127.0.0.1", {
+        env: {},
+        preferredPort,
+        onFallback: (event) => fallbackCalls.push(event),
+      });
+
+      expect(Number.isInteger(fallbackPort)).toBe(true);
+      expect(fallbackPort).not.toBe(preferredPort);
+      expect(fallbackCalls).toEqual([
+        {
+          host: "127.0.0.1",
+          preferredPort,
+          fallbackPort,
+        },
+      ]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 });
