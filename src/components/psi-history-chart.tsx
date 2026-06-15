@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback, useState } from "react";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -46,8 +46,10 @@ export function ScoreChart({
 }) {
   const psiScoreGradientId = useSvgId("psi-score");
   const chartRef = useRef<HTMLDivElement>(null);
-  const handlePngExport = useCallback(() => {
-    downloadChartPng(chartRef, "pharos-psi-history");
+  const [exportError, setExportError] = useState<string | null>(null);
+  const handlePngExport = useCallback(async () => {
+    const exported = await downloadChartPng(chartRef, "pharos-psi-history");
+    setExportError(exported ? null : "Chart export failed. Try again from this browser.");
   }, []);
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const isMobile = useIsMobile();
@@ -95,6 +97,11 @@ export function ScoreChart({
           </CardAction>
         </CardHeader>
       )}
+      {showHeader && exportError ? (
+        <p className="px-6 pb-0 text-xs text-destructive" role="alert">
+          {exportError}
+        </p>
+      ) : null}
       <CardContent className={showHeader ? undefined : "px-4 pt-4 pb-2"}>
         {(() => {
           const chartHeight = showHeader ? "h-[250px] sm:h-[350px]" : "h-[250px] sm:h-[336px]";
