@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   POSTMAN_FOLDERS,
   PUBLIC_API_ARTIFACT_ENDPOINTS,
@@ -171,13 +171,19 @@ function renderEnvironment() {
   }, null, 2)}\n`;
 }
 
-syncGeneratedArtifacts({
-  artifacts: [
-    { path: COLLECTION_OUTPUT, contents: renderCollection() },
-    { path: ENVIRONMENT_OUTPUT, contents: renderEnvironment() },
-  ],
-  check: CHECK_MODE,
-  staleMessage: "Postman exports are out of date. Run `tsx scripts/maintenance/generate-postman-collection.ts`.",
-  currentMessage: "Postman exports are current",
-  writtenMessage: "Generated Postman collection and environment",
-});
+function main() {
+  syncGeneratedArtifacts({
+    artifacts: [
+      { path: COLLECTION_OUTPUT, contents: renderCollection() },
+      { path: ENVIRONMENT_OUTPUT, contents: renderEnvironment() },
+    ],
+    check: CHECK_MODE,
+    staleMessage: "Postman exports are out of date. Run `tsx scripts/maintenance/generate-postman-collection.ts`.",
+    currentMessage: "Postman exports are current",
+    writtenMessage: "Generated Postman collection and environment",
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
