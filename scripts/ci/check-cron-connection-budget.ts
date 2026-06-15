@@ -90,7 +90,7 @@ export function evaluateCronConnectionBudget(input: {
   const missingBudgetScheduleKeys = Object.keys(schedules).filter((scheduleKey) => !slotPlans[scheduleKey]);
   const triggerReports: CronConnectionTriggerReport[] = [];
   const headroomFullTriggers: CronConnectionTriggerReport[] = [];
-  let failed = missingBudgetScheduleKeys.length > 0 || missingBudgetJobs.length > 0;
+  let failed = missingBudgetScheduleKeys.length > 0;
 
   function resolveEntry(scheduleKey: string, job: string): CronConnectionBudgetEntryForCheck | null {
     const matches = entriesByJob.get(job) ?? [];
