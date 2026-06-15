@@ -1,10 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CoinLockup } from "@/components/depeg-resolver-row-card-shared";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/tooltip";
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import {
   DDRR_PUBLIC_WARNING,
@@ -337,27 +335,6 @@ function Kicker({ children }: { children: ReactNode }) {
   );
 }
 
-function CoinLockup({
-  row,
-  logos,
-}: {
-  row: Pick<DdrrRow, "stablecoinId" | "symbol" | "name">;
-  logos?: Record<string, string>;
-}) {
-  return (
-    <Link
-      href={buildStablecoinUrl(row.stablecoinId)}
-      className="pharos-focus-ring group/lockup flex min-w-0 items-center gap-2 rounded-sm"
-    >
-      <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={22} />
-      <span className="truncate text-sm font-semibold text-foreground group-hover/lockup:underline">
-        {row.symbol}
-      </span>
-      <span className="truncate text-xs text-muted-foreground">{row.name}</span>
-    </Link>
-  );
-}
-
 /** Scored-vs-maturing progress: a filled segment over a muted track plus a count caption. */
 function CalibrationBar({
   scored,
@@ -599,7 +576,7 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
       )}
     >
       <div className="min-w-0 sm:col-start-1 sm:row-start-1">
-        <CoinLockup row={row} logos={logos} />
+        <CoinLockup row={row} logos={logos} logoSize={22} />
       </div>
       <Badge
         variant="outline"
