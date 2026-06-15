@@ -128,6 +128,28 @@ describe("resolveOutlook — acceptance cases", () => {
     expect(r.tier).toBe("recovery_unlikely");
   });
 
+  it("non-frozen terminal status (dead) is treated as terminal → recovery_unlikely", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -500 }),
+      coin({ status: "dead", mechanismArchetype: "cdp" }),
+      baseSupply(),
+      baseLive(),
+    );
+    expect(r.tier).toBe("recovery_unlikely");
+  });
+
+  it("terminal coin in an overpeg break stays recovery_unlikely (no contradictory verdict)", () => {
+    const r = resolveOutlook(
+      event({ direction: "above", peakDeviationBps: 300 }),
+      coin({ status: "frozen", mechanismArchetype: "cdp", authorityPosture: "none-resolved" }),
+      baseSupply(),
+      baseLive({ liquidityScore: 70 }),
+    );
+    expect(r.tier).toBe("recovery_unlikely");
+    // The severe freeze/seizure kill must accompany the terminal verdict.
+    expect(r.factors.some((f) => f.code === "K3_freeze_seizure" && f.severity === "severe")).toBe(true);
+  });
+
   it("overpeg is quasi-certain to recover, unless premium is sticky", () => {
     const recoverable = resolveOutlook(
       event({ direction: "above", peakDeviationBps: 300 }),

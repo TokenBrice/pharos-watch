@@ -9,6 +9,7 @@
  */
 
 import type { DdrFactor, DdrResolution, DdrResolutionTier } from "../../types/depeg-resolver";
+import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
 import type { DdrActiveEventInput, DdrCoinStructural, DdrLiveContext, DdrSupplyContext } from "./inputs";
 import { depthBucket } from "./strata";
 
@@ -166,7 +167,9 @@ export function resolveOutlook(
   if (active.currentDeviationBps == null) insufficientReasons.push(DDR_INSUFFICIENT_LIVE_PRICE_REASON);
 
   // Frozen/dead coin sitting in an open event is terminal context by definition.
-  const frozenTerminal = coin.status === "frozen";
+  // Use the canonical terminal-status helper so the prediction side and the
+  // review side (depeg-resolver-review/outcomes.ts) share one definition.
+  const frozenTerminal = isTerminalStablecoinStatus(coin.status);
 
   const kills = killSignals(active, coin, supply, live);
   const anchors = recoveryAnchors(coin, supply, live);
@@ -178,7 +181,11 @@ export function resolveOutlook(
 
   let tier: DdrResolutionTier;
 
-  if (active.direction === "above") {
+  if (frozenTerminal) {
+    // A terminal coin is recovery_unlikely irrespective of break direction;
+    // an overpeg on a frozen/wound-down issuer is not a recovery signal.
+    tier = "recovery_unlikely";
+  } else if (active.direction === "above") {
     // Overpeg: recovery is quasi-certain; only a sticky-premium signal lifts to at_risk.
     const sticky = kills.some((k) => k.code === "K5_exit_collapse");
     tier = sticky ? "at_risk" : "recovery_likely";
@@ -190,7 +197,7 @@ export function resolveOutlook(
       (a) => a.code === "R1_noninflatable_supply" || a.code === "R2_hard_collateral_redemption",
     );
 
-    if (frozenTerminal || severeKills >= 1 || (elevatedOrWorse >= 2 && !hasStrongStructuralAnchor)) {
+    if (severeKills >= 1 || (elevatedOrWorse >= 2 && !hasStrongStructuralAnchor)) {
       tier = "recovery_unlikely";
     } else if (elevatedOrWorse === 0 && strongAnchors.length >= 2 && hasStrongStructuralAnchor) {
       tier = "recovery_likely";
