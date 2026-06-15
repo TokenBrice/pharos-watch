@@ -76,7 +76,7 @@ export default function DigestArchivePage() {
 
       <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} />
 
-      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-border/60 pb-4 text-center text-sm text-muted-foreground">
+      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-muted-foreground">
         <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
         <span>Wake up to the daily digest in your feed.</span>
         <Link

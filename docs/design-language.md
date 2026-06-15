@@ -155,6 +155,14 @@ Digest entries use a distinctive **"intelligence briefing"** editorial aesthetic
 - Editorial prose constrained to `max-w-[68ch]`
 - Homepage digest preview switches to a split desktop layout so the title block and italic executive-summary paragraph can use the full container width; dedicated digest pages keep the `max-w-[68ch]` editorial measure.
 
+#### Archive Front Page (`/digest/`)
+
+The archive index reads as a single newspaper front page rather than a standard feature shell (it does not use `FeaturePageShell`):
+
+- **Nameplate** (`DigestNameplate`): a centered broadsheet masthead — hairline-flanked eyebrow, oversized `digestDisplay` (Newsreader) wordmark carrying the page `h1`, and a ruled dateline strip (`border-t-2 border-foreground/70` above, hairline below) reading `Issue #<latest daily edition> · <date> · Written by Claude Opus 4.8`. The on-page breadcrumb is omitted for the full-bleed masthead; `BreadcrumbJsonLd` is still emitted for SEO.
+- **Sectioned wire**: `WireSectionRule` hairline-flanked labels separate `Today's Lead` (the daily preview, rendered with `DailyDigest hideMasthead` since the nameplate already carries the edition + date), `The Week in Review` (latest weekly teaser), and `Archive` (month-filtered wire table). The weekly recap appears once — the old sans-serif "Weekly market recaps" card grid was removed; older weeklies live in the wire table (`Weekly #N` badge + subtle `bg-muted/25` fill, no edge stripe).
+- **Colophon** (`DigestColophon`): a one-line mono small-caps footer (`Pharos Digest · Watching the peg · RSS · Methodology · Privacy · Not financial advice`) replaces the standard site footer. The global `Footer` is suppressed across the whole `/digest` subtree via `GlobalFooterChrome`; dated detail pages keep their richer `EditorialColophon` (with citation), and the detail masthead credits `Editor: Claude Opus 4.8`.
+
 #### Editorial Typography System
 
 The digest feature employs a dual-font hierarchy that evokes newspaper headlines over wire-service dispatches:
