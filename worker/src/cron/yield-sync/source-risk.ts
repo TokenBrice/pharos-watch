@@ -1152,6 +1152,7 @@ export function buildYieldSourceRisk(params: {
       existing.venueRiskTier ?? (reviewedConfig ? deriveVenueRiskTier(reviewedWeighted) : "unknown"),
     venueRiskScores: existing.venueRiskScores ?? reviewedConfig?.scores ?? null,
     venueRiskWeighted: existing.venueRiskWeighted ?? reviewedWeighted,
+    venueRiskConfidence: existing.venueRiskConfidence ?? reviewedConfig?.confidence ?? null,
     ...(existing.dependencyConcentration
       ? { dependencyConcentration: existing.dependencyConcentration }
       : {}),

@@ -52,6 +52,26 @@ describe("yield source risk UI helpers", () => {
     expect(getYieldSourceRiskDrivers({ sourceRisk: { venueRiskTier: "unknown" } })).toEqual([]);
   });
 
+  it("flags low/partial venue-score confidence without discounting the penalty", () => {
+    const low = getYieldSourceRiskDrivers({
+      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 3.7, venueRiskConfidence: "low" },
+    });
+    expect(low[0]?.label).toContain("low confidence");
+    expect(low[0]?.description).toContain("low-confidence");
+
+    const partial = getYieldSourceRiskDrivers({
+      sourceRisk: { venueRiskTier: "medium", venueRiskWeighted: 2.8, venueRiskConfidence: "partial" },
+    });
+    expect(partial[0]?.label).not.toContain("confidence"); // partial isn't shouted in the label
+    expect(partial[0]?.description).toContain("partial-confidence");
+
+    const verified = getYieldSourceRiskDrivers({
+      sourceRisk: { venueRiskTier: "high", venueRiskWeighted: 4.4, venueRiskConfidence: "verified" },
+    });
+    expect(verified[0]?.label).toBe("high-risk venue");
+    expect(verified[0]?.description).not.toContain("confidence");
+  });
+
   it("keeps missing source-risk evidence neutral", () => {
     expect(getYieldSourceRiskDrivers({ sourceRisk: null })).toEqual([]);
     expect(getYieldSourceRiskDrivers({ sourceRisk: buildSourceRiskGoldenFixture("missing-safety") })).toEqual([]);

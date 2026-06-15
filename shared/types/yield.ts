@@ -157,6 +157,7 @@ const YieldSourceRiskSchema = z.object({
   venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),
   venueRiskScores: YieldVenueRiskScoresSchema.nullable().optional(),
   venueRiskWeighted: z.number().min(1).max(5).nullable().optional(),
+  venueRiskConfidence: z.enum(["verified", "partial", "low"]).nullable().optional(),
   dependencyConcentration: YieldDependencyConcentrationSchema.nullable().optional(),
   trancheSide: z.enum(["senior", "junior"]).nullable().optional(),
   trancheSafetyScore: z.number().min(0).max(100).nullable().optional(),

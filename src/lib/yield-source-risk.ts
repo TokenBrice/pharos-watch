@@ -104,17 +104,27 @@ export function getYieldSourceRiskDrivers(params: {
   const venueRiskWeighted = finiteNumber(sourceRisk?.venueRiskWeighted);
   const venueWeightedSuffix =
     venueRiskWeighted !== null ? ` (venue risk ${venueRiskWeighted.toFixed(1)}/5)` : "";
+  // Confidence is surfaced, not used to discount the penalty: an uncertain venue
+  // is scored conservatively (uncertainty = risk), and the chip says so.
+  const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
+  const confidenceNote =
+    venueConfidence === "low"
+      ? " Venue score is low-confidence — a conservative estimate where audit/admin facts were unverifiable."
+      : venueConfidence === "partial"
+        ? " Venue score is partial-confidence — some audit or admin facts are unverified."
+        : "";
+  const lowConfidenceSuffix = venueConfidence === "low" ? " · low confidence" : "";
   if (sourceRisk?.venueRiskTier === "high") {
     drivers.push({
       key: "high-risk-venue",
-      label: "high-risk venue",
-      description: `The yield venue scores high on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.`,
+      label: `high-risk venue${lowConfidenceSuffix}`,
+      description: `The yield venue scores high on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.${confidenceNote}`,
     });
   } else if (sourceRisk?.venueRiskTier === "medium") {
     drivers.push({
       key: "elevated-risk-venue",
-      label: "elevated-risk venue",
-      description: `The yield venue scores medium on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.`,
+      label: `elevated-risk venue${lowConfidenceSuffix}`,
+      description: `The yield venue scores medium on the Yearn-style 5-category risk rubric${venueWeightedSuffix}.${confidenceNote}`,
     });
   }
 
