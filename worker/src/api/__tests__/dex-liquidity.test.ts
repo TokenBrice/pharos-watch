@@ -208,6 +208,28 @@ describe("handleDexLiquidity", () => {
     expect(coin?.trendworthy).toBe(true);
   });
 
+  it("uses coverage confidence instead of balance ratio for liquidity evidence", async () => {
+    const db = mockD1([
+      {
+        match: "dex_liquidity",
+        rows: [makeDexLiquidityRow({
+          total_tvl_usd: 2_000_000,
+          balance_measured_tvl_usd: 2_000_000,
+          coverage_class: "fallback",
+          coverage_confidence: 0.5,
+        })],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const coin = body["usdt-tether"];
+    expect(coin?.liquidityEvidenceClass).toBe("observed_unmeasured");
+    expect(coin?.hasMeasuredLiquidityEvidence).toBe(false);
+    expect(coin?.trendworthy).toBe(false);
+  });
+
   it("classifies partial measured liquidity separately", async () => {
     const db = mockD1([
       {

@@ -1,6 +1,7 @@
 import { withErrorHandler, handleStablecoinHistoryRequest } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
+import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;
@@ -10,44 +11,6 @@ interface LiquidityHistoryRow {
   coverage_class: string | null;
   coverage_confidence: number | null;
   methodology_version: string | null;
-}
-
-function classifyLiquidityEvidence(
-  totalTvlUsd: number,
-  coverageClass: string | null,
-  coverageConfidence: number | null,
-): {
-  liquidityEvidenceClass: "unobserved" | "measured" | "partial_measured" | "observed_unmeasured";
-  hasMeasuredLiquidityEvidence: boolean;
-  trendworthy: boolean;
-} {
-  if (totalTvlUsd <= 0) {
-    return {
-      liquidityEvidenceClass: "unobserved",
-      hasMeasuredLiquidityEvidence: false,
-      trendworthy: false,
-    };
-  }
-  const trendworthy = (coverageConfidence ?? 0) >= 0.75 && (coverageClass === "primary" || coverageClass === "mixed");
-  if (trendworthy && coverageClass === "primary") {
-    return {
-      liquidityEvidenceClass: "measured",
-      hasMeasuredLiquidityEvidence: true,
-      trendworthy,
-    };
-  }
-  if (trendworthy) {
-    return {
-      liquidityEvidenceClass: "partial_measured",
-      hasMeasuredLiquidityEvidence: true,
-      trendworthy,
-    };
-  }
-  return {
-    liquidityEvidenceClass: "observed_unmeasured",
-    hasMeasuredLiquidityEvidence: false,
-    trendworthy,
-  };
 }
 
 export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history", async (

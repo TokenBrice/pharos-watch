@@ -11,9 +11,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import {
   buildDexLiquidityWarning,
-  classifyLiquidityEvidence,
   getDexLiquidityTrendTolerances,
-  isTrendworthySnapshot,
   normalizeTopPools,
   selectTrendBaseline,
   type DexLiquidityCronRow,
@@ -21,6 +19,7 @@ import {
   type DexLiquidityRow,
   type DexPriceRow,
 } from "./dex-liquidity-response";
+import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
@@ -106,12 +105,12 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     const dexPrice = dexPriceById.get(id);
     const coverageClass = id === "__global__" ? null : (row.coverage_class ?? "legacy");
     const coverageConfidence = row.coverage_confidence ?? 0.5;
-    const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
-    const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence } = classifyLiquidityEvidence(
+    const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence, trendworthy } = classifyLiquidityEvidence(
       currentTvl,
-      balanceMeasuredTvlUsd,
+      coverageClass,
+      coverageConfidence,
     );
-    const trendworthy = isTrendworthySnapshot(currentTvl, coverageClass, coverageConfidence);
+    const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
 
     map[id] = {
       totalTvlUsd: currentTvl,

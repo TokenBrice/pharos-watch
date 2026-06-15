@@ -396,7 +396,7 @@ DEX price median weighting uses canonical source families rather than the normal
 
 **API exposure:**
 
-- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`, `coverageClass`, `coverageConfidence`, `liquidityEvidenceClass`, `hasMeasuredLiquidityEvidence`, `trendworthy`, `sourceMix`, `balanceMeasuredTvlUsd`, `organicMeasuredTvlUsd`
+- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`, `coverageClass`, `coverageConfidence`, coverage-confidence-derived `liquidityEvidenceClass`, `hasMeasuredLiquidityEvidence`, `trendworthy`, `sourceMix`, `balanceMeasuredTvlUsd`, `organicMeasuredTvlUsd`
 - `/api/dex-liquidity`: adds a `Warning` header when the latest `sync-dex-liquidity` run was degraded or failed and the endpoint is serving the last successful dataset; high-severity quality drift in an otherwise `ok` run now also emits a warning
 - `/api/dex-liquidity-history`: now returns `liquidityEvidenceClass`, `hasMeasuredLiquidityEvidence`, and `trendworthy` so history consumers can separate baseline-worthy periods from informational low-confidence snapshots
 - `/api/peg-summary`: adds optional `dexPriceCheck` per coin when the row passes a UI trust gate (fresh within 60 minutes and aggregate source TVL `>= $250K`)
