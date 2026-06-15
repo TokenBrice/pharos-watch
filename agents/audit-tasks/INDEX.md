@@ -3,17 +3,17 @@
 > **Generated** by `node agents/rebuild-audit-index.mjs`. Do not hand-edit — edit individual
 > finding files; re-run to refresh. Protocol: `README.md`. Narrative report: `../CODEBASE-AUDIT-2026-06-15.md`.
 
-**99/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
+**104/733 done (14%)**  `███░░░░░░░░░░░░░░░░░`
 
 | Status | todo | in-progress | blocked | done | wontfix |
 |---|---|---|---|---|---|
-| Count | 612 | 3 | 0 | 99 | 19 |
+| Count | 609 | 1 | 0 | 104 | 19 |
 
 ### By pillar
 | Pillar | Total | Done | In-progress | Blocked | Todo |
 |---|---|---|---|---|---|
-| redundancy | 266 | 43 | 2 | 0 | 211 |
-| quality | 315 | 47 | 1 | 0 | 260 |
+| redundancy | 266 | 46 | 0 | 0 | 210 |
+| quality | 315 | 49 | 1 | 0 | 258 |
 | sustainability | 152 | 9 | 0 | 0 | 141 |
 
 ## redundancy (266)
@@ -36,7 +36,7 @@
 | ⬜ | [R-007](redundancy/R-007.md) | S | clone | Identical ratioFromRaw / RATIO_SCALE duplicated in erc4626-single-asset and m0-wrapper-und |  | `worker/src/cron/reserve-adapters/erc4626-single-` |
 | ⬜ | [R-008](redundancy/R-008.md) | S | clone | ERC4626 and ERC20 selector constants re-declared inside liquity-v2-branches instead of imp |  | `worker/src/cron/reserve-adapters/liquity-v2-bran` |
 | ✅ | [R-009](redundancy/R-009.md) | S | dead-code | Inline import() type expressions in hero-card-sections.tsx for already-re-exported types | codex | `src/components/stablecoin-detail/hero-card-secti` |
-| 🔄 | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
+| ✅ | [R-010](redundancy/R-010.md) | S | clone | DepegFeed load-more onClick duplicates the same setVisibleCount call | codex | `src/components/depeg-feed.tsx:L170-L177` |
 | ✅ | [R-011](redundancy/R-011.md) | S | clone | Duplicated `isValidDateOnly` / `DATE_ONLY_RE` across two tooling modules | codex | `scripts/lib/hotspot-ratchet.mjs:L64-L70+L365-L37` |
 | ✅ | [R-012](redundancy/R-012.md) | S | clone | stringValue() defined six times across scripts with identical body | codex | `scripts/maintenance/audit-dex-pricing-source-gap` |
 | ⬜ | [R-013](redundancy/R-013.md) | S | clone | Three independent formatAge implementations across the telegram layer |  | `worker/src/api/telegram-webhook-insights.ts:L21-` |
@@ -124,7 +124,7 @@
 | ✅ | [R-090](redundancy/R-090.md) | S | clone | Split import of `@shared/lib/format` in chains/client.tsx | codex | `src/app/chains/client.tsx:L19, L23` |
 | ✅ | [R-091](redundancy/R-091.md) | S | dead-code | Redundant `shouldShowTickerLabel` alias in coin-emblem.tsx | codex | `src/app/alt-pegs/fiat-world-atlas/coin-emblem.ts` |
 | ✅ | [R-092](redundancy/R-092.md) | S | clone | Split import statements from `@/hooks/api-hooks` in depeg/client.tsx | codex | `src/app/depeg/client.tsx:L8-L9` |
-| ⬜ | [R-093](redundancy/R-093.md) | S | dead-code | getErrorMessage in raw-snapshot.ts is a one-line pass-through wrapper with no value |  | `worker/src/lib/status/raw-snapshot.ts:L48-L50` |
+| ✅ | [R-093](redundancy/R-093.md) | S | dead-code | getErrorMessage in raw-snapshot.ts is a one-line pass-through wrapper with no value | codex | `worker/src/lib/status/raw-snapshot.ts:L48-L50` |
 | ⬜ | [R-094](redundancy/R-094.md) | S | dead-code | buildComplianceViewModel calls isGeniusRegimeEffective twice per invocation |  | `src/app/compliance/model.ts:L268-L278` |
 | ✅ | [R-095](redundancy/R-095.md) | S | dead-code | collectCronConsoleUsage is an exported alias with zero importers | codex | `scripts/ci/check-cron-console-usage.mjs:L153` |
 | ✅ | [R-096](redundancy/R-096.md) | S | wrapper | One-line ChartTooltip wrapper adds no value inside cemetery-charts.tsx | codex | `src/components/cemetery-charts.tsx:L33-L39` |
@@ -192,7 +192,7 @@
 | ✅ | [R-158](redundancy/R-158.md) | S | dead-code | selectConfirmedEvents is a transparent pass-through exported for testing but adding no log | codex | `scripts/maintenance/sync-depeg-events.ts:L83-L85` |
 | ⬜ | [R-159](redundancy/R-159.md) | S | dead-code | getCoinsByLifecycleStatus accepts a 'dead' status that is unreachable and always returns [ |  | `shared/lib/stablecoins/by-mechanism.ts:L74-L91` |
 | ⬜ | [R-160](redundancy/R-160.md) | S | clone | rowsById map constructed independently in lower-ranked and output-helpers for the same uni |  | `shared/lib/selector/lower-ranked.ts:L109-L110; s` |
-| 🔄 | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null | codex | `src/lib/sidebar-signals.ts:L55-L57` |
+| ✅ | [R-161](redundancy/R-161.md) | S | dead-code | getStabilityIndexNavSignal always returns null | codex | `src/lib/sidebar-signals.ts:L55-L57` |
 | ⬜ | [R-162](redundancy/R-162.md) | S | clone | MONTH_INDEX and MONTH_LABEL arrays duplicated between attestation-pdf-index and usdh-nativ |  | `worker/src/cron/reserve-adapters/attestation-pdf` |
 | ⬜ | [R-163](redundancy/R-163.md) | S | dead-code | Report-card cache envelope path (generation-mismatch / invalid-envelope) is unreachable at |  | `worker/src/lib/report-card-cache.ts:L102-L130, L` |
 | ⬜ | [R-164](redundancy/R-164.md) | S | wrapper | toRedemptionBackstopVersionLabel re-export aliases a base utility only for one methodology |  | `shared/lib/methodology-versions/redemption-backs` |
@@ -321,7 +321,7 @@
 | ✅ | [Q-011](quality/Q-011.md) | S | error-handling | sky-makercore.ts silently discards ALL errors from the LitePSM on-chain read | codex | `worker/src/cron/reserve-adapters/sky-makercore.t` |
 | ✅ | [Q-012](quality/Q-012.md) | S | error-handling | Bare catch in loadPriceValidationReferences silently swallows DB errors and masks degradat | codex | `worker/src/lib/price-validation.ts:L191-L197` |
 | ⬜ | [Q-013](quality/Q-013.md) | S | complexity | resupply-pairs serialises all pair I/O in a sequential loop, multiplying latency with pair |  | `worker/src/cron/reserve-adapters/resupply-pairs.` |
-| 🔄 | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
+| ✅ | [Q-014](quality/Q-014.md) | S | error-handling | Silent `catch {}` swallows selector engine errors in use-selector.ts | codex | `src/app/screener/picker/use-selector.ts:L163-L16` |
 | ⬜ | [Q-015](quality/Q-015.md) | M | error-handling | ChartBrush declares role='slider' but implements no keyboard interaction — ARIA contract v |  | `src/components/chart-primitives/sync.tsx:L110-L2` |
 | ⬜ | [Q-016](quality/Q-016.md) | M | security | window.confirm and window.prompt used for destructive admin mutation confirmations |  | `src/components/status/api-key-requests-panel.tsx` |
 | ⬜ | [Q-019](quality/Q-019.md) | S | clone | Peg-floor thresholds duplicated verbatim in answers-to-screener instead of calling exclusi |  | `shared/lib/selector/answers-to-screener.ts:L84-L` |
@@ -333,7 +333,7 @@
 | ⬜ | [Q-031](quality/Q-031.md) | M | type-safety | DigestSnapshotInputDataSchema casts z.object({}).passthrough() to DigestInputData — snapsh |  | `shared/types/digest.ts:L428-L432` |
 | ⬜ | [Q-036](quality/Q-036.md) | M | error-handling | fetchCurrentBalanceForAddress (current-balance-cache) never uses drpcApiKey despite it bei |  | `worker/src/cron/blacklist/current-balance-cache.` |
 | ⬜ | [Q-039](quality/Q-039.md) | S | error-handling | admin-action-audit.ts truncates serialized JSON at a byte boundary, producing invalid JSON |  | `worker/src/lib/admin-action-audit.ts:L22-L23` |
-| ⬜ | [Q-040](quality/Q-040.md) | S | error-handling | mapWithConcurrency early-abort skips when task rejects with a falsy value |  | `worker/src/lib/concurrency.ts:37-43` |
+| ✅ | [Q-040](quality/Q-040.md) | S | error-handling | mapWithConcurrency early-abort skips when task rejects with a falsy value | codex | `worker/src/lib/concurrency.ts:37-43` |
 | ⬜ | [Q-041](quality/Q-041.md) | M | clone | Alert-safety explain snapshot re-derives stage scores from rounded baseScore, diverging fr |  | `worker/src/lib/alert-safety-source-cache.ts:L470` |
 | ⬜ | [Q-043](quality/Q-043.md) | S | testing | safety-score-golden test is outside the critical test suite; methodology regressions caugh |  | `worker/src/lib/__tests__/safety-score-golden.tes` |
 | ⬜ | [Q-044](quality/Q-044.md) | M | naming | governance kind overloaded as catch-all for semantically distinct exploit events |  | `shared/data/annotations/curated-annotations.ts:L` |
@@ -443,7 +443,7 @@
 | ⬜ | [Q-027](quality/Q-027.md) | S | testing | homepage-bootstrap-runtime.ts has zero test coverage for its custom ApiMeta parsing logic |  | `src/lib/homepage-bootstrap-runtime.ts:51-93` |
 | ⬜ | [Q-029](quality/Q-029.md) | M | complexity | IIFE inside JSX render obscures dominance-breakdown logic in chains/client.tsx |  | `src/app/chains/client.tsx:L292-L385` |
 | ⬜ | [Q-030](quality/Q-030.md) | S | type-safety | psiBand is cast to ConditionBand without membership guard in digest-archive-client |  | `src/components/digest-archive-client.tsx:296, 31` |
-| ⬜ | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user |  | `src/lib/chart-export.ts:15-17` |
+| 🔄 | [Q-032](quality/Q-032.md) | S | error-handling | chart-export.ts silently swallows errors; caller has no way to surface failure to the user | codex | `src/lib/chart-export.ts:15-17` |
 | ⬜ | [Q-033](quality/Q-033.md) | S | type-safety | normalizeDependencyMeta in homepage-bootstrap-runtime.ts uses as never cast to work around |  | `src/lib/homepage-bootstrap-runtime.ts:51-75` |
 | ✅ | [Q-034](quality/Q-034.md) | S | type-safety | useHomeAltFilters passes the clear-sentinel "all" through setParams, causing a no-op URL w | codex | `src/hooks/use-home-alt-filters.ts:L36-L38` |
 | ⬜ | [Q-035](quality/Q-035.md) | S | complexity | setup.ts callback issues a raw D1 query for telegram_pending_disambiguation instead of usi |  | `worker/src/api/webhook-callbacks/setup.ts:L51-L6` |
