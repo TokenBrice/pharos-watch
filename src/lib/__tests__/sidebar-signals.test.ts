@@ -3,13 +3,11 @@ import type {
   BlacklistSummaryResponse,
   HealthResponse,
   PegSummaryResponse,
-  StabilityIndexResponse,
 } from "@shared/types";
 import {
   getBlacklistNavSignal,
   getDepegNavSignal,
   getDigestNavSignal,
-  getStabilityIndexNavSignal,
   getStatusNavSignal,
   hasUnreadDigest,
   parseSidebarDigestSeenAt,
@@ -28,24 +26,6 @@ describe("sidebar-signals", () => {
       tone: "danger",
     });
     expect(getDepegNavSignal({ summary: { activeDepegCount: 0 } } as PegSummaryResponse)).toBeNull();
-  });
-
-  it("keeps the PSI sidebar signal hidden", () => {
-    const response = {
-      current: {
-        score: 82.4,
-        band: "BEDROCK",
-        avg24h: 77.2,
-        avg24hBand: "TREMOR",
-        computedAt: 1_777_000_000,
-        components: { severity: 0, breadth: 0, trend: 0 },
-        methodologyVersion: "1.0",
-      },
-      history: [],
-      methodology: { version: "1.0", versionLabel: "v1.0", currentVersion: "1.0", currentVersionLabel: "v1.0", changelogPath: "/methodology/stability-index-changelog/", asOf: 1_777_000_000, isCurrent: true },
-    } as StabilityIndexResponse;
-
-    expect(getStabilityIndexNavSignal(response)).toBeNull();
   });
 
   it("shows a 24h blacklist-event signal only when the new stat is non-zero", () => {

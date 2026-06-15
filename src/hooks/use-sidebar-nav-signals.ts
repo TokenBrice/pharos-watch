@@ -8,13 +8,11 @@ import {
   useSidebarBlacklistSignal,
   useSidebarHealthSignal,
   useSidebarPegSummarySignal,
-  useSidebarStabilityIndexSignal,
 } from "@/hooks/use-sidebar-nav-signal-data";
 import {
   getBlacklistNavSignal,
   getDepegNavSignal,
   getDigestNavSignal,
-  getStabilityIndexNavSignal,
   getStatusNavSignal,
   getTapeNavSignal,
   parseSidebarDigestSeenAt,
@@ -25,7 +23,6 @@ import {
 export function useSidebarNavSignals() {
   const pathname = usePathname();
   const { data: pegSummary } = useSidebarPegSummarySignal();
-  const { data: stabilityIndex } = useSidebarStabilityIndexSignal();
   const { data: health } = useSidebarHealthSignal();
   const { data: dailyDigest } = useSidebarDailyDigestSignal();
   const { data: blacklistSummary } = useSidebarBlacklistSignal(pathname.startsWith("/freezewatch"));
@@ -49,11 +46,10 @@ export function useSidebarNavSignals() {
     () => ({
       "/depeg/": getDepegNavSignal(pegSummary),
       "/timeline/": getTapeNavSignal(pegSummary),
-      "/stability-index/": getStabilityIndexNavSignal(stabilityIndex),
       "/freezewatch/": getBlacklistNavSignal(blacklistSummary),
       "/status/": getStatusNavSignal(health),
       "/digest/": getDigestNavSignal(dailyDigest?.generatedAt, seenDigestGeneratedAt),
     }),
-    [blacklistSummary, dailyDigest?.generatedAt, health, pegSummary, seenDigestGeneratedAt, stabilityIndex],
+    [blacklistSummary, dailyDigest?.generatedAt, health, pegSummary, seenDigestGeneratedAt],
   );
 }

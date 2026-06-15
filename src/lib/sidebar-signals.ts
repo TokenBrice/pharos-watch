@@ -3,7 +3,6 @@ import type {
   BlacklistSummaryResponse,
   HealthResponse,
   PegSummaryResponse,
-  StabilityIndexResponse,
 } from "@shared/types";
 
 export interface SidebarNavSignal {
@@ -50,10 +49,6 @@ export function getTapeNavSignal(pegSummary: PegSummaryResponse | null | undefin
     title: `${activeDepegCount} open incident${activeDepegCount === 1 ? "" : "s"} on the tape`,
     tone: "warning",
   };
-}
-
-export function getStabilityIndexNavSignal(_stabilityIndex: StabilityIndexResponse | null | undefined): SidebarNavSignal | null {
-  return null;
 }
 
 export function getBlacklistNavSignal(blacklistSummary: BlacklistSummaryResponse | null | undefined): SidebarNavSignal | null {
