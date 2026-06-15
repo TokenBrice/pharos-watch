@@ -32,9 +32,6 @@ import {
   fetchAerodromeData as fetchAerodromeSubgraphData,
   fetchUniV3Data as fetchUniV3SubgraphData,
 } from "./subgraph-source-families";
-import type {
-  ProviderChainAddress,
-} from "./token-batch-runner";
 import { toErrorMessage } from "../../lib/error-utils";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
@@ -439,7 +436,11 @@ export function buildKnownPoolAddresses(
   return known;
 }
 
-export type { ProviderChainAddress } from "./token-batch-runner";
+export interface ProviderChainAddress {
+  chain: string;
+  address: string;
+  stablecoinId: string;
+}
 
 /** Build provider chain → tracked token addresses map from canonical chain ids. */
 export function buildChainAddresses(chainMap: Record<string, string>): Map<string, ProviderChainAddress[]> {
