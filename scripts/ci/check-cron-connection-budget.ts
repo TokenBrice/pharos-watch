@@ -38,6 +38,7 @@ export interface CronConnectionTriggerReport {
 }
 
 export interface CronConnectionBudgetReport {
+  budget: CronConnectionBudgetConfigForCheck;
   budgetOnlyCount: number;
   failed: boolean;
   headroomFullTriggers: CronConnectionTriggerReport[];
@@ -171,6 +172,7 @@ export function evaluateCronConnectionBudget(input: {
   }
 
   return {
+    budget,
     budgetOnlyCount: entries.filter((entry) => !entry.statusTracked).length,
     failed: failed || missingBudgetJobs.length > 0,
     headroomFullTriggers,
@@ -180,7 +182,8 @@ export function evaluateCronConnectionBudget(input: {
   };
 }
 
-function printReport(report: CronConnectionBudgetReport): void {
+export function printReport(report: CronConnectionBudgetReport): void {
+  const { budget } = report;
   if (report.missingBudgetScheduleKeys.length > 0) {
     console.error(
       `FAIL: ${pluralize(report.missingBudgetScheduleKeys.length, "cron schedule")} missing from SCHEDULED_SLOT_PLANS: ${report.missingBudgetScheduleKeys.join(", ")}`,
@@ -194,9 +197,9 @@ function printReport(report: CronConnectionBudgetReport): void {
   }
 
   for (const trigger of report.triggerReports) {
-    if (trigger.totalConnections >= CRON_CONNECTION_BUDGET.failAt) {
+    if (trigger.totalConnections >= budget.failAt) {
       console.error(
-        `FAIL: Trigger "${trigger.scheduleKey}" uses ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections:`,
+        `FAIL: Trigger "${trigger.scheduleKey}" uses ${trigger.totalConnections}/${budget.maxPerTrigger} connections:`,
       );
       for (const chain of trigger.chains) {
         console.error(`  - ${chain.chainKey}: ${chain.peak} connections (${chain.jobs.join(" -> ")})`);
@@ -219,10 +222,10 @@ function printReport(report: CronConnectionBudgetReport): void {
 
   if (report.headroomFullTriggers.length > 0) {
     console.log(
-      `\nConnection headroom policy: ${CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections is full for new fetch-heavy work.`,
+      `\nConnection headroom policy: ${budget.fullForNewFetchHeavyWorkAt}/${budget.maxPerTrigger} connections is full for new fetch-heavy work.`,
     );
     for (const trigger of report.headroomFullTriggers) {
-      console.log(`  - ${trigger.scheduleKey}: ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger}`);
+      console.log(`  - ${trigger.scheduleKey}: ${trigger.totalConnections}/${budget.maxPerTrigger}`);
       for (const chain of trigger.chains) {
         console.log(`    * ${chain.chainKey}: ${pluralize(chain.peak, "connection")} (${chain.jobs.join(" -> ")})`);
       }
